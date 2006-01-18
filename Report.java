@@ -10,6 +10,7 @@ public class Report {
     private mySQLConnect SQLC;
     private PrintStream Log;
     private int reportLevel;
+    private String reportTbl;
     private String hostName;
     private String clientName;
     
@@ -26,6 +27,26 @@ public class Report {
 	}
 
 	this.reportLevel = reportLevel;
+	this.reportTbl = "report";
+	clientName = Machine.getClient();
+	hostName = SQLC.getHost();
+	
+    }
+
+    public Report(String connFile, String logFile, int reportLevel, String reportTable) {
+
+	SQLC = new mySQLConnect();
+	SQLC.readConnectionFile(connFile);
+	myConnection = SQLC.openConnection();
+	
+	try {
+	    Log = new PrintStream(new FileOutputStream(logFile));
+	} catch (Exception e) {
+	    System.out.println(e);
+	}
+
+	this.reportLevel = reportLevel;
+	this.reportTbl = reportTable;
 	clientName = Machine.getClient();
 	hostName = SQLC.getHost();
 	
@@ -72,7 +93,7 @@ public class Report {
 	if (level<=reportLevel) {
 	    try {
 		Statement S = myConnection.createStatement();
-		S.executeUpdate("INSERT INTO report (Client, Host, Description, Start) VALUES (\""+clientName+"\", \""+hostName+"\", \""+description+"\", NOW());");
+		S.executeUpdate("INSERT INTO "+reportTbl+" (Client, Host, Description, Start) VALUES (\""+clientName+"\", \""+hostName+"\", \""+description+"\", NOW());");
 		S.close();
 	    } catch (SQLException E) {
 		System.out.println("SQLException:\t" + E.getMessage());
@@ -88,7 +109,7 @@ public class Report {
 	if (level<=reportLevel) {
 	    try {
 		Statement S = myConnection.createStatement();
-		S.executeUpdate("UPDATE report SET End = NOW(), Total = TIMEDIFF(End, Start) WHERE ID = LAST_INSERT_ID();");
+		S.executeUpdate("UPDATE "+reportTbl+" SET End = NOW(), Total = TIMEDIFF(End, Start) WHERE ID = LAST_INSERT_ID();");
 		S.close();
 	    } catch (SQLException E) {
 		System.out.println("SQLException:\t" + E.getMessage());
@@ -104,7 +125,7 @@ public class Report {
 	if (level<=reportLevel) {
 	    try {
 		Statement S = myConnection.createStatement();
-		S.executeUpdate("UPDATE report SET End = NOW(), Total = TIMEDIFF(End, Start) WHERE (Client = \""+clientName+"\") AND (Host = \""+hostName+"\") AND (Description = \""+description+"\");");
+		S.executeUpdate("UPDATE "+reportTbl+" SET End = NOW(), Total = TIMEDIFF(End, Start) WHERE (Client = \""+clientName+"\") AND (Host = \""+hostName+"\") AND (Description = \""+description+"\");");
 		S.close();
 	    } catch (SQLException E) {
 		System.out.println("SQLException:\t" + E.getMessage());
