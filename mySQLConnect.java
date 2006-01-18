@@ -37,9 +37,9 @@ public class mySQLConnect
     public void loadSQLDriver() {
 	try {
 	    // The newInstance() call is a work around for some broken Java implementations
-	    System.out.print("Loading "+driverName +" ... "); 
+	    //System.out.print("Loading "+driverName +" ... "); 
 	    Class.forName(driverName).newInstance(); 
-	    System.out.println("done."); 
+	    //System.out.println("done."); 
 	} 
 	catch (Exception E) {
 	    System.out.println("\nUnable to load SQL-driver "+driverName);
@@ -61,6 +61,7 @@ public class mySQLConnect
     public Connection openConnection() { 
 	// open a connection with the parameters retrieved to the database <dbname> 
 	Connection Conn=null;
+	String connector = "";
 	try {
 	    Class.forName( driverName).newInstance(); 	     
 	    try {
@@ -71,7 +72,11 @@ public class mySQLConnect
 		// System.out.println("user "+user);
 		// System.out.println("password "+password);
 		
-		String connector = "jdbc:mysql://"+host+port+"/"+dbname+"?user="+user+"&password="+password+"&allowMultiQueries=true";
+		if (!password.equals("")) {
+		    connector = "jdbc:mysql://"+host+port+"/"+dbname+"?user="+user+"&password="+password+"&allowMultiQueries=true";
+		} else {
+		    connector = "jdbc:mysql://"+host+port+"/"+dbname+"?user="+user+"&allowMultiQueries=true";
+		}
 		//System.out.println("Opening a connection to "+connector); 
 		Conn = DriverManager.getConnection( connector);
 	  } catch (SQLException E) {
@@ -97,7 +102,7 @@ public class mySQLConnect
 	} // end if
 	// else the location of the connection file was given 
 
-	System.out.println("Reading settings from file "+connFile);
+	//System.out.println("Reading settings from file "+connFile);
 	// Open the configuration file
 	FileReader theFile = null;
 	BufferedReader fileIn = null;
@@ -156,6 +161,4 @@ public class mySQLConnect
     } // end class readConnectionFile
 
 } // end class mySQLconnect 
-
-
 
