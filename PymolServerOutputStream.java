@@ -100,7 +100,6 @@ public class PymolServerOutputStream extends OutputStream {
 	    // submit command
 	    try {
 	    	this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
-	    	System.in.read();
 	    	
 	    } catch(XmlRpcException e) {
 	    	System.out.println("XMP-RPC exception occured.");
