@@ -93,11 +93,14 @@ public class PymolServerOutputStream extends OutputStream {
 	    myvector.add(new String(this.commandBuffer, 0, commandBufferPtr).trim());
 	    // reset command buffer
 	    this.commandBuffer = new byte[INITIALBUFFERCAPACITY];
+	    this.commandBufferCap = INITIALBUFFERCAPACITY;
+	    this.commandBufferPtr = 0;
 	    // DEBUG: view command to be sent
 	    // System.out.println("Flush, current buffer=" + myvector);
 	    // submit command
 	    try {
 	    	this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
+	    	System.in.read();
 	    	
 	    } catch(XmlRpcException e) {
 	    	System.out.println("XMP-RPC exception occured.");
