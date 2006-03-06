@@ -1,7 +1,5 @@
 package tools;
 
-import tools.*;
-import java.io.*;
 import java.net.*;
  
 public class Machine {

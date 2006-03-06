@@ -1,10 +1,8 @@
 package tools; 
 
-import tools.*;
 import java.io.*;
 import java.util.*;
 import org.rosuda.JRclient.*;
-import Jama.*;
 
 public class R {
 
@@ -112,7 +110,7 @@ public class R {
 	FileReader theFile = null;
 	BufferedReader fileIn = null;
 	StringTokenizer str;
-	String item, oneLine, dummy; 
+	String item, oneLine; 
 	String host = null, port = null, user = null, password = null, dbname = null;
 	
 	// list the entries in the file and decompose them 

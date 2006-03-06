@@ -1,6 +1,5 @@
 package tools; 
 
-import tools.*;
 import java.sql.*;
 import java.io.*;
 import java.util.*;
@@ -108,7 +107,7 @@ public class mySQLConnect
 	FileReader theFile = null;
 	BufferedReader fileIn = null;
 	StringTokenizer str;
-	String item, oneLine, dummy; 
+	String item, oneLine; 
 	
 	// list the entries in the file and decompose them 
 	try {
