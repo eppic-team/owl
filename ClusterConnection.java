@@ -26,32 +26,15 @@ public class ClusterConnection {
 	
 	//create a ClusterConnection passing a key. Then we need to call createNConStatement only passing the idx as argument.
 	public ClusterConnection (String db,String key, String user,String password) {
-		loadMySQLDriver();
-		setDb(db);
-		setKey(key);
+		new ClusterConnection(db,user,password);
+		this.key=key; //can't use the setKey method here before we've got the db field initialized
 		setIdxColumn();
 		setMasterTable(db);
-		setUser(user);
-		setPassword(password);
-		try {
-			// For nCon we create a connection to the master too. 
-			// This is just a place holder because the actual node connection is not created until we create the statement
-			// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
-			this.nCon = DriverManager.getConnection(url+masterHost+"/"+masterDb,user,password); 
-			this.mCon = DriverManager.getConnection(url+masterHost+"/"+masterDb,user,password);
-		}
-		catch(SQLException e){
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
-    	    System.out.println("VendorError:  " + e.getErrorCode());
-			System.out.println("Couldn't get connection to master host "+masterHost+", db="+masterDb+", exiting.");
-			System.exit(2);			
-		}
 	}
 
 	// create a cluster connection with an empty key field. In this case we need to call createNConStatement passing the key as argument 
 	public ClusterConnection (String db, String user,String password) { 
-		this.loadMySQLDriver();
+		loadMySQLDriver();
 		setDb(db);
 		setUser(user);
 		setPassword(password);
@@ -155,8 +138,6 @@ public class ClusterConnection {
 	
 	public Statement createStatement(String key,int idx) {
 		setKey(key);
-		setMasterTable();
-		setIdxColumn();
 		return createStatement(idx);
 	}
 	
@@ -190,10 +171,6 @@ public class ClusterConnection {
 	
 	public void setKey(String key){
 		this.key=key;
-	}
-
-	public void switchKey(String key){
-		this.key=key;
 		setMasterTable();
 		setIdxColumn();
 	}
@@ -214,8 +191,6 @@ public class ClusterConnection {
 
 	public ResultSet getAllIdxFromMaster(String key) { 
 		this.setKey(key);
-		this.setIdxColumn();
-		this.setMasterTable();
 		String query;
 		Statement S;
 		ResultSet R=null;
@@ -239,8 +214,6 @@ public class ClusterConnection {
 	public int getHostId4Idx (String key,int idx) { 
 		int hostId=0;
 		this.setKey(key);
-		this.setIdxColumn();
-		this.setMasterTable();
 		Statement S;
 		ResultSet R;
 		String query;
@@ -279,8 +252,6 @@ public class ClusterConnection {
 		Statement S;
 		String query;
 		this.setKey(key);
-		this.setMasterTable();
-		this.setIdxColumn();
 		try {
 			S=this.mCon.createStatement();
 			query="INSERT INTO "+this.keyTable+" (client_id) VALUES ("+clientId+");";
@@ -297,8 +268,6 @@ public class ClusterConnection {
 
 	public void insertIdxInMaster(String keySrc,String keyDest,int idxSrc) {
 		this.setKey(keySrc);
-		this.setMasterTable();
-		this.setIdxColumn();
 		int clientId=0;
 		clientId=this.getHostId4Idx(keySrc,idxSrc);
 		insertIdxInMaster(keyDest,clientId);
@@ -307,8 +276,6 @@ public class ClusterConnection {
 	public int getLastInsertId(String key) {
 		int lastIdx=0;
 		this.setKey(key);
-		this.setMasterTable();
-		this.setIdxColumn();
 		Statement S;
 		ResultSet R;
 		String query = "";
