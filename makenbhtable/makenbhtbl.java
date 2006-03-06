@@ -7,8 +7,6 @@
  *              table in the 'newmsdgraph' database. The program will
  *              generate rows in the neighbourhood table for each node in
  *              each graph with start_index <= graph_id <= end_index.
- * License:     You may use this code for any purpose provided that you give
- *              credit to the author.
  * Contact:     stehr@molgen.mpg.de
  *****************************************************************************/
 
