@@ -1,8 +1,6 @@
 package tools; 
 
 import java.sql.*;
-import java.io.*;
-import java.util.*;
 
 /* find the maximum Spanning Tree structure data 
     author: Michael Lappe, 2005-04-15  
@@ -227,10 +225,10 @@ public class calcMST
      */ 
 
     static void backtrack() {
-	int s_num=0, t_num=act_num, weight=0, dista, counter=0;
-	String s_cid="", t_cid=act_cid, Query; 
+	int s_num=0, t_num=act_num, dista, counter=0;
+	String s_cid="", t_cid=act_cid; 
 	Statement S, Stmt; 
-	ResultSet R, RS; 
+	ResultSet RS; 
 	reportln("backtracking path from ["+act_cid+":"+act_num+"] to root ["+root_cid+":"+root_num+"]", 3);
 	reportln("#n target -(dist)-> source", 3); 
 	// report the path that we have found 

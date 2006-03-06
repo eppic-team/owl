@@ -1,6 +1,5 @@
 package tools;
 
-import tools.*;
 import java.sql.*;
 import java.io.*;
 
