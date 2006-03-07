@@ -297,4 +297,102 @@ public class ClusterConnection {
 		} // end try/catch connection 
 		return lastIdx;
 	} // end getGraphId
+	
+	public int[][] getIdxSet(String key) { 
+		int[][] indMatrix=null;
+		this.setKey(key);
+		String query;
+		Statement S;
+		ResultSet R;
+		try {
+			// STEP 1 -- getting set of all client_ids
+			S=this.mCon.createStatement();
+			query="SELECT count(distinct client_id) FROM "+keyTable+";";
+			int count=0;
+			R=S.executeQuery(query);
+			if (R.next()){
+				count=R.getInt(1);
+			}
+			query="SELECT DISTINCT client_id FROM "+keyTable+" ORDER BY client_id;";
+			//R.close();
+			//S.close();
+			R=S.executeQuery(query);
+			
+			// STEP 2 -- putting sets of indices counts into temp tables c_<client_id> with a serial auto_increment field
+			int[] clids=new int[count]; //array to store all client_ids. To be used in loops later
+			int i=0;
+			while (R.next()){
+				Statement Sloop=this.mCon.createStatement();
+				int clid=R.getInt(1);
+				query="CREATE TEMPORARY TABLE c_"+clid+" (serial int(11) NOT NULL AUTO_INCREMENT,"+idxColumn+" int(11),client_id int(11), PRIMARY KEY(serial));";				
+				Sloop.executeUpdate(query);
+				query="INSERT INTO c_"+clid+" ("+idxColumn+",client_id) SELECT "+idxColumn+",client_id FROM "+keyTable+" WHERE client_id="+clid+";";
+				Sloop.executeUpdate(query);
+				clids[i]=clid;
+				i++;
+				Sloop.close();
+			}
+			
+			// STEP3 -- merging all c_<client_id> tables into a temp table tmp_allcs and selecting the client_id with the maximum count
+			//query="SELECT client_id,count(*) as c FROM c_34 GROUP BY client_id UNION SELECT client_id,count(*) as c FROM c_32 GROUP BY client_id;";
+			query="DROP TABLE IF EXISTS tmp_allcs;"; 
+			S.executeUpdate(query);
+			//this table must be permanent! otherwise cannot do the select max(c) later
+			query="CREATE TABLE IF NOT EXISTS tmp_allcs (client_id int(11), c int(11)) ENGINE=MEMORY;";
+			S.executeUpdate(query);
+			String unionStr="SELECT client_id,count(*) AS c FROM c_"+clids[0]+" GROUP BY client_id";
+			for (i=1;i<clids.length;i++) {
+				unionStr+=" UNION SELECT client_id,count(*) AS c FROM c_"+clids[i]+" GROUP BY client_id";
+			}
+			query="INSERT INTO tmp_allcs "+unionStr+";";
+			S.executeUpdate(query);
+			query="SELECT client_id,c FROM tmp_allcs WHERE c=(SELECT max(c) FROM tmp_allcs);";
+			R=S.executeQuery(query);
+			int clidMaxIdxCount=0;
+			int maxIdxCount=0;
+			if (R.next()) {
+				clidMaxIdxCount=R.getInt(1);
+				maxIdxCount=R.getInt(2);
+			}
+			query="DROP TABLE tmp_allcs;";
+			S.executeUpdate(query);
+			
+			// STEP 4 -- join all c_<client_id> tables into a table with a serial column, and c_<client_id> columns each of them with the indices for each client_id 
+			//query="SELECT c_34.serial,c_34.asu_id AS c_34,c_32.asu_id AS c_32,c_36.asu_id AS c_36 FROM c_34 LEFT JOIN c_32 ON (c_34.serial=c_32.serial) LEFT JOIN c_36 ON (c_34.serial=c_36.serial);";
+			String selectStr="c_"+clidMaxIdxCount+".serial, c_"+clidMaxIdxCount+"."+idxColumn+" AS c_"+clidMaxIdxCount;
+			String fromStr="c_"+clidMaxIdxCount;
+			for (i=0;i<clids.length;i++) {
+				if (clids[i]!=clidMaxIdxCount){
+					selectStr+=", c_"+clids[i]+"."+idxColumn+" AS c_"+clids[i];
+					fromStr+=" LEFT JOIN c_"+clids[i]+" ON (c_"+clidMaxIdxCount+".serial=c_"+clids[i]+".serial)";
+				}
+			} 
+			query="CREATE TEMPORARY TABLE indices_matrix "+"SELECT "+selectStr+" FROM "+fromStr+";";
+			S.executeUpdate(query);
+			
+			// STEP 5 -- put the table into a 2-dimensional array and return it
+			indMatrix = new int[maxIdxCount][clids.length];
+			query="SELECT * FROM indices_matrix";
+			R=S.executeQuery(query);
+			i=0;
+			while (R.next()) {
+				for (int j=0;j<clids.length;j++){
+					indMatrix[i][j]=R.getInt(j+1);
+				}
+				i++;
+			}
+			R.close();
+			S.close();
+		}
+		catch (SQLException e){
+			System.out.println("SQLException: " + e.getMessage());
+			System.out.println("SQLState:     " + e.getSQLState());
+			System.out.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
+			System.exit(2);									
+		}
+		return indMatrix;
+	}
+
+	
 }
+
