@@ -377,7 +377,7 @@ public class ClusterConnection {
 			i=0;
 			while (R.next()) {
 				for (int j=0;j<clids.length;j++){
-					indMatrix[i][j]=R.getInt(j+1);
+					indMatrix[i][j]=R.getInt(j+2);
 				}
 				i++;
 			}
