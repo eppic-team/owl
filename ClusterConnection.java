@@ -109,6 +109,9 @@ public class ClusterConnection {
 	public void setHost(String host) {
 		this.host=host;
 		try {
+			//Closing previous connection is essential
+			//If we don't close it a lot of connections stay open after using a ClusterConnection object for a while
+			this.nCon.close(); 
 			this.nCon=DriverManager.getConnection(url+host+"/"+db,user,password);
 		}
 		catch (SQLException e){
