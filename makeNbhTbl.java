@@ -12,7 +12,7 @@
 
 import java.sql.*;
 
-public class makenbhtbl {
+public class makeNbhTbl {
 
 /* -------------------------------- constants ------------------------------------------*/
 	
@@ -356,7 +356,7 @@ public class makenbhtbl {
 		
 		// read command line parameters		
 		if ( args.length != 2) {
-		    System.err.println("Usage: makenbhtbl [start_index] [end_index]");
+		    System.err.println("Usage: makeNbhTbl [start_index] [end_index]");
 		    System.exit(1);
 		} else {
 		
@@ -403,4 +403,4 @@ public class makenbhtbl {
 		
 	} // end of main
 
-} // end of class makenbhtbl
+} // end of class makeNbhTbl

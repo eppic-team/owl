@@ -1,6 +1,6 @@
-package tools;
 import java.sql.*;
 
+import tools.ClusterConnection;
 
 public class testClusterConnection {
 

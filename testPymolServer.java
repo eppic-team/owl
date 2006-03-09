@@ -1,5 +1,3 @@
-package tools;
-
 import org.apache.xmlrpc.*;
 import java.net.*;
 import java.util.*;
@@ -7,7 +5,7 @@ import java.io.*;
 
 /**
  * Package:		tools
- * Class: 		pymolServerTest
+ * Class: 		testPymolServer
  * Author:		Henning Stehr, stehr@molgen.mpg.de
  * Date:		2/Feb/2006
  * 
@@ -17,7 +15,7 @@ import java.io.*;
  * Changelog:
  * 06/02/02 first created by HS
  */
-public class pymolServerTest {
+public class testPymolServer {
 
 	/**
 	 * Send the first command line parameter to the pymol server.
