@@ -74,10 +74,11 @@ public class PymolServerOutputStream extends OutputStream {
 		if(commandBufferPtr >= commandBufferCap) {
 			// get more space
 			byte[] newBuffer = new byte[commandBufferCap + BUFFERCAPACITYINCREASE];
-			for(int i = 0; i < commandBufferCap; i++) {
+			for(int i = 0; i < commandBufferPtr; i++) {
 				newBuffer[i] = commandBuffer[i];
 			}
 			commandBuffer = newBuffer;
+			commandBufferCap += BUFFERCAPACITYINCREASE;
 		}
 		commandBuffer[commandBufferPtr++] = (byte) arg0;
 	}
