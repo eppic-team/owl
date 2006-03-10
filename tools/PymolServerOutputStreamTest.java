@@ -14,7 +14,7 @@ public class PymolServerOutputStreamTest extends TestCase {
 	 */
 	public void testPymolServerOutputStream() {
 		
-			final String	serverUrl = 	"http://gelb:9124";
+			final String	serverUrl = 	"http://gelb:9123";
 			final int		from	   =	   10,
 							to		   =	 1060,
 							inc		   = 	   10;
