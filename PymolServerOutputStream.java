@@ -39,6 +39,7 @@ public class PymolServerOutputStream extends OutputStream {
 	static final String 	DEFAULTXMLRPCCOMMAND	= "do";
 	static final int		INITIALBUFFERCAPACITY   = 255;
 	static final int		BUFFERCAPACITYINCREASE  = 255;
+	static final int        PYMOLCOMMANDLENGTHLIMIT = 1060;
 	
 	byte[]			commandBuffer;
 	int				commandBufferPtr,  // current load
@@ -56,7 +57,6 @@ public class PymolServerOutputStream extends OutputStream {
 		commandBufferPtr = 0;
 		
 		try {
-		
 		// initialize connection to server
 	    this.client = new XmlRpcClient(url);
 		} catch(MalformedURLException e) {
@@ -89,15 +89,18 @@ public class PymolServerOutputStream extends OutputStream {
 	 */ 
 	@Override
 	public void flush() throws IOException {
+		// prevent overlong commands from being sent to server
+		if(commandBufferPtr > PYMOLCOMMANDLENGTHLIMIT + 1) {
+			throw new IOException();
+		}
 		// prepare parameter vector
-	    Vector<String> myvector = new Vector<String>();
-	    myvector.add(new String(this.commandBuffer, 0, commandBufferPtr).trim());
+		Vector<String> myvector = new Vector<String>();
+	    String commandString = new String(this.commandBuffer, 0, commandBufferPtr).trim();
+	    myvector.add(commandString);
 	    // reset command buffer
 	    this.commandBuffer = new byte[INITIALBUFFERCAPACITY];
 	    this.commandBufferCap = INITIALBUFFERCAPACITY;
 	    this.commandBufferPtr = 0;
-	    // DEBUG: view command to be sent
-	    // System.out.println("Flush, current buffer=" + myvector);
 	    // submit command
 	    try {
 	    	this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
@@ -113,7 +116,7 @@ public class PymolServerOutputStream extends OutputStream {
 	public static void main(String[] args) {
 
 		String	serverUrl = 	"http://gelb:9123";
-		String  command0 =       "delete hello";
+		String  command0 =      "delete hello";
 		String	command1 =		"load /project/StruPPi/PDBs/mainPDB/1RX4.pdb, hello";
 		String	command2 =		"show cartoon";
 		String	command3 =		"select hello2, resi 12";
