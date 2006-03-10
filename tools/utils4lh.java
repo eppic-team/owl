@@ -8,9 +8,9 @@ public class utils4lh {
 
     private utils4lh() {}
 
-    public static LinkedHashMap reverse(LinkedHashMap lhm) {
+    public static LinkedHashMap<?,?> reverse(LinkedHashMap<?,?> lhm) {
 
-	LinkedHashMap rvLhm = new LinkedHashMap();
+	LinkedHashMap<Object,Object> rvLhm = new LinkedHashMap<Object, Object>();
 	
 	Object[] a = lhm.keySet().toArray();
 	
@@ -18,15 +18,14 @@ public class utils4lh {
 	    rvLhm.put(a[i], lhm.get(a[i]));
 	    
 	}
-	
 	return rvLhm;
     
     }
 
-    public static LinkedHashMap putKeyFirst(LinkedHashMap lhm, Object key) {
+    public static LinkedHashMap<?,?> putKeyFirst(LinkedHashMap<?,?> lhm, Object key) {
 	
-        LinkedHashMap oldLhm = (LinkedHashMap)lhm.clone();
-	LinkedHashMap newLhm = new LinkedHashMap();
+    LinkedHashMap<?,?> oldLhm = (LinkedHashMap<?, ?>) lhm.clone();
+	LinkedHashMap<Object,Object> newLhm = new LinkedHashMap<Object,Object>();
 
 	newLhm.put(key, oldLhm.get(key));
 	oldLhm.remove(key);
@@ -36,12 +35,12 @@ public class utils4lh {
 
     }
 
-    public static LinkedHashSet linkedHashSetDiff(LinkedHashSet a, LinkedHashSet b) {
+    public static LinkedHashSet<?> linkedHashSetDiff(LinkedHashSet<?> a, LinkedHashSet<?> b) {
 
 	Object obj;
-	LinkedHashSet a_b = new LinkedHashSet();
-	LinkedHashSet ab = new LinkedHashSet();
-	LinkedHashSet all = new LinkedHashSet();
+	LinkedHashSet<Object> a_b = new LinkedHashSet<Object>();
+	LinkedHashSet<Object> ab = new LinkedHashSet<Object>();
+	LinkedHashSet<Object> all = new LinkedHashSet<Object>();
 
 	for (Iterator aItr = a.iterator(); aItr.hasNext();) {
 	    obj = aItr.next();
