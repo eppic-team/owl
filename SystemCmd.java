@@ -25,6 +25,13 @@ public class SystemCmd {
 	return output;
 
     }
+    
+    public static String exec(String cmd) {
+    	String[] cmdarr={cmd};
+    	String output=exec(cmdarr);
+    	return output;
+    }
+
 
 }
  
