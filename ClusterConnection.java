@@ -46,10 +46,10 @@ public class ClusterConnection {
 			this.mCon = DriverManager.getConnection(url+masterHost+"/"+masterDb,user,password);
 		}
 		catch(SQLException e){
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
-    	    System.out.println("VendorError:  " + e.getErrorCode());
-			System.out.println("Couldn't get connection to master host "+masterHost+", db="+masterDb+", exiting.");
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+			System.err.println("Couldn't get connection to master host "+masterHost+", db="+masterDb+", exiting.");
 			System.exit(2);			
 		}
 	}
@@ -60,8 +60,8 @@ public class ClusterConnection {
 			Class.forName("com.mysql.jdbc.Driver");
 		}
 		catch(Exception e) {
-			System.out.println(e.getMessage());
-			System.out.println("An exception occurred while loading the mysql jdbc driver, exiting.");
+			System.err.println(e.getMessage());
+			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
 			System.exit(1);
 		}
 	}
@@ -71,9 +71,9 @@ public class ClusterConnection {
 			this.mCon.close();
 		}
 		catch(SQLException e) {
-			System.out.println("Couldn't close database connections for master: "+masterHost+" and node: "+this.host+", exiting.");
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't close database connections for master: "+masterHost+" and node: "+this.host+", exiting.");
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
 			System.exit(3);						
 		}
 	}
@@ -94,9 +94,9 @@ public class ClusterConnection {
 			R.close();
 		}
 		catch(SQLException e) {
-			System.out.println("Couldn't get the host name for idx "+idx+", exiting");
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get the host name for idx "+idx+", exiting");
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
 			System.exit(3);									
 		}
 		return host;
@@ -115,9 +115,9 @@ public class ClusterConnection {
 			this.nCon=DriverManager.getConnection(url+host+"/"+db,user,password);
 		}
 		catch (SQLException e){
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
-			System.out.println("Couldn't get connection to node "+host+", exiting.");
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get connection to node "+host+", exiting.");
 			System.exit(2);						
 		}
 	}
@@ -131,9 +131,9 @@ public class ClusterConnection {
 			S=this.nCon.createStatement();
 		}
 		catch (SQLException e){
-			System.out.println("SQLException: " + e.getMessage());
-			System.out.println("SQLState:     " + e.getSQLState());
-			System.out.println("Couldn't create statement for the node connection, idx= "+idx+", exiting.");
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't create statement for the node connection, idx= "+idx+", exiting.");
 			System.exit(2);									
 		}
 		return S;
@@ -184,9 +184,9 @@ public class ClusterConnection {
 			S=this.mCon.createStatement();
 		}
 		catch (SQLException e){
-			System.out.println("SQLException: " + e.getMessage());
-			System.out.println("SQLState:     " + e.getSQLState());
-			System.out.println("Couldn't create statement for the master connection, exiting.");
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't create statement for the master connection, exiting.");
 			System.exit(2);									
 		}
 		return S;
@@ -204,9 +204,9 @@ public class ClusterConnection {
 			//S.close(); // apparently it doesn't work if we close the Statement!! Don't know why!
 		}
 		catch (SQLException e){
-			System.out.println("SQLException: " + e.getMessage());
-			System.out.println("SQLState:     " + e.getSQLState());
-			System.out.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
 			System.exit(2);									
 		}
 		return R;
@@ -229,7 +229,7 @@ public class ClusterConnection {
 				countCids=R.getInt(1);
 			}
 			if (countCids!=1){
-				System.out.println("Error! the number of client_id for idx "+idxColumn+"= "+idx+" is bigger than 1. Check what's wrong! Exiting now.");
+				System.err.println("Error! the number of client_id for idx "+idxColumn+"= "+idx+" is bigger than 1. Check what's wrong! Exiting now.");
 				System.exit(2);
 			}
 			else {
@@ -243,9 +243,9 @@ public class ClusterConnection {
 			R.close();
 		}
 		catch(SQLException e) {
-			System.out.println("Couldn't get the host id for idx "+idxColumn+"="+idx+", exiting");
-    	    System.out.println("SQLException: " + e.getMessage());
-    	    System.out.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get the host id for idx "+idxColumn+"="+idx+", exiting");
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
 			System.exit(3);									
 		}
 		return hostId;
@@ -262,9 +262,9 @@ public class ClusterConnection {
 			S.close();
 		} 
 		catch (SQLException E) {
-			System.out.println("SQLException: " + E.getMessage());
-			System.out.println("SQLState:     " + E.getSQLState());
-			System.out.println("Couldn't insert new "+this.idxColumn+" in master table "+this.getMasterTable()+". The client_id for it was "+clientId+". Exiting.");
+			System.err.println("SQLException: " + E.getMessage());
+			System.err.println("SQLState:     " + E.getSQLState());
+			System.err.println("Couldn't insert new "+this.idxColumn+" in master table "+this.getMasterTable()+". The client_id for it was "+clientId+". Exiting.");
 			System.exit(2);
 		} 
 	}
@@ -293,9 +293,9 @@ public class ClusterConnection {
 			S.close();
 		} 
 		catch (SQLException E) {
-			System.out.println("Couldn't get the last insert id for key type "+this.idxColumn+" from table "+this.keyTable+". Exiting");
-			System.out.println("SQLException: " + E.getMessage());
-			System.out.println("SQLState:     " + E.getSQLState());
+			System.err.println("Couldn't get the last insert id for key type "+this.idxColumn+" from table "+this.keyTable+". Exiting");
+			System.err.println("SQLException: " + E.getMessage());
+			System.err.println("SQLState:     " + E.getSQLState());
 			System.exit(3);
 		} // end try/catch connection 
 		return lastIdx;
@@ -388,9 +388,9 @@ public class ClusterConnection {
 			S.close();
 		}
 		catch (SQLException e){
-			System.out.println("SQLException: " + e.getMessage());
-			System.out.println("SQLState:     " + e.getSQLState());
-			System.out.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
 			System.exit(2);									
 		}
 		return indMatrix;
