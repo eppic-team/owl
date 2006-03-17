@@ -124,7 +124,7 @@ public class ClusterConnection {
 		catch (SQLException e){
     	    System.err.println("SQLException: " + e.getMessage());
     	    System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get connection to node "+host+", exiting.");
+			System.err.println("Couldn't get connection to node "+host+", database "+db+", exiting.");
 			System.exit(2);						
 		}
 	}
@@ -262,7 +262,8 @@ public class ClusterConnection {
 				countCids=R.getInt(1);
 			}
 			if (countCids!=1){
-				System.err.println("Error! the number of client_id for idx "+idxColumn+"= "+idx+" is bigger than 1. Check what's wrong! Exiting now.");
+				System.err.println("Error! the number of client_id for idx "+idxColumn+"= "+idx+" is 0 or bigger than 1." +
+						" The values where taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
 				System.exit(2);
 			}
 			else {
