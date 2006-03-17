@@ -5,15 +5,12 @@ import java.sql.*;
  * ClusterConnection class to wrap the master/node mysql servers so that is transparent to other programs
  * @author Jose Duarte
  */
-//TODO Maybe we should always pass the key for CreateStatement and the constructor and drop the 2 methods without key.
-//TODO I think that should make things easier. To have to remember to be switching keys is not ideal, I'd rather pass it always as a parameter in CreateStatement
-//TODO The only problem with this approach is when constructing the object the key must be passed. That shouldn't be a major problem anyway. Revise all this
 
 public class ClusterConnection {
 
-	private final String url= "jdbc:mysql://";
-	private final String masterDb="key_master"; 
-	private final String masterHost="white";
+	private final String URL= "jdbc:mysql://";
+	private String MASTERDB="key_master"; 
+	private final String MASTERHOST="white";
 	private Connection nCon;
 	private Connection mCon;
 	public String keyTable;
@@ -23,16 +20,27 @@ public class ClusterConnection {
 	public String db;
 	private String user;
 	private String password;
-	
-	//create a ClusterConnection passing a key. Then we need to call createNConStatement only passing the idx as argument.
+
+	/**
+	 * Create a ClusterConnection passing a key. 
+	 * @param db The database name
+	 * @param key The key name: if asu_id is the ids from which my key is based on, then the key name is "asu"
+	 * @param user The user name for connection to both master and nodes
+	 * @param password The password for connection to both master and nodes
+	 */
 	public ClusterConnection (String db,String key, String user,String password) {
 		new ClusterConnection(db,user,password);
 		this.key=key; //can't use the setKey method here before we've got the db field initialized
 		setIdxColumn();
-		setMasterTable(db);
+		setKeyTable(db);
 	}
 
-	// create a cluster connection with an empty key field. In this case we need to call createNConStatement passing the key as argument 
+	/**
+	 * Create a ClusterConnection without passing a key. The key will be set later when we call createStatement(key,idx) 
+	 * @param db The database name
+	 * @param user The user name for connection to both master and nodes
+	 * @param password The password for connection to both master and nodes
+	 */ 
 	public ClusterConnection (String db, String user,String password) { 
 		loadMySQLDriver();
 		setDb(db);
@@ -42,18 +50,17 @@ public class ClusterConnection {
 			// For nCon we create a connection to the master too. 
 			// This is just a place holder because the actual node connection is not created until we create the statement
 			// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
-			this.nCon = DriverManager.getConnection(url+masterHost+"/"+masterDb,user,password);
-			this.mCon = DriverManager.getConnection(url+masterHost+"/"+masterDb,user,password);
+			this.nCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
+			this.mCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
 		}
 		catch(SQLException e){
     	    System.err.println("SQLException: " + e.getMessage());
     	    System.err.println("SQLState:     " + e.getSQLState());
     	    System.err.println("VendorError:  " + e.getErrorCode());
-			System.err.println("Couldn't get connection to master host "+masterHost+", db="+masterDb+", exiting.");
+			System.err.println("Couldn't get connection to master host "+MASTERHOST+", db="+MASTERDB+", exiting.");
 			System.exit(2);			
 		}
 	}
-
 	
 	public void loadMySQLDriver() {
 		try {
@@ -71,7 +78,7 @@ public class ClusterConnection {
 			this.mCon.close();
 		}
 		catch(SQLException e) {
-			System.err.println("Couldn't close database connections for master: "+masterHost+" and node: "+this.host+", exiting.");
+			System.err.println("Couldn't close database connections for master: "+MASTERHOST+" and node: "+this.host+", exiting.");
     	    System.err.println("SQLException: " + e.getMessage());
     	    System.err.println("SQLState:     " + e.getSQLState());
 			System.exit(3);						
@@ -112,7 +119,7 @@ public class ClusterConnection {
 			//Closing previous connection is essential
 			//If we don't close it a lot of connections stay open after using a ClusterConnection object for a while
 			this.nCon.close(); 
-			this.nCon=DriverManager.getConnection(url+host+"/"+db,user,password);
+			this.nCon=DriverManager.getConnection(URL+host+"/"+db,user,password);
 		}
 		catch (SQLException e){
     	    System.err.println("SQLException: " + e.getMessage());
@@ -121,9 +128,14 @@ public class ClusterConnection {
 			System.exit(2);						
 		}
 	}
-	
-	public Statement createStatement(int idx) { // to use when the field "key" is already set
-		setMasterTable();
+	/**
+	 * This method is strictly private. We shouldn't call this from another class as a key might not be set when we call it
+	 * and thus we can't get the client_id from the master key table. Only to be called from createStatement(key,idx)
+	 * @param idx The value of the id for a certain key already set
+	 * @return
+	 */
+	private Statement createStatement(int idx) { // to use when the field "key" is already set
+		setKeyTable();
 		setIdxColumn();
 		Statement S=null;
 		this.setHostFromIdx(idx);
@@ -138,21 +150,26 @@ public class ClusterConnection {
 		}
 		return S;
 	}
-	
+	/**
+	 * This method is used to create a statement passing the key and idx. It will create a connection the the right node and return a Statement for that connection
+	 * @param key The name of the key, i.e. something like "asu" or "graph"
+	 * @param idx The value of the id for that key
+	 * @return The Statement with a connection to the node that contains idx for key
+	 */
 	public Statement createStatement(String key,int idx) {
 		setKey(key);
 		return createStatement(idx);
 	}
 	
-	public void setMasterTable(String db) { // to set masterTable field in constructor (i.e. first time)
+	public void setKeyTable(String db) { // to set masterTable field in constructor (i.e. first time)
 		this.keyTable=db+"_"+this.key+"_list_master";
 	}
 	
-	public void setMasterTable() { // to set masterTable field when db is already set 
+	public void setKeyTable() { // to set masterTable field when db is already set 
 		this.keyTable=this.db+"_"+this.key+"_list_master";
 	}
 	
-	public String getMasterTable() {
+	public String getKeyTable() {
 		return this.keyTable;
 	}
 	
@@ -174,7 +191,7 @@ public class ClusterConnection {
 	
 	public void setKey(String key){
 		this.key=key;
-		setMasterTable();
+		setKeyTable();
 		setIdxColumn();
 	}
 
@@ -206,7 +223,7 @@ public class ClusterConnection {
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
 			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
+			System.err.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
 		return R;
@@ -264,7 +281,7 @@ public class ClusterConnection {
 		catch (SQLException E) {
 			System.err.println("SQLException: " + E.getMessage());
 			System.err.println("SQLState:     " + E.getSQLState());
-			System.err.println("Couldn't insert new "+this.idxColumn+" in master table "+this.getMasterTable()+". The client_id for it was "+clientId+". Exiting.");
+			System.err.println("Couldn't insert new "+this.idxColumn+" in master table "+this.getKeyTable()+". The client_id for it was "+clientId+". Exiting.");
 			System.exit(2);
 		} 
 	}
@@ -390,7 +407,7 @@ public class ClusterConnection {
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
 			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+masterDb+" database in "+masterHost+", exiting.");
+			System.err.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
 		return indMatrix;
