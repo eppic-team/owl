@@ -23,10 +23,10 @@ public class ClusterConnection {
 
 	/**
 	 * Create a ClusterConnection passing a key. 
-	 * @param db The database name
-	 * @param key The key name: if asu_id is the ids from which my key is based on, then the key name is "asu"
-	 * @param user The user name for connection to both master and nodes
-	 * @param password The password for connection to both master and nodes
+	 * @param db the database name
+	 * @param key the key name: if asu_id is the ids from which my key is based on, then the key name is "asu"
+	 * @param user the user name for connection to both master and nodes
+	 * @param password the password for connection to both master and nodes
 	 */
 	public ClusterConnection (String db,String key, String user,String password) {
 		new ClusterConnection(db,user,password);
@@ -37,9 +37,9 @@ public class ClusterConnection {
 
 	/**
 	 * Create a ClusterConnection without passing a key. The key will be set later when we call createStatement(key,idx) 
-	 * @param db The database name
-	 * @param user The user name for connection to both master and nodes
-	 * @param password The password for connection to both master and nodes
+	 * @param db the database name
+	 * @param user the user name for connection to both master and nodes
+	 * @param password the password for connection to both master and nodes
 	 */ 
 	public ClusterConnection (String db, String user,String password) { 
 		loadMySQLDriver();
@@ -128,11 +128,12 @@ public class ClusterConnection {
 			System.exit(2);						
 		}
 	}
+	
 	/**
 	 * This method is strictly private. We shouldn't call this from another class as a key might not be set when we call it
 	 * and thus we can't get the client_id from the master key table. Only to be called from createStatement(key,idx)
-	 * @param idx The value of the id for a certain key already set
-	 * @return
+	 * @param idx the value of the id for a certain key already set
+	 * @return a Stament object with a connection to the node that contains idx for key
 	 */
 	private Statement createStatement(int idx) { // to use when the field "key" is already set
 		setKeyTable();
@@ -150,22 +151,32 @@ public class ClusterConnection {
 		}
 		return S;
 	}
+	
 	/**
-	 * This method is used to create a statement passing the key and idx. It will create a connection the the right node and return a Statement for that connection
-	 * @param key The name of the key, i.e. something like "asu" or "graph"
-	 * @param idx The value of the id for that key
-	 * @return The Statement with a connection to the node that contains idx for key
+	 * This method is used to create a statement passing the key and idx. It will create a connection the the right node 
+	 * and return a Statement for that connection
+	 * @param idx the key name
+	 * @param idx the id value for that key
+	 * @return a Statement object with a connection to the node that contains idx for key
 	 */
 	public Statement createStatement(String key,int idx) {
 		setKey(key);
 		return createStatement(idx);
 	}
 	
-	public void setKeyTable(String db) { // to set masterTable field in constructor (i.e. first time)
+	/**
+	 * To set keyTable field in constructor (i.e. first time)
+	 * @param db the database name
+	 */
+	public void setKeyTable(String db) { 
 		this.keyTable=db+"_"+this.key+"_list_master";
 	}
 	
-	public void setKeyTable() { // to set masterTable field when db is already set 
+	/**
+	 * To se the keyTable field when db is already set
+	 *
+	 */
+	public void setKeyTable() {  
 		this.keyTable=this.db+"_"+this.key+"_list_master";
 	}
 	
@@ -229,7 +240,12 @@ public class ClusterConnection {
 		return R;
 	}
 
-	//	 to get client_id for a certain idx and key
+	/**
+	 * To get client_id for a certain idx and key
+	 * @param key the key name
+	 * @param idx the id value for that key
+	 * @return the client_id for node that has the data for the idx for that key
+	 */
 	//TODO will need to change the query. In general this method would return more than 1 client_id if the idx is not unique
 	public int getHostId4Idx (String key,int idx) { 
 		int hostId=0;
