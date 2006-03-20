@@ -239,7 +239,31 @@ public class ClusterConnection {
 		}
 		return R;
 	}
-
+	/**
+	 * To get all ids and clients_names pairs for a certain key. Useful when need to submit to all hosts using qsub -q
+	 * @param key the name of the key
+	 * @return ResultSet with the pairs: id, client_name
+	 */
+	public ResultSet getAllIdxAndClients (String key){
+		this.setKey(key);
+		String query;
+		Statement S;
+		ResultSet R = null;
+		try {
+			query="SELECT a."+idxColumn+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
+			S=this.mCon.createStatement();
+			R=S.executeQuery(query);
+			//S.close(); // apparently it doesn't work if we close the Statement!! Don't know why!
+		}
+		catch (SQLException e){
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get all indices/client_names pairs from table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
+			System.exit(2);									
+		}
+		return R;
+	}
+	
 	/**
 	 * To get client_id for a certain idx and key
 	 * @param key the key name
