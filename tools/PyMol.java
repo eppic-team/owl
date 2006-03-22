@@ -18,10 +18,16 @@ import java.text.*;
  * and load them on-the-fly.
  *  
  * Notes: 
+ * - variable: this boolean parameter appears in many methods. The idea is that if
+ * 	 the objectName provided is really a PyMol object or selection, then it must be
+ * 	 quoted. However, it may be just a string variable, so it must be evaluated.In 
+ * 	 that case parameter variable should be true.
  * - This is not a full PyMol API. Existing methods wrap basic pymol commands
  * 	in a simple, rather stupid way to facilitate contact graph visualization. 
  * 
  * Changelog:
+ * 22/03/06 modified by IF (objectNameQuotes class variable replaced by 
+ * 			method parameter variable) 
  * 20/03/06 first created by IF
  */
 public class PyMol {
@@ -30,12 +36,9 @@ public class PyMol {
 	// attrs: a HashMap with keys the PyMol state variables allowed to be set
 	//		  by the set class. Values are integers (could be used in a "switch")
 	// DF: used to format decimal numbers so commands issued are readable
-	// objectNameQuotes: used to enable (disable) the use of double quotes for
-	//					 strings in PyMol commands (check list related methods)
     private PrintWriter Out = null;
     private HashMap<String, Integer> attrs = new HashMap<String, Integer>();
     private DecimalFormat DF = new DecimalFormat("#0.000");
-    private boolean objectNameQuotes = true;
 
     // constructor
     public PyMol(PrintWriter out) {
@@ -245,8 +248,8 @@ public class PyMol {
 		String nodeName = "n."+cid+"."+num;
 		String nodeSel = selectNode(cid, num, msdsd, true);
 		
-		Out.println("cmd.create(\""+nodeName+"\", \""+nodeSel+"\"");
-		Out.println("cmd.show(\"sphere\", \""+nodeName+"\"");
+		Out.println("cmd.create(\""+nodeName+"\", \""+nodeSel+"\")");
+		Out.println("cmd.show(\"sphere\", \""+nodeName+"\")");
 	
 		return nodeName;
 
@@ -267,7 +270,7 @@ public class PyMol {
 		String iNodeSel = selectNode(i_cid, i_num, msdsd, true);
 		String jNodeSel = selectNode(j_cid, j_num, msdsd, true);
 	
-		Out.println("cmd.distance(\""+edgeName+"\", \""+iNodeSel+"\", \""+jNodeSel+"\"");
+		Out.println("cmd.distance(\""+edgeName+"\", \""+iNodeSel+"\", \""+jNodeSel+"\")");
 		Out.println("cmd.hide(\"labels\")");
 	
 		return edgeName;
@@ -331,10 +334,9 @@ public class PyMol {
     /**
      * deletes an object or selection
      */    
-    public void delete(String objectName) {
+    public void delete(String objectName, boolean variable) {
 	
-		Out.println("cmd.delete("+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.delete("+((!variable)?"\""+objectName+"\"":objectName)+")");
 
     }
     
@@ -361,20 +363,18 @@ public class PyMol {
     /**
      * turns on atom/bond representation specified by what for an object or selection
      */ 
-    public void showWhat(String what, String objectName) {
+    public void showWhat(String what, String objectName, boolean variable) {
 
-		Out.println("cmd.show(\""+what+"\", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.show(\""+what+"\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 		
     }
 
     /**
      * turns on atom/bond representation for all bonds for an object or selection
      */ 
-    public void show(String objectName) {
+    public void show(String objectName, boolean variable) {
 	
-		Out.println("cmd.show(\"everything\", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.show(\"everything\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 
     }
 
@@ -402,20 +402,18 @@ public class PyMol {
     /**
      * turns off atom/bond representation specified by what for an object or selection
      */ 
-    public void hideWhat(String what, String objectName) {
+    public void hideWhat(String what, String objectName, boolean variable) {
 
-		Out.println("cmd.hide(\""+what+"\", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.hide(\""+what+"\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 		
     }
     
     /**
      * turns off atom/bond representation for all bonds for an object or selection
      */ 
-    public void hide(String objectName) {
+    public void hide(String objectName, boolean variable) {
 	
-		Out.println("cmd.hide(\"everything\", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.hide(\"everything\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 
     }
 
@@ -505,15 +503,14 @@ public class PyMol {
      * Notes:
      * - If the state variable is not defined in the attrs hashMap, then set returns -1 else 0.
      */   
-    public int set(String attribute, double value, String objectName) {
+    public int set(String attribute, double value, String objectName, boolean variable) {
 
 		Integer key = null;
 		key = attrs.get(attribute);
 	
 		if (key == null) { return -1; }
 	
-		Out.println("cmd.set(\""+attribute+"\", "+DF.format(value)+", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.set(\""+attribute+"\", "+DF.format(value)+", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 	
 		return 0;
 		
@@ -522,20 +519,18 @@ public class PyMol {
     /**
      * sets the color for a node
      */  
-    public void setNodeColor(String color, String nodeName) {
+    public void setNodeColor(String color, String nodeName, boolean variable) {
 
-		Out.println("cmd.set(\"sphere_color\", \""+color+"\", "+(objectNameQuotes?"\""+nodeName+"\"":nodeName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.set(\"sphere_color\", \""+color+"\", "+((!variable)?"\""+nodeName+"\"":nodeName)+")");
 
     }
     
     /**
      * sets the color for an object or selection
      */ 
-    public void setColor(String color, String objectName) {
+    public void setColor(String color, String objectName, boolean variable) {
 
-		Out.println("cmd.color(\""+color+"\", "+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.color(\""+color+"\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 
     }
 
@@ -555,6 +550,15 @@ public class PyMol {
 	
 		Out.println("cmd.set_color(\""+colorName+"\", ["+DF.format(rgb[0])+", "+DF.format(rgb[1])+", "+DF.format(rgb[2])+"])");
 
+    }
+    
+    /**
+     * create/set value for a string
+     */  
+    public void setString(String name, String value) {
+
+    	Out.println(name+" = "+value);
+	
     }
     
     /**
@@ -585,17 +589,15 @@ public class PyMol {
      *		PyMol pml = new PyMol(out);
      *		...
      *		pml.iterateList("edges", "edge");
-     *		pml.setColor("red", "edge");
+     *		pml.setColor("red", edge, true);
      * - In the previous example, the "edge" parameter in the setColor command
      *   is the name of tha variable holding the actual object. Therefore, it must
-     *   be evaluated and so not quoted. This is why this method disables the use 
-     *   of quotes. setColor, after streaming the command, will reset the objectNameQuotes 
-     *   again back to true.
+     *   be evaluated and so not quoted. This is why setColor is called with true
+     *   value for the argument variable
      */
     public void iterateList(String listName, String item) {
 
 		Out.print("for "+item+" in "+listName+":");
-		setObjectNameQuotes(false);
 	
     }
     
@@ -693,10 +695,9 @@ public class PyMol {
     /**
      * zooms on an object or selection
      */     
-    public void zoom(String objectName) {
+    public void zoom(String objectName, boolean variable) {
 	
-		Out.println("cmd.zoom("+(objectNameQuotes?"\""+objectName+"\"":objectName)+")");
-		if (!objectNameQuotes) { setObjectNameQuotes(true); }
+		Out.println("cmd.zoom("+((!variable)?"\""+objectName+"\"":objectName)+")");
 
     }
     
@@ -726,18 +727,6 @@ public class PyMol {
 		Out.println("cmd.set(\"cartoon_fancy_helices\", 1)");
 		Out.println("cmd.hide(\"spheres\", \"hetatm\")");
 
-    }
-
-    /**
-     * enables (disables) the use of double quotes for strings in PyMol commands
-     * 
-     * Notes:
-     * - check list related methods
-     */
-    private void setObjectNameQuotes(boolean value) {
-	
-		this.objectNameQuotes = value;
-	
     }
 
 }

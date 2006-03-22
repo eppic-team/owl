@@ -235,19 +235,20 @@ public class Graph2Pml {
 		pml.createColor("light_grey", new double[] {0.8, 0.8, 0.8});
 	
 		if (draw[3]) { 
-		    pml.showWhat("surface", molObjName);
-		    pml.set("transparency", surfTransp, molObjName);
+		    pml.showWhat("surface", molObjName, false);
+		    pml.set("transparency", surfTransp, molObjName, false);
 		}
 	
 		chains();
-	
+		
 		if (draw[2]) { colorSpecialRes(); }
+
+		pml.zoom(molObjName, false);
 	
-		pml.zoom("");
-	
+		
 		if (draw[0]) {
 		    createNodes();
-	
+		    
 		    if (nodeSizeMethod.equals("uniform")) {
 		    	setNodesSize("nodes");
 		    } else {
@@ -265,50 +266,54 @@ public class Graph2Pml {
 		    } else {
 		    	setNodesTransp();
 		    }
+		    
 		}
 	
-		pml.zoom("");
-	
+		pml.zoom(molObjName, false);
+		
 		if (draw[1]) {
 	
 		    if (cgoEdge) {
 		    
-			createCgoEdges();
+		    	createCgoEdges();
 	
 		    } else {
 			
-			createEdges();
-			
-			/*
-			if (edgeSizeMethod.equals("uniform")) {
-			    setEdgesSize("edges");
-			} else {
-			    setEdgesSize();
-			}
-			*/
-	
-			if (edgeColorMethod.equals("uniform")) {
-			    setEdgesColor("edges");
-			} else {
-			    //setEdgesColor();
-			}
-	
-			/*
-			if (directed) {
-			    setGapDir();
-			} else {
-			    if (edgeGapCondition.equals("")) {
-				setEdgesGap("edges");
-			    } else {
-				setEdgesGap();
-			    }
-			}
-			*/
+				createEdges();
+				
+				//had here comment
+				/*
+				if (edgeSizeMethod.equals("uniform")) {
+				    setEdgesSize("edges");
+				} else {
+				    setEdgesSize();
+				}
+				*/		
+				
+				if (edgeColorMethod.equals("uniform")) {
+				    setEdgesColor("edges");
+				} else {
+				    //setEdgesColor();
+				}
+				
+				//had here comment
+				/*
+				if (directed) {
+				    setGapDir();
+				} else {
+				    if (edgeGapCondition.equals("")) {
+					setEdgesGap("edges");
+				    } else {
+					setEdgesGap();
+				    }
+				}
+				*/
+				
 		    }
 	
 		}
-	
-		pml.zoom("");
+		
+		pml.zoom(molObjName, false);
   
     } // end of exportPML
 
@@ -329,7 +334,7 @@ public class Graph2Pml {
 				numChains++;
 				pml.createColor("color_cid"+cid, colors[numChains%colors.length]);
 				chainSel = pml.selectChain(cid, msdsd);
-				pml.setColor("color_cid"+cid, "\""+chainSel+"\"");
+				pml.setColor("color_cid"+cid, chainSel, false);
 				graphChainSet = graphChainSet + chainSel+ " or ";
 				pml.initList("edges_cid"+cid);
 		    }
@@ -344,7 +349,7 @@ public class Graph2Pml {
 		} // end catch
 	
 		pml.selPml("restMol", molObjName+" and not ("+graphChainSet.substring(0,graphChainSet.length()-4)+")", false);
-		pml.hide("restMol");
+		pml.hide("restMol", false);
 
     }
 
@@ -376,7 +381,7 @@ public class Graph2Pml {
 		} // end catch
 	
 		pml.selPml("specialRes", resSel.substring(0,resSel.length()-4), false);
-		pml.setColor(specialResColor, "specialRes");
+		pml.setColor(specialResColor, "specialRes", false);
 
     } // end colorSpecialRes
 
@@ -467,7 +472,7 @@ public class Graph2Pml {
 
     public void setNodesSize(String nodes) {
 
-    	pml.set("sphere_scale", nodeSize, nodes);
+    	pml.set("sphere_scale", nodeSize, nodes, false);
 	
     }
 
@@ -491,7 +496,7 @@ public class Graph2Pml {
 	
 				node = "n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1]);
 				curNodeSize = rescale(R.getDouble(nodeSizeMethod), nodeCurSizeRange, nodeSizeRange, nodeSizeRev);
-				pml.set("sphere_scale", curNodeSize, node);
+				pml.set("sphere_scale", curNodeSize, node, false);
 	
 		    } // end while loop through the resultset R
 		    
@@ -509,7 +514,7 @@ public class Graph2Pml {
 
     public void setEdgesSize(String edges) {
 
-    	pml.set("dash_width", edgeSize, edges);
+    	pml.set("dash_width", edgeSize, edges, false);
 	
     }
 
@@ -533,7 +538,7 @@ public class Graph2Pml {
 		
 				edge = "e."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[2])+"."+R.getString(nodeInfo[1])+"."+R.getInt(nodeInfo[3]);
 				curEdgeSize = rescale(R.getDouble(edgeSizeMethod), edgeCurSizeRange, edgeSizeRange, edgeSizeRev);
-				pml.set("dash_width", curEdgeSize, edge);
+				pml.set("dash_width", curEdgeSize, edge, false);
 	
 		    } // end while loop through the resultset R
 		    
@@ -551,7 +556,7 @@ public class Graph2Pml {
 
     public void setNodesTransp(String nodes) {
 
-    	pml.set("sphere_transparency", nodeTransp, nodes);
+    	pml.set("sphere_transparency", nodeTransp, nodes, false);
 
     }
 
@@ -563,7 +568,7 @@ public class Graph2Pml {
 	
 		try { 
 	
-		    pml.set("sphere_transparency", 0, "nodes");
+		    pml.set("sphere_transparency", 0, "nodes", false);
 	
 		    S = conn.createStatement();
 	
@@ -586,13 +591,13 @@ public class Graph2Pml {
 		} // end catch 
 	
 		nodes = "("+nodes.substring(0,nodes.length()-1)+")";
-		pml.set("sphere_transparency", nodeTransp, nodes);
+		pml.set("sphere_transparency", nodeTransp, nodes, false);
 
     }
 
     public void setEdgesGap(String edges) {
 
-    	pml.set("dash_gap", edgeGap, edges);
+    	pml.set("dash_gap", edgeGap, edges, false);
 
     }
 
@@ -604,7 +609,7 @@ public class Graph2Pml {
 	
 		try { 
 	
-		    pml.set("dash_gap", 0, "edges");
+		    pml.set("dash_gap", 0, "edges", false);
 	
 		    S = conn.createStatement();
 	
@@ -627,7 +632,7 @@ public class Graph2Pml {
 		} // end catch 
 	
 		edges = "("+edges.substring(0,edges.length()-1)+")";
-		pml.set("dash_gap", edgeGap, edges);
+		pml.set("dash_gap", edgeGap, edges, false);
 
     }
 
@@ -639,7 +644,7 @@ public class Graph2Pml {
 	
 		try { 
 	
-		    pml.set("dash_gap", 0, "edges");
+		    pml.set("dash_gap", 0, "edges", false);
 	
 		    S = conn.createStatement();
 	
@@ -667,13 +672,13 @@ public class Graph2Pml {
 		} // end catch 
 	
 		edges = "("+edges.substring(0,edges.length()-1)+")";
-		pml.set("dash_gap", edgeGap, edges);
+		pml.set("dash_gap", edgeGap, edges, false);
 
     }
     
     public void setNodesColor(String nodes) {
 
-    	pml.setNodeColor(nodeColor, nodes);
+    	pml.setNodeColor(nodeColor, nodes, false);
 
     }
 
@@ -696,7 +701,7 @@ public class Graph2Pml {
 		    if (nodeColorMethod.equals("chain")) {
 	
 				for (String chain : chainNodes.keySet()) {
-				    pml.setNodeColor("color_cid"+chain, "nodes_cid"+chain);
+				    pml.setNodeColor("color_cid"+chain, "nodes_cid"+chain, false);
 				}
 	
 		    } else if ((!nodeColorMethod.equals("uniform")) && (nodeColDiscr)) {
@@ -725,7 +730,7 @@ public class Graph2Pml {
 				    nodeSetStr = "("+nodeSetStr.substring(0,nodeSetStr.length()-1)+")";
 				    nodeSets.put(curNodeSet, nodeSetStr);
 				    pml.selPml(curNodeSet, nodeSetStr, false);
-				    pml.setNodeColor("color_"+curNodeSet, curNodeSet);
+				    pml.setNodeColor("color_"+curNodeSet, curNodeSet, false);
 				}
 	
 		    } else if ((!nodeColorMethod.equals("uniform")) && (!nodeColDiscr)) {
@@ -742,7 +747,7 @@ public class Graph2Pml {
 				    nodeHSV[2] = 1;
 				    nodeRGB = hsvToRgb(nodeHSV);
 				    pml.createColor("color_"+node, nodeRGB);
-				    pml.setNodeColor("color_"+node, node);
+				    pml.setNodeColor("color_"+node, node, false);
 				}
 				R.close();
 		
@@ -762,7 +767,7 @@ public class Graph2Pml {
     public void setEdgesColor(String edges) {
 
 		pml.iterateList(edges, "edge");
-		pml.setColor(edgeColor, "edge");
+		pml.setColor(edgeColor, "edge", true);
 
     }
 
@@ -785,16 +790,16 @@ public class Graph2Pml {
 		    if (edgeColorMethod.equals("chain")) {
 	
 				for (String chain : chainEdges.keySet()) {
-				    pml.setColor("color_cid"+chain, "edges_cid"+chain);
+				    pml.setColor("color_cid"+chain, "edges_cid"+chain, false);
 				}
 	
 		    } else if (edgeColorMethod.equals("node")) {
 	
 				if (nodeColorMethod.equals("uniform")) {
-				    pml.setColor(nodeColor, "edges");
+				    pml.setColor(nodeColor, "edges", false);
 				} else if (nodeColorMethod.equals("chain")) {
 				    for (String chain : chainEdges.keySet()) {
-				    	pml.setColor("color_cid"+chain, "edges_cid"+chain);
+				    	pml.setColor("color_cid"+chain, "edges_cid"+chain, false);
 				    }		    
 				} else if (nodeColDiscr) {
 				    query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
@@ -802,7 +807,7 @@ public class Graph2Pml {
 				    while (R.next()) {
 						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
 						edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
-						pml.setColor("color_"+nodeSet.get(node), "\""+edge+"\"");
+						pml.setColor("color_"+nodeSet.get(node), "\""+edge+"\"", false);
 				    }
 				    R.close();
 				} else if (!nodeColDiscr) {
@@ -811,7 +816,7 @@ public class Graph2Pml {
 				    while (R.next()) {
 						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
 						edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
-						pml.setColor("color_"+node, "\""+edge+"\"");
+						pml.setColor("color_"+node, "\""+edge+"\"", false);
 				    }
 				    R.close();
 				}
@@ -842,7 +847,7 @@ public class Graph2Pml {
 				    edgeSetStr = "("+edgeSetStr.substring(0,edgeSetStr.length()-1)+")";
 				    edgeSets.put(curEdgeSet, edgeSetStr);
 				    pml.selPml(curEdgeSet, edgeSetStr, false);
-				    pml.setColor("color_"+curEdgeSet, curEdgeSet);
+				    pml.setColor("color_"+curEdgeSet, curEdgeSet, false);
 				}
 	
 		    } else if ((!edgeColorMethod.equals("uniform")) && (!edgeColDiscr)) {
@@ -859,7 +864,7 @@ public class Graph2Pml {
 				    edgeHSV[2] = 1;
 				    edgeRGB = hsvToRgb(edgeHSV);
 				    pml.createColor("color_"+edge, edgeRGB);
-				    pml.setColor("color_"+edge, "\""+edge+"\"");
+				    pml.setColor("color_"+edge, "\""+edge+"\"", false);
 				}
 				R.close();
 	
