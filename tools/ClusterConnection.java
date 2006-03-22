@@ -165,6 +165,26 @@ public class ClusterConnection {
 	}
 	
 	/**
+	 * To execute a sql update/insert query in the right node given a query, key and idx. Just a shortcut not to have to do the create statement and execute
+	 * @param query the SQL query
+	 * @param key the name of the key
+	 * @param idx the id value for that key
+	 */
+	public void executeSql(String query,String key, int idx) {
+		Statement stmt;
+		try {
+		    stmt = this.createStatement(key,idx);	
+		    stmt.execute(query);
+			stmt.close();		    
+		} catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} 
+	}
+	
+	/**
 	 * To set keyTable field in constructor (i.e. first time)
 	 * @param db the database name
 	 */
@@ -173,7 +193,7 @@ public class ClusterConnection {
 	}
 	
 	/**
-	 * To se the keyTable field when db is already set
+	 * To set the keyTable field when db is already set
 	 *
 	 */
 	public void setKeyTable() {  
