@@ -26,6 +26,8 @@ import java.text.*;
  * 	in a simple, rather stupid way to facilitate contact graph visualization. 
  * 
  * Changelog:
+ * 27/03/06 modified by IF (refresh method plus refresh added in saveImage)
+ * 23/03/06 modified by IF (python string methods added plus removeList,concatList methods)
  * 22/03/06 modified by IF (objectNameQuotes class variable replaced by 
  * 			method parameter variable) 
  * 20/03/06 first created by IF
@@ -49,7 +51,7 @@ public class PyMol {
     	attrs.put("sphere_scale", new Integer(2));
     	attrs.put("dash_gap", new Integer(3));
     	attrs.put("dash_width", new Integer(4));
-    	attrs.put("transparancy", new Integer(5));
+    	attrs.put("transparency", new Integer(5));
     	
     }
 
@@ -457,14 +459,14 @@ public class PyMol {
     }
 
     /**
-     * creates a selection called name using the atom selection of the papameter selection
+     * creates a selection called name using the atom selection "encoded" in the objectName
      *  
      * Notes:
      * - If pink is false, the selection display is disabled (pink stuff go away!!!!) 
      */   
-    public void selPml(String name, String selection, boolean pink) {
+    public void selPml(String name, String objectName, boolean pink, boolean variable) {
 
-		Out.println("cmd.select(\""+name+"\", \""+selection+"\")");
+		Out.println("cmd.select(\""+name+"\", "+((!variable)?"\""+objectName+"\"":objectName)+")");
 		if (!pink) { Out.println("cmd.disable(\""+name+"\")"); };
 
     }
@@ -553,13 +555,40 @@ public class PyMol {
     }
     
     /**
-     * create/set value for a string
+     * create/set a string
      */  
-    public void setString(String name, String value) {
+    public void initString(String stringName, String value) {
 
-    	Out.println(name+" = "+value);
+    	Out.println(stringName+" = \""+value+"\"");
 	
     }
+    
+    /**
+     * append to String
+     */  
+    public void appendString(String stringName, String value) {
+
+    	Out.println(stringName+" += \""+value+"\"");
+	
+    }
+    
+    /**
+     * rstring a String
+     */  
+    public void rstripString(String stringName, String value) {
+
+    	Out.println("string.rstrip("+stringName+", \""+value+"\")");
+	
+    }    
+    
+    /**
+     * replace a specific substring within a string with another one
+     */  
+    public void replaceString(String stringName, String oldValue, String newValue) {
+
+    	Out.println("string.replace("+stringName+", \""+oldValue+"\", \""+newValue+"\")");
+	
+    }        
     
     /**
      * create/initialize a list
@@ -576,6 +605,24 @@ public class PyMol {
     public void appendList(String listName, String value) {
 
     	Out.println(listName+".append(\""+value+"\")");
+	
+    }
+    
+    /**
+     * remove object from a list
+     */  
+    public void removeList(String listName, String value) {
+
+    	Out.println(listName+".remove(\""+value+"\")");
+	
+    }
+    
+    /**
+     * concatenate all members of a list of strings into a string using specific seperator
+     */  
+    public void concatList(String listName, String sep, String stringName) {
+
+    	Out.println(stringName+" = \""+sep+"\".join("+listName+")");
 	
     }
     
@@ -605,6 +652,7 @@ public class PyMol {
      * opens a log file
      * 
      * Notes:
+     * - Be careful. All log files are saved with extension .pml. Remember to include it in the fileName!!!!!
      * - There are two versions. One of them opens the log file specified by its name and the directory path, while
      *   the other just uses the filename.
      */ 
@@ -618,6 +666,7 @@ public class PyMol {
      * opens a log file
      * 
      * Notes:
+     * - Be careful. All log files are saved with extension .pml. Remember to include it in the fileName!!!!!
      * - There are two versions. One of them opens the log file specified by its name and the directory path, while
      *   the other just uses the filename.
      */ 
@@ -633,6 +682,55 @@ public class PyMol {
     public void closeLog() {
        	
 		Out.println("log_close");
+
+    }
+    
+    /**
+     * get the current view into a string
+     */ 
+    public void getView(String viewName) {
+       	
+		Out.println(viewName+" = cmd.get_view()");
+
+    }
+    
+    /**
+     * get the current view into a string from a log file
+     */ 
+    public void getFileView(String viewName, String fileName) {
+       	
+    	String viewStr = "";
+    	String line = "", viewLine = "";
+    	boolean viewFinished = false;
+    	
+    	try {
+    		//read the first view in the file
+    		BufferedReader fileIn = new BufferedReader(new FileReader(new File(fileName)));
+    		while ( ((line = fileIn.readLine()) != null) && (!viewFinished) ){
+    			if (line.equals("_ set_view (\\")) {
+    				while ( ((viewLine = fileIn.readLine()) != null) && (!viewFinished) ) {
+    					if (viewLine.startsWith("_")) {
+    						viewStr = viewStr + viewLine.substring(1,viewLine.length()-1);
+    					} else {
+    						viewFinished = true;
+    					}
+    				}
+    			}
+    		}
+    		if (fileIn != null) { fileIn.close(); }
+    		viewStr = "("+viewStr+")";
+    	}
+    	catch (Exception e) { System.out.println(e); }
+		Out.println(viewName+" = "+viewStr);
+
+    }
+    
+    /**
+     * set the view based on a string's value
+     */ 
+    public void setView(String view) {
+       	
+		Out.println("cmd.set_view("+view+")");
 
     }
     
@@ -661,6 +759,7 @@ public class PyMol {
      */ 
     public void saveImage(String imageName, boolean rayTraced) {
 	
+    	refresh();
 		if (rayTraced) { Out.println("ray"); }
 		Out.println("png "+imageName+".png");
 
@@ -707,6 +806,15 @@ public class PyMol {
     public void background(String color) {
 
 		Out.println("cmd.bg_color(\""+color+"\")");
+	
+    }
+    
+    /**
+     * refresh the scene
+     */       
+    public void refresh() {
+
+		Out.println("cmd.refresh()");
 	
     }
     
