@@ -54,7 +54,7 @@ import java.util.*;
  * - If you put surface even with high transparency, you can not see the nodes.
  * 
  * Changelog:
- * 27/03/06 modified by IF (functional at last)
+ * 27/03/06 modified by IF (functional at last - added cgoEdges)
  * 22/03/06 modified by IF (modified to compile based on objectNameQuotes variable changes in PyMol class - still non functional)
  * 21/03/06 first created by IF (non functional)
  */
@@ -84,11 +84,12 @@ public class Graph2Pml {
     private boolean[] draw = new boolean[] {true, true, false, false};
     private String nodeColorMethod = "chain", nodeSizeMethod = "uniform", edgeColorMethod = "uniform", edgeSizeMethod = "uniform", nodeColor = "blue", edgeColor = "orange", specialResColor = "purple";
     private boolean nodeColDiscr = false, edgeColDiscr = false, nodeSizeRev = false, edgeSizeRev = false;
-    private double nodeSize = 0.46, edgeSize = 3.65;
+    private double nodeSize = 0.46, edgeSize = 3.65, cgoEdgeSize = 0.3;
     private double[] nodeSizeRange = {0.2, 0.8}; //{0.18, 0.75};
     private double[] edgeSizeRange = {0.3, 7.0};
+    private double[] cgoEdgeSizeRange = {0.2, 0.5};
     private String edgeGapCondition = "", nodeTranspCondition = "", specialResQuery = null;
-    private double edgeGap = 0.25, nodeTransp = 0.6, surfTransp = 0.6;
+    private double edgeGap = 0.25, nodeTransp = 0.6, surfTransp = 0.6, cgoEdgeGap = 0, cgoEdgeLength = 0.5;
     private String backgroundColor = "white";
 			  
     private String[] colors = {"light_grey", "green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
@@ -158,7 +159,9 @@ public class Graph2Pml {
     public void seNodeSizeRange(double[] range) { nodeSizeRange = range; }
 
     public void setEdgeSizeRange(double[] range) { edgeSizeRange = range; }
-
+    
+    public void setCgoEdgeSizeRange(double[] range) { cgoEdgeSizeRange = range; }
+    
     public void setBackgroundColor(String color) { backgroundColor = color; }
     
     public boolean setUniformNodeColor(String color) {
@@ -182,7 +185,7 @@ public class Graph2Pml {
 		return draw[1];
 
     }
-
+    
     public boolean setSpecialRes(String color, String query) {
 	
 		if (draw[2]) {
@@ -215,6 +218,18 @@ public class Graph2Pml {
 		return draw[1];
 
     }
+    
+    public boolean setUniformCgoEdgeSize(double size) {
+
+		if (draw[1]) {
+		    cgoEdgeSize = size;
+		    edgeSizeMethod = "uniform";
+		}
+
+		return draw[1];
+
+    }
+
 
     public void setNodeColorMethod(String method, boolean discr) { nodeColorMethod = method; nodeColDiscr = discr; }
 
@@ -264,6 +279,10 @@ public class Graph2Pml {
 				System.out.println("Provide method for coloring your edges or set the uniform edge color!");
 				status = false;
 		    }
+		    if ((edgeColorMethod.equals("node")) && (!draw[0])) {
+				System.out.println("Since nodes are not drawn, edges can not be colored based on nodes coloring!");
+				status = false;
+		    }
 		    if ((edgeSizeMethod == null) || (edgeSizeMethod.equals("uniform") && (edgeSize == 0))) {
 				System.out.println("Provide method for defining your edges' size or set the uniform edge size!");
 				status = false;
@@ -271,7 +290,9 @@ public class Graph2Pml {
 		    if ((!edgeGapCondition.equals("")) && (directed)) {
 		    	System.out.println("Gap condition will be ignored!");
 		    }
-		    
+		    if ( (cgoEdge) && ((!edgeGapCondition.equals("")) || (edgeGap != 0)) ) {
+		    	System.out.println("Gap is ignored for CGO edges!");
+		    }
 		}
 	
 		if ((draw[2]) && ((specialResColor == null) || (specialResQuery == null))) {
@@ -320,7 +341,8 @@ public class Graph2Pml {
 	
 		if (draw[1]) {	
 		    if (cgoEdge) {		    
-		    	createCgoEdges();	
+		    	createCgoEdges();
+		    	pml.zoom("graphMol", false);
 		    } else {			
 				createEdges();
 				pml.zoom("graphMol", false);
@@ -964,7 +986,105 @@ public class Graph2Pml {
     }
 
     public void createCgoEdges() {
-
+    	
+		Statement S;
+		ResultSet R;
+		String query = "", edge = "", i_cid = "", curCgoEdgeColor = "", queryFields = "", edgeSetId = "", node = "";
+		double colWeight = 0, curCgoEdgeSize = 0;
+		double[] edgeCurSizeRange = new double[2];
+		double[] edgeCurColRange = new double[2];
+		double[] edgeRGB = new double[3];
+		double[] edgeHSV = new double[3];
+		int i = 0;
+		
+		try { 
+	
+			pml.initList("edges");
+			
+			S = conn.createStatement();	
+			
+			if (!edgeSizeMethod.equals("uniform")) {
+				edgeCurSizeRange = utils4DB.getRange(conn, dbInfo[0]+"."+dbInfo[3], edgeSizeMethod, edgeGraphSel+" AND ("+graphInfo[5]+")");
+				queryFields += ", "+edgeSizeMethod;
+			}
+			
+			if ( !(edgeColorMethod.equals("uniform") || edgeColorMethod.equals("chain") | edgeColorMethod.equals("node")) ) {
+				if (edgeColDiscr) {	
+					query = "SELECT DISTINCT "+edgeColorMethod+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeColorMethod+";";
+					R = S.executeQuery(query);
+					while (R.next()) {
+					    i++;
+					    pml.createColor("color_edges_set"+i, colors[i%colors.length]);
+					    edgeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))), "edges_set"+i);
+					    pml.initList("edges_set"+i);
+					}
+					R.close();
+			
+				} else if (!edgeColDiscr) {
+					edgeCurColRange = utils4DB.getRange(conn, dbInfo[0]+"."+dbInfo[3], edgeColorMethod, edgeGraphSel+" AND ("+graphInfo[5]+")");
+				}
+				queryFields += ", "+edgeColorMethod;
+			}   
+			
+			query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+queryFields+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
+			R = S.executeQuery(query);
+		    while (R.next()) { 
+				i_cid = R.getString(edgeInfo[0]);
+				
+				if (!edgeSizeMethod.equals("uniform")) {
+					curCgoEdgeSize = rescale(R.getDouble(edgeSizeMethod), edgeCurSizeRange, cgoEdgeSizeRange, edgeSizeRev);
+				} else {
+					curCgoEdgeSize = cgoEdgeSize;
+				}
+				
+				if (edgeColorMethod.equals("uniform")) {
+					curCgoEdgeColor = edgeColor;
+				} else if (edgeColorMethod.equals("chain")){
+					curCgoEdgeColor = "color_cid"+i_cid;
+				} else if (edgeColorMethod.equals("node")){
+					if (nodeColorMethod.equals("uniform")) {
+						curCgoEdgeColor = nodeColor;
+					} else if (nodeColorMethod.equals("chain")) {
+						curCgoEdgeColor = "color_cid"+i_cid;		    
+					} else if (nodeColDiscr) {
+						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
+						curCgoEdgeColor = "color_"+nodeSet.get(node);
+					} else if (!nodeColDiscr) {
+						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
+						curCgoEdgeColor = "color_"+node;
+					}
+				} else if ((!edgeColorMethod.equals("uniform")) && (edgeColDiscr)) {
+					edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
+				    edgeSetId = edgeSetIds.get(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))));
+				    edgeSet.put(edge, edgeSetId);
+				    pml.appendList(edgeSetId, edge);
+				    curCgoEdgeColor = "color_"+edgeSetId;
+				} else if ((!edgeColorMethod.equals("uniform")) && (!edgeColDiscr)) {
+					edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
+				    colWeight = R.getDouble(edgeColorMethod);
+				    edgeHSV[0] = rescale(colWeight, edgeCurColRange, new double[] {0, 240}, false);
+				    edgeHSV[1] = 1;
+				    edgeHSV[2] = 1;
+				    edgeRGB = hsvToRgb(edgeHSV);
+				    pml.createColor("color_"+edge, edgeRGB);
+				    curCgoEdgeColor = "color_"+edge;
+				}
+				
+				edge = pml.addCgoEdge(i_cid, R.getInt(edgeInfo[2]), R.getString(edgeInfo[1]), R.getInt(edgeInfo[3]), curCgoEdgeColor, cgoEdgeGap, cgoEdgeLength, curCgoEdgeSize, directed, curCgoEdgeColor, msdsd);
+				pml.appendList("edges_cid"+i_cid, edge);
+				pml.appendList("edges", edge);		
+		    } 
+		    
+		    R.close();
+		    S.close();
+	
+		} // end try
+		catch (SQLException E) {
+		    System.out.println("SQLException: " + E.getMessage());
+		    System.out.println("SQLState:     " + E.getSQLState());
+		    System.out.println("VendorError:  " + E.getErrorCode());
+		} // end catch 
+		
     }
 
     private double rescale(double value, double[] curRange, double[] newRange, boolean rev) {
