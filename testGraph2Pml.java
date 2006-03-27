@@ -12,7 +12,7 @@ import tools.*;
  * PyMol class. Run PyMol with the -R option to run the server.
  * 
  * Changelog:
- * 27/03/06 modified by IF (functional with comments)
+ * 27/03/06 modified by IF (functional with comments - added cgo examples)
  * 21/03/06 first created by IF (non functional)
  */
 
@@ -33,6 +33,7 @@ public class testGraph2Pml {
 		PrintWriter serverOutPw = new PrintWriter(new PymolServerOutputStream("http://"+Machine.getClient()+":9123"), true);
 		pml = new PyMol(serverOutPw);
 		
+		//Edges as lines
 		//export the pdb file directly from msdsd and load it in pymol
 		pdbFileName = Msdsd2Pdb.export2File("1rx4", 20717, 52567, 9, "/project/StruPPi/ioannis/tmp");
 		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
@@ -218,6 +219,112 @@ public class testGraph2Pml {
 		pml.saveImage("test11","/home/filippis/Desktop", false);
 		
 		pml.delete("all", false);
+		
+		//CGO EDGES SECTION
+		pdbFileName = Msdsd2Pdb.export2File("1kj0", 21698, 55132, 9, "/project/StruPPi/ioannis/tmp");
+		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//Cgo makes sense to be used with directed graph
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 35666, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, true, true, conn);
+		graphPml.draw(true, true, false, false);		
+		graphPml.outputGraph();
+		pml.saveImage("test12","/home/filippis/Desktop", false);
+		pml.getView("test3_view");
+
+		// delete all edges
+		pml.iterateList("edges", "edge");
+		pml.delete("edge", true);
+		
+		graphPml.draw(false, true, false, false);
+		graphPml.setUniformCgoEdgeSize(0.2);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test13","/home/filippis/Desktop", false);
+		
+		// delete all edges
+		pml.iterateList("edges", "edge");
+		pml.delete("edge", true);
+				
+		graphPml.setEdgeSizeMethod("SC_SC", false);
+		graphPml.setEdgeColorMethod("BB_BB", false);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test14","/home/filippis/Desktop", false);
+		
+		pml.iterateList("edges", "edge");
+		pml.delete("edge", true);
+		
+		graphPml.setEdgeSizeMethod("SC_SC", true);
+		graphPml.setEdgeColorMethod("BB_BB", true);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test15","/home/filippis/Desktop", false);
+				
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+				
+		//to check node method for edge coloring when nodeColor method not discretised
+		graphPml.draw(true, true, false, false);
+		graphPml.setUniformNodeSize(0.6);
+		graphPml.setNodeColorMethod("BB_BB_out", false);
+		graphPml.setUniformEdgeSize(0.4);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test16","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//to check node method for edge coloring when nodeColor method not discretised
+		graphPml.setUniformNodeSize(0.6);
+		graphPml.setNodeColorMethod("BB_BB_out", true);
+		graphPml.setUniformEdgeSize(0.4);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test17","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//see "real" half-edges
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 35666, "SC_BB", "SC_BB_in+SC_BB_out", "SC_BB", "true", "true", true, true, true, conn);
+		graphPml.outputGraph();
+		pml.setView("test3_view");
+		pml.saveImage("test18","/home/filippis/Desktop", false);		
+		
+		pml.delete("all", false);
+		
+		//test multi-chain macromolecule with RNA also
+		pdbFileName = "1a0a_1107_2560.pdb";
+		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		System.out.println(molObjName);
+		
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 95, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, true, true, conn);
+		graphPml.draw(true, true, false, false);
+		graphPml.setNodeColorMethod("SC_SC_out", false);
+		graphPml.setNodeTransp(0);		
+		graphPml.setEdgeSizeMethod("SC_SC", false);
+		graphPml.setEdgeColorMethod("chain", true);
+		graphPml.outputGraph();
+		pml.saveImage("test19","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		
+		pdbFileName = "1rx4_20717_52567.pdb";
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 33729, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, true, true, conn);
+		graphPml.draw(true, true, false, false);
+		graphPml.setNodeSizeMethod("SC_SC_out", false);
+		graphPml.setNodeColorMethod("SC_SC_out", false);
+		graphPml.setNodeTransp(0.6);		
+		graphPml.setEdgeSizeMethod("SC_SC", false);
+		graphPml.setEdgeColorMethod("SC_SC", false);
+		graphPml.outputGraph();
+		pml.saveImage("test20","/home/filippis/Desktop", false);
 		
 		SQLC.closeConnection(conn);	
 
