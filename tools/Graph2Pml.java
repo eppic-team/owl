@@ -4,6 +4,61 @@ import java.sql.*;
 import java.io.*;
 import java.util.*;
 
+
+/**
+ * Package:		tools
+ * Class: 		Graph2Pml
+ * Author:		Ioannis Filippis, filippis@molgen.mpg.de
+ * Date:		21/03/2006
+ *  
+ *  
+ * Notes:
+ * - All properties of nodes and edges are handled separately for 2 reasons
+ *	 - Even though nodes(edges) could be created and their properties could be
+ *	   set at the same time (traversing one the nodes(edges) from the database), 
+ *	   it was preferred to be handled in different functions. In this way, these
+ *     functions can be called later just for a specific purpose instead of
+ *     having to recreate the nodes from the beginning.
+ *   - Despite the fact that the code for setting node properties is the same
+ *     with the code for the edge properties (except some minor changes), separate
+ *     methods are preferred for the same property, one for the node and one for the
+ *     color. This is to accommodate future changes to the code, that might not be
+ *     common to edges and nodes. 
+ * - There are actually 3 implementations in this code, 2 of them commented
+ * 	 These implementations concern how to handle in groups nodes, edges. For
+ * 	 example, handle simultaneously all the nodes or all the nodes of a chain
+ *   or all the nodes of a connected component for coloring purposes.
+ *   -Java string method: The first idea was to keep somehow in memory pymol selection
+ *    strings and create PyMol selection objects with that. For example, the string
+ *    variable nodesConnectedComponent could have value "n.A.1+n.A.3+n.A.4" and a
+ *    pymol selection could be easily made using that. However, pymol command length
+ *    is limited and especially for edges the command could easily exceed the limit.
+ *   -Pymol string method: The second idea was to create the string in pymol stepwise.
+ *    So the string would be a python string actually and the command line would be small
+ *    since each time that a node was added in the graph, it would be added also in
+ *    the string e.g. nodesConnectedComponent += "n.A.1". However, still the command line
+ *    was exceeded. For example when the value of the all edges string exceeded the limit,
+ *    calling a pymol command with parameter edges would make pymol crash.
+ *   -Final method: A pymol list of objects is created and you just iterate the list giving
+ *    the command you wish. The nice thing is that if your graph is not large, then you
+ *    can still converge to the previous method by concatenating the list. See example in
+ *    testGraph2Pml. Of course, the list solution is slower but it will never crash.
+ *   -It must be noticed that the edges modelled as distance objects can not be selected
+ *    in pymol since they do not contain any atoms.
+ *   -The 3 different implementations are limited in the chains, createNodes, createEdges,
+ *    setNodesColorUniform(String, String), setEdgesColorUniform(String, String) methods.
+ *   -The only point where I don't use list or where I modify node/edge one-by-one, is in 
+ *    the colorSpecialRes method. I expect these residues not to be many so the command line
+ *    length limit won't be exceeded.
+ * - Never use "." for a list's name!!!!
+ * - If you put surface even with high transparency, you can not see the nodes.
+ * 
+ * Changelog:
+ * 27/03/06 modified by IF (functional at last)
+ * 22/03/06 modified by IF (modified to compile based on objectNameQuotes variable changes in PyMol class - still non functional)
+ * 21/03/06 first created by IF (non functional)
+ */
+
 public class Graph2Pml {
 
     private Connection conn;
@@ -11,13 +66,13 @@ public class Graph2Pml {
     private PyMol pml = null;
     private boolean msdsd = true, cgoEdge = false, directed = true;
     
-    private HashMap<String, String> chainNodes = new HashMap<String, String>();
-    private HashMap<String, String> chainEdges = new HashMap<String, String>();
+    private HashSet<String> chains = new HashSet<String>();
+    
+    //private HashMap<String, String> chainNodes = new HashMap<String, String>(); //java String method
+    //private HashMap<String, String> chainEdges = new HashMap<String, String>(); //java String method
     private HashMap<Long, String> nodeSetIds = new HashMap<Long, String> ();
-    private HashMap<String, String> nodeSets = new HashMap<String, String> ();
     private HashMap<String, String> nodeSet = new HashMap<String, String> ();
     private HashMap<Long, String> edgeSetIds = new HashMap<Long, String> ();
-    private HashMap<String, String> edgeSets = new HashMap<String, String> ();
     private HashMap<String, String> edgeSet = new HashMap<String, String> ();
 
     private String[] dbInfo = new String[] {"newmsdgraph", "list", "nodes", "edges", "graph_id"};
@@ -30,7 +85,7 @@ public class Graph2Pml {
     private String nodeColorMethod = "chain", nodeSizeMethod = "uniform", edgeColorMethod = "uniform", edgeSizeMethod = "uniform", nodeColor = "blue", edgeColor = "orange", specialResColor = "purple";
     private boolean nodeColDiscr = false, edgeColDiscr = false, nodeSizeRev = false, edgeSizeRev = false;
     private double nodeSize = 0.46, edgeSize = 3.65;
-    private double[] nodeSizeRange = {0.18, 0.75};
+    private double[] nodeSizeRange = {0.2, 0.8}; //{0.18, 0.75};
     private double[] edgeSizeRange = {0.3, 7.0};
     private String edgeGapCondition = "", nodeTranspCondition = "", specialResQuery = null;
     private double edgeGap = 0.25, nodeTransp = 0.6, surfTransp = 0.6;
@@ -46,7 +101,7 @@ public class Graph2Pml {
         graphInfo[3] = edgeContactType;
 		graphInfo[4] = contactRange;
 		graphInfo[5] = userFilter;
-		nodeGraphSel = "("+dbInfo[4]+" = "+graphInfo[0]+") AND ("+graphInfo[2]+" > 0) AND ("+graphInfo[4]+")";
+		nodeGraphSel = "("+dbInfo[4]+" = "+graphInfo[0]+") AND ("+graphInfo[2]+" > 0) AND (true)";
 		edgeGraphSel = "("+dbInfo[4]+" = "+graphInfo[0]+") AND ("+graphInfo[3]+" > 0) AND ("+graphInfo[4]+")";
 		
 		this.conn = conn;
@@ -110,7 +165,7 @@ public class Graph2Pml {
 
 		if (draw[0]) {
 		    nodeColor = color;
-		    nodeColorMethod = "Uniform";
+		    nodeColorMethod = "uniform";
 		}
 	
 		return draw[0];
@@ -121,7 +176,7 @@ public class Graph2Pml {
 
 		if (draw[1]) {
 		    edgeColor = color;
-		    edgeColorMethod = "Uniform";
+		    edgeColorMethod = "uniform";
 		}
 
 		return draw[1];
@@ -143,7 +198,7 @@ public class Graph2Pml {
 
 		if (draw[0]) {
 		    nodeSize = size;
-		    nodeSizeMethod = "Uniform";
+		    nodeSizeMethod = "uniform";
 		}
 
 		return draw[0];
@@ -154,7 +209,7 @@ public class Graph2Pml {
 
 		if (draw[1]) {
 		    edgeSize = size;
-		    edgeSizeMethod = "Uniform";
+		    edgeSizeMethod = "uniform";
 		}
 
 		return draw[1];
@@ -179,7 +234,7 @@ public class Graph2Pml {
 
     public void setSurfTransp(double transp) { surfTransp = transp; }
 
-    public boolean outputGraph(String connFile) {
+    public boolean outputGraph() {
 
 		boolean status = check();
 		if (!status) { return status; }
@@ -193,11 +248,11 @@ public class Graph2Pml {
 		boolean status = true;
 	
 		if (draw[0]) {
-		    if ((nodeColorMethod == null) || (nodeColorMethod.equals("Uniform") && (nodeColor == null))) {
+		    if ((nodeColorMethod == null) || (nodeColorMethod.equals("uniform") && (nodeColor == null))) {
 				System.out.println("Provide method for coloring your nodes or set the uniform node color!");
 				status = false;
 		    }
-		    if ((nodeSizeMethod == null) || (nodeSizeMethod.equals("Uniform") && (nodeSize == 0))) {
+		    if ((nodeSizeMethod == null) || (nodeSizeMethod.equals("uniform") && (nodeSize == 0))) {
 				System.out.println("Provide method for defining your nodes' size or set the uniform node size!");
 				status = false;
 		    }
@@ -205,11 +260,11 @@ public class Graph2Pml {
 		}
 	
 		if (draw[1]) {
-		    if ((edgeColorMethod == null) || (edgeColorMethod.equals("Uniform") && (edgeColor == null))) {
+		    if ((edgeColorMethod == null) || (edgeColorMethod.equals("uniform") && (edgeColor == null))) {
 				System.out.println("Provide method for coloring your edges or set the uniform edge color!");
 				status = false;
 		    }
-		    if ((edgeSizeMethod == null) || (edgeSizeMethod.equals("Uniform") && (edgeSize == 0))) {
+		    if ((edgeSizeMethod == null) || (edgeSizeMethod.equals("uniform") && (edgeSize == 0))) {
 				System.out.println("Provide method for defining your edges' size or set the uniform edge size!");
 				status = false;
 		    }
@@ -228,93 +283,78 @@ public class Graph2Pml {
 
     }
 
-    public void exportPML() {
+    private void exportPML() {
 
 		pml.background(backgroundColor);
 		pml.init();
 		pml.createColor("light_grey", new double[] {0.8, 0.8, 0.8});
 	
-		if (draw[3]) { 
-		    pml.showWhat("surface", molObjName, false);
-		    pml.set("transparency", surfTransp, molObjName, false);
-		}
-	
 		chains();
 		
 		if (draw[2]) { colorSpecialRes(); }
 
-		pml.zoom(molObjName, false);
-	
-		
+		pml.zoom("graphMol", false);
+			
 		if (draw[0]) {
 		    createNodes();
-		    
+		    pml.zoom("graphMol", false);
 		    if (nodeSizeMethod.equals("uniform")) {
-		    	setNodesSize("nodes");
+		    	setNodesSizeUniform("nodes", nodeSize);
 		    } else {
 		    	setNodesSize();
 		    }
-	
+		    pml.zoom("graphMol", false);			
 		    if (nodeColorMethod.equals("uniform")) {
-		    	setNodesColor("nodes");
+		    	setNodesColorUniform("nodes", nodeColor);
 		    } else {
 		    	setNodesColor();
 		    }
-	
+		    pml.zoom("graphMol", false);
 		    if (nodeTranspCondition.equals("")) {
-		    	setNodesTransp("nodes");
+		    	setNodesTranspUniform("nodes", nodeTransp);
 		    } else {
 		    	setNodesTransp();
 		    }
-		    
+		    pml.zoom("graphMol", false);
 		}
 	
-		pml.zoom(molObjName, false);
-		
-		if (draw[1]) {
-	
-		    if (cgoEdge) {
-		    
-		    	createCgoEdges();
-	
-		    } else {
-			
+		if (draw[1]) {	
+		    if (cgoEdge) {		    
+		    	createCgoEdges();	
+		    } else {			
 				createEdges();
-				
-				//had here comment
-				/*
+				pml.zoom("graphMol", false);
 				if (edgeSizeMethod.equals("uniform")) {
-				    setEdgesSize("edges");
+				    setEdgesSizeUniform("edges", edgeSize);
 				} else {
 				    setEdgesSize();
 				}
-				*/		
-				
+				pml.zoom("graphMol", false);
 				if (edgeColorMethod.equals("uniform")) {
-				    setEdgesColor("edges");
+				    setEdgesColorUniform("edges", edgeColor);
 				} else {
-				    //setEdgesColor();
+				    setEdgesColor();
 				}
-				
-				//had here comment
-				/*
+				pml.zoom("graphMol", false);
 				if (directed) {
 				    setGapDir();
 				} else {
 				    if (edgeGapCondition.equals("")) {
-					setEdgesGap("edges");
+				    	setEdgesGapUniform("edges", edgeGap);
 				    } else {
-					setEdgesGap();
+				    	setEdgesGap();
 				    }
 				}
-				*/
-				
-		    }
-	
+				pml.zoom("graphMol", false);				
+		    }	
 		}
 		
-		pml.zoom(molObjName, false);
-  
+		if (draw[3]) { 
+		    pml.showWhat("surface", "graphMol", false);
+		    pml.set("transparency", surfTransp, "graphMol", false);
+		}
+		pml.zoom("graphMol", false);
+		
     } // end of exportPML
 
     private void chains() {
@@ -326,17 +366,23 @@ public class Graph2Pml {
 		
 		try { 
 		    query = "SELECT DISTINCT("+nodeInfo[0]+") FROM "+dbInfo[0]+"."+dbInfo[2]+" WHERE ("+dbInfo[4]+" = "+graphInfo[0]+") ORDER BY "+nodeInfo[0]+";";
-		    System.out.println(query);
 		    S = conn.createStatement();
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
 				cid = R.getString(nodeInfo[0]);
+				chains.add(cid);
 				numChains++;
+				
 				pml.createColor("color_cid"+cid, colors[numChains%colors.length]);
 				chainSel = pml.selectChain(cid, msdsd);
 				pml.setColor("color_cid"+cid, chainSel, false);
-				graphChainSet = graphChainSet + chainSel+ " or ";
+				
+				pml.initList("nodes_cid"+cid);
 				pml.initList("edges_cid"+cid);
+				//pml.initString("nodes_cid"+cid, ""); // pymol string method
+				//pml.initString("edges_cid"+cid, ""); // pymol string method	
+				
+				graphChainSet = graphChainSet + chainSel+ " or ";				
 		    }
 		    R.close();
 		    S.close();
@@ -348,7 +394,8 @@ public class Graph2Pml {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch
 	
-		pml.selPml("restMol", molObjName+" and not ("+graphChainSet.substring(0,graphChainSet.length()-4)+")", false);
+		pml.selPml("graphMol", graphChainSet.substring(0,graphChainSet.length()-4), false, false);
+		pml.selPml("restMol", molObjName+" and not graphMol", false, false);
 		pml.hide("restMol", false);
 
     }
@@ -380,30 +427,36 @@ public class Graph2Pml {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch
 	
-		pml.selPml("specialRes", resSel.substring(0,resSel.length()-4), false);
+		pml.selPml("specialRes", resSel.substring(0,resSel.length()-4), false, false);
 		pml.setColor(specialResColor, "specialRes", false);
 
     } // end colorSpecialRes
 
-    public String createNodes() {
+    public void createNodes() {
 
 		Statement S;
 		ResultSet R;
-		String query = "", nodes = "", node = "", chainNodesStr = "", cid = "";
+		String query = "", node = "", cid = "";
+		//String nodes = "", chainNodesStr = ""; //java String method
 	
 		try { 
 	
-		    S = conn.createStatement();
-	
+			pml.initList("nodes");
+			//pml.initString("nodes", ""); // pymol String method
+			
+		    S = conn.createStatement();	
 		    query = "SELECT "+nodeInfo[0]+", "+nodeInfo[1]+" FROM "+dbInfo[0]+"."+dbInfo[2]+" WHERE ("+nodeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+nodeInfo[0]+", "+nodeInfo[1]+";";
-		    System.out.println(query);
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
 				cid = R.getString(nodeInfo[0]);
 				node = pml.addNode(cid, R.getInt(nodeInfo[1]), msdsd);
-				chainNodes.put(cid, chainNodes.get(cid)+node+"+");
-				nodes = nodes+node+"+";
-		    } // end while loop through the resultset R
+				pml.appendList("nodes_cid"+cid, node);
+				pml.appendList("nodes", node);
+				//pml.appendString("nodes_cid"+cid, node+"+"); // pymol String method
+				//pml.appendString("nodes", node+"+"); // pymol String method
+				//chainNodes.put(cid, chainNodes.get(cid)+node+"+"); // java String method
+				//nodes = nodes+node+"+"; // java String method				
+		    } 
 		    
 		    R.close();
 		    S.close();
@@ -415,40 +468,52 @@ public class Graph2Pml {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
 	
+		/*
 		for (String chain : chainNodes.keySet()) {
+			//pymol String method
+			pml.rstripString("nodes_cid"+chain, "+");
+		    pml.selPml("nodes_cid"+chain, "nodes_cid"+chain, false, true);
+			//java String method
 		    chainNodesStr = chainNodes.get(chain);
-		    System.out.println(chain+" "+chainNodesStr);
-		    chainNodesStr = "("+chainNodesStr.substring(4,chainNodesStr.length()-1)+")";
+		    chainNodesStr = chainNodesStr.substring(4,chainNodesStr.length()-1);
 		    chainNodes.put(chain, chainNodesStr);
-		    pml.selPml("nodes_cid"+chain, chainNodesStr, false);
+		    pml.selPml("nodes_cid"+chain, chainNodesStr, false, false);		    	    
 		}
-		nodes = "("+nodes.substring(0,nodes.length()-1)+")";
-		pml.selPml("nodes", nodes, false);
-		return nodes;
-
+		//pymol String method
+		pml.rstripString("nodes", "+");
+		pml.selPml("nodes", "nodes", false, true);
+		//java String method
+		nodes = nodes.substring(0,nodes.length()-1);
+		pml.selPml("nodes", nodes, false, false);
+		*/
+		
     } // end writeNodes()
-
-    public void createEdges() {
     
+    public void createEdges() {
+
 		Statement S;
 		ResultSet R;
-		String query = "", edge = "", chainEdgesStr = "", i_cid = "";
+		String query = "", edge = "", i_cid = "";
+		//String edges = "", chainEdgesStr = ""; //java String method
 	
 		try { 
 	
-		    pml.initList("edges");
-	
-		    S = conn.createStatement();
-	
+			pml.initList("edges");
+			//pml.initString("edges", ""); // pymol String method
+			
+		    S = conn.createStatement();	
 		    query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
 		    R = S.executeQuery(query);
-		    while (R.next()) {
-		    	i_cid = R.getString(edgeInfo[0]);	
-		       	edge = pml.addEdge(i_cid, R.getInt(edgeInfo[2]), R.getString(edgeInfo[1]), R.getInt(edgeInfo[3]), msdsd);
-				chainEdges.put(i_cid, chainEdges.get(i_cid)+edge+"+"); // to be removed
+		    while (R.next()) { 
+				i_cid = R.getString(edgeInfo[0]);
+				edge = pml.addEdge(i_cid, R.getInt(edgeInfo[2]), R.getString(edgeInfo[1]), R.getInt(edgeInfo[3]), msdsd);
 				pml.appendList("edges_cid"+i_cid, edge);
 				pml.appendList("edges", edge);
-		    } // end while loop through the resultset R
+				//pml.appendString("edges_cid"+i_cid, edge+"+"); // pymol String method
+				//pml.appendString("edges", edge+"+"); // pymol String method
+				//chainEdges.put(cid, chainEdges.get(i_cid)+edge+"+"); // java String method
+				//edges = edges+edge+"+"; // java String method				
+		    } 
 		    
 		    R.close();
 		    S.close();
@@ -460,19 +525,27 @@ public class Graph2Pml {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
 	
-		// to be removed
+		/*
 		for (String chain : chainEdges.keySet()) {
+			//pymol String method
+			pml.rstripString("edges_cid"+chain, "+");
+			//java String method
 		    chainEdgesStr = chainEdges.get(chain);
-		    System.out.println(chain+" "+chainEdgesStr);
-		    chainEdgesStr = "("+chainEdgesStr.substring(4,chainEdgesStr.length()-1)+")";
-		    chainEdges.put(chain, chainEdgesStr);
+		    chainEdgesStr = chainEdgesStr.substring(4,chainEdgesStr.length()-1);
+		    chainEdges.put(chain, chainEdgesStr);   	    
 		}
+		//pymol String method
+		pml.rstripString("edges", "+");
+		//java String method
+		edges = edges.substring(0,nodes.length()-1);
+		*/
+		
+    } // end writeEdges()
+    
+    public void setNodesSizeUniform(String nodes, double size) {
 
-    }
-
-    public void setNodesSize(String nodes) {
-
-    	pml.set("sphere_scale", nodeSize, nodes, false);
+    	pml.iterateList(nodes, "node");
+		pml.set("sphere_scale", size, "node", true);
 	
     }
 
@@ -512,9 +585,10 @@ public class Graph2Pml {
 
     }
 
-    public void setEdgesSize(String edges) {
+    public void setEdgesSizeUniform(String edges, double size) {
 
-    	pml.set("dash_width", edgeSize, edges, false);
+    	pml.iterateList(edges, "edge");
+		pml.set("dash_width", size, "edge", true);
 	
     }
 
@@ -536,8 +610,8 @@ public class Graph2Pml {
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
 		
-				edge = "e."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[2])+"."+R.getString(nodeInfo[1])+"."+R.getInt(nodeInfo[3]);
-				curEdgeSize = rescale(R.getDouble(edgeSizeMethod), edgeCurSizeRange, edgeSizeRange, edgeSizeRev);
+		    	edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
+		    	curEdgeSize = rescale(R.getDouble(edgeSizeMethod), edgeCurSizeRange, edgeSizeRange, edgeSizeRev);
 				pml.set("dash_width", curEdgeSize, edge, false);
 	
 		    } // end while loop through the resultset R
@@ -554,9 +628,10 @@ public class Graph2Pml {
 
     }
 
-    public void setNodesTransp(String nodes) {
+    public void setNodesTranspUniform(String nodes, double transp) {
 
-    	pml.set("sphere_transparency", nodeTransp, nodes, false);
+    	pml.iterateList(nodes, "node");
+		pml.set("sphere_transparency", transp, "node", true);
 
     }
 
@@ -564,20 +639,20 @@ public class Graph2Pml {
 
 		Statement S;
 		ResultSet R;
-		String query = "", nodes = "";
+		String query = "", node = "";
 	
 		try { 
 	
-		    pml.set("sphere_transparency", 0, "nodes", false);
+	    	pml.iterateList("nodes", "node");
+			pml.set("sphere_transparency", 0, "node", true);
 	
 		    S = conn.createStatement();
 	
 		    query = "SELECT "+nodeInfo[0]+", "+nodeInfo[1]+" FROM "+dbInfo[0]+"."+dbInfo[2]+" WHERE ("+nodeGraphSel+") AND ("+graphInfo[5]+")  AND ("+nodeTranspCondition+") ORDER BY "+nodeInfo[0]+", "+nodeInfo[1]+";";
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
-	
-		    	nodes = nodes+"n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1])+"+";
-			
+		    	node = "n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1]);
+		    	pml.set("sphere_transparency", nodeTransp, node, false);
 		    } // end while loop through the resultset R
 		    
 		    R.close();
@@ -589,15 +664,13 @@ public class Graph2Pml {
 		    System.out.println("SQLState:     " + E.getSQLState());
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
-	
-		nodes = "("+nodes.substring(0,nodes.length()-1)+")";
-		pml.set("sphere_transparency", nodeTransp, nodes, false);
 
     }
 
-    public void setEdgesGap(String edges) {
+    public void setEdgesGapUniform(String edges, double gap) {
 
-    	pml.set("dash_gap", edgeGap, edges, false);
+    	pml.iterateList(edges, "edge");
+		pml.set("dash_gap", gap, "edge", true);
 
     }
 
@@ -605,20 +678,20 @@ public class Graph2Pml {
 
 		Statement S;
 		ResultSet R;
-		String query = "", edges = "";
+		String query = "", edge = "";
 	
 		try { 
 	
-		    pml.set("dash_gap", 0, "edges", false);
-	
+			pml.iterateList("edges", "edge");
+			pml.set("dash_gap", 0, "edge", true);
+				
 		    S = conn.createStatement();
 	
 		    query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") AND ("+edgeGapCondition+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
-	
-		    	edges = edges+"e."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[2])+"."+R.getString(nodeInfo[1])+"."+R.getInt(nodeInfo[3])+"+";
-			
+		    	edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
+		    	pml.set("dash_gap", edgeGap, edge, false);
 		    } // end while loop through the resultset R
 		    
 		    R.close();
@@ -631,20 +704,18 @@ public class Graph2Pml {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
 	
-		edges = "("+edges.substring(0,edges.length()-1)+")";
-		pml.set("dash_gap", edgeGap, edges, false);
-
     }
 
     public void setGapDir() {
 
 		Statement S;
 		ResultSet R;
-		String query = "", subQuery = "", edges = "";
+		String query = "", subQuery = "", edge = "";
 	
 		try { 
 	
-		    pml.set("dash_gap", 0, "edges", false);
+			pml.iterateList("edges", "edge");
+			pml.set("dash_gap", 0, "edge", true);
 	
 		    S = conn.createStatement();
 	
@@ -656,9 +727,8 @@ public class Graph2Pml {
 			"WHERE (B.i_cid IS NULL) ORDER BY i_cid, i_num, j_cid, j_num;";
 		    R = S.executeQuery(query);
 		    while (R.next()) { 
-	
-		    	edges = edges+"e."+R.getString("i_cid")+"."+R.getInt("i_num")+"."+R.getString("j_cid")+"."+R.getInt("j_num")+"+";
-			
+		    	edge = "e."+R.getString("i_cid")+"."+R.getInt("i_num")+"."+R.getString("j_cid")+"."+R.getInt("j_num");
+		    	pml.set("dash_gap", edgeGap, edge, false);
 		    } // end while loop through the resultset R
 		    
 		    R.close();
@@ -670,15 +740,18 @@ public class Graph2Pml {
 		    System.out.println("SQLState:     " + E.getSQLState());
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
-	
-		edges = "("+edges.substring(0,edges.length()-1)+")";
-		pml.set("dash_gap", edgeGap, edges, false);
 
     }
     
-    public void setNodesColor(String nodes) {
+    public void setNodesColorUniform(String nodes, String color) {
 
-    	pml.setNodeColor(nodeColor, nodes, false);
+    	pml.iterateList(nodes, "node");
+		pml.setNodeColor(color, "node", true);
+    	//java String method passing either a nodes selection string or just "nodes"
+    	//pymol String method passing "nodes" (the pymol selection nodes is used)
+    	//pml.setNodeColor(nodeColor, nodes, false);
+    	//pymol String method passing "nodes" (the pymol string nodes is used) 
+    	//pml.setNodeColor(nodeColor, nodes, true);
 
     }
 
@@ -686,7 +759,7 @@ public class Graph2Pml {
 
 		Statement S;
 		ResultSet R;
-		String query = "", node = "", nodeSetId = "", nodeSetStr = "";
+		String query = "", node = "", nodeSetId = "";
 		double colWeight = 0;
 		double[] nodeCurColRange = new double[2];
 		double[] nodeRGB = new double[3];
@@ -700,37 +773,44 @@ public class Graph2Pml {
 	
 		    if (nodeColorMethod.equals("chain")) {
 	
-				for (String chain : chainNodes.keySet()) {
-				    pml.setNodeColor("color_cid"+chain, "nodes_cid"+chain, false);
+				for (String chain : chains) {
+				    setNodesColorUniform("nodes_cid"+chain, "color_cid"+chain);
 				}
 	
 		    } else if ((!nodeColorMethod.equals("uniform")) && (nodeColDiscr)) {
 	
+		    	/* The solution to select residues with specific value for the 
+		    	 * nodeColorMethod field, while traversing resultset R, wouldn't 
+		    	 * work because equalities with floating-point numbers are dangerous.
+		    	 */
 				query = "SELECT DISTINCT "+nodeColorMethod+" FROM "+dbInfo[0]+"."+dbInfo[2]+" WHERE ("+nodeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+nodeColorMethod+";";
 				R = S.executeQuery(query);
 				while (R.next()) {
 				    i++;
-				    pml.createColor("color_nodeSet."+i, colors[i%colors.length]);
-				    nodeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(nodeColorMethod))), "nodeSet."+i);
+				    pml.createColor("color_nodes_set"+i, colors[i%colors.length]);
+				    nodeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(nodeColorMethod))), "nodes_set"+i);
+				    pml.initList("nodes_set"+i);
 				}
 				R.close();
-		
+				
+				/*
+				 * I could skip the nodeSet.X lists and just set the color for the specific residue
+				 * but it is easier if someone wants for example to highlight one nodeSet later.
+				 * Also, the idea to use the "iterate list" solution here is mainly to avoid many
+				 * lines in the script. 
+				 */
 				query = "SELECT "+nodeInfo[0]+", "+nodeInfo[1]+", "+nodeColorMethod+" FROM "+dbInfo[0]+"."+dbInfo[2]+" WHERE ("+nodeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+nodeInfo[0]+", "+nodeInfo[1]+";";
+				R = S.executeQuery(query);
 				while (R.next()) {
-				    node = "n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1])+"+";
-				    colWeight = R.getDouble(nodeColorMethod);
-				    nodeSetId = nodeSetIds.get(new Long(Double.doubleToLongBits(colWeight)));
+				    node = "n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1]);
+				    nodeSetId = nodeSetIds.get(new Long(Double.doubleToLongBits(R.getDouble(nodeColorMethod))));
 				    nodeSet.put(node, nodeSetId);
-				    nodeSets.put(nodeSetId, nodeSets.get(nodeSetId)+node+"+");
+				    pml.appendList(nodeSetId, node);
 				}
 				R.close();
 		
-				for (String curNodeSet : nodeSets.keySet()) {
-				    nodeSetStr = nodeSets.get(curNodeSet);
-				    nodeSetStr = "("+nodeSetStr.substring(0,nodeSetStr.length()-1)+")";
-				    nodeSets.put(curNodeSet, nodeSetStr);
-				    pml.selPml(curNodeSet, nodeSetStr, false);
-				    pml.setNodeColor("color_"+curNodeSet, curNodeSet, false);
+				for (String curNodeSet : nodeSetIds.values()) {
+					setNodesColorUniform(curNodeSet, "color_"+curNodeSet);
 				}
 	
 		    } else if ((!nodeColorMethod.equals("uniform")) && (!nodeColDiscr)) {
@@ -764,18 +844,23 @@ public class Graph2Pml {
 
     }
 
-    public void setEdgesColor(String edges) {
-
-		pml.iterateList(edges, "edge");
-		pml.setColor(edgeColor, "edge", true);
-
+    public void setEdgesColorUniform(String edges, String color) {
+    	
+    	pml.iterateList(edges, "edge");
+		pml.setColor(color, "edge", true);
+    	//java String method passing either a edges selection string or just "edges"
+    	//pymol String method passing "edges" (the pymol selection edges is used)
+    	//pml.setColor(edgeColor, edges, false);
+    	//pymol String method passing "edges" (the pymol string edges is used) 
+    	//pml.setColor(edgeColor, edges, true);
+		
     }
 
     public void setEdgesColor() {
 
 		Statement S;
 		ResultSet R;
-		String query = "", edge = "", edgeSetId = "", edgeSetStr = "", node = "";
+		String query = "", edge = "", edgeSetId = "", node = "";
 		double colWeight = 0;
 		double[] edgeCurColRange = new double[2];
 		double[] edgeRGB = new double[3];
@@ -789,17 +874,17 @@ public class Graph2Pml {
 	
 		    if (edgeColorMethod.equals("chain")) {
 	
-				for (String chain : chainEdges.keySet()) {
-				    pml.setColor("color_cid"+chain, "edges_cid"+chain, false);
+				for (String chain : chains) {
+					setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
 				}
 	
 		    } else if (edgeColorMethod.equals("node")) {
 	
 				if (nodeColorMethod.equals("uniform")) {
-				    pml.setColor(nodeColor, "edges", false);
+					setEdgesColorUniform("edges", nodeColor);
 				} else if (nodeColorMethod.equals("chain")) {
-				    for (String chain : chainEdges.keySet()) {
-				    	pml.setColor("color_cid"+chain, "edges_cid"+chain, false);
+				    for (String chain : chains) {
+				    	setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
 				    }		    
 				} else if (nodeColDiscr) {
 				    query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
@@ -807,7 +892,7 @@ public class Graph2Pml {
 				    while (R.next()) {
 						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
 						edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
-						pml.setColor("color_"+nodeSet.get(node), "\""+edge+"\"", false);
+						pml.setColor("color_"+nodeSet.get(node), edge, false);
 				    }
 				    R.close();
 				} else if (!nodeColDiscr) {
@@ -816,7 +901,7 @@ public class Graph2Pml {
 				    while (R.next()) {
 						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
 						edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
-						pml.setColor("color_"+node, "\""+edge+"\"", false);
+						pml.setColor("color_"+node, edge, false);
 				    }
 				    R.close();
 				}
@@ -827,29 +912,26 @@ public class Graph2Pml {
 				R = S.executeQuery(query);
 				while (R.next()) {
 				    i++;
-				    pml.createColor("color_edgeSet."+i, colors[i%colors.length]);
-				    edgeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))), "edgeSet."+i);
+				    pml.createColor("color_edges_set"+i, colors[i%colors.length]);
+				    edgeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))), "edges_set"+i);
+				    pml.initList("edges_set"+i);
 				}
 				R.close();
 		
 				query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+", "+edgeColorMethod+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
+				R = S.executeQuery(query);
 				while (R.next()) {
 				    edge = "e."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2])+"."+R.getString(edgeInfo[1])+"."+R.getInt(edgeInfo[3]);
-				    colWeight = R.getDouble(edgeColorMethod);
-				    edgeSetId = edgeSetIds.get(new Long(Double.doubleToLongBits(colWeight)));
+				    edgeSetId = edgeSetIds.get(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))));
 				    edgeSet.put(edge, edgeSetId);
-				    edgeSets.put(edgeSetId, edgeSets.get(edgeSetId)+edge+"+");
+				    pml.appendList(edgeSetId, edge);
 				}
 				R.close();
 		
-				for (String curEdgeSet : edgeSets.keySet()) {
-				    edgeSetStr = edgeSets.get(curEdgeSet);
-				    edgeSetStr = "("+edgeSetStr.substring(0,edgeSetStr.length()-1)+")";
-				    edgeSets.put(curEdgeSet, edgeSetStr);
-				    pml.selPml(curEdgeSet, edgeSetStr, false);
-				    pml.setColor("color_"+curEdgeSet, curEdgeSet, false);
+				for (String curEdgeSet : edgeSetIds.values()) {
+					setEdgesColorUniform(curEdgeSet, "color_"+curEdgeSet);
 				}
-	
+					
 		    } else if ((!edgeColorMethod.equals("uniform")) && (!edgeColDiscr)) {
 	
 				edgeCurColRange = utils4DB.getRange(conn, dbInfo[0]+"."+dbInfo[3], edgeColorMethod, edgeGraphSel+" AND ("+graphInfo[5]+")");
@@ -864,7 +946,7 @@ public class Graph2Pml {
 				    edgeHSV[2] = 1;
 				    edgeRGB = hsvToRgb(edgeHSV);
 				    pml.createColor("color_"+edge, edgeRGB);
-				    pml.setColor("color_"+edge, "\""+edge+"\"", false);
+				    pml.setColor("color_"+edge, edge, false);
 				}
 				R.close();
 	

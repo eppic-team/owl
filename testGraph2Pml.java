@@ -2,28 +2,225 @@ import java.sql.*;
 import java.io.*;
 import tools.*;
 
+/**
+ * Package:		tools
+ * Class: 		testGraph2Pml
+ * Author:		Ioannis Filippis, filippis@molgen.mpg.de
+ * Date:		21/03/2006
+ * 
+ * Simple test class for visualizing contact graphs using Graph2Pml class plus
+ * PyMol class. Run PyMol with the -R option to run the server.
+ * 
+ * Changelog:
+ * 27/03/06 modified by IF (functional with comments)
+ * 21/03/06 first created by IF (non functional)
+ */
+
 public class testGraph2Pml {
 
 	public static void main(String[] args) {
-
-		String connFile = "/project/StruPPi/ioannis/cnfs/msdgraph.my.cnf";
-	
+		
+		String connFile = "/project/StruPPi/ioannis/cnfs/msdgraph.my.cnf", pdbFileName = "", molObjName = "";
+		Graph2Pml graphPml = null;
+		PyMol pml = null;
+		
 		mySQLConnect SQLC =  new mySQLConnect();
 		SQLC.readConnectionFile(connFile);
 		Connection conn = SQLC.openConnection();
 	
-		PrintWriter serverOutPw = new PrintWriter(new PymolServerOutputStream("http://blau:9123"), true);
-		PyMol pml = new PyMol(serverOutPw);
-	
-		String pdbFileName = Msdsd2Pdb.export2File("1rx4", 20717, 52567, 9, "/project/StruPPi/ioannis/tmp");
-		String molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		//Create a new output stream to the pymol server running at the localhost
+		//all commands will be send there
+		PrintWriter serverOutPw = new PrintWriter(new PymolServerOutputStream("http://"+Machine.getClient()+":9123"), true);
+		pml = new PyMol(serverOutPw);
+		
+		//export the pdb file directly from msdsd and load it in pymol
+		pdbFileName = Msdsd2Pdb.export2File("1rx4", 20717, 52567, 9, "/project/StruPPi/ioannis/tmp");
+		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
 		System.out.println(molObjName);
-	
-		Graph2Pml graphPml = new Graph2Pml(serverOutPw, molObjName, 33729, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, false, false, conn);
-		graphPml.exportPML();
-	
+		
+		//create a pymol contact graph object for the graph 33729
+		//use only SC_SC edges with SC_SC edge weight and nodes that have SC_SC edges
+		//no further filtering in the edges based on the contact range is applied
+		//no user based graph filtering is applied
+		//the graph comes from msdsd
+		//normal edges will be utilised
+		//the graph will not be visualised as "directed" 
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 33729, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, false, false, conn);
+		//draw nodes, edges, special residues but not surface
+		//the node size will be calculated based on the SC_SC_out field on asc order
+		//the node color will be calculated based on the BB_BB_out field not discretised
+		//all ALA nodes will be transparent
+		//all residues that do not have any SC interactions will be the special ones colored green
+		//all edges will be lines of width determined by the SC_SC field in asc order
+		//all edges lines will have color calculated based on the BB_BB_out field not discretised
+		//all edges lines with adjacent ALA's will have gaps
+		graphPml.draw(true, true, true, false);		
+		graphPml.setNodeSizeMethod("SC_SC_out", false);
+		graphPml.setNodeColorMethod("BB_BB_out", false);
+		graphPml.setNodeTranspCondition("(res = \"ALA\")");
+		graphPml.setSpecialRes("green", "SELECT cid, num FROM newmsdgraph.nodes WHERE (graph_id = 33729) AND (sc_sc_in+sc_sc_out = 0);");
+		graphPml.setEdgeSizeMethod("SC_SC", false);
+		graphPml.setEdgeColorMethod("BB_BB", false);
+		graphPml.setEdgeGapCondition("(i_res = \"ALA\" OR j_res = \"ALA\")");
+		//create the contact graph
+		graphPml.outputGraph();
+		//save the image not ray-traced
+		pml.saveImage("test1","/home/filippis/Desktop", false);
+		//if you want later to read the view from a log file
+		//pml.openLog("test1_log","/home/filippis/Desktop");
+		//get the view
+		pml.getView("test1_view");
+		//pml.closeLog();
+
+		// delete all and reload the structure
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//to check reversibility in setNodeSizeMethod, setEdgeSizeMethod 
+		//and discretised coloring in setNodeColorMethod, setEdgeColorMethod
+		graphPml.setNodeSizeMethod("SC_SC_out", true);
+		graphPml.setNodeColorMethod("BB_BB_out", true);
+		graphPml.setEdgeSizeMethod("SC_SC", true);
+		graphPml.setEdgeColorMethod("BB_BB", true);
+		graphPml.outputGraph();
+		//set view by reading a log file
+		//pml.getFileView("test2_view", "/home/filippis/Desktop/test1_log.pml");
+		//pml.setView("test2_view");
+		//set view based on the view of the first structure so that you can compare
+		//different graphs for the same structure
+		pml.setView("test1_view");
+		pml.saveImage("test2","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//to check node method for edge coloring when nodeColor method not discretised
+		graphPml.setUniformNodeSize(0.6);
+		graphPml.setNodeColorMethod("BB_BB_out", false);
+		graphPml.setUniformEdgeSize(4);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test1_view");
+		pml.saveImage("test3","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+				
+		//to check node method for edge coloring when nodeColor method is discretised
+		graphPml.setUniformNodeSize(0.6);
+		graphPml.setNodeColorMethod("BB_BB_out", true);
+		graphPml.setUniformEdgeSize(4);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test1_view");
+		pml.saveImage("test4","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+				
+		//to check node method for edge coloring when nodeColor method is uniform
+		graphPml.setUniformNodeSize(0.6);
+		graphPml.setUniformNodeColor("blue");
+		graphPml.setUniformEdgeSize(4);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test1_view");
+		pml.saveImage("test5","/home/filippis/Desktop", false);		
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//to check the trick of directionality with gapped lines for "half" edges
+		//for this purpose a SC_BB graph model is used that doesn't ensure bidirectionality
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 33729, "SC_BB", "SC_BB_in+SC_BB_out", "SC_BB", "true", "true", true, false, true, conn);
+		graphPml.outputGraph();
+		pml.setView("test1_view");
+		pml.saveImage("test6","/home/filippis/Desktop", false);		
+		
+		
+		pml.delete("all", false);
+		
+		//test multi-chain macromolecule with RNA also
+		pdbFileName = Msdsd2Pdb.export2File("1a0a", 1107, 2560, 1, "/project/StruPPi/ioannis/tmp");
+		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		System.out.println(molObjName);
+		
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 95, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, false, false, conn);
+		graphPml.draw(true, true, false, false);
+		//color nodes based on the chains they belong to
+		graphPml.setNodeColorMethod("chain", true);
+		graphPml.setNodeTransp(0.2);		
+		graphPml.setUniformEdgeColor("red");
+		graphPml.setUniformEdgeSize(4.5);
+		graphPml.setEdgeGap(0.5);
+		graphPml.outputGraph();
+		pml.saveImage("test7","/home/filippis/Desktop", false);
+		pml.getView("test2_view");
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//color edges based on the chains they belong to
+		graphPml.draw(true, true, false, false);		
+		graphPml.setUniformNodeColor("red");
+		graphPml.setEdgeColorMethod("chain", true);
+		graphPml.outputGraph();
+		pml.setView("test2_view");
+		pml.saveImage("test8","/home/filippis/Desktop", false);		
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//to check node method for edge coloring when nodeColor method is based on chain coloring	
+		graphPml.setNodeColorMethod("chain", true);
+		graphPml.setEdgeColorMethod("node", true);
+		graphPml.outputGraph();
+		pml.setView("test2_view");
+		pml.saveImage("test9","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//draw also surface - you can not see the graph anymore
+		graphPml.draw(true, true, false, true);
+		graphPml.setSurfTransp(0.7);
+		graphPml.outputGraph();
+		pml.setView("test2_view");
+		pml.saveImage("test10","/home/filippis/Desktop", false);
+		
+		try { Thread.sleep(10000); } catch (Exception e) {}
+		
+		//hide the surface, show the RNA also
+		//change the color of the nodes for each chain using the pymol defined list of nodes for each chain 
+		pml.hideWhat("surface", "graphMol", false);
+		pml.showWhat("lines", "restMol", false);
+		graphPml.setNodesColorUniform("nodes_cidA","red");
+		graphPml.setNodesColorUniform("nodes_cidA","yellow");
+		
+		try { Thread.sleep(10000); } catch (Exception e) {}
+		
+		//if you believe that the objects contained in the list won't exceed the pymol command length limit,
+		//you can concatenate all objects as a single string selection and handle them all together 
+		pml.concatList("nodes", "+", "nodesStr");
+		pml.setNodeColor("blue", "nodesStr", true);
+		pml.selPml("nodes", "nodesStr", true, true);
+				
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//check a graph model with only inter-secondary-structure-elements SC_SC edges
+		//remember that all the nodes with SC_SC will be selected
+		//use default behaviour
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 95, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "(!((i_ssid = j_ssid) AND (i_sstype = j_sstype)))", "true", true, false, false, conn);
+		graphPml.draw(true, true, false, false);
+		graphPml.outputGraph();
+		pml.setView("test2_view");
+		pml.saveImage("test11","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		
 		SQLC.closeConnection(conn);	
 
     }
 
-} // end of class Graph2Pml
+} // end of class testGraph2Pml
