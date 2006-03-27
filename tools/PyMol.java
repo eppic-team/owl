@@ -299,7 +299,7 @@ public class PyMol {
 		String iNodeSel = selectNode(i_cid, i_num, msdsd, true);
 		String jNodeSel = selectNode(j_cid, j_num, msdsd, true);
 	
-		Out.println("edge name="+edgeName+", i_node="+iNodeSel+", j_node="+jNodeSel+", r="+rgb[0]+", g="+rgb[1]+", b="+rgb[2]+", dg="+dashGap+", dl="+dashLength+", dr="+dashRadius+", dir="+(directed?1:0)+", dir_r="+half_rgb[0]+", dir_g="+half_rgb[1]+", dir_b="+half_rgb[2]+"");
+		Out.println("edge name="+edgeName+", i_node="+iNodeSel+", j_node="+jNodeSel+", r="+DF.format(rgb[0])+", g="+DF.format(rgb[1])+", b="+DF.format(rgb[2])+", dg="+DF.format(dashGap)+", dl="+DF.format(dashLength)+", dr="+DF.format(dashRadius)+", dir="+(directed?1:0)+", dir_r="+DF.format(half_rgb[0])+", dir_g="+DF.format(half_rgb[1])+", dir_b="+DF.format(half_rgb[2])+"");
 	
 		return edgeName;
 
@@ -327,7 +327,7 @@ public class PyMol {
 		String iNodeSel = selectNode(i_cid, i_num, msdsd, true);
 		String jNodeSel = selectNode(j_cid, j_num, msdsd, true);
 	
-		Out.println("edge name="+edgeName+", i_node="+iNodeSel+", j_node="+jNodeSel+", color="+color+", dg="+dashGap+", dl="+dashLength+", dr="+dashRadius+", dir="+(directed?1:0)+", dir_color="+color+"");
+		Out.println("edge name="+edgeName+", i_node="+iNodeSel+", j_node="+jNodeSel+", color="+color+", dg="+DF.format(dashGap)+", dl="+DF.format(dashLength)+", dr="+DF.format(dashRadius)+", dir="+(directed?1:0)+", dir_color="+color+"");
 	
 		return edgeName;
 
@@ -744,6 +744,7 @@ public class PyMol {
      */ 
     public void saveImage(String imageName, String dir, boolean rayTraced) {
 	
+    	refresh();
 		if (rayTraced) { Out.println("ray"); }
 		Out.println("png "+dir+"/"+imageName+".png");
 
