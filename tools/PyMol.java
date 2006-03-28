@@ -23,7 +23,9 @@ import java.text.*;
  * 	 quoted. However, it may be just a string variable, so it must be evaluated.In 
  * 	 that case parameter variable should be true.
  * - This is not a full PyMol API. Existing methods wrap basic pymol commands
- * 	in a simple, rather stupid way to facilitate contact graph visualization. 
+ * 	 in a simple, rather stupid way to facilitate contact graph visualization.
+ * - If you want to use cgo edges, create a .pymolrc file in your home directory
+ *   with the command "run /project/StruPPi/PyMolAll/pymol/scripts/ioannis/graph.py"
  * 
  * Changelog:
  * 27/03/06 modified by IF (refresh method plus refresh added in saveImage)
