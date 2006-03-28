@@ -11,7 +11,12 @@ import tools.*;
  * Simple test class for visualizing contact graphs using Graph2Pml class plus
  * PyMol class. Run PyMol with the -R option to run the server.
  * 
+ * Notes:
+ * - You can find the results from all examples here in 
+ *   /project/StruPPi/ioannis/workspace/aglappe/vis_examples/
+ * 
  * Changelog:
+ * 28/03/06 modified by IF (more examples added)
  * 27/03/06 modified by IF (functional with comments - added cgo examples)
  * 21/03/06 first created by IF (non functional)
  */
@@ -32,6 +37,8 @@ public class testGraph2Pml {
 		//all commands will be send there
 		PrintWriter serverOutPw = new PrintWriter(new PymolServerOutputStream("http://"+Machine.getClient()+":9123"), true);
 		pml = new PyMol(serverOutPw);
+
+		pml.openLog("test", "/home/filippis/Desktop");
 		
 		//Edges as lines
 		//export the pdb file directly from msdsd and load it in pymol
@@ -66,7 +73,7 @@ public class testGraph2Pml {
 		//create the contact graph
 		graphPml.outputGraph();
 		//save the image not ray-traced
-		pml.saveImage("test1","/home/filippis/Desktop", false);
+		pml.saveImage("test1", "/home/filippis/Desktop", false);
 		//if you want later to read the view from a log file
 		//pml.openLog("test1_log","/home/filippis/Desktop");
 		//get the view
@@ -91,6 +98,19 @@ public class testGraph2Pml {
 		//different graphs for the same structure
 		pml.setView("test1_view");
 		pml.saveImage("test2","/home/filippis/Desktop", false);
+		
+		// delete all and reload the structure
+		pml.delete("all", false);
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//just check user defined set/discretised colors
+		//all green nodes must become red
+		graphPml.setNodeColors(new String[] {"red", "magenta", "orange", "chocolate"});
+		//switched red-green, yellow-blue
+		graphPml.setEdgeColors(new String[] {"red", "green", "yellow", "blue", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"});
+	    graphPml.outputGraph();
+		pml.setView("test1_view");
+		pml.saveImage("test2a","/home/filippis/Desktop", false);
 		
 		pml.delete("all", false);
 		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
@@ -149,7 +169,7 @@ public class testGraph2Pml {
 		graphPml = new Graph2Pml(serverOutPw, molObjName, 95, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, false, false, conn);
 		graphPml.draw(true, true, false, false);
 		//color nodes based on the chains they belong to
-		graphPml.setNodeColorMethod("chain", true);
+		graphPml.setChainNodeColor();
 		graphPml.setNodeTransp(0.2);		
 		graphPml.setUniformEdgeColor("red");
 		graphPml.setUniformEdgeSize(4.5);
@@ -164,7 +184,7 @@ public class testGraph2Pml {
 		//color edges based on the chains they belong to
 		graphPml.draw(true, true, false, false);		
 		graphPml.setUniformNodeColor("red");
-		graphPml.setEdgeColorMethod("chain", true);
+		graphPml.setChainEdgeColor();
 		graphPml.outputGraph();
 		pml.setView("test2_view");
 		pml.saveImage("test8","/home/filippis/Desktop", false);		
@@ -172,8 +192,9 @@ public class testGraph2Pml {
 		pml.delete("all", false);
 		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
 		
-		//to check node method for edge coloring when nodeColor method is based on chain coloring	
-		graphPml.setNodeColorMethod("chain", true);
+		//to check node method for edge coloring when nodeColor method is based on chain coloring
+		//also check the user defined chain colors for nodes
+		graphPml.setChainNodeColor(new String[] {"blue"});
 		graphPml.setEdgeColorMethod("node", true);
 		graphPml.outputGraph();
 		pml.setView("test2_view");
@@ -307,7 +328,7 @@ public class testGraph2Pml {
 		graphPml.setNodeColorMethod("SC_SC_out", false);
 		graphPml.setNodeTransp(0);		
 		graphPml.setEdgeSizeMethod("SC_SC", false);
-		graphPml.setEdgeColorMethod("chain", true);
+		graphPml.setChainEdgeColor(new String[] {"yellow","red"});
 		graphPml.outputGraph();
 		pml.saveImage("test19","/home/filippis/Desktop", false);
 		
@@ -325,6 +346,30 @@ public class testGraph2Pml {
 		graphPml.setEdgeColorMethod("SC_SC", false);
 		graphPml.outputGraph();
 		pml.saveImage("test20","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pdbFileName = "1kj0_21698_55132.pdb";
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//check the setNodeSizeRange method
+		graphPml = new Graph2Pml(serverOutPw, molObjName, 35666, "SC_SC", "SC_SC_in+SC_SC_out", "SC_SC", "true", "true", true, true, true, conn);
+		graphPml.draw(true, false, false, false);
+		graphPml.setChainColors(new String[] {"red"});
+		graphPml.setNodeSizeMethod("SC_SC_out", false);
+		graphPml.setNodeSizeRange(new double[] {0.6, 1.2});
+		graphPml.outputGraph();
+		pml.saveImage("test21","/home/filippis/Desktop", false);
+		
+		pml.delete("all", false);
+		pdbFileName = "1kj0_21698_55132.pdb";
+		pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
+		
+		//check the setDefaults method
+		graphPml.setDefaults(new String[] {"nodeSizeRange", "chainColors"});
+		graphPml.outputGraph();
+		pml.saveImage("test22","/home/filippis/Desktop", false);
+		
+		pml.closeLog();
 		
 		SQLC.closeConnection(conn);	
 
