@@ -11,8 +11,29 @@ import java.util.*;
  * Author:		Ioannis Filippis, filippis@molgen.mpg.de
  * Date:		21/03/2006
  *  
- *  
+ * This class enables the visualization of a contact graph. Contact
+ * graph is defined based on the contact weight, the contact type, the
+ * contact range as well as a user defined filter. User can also define 
+ * chain coloring, color/size/transparency of nodes, color/width/gap of
+ * edges, representation of edges like lines or cylinders, directedness
+ * of graph, etc ... Moreover, the schema of the tables where the graph
+ * is extracted from, can be modified.
+ * 
+ * 
  * Notes:
+ * - The program defines some python/pymol string lists that could be used later for
+ * 	 easy manipulation of groups. You may encounter the following lists:
+ *   - nodes, edges : all nodes/edges
+ * 	 - nodes_cidX, edges_cidX (where X the chain_code) contain all nodes/edges per
+ * 	  chain
+ * 	 - 
+ * - The visualization is not "static". Although, the whole class is defined
+ *   for a single visualisation instance, all methods could be used for on-the-fly
+ *   visualization changes.
+ * - The coding is not optimum since the purposes of the visualization are not
+ *   well defined at the moment. The main purpose of the class is to provide
+ *   insight how the PyMol class can be used, as well as ready code for custom
+ *   implementations.
  * - All properties of nodes and edges are handled separately for 2 reasons
  *	 - Even though nodes(edges) could be created and their properties could be
  *	   set at the same time (traversing one the nodes(edges) from the database), 
@@ -51,9 +72,10 @@ import java.util.*;
  *    the colorSpecialRes method. I expect these residues not to be many so the command line
  *    length limit won't be exceeded.
  * - Never use "." for a list's name!!!!
- * - If you put surface even with high transparency, you can not see the nodes.
+ * - If you put surface even with high transparency, you can not see the complete graph.
  * 
  * Changelog:
+ * 28/03/06 modified by IF (adding more flexibility on coloring, popDefaults and setDefaults methods and more comments)
  * 27/03/06 modified by IF (functional at last - added cgoEdges)
  * 22/03/06 modified by IF (modified to compile based on objectNameQuotes variable changes in PyMol class - still non functional)
  * 21/03/06 first created by IF (non functional)
@@ -61,26 +83,87 @@ import java.util.*;
 
 public class Graph2Pml {
 
+	// check constructor
     private Connection conn;
     private PrintWriter out = null;
     private PyMol pml = null;
     private boolean msdsd = true, cgoEdge = false, directed = true;
+    private String molObjName = null;
     
+    /*
+     * chains: HashSet holding all chain codes
+     * nodeSetIds: HashMap containing nodes' possible values based on which
+     * 			nodes are separated into sets. Values are the set names. Used
+     * 			when the coloring of nodes is based on a field and colors are
+     * 			discretised.
+     * nodeSet:  HashMap containing nodes as keys and the set they belong to
+     * 			as values. This is used when the edges are colored as the nodes
+     * 			("node" method) and the coloring of nodes is based on a field 
+     * 			with colors to be discretised.
+     * edgeSetIds, edgeSet:  similar with nodeSetIds, nodeSet. edgeSet is not
+     * 			actually used.
+     * defaults: HashMap containing all attributes/variables that can be set
+     * 			to their default values using setDefaults method. Values are 
+     * 			integers so a switch can be utilised.  
+     */
     private HashSet<String> chains = new HashSet<String>();
-    
-    //private HashMap<String, String> chainNodes = new HashMap<String, String>(); //java String method
-    //private HashMap<String, String> chainEdges = new HashMap<String, String>(); //java String method
     private HashMap<Long, String> nodeSetIds = new HashMap<Long, String> ();
     private HashMap<String, String> nodeSet = new HashMap<String, String> ();
     private HashMap<Long, String> edgeSetIds = new HashMap<Long, String> ();
-    private HashMap<String, String> edgeSet = new HashMap<String, String> ();
-
+    private HashMap<String, String> edgeSet = new HashMap<String, String> ();   
+    //private HashMap<String, String> chainNodes = new HashMap<String, String>(); //java String method
+    //private HashMap<String, String> chainEdges = new HashMap<String, String>(); //java String method
+    private HashMap<String, Integer> defaults = new HashMap<String, Integer>();
+    
+    /*
+     * dbInfo, nodeInfo and edgeInfo hold the db schema info, while the graphInfo
+     * 	concenrns the graph model
+     * dbInfo: String array holding the db name, the table name with the list of available
+     * 		graphs, the nodes table name, the edges table name and the column name for the
+     * 		graph id
+     * nodeInfo: String array holding the chain code and the residue serial column names
+     * edgeInfo: String array holding the chain code and the residue serial column names
+     * 		for the i and j edges
+     * graphInfo: String array holding the graph id, the edge weight, the node contact type,
+     * 		the edge contact type, the contact range and the user-defined filter
+     * nodeGraphSel: String containing the mysql where-condition when quering the nodes table
+     * edgeGraphSel: String containing the mysql where-condition when quering the edges table 
+     */
     private String[] dbInfo = new String[] {"newmsdgraph", "list", "nodes", "edges", "graph_id"};
     private String[] nodeInfo = new String[] {"cid", "num"};
     private String[] edgeInfo = new String[] {"i_cid", "j_cid", "i_num", "j_num"};
     private String[] graphInfo = new String[6];
-    private String molObjName = null, nodeGraphSel = "", edgeGraphSel = "";
+    private String nodeGraphSel = "", edgeGraphSel = "";
     
+    /*
+     * draw: boolean array defining whether nodes, edges, special residues, surface will 
+     * 		drawn
+     * nodeColorMethod: String containing the method for defining the node color. These can be: 
+     * 		- "chain" (default): all nodes of the same chain will have the same color, either defined
+     * 			by the user or by the color of the chain they belong to
+     * 		- "uniform": all nodes will have the same color
+     * 		- db field based: in this case either the values of the field are rescaled in the rgb
+     * 			scale (from red to blue) or all nodes of the same value will have specific color
+     * 			(discretised case)
+     * edgeColorMethod: Similar as above plus one more method:
+     * 		- "node": edges are colored based on the color of the i_node.
+     * nodeSizeMethod, edgeSizeMethod: the same as above except the "chain" and the "node"
+     * nodeColDiscr, edgeColDiscr : whether the coloring is discretised in the db field based case
+     * nodeSizeRev, edgeSizeRev : whether values should be considered in the descending order in the
+     * 		db field based case (high value -> small sphere)
+     * nodeColor, edgeColor, specialResColor, backgroundColor: ...
+     * nodeSizeRange, edgeSizeRange, cgoEdgeSizeRange: ...
+     * edgeGap, cgoEdgeGap, cgoEdgeLength, nodeTransp, surfTransp: ...
+     * 		Cylinder is defined by the cgoEdgeGap, cgoEdgeLength and cgoEdgeSize (actually the radius).
+     * 		Only the last one can be defined by the user
+     * specialResQuery: a mysql query statement that identifies residues(not nodes - spheres) that 
+     * 		should be colored with specialResColor. For example, this could be used in a SC_SC graph to 
+     * 		mark the SC_SC=0 regions in the chain, or early folding residues
+     * edgeGapCondition: a mysql where-condition based on which specific edges will have gaps. If the graph is
+     * 		defined as directed, then this will be ignored
+     * nodeTranspCondition: a mysql where-condition based on which specific nodes will be transparent
+     * 
+     */
     private boolean[] draw = new boolean[] {true, true, false, false};
     private String nodeColorMethod = "chain", nodeSizeMethod = "uniform", edgeColorMethod = "uniform", edgeSizeMethod = "uniform", nodeColor = "blue", edgeColor = "orange", specialResColor = "purple";
     private boolean nodeColDiscr = false, edgeColDiscr = false, nodeSizeRev = false, edgeSizeRev = false;
@@ -91,9 +174,49 @@ public class Graph2Pml {
     private String edgeGapCondition = "", nodeTranspCondition = "", specialResQuery = null;
     private double edgeGap = 0.25, nodeTransp = 0.6, surfTransp = 0.6, cgoEdgeGap = 0, cgoEdgeLength = 0.5;
     private String backgroundColor = "white";
-			  
-    private String[] colors = {"light_grey", "green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
-
+    
+    /*
+     * All the following string arrays holding colors can be changed by the user!
+     * chainColors: default chain colors (chain A will be light_grey, second green and so on).
+     * chainNodeColors, chainEdgeColors: String arrays holding the colors to be used for
+     * 		coloring the nodes(edges) if "chain" is the coloring methods. By default, these are null
+     * 		and the chainColors are used instead.
+     * setNodeColors, setEdgeColors: String array holding the colors to be used for nodes/edges
+     * 		based on the set they belong to (db field based, discretised coloring). By default, are similar
+     * 		to the chainColors (only the first light_grey color is omitted)
+     */  
+    private String[] chainColors = {"light_grey", "green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    private String[] chainNodeColors = null;
+    private String[] chainEdgeColors = null;
+    private String[] setNodeColors = {"green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    private String[] setEdgeColors = {"green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    
+    /*
+     * @param out: PrintWriter where pymol commands will be send to
+     * @param molObjName: the object name where the molecule is loaded to
+     * @param graphId: the graph IDX
+     * @param edgeWeight, nodeContactType, edgeContactType, contactRange, userFilter
+     * 		All should be given in the format of a sql expression embedded in a where clause
+     * @param edgeWeight: the weight to be used for the edge (non functional)
+     * 		This should not be confused with contact type. For example, you may choose 
+     * 		all SC_SC edges but the edge weight to be uniform.
+     * @param nodeContactType, edgeContact Type: both refer to contact type (SC_SC, BB_BB, .. edges)
+     * 		Contact type is defined separately due to different db fields that have to be >0. For 
+     * 		example for newmsdgraph	db and for a SC_SC graph, nodeContactType should be "SC_SC_in+SC_SC_out",
+     * 		while edgeContactType "SC_SC".
+     * @param contactRange: inter-secondary-structure/SC-dominated/long-medium-short range edges
+     * 		This filter is applied only to edges. So, the nodes will be the same whether you
+     * 		define a contactRange filter or not (in this case you should use "(true)").
+     * @param userFilter: a user defined filter
+     * 		This is applies both to nodes and edges! If not applicable, just give "(true)".
+     * @param msdsd: whether the pdb file is extracted from msdsd
+     * @param cgoEdge: whether the edge should be represented as a cylinder
+     * @param directed: whether the edge should be directed 
+     * 		If edge is line, then it will have gaps if not present in both directions else solid
+     * 		If edge is cylinder, then directed edge is represented as cylinder-line combination
+     * @param conn: mysql connection
+     *  
+     */
     public Graph2Pml(PrintWriter out, String molObjName, int graphId, String edgeWeight, String nodeContactType, String edgeContactType, String contactRange, String userFilter, boolean msdsd, boolean cgoEdge, boolean directed, Connection conn) {
 	
 		graphInfo[0] = String.valueOf(graphId);
@@ -112,9 +235,15 @@ public class Graph2Pml {
 		this.msdsd = msdsd;
 		this.cgoEdge = cgoEdge;
 		this.directed = directed;
+		
+		// initialise defaults hashMap
+		popDefaults();
 
     }
     
+    /*
+     * define whether nodes, edges, special residues, surface will be drawn
+     */
     public boolean draw(boolean nodes, boolean edges, boolean specialRes, boolean surface) {
 
 		boolean status = true;
@@ -133,7 +262,10 @@ public class Graph2Pml {
 		return status;
 
     }
-
+    
+    /*
+     * define the schema of the database from where the contact graph will be extracted
+     */
     public void setSchema(String dbName, String graphTbl, String nodesTbl, String edgesTbl, String graphIdCol, String nodeChainCol, String nodeNumCol, String edgeINodeChainCol, String edgeJNodeChainCol, String edgeINodeNumCol, String edgeJNodeNumCol) {
 
 		dbInfo[0] = dbName;
@@ -156,13 +288,19 @@ public class Graph2Pml {
 
     public void setUserFilter(String filter) { graphInfo[4] = filter; }
 
-    public void seNodeSizeRange(double[] range) { nodeSizeRange = range; }
+    public void setNodeSizeRange(double[] range) { nodeSizeRange = range; }
 
     public void setEdgeSizeRange(double[] range) { edgeSizeRange = range; }
     
     public void setCgoEdgeSizeRange(double[] range) { cgoEdgeSizeRange = range; }
     
     public void setBackgroundColor(String color) { backgroundColor = color; }
+    
+    public void setChainColors(String[] colors) { chainColors = colors; }
+    
+    public void setNodeColors(String[] colors) { setNodeColors = colors; }
+    
+    public void setEdgeColors(String[] colors) { setEdgeColors = colors; }
     
     public boolean setUniformNodeColor(String color) {
 
@@ -180,6 +318,50 @@ public class Graph2Pml {
 		if (draw[1]) {
 		    edgeColor = color;
 		    edgeColorMethod = "uniform";
+		}
+
+		return draw[1];
+
+    }
+    
+    public boolean setChainNodeColor() {
+
+		if (draw[0]) {
+			chainNodeColors = null;
+		    nodeColorMethod = "chain";
+		}
+	
+		return draw[0];
+
+    }
+    
+    public boolean setChainNodeColor(String[] colors) {
+
+		if (draw[0]) {
+		    chainNodeColors = colors;
+		    nodeColorMethod = "chain";
+		}
+	
+		return draw[0];
+
+    }
+    
+    public boolean setChainEdgeColor() {
+
+		if (draw[1]) {
+			chainEdgeColors = null;
+		    edgeColorMethod = "chain";
+		}
+
+		return draw[1];
+
+    }
+    
+    public boolean setChainEdgeColor(String[] colors) {
+
+		if (draw[1]) {
+		    chainEdgeColors = colors;
+		    edgeColorMethod = "chain";
 		}
 
 		return draw[1];
@@ -230,13 +412,30 @@ public class Graph2Pml {
 
     }
 
-
+    /*
+     * define the db field to be used for coloring the nodes. If discr (discretised is true), 
+     * all nodes of the same value will have specific color, else the values of the field 
+     * are rescaled in the rgb scale (from red to blue)
+     */
     public void setNodeColorMethod(String method, boolean discr) { nodeColorMethod = method; nodeColDiscr = discr; }
-
+    
+    /*
+     * define the db field to be used for coloring the edges. If discr (discretised is true), 
+     * all edges of the same value will have specific color, else the values of the field 
+     * are rescaled in the rgb scale (from red to blue)
+     */
     public void setEdgeColorMethod(String method, boolean discr) { edgeColorMethod = method; edgeColDiscr = discr; }
     
+    /*
+     * define the db field to be used for coloring the nodes. If rev (reversed is true), 
+     * values will be considered in the descending order (high value -> small sphere).
+     */    
     public void setNodeSizeMethod(String method, boolean rev) { nodeSizeMethod = method; nodeSizeRev = rev; }
 
+    /*
+     * define the db field to be used for coloring the edges. If rev (reversed is true), 
+     * values will be considered in the descending order (high value -> thin edge).
+     */       
     public void setEdgeSizeMethod(String method, boolean rev) { edgeSizeMethod = method; edgeSizeRev = rev; }
 
     public void setEdgeGapCondition(String condition) { edgeGapCondition = condition; }
@@ -249,6 +448,9 @@ public class Graph2Pml {
 
     public void setSurfTransp(double transp) { surfTransp = transp; }
 
+    /*
+     * visualise the graph
+     */
     public boolean outputGraph() {
 
 		boolean status = check();
@@ -258,6 +460,9 @@ public class Graph2Pml {
 
     }
 
+    /*
+     * private method to do some simple checks on the compatibility of user defined preferences
+     */
     private boolean check() {
 
 		boolean status = true;
@@ -304,6 +509,9 @@ public class Graph2Pml {
 
     }
 
+    /*
+     * private method that exports all pymol commands for visualization
+     */
     private void exportPML() {
 
 		pml.background(backgroundColor);
@@ -312,10 +520,11 @@ public class Graph2Pml {
 	
 		chains();
 		
-		if (draw[2]) { colorSpecialRes(); }
-
+		//draw special residues
+		if (draw[2]) { colorSpecialRes(); } 
 		pml.zoom("graphMol", false);
-			
+	
+		//draw nodes
 		if (draw[0]) {
 		    createNodes();
 		    pml.zoom("graphMol", false);
@@ -339,6 +548,7 @@ public class Graph2Pml {
 		    pml.zoom("graphMol", false);
 		}
 	
+		//draw edges
 		if (draw[1]) {	
 		    if (cgoEdge) {		    
 		    	createCgoEdges();
@@ -371,6 +581,7 @@ public class Graph2Pml {
 		    }	
 		}
 		
+		//draw surface
 		if (draw[3]) { 
 		    pml.showWhat("surface", "graphMol", false);
 		    pml.set("transparency", surfTransp, "graphMol", false);
@@ -379,6 +590,10 @@ public class Graph2Pml {
 		
     } // end of exportPML
 
+	/*
+	 * private method to color the chains, initialise chain based lists and hide the
+	 * rest of the macromolecule (restMol) not included in the contact graph (graphMol)
+	 */
     private void chains() {
 
 		Statement S;
@@ -395,7 +610,7 @@ public class Graph2Pml {
 				chains.add(cid);
 				numChains++;
 				
-				pml.createColor("color_cid"+cid, colors[numChains%colors.length]);
+				pml.createColor("color_cid"+cid, chainColors[numChains%chainColors.length]);
 				chainSel = pml.selectChain(cid, msdsd);
 				pml.setColor("color_cid"+cid, chainSel, false);
 				
@@ -422,6 +637,9 @@ public class Graph2Pml {
 
     }
 
+    /*
+     * private method to color special residues
+     */
     private void colorSpecialRes() {
 
 		String cid = "", resSel = "";
@@ -454,6 +672,9 @@ public class Graph2Pml {
 
     } // end colorSpecialRes
 
+    /*
+     * creates all nodes with pymol default settings and appends them in the nodes, nodes_cidX lists
+     */
     public void createNodes() {
 
 		Statement S;
@@ -511,6 +732,9 @@ public class Graph2Pml {
 		
     } // end writeNodes()
     
+    /*
+     * creates all edges with pymol default settings and appends them in the edges, edges_cidX list
+     */    
     public void createEdges() {
 
 		Statement S;
@@ -564,6 +788,9 @@ public class Graph2Pml {
 		
     } // end writeEdges()
     
+    /*
+     * sets the node size for all nodes included in the @param nodes list
+     */
     public void setNodesSizeUniform(String nodes, double size) {
 
     	pml.iterateList(nodes, "node");
@@ -571,6 +798,9 @@ public class Graph2Pml {
 	
     }
 
+    /*
+     * sets the size for all nodes based on a db field
+     */
     public void setNodesSize() {
 
 		Statement S;
@@ -581,6 +811,7 @@ public class Graph2Pml {
 	
 		try { 
 	
+			// get min, max values of the db field
 		    nodeCurSizeRange = utils4DB.getRange(conn, dbInfo[0]+"."+dbInfo[2], nodeSizeMethod, nodeGraphSel+" AND ("+graphInfo[5]+")");
 	
 		    S = conn.createStatement();
@@ -606,14 +837,20 @@ public class Graph2Pml {
 		} // end catch 
 
     }
-
+    
+    /*
+     * sets the edges size for all nodes included in the @param edges list
+     */
     public void setEdgesSizeUniform(String edges, double size) {
 
     	pml.iterateList(edges, "edge");
 		pml.set("dash_width", size, "edge", true);
 	
     }
-
+    
+    /*
+     * sets the size for all nodes based on a db field
+     */
     public void setEdgesSize() {
 
 		Statement S;
@@ -650,13 +887,19 @@ public class Graph2Pml {
 
     }
 
+    /*
+     * sets the node transparency for all nodes included in the @param nodes list
+     */   
     public void setNodesTranspUniform(String nodes, double transp) {
 
     	pml.iterateList(nodes, "node");
 		pml.set("sphere_transparency", transp, "node", true);
 
     }
-
+    
+    /*
+     * sets the node transparency for all nodes defined by the nodeTranspCondition
+     */
     public void setNodesTransp() {
 
 		Statement S;
@@ -665,6 +908,7 @@ public class Graph2Pml {
 	
 		try { 
 	
+			//initialise transparency to 0
 	    	pml.iterateList("nodes", "node");
 			pml.set("sphere_transparency", 0, "node", true);
 	
@@ -688,14 +932,20 @@ public class Graph2Pml {
 		} // end catch 
 
     }
-
+    
+    /*
+     * sets the gap for all edges included in the @param edges list
+     */   
     public void setEdgesGapUniform(String edges, double gap) {
 
     	pml.iterateList(edges, "edge");
 		pml.set("dash_gap", gap, "edge", true);
 
     }
-
+    
+    /*
+     * sets the gap for all edges defined by the edgeGapCondition
+     */
     public void setEdgesGap() {
 
 		Statement S;
@@ -704,6 +954,7 @@ public class Graph2Pml {
 	
 		try { 
 	
+			// initialise gap to 0
 			pml.iterateList("edges", "edge");
 			pml.set("dash_gap", 0, "edge", true);
 				
@@ -728,6 +979,10 @@ public class Graph2Pml {
 	
     }
 
+    /*
+     * edges that exist only in one direction are set to have gap, while all bidirectional ones
+     * are solid
+     */
     public void setGapDir() {
 
 		Statement S;
@@ -735,14 +990,15 @@ public class Graph2Pml {
 		String query = "", subQuery = "", edge = "";
 	
 		try { 
-	
+			
+			//initialise gap to 0
 			pml.iterateList("edges", "edge");
 			pml.set("dash_gap", 0, "edge", true);
 	
 		    S = conn.createStatement();
 	
 		    subQuery = "SELECT "+edgeInfo[0]+" AS i_cid, "+edgeInfo[2]+" AS i_num, "+edgeInfo[1]+" AS j_cid, "+edgeInfo[3]+" AS j_num FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+")";
-	
+		    // left join the edges with themselves and choose the ones with null on the match
 		    query = "SELECT A.* FROM "+
 			"("+subQuery+") AS A LEFT JOIN ("+subQuery+") AS B ON "+
 			"(A.i_cid = B.j_cid AND A.i_num = B.j_num AND A.j_cid = B.i_cid AND A.j_num = B.i_num) "+
@@ -765,6 +1021,9 @@ public class Graph2Pml {
 
     }
     
+    /*
+     * sets the color for all nodes included in the @param nodes list
+     */       
     public void setNodesColorUniform(String nodes, String color) {
 
     	pml.iterateList(nodes, "node");
@@ -776,7 +1035,10 @@ public class Graph2Pml {
     	//pml.setNodeColor(nodeColor, nodes, true);
 
     }
-
+    
+    /*
+     * sets the color for all nodes based on the nodeColorMethod
+     */
     public void setNodesColor() {
 
 		Statement S;
@@ -786,7 +1048,7 @@ public class Graph2Pml {
 		double[] nodeCurColRange = new double[2];
 		double[] nodeRGB = new double[3];
 		double[] nodeHSV = new double[3];
-		int i = 0;
+		int i = -1;
 		
 	
 		try { 
@@ -795,9 +1057,16 @@ public class Graph2Pml {
 	
 		    if (nodeColorMethod.equals("chain")) {
 	
-				for (String chain : chains) {
-				    setNodesColorUniform("nodes_cid"+chain, "color_cid"+chain);
-				}
+		    	if (chainNodeColors == null) {
+					for (String chain : chains) {
+					    setNodesColorUniform("nodes_cid"+chain, "color_cid"+chain);
+					}		    		
+		    	} else {
+		    		for (String chain : chains) {
+		    			pml.createColor("color_nodes_cid"+chain, chainNodeColors[i%chainNodeColors.length]);
+					    setNodesColorUniform("nodes_cid"+chain, "color_nodes_cid"+chain);
+					}	
+		    	} 
 	
 		    } else if ((!nodeColorMethod.equals("uniform")) && (nodeColDiscr)) {
 	
@@ -809,7 +1078,7 @@ public class Graph2Pml {
 				R = S.executeQuery(query);
 				while (R.next()) {
 				    i++;
-				    pml.createColor("color_nodes_set"+i, colors[i%colors.length]);
+				    pml.createColor("color_nodes_set"+i, setNodeColors[i%setNodeColors.length]);
 				    nodeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(nodeColorMethod))), "nodes_set"+i);
 				    pml.initList("nodes_set"+i);
 				}
@@ -844,9 +1113,11 @@ public class Graph2Pml {
 				while (R.next()) {
 				    node = "n."+R.getString(nodeInfo[0])+"."+R.getInt(nodeInfo[1]);
 				    colWeight = R.getDouble(nodeColorMethod);
+				    //HSV (Hue, Saturation, Value) model- Hue is the color type defined by the rescaled db field value
 				    nodeHSV[0] = rescale(colWeight, nodeCurColRange, new double[] {0, 240}, false);
 				    nodeHSV[1] = 1;
 				    nodeHSV[2] = 1;
+				    //convert the hsv color to rgb
 				    nodeRGB = hsvToRgb(nodeHSV);
 				    pml.createColor("color_"+node, nodeRGB);
 				    pml.setNodeColor("color_"+node, node, false);
@@ -865,7 +1136,10 @@ public class Graph2Pml {
 		} // end catch 
 
     }
-
+    
+    /*
+     * sets the color for all edges included in the @param edges list
+     */    
     public void setEdgesColorUniform(String edges, String color) {
     	
     	pml.iterateList(edges, "edge");
@@ -878,6 +1152,9 @@ public class Graph2Pml {
 		
     }
 
+    /*
+     * sets the color for all edges based on the edgeColorMethod
+     */
     public void setEdgesColor() {
 
 		Statement S;
@@ -887,7 +1164,7 @@ public class Graph2Pml {
 		double[] edgeCurColRange = new double[2];
 		double[] edgeRGB = new double[3];
 		double[] edgeHSV = new double[3];
-		int i = 0;
+		int i = -1;
 		
 	
 		try { 
@@ -895,19 +1172,32 @@ public class Graph2Pml {
 		    S = conn.createStatement();
 	
 		    if (edgeColorMethod.equals("chain")) {
-	
-				for (String chain : chains) {
-					setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
-				}
-	
+		    	
+		    	if (chainEdgeColors == null) {		    	
+					for (String chain : chains) {
+						setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
+					}
+		    	} else {
+		    		for (String chain : chains) {
+		    			pml.createColor("color_edges_cid"+chain, chainEdgeColors[i%chainEdgeColors.length]);
+					    setEdgesColorUniform("edges_cid"+chain, "color_edges_cid"+chain);
+					}	
+		    	} 
+		    	
 		    } else if (edgeColorMethod.equals("node")) {
 	
 				if (nodeColorMethod.equals("uniform")) {
 					setEdgesColorUniform("edges", nodeColor);
 				} else if (nodeColorMethod.equals("chain")) {
-				    for (String chain : chains) {
-				    	setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
-				    }		    
+					if (chainNodeColors == null) {
+						for (String chain : chains) {
+							setEdgesColorUniform("edges_cid"+chain, "color_cid"+chain);
+						}
+					} else {
+						for (String chain : chains) {
+							setEdgesColorUniform("edges_cid"+chain, "color_nodes_cid"+chain);
+						}
+					}
 				} else if (nodeColDiscr) {
 				    query = "SELECT "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+" FROM "+dbInfo[0]+"."+dbInfo[3]+" WHERE ("+edgeGraphSel+") AND ("+graphInfo[5]+") ORDER BY "+edgeInfo[0]+", "+edgeInfo[2]+", "+edgeInfo[1]+", "+edgeInfo[3]+";";
 				    R = S.executeQuery(query);
@@ -934,7 +1224,7 @@ public class Graph2Pml {
 				R = S.executeQuery(query);
 				while (R.next()) {
 				    i++;
-				    pml.createColor("color_edges_set"+i, colors[i%colors.length]);
+				    pml.createColor("color_edges_set"+i, setEdgeColors[i%setEdgeColors.length]);
 				    edgeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))), "edges_set"+i);
 				    pml.initList("edges_set"+i);
 				}
@@ -985,6 +1275,9 @@ public class Graph2Pml {
 
     }
 
+    /*
+     * create cgo edges (cylinders)
+     */
     public void createCgoEdges() {
     	
 		Statement S;
@@ -1003,6 +1296,11 @@ public class Graph2Pml {
 			
 			S = conn.createStatement();	
 			
+			if (edgeColorMethod.equals("chain") && (chainEdgeColors != null)) {
+				for (String chain : chains) {
+	    			pml.createColor("color_edges_cid"+chain, chainEdgeColors[i%chainEdgeColors.length]);
+				}
+			}			
 			if (!edgeSizeMethod.equals("uniform")) {
 				edgeCurSizeRange = utils4DB.getRange(conn, dbInfo[0]+"."+dbInfo[3], edgeSizeMethod, edgeGraphSel+" AND ("+graphInfo[5]+")");
 				queryFields += ", "+edgeSizeMethod;
@@ -1014,7 +1312,7 @@ public class Graph2Pml {
 					R = S.executeQuery(query);
 					while (R.next()) {
 					    i++;
-					    pml.createColor("color_edges_set"+i, colors[i%colors.length]);
+					    pml.createColor("color_edges_set"+i, setEdgeColors[i%setEdgeColors.length]);
 					    edgeSetIds.put(new Long(Double.doubleToLongBits(R.getDouble(edgeColorMethod))), "edges_set"+i);
 					    pml.initList("edges_set"+i);
 					}
@@ -1040,12 +1338,12 @@ public class Graph2Pml {
 				if (edgeColorMethod.equals("uniform")) {
 					curCgoEdgeColor = edgeColor;
 				} else if (edgeColorMethod.equals("chain")){
-					curCgoEdgeColor = "color_cid"+i_cid;
+					curCgoEdgeColor = (chainEdgeColors == null)?"color_cid"+i_cid:"color_edges_cid"+i_cid;					
 				} else if (edgeColorMethod.equals("node")){
 					if (nodeColorMethod.equals("uniform")) {
 						curCgoEdgeColor = nodeColor;
 					} else if (nodeColorMethod.equals("chain")) {
-						curCgoEdgeColor = "color_cid"+i_cid;		    
+						curCgoEdgeColor = (chainNodeColors == null)?"color_cid"+i_cid:"color_nodes_cid"+i_cid;
 					} else if (nodeColDiscr) {
 						node = "n."+R.getString(edgeInfo[0])+"."+R.getInt(edgeInfo[2]);
 						curCgoEdgeColor = "color_"+nodeSet.get(node);
@@ -1096,7 +1394,10 @@ public class Graph2Pml {
 		}
 		
     }
-
+    
+    /*
+     * convert HSV (Hue, Saturation, Value) model to RGB (red-green-blue)
+     */
     private double[] hsvToRgb(double[] hsv) {
 	
 		double rgb[] = {0, 0, 0};
@@ -1159,4 +1460,72 @@ public class Graph2Pml {
 
     } // end of hsvToRgb
 
+    /*
+     * private method to initialise defaults HashMap
+     */
+    private void popDefaults() {
+    
+    	defaults.put("nodeSize", new Integer(1));
+    	defaults.put("edgeSize", new Integer(2));
+    	defaults.put("cgoEdgeSize", new Integer(3));
+    	defaults.put("nodeSizeRange", new Integer(4));
+    	defaults.put("edgeSizeRange", new Integer(5));
+    	defaults.put("cgoEdgeSizeRange", new Integer(6));
+    	defaults.put("edgeGap", new Integer(7));
+    	defaults.put("nodeTransp", new Integer(8));
+    	defaults.put("surfTransp", new Integer(9));
+    	defaults.put("chainColors", new Integer(10));
+    	defaults.put("setNodeColors", new Integer(11));
+    	defaults.put("setEdgeColors", new Integer(12));    	
+    	
+    }
+    
+    /*
+     * define which attributes to be reset to their default values
+     */
+    public void setDefaults(String[] attrs) {
+    	for(String attr : attrs) {
+    		switch(defaults.get(attr).intValue()) {
+    			case 1: 
+    				nodeSize = 0.46;
+    				break;
+    			case 2:
+    				edgeSize = 3.65;
+    				break;
+    			case 3:
+    				cgoEdgeSize = 0.3;
+    				break;
+    			case 4:
+    				nodeSizeRange = new double[] {0.2, 0.8};
+    				break;
+    			case 5:
+    				edgeSizeRange = new double[] {0.3, 7.0};
+    				break;
+    			case 6:
+    				cgoEdgeSizeRange = new double[] {0.2, 0.5};
+    				break;
+    			case 7:
+    				edgeGap = 0.25;
+    				break;
+    			case 8:
+    				nodeTransp = 0.6;
+    				break;
+    			case 9:
+    				surfTransp = 0.6;
+    				break;
+    			case 10:
+    				chainColors = new String[] {"light_grey", "green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    				break;
+    			case 11:
+    				setNodeColors = new String[] {"green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    				break;
+    			case 12:
+    				setEdgeColors = new String[] {"green", "red", "blue", "yellow", "violet", "cyan", "salmon", "lime", "pink", "slate", "magenta", "orange", "marine", "olive", "purple", "teal", "forest", "firebrick", "chocolate", "wheat", "white", "grey"};
+    				break;
+    			default:
+    				System.out.println("Attribute "+attr+" doesn't exist!");    		  		
+    		}    		
+    	}
+    }
+    
 } // end of class Graph2Pml
