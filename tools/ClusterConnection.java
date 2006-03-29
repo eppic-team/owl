@@ -189,6 +189,17 @@ public class ClusterConnection {
 	 */
 	public void setKeyDb(String db) { 
 		this.MASTERDB=db;
+		try {
+			//Closing previous connection is essential
+			this.mCon.close(); 
+			this.mCon=DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
+		}
+		catch (SQLException e){
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get connection to master host "+host+", database "+MASTERDB+", exiting.");
+			System.exit(2);						
+		}
 	}
 	
 	/**
@@ -313,6 +324,7 @@ public class ClusterConnection {
 				countCids=R.getInt(1);
 			}
 			if (countCids!=1){
+				System.out.println("the query was: "+query);
 				System.err.println("Error! the count of client_ids for idx "+idxColumn+"= "+idx+" is " +countCids+
 						". It must be 1! The values were taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
 				System.exit(2);
