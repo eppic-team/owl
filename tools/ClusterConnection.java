@@ -183,6 +183,13 @@ public class ClusterConnection {
 		    e.printStackTrace();
 		} 
 	}
+	/**
+	 * To change the MASTERDB String, i.e. the name of the key master database. To be used in testing.
+	 * @param db the name of the key master db we want to use instead of the default defined in the MASTERDB field
+	 */
+	public void setKeyDb(String db) { 
+		this.MASTERDB=db;
+	}
 	
 	/**
 	 * To set keyTable field in constructor (i.e. first time)
