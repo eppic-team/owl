@@ -1,10 +1,41 @@
 package tools; 
 
 import java.sql.*;
-
+/**
+ * Package:		tools
+ * Class: 		utils4DB
+ * Author:		Ioannis Filippis, filippis@molgen.mpg.de
+ * Date:		23/01/2006
+ * 
+ * utils4DB contains static methods to facilitate information retrieval from database.
+ * For example execute an update Query, get the range of a numeric field from a table,
+ * get information for the size of a database
+ * 
+ * Changelog:
+ * 04/04/06 modified by IF - execUpdateQuery method added and code in comments was removed
+ * 21/03/06 modified by IF - getRange methods return double array instead of float 
+ * 23/01/06 first created by IF
+ */
 public class utils4DB {
 
     private utils4DB() {};
+    
+    public static void execUpdateQuery(Connection C, String query) {
+
+    	Statement S;
+
+    	try {
+    	    S = C.createStatement();
+    	    S.executeUpdate(query);
+    	    S.close();
+    	} // end try
+    	catch (SQLException E) {
+    	    System.out.println("SQLException: " + E.getMessage());
+    	    System.out.println("SQLState:     " + E.getSQLState());
+    	    System.out.println("VendorError:  " + E.getErrorCode());
+    	} // end catch
+    	    	
+    }
     
     public static double[] getRange(Connection C, String table, String column) {
 
@@ -69,72 +100,6 @@ public class utils4DB {
     	return range;
     	
     }
-    
-    /*
-    public static float[] getRange(Connection C, String table, String column) {
-
-		String query = "";
-		Statement S;
-		ResultSet R;
-	
-		float[] range = new float[2];
-	
-		try { 
-		    query = "SELECT MIN("+column+"), MAX("+column+") FROM "+table+";";
-		    S = C.createStatement();
-		    R = S.executeQuery(query);
-		
-		    if (R.next()) {
-				range[0] = R.getFloat(1);
-				range[1] = R.getFloat(2);
-		    } 
-	
-		    R.close();
-		    S.close();
-	
-		} // end try
-		catch (SQLException E) {
-		    System.out.println("SQLException: " + E.getMessage());
-		    System.out.println("SQLState:     " + E.getSQLState());
-		    System.out.println("VendorError:  " + E.getErrorCode());
-		} // end catch
-		
-		return range;
-
-    }
-
-    public static float[] getRange(Connection C, String table, String column, String selection) {
-
-		String query = "";
-		Statement S;
-		ResultSet R;
-	
-		float[] range = new float[2];
-	
-		try { 
-		    query = "SELECT MIN("+column+"), MAX("+column+") FROM "+table+" WHERE ("+selection+");";
-		    S = C.createStatement();
-		    R = S.executeQuery(query);
-		
-		    if (R.next()) {
-				range[0] = R.getFloat(1);
-				range[1] = R.getFloat(2);
-		    } 
-	
-		    R.close();
-		    S.close();
-	
-		} // end try
-		catch (SQLException E) {
-		    System.out.println("SQLException: " + E.getMessage());
-		    System.out.println("SQLState:     " + E.getSQLState());
-		    System.out.println("VendorError:  " + E.getErrorCode());
-		} // end catch
-		
-		return range;
-
-    }
-    */
     
     public static void getDbSizeInfo(String connFile, String DB) {
 
