@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.StringTokenizer;
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MySQLConnection {
 
@@ -129,18 +130,11 @@ public class MySQLConnection {
 		return this.conn.createStatement();
 	}
 	
-	public void executeSql(String query) {
-		Statement stmt;
-		try {
-		    stmt = conn.createStatement();	
-		    stmt.execute(query);
-			stmt.close();		    
-		} catch (SQLException e) {
-		    System.err.println("SQLException: " + e.getMessage());
-		    System.err.println("SQLState:     " + e.getSQLState());
-		    System.err.println("VendorError:  " + e.getErrorCode());
-		    e.printStackTrace();
-		} // end catch
+	public void executeSql(String query) throws SQLException{
+		Statement stmt;		
+		stmt = conn.createStatement();	
+		stmt.execute(query);
+		stmt.close();		    
 	}
 	
 	/** 
@@ -397,4 +391,38 @@ public class MySQLConnection {
     	return range;    	
     }
 	
+    /**
+     * To get all indexes for a certain table. Note the MySQLConnection object must be created with a non-blank database.
+     * @param table
+     * @return
+     */
+    public String[] getAllIndexes4Table(String table) {
+    	ArrayList<String> indexesAL=new ArrayList<String>();
+    	String query;
+    	Statement S;
+    	ResultSet R;
+    	try { 
+    	    query = "SELECT index_name from INFORMATION_SCHEMA.statistics WHERE table_schema='"+dbname+"' AND table_name='"+table+"';";
+    	    S = this.conn.createStatement();
+    	    R = S.executeQuery(query);    	
+    	    while (R.next()) {
+	    		indexesAL.add(R.getString(1));	    		
+    	    } 
+    	    R.close();
+    	    S.close();
+    	} // end try     		
+    	catch (SQLException e) {
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+    	    e.printStackTrace();
+    	} // end catch
+    	String[] indexes=new String[indexesAL.size()];
+    	int i=0;
+    	for (String index:indexesAL) {
+    		indexes[i]=index;
+    		i++;
+    	}
+    	return indexes;
+    }
 }
