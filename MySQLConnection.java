@@ -114,7 +114,7 @@ public class MySQLConnection {
 	
 	/*---------------------- methods -------------------------*/
 	
-	public void loadMySQLDriver() {
+	private void loadMySQLDriver() {
 		try {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		}
@@ -216,12 +216,20 @@ public class MySQLConnection {
 			e.printStackTrace();
 	    } // end try/catch connection 
 	}
+	
+	/**
+	 * Get the actual Connection object within this MySQLConnection. In case that an external library need a Connection object
+	 * @return
+	 */
+	public Connection getConnectionObject() {
+		return this.conn;
+	}
 
 	/**
-	 * 
+	 * Used in the constructor that gets a connFile as argument. To read the connection parameters from a connection file.
 	 * @param connFile
 	 */
-	public void readConnectionFile(String connFile) {
+	private void readConnectionFile(String connFile) {
 		// reads the values of the connFile into the static variables; 
 		String homedir = System.getProperty("user.home"); 
 		if (connFile.length()==0) { // no file was specified
@@ -290,5 +298,103 @@ public class MySQLConnection {
 		
 	}
 
+    /**
+     * To print the db size info for the given db of this MySQLConnection.
+     * @param dbName
+     */
+	public void printDbSizeInfo (String dbName) {
+		double data = 0, index = 0, table_data = 0, table_index = 0, GB = Math.pow(2, 30);
+		String Query = null, table = null;
+		Statement Stmt = null;
+		ResultSet RS = null;		
+		try {
+		    Query = "SHOW TABLE STATUS FROM "+dbName;
+		    Stmt = this.conn.createStatement();
+		    RS = Stmt.executeQuery(Query);
+		    while (RS.next()) {
+				table = RS.getString("Name");
+				table_data = RS.getDouble("Data_length");
+				table_index = RS.getDouble("Index_length");
+				data += RS.getDouble("Data_length");
+				index += RS.getDouble("Index_length");
+				System.out.println("Table "+table+"##data:"+table_data+", index:"+table_index);
+		    }
+		    RS.close();
+		    Stmt.close();	
+		    System.out.println("Database "+dbName+" needs "+((data+index)/GB)+ " GB (data:"+(data/GB)+", index:"+(index/GB)+").");
+		} 
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} // end try/catch connection
+    }
+
+    /**
+     * To get range of a column from a table in this MySQLConnection. Note that if the connection was created without pointing 
+     * to a particular database then the argument table must be specified as dbname.tablename.
+     * @param table
+     * @param column
+     * @return
+     */
+    public double[] getRange(String table, String column) {
+    	String query = "";
+    	Statement S;
+    	ResultSet R;
+    	double[] range = new double[2];
+    	try { 
+    	    query = "SELECT MIN("+column+"), MAX("+column+") FROM "+table+";";
+    	    S = this.conn.createStatement();
+    	    R = S.executeQuery(query);    	
+    	    if (R.next()) {
+	    		range[0] = R.getDouble(1);
+	    		range[1] = R.getDouble(2);
+    	    } 
+    	    R.close();
+    	    S.close();
+    	} // end try
+    	catch (SQLException e) {
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+    	    e.printStackTrace();
+    	} // end catch    	
+    	return range;    	
+    }
+
+    /**
+     * To get range of a column from a table in this MySQLConnection using a given WHERE condition. Note that if 
+     * the connection was created without pointing to a particular database then the argument table must 
+     * be specified as dbname.tablename.
+     * @param table
+     * @param column
+     * @param whereStr
+     * @return
+     */
+    public double[] getRange(String table, String column, String whereStr) {
+    	String query = "";
+    	Statement S;
+    	ResultSet R;
+    	double[] range = new double[2];
+    	try { 
+    	    query = "SELECT MIN("+column+"), MAX("+column+") FROM "+table+" WHERE ("+whereStr+");";
+    	    S = this.conn.createStatement();
+    	    R = S.executeQuery(query);    	
+    	    if (R.next()) {
+	    		range[0] = R.getDouble(1);
+	    		range[1] = R.getDouble(2);
+    	    } 
+    	    R.close();
+    	    S.close();
+    	} // end try
+    	catch (SQLException e) {
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+    	    e.printStackTrace();
+    	} // end catch    	
+    	return range;    	
+    }
 	
 }
