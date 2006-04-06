@@ -406,7 +406,7 @@ public class MySQLConnection {
     	Statement S;
     	ResultSet R;
     	try { 
-    	    query = "SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA='"+dbname+"' AND TABLE_NAME='"+table+"';";
+    	    query = "SELECT DISTINCT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA='"+dbname+"' AND TABLE_NAME='"+table+"';";
     	    S = this.conn.createStatement();
     	    R = S.executeQuery(query);    	
     	    while (R.next()) {
