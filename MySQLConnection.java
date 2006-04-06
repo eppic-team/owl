@@ -54,7 +54,8 @@ public class MySQLConnection {
 	}
 
 	/**
-	 * Connect to database using the given server, user, password and dbname
+	 * Connect to database using the given server, user, password and dbname.
+	 * Please always use this constructor in preference rather than constructing without specifying a database
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) {
 		loadMySQLDriver();
@@ -76,6 +77,7 @@ public class MySQLConnection {
 
 	/**
 	 * Connect to database using the given server, user, password, dbname and port
+	 * Only needed if mysql server uses a port different from the standard 3306
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName, int portNum) {
 		loadMySQLDriver();
@@ -234,8 +236,8 @@ public class MySQLConnection {
 		BufferedReader fileIn = null;
 		StringTokenizer str;
 		String item, oneLine;
-		// to control if the minimum necessary 3 parameters are given in file
-		int cfgParsPresent=0; 
+		// to control if the minimum mandatory 4 parameters are given in file
+		int paramCount=0; 
 		// setting default blank values for port and dbname, they are set to blank unless fields specified in file
 		port="";
 		dbname="";
@@ -249,7 +251,7 @@ public class MySQLConnection {
 					item = str.nextToken();
 					if( item.equals("host")) { // mandatory parameter
 						host=str.nextToken();
-						cfgParsPresent++;
+						paramCount++;
 						break; 
 					} // end if host 
 					if( item.equals("port")) { // optional parameter
@@ -258,21 +260,22 @@ public class MySQLConnection {
 					} // end if port
 					if( item.equals("user")) { // mandatory parameter
 						user=str.nextToken();
-						cfgParsPresent++;
+						paramCount++;
 						break; 
 					} // end if password 
 					if( item.equals("password")) { // mandatory parameter
 						password=str.nextToken();
-						cfgParsPresent++;
+						paramCount++;
 						break; 
 					} // end if password
-					if( item.equals("database")) { // optional parameter
+					if( item.equals("database")) { // mandatory parameter
 						dbname=str.nextToken();
+						paramCount++;
 						break; 
 					} // end if password 					
 				} // next token in this line 
 			} // next line in the file
-			if (cfgParsPresent<3){
+			if (paramCount<4){
 				System.err.println("Not all mandatory parameters are given in connection file "+connFile+". Can't connect to mysql server, exiting.");
 				System.exit(1);
 			}			
