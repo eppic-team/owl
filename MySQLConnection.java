@@ -59,20 +59,26 @@ public class MySQLConnection {
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) {
 		loadMySQLDriver();
-		host=dbServer;
-		user=dbUserName;
-		password=dbPassword;
-		port="";
-		dbname=dbName;		
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 
+		if (dbExists(dbName,dbServer,dbUserName,dbPassword)) { 
+			host=dbServer;
+			user=dbUserName;
+			password=dbPassword;
+			port="";
+			dbname=dbName;		
+			String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+			try {
+				conn = DriverManager.getConnection(connStr, user, password);
+			} catch (SQLException e) {
+				System.err.println("SQLException: " + e.getMessage());
+				System.err.println("SQLState:     " + e.getSQLState());
+				System.err.println("VendorError:  " + e.getErrorCode());
+				e.printStackTrace();
+			} // end try/catch connection 		 		 
+		}
+		else {
+			System.err.println("Database "+dbName+" doesn't exist in server "+dbServer+". Can't connect, exiting.");
+			System.exit(1);
+		}
 	}
 
 	/**
@@ -128,6 +134,107 @@ public class MySQLConnection {
 		}
 	}
 
+    /**
+     * To check whether a db exists in this MySQLConnection, i.e. in this mysql server instance. To be called only from the constructor
+     * Using INFORMATION_SCHEMA db, only works from mysql 5.0
+     * @param dbName
+     * @return true if exists, false if not
+     */
+    private boolean dbExists(String dbName,String host, String user, String password){
+    	boolean dbexist=false;
+    	MySQLConnection tconn=new MySQLConnection(host,user,password); //we consruct object with a blank database
+    	String query="SELECT * FROM  INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME LIKE '"+dbName+"'";
+    	try {
+    		Statement S=conn.createStatement();
+    		ResultSet R = S.executeQuery(query);
+    		if (R.next()){
+    			dbexist=true;
+    		}
+    		R.close();
+    		S.close();
+    	} catch (SQLException e){
+    		System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    		e.printStackTrace();
+    	}
+    	tconn.close();    	
+    	return dbexist;
+    }
+
+	/**
+	 * Used in the constructor that gets a connFile as argument. To read the connection parameters from a connection file.
+	 * @param connFile
+	 */
+	private void readConnectionFile(String connFile) {
+		// reads the values of the connFile into the static variables; 
+		String homedir = System.getProperty("user.home"); 
+		if (connFile.length()==0) { // no file was specified
+			connFile=homedir+"/.my.cnf"; // assume default configuration file 
+		}		
+		// else the location of the connection file was given 		
+		// Open the configuration file		
+		BufferedReader fileIn = null;
+		StringTokenizer str;
+		String item, oneLine;
+		// to control if the minimum mandatory 4 parameters are given in file
+		int paramCount=0; 
+		// setting default blank values for port and dbname, they are set to blank unless fields specified in file
+		port="";
+		dbname="";
+		// list the entries in the file and decompose them 
+		try {
+			fileIn = new BufferedReader(new FileReader(new File(connFile))); // open BufferedReader to file connFile 
+			while ((oneLine = fileIn.readLine()) != null ) {
+				// Construct a stringTokenizer for the line that we read with : delimited
+				str = new StringTokenizer(oneLine, "="); // true sets returnDelimiters flag 
+				while ( str.hasMoreTokens()) {
+					item = str.nextToken();
+					if( item.equals("host")) { // mandatory parameter
+						host=str.nextToken();
+						paramCount++;
+						break; 
+					} // end if host 
+					if( item.equals("port")) { // optional parameter
+						port=":"+str.nextToken();
+						break; 
+					} // end if port
+					if( item.equals("user")) { // mandatory parameter
+						user=str.nextToken();
+						paramCount++;
+						break; 
+					} // end if password 
+					if( item.equals("password")) { // mandatory parameter
+						password=str.nextToken();
+						paramCount++;
+						break; 
+					} // end if password
+					if( item.equals("database")) { // mandatory parameter
+						dbname=str.nextToken();
+						paramCount++;
+						break; 
+					} // end if password 					
+				} // next token in this line 
+			} // next line in the file
+			if (paramCount<4){
+				System.err.println("Not all mandatory parameters are given in connection file "+connFile+". Can't connect to mysql server, exiting.");
+				System.exit(1);
+			}			
+		} 
+		catch (IOException e) {
+			System.err.println("Couldn't open file "+connFile);			
+			e.printStackTrace();
+			System.exit(1);
+		}  
+		
+		try { // closing the file
+			if (fileIn != null) fileIn.close();			
+		} catch (IOException e) {
+			System.err.println("Couldn't close file "+connFile);
+			e.printStackTrace(); 
+		}
+		
+	}
+
 	public Statement createStatement() throws SQLException {
 		return this.conn.createStatement();
 	}
@@ -138,7 +245,7 @@ public class MySQLConnection {
 		stmt.execute(query);
 		stmt.close();		    
 	}
-	
+		
 	/** 
 	 * @param query
 	 * @return the first column of the first row of the result of the given query as a string
@@ -219,80 +326,6 @@ public class MySQLConnection {
 	 */
 	public Connection getConnectionObject() {
 		return this.conn;
-	}
-
-	/**
-	 * Used in the constructor that gets a connFile as argument. To read the connection parameters from a connection file.
-	 * @param connFile
-	 */
-	private void readConnectionFile(String connFile) {
-		// reads the values of the connFile into the static variables; 
-		String homedir = System.getProperty("user.home"); 
-		if (connFile.length()==0) { // no file was specified
-			connFile=homedir+"/.my.cnf"; // assume default configuration file 
-		}		
-		// else the location of the connection file was given 		
-		// Open the configuration file		
-		BufferedReader fileIn = null;
-		StringTokenizer str;
-		String item, oneLine;
-		// to control if the minimum mandatory 4 parameters are given in file
-		int paramCount=0; 
-		// setting default blank values for port and dbname, they are set to blank unless fields specified in file
-		port="";
-		dbname="";
-		// list the entries in the file and decompose them 
-		try {
-			fileIn = new BufferedReader(new FileReader(new File(connFile))); // open BufferedReader to file connFile 
-			while ((oneLine = fileIn.readLine()) != null ) {
-				// Construct a stringTokenizer for the line that we read with : delimited
-				str = new StringTokenizer(oneLine, "="); // true sets returnDelimiters flag 
-				while ( str.hasMoreTokens()) {
-					item = str.nextToken();
-					if( item.equals("host")) { // mandatory parameter
-						host=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if host 
-					if( item.equals("port")) { // optional parameter
-						port=":"+str.nextToken();
-						break; 
-					} // end if port
-					if( item.equals("user")) { // mandatory parameter
-						user=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password 
-					if( item.equals("password")) { // mandatory parameter
-						password=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password
-					if( item.equals("database")) { // mandatory parameter
-						dbname=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password 					
-				} // next token in this line 
-			} // next line in the file
-			if (paramCount<4){
-				System.err.println("Not all mandatory parameters are given in connection file "+connFile+". Can't connect to mysql server, exiting.");
-				System.exit(1);
-			}			
-		} 
-		catch (IOException e) {
-			System.err.println("Couldn't open file "+connFile);			
-			e.printStackTrace();
-			System.exit(1);
-		}  
-		
-		try { // closing the file
-			if (fileIn != null) fileIn.close();			
-		} catch (IOException e) {
-			System.err.println("Couldn't close file "+connFile);
-			e.printStackTrace(); 
-		}
-		
 	}
 
     /**
@@ -395,7 +428,8 @@ public class MySQLConnection {
     }
 	
     /**
-     * To get all indexes for a certain table. Note the MySQLConnection object must be created with a non-blank database.
+     * To get all indexes names for a certain table. Note the MySQLConnection object must be created with a non-blank database.
+     * Using INFORMATION_SCHEMA db, only works from mysql 5.0
      * @param table
      * @return
      */
@@ -405,7 +439,7 @@ public class MySQLConnection {
     	Statement S;
     	ResultSet R;
     	try { 
-    	    query = "SELECT index_name from INFORMATION_SCHEMA.statistics WHERE table_schema='"+dbname+"' AND table_name='"+table+"';";
+    	    query = "SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA='"+dbname+"' AND TABLE_NAME='"+table+"';";
     	    S = this.conn.createStatement();
     	    R = S.executeQuery(query);    	
     	    while (R.next()) {
@@ -428,4 +462,5 @@ public class MySQLConnection {
     	}
     	return indexes;
     }
+    
 }
