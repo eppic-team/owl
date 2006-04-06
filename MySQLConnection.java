@@ -58,27 +58,21 @@ public class MySQLConnection {
 	 * Please always use this constructor in preference rather than constructing without specifying a database
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) {
-		loadMySQLDriver();
-		if (dbExists(dbName,dbServer,dbUserName,dbPassword)) { 
-			host=dbServer;
-			user=dbUserName;
-			password=dbPassword;
-			port="";
-			dbname=dbName;		
-			String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-			try {
-				conn = DriverManager.getConnection(connStr, user, password);
-			} catch (SQLException e) {
-				System.err.println("SQLException: " + e.getMessage());
-				System.err.println("SQLState:     " + e.getSQLState());
-				System.err.println("VendorError:  " + e.getErrorCode());
-				e.printStackTrace();
-			} // end try/catch connection 		 		 
-		}
-		else {
-			System.err.println("Database "+dbName+" doesn't exist in server "+dbServer+". Can't connect, exiting.");
-			System.exit(1);
-		}
+		loadMySQLDriver(); 
+		host=dbServer;
+		user=dbUserName;
+		password=dbPassword;
+		port="";
+		dbname=dbName;		
+		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		try {
+			conn = DriverManager.getConnection(connStr, user, password);
+		} catch (SQLException e) {
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("VendorError:  " + e.getErrorCode());
+			e.printStackTrace();
+		} // end try/catch connection 		 		 		
 	}
 
 	/**
@@ -133,33 +127,6 @@ public class MySQLConnection {
 			System.exit(1);
 		}
 	}
-
-    /**
-     * To check whether a db exists in this MySQLConnection, i.e. in this mysql server instance. To be called only from the constructor
-     * Using INFORMATION_SCHEMA db, only works from mysql 5.0
-     * @param dbName
-     * @return true if exists, false if not
-     */
-    private boolean dbExists(String dbName,String host, String user, String password){
-    	boolean dbexist=false;
-    	MySQLConnection tconn=new MySQLConnection(host,user,password); //we consruct object with a blank database
-    	String query="SELECT * FROM  INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME LIKE '"+dbName+"'";
-    	try {
-    		Statement S=conn.createStatement();
-    		ResultSet R = S.executeQuery(query);
-    		if (R.next()){
-    			dbexist=true;
-    		}
-    		R.close();
-    		S.close();
-    	} catch (SQLException e){
-    		System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-    		e.printStackTrace();
-    	}
-    	tconn.close();    	
-    	return dbexist;
-    }
 
 	/**
 	 * Used in the constructor that gets a connFile as argument. To read the connection parameters from a connection file.
