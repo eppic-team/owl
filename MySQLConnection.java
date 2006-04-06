@@ -463,4 +463,22 @@ public class MySQLConnection {
     	return indexes;
     }
     
+    /**
+     * To set the sql_mode of this connection. 
+     * @param sqlmode either NO_UNSIGNED_SUBTRACTION or blank
+     */
+    public void setSqlMode(String sqlmode) {
+    	String query="SET SESSION sql_mode='"+sqlmode+"';";
+    	try {
+    		this.executeSql(query);
+    	}
+    	catch (SQLException e){
+    		System.err.println("Couldn't change the sql mode to "+sqlmode);
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+    	    e.printStackTrace();    		
+    	}
+    }
+    
 }
