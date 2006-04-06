@@ -431,6 +431,45 @@ public class MySQLConnection {
     }
     
     /**
+     * Gets an array of Strings with all queries necessary to create all the indexes for a certain table 
+     * @param table
+     * @return
+     */
+    public String[] getCreateIndex4Table(String table){
+    	String[] indexes=this.getAllIndexes4Table(table);
+    	String[] createIndexQueries=new String[indexes.length];     	
+    	for (int i=0;i<indexes.length;i++){
+    		String index=indexes[i];
+        	try { 
+        		Statement S;
+        		ResultSet R;
+        	    String query = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.STATISTICS " +
+        	    				"WHERE TABLE_SCHEMA='"+dbname+"' AND TABLE_NAME='"+table+"' AND INDEX_NAME='"+index+"' " +
+        	    						"ORDER BY SEQ_IN_INDEX;";
+        	    S = this.conn.createStatement();
+        	    R = S.executeQuery(query);
+        	    String createIndexStr="CREATE INDEX "+index+" ON "+table+" (";
+        	    while (R.next()) {
+        	    	String colName = R.getString(1);
+        	    	createIndexStr+=colName+",";
+        	    }
+        	    createIndexStr=createIndexStr.substring(0,createIndexStr.lastIndexOf(","));
+        	    createIndexStr+=");";
+        	    createIndexQueries[i]=createIndexStr;
+        	    R.close();
+        	    S.close();
+        	} // end try     		
+        	catch (SQLException e) {
+        	    System.err.println("SQLException: " + e.getMessage());
+        	    System.err.println("SQLState:     " + e.getSQLState());
+        	    System.err.println("VendorError:  " + e.getErrorCode());
+        	    e.printStackTrace();
+        	} // end catch    		
+    	}
+    	return createIndexQueries;
+    }
+    
+    /**
      * To set the sql_mode of this connection. 
      * @param sqlmode either NO_UNSIGNED_SUBTRACTION or blank
      */
