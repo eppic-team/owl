@@ -9,7 +9,7 @@ public class DataDistribution {
 
 	final static String GLOBALDIR="/project/snow/global/tmp";
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
-	final static String MASTER="white";
+	public final static String MASTER="white";
 	final static String HFILE=ADMINDIR+"/hosts_ss.txt";
 	final static String KEYMASTERDB="key_master";
 
