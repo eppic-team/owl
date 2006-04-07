@@ -11,7 +11,7 @@ public class DataDistribution {
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
 	public final static String MASTER="white";
 	final static String HFILE=ADMINDIR+"/hosts_ss.txt";
-	final static String KEYMASTERDB="key_master_test";
+	final static String KEYMASTERDB="key_master";
 
 	boolean debug=false; // if set to true only mysql commands written, no actual dump or load, also dump directory not removed. Use setDebug method to change it
 	String dumpdir;
