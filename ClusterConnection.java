@@ -1,5 +1,7 @@
 package tools;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * ClusterConnection class to wrap the master/node mysql servers so that is transparent to other programs
@@ -258,16 +260,19 @@ public class ClusterConnection {
 		return S;
 	}
 
-	public ResultSet getAllIdxFromMaster(String key) { 
+	public int[] getAllIdxFromMaster(String key) { 
 		this.setKey(key);
-		String query;
-		Statement S;
-		ResultSet R=null;
-		try {
-			query="SELECT "+idxColumn+" FROM "+keyTable+";";
-			S=this.mCon.createStatement();
-			R=S.executeQuery(query);
-			//S.close(); // apparently it doesn't work if we close the Statement!! Don't know why!
+		int[] ids=null;
+		ArrayList<Integer> idsAL=new ArrayList<Integer>();
+		try {			
+			String query="SELECT "+idxColumn+" FROM "+keyTable+";";
+			Statement S=this.mCon.createStatement();
+			ResultSet R=S.executeQuery(query);
+			while (R.next()){
+				idsAL.add(R.getInt(1));
+			}
+			R.close();
+			S.close();
 		}
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
@@ -275,23 +280,29 @@ public class ClusterConnection {
 			System.err.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
-		return R;
+		ids=new int[idsAL.size()];
+		for (int i=0;i<idsAL.size();i++){
+			ids[i]=idsAL.get(i);
+		}
+		return ids;
 	}
 	/**
 	 * To get all ids and clients_names pairs for a certain key. Useful when need to submit to all hosts using qsub -q
 	 * @param key the name of the key
-	 * @return ResultSet with the pairs: id, client_name
+	 * @return HashMap with keys = indices, and values = node names where the corresponding index is stored
 	 */
-	public ResultSet getAllIdxAndClients (String key){
+	public HashMap<Integer,String> getAllIdxAndClients (String key){
 		this.setKey(key);
-		String query;
-		Statement S;
-		ResultSet R = null;
+		HashMap<Integer,String> idsAndClients=new HashMap<Integer,String>();
 		try {
-			query="SELECT a."+idxColumn+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
-			S=this.mCon.createStatement();
-			R=S.executeQuery(query);
-			//S.close(); // apparently it doesn't work if we close the Statement!! Don't know why!
+			String query="SELECT a."+idxColumn+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
+			Statement S=this.mCon.createStatement();
+			ResultSet R=S.executeQuery(query);
+			while (R.next()){
+				idsAndClients.put(R.getInt(1),R.getString(2));
+			}
+			R.close();
+			S.close();
 		}
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
@@ -299,7 +310,7 @@ public class ClusterConnection {
 			System.err.println("Couldn't get all indices/client_names pairs from table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
-		return R;
+		return idsAndClients;
 	}
 	
 	/**
