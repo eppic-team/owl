@@ -11,7 +11,7 @@ public class DataDistribution {
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
 	public final static String MASTER="white";
 	final static String HFILE=ADMINDIR+"/hosts_ss.txt";
-	final static String KEYMASTERDB="key_master";
+	final static String KEYMASTERDB="key_master_test";
 
 	boolean debug=false; // if set to true only mysql commands written, no actual dump or load, also dump directory not removed. Use setDebug method to change it
 	String dumpdir;
@@ -569,6 +569,44 @@ public class DataDistribution {
 		}
 		catch (SQLException e){
 			e.printStackTrace();
+		}
+		// putting the ids in the key_master database so we keep track of where everything is
+		insertIdsToKeyMaster(key,table,destDb,idSets);
+	}
+	
+	/**
+	 * Insert all ids to the key_master database creating a new table for this table/destDb combination if not exists
+	 * @param key name of key on which distribution of table is based
+	 * @param table name of table that we are distributing
+	 * @param destDb name of database in nodes where data is distributed
+	 * @param idSets as returned from splitIdsIntoSets
+	 */
+	public void insertIdsToKeyMaster(String key,String table,String destDb,HashMap<String,int[]> idSets) {
+		MySQLConnection conn = this.getConnectionToMasterKeyDb();
+		String keyMasterTbl=destDb+"_"+table+"_master";
+		String keyColumn=key+"_id";
+		String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
+					keyColumn+" int(11) NOT NULL auto_increment, " +
+					"client_id smallint(6) NOT NULL default '0', " +
+					"PRIMARY KEY (`"+keyColumn+"`) " +
+					") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
+		try {
+			conn.executeSql(query);
+		} catch (SQLException e) {
+			System.err.println("Couldn't create table "+keyMasterTbl);
+			e.printStackTrace();
+		}
+		for (String node:idSets.keySet()){
+			int[] thisNodeIds=idSets.get(node);
+			for (int id:thisNodeIds){
+				query="INSERT INTO "+keyMasterTbl+" ("+keyColumn+",client_id) " +
+							"SELECT "+id+",c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
+				try {
+					conn.executeSql(query);
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
