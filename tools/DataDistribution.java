@@ -575,7 +575,6 @@ public class DataDistribution {
 	/**
 	 * Executes a query in all nodes in cluster.
 	 * TODO Right now it is serial, must parallelize this with threads
-	 * TODO This can be used in lots of methods in this class (all the loadData and dumpData ones)
 	 * @param query
 	 */
 	public void clusterExecuteQuery(String query){
@@ -594,4 +593,30 @@ public class DataDistribution {
 		}
 
 	}
+	
+	/**
+	 * Executes a query in all nodes in cluster given a HashMap containing a set of queries (one per node)
+	 * TODO Right now it is serial, must parallelize this with threads
+	 * TODO This can be used in the load/dump methods in this class where queries are different for each node
+	 * @param query
+	 */
+	public void clusterExecuteQuery(HashMap<String,String> queries){
+		String[] nodes = getNodes();
+		for (String node: nodes){
+			String query="";
+			try {
+				query=queries.get(node);
+				MySQLConnection conn = this.getConnectionToNode(node);
+				conn.executeSql(query);
+				conn.close();
+			}
+			catch(SQLException e){
+				e.printStackTrace();
+				System.err.println("Couldn't execute query="+query+", in node="+node);
+				System.exit(1);
+			}
+		}
+
+	}
+
 }
