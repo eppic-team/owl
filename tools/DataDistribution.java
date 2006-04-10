@@ -419,16 +419,18 @@ public class DataDistribution {
 	}
 	
 	/**
-	 * Method used by splitIdsIntoSet method. To get all ordered ids from a certain key and table from this db in master server
+	 * Method used by splitIdsIntoSet and getIdSetsFromNodes. 
+	 * To get all ordered ids from a certain key and table from this db in a certain host
 	 * @param key the key name
 	 * @param table the table name
+	 * @param host the host name
 	 * @return int array containing all ids 
 	 */
-	public int[] getAllIds4KeyAndTable(String key, String table){
+	public int[] getAllIds4KeyAndTable(String key, String table, String host){
 		int[] allIds=null;
 		String keyColumn=key+"_id";		
 		try {
-			MySQLConnection conn=this.getConnectionToMaster();
+			MySQLConnection conn=this.getConnectionToNode(host);
 			Statement S=conn.createStatement();
 			String query="SELECT DISTINCT "+keyColumn+" FROM "+table+" ORDER BY "+keyColumn+";";
 			ResultSet R=S.executeQuery(query);
@@ -451,16 +453,46 @@ public class DataDistribution {
 	}
 	
 	/**
-	 * For a certain key and table returns a HashMap containing an int array per cluster node
+	 * The two following methods getIdSetsFromNodes and splitIdsIntoSets are very related.
+	 * Both return the same thing: a "data distribution", which is defined as a HashMap of int[], 
+	 * being the keys the name of the nodes and the int[] all ids that the node contains.
+	 * Maybe should create a class that encapsulates the "data distribution" HashMap
+	 */
+	
+	/**
+	 * For a certain key and table finds out how the table is splitted in nodes and returns the "data distribution"
+	 * To be used when data for a table is already splitted (splitted doesn't need to mean that there is different chunks of it
+	 * in different nodes, but rather that the same table is somehow in all nodes (either in chunks or the whole thing)
+	 * Take care when using this method as an argument of insertIdsToKeyMaster: if table is not in chunks (i.e. all data in all)
+	 * then ids can't be inserted in key_master as there will be duplication, i.e. for key_id=1 as data is in all nodes there 
+	 * will be 40 copies of it and thus 40 equal ids will try to be inserted in key_master, which a) makes no sense and 
+	 * b) mysql won't do it anyway  
+	 * @param key
+	 * @param table 
+	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
+	 */
+	public HashMap<String,int[]> getIdSetsFromNodes(String key, String table){
+		HashMap<String,int[]> idSets =new HashMap<String,int[]>();
+		String[] nodes = getNodes();
+		for (String node:nodes){
+			idSets.put(node,getAllIds4KeyAndTable(key,table,node));
+		}
+		return idSets;
+	}
+	
+	/**
+	 * For a certain key and table returns a certain "data distribution" (kind of evenly distributed) of the data to the nodes
+	 * To be used when we have a table that we are going to split to the nodes
+	 * TODO eventually the code could be cleverer so that the data is actually evenly distributed, right now is only evenly distributed on key ids
 	 * @param key
 	 * @param table
-	 * @return HashMap, keys are node names, values: int array with the ids for each node
+	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
 	 */
 	public HashMap<String,int[]> splitIdsIntoSets(String key, String table){
 		HashMap<String,int[]> idSets =new HashMap<String,int[]>();
 		String[] nodes=DataDistribution.getNodes();
 		int numNodes=nodes.length;
-		int[] allIds=this.getAllIds4KeyAndTable(key,table);
+		int[] allIds=this.getAllIds4KeyAndTable(key,table,MASTER);
 		int numIds=allIds.length;
 		int setSize=numIds/numNodes;
 		int remainder=numIds%numNodes;
@@ -579,7 +611,7 @@ public class DataDistribution {
 	 * @param key name of key on which distribution of table is based
 	 * @param table name of table that we are distributing
 	 * @param destDb name of database in nodes where data is distributed
-	 * @param idSets as returned from splitIdsIntoSets
+	 * @param idSets as returned from splitIdsIntoSets or getIdSetsFromNodes
 	 */
 	public void insertIdsToKeyMaster(String key,String table,String destDb,HashMap<String,int[]> idSets) {
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();
