@@ -281,13 +281,14 @@ public class DataDistribution {
 	 */
 	public boolean checkKeyCounts(String key) {
 		boolean checkResult=true;
-		String keyTable=key+"_list";
-		String masterKeyTable=db+"_"+key+"_list_master";
-		String keyColumn =key+"_id";
+		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd);
+		String keyTable=cconn.getTableOnNode();
+		String masterKeyTable=cconn.getKeyTable();
+		cconn.close();
 		// getting hashmap of counts of keys from nodes
 		String[] nodes = getNodes();
 		HashMap<String,int[]> countsNodes=new HashMap<String,int[]>();
-		String query="SELECT count("+keyColumn+"),count(DISTINCT "+keyColumn+") FROM "+keyTable+";";
+		String query="SELECT count("+key+"),count(DISTINCT "+key+") FROM "+keyTable+";";
 		for (String node:nodes){
 			try {				
 				MySQLConnection conn = this.getConnectionToNode(node);
@@ -335,12 +336,12 @@ public class DataDistribution {
 			int masterCount=countsMaster.get(node);
 			int[] thisNodeCount=countsNodes.get(node);
 			if (thisNodeCount[0]!=thisNodeCount[1]) {
-				System.out.println("Key count and distinct key count do not coincide for key "+keyColumn+" in node "+node+". Key count="+thisNodeCount[0]+", distinct key count="+thisNodeCount[1]);
+				System.out.println("Key count and distinct key count do not coincide for key "+key+" in node "+node+". Key count="+thisNodeCount[0]+", distinct key count="+thisNodeCount[1]);
 				checkResult=false;
 			}
 			else if (thisNodeCount[0]!=masterCount) {
-				System.out.println("Key counts do not coincide for key "+keyColumn+" in master and node "+node+". MASTER COUNT="+masterCount+", NODE COUNT="+thisNodeCount[0]);
-				System.out.print("Differing "+keyColumn+"'s are: ");
+				System.out.println("Key counts do not coincide for key "+key+" in master and node "+node+". MASTER COUNT="+masterCount+", NODE COUNT="+thisNodeCount[0]);
+				System.out.print("Differing "+key+"'s are: ");
 				int[] diffKeys = getDifferingKeys(key,node);
 				for (int k:diffKeys){
 					System.out.print(k+" ");
@@ -349,7 +350,7 @@ public class DataDistribution {
 				checkResult=false;
 			}
 			else {
-				System.out.println("Key counts check passed for key "+keyColumn+" in node "+node+". The count is: "+masterCount);
+				System.out.println("Key counts check passed for key "+key+" in node "+node+". The count is: "+masterCount);
 			}
 		}				
 		return checkResult;
@@ -364,17 +365,18 @@ public class DataDistribution {
 	public int[] getDifferingKeys (String key,String node) {
 		ArrayList<Integer> diffKeys = new ArrayList<Integer>();
 		int[] diffKeysAr;
-		String keyTable=key+"_list";
-		String masterKeyTable=db+"_"+key+"_list_master";
-		String keyColumn=key+"_id";
-		String query="SELECT DISTINCT "+keyColumn+" FROM "+keyTable+" ORDER BY "+keyColumn+";";
+		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd);
+		String keyTable=cconn.getTableOnNode();
+		String masterKeyTable=cconn.getKeyTable();
+		cconn.close();
+		String query="SELECT DISTINCT "+key+" FROM "+keyTable+" ORDER BY "+key+";";
 		MySQLConnection mconn=null;
 		try {				
 			MySQLConnection nconn = this.getConnectionToNode(node);
 			mconn = this.getConnectionToMasterKeyDb();
 			Statement S=nconn.createStatement();
 			ResultSet R=S.executeQuery(query);
-			mconn.executeSql("CREATE TEMPORARY TABLE tmp_keys ("+keyColumn+" int(11) default NULL) ENGINE=MEMORY;");
+			mconn.executeSql("CREATE TEMPORARY TABLE tmp_keys ("+key+" int(11) default NULL) ENGINE=MEMORY;");
 			int thisKey=0;
 			while (R.next()){
 				thisKey=R.getInt(1);
@@ -395,7 +397,7 @@ public class DataDistribution {
 					"FROM " +
 						"(SELECT u.id AS k,count(u.id) AS cnt " +
 							"FROM " +
-							"(SELECT "+keyColumn+" AS id FROM tmp_keys UNION ALL SELECT kt."+keyColumn+" AS id FROM "+masterKeyTable+" AS kt LEFT JOIN clients_names AS cn ON kt.client_id=cn.client_id WHERE cn.client_name='"+node+"') AS u GROUP BY u.id) " +
+							"(SELECT "+key+" AS id FROM tmp_keys UNION ALL SELECT kt."+key+" AS id FROM "+masterKeyTable+" AS kt LEFT JOIN clients_names AS cn ON kt.client_id=cn.client_id WHERE cn.client_name='"+node+"') AS u GROUP BY u.id) " +
 					"AS c " +
 					"WHERE c.cnt=1;";
 			Statement S=mconn.createStatement();
@@ -427,12 +429,11 @@ public class DataDistribution {
 	 * @return int array containing all ids 
 	 */
 	public int[] getAllIds4KeyAndTable(String key, String table, String host){
-		int[] allIds=null;
-		String keyColumn=key+"_id";		
+		int[] allIds=null;		
 		try {
 			MySQLConnection conn=this.getConnectionToNode(host);
 			Statement S=conn.createStatement();
-			String query="SELECT DISTINCT "+keyColumn+" FROM "+table+" ORDER BY "+keyColumn+";";
+			String query="SELECT DISTINCT "+key+" FROM "+table+" ORDER BY "+key+";";
 			ResultSet R=S.executeQuery(query);
 			ArrayList<Integer> idsAL=new ArrayList<Integer>();
 			while (R.next()){
@@ -520,7 +521,6 @@ public class DataDistribution {
 	 * @param table 
 	 */
 	public void splitTable (String key,String table){
-		String keyColumn=key+"_id";
 		String query;
 		HashMap<String,int[]> idSets = this.splitIdsIntoSets(key,table);
 		String[] splitTables=new String[idSets.size()];
@@ -541,7 +541,7 @@ public class DataDistribution {
 				}
 				int idmin=idSets.get(node)[0];
 				int idmax=idSets.get(node)[idSets.get(node).length-1];
-				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+keyColumn+">="+idmin+" AND "+keyColumn+"<="+idmax+";";				
+				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
 				conn.executeSql(query);
 				//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
 			}
@@ -559,7 +559,6 @@ public class DataDistribution {
 	 * @param destDb name of destination db 
 	 */
 	public void splitTableToCluster (String key,String table, String destDb){
-		String keyColumn=key+"_id";
 		String query;
 		HashMap<String,int[]> idSets = this.splitIdsIntoSets(key,table);
 		String[] splitTables=new String[idSets.size()];
@@ -583,7 +582,7 @@ public class DataDistribution {
 				//conn.executeSql(query);
 				int idmin=idSets.get(node)[0];
 				int idmax=idSets.get(node)[idSets.get(node).length-1];
-				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+keyColumn+">="+idmin+" AND "+keyColumn+"<="+idmax+";";				
+				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
 				conn.executeSql(query);
 			}
 			// transfering data across
@@ -616,11 +615,10 @@ public class DataDistribution {
 	public void insertIdsToKeyMaster(String key,String table,String destDb,HashMap<String,int[]> idSets) {
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();
 		String keyMasterTbl=destDb+"_"+table+"_master";
-		String keyColumn=key+"_id";
 		String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
-					keyColumn+" int(11) NOT NULL auto_increment, " +
+					key+" int(11) NOT NULL auto_increment, " +
 					"client_id smallint(6) NOT NULL default '0', " +
-					"PRIMARY KEY (`"+keyColumn+"`) " +
+					"PRIMARY KEY (`"+key+"`) " +
 					") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
 		try {
 			conn.executeSql(query);
@@ -631,7 +629,7 @@ public class DataDistribution {
 		for (String node:idSets.keySet()){
 			int[] thisNodeIds=idSets.get(node);
 			for (int id:thisNodeIds){
-				query="INSERT INTO "+keyMasterTbl+" ("+keyColumn+",client_id) " +
+				query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
 							"SELECT "+id+",c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
 				try {
 					conn.executeSql(query);
