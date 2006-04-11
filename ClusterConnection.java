@@ -312,6 +312,37 @@ public class ClusterConnection {
 		}
 		return S;
 	}
+	
+	public void createNewKeyMasterTbl(String table) {
+		String keyMasterTbl=db+"__"+table;
+		try {
+			String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
+						key+" int(11) NOT NULL auto_increment, " +
+						"client_id smallint(6) NOT NULL default '0', " +
+						"PRIMARY KEY (`"+key+"`) " +
+						") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
+			Statement S=this.mCon.createStatement();
+			S.executeUpdate(query);
+			S.close();
+		} catch (SQLException e) {
+			System.err.println("Couldn't create table "+keyMasterTbl);
+			e.printStackTrace();
+		}
+		try {
+			Statement S=this.mCon.createStatement();
+			// following query is exactly the same as query in key_master.sql for key_master database definition
+			String query = "INSERT INTO dbs_keys "+
+						"SELECT i.COLUMN_NAME AS key_name, LEFT(i.TABLE_NAME,POSITION('__' IN i.TABLE_NAME)-1) AS db, i.TABLE_NAME AS key_master_table "+
+						"FROM INFORMATION_SCHEMA.STATISTICS AS i "+
+						"WHERE i.TABLE_SCHEMA='"+MASTERDB+"' AND i.TABLE_NAME!='clients_names' AND i.TABLE_NAME!='dbs_keys';";
+			S.executeUpdate(query);
+			S.close();
+		} catch (SQLException e) {
+			System.err.println("Didn't insert new record into table dbs_keys of database: "+MASTERDB+". The record for key: "+key+", table: "+table+" existed already. This is usually a harmless error!");
+			System.err.println("SQLException: " + e.getMessage());
+		}
+		setKeyTable();
+	}
 
 	public int[] getAllIdxFromMaster(String key) { 
 		this.setKey(key);
