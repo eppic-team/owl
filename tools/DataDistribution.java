@@ -614,22 +614,14 @@ public class DataDistribution {
 	 */
 	public void insertIdsToKeyMaster(String key,String table,String destDb,HashMap<String,int[]> idSets) {
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();
-		String keyMasterTbl=destDb+"_"+table+"_master";
-		String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
-					key+" int(11) NOT NULL auto_increment, " +
-					"client_id smallint(6) NOT NULL default '0', " +
-					"PRIMARY KEY (`"+key+"`) " +
-					") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
-		try {
-			conn.executeSql(query);
-		} catch (SQLException e) {
-			System.err.println("Couldn't create table "+keyMasterTbl);
-			e.printStackTrace();
-		}
+		ClusterConnection cconn = new ClusterConnection(destDb,key,user,pwd);
+		cconn.createNewKeyMasterTbl(table);
+		String keyMasterTbl=cconn.getKeyTable();
+		cconn.close();
 		for (String node:idSets.keySet()){
 			int[] thisNodeIds=idSets.get(node);
 			for (int id:thisNodeIds){
-				query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
+				String query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
 							"SELECT "+id+",c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
 				try {
 					conn.executeSql(query);
@@ -666,7 +658,7 @@ public class DataDistribution {
 	 * Executes a query in all nodes in cluster given a HashMap containing a set of queries (one per node)
 	 * TODO Right now it is serial, must parallelize this with threads
 	 * TODO This can be used in the load/dump methods in this class where queries are different for each node
-	 * @param query
+	 * @param queries a HashMap containing a query per node
 	 */
 	public void clusterExecuteQuery(HashMap<String,String> queries){
 		String[] nodes = getNodes();
