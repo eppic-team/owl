@@ -17,7 +17,6 @@ public class ClusterConnection {
 	private Connection mCon;
 	public String keyTable;
 	public String key;
-	public String idxColumn;
 	public String host;
 	public String db;
 	private String user;
@@ -26,14 +25,30 @@ public class ClusterConnection {
 	/**
 	 * Create a ClusterConnection passing a key. 
 	 * @param db the database name
-	 * @param key the key name: if asu_id is the ids from which my key is based on, then the key name is "asu"
+	 * @param key the key name: e.g. asu_id
 	 * @param user the user name for connection to both master and nodes
 	 * @param password the password for connection to both master and nodes
 	 */
 	public ClusterConnection (String db,String key, String user,String password) {
-		new ClusterConnection(db,user,password);
+		loadMySQLDriver();
+		setDb(db);
+		setUser(user);
+		setPassword(password);
+		try {
+			// For nCon we create a connection to the master too. 
+			// This is just a place holder because the actual node connection is not created until we create the statement
+			// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
+			this.nCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
+			this.mCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
+		}
+		catch(SQLException e){
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+			System.err.println("Couldn't get connection to master host "+MASTERHOST+", db="+MASTERDB+", exiting.");
+			System.exit(2);			
+		}
 		this.key=key; //can't use the setKey method here before we've got the db field initialized
-		setIdxColumn();
 		setKeyTable(db);
 	}
 
@@ -66,7 +81,7 @@ public class ClusterConnection {
 	
 	public void loadMySQLDriver() {
 		try {
-			Class.forName("com.mysql.jdbc.Driver");
+			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		}
 		catch(Exception e) {
 			System.err.println(e.getMessage());
@@ -94,7 +109,7 @@ public class ClusterConnection {
 		try {
 			S=mCon.createStatement();
 			String query="SELECT client_name FROM "+keyTable+" AS m INNER JOIN clients_names AS c "+
-						"ON (m.client_id=c.client_id) WHERE "+idxColumn+"="+idx+";";
+						"ON (m.client_id=c.client_id) WHERE "+key+"="+idx+";";
 			R=S.executeQuery(query);
 			if (R.next()){
 				host=R.getString(1);
@@ -139,7 +154,6 @@ public class ClusterConnection {
 	 */
 	private Statement createStatement(int idx) { // to use when the field "key" is already set
 		setKeyTable();
-		setIdxColumn();
 		Statement S=null;
 		this.setHostFromIdx(idx);
 		try {
@@ -205,29 +219,69 @@ public class ClusterConnection {
 	}
 	
 	/**
-	 * To set keyTable field in constructor (i.e. first time)
+	 * To set keyTable field in constructor (i.e. first time). Only to be used in constructor.
 	 * @param db the database name
 	 */
 	public void setKeyTable(String db) { 
-		this.keyTable=db+"_"+this.key+"_list_master";
+		String query="SELECT key_master_table FROM dbs_keys WHERE db=\'"+db+"\' AND key_name=\'"+this.key+"\';";
+		try {
+			Statement S = this.mCon.createStatement();
+			ResultSet R = S.executeQuery(query);
+			if (R.next()){
+				this.keyTable=R.getString(1);
+			}
+			R.close();
+			S.close();			
+		} catch (SQLException e) {
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get the key_master_table from "+MASTERDB+", exiting.");
+			System.exit(2);						
+		}				
 	}
 	
 	/**
 	 * To set the keyTable field when db is already set
-	 *
+	 * The value of keyTable is taken from the dbs_keys table in the database given the db and key.
 	 */
 	public void setKeyTable() {  
-		this.keyTable=this.db+"_"+this.key+"_list_master";
+		String query="SELECT key_master_table FROM dbs_keys WHERE db=\'"+this.db+"\' AND key_name=\'"+this.key+"\';";
+		try {
+			Statement S = this.mCon.createStatement();
+			ResultSet R = S.executeQuery(query);
+			if (R.next()){
+				this.keyTable=R.getString(1);
+			}
+			R.close();
+			S.close();
+		} catch (SQLException e) {
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("Couldn't get the key_master_table from "+MASTERDB+", exiting.");
+			System.exit(2);						
+		}
 	}
 	
 	public String getKeyTable() {
 		return this.keyTable;
 	}
 	
-	public void setIdxColumn() {
-		this.idxColumn=this.key+"_id";
+	/**
+	 * To get the name of the target table where splitted data is stored in nodes, e.g. for keyTable pdbgraph__asu_list, we get asu_list
+	 * @return
+	 */
+	public String getTableOnNode(){
+		String table="";
+		if (this.keyTable.contains("__")) {
+			String[] tokens=this.keyTable.split("__");
+			table=tokens[1];
+		}
+		else {
+			System.err.println("Error! The keyTable field is not set in this ClusterConnection object.");
+		}
+		return table;
 	}
-
+	
 	public void setUser(String user) {
 		this.user=user;
 	}
@@ -243,7 +297,6 @@ public class ClusterConnection {
 	public void setKey(String key){
 		this.key=key;
 		setKeyTable();
-		setIdxColumn();
 	}
 
 	public Statement createMasterStatement() { 
@@ -265,7 +318,7 @@ public class ClusterConnection {
 		int[] ids=null;
 		ArrayList<Integer> idsAL=new ArrayList<Integer>();
 		try {			
-			String query="SELECT "+idxColumn+" FROM "+keyTable+";";
+			String query="SELECT "+key+" FROM "+keyTable+";";
 			Statement S=this.mCon.createStatement();
 			ResultSet R=S.executeQuery(query);
 			while (R.next()){
@@ -277,7 +330,7 @@ public class ClusterConnection {
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
 			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get all indices from columnn "+idxColumn+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
+			System.err.println("Couldn't get all indices from columnn "+key+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
 		ids=new int[idsAL.size()];
@@ -295,7 +348,7 @@ public class ClusterConnection {
 		this.setKey(key);
 		HashMap<Integer,String> idsAndClients=new HashMap<Integer,String>();
 		try {
-			String query="SELECT a."+idxColumn+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
+			String query="SELECT a."+key+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
 			Statement S=this.mCon.createStatement();
 			ResultSet R=S.executeQuery(query);
 			while (R.next()){
@@ -329,19 +382,19 @@ public class ClusterConnection {
 		int countCids=0;
 		try {
 			S=mCon.createStatement();
-			query="SELECT count(client_id) FROM "+keyTable+" WHERE "+idxColumn+"="+idx+";";
+			query="SELECT count(client_id) FROM "+keyTable+" WHERE "+key+"="+idx+";";
 			R=S.executeQuery(query);
 			if (R.next()){
 				countCids=R.getInt(1);
 			}
 			if (countCids!=1){
 				System.out.println("the query was: "+query);
-				System.err.println("Error! the count of client_ids for idx "+idxColumn+"= "+idx+" is " +countCids+
+				System.err.println("Error! the count of client_ids for idx "+key+"= "+idx+" is " +countCids+
 						". It must be 1! The values were taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
 				System.exit(2);
 			}
 			else {
-				query="SELECT client_id FROM "+keyTable+" WHERE "+idxColumn+"="+idx+";";
+				query="SELECT client_id FROM "+keyTable+" WHERE "+key+"="+idx+";";
 				R=S.executeQuery(query);
 				if (R.next()){
 					hostId=R.getInt(1);
@@ -351,7 +404,7 @@ public class ClusterConnection {
 			R.close();
 		}
 		catch(SQLException e) {
-			System.err.println("Couldn't get the host id for idx "+idxColumn+"="+idx+", exiting");
+			System.err.println("Couldn't get the host id for idx "+key+"="+idx+", exiting");
     	    System.err.println("SQLException: " + e.getMessage());
     	    System.err.println("SQLState:     " + e.getSQLState());
 			System.exit(3);									
@@ -372,7 +425,7 @@ public class ClusterConnection {
 		catch (SQLException E) {
 			System.err.println("SQLException: " + E.getMessage());
 			System.err.println("SQLState:     " + E.getSQLState());
-			System.err.println("Couldn't insert new "+this.idxColumn+" in master table "+this.getKeyTable()+". The client_id for it was "+clientId+". Exiting.");
+			System.err.println("Couldn't insert new "+this.key+" in master table "+this.getKeyTable()+". The client_id for it was "+clientId+". Exiting.");
 			System.exit(2);
 		} 
 	}
@@ -401,7 +454,7 @@ public class ClusterConnection {
 			S.close();
 		} 
 		catch (SQLException E) {
-			System.err.println("Couldn't get the last insert id for key type "+this.idxColumn+" from table "+this.keyTable+". Exiting");
+			System.err.println("Couldn't get the last insert id for key type "+this.key+" from table "+this.keyTable+". Exiting");
 			System.err.println("SQLException: " + E.getMessage());
 			System.err.println("SQLState:     " + E.getSQLState());
 			System.exit(3);
@@ -435,9 +488,9 @@ public class ClusterConnection {
 			while (R.next()){
 				Statement Sloop=this.mCon.createStatement();
 				int clid=R.getInt(1);
-				query="CREATE TEMPORARY TABLE c_"+clid+" (serial int(11) NOT NULL AUTO_INCREMENT,"+idxColumn+" int(11),client_id int(11), PRIMARY KEY(serial));";				
+				query="CREATE TEMPORARY TABLE c_"+clid+" (serial int(11) NOT NULL AUTO_INCREMENT,"+key+" int(11),client_id int(11), PRIMARY KEY(serial));";				
 				Sloop.executeUpdate(query);
-				query="INSERT INTO c_"+clid+" ("+idxColumn+",client_id) SELECT "+idxColumn+",client_id FROM "+keyTable+" WHERE client_id="+clid+";";
+				query="INSERT INTO c_"+clid+" ("+key+",client_id) SELECT "+key+",client_id FROM "+keyTable+" WHERE client_id="+clid+";";
 				Sloop.executeUpdate(query);
 				clids[i]=clid;
 				i++;
@@ -470,11 +523,11 @@ public class ClusterConnection {
 			
 			// STEP 4 -- join all c_<client_id> tables into a table with a serial column, and c_<client_id> columns each of them with the indices for each client_id 
 			//query="SELECT c_34.serial,c_34.asu_id AS c_34,c_32.asu_id AS c_32,c_36.asu_id AS c_36 FROM c_34 LEFT JOIN c_32 ON (c_34.serial=c_32.serial) LEFT JOIN c_36 ON (c_34.serial=c_36.serial);";
-			String selectStr="c_"+clidMaxIdxCount+".serial, c_"+clidMaxIdxCount+"."+idxColumn+" AS c_"+clidMaxIdxCount;
+			String selectStr="c_"+clidMaxIdxCount+".serial, c_"+clidMaxIdxCount+"."+key+" AS c_"+clidMaxIdxCount;
 			String fromStr="c_"+clidMaxIdxCount;
 			for (i=0;i<clids.length;i++) {
 				if (clids[i]!=clidMaxIdxCount){
-					selectStr+=", c_"+clids[i]+"."+idxColumn+" AS c_"+clids[i];
+					selectStr+=", c_"+clids[i]+"."+key+" AS c_"+clids[i];
 					fromStr+=" LEFT JOIN c_"+clids[i]+" ON (c_"+clidMaxIdxCount+".serial=c_"+clids[i]+".serial)";
 				}
 			} 
@@ -498,7 +551,7 @@ public class ClusterConnection {
 		catch (SQLException e){
 			System.err.println("SQLException: " + e.getMessage());
 			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get the indices set from columnn "+idxColumn+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
+			System.err.println("Couldn't get the indices set from columnn "+key+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
 		return indMatrix;
