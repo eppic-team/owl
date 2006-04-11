@@ -419,7 +419,7 @@ public class ClusterConnection {
 				countCids=R.getInt(1);
 			}
 			if (countCids!=1){
-				System.out.println("the query was: "+query);
+				System.err.println("the query was: "+query);
 				System.err.println("Error! the count of client_ids for idx "+key+"= "+idx+" is " +countCids+
 						". It must be 1! The values were taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
 				System.exit(2);
