@@ -330,11 +330,7 @@ public class ClusterConnection {
 		}
 		try {
 			Statement S=this.mCon.createStatement();
-			// following query is exactly the same as query in key_master.sql for key_master database definition
-			String query = "INSERT INTO dbs_keys "+
-						"SELECT i.COLUMN_NAME AS key_name, LEFT(i.TABLE_NAME,POSITION('__' IN i.TABLE_NAME)-1) AS db, i.TABLE_NAME AS key_master_table "+
-						"FROM INFORMATION_SCHEMA.STATISTICS AS i "+
-						"WHERE i.TABLE_SCHEMA='"+MASTERDB+"' AND i.TABLE_NAME!='clients_names' AND i.TABLE_NAME!='dbs_keys';";
+			String query="INSERT INTO dbs_keys (key_name,db,key_master_table) VALUES (\'"+key+"\',\'"+db+"\',\'"+keyMasterTbl+"\');";
 			S.executeUpdate(query);
 			S.close();
 		} catch (SQLException e) {
