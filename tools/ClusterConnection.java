@@ -313,33 +313,6 @@ public class ClusterConnection {
 		return S;
 	}
 	
-	public void createNewKeyMasterTbl(String table) {
-		String keyMasterTbl=db+"__"+table;
-		try {
-			String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
-						key+" int(11) NOT NULL auto_increment, " +
-						"client_id smallint(6) NOT NULL default '0', " +
-						"PRIMARY KEY (`"+key+"`) " +
-						") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
-			Statement S=this.mCon.createStatement();
-			S.executeUpdate(query);
-			S.close();
-		} catch (SQLException e) {
-			System.err.println("Couldn't create table "+keyMasterTbl);
-			e.printStackTrace();
-		}
-		try {
-			Statement S=this.mCon.createStatement();
-			String query="INSERT INTO dbs_keys (key_name,db,key_master_table) VALUES (\'"+key+"\',\'"+db+"\',\'"+keyMasterTbl+"\');";
-			S.executeUpdate(query);
-			S.close();
-		} catch (SQLException e) {
-			System.err.println("Didn't insert new record into table dbs_keys of database: "+MASTERDB+". The record for key: "+key+", table: "+table+" existed already. This is usually a harmless error!");
-			System.err.println("SQLException: " + e.getMessage());
-		}
-		setKeyTable();
-	}
-
 	public int[] getAllIdxFromMaster(String key) { 
 		this.setKey(key);
 		int[] ids=null;
