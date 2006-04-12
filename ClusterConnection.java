@@ -10,11 +10,10 @@ import java.util.HashMap;
 
 public class ClusterConnection {
 
-	private final String URL= "jdbc:mysql://";
 	private String MASTERDB="key_master"; 
 	private final String MASTERHOST="white";
-	private Connection nCon;
-	private Connection mCon;
+	private MySQLConnection nCon;
+	private MySQLConnection mCon;
 	public String keyTable;
 	public String key;
 	public String host;
@@ -30,24 +29,14 @@ public class ClusterConnection {
 	 * @param password the password for connection to both master and nodes
 	 */
 	public ClusterConnection (String db,String key, String user,String password) {
-		loadMySQLDriver();
 		setDb(db);
 		setUser(user);
 		setPassword(password);
-		try {
-			// For nCon we create a connection to the master too. 
-			// This is just a place holder because the actual node connection is not created until we create the statement
-			// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
-			this.nCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
-			this.mCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
-		}
-		catch(SQLException e){
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-    	    System.err.println("VendorError:  " + e.getErrorCode());
-			System.err.println("Couldn't get connection to master host "+MASTERHOST+", db="+MASTERDB+", exiting.");
-			System.exit(2);			
-		}
+		// For nCon we create a connection to the master too. 
+		// This is just a place holder because the actual node connection is not created until we create the statement
+		// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
+		this.nCon = new MySQLConnection(MASTERHOST,user,password,MASTERDB); 
+		this.mCon = new MySQLConnection(MASTERHOST,user,password,MASTERDB);
 		this.key=key; //can't use the setKey method here before we've got the db field initialized
 		setKeyTable(db);
 	}
@@ -59,70 +48,26 @@ public class ClusterConnection {
 	 * @param password the password for connection to both master and nodes
 	 */ 
 	public ClusterConnection (String db, String user,String password) { 
-		loadMySQLDriver();
 		setDb(db);
 		setUser(user);
-		setPassword(password);
-		try {
-			// For nCon we create a connection to the master too. 
-			// This is just a place holder because the actual node connection is not created until we create the statement
-			// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
-			this.nCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
-			this.mCon = DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
-		}
-		catch(SQLException e){
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-    	    System.err.println("VendorError:  " + e.getErrorCode());
-			System.err.println("Couldn't get connection to master host "+MASTERHOST+", db="+MASTERDB+", exiting.");
-			System.exit(2);			
-		}
+		setPassword(password);		
+		// For nCon we create a connection to the master too. 
+		// This is just a place holder because the actual node connection is not created until we create the statement
+		// If we don't do this then when closing the two connections an exception might occurr because we try to close a non existing object
+		this.nCon = new MySQLConnection(MASTERHOST,user,password,MASTERDB); 
+		this.mCon = new MySQLConnection(MASTERHOST,user,password,MASTERDB);
 	}
 	
-	public void loadMySQLDriver() {
-		try {
-			Class.forName("com.mysql.jdbc.Driver").newInstance();
-		}
-		catch(Exception e) {
-			System.err.println(e.getMessage());
-			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
-			System.exit(1);
-		}
-	}
 	public void close() {
-		try {
-			this.nCon.close();
-			this.mCon.close();
-		}
-		catch(SQLException e) {
-			System.err.println("Couldn't close database connections for master: "+MASTERHOST+" and node: "+this.host+", exiting.");
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.exit(3);						
-		}
+		this.nCon.close();
+		this.mCon.close();
 	}
 	
 	public String getHost4Idx (int idx) {
 		String host="";
-		Statement S;
-		ResultSet R;
-		try {
-			S=mCon.createStatement();
-			String query="SELECT client_name FROM "+keyTable+" AS m INNER JOIN clients_names AS c "+
-						"ON (m.client_id=c.client_id) WHERE "+key+"="+idx+";";
-			R=S.executeQuery(query);
-			if (R.next()){
-				host=R.getString(1);
-			}
-			S.close();
-			R.close();
-		}
-		catch(SQLException e) {
-			System.err.println("Couldn't get the host name for idx "+idx+", exiting");
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.exit(3);									
-		}
+		String query = "SELECT client_name FROM "+keyTable+" AS m INNER JOIN clients_names AS c "+
+					   "ON (m.client_id=c.client_id) WHERE "+key+"="+idx+";";
+		host=this.mCon.getStringFromDb(query);
 		return host;
 	}
 	
@@ -132,18 +77,10 @@ public class ClusterConnection {
 	
 	public void setHost(String host) {
 		this.host=host;
-		try {
-			//Closing previous connection is essential
-			//If we don't close it a lot of connections stay open after using a ClusterConnection object for a while
-			this.nCon.close(); 
-			this.nCon=DriverManager.getConnection(URL+host+"/"+db,user,password);
-		}
-		catch (SQLException e){
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get connection to node "+host+", database "+db+", exiting.");
-			System.exit(2);						
-		}
+		//Closing previous connection is essential
+		//If we don't close it a lot of connections stay open after using a ClusterConnection object for a while
+		this.nCon.close(); 
+		this.nCon = new MySQLConnection(host,user,password,db);
 	}
 	
 	/**
@@ -186,36 +123,22 @@ public class ClusterConnection {
 	 * @param key the name of the key
 	 * @param idx the id value for that key
 	 */
-	public void executeSql(String query,String key, int idx) {
+	public void executeSql(String query,String key, int idx) throws SQLException {
 		Statement stmt;
-		try {
-		    stmt = this.createStatement(key,idx);	
-		    stmt.execute(query);
-			stmt.close();		    
-		} catch (SQLException e) {
-		    System.err.println("SQLException: " + e.getMessage());
-		    System.err.println("SQLState:     " + e.getSQLState());
-		    System.err.println("VendorError:  " + e.getErrorCode());
-		    e.printStackTrace();
-		} 
+		stmt = this.createStatement(key,idx);	
+		stmt.execute(query);
+		stmt.close();		    
 	}
+	
 	/**
 	 * To change the MASTERDB String, i.e. the name of the key master database. To be used in testing.
 	 * @param db the name of the key master db we want to use instead of the default defined in the MASTERDB field
 	 */
 	public void setKeyDb(String db) { 
 		this.MASTERDB=db;
-		try {
-			//Closing previous connection is essential
-			this.mCon.close(); 
-			this.mCon=DriverManager.getConnection(URL+MASTERHOST+"/"+MASTERDB,user,password);
-		}
-		catch (SQLException e){
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get connection to master host "+host+", database "+MASTERDB+", exiting.");
-			System.exit(2);						
-		}
+		//Closing previous connection is essential
+		this.mCon.close(); 
+		this.mCon = new MySQLConnection(MASTERHOST,user,password,MASTERDB);
 	}
 	
 	/**
@@ -224,20 +147,7 @@ public class ClusterConnection {
 	 */
 	public void setKeyTable(String db) { 
 		String query="SELECT key_master_table FROM dbs_keys WHERE db=\'"+db+"\' AND key_name=\'"+this.key+"\';";
-		try {
-			Statement S = this.mCon.createStatement();
-			ResultSet R = S.executeQuery(query);
-			if (R.next()){
-				this.keyTable=R.getString(1);
-			}
-			R.close();
-			S.close();			
-		} catch (SQLException e) {
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get the key_master_table from "+MASTERDB+", exiting.");
-			System.exit(2);						
-		}				
+		this.keyTable=this.mCon.getStringFromDb(query);
 	}
 	
 	/**
@@ -246,20 +156,7 @@ public class ClusterConnection {
 	 */
 	public void setKeyTable() {  
 		String query="SELECT key_master_table FROM dbs_keys WHERE db=\'"+this.db+"\' AND key_name=\'"+this.key+"\';";
-		try {
-			Statement S = this.mCon.createStatement();
-			ResultSet R = S.executeQuery(query);
-			if (R.next()){
-				this.keyTable=R.getString(1);
-			}
-			R.close();
-			S.close();
-		} catch (SQLException e) {
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("Couldn't get the key_master_table from "+MASTERDB+", exiting.");
-			System.exit(2);						
-		}
+		this.keyTable=this.mCon.getStringFromDb(query);
 	}
 	
 	public String getKeyTable() {
@@ -376,51 +273,29 @@ public class ClusterConnection {
 	public int getHostId4Idx (String key,int idx) { 
 		int hostId=0;
 		this.setKey(key);
-		Statement S;
-		ResultSet R;
 		String query;
 		int countCids=0;
-		try {
-			S=mCon.createStatement();
-			query="SELECT count(client_id) FROM "+keyTable+" WHERE "+key+"="+idx+";";
-			R=S.executeQuery(query);
-			if (R.next()){
-				countCids=R.getInt(1);
-			}
-			if (countCids!=1){
-				System.err.println("the query was: "+query);
-				System.err.println("Error! the count of client_ids for idx "+key+"= "+idx+" is " +countCids+
-						". It must be 1! The values were taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
-				System.exit(2);
-			}
-			else {
-				query="SELECT client_id FROM "+keyTable+" WHERE "+key+"="+idx+";";
-				R=S.executeQuery(query);
-				if (R.next()){
-					hostId=R.getInt(1);
-				}
-			}
-			S.close();
-			R.close();
+		query="SELECT count(client_id) FROM "+keyTable+" WHERE "+key+"="+idx+";";
+		countCids=this.mCon.getIntFromDb(query);
+		if (countCids!=1){
+			System.err.println("the query was: "+query);
+			System.err.println("Error! the count of client_ids for idx "+key+"= "+idx+" is " +countCids+
+					". It must be 1! The values were taken from host: "+MASTERHOST+", database: "+MASTERDB+", table: "+keyTable+". Check what's wrong! Exiting now.");
+			System.exit(2);
 		}
-		catch(SQLException e) {
-			System.err.println("Couldn't get the host id for idx "+key+"="+idx+", exiting");
-    	    System.err.println("SQLException: " + e.getMessage());
-    	    System.err.println("SQLState:     " + e.getSQLState());
-			System.exit(3);									
+		else {
+			query="SELECT client_id FROM "+keyTable+" WHERE "+key+"="+idx+";";
+			hostId=this.mCon.getIntFromDb(query);
 		}
 		return hostId;
 	}
 	
 	public void insertIdxInMaster(String key, int clientId) {
-		Statement S;
 		String query;
 		this.setKey(key);
 		try {
-			S=this.mCon.createStatement();
 			query="INSERT INTO "+this.keyTable+" (client_id) VALUES ("+clientId+");";
-			S.executeUpdate(query);
-			S.close();
+			this.mCon.executeSql(query);
 		} 
 		catch (SQLException E) {
 			System.err.println("SQLException: " + E.getMessage());
@@ -440,27 +315,11 @@ public class ClusterConnection {
 	public int getLastInsertId(String key) {
 		int lastIdx=0;
 		this.setKey(key);
-		Statement S;
-		ResultSet R;
 		String query = "";
-		try {
-			S = this.mCon.createStatement();
-			query = "SELECT LAST_INSERT_ID() FROM "+this.keyTable+" LIMIT 1;";
-			R = S.executeQuery(query);
-			if (R.next()) {
-				lastIdx=R.getInt(1);
-			}
-			R.close();
-			S.close();
-		} 
-		catch (SQLException E) {
-			System.err.println("Couldn't get the last insert id for key type "+this.key+" from table "+this.keyTable+". Exiting");
-			System.err.println("SQLException: " + E.getMessage());
-			System.err.println("SQLState:     " + E.getSQLState());
-			System.exit(3);
-		} // end try/catch connection 
+		query = "SELECT LAST_INSERT_ID() FROM "+this.keyTable+" LIMIT 1;";
+		lastIdx=this.mCon.getIntFromDb(query);
 		return lastIdx;
-	} // end getGraphId
+	}
 	
 	public int[][] getIdxSet(String key) { 
 		int[][] indMatrix=null;
@@ -469,17 +328,12 @@ public class ClusterConnection {
 		Statement S;
 		ResultSet R;
 		try {
-			// STEP 1 -- getting set of all client_ids
-			S=this.mCon.createStatement();
+			// STEP 1 -- getting set of all client_ids			
 			query="SELECT count(distinct client_id) FROM "+keyTable+";";
 			int count=0;
-			R=S.executeQuery(query);
-			if (R.next()){
-				count=R.getInt(1);
-			}
+			count=this.mCon.getIntFromDb(query);
+			S=this.mCon.createStatement();
 			query="SELECT DISTINCT client_id FROM "+keyTable+" ORDER BY client_id;";
-			//R.close();
-			//S.close();
 			R=S.executeQuery(query);
 			
 			// STEP 2 -- putting sets of indices counts into temp tables c_<client_id> with a serial auto_increment field
