@@ -613,11 +613,9 @@ public class DataDistribution {
 	 * @param idSets as returned from splitIdsIntoSets or getIdSetsFromNodes
 	 */
 	public void insertIdsToKeyMaster(String key,String table,String destDb,HashMap<String,int[]> idSets) {
-		MySQLConnection conn = this.getConnectionToMasterKeyDb();
-		ClusterConnection cconn = new ClusterConnection(destDb,key,user,pwd);
-		cconn.createNewKeyMasterTbl(table);
-		String keyMasterTbl=cconn.getKeyTable();
-		cconn.close();
+		MySQLConnection conn = this.getConnectionToMasterKeyDb();		
+		String keyMasterTbl = createNewKeyMasterTbl(key,table,destDb);
+		removePK(keyMasterTbl,key); // attention removing primary keys, duplicates won't be checked!!!
 		for (String node:idSets.keySet()){
 			int[] thisNodeIds=idSets.get(node);
 			for (int id:thisNodeIds){
@@ -630,6 +628,82 @@ public class DataDistribution {
 				}
 			}
 		}
+		removeZeros(keyMasterTbl,key); // we only have inserted 0s for records that we didn't want, it's safe now to get rid of them
+		addPK(keyMasterTbl,key); // if there were duplicates, this should barf
+	}
+
+	/**
+	 * To create a new key master table in the key_master database given a key, table and db. Used by insertIdsToKeyMaster
+	 * Eventually this method on other key_master related should go into their own class, shouldn't they?
+	 * @param key
+	 * @param table
+	 * @param destDb the db
+	 * @return the name of the key master table created
+	 */
+	public String createNewKeyMasterTbl(String key,String table,String destDb) {
+		String keyMasterTbl=destDb+"__"+table;
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();
+		try {
+			String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
+						key+" int(11) NOT NULL auto_increment, " +
+						"client_id smallint(6) NOT NULL default '0', " +
+						"PRIMARY KEY (`"+key+"`) " +
+						") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
+			Statement S=conn.createStatement();
+			S.executeUpdate(query);
+			S.close();
+		} catch (SQLException e) {
+			System.err.println("Couldn't create table "+keyMasterTbl);
+			e.printStackTrace();
+		}
+		try {
+			Statement S=conn.createStatement();
+			String query="INSERT INTO dbs_keys (key_name,db,key_master_table) VALUES (\'"+key+"\',\'"+db+"\',\'"+keyMasterTbl+"\');";
+			S.executeUpdate(query);
+			S.close();
+		} catch (SQLException e) {
+			System.err.println("Didn't insert new record into table dbs_keys of database: "+KEYMASTERDB+". The record for key: "+key+", table: "+table+" existed already. This is usually a harmless error!");
+			System.err.println("SQLException: " + e.getMessage());
+		}
+		conn.close();
+		return keyMasterTbl;
+	}
+	
+	public void removePK (String keyMasterTbl,String key){
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
+		try {
+			String query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" int(11) NOT NULL default '0';";
+			conn.executeSql(query);
+			query="ALTER TABLE "+keyMasterTbl+" DROP PRIMARY KEY;";
+			conn.executeSql(query);			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		conn.close();
+	}
+	
+	public void addPK (String keyMasterTbl, String key){
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
+		try {
+			String query="ALTER TABLE "+keyMasterTbl+" ADD PRIMARY KEY("+key+");";				
+			conn.executeSql(query);
+			query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" int(11) NOT NULL auto_increment;";
+			conn.executeSql(query);			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		conn.close();		
+	}
+	
+	public void removeZeros (String keyMasterTbl, String key){
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
+		try {
+			String query="DELETE FROM "+keyMasterTbl+" WHERE "+key+"=0;";				
+			conn.executeSql(query);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		conn.close();				
 	}
 
 	/**
