@@ -32,8 +32,11 @@ public class MySQLConnection {
 	
 	/*-------------------- constructors -----------------------*/
 
-	/**
+	/** 
 	 * Connect to database using the given server, user and password
+	 * @param dbServer
+	 * @param dbUserName
+	 * @param dbPassword
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword) {
 		loadMySQLDriver();
@@ -56,6 +59,10 @@ public class MySQLConnection {
 	/**
 	 * Connect to database using the given server, user, password and dbname.
 	 * Please always use this constructor in preference rather than constructing without specifying a database
+	 * @param dbServer
+	 * @param dbUserName
+	 * @param dbPassword
+	 * @param dbName 
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) {
 		loadMySQLDriver(); 
@@ -78,6 +85,11 @@ public class MySQLConnection {
 	/**
 	 * Connect to database using the given server, user, password, dbname and port
 	 * Only needed if mysql server uses a port different from the standard 3306
+	 * @param dbServer
+	 * @param dbUserName
+	 * @param dbPassword
+	 * @param dbName
+	 * @param portNum
 	 */
 	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName, int portNum) {
 		loadMySQLDriver();
@@ -98,7 +110,8 @@ public class MySQLConnection {
 	}
 		
 	/**
-	 * Connect to database giving a connection file 
+	 * Connect to database giving a connection file
+	 * @param connFile the connection file's name
 	 */
 	public MySQLConnection(String connFile) {		
 		loadMySQLDriver();
