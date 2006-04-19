@@ -67,33 +67,6 @@ public class DataDistribution {
 	    return nodes;
 	}
 
-	public String[] getTables4Db(){
-		String[] tables=null;
-		ArrayList<String> tablesAL=new ArrayList<String>();
-		String query="SELECT table_name FROM information_schema.tables WHERE table_schema='"+db+"' ORDER BY table_name DESC;";
-		try {
-			MySQLConnection conn = this.getConnectionToMaster();
-			Statement S=conn.createStatement();
-			ResultSet R=S.executeQuery(query);
-			while (R.next()){
-				tablesAL.add(R.getString(1));
-			}
-			S.close();
-			R.close();
-			conn.close();
-			tables=new String[tablesAL.size()];
-			for (int i=0;i<tablesAL.size();i++) {
-				tables[i]=tablesAL.get(i);
-			}
-		}
-		catch(SQLException e){
-			e.printStackTrace();
-			System.err.println("Couldn't get table names from "+MASTER+" for db="+db);
-			System.exit(1);
-		}
-		return tables;
-	}
-	
 	public void initializeDirs() {	
 	    if (!((new File(dumpdir)).mkdir())) {
 	    	System.err.println("Couldn't create directory "+dumpdir);
@@ -209,7 +182,9 @@ public class DataDistribution {
 	public boolean checkCountsAllTables (){
 		boolean checkResult=true;
 		String[] nodes = getNodes();
-		String[] tables = getTables4Db();
+		MySQLConnection mconn = this.getConnectionToMaster();
+		String[] tables = mconn.getTables4Db();
+		mconn.close();
 		// getting hashmap of all counts from all tables from nodes
 		HashMap<String,HashMap<String,Integer>> countsNodes=new HashMap<String,HashMap<String,Integer>>();
 		for (String node:nodes){

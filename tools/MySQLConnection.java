@@ -483,6 +483,38 @@ public class MySQLConnection {
     }
     
     /**
+     * To get all tables for this MySQLConnection's database.
+     * @return an array of String with all table names
+     */
+	public String[] getTables4Db(){
+		String[] tables=null;
+		ArrayList<String> tablesAL=new ArrayList<String>();
+		String query="SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='"+dbname+"' ORDER BY TABLE_NAME DESC;";
+		try {			
+			Statement S = this.conn.createStatement();
+			ResultSet R=S.executeQuery(query);
+			while (R.next()){
+				tablesAL.add(R.getString(1));
+			}
+			S.close();
+			R.close();
+			conn.close();
+			tables=new String[tablesAL.size()];
+			for (int i=0;i<tablesAL.size();i++) {
+				tables[i]=tablesAL.get(i);
+			}
+		}
+		catch(SQLException e){			
+			System.err.println("Couldn't get table names from "+host+" for db="+dbname);
+    	    System.err.println("SQLException: " + e.getMessage());
+    	    System.err.println("SQLState:     " + e.getSQLState());
+    	    System.err.println("VendorError:  " + e.getErrorCode());
+			e.printStackTrace();
+		}
+		return tables;
+	}
+
+    /**
      * To set the sql_mode of this connection. 
      * @param sqlmode either NO_UNSIGNED_SUBTRACTION or blank
      */
