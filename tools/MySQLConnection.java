@@ -498,7 +498,6 @@ public class MySQLConnection {
 			}
 			S.close();
 			R.close();
-			conn.close();
 			tables=new String[tablesAL.size()];
 			for (int i=0;i<tablesAL.size();i++) {
 				tables[i]=tablesAL.get(i);
@@ -513,6 +512,36 @@ public class MySQLConnection {
 		}
 		return tables;
 	}
+	
+	/** 
+	 * To get all distinct ordered ids from a certain key and table from this MySQLConnection
+	 * @param key the key name
+	 * @param table the table name
+	 * @return int array containing all ids 
+	 */
+	public int[] getAllIds4KeyAndTable(String key, String table){
+		int[] allIds=null;		
+		try {
+			Statement S=conn.createStatement();
+			String query="SELECT DISTINCT "+key+" FROM "+table+" ORDER BY "+key+";";
+			ResultSet R=S.executeQuery(query);
+			ArrayList<Integer> idsAL=new ArrayList<Integer>();
+			while (R.next()){
+				idsAL.add(R.getInt(1));
+			}
+			allIds=new int[idsAL.size()];
+			for (int i=0;i<idsAL.size();i++) {
+				allIds[i]=idsAL.get(i);
+			}
+			R.close();
+			S.close();
+		}
+		catch (SQLException e){
+			e.printStackTrace();
+		}
+		return allIds;
+	}
+
 
     /**
      * To set the sql_mode of this connection. 
