@@ -11,6 +11,12 @@ public class DataDistributer {
 	public final static String MASTER = DataDistribution.MASTER;
 	public final static String KEYMASTERDB = DataDistribution.KEYMASTERDB;
 	
+	// Following parameters are optimized after some testing. I found these to be good values
+	// They represent the number of nodes reading/writing from/to nfs concurrently when loading/dumping
+	// 1 means no concurrency at all. Higher numbers mean more concurrency i.e. more nodes writing/reading to/from nfs concurrently
+	final static int NUM_CONCURRENT_READ_QUERIES  = 9;
+	final static int NUM_CONCURRENT_WRITE_QUERIES = 6;
+	
 	String dumpdir;
 	String srcDb;
 	String destDb;
@@ -60,6 +66,16 @@ public class DataDistributer {
 		SystemCmd.exec("chmod go+rw "+dumpdir);
 	}
 	
+	public void initializeDirs(String[] hosts){
+		for (String host: hosts) {
+			if (!((new File(dumpdir+"/"+host+"/"+srcDb)).mkdirs())) {
+				System.err.println("Couldn't create directory "+dumpdir+"/"+host+"/"+srcDb);
+				System.exit(1);
+			}
+			SystemCmd.exec("chmod -R go+rw "+dumpdir+"/"+host);
+		}
+	}
+	
 	public void finalizeDirs() {
 	    if (debug) {
 	    	System.out.println("Temporary directory "+dumpdir+" was not removed. You must remove it manually");
@@ -75,11 +91,6 @@ public class DataDistributer {
 		return conn;
 	}
 	
-	private MySQLConnection getConnectionToNode(String node, String dbName){
-		MySQLConnection conn=new MySQLConnection(node,user,pwd,dbName);
-		return conn;
-	}
-	
 	private MySQLConnection getConnectionToMaster() {
 		MySQLConnection conn=this.getConnectionToNode(MASTER);
 		return conn;
@@ -91,83 +102,128 @@ public class DataDistributer {
 	}
 
 	public void dumpData(String[] srchosts, String[] tables) {
-		for (String srchost: srchosts) {
-			if (!((new File(dumpdir+"/"+srchost+"/"+srcDb)).mkdirs())) {
-				System.err.println("Couldn't create directory "+dumpdir+"/"+srchost+"/"+srcDb);
-				System.exit(1);
-			}
-			SystemCmd.exec("chmod -R go+rw "+dumpdir+"/"+srchost);
-			for ( String tbl: tables) {
+		int concurrentQueries = 1;
+		if (srchosts.length>1) {
+			concurrentQueries = NUM_CONCURRENT_WRITE_QUERIES;
+		}
+		int i = 0;
+		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
+		initializeDirs(srchosts);
+		for ( String tbl: tables) {
+			for (String srchost: srchosts) {				
 				String outfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tbl+".txt";
 				String wherestr="";
 				String sqldumpstr="SELECT * FROM `"+tbl+"` "+wherestr+" INTO OUTFILE '"+outfile+"';";
 				if (debug) {System.out.println ("HOST="+srchost+", database="+srcDb+", sqldumpstr="+sqldumpstr);} 
 				else {
-					try {
-						MySQLConnection conn = this.getConnectionToNode(srchost);
-						Statement S=conn.createStatement();
-						S.executeQuery(sqldumpstr);
-						System.out.println ("Dumped from host="+srchost+", database="+srcDb+", table="+tbl+" to outfile="+outfile);
-						S.close();
-						conn.close();
-					}
-					catch(SQLException e){
-						e.printStackTrace();
-						System.err.println("Couldn't dump from host="+srchost+", database="+srcDb+", table="+tbl+" to outfile="+outfile);
-						System.exit(1);
-					}		
+					if (i!=0 && i%(concurrentQueries) == 0) {
+						try {
+							for (int j = 0;j<qtGroup.length;j++){
+								qtGroup[j].join(); // wait until previous thread group is finished
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						i = 0;
+						qtGroup = new QueryThread[concurrentQueries];
+					}			
+					qtGroup[i] = new QueryThread(sqldumpstr,srchost,user,pwd,srcDb);	    				
 				} //end else if debug
-			} // end foreach tbl
-		}
+				i++;
+			} // end foreach srchost
+		} // end foreach table
+		try {
+			for (int j = 0;j<qtGroup.length;j++){
+				if (qtGroup[j]!=null){ // some slots of the array may be null, check for those before trying the join
+					qtGroup[j].join(); // wait until the last thread group is finished
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}		
 		System.out.println ("Dump finished.");
 	}
-	
+
 	public void loadData(String[] srchosts, String[] desthosts,String[] tables) {
-	    for (String desthost: desthosts) {
-	    	for (String srchost: srchosts) {
-	    		for (String tbl:tables) {
-	    			String dumpfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tbl+".txt";
-	    			String sqlloadstr="LOAD DATA INFILE '"+dumpfile+"' INTO TABLE `"+tbl+"`;";
-	    			if (debug) {System.out.println ("SRCHOST="+srchost+", DESTHOST="+desthost+", DESTDB="+destDb+", sqlloadstr="+sqlloadstr);} 
-	    			else {
-	    				try {
-	    					MySQLConnection conn = this.getConnectionToNode(desthost,destDb);
-	    					conn.executeSql(sqlloadstr);
-	    					System.out.println ("HOST: "+desthost+". Loaded from file="+dumpfile+", into database="+destDb+", table="+tbl);
-	    					conn.close();
-	    				}
-	    				catch(SQLException e){
-	    					e.printStackTrace();
-	    					System.err.println("Errors occurred while loading data from file="+dumpfile+" into host="+desthost+", database="+destDb+", table="+tbl);
-	    					System.exit(1);
-	    				}
-	    			}	    		
-	    		} // end foreach tbl
-	    	} 
-	    } 
+		int concurrentQueries = 1;
+		if (srchosts.length==1 && desthosts.length>1) {
+			concurrentQueries = NUM_CONCURRENT_READ_QUERIES;
+		}
+		int i = 0;
+		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
+		for (String srchost:srchosts){
+			for (String tbl:tables) {
+				String dumpfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tbl+".txt";
+				String sqlloadstr="LOAD DATA INFILE '"+dumpfile+"' INTO TABLE `"+tbl+"`;";
+				for (String desthost: desthosts) {
+					if (debug) {System.out.println ("SRCHOST="+srchost+", DESTHOST="+desthost+", DESTDB="+destDb+", sqlloadstr="+sqlloadstr);} 
+					else {						
+						if (i!=0 && i%(concurrentQueries) == 0) {
+							try {
+								for (int j = 0;j<qtGroup.length;j++){
+									qtGroup[j].join(); // wait until previous thread group is finished
+								}
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+							i = 0;
+							qtGroup = new QueryThread[concurrentQueries];
+						}			
+						qtGroup[i] = new QueryThread(sqlloadstr,desthost,user,pwd,destDb);	    				
+					}	    						
+					i++;
+				} // end foreach desthost
+			} // end foreach tbl
+		} // end foreach srchost
+		try {
+			for (int j = 0;j<qtGroup.length;j++){
+				if (qtGroup[j]!=null){ // some slots of the array may be null, check for those before trying the join
+					qtGroup[j].join(); // wait until the last thread group is finished
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}		
 	    System.out.println ("Load finished.");
 	    finalizeDirs();
 	}
 
 	public void loadSplitData(String srchost, String[] desthosts, String tableName) {
+		int concurrentQueries = 1;
+		if (desthosts.length>1) {
+			concurrentQueries = NUM_CONCURRENT_READ_QUERIES;
+		}
+		int i = 0;
+		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
 		for (String desthost:desthosts) {
 			String dumpfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tableName+"_split_"+desthost+".txt";
 			String sqlloadstr="LOAD DATA INFILE '"+dumpfile+"' INTO TABLE `"+tableName+"`;";
 			if (debug) {System.out.println ("SRCHOST="+srchost+", DESTHOST="+desthost+", DESTDB="+destDb+", sqlloadstr="+sqlloadstr);} 
 			else {
-				try {
-					MySQLConnection conn = this.getConnectionToNode(desthost,destDb);
-					conn.executeSql(sqlloadstr);
-					System.out.println ("HOST: "+desthost+". Loaded from file="+dumpfile+", database="+srcDb+", table="+tableName);
-					conn.close();
-				}
-				catch(SQLException e){
-					e.printStackTrace();
-					System.err.println("Errors occurred while loading data from file="+dumpfile+" into host="+desthost+", database="+destDb+", table="+tableName);
-					System.exit(1);
-				}
-			}	    		
+				if (i!=0 && i%(concurrentQueries) == 0) {
+					try {
+						for (int j = 0;j<qtGroup.length;j++){
+							qtGroup[j].join(); // wait until previous thread group is finished
+						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					i = 0;
+					qtGroup = new QueryThread[concurrentQueries];
+				}			
+				qtGroup[i] = new QueryThread(sqlloadstr,desthost,user,pwd,destDb);
+			} // end else if debug
+			i++;
 		} // end foreach desthosts
+		try {
+			for (int j = 0;j<qtGroup.length;j++){
+				if (qtGroup[j]!=null){ // some slots of the array may be null, check for those before trying the join
+					qtGroup[j].join(); // wait until the last thread group is finished
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}		
 	    System.out.println ("Load finished.");
 	    finalizeDirs();
 	}
