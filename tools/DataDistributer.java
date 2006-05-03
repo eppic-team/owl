@@ -16,6 +16,9 @@ public class DataDistributer {
 	// 1 means no concurrency at all. Higher numbers mean more concurrency i.e. more nodes writing/reading to/from nfs concurrently
 	final static int NUM_CONCURRENT_READ_QUERIES  = 9;
 	final static int NUM_CONCURRENT_WRITE_QUERIES = 6;
+	// Following parameter only for concurrent writing queries in same host. This number has to be low
+	// as the only limitation is the i/o capacity of the host. 
+	final static int NUM_CONCURRENT_SAMEHOST_QUERIES = 3; 
 	
 	String dumpdir;
 	String srcDb;
@@ -131,6 +134,49 @@ public class DataDistributer {
 				} //end else if debug
 				i++;
 			} // end foreach srchost
+		} // end foreach table
+		try {
+			for (int j = 0;j<qtGroup.length;j++){
+				if (qtGroup[j]!=null){ // some slots of the array may be null, check for those before trying the join
+					qtGroup[j].join(); // wait until the last thread group is finished
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}		
+		System.out.println ("Dump finished.");
+	}
+
+	public void dumpSplitData(String srchost, String[] tables, String key, HashMap<String,int[]> idSets) {
+		int concurrentQueries = NUM_CONCURRENT_SAMEHOST_QUERIES; 
+		int i = 0;
+		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
+		String[] srchosts = {srchost};
+		initializeDirs(srchosts);
+		for ( String tbl: tables) {
+			for (String node:idSets.keySet()) {			
+				int idmin=idSets.get(node)[0];
+				int idmax=idSets.get(node)[idSets.get(node).length-1];				
+				String outfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tbl+"_split_"+node+".txt";
+				String wherestr="WHERE "+key+">="+idmin+" AND "+key+"<="+idmax;
+				String sqldumpstr="SELECT * FROM `"+tbl+"` "+wherestr+" INTO OUTFILE '"+outfile+"';";
+				if (debug) {System.out.println ("HOST="+srchost+", database="+srcDb+", sqldumpstr="+sqldumpstr);} 
+				else {
+					if (i!=0 && i%(concurrentQueries) == 0) {
+						try {
+							for (int j = 0;j<qtGroup.length;j++){
+								qtGroup[j].join(); // wait until previous thread group is finished
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						i = 0;
+						qtGroup = new QueryThread[concurrentQueries];
+					}			
+					qtGroup[i] = new QueryThread(sqldumpstr,srchost,user,pwd,srcDb);	    				
+				} //end else if debug
+				i++;
+			}			
 		} // end foreach table
 		try {
 			for (int j = 0;j<qtGroup.length;j++){
@@ -307,48 +353,13 @@ public class DataDistributer {
 	 * @param table 
 	 */
 	public DataDistribution splitTableToCluster (String key,String table){
-		String query;
 		HashMap<String,int[]> idSets = this.splitIdsIntoSets(key,table);
-		String[] splitTables=new String[idSets.size()];
-		try {
-			MySQLConnection conn=this.getConnectionToMaster();
-			int i=0;
-			for (String node:idSets.keySet()) {
-				String splitTbl=table+"_split_"+node;
-				splitTables[i]=splitTbl;
-				i++;
-				// we create permanent tables, later we drop them. Can't be temporary as we use another connection for dumpData
-				query="CREATE TABLE "+splitTbl+" LIKE "+table+";";
-				conn.executeSql(query);
-				// drop the indexes if there was any, indexes will slow down the creation of split tables
-				String[] indexes=conn.getAllIndexes4Table(table);
-				for (String index:indexes) { 
-					conn.executeSql("DROP INDEX "+index+" ON "+splitTbl+";");
-				}
-				// make the table a memory table (won't be feasible in general case where tables can be VERY big, even white won't cope) 
-				//query="ALTER TABLE "+splitTbl+" TYPE=MEMORY;";
-				//conn.executeSql(query);
-				int idmin=idSets.get(node)[0];
-				int idmax=idSets.get(node)[idSets.get(node).length-1];
-				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
-				conn.executeSql(query);
-			}
-			// transfering data across
-			String[] srchosts={MASTER};
-			String[] desthosts=DataDistribution.getNodes();
-			dumpData(srchosts,splitTables);
-			// using here loadSplitData rather than loadData because table names are not the same on source and destination, i.e. source: table_split_tla01, dest: table
-			loadSplitData(MASTER,desthosts,table);
-			// droping table, we don't want them anymore after loading data to nodes
-			for (String tbl:splitTables){					
-				query="DROP TABLE "+tbl+";";
-				conn.executeSql(query);
-			}
-			conn.close();
-		}
-		catch (SQLException e){
-			e.printStackTrace();
-		}
+		String[] tables={table};
+		String[] desthosts=DataDistribution.getNodes();
+		// dumping data with the dumpSplitData method, a modified version of dumpData
+		dumpSplitData(MASTER,tables,key,idSets);
+		// using here loadSplitData rather than loadData because table names are not the same on source and destination, i.e. source: table_split_tla01, dest: table
+		loadSplitData(MASTER,desthosts,table);	
 		// putting the ids in the key_master database so we keep track of where everything is
 		insertIdsToKeyMaster(key,table,idSets);
 		DataDistribution dataDist = new DataDistribution(destDb,user,pwd);
