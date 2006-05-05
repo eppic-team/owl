@@ -10,8 +10,8 @@ import java.util.HashMap;
 
 public class ClusterConnection {
 
-	private String MASTERDB="key_master"; 
-	private final String MASTERHOST="white";
+	private String MASTERDB=DataDistribution.KEYMASTERDB; 
+	private final String MASTERHOST=DataDistribution.MASTER;
 	private MySQLConnection nCon;
 	private MySQLConnection mCon;
 	public String keyTable;

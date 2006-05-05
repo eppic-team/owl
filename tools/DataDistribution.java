@@ -10,7 +10,7 @@ public class DataDistribution {
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
 	final static String HOSTSFILE=ADMINDIR+"/hosts_ss.txt";
 	public final static String MASTER="white";
-	final static String KEYMASTERDB="key_master";
+	public final static String KEYMASTERDB="key_master";
 
 	public String db;
 	private String user;
