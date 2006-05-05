@@ -60,6 +60,10 @@ public class DataDistributer {
 		this.debug=debug;
 	}
 	
+	public void setDumpDir(String dumpdir){
+		this.dumpdir=dumpdir;
+	}
+	
 	public void initializeDirs() {
 		dumpdir=GLOBALDIR+"/dumps_tmp_"+System.currentTimeMillis();
 	    if (!((new File(dumpdir)).mkdir())) {
