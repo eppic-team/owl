@@ -483,6 +483,40 @@ public class MySQLConnection {
     }
     
     /**
+     * To get the column type for a certain column and table
+     * @param table
+     * @param column
+     * @return
+     */
+    public String getColumnType(String table,String column){
+    	String query = "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS " +
+    					"WHERE TABLE_SCHEMA='"+this.dbname+"' AND TABLE_NAME='"+table+"' AND COLUMN_NAME='"+column+"';";
+    	String colType = this.getStringFromDb(query);
+    	return colType;
+    }
+    
+    /**
+     * To findout whether a key (i.e. column) is numeric-based or text-based
+     * @param table
+     * @param key
+     * @return true if is numeric-based, false if is text-based
+     */
+    public boolean isKeyNumeric(String table, String key){
+    	boolean isNumeric = false;
+    	String colType = getColumnType(table,key);
+    	if (colType.contains("int") || colType.contains("INT")){
+    		isNumeric = true;
+    	}
+    	else if (colType.contains("char") || colType.contains("CHAR")){
+    		isNumeric = false;
+    	}
+    	else {
+    		System.err.println("The key '"+key+"' from table '"+table+"' is neither numeric-based (int) nor text-based (char/varchar). Check what's wrong!");
+    	}
+    	return isNumeric;
+    }
+    
+    /**
      * To get all tables for this MySQLConnection's database.
      * @return an array of String with all table names
      */
@@ -519,8 +553,8 @@ public class MySQLConnection {
 	 * @param table the table name
 	 * @return int array containing all ids 
 	 */
-	public int[] getAllIds4KeyAndTable(String key, String table){
-		int[] allIds=null;		
+	public Integer[] getAllNumIds4KeyAndTable(String key, String table){
+		Integer[] allIds=null;		
 		try {
 			Statement S=conn.createStatement();
 			String query="SELECT DISTINCT "+key+" FROM "+table+" ORDER BY "+key+";";
@@ -529,7 +563,7 @@ public class MySQLConnection {
 			while (R.next()){
 				idsAL.add(R.getInt(1));
 			}
-			allIds=new int[idsAL.size()];
+			allIds=new Integer[idsAL.size()];
 			for (int i=0;i<idsAL.size();i++) {
 				allIds[i]=idsAL.get(i);
 			}
@@ -542,6 +576,34 @@ public class MySQLConnection {
 		return allIds;
 	}
 
+	/** 
+	 * To get all distinct ordered text (i.e. char/varchar column) ids from a certain key and table from this MySQLConnection
+	 * @param key the key name
+	 * @param table the table name
+	 * @return int array containing all ids 
+	 */
+	public String[] getAllTxtIds4KeyAndTable(String key, String table){
+		String[] allIds=null;		
+		try {
+			Statement S=conn.createStatement();
+			String query="SELECT DISTINCT "+key+" FROM "+table+" ORDER BY "+key+";";
+			ResultSet R=S.executeQuery(query);
+			ArrayList<String> idsAL=new ArrayList<String>();
+			while (R.next()){
+				idsAL.add(R.getString(1));
+			}
+			allIds=new String[idsAL.size()];
+			for (int i=0;i<idsAL.size();i++) {
+				allIds[i]=idsAL.get(i);
+			}
+			R.close();
+			S.close();
+		}
+		catch (SQLException e){
+			e.printStackTrace();
+		}
+		return allIds;
+	}
 
     /**
      * To set the sql_mode of this connection. 
