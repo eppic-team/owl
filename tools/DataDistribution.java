@@ -272,24 +272,45 @@ public class DataDistribution {
 	}
 	
 	/**
-	 * For a certain key and table finds out how the table is splitted in nodes and returns the "data distribution"
+	 * For a certain NUMERIC key and table finds out how the table is splitted in nodes and returns the "data distribution"
 	 * Take care when using this method as an argument of insertIdsToKeyMaster: if table is not in chunks (but rather all data in all)
 	 * then ids can't be inserted in key_master as there will be duplication, i.e. for key_id=1 as data is in all nodes there 
 	 * will be 40 copies of it and thus 40 equal ids will try to be inserted in key_master, which a) makes no sense and 
 	 * b) mysql won't do it anyway  
-	 * @param key
+	 * @param key numeric key (int)
 	 * @param table 
 	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
 	 */
-	public HashMap<String,int[]> getIdSetsFromNodes(String key, String table){
-		HashMap<String,int[]> idSets =new HashMap<String,int[]>();
+	public HashMap<String,Integer[]> getNumIdSetsFromNodes(String key, String table){
+		HashMap<String,Integer[]> idSets =new HashMap<String,Integer[]>();
 		String[] nodes = getNodes();
 		for (String node:nodes){
 			MySQLConnection conn = this.getConnectionToNode(node);
-			idSets.put(node,conn.getAllIds4KeyAndTable(key,table));
+			idSets.put(node,conn.getAllNumIds4KeyAndTable(key,table));
 			conn.close();		
 		}
 		return idSets;
 	}
-	
+
+	/**
+	 * For a certain TEXT key and table finds out how the table is splitted in nodes and returns the "data distribution"
+	 * Take care when using this method as an argument of insertIdsToKeyMaster: if table is not in chunks (but rather all data in all)
+	 * then ids can't be inserted in key_master as there will be duplication, i.e. for key_id=1 as data is in all nodes there 
+	 * will be 40 copies of it and thus 40 equal ids will try to be inserted in key_master, which a) makes no sense and 
+	 * b) mysql won't do it anyway  
+	 * @param key text-based key (char/varchar)
+	 * @param table 
+	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
+	 */
+	public HashMap<String,String[]> getTxtIdSetsFromNodes(String key, String table){
+		HashMap<String,String[]> idSets =new HashMap<String,String[]>();
+		String[] nodes = getNodes();
+		for (String node:nodes){
+			MySQLConnection conn = this.getConnectionToNode(node);
+			idSets.put(node,conn.getAllTxtIds4KeyAndTable(key,table));
+			conn.close();		
+		}
+		return idSets;
+	}
+
 }

@@ -151,36 +151,40 @@ public class DataDistributer {
 		System.out.println ("Dump finished.");
 	}
 
-	public void dumpSplitData(String srchost, String[] tables, String key, HashMap<String,int[]> idSets) {
+	public <T> void dumpSplitData(String srchost, String[] tables, String key, HashMap<String,T[]> idSets) {
 		int concurrentQueries = NUM_CONCURRENT_SAMEHOST_QUERIES; 
 		int i = 0;
 		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
 		String[] srchosts = {srchost};
 		initializeDirs(srchosts);
 		for ( String tbl: tables) {
-			for (String node:idSets.keySet()) {			
-				int idmin=idSets.get(node)[0];
-				int idmax=idSets.get(node)[idSets.get(node).length-1];				
+			for (String node:idSets.keySet()) {
 				String outfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tbl+"_split_"+node+".txt";
-				String wherestr="WHERE "+key+">="+idmin+" AND "+key+"<="+idmax;
-				String sqldumpstr="SELECT * FROM `"+tbl+"` "+wherestr+" INTO OUTFILE '"+outfile+"';";
-				if (debug) {System.out.println ("HOST="+srchost+", database="+srcDb+", sqldumpstr="+sqldumpstr);} 
-				else {
-					if (i!=0 && i%(concurrentQueries) == 0) {
-						try {
-							for (int j = 0;j<qtGroup.length;j++){
-								qtGroup[j].join(); // wait until previous thread group is finished
+				String wherestr="";
+				// if number of ids for the key was less than number of nodes, some of the node slots will be empty. We check for those before trying to access the array
+				if (idSets.get(node).length>0) {
+					T idmin= idSets.get(node)[0];
+					T idmax= idSets.get(node)[idSets.get(node).length-1];				
+					wherestr="WHERE "+key+">='"+idmin+"' AND "+key+"<='"+idmax+"'";
+					String sqldumpstr="SELECT * FROM `"+tbl+"` "+wherestr+" INTO OUTFILE '"+outfile+"';";
+					if (debug) {System.out.println ("HOST="+srchost+", database="+srcDb+", sqldumpstr="+sqldumpstr);} 
+					else {
+						if (i!=0 && i%(concurrentQueries) == 0) {
+							try {
+								for (int j = 0;j<qtGroup.length;j++){
+									qtGroup[j].join(); // wait until previous thread group is finished
+								}
+							} catch (InterruptedException e) {
+								e.printStackTrace();
 							}
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						i = 0;
-						qtGroup = new QueryThread[concurrentQueries];
-					}			
-					qtGroup[i] = new QueryThread(sqldumpstr,srchost,user,pwd,srcDb);	    				
-				} //end else if debug
-				i++;
-			}			
+							i = 0;
+							qtGroup = new QueryThread[concurrentQueries];
+						}			
+						qtGroup[i] = new QueryThread(sqldumpstr,srchost,user,pwd,srcDb);	    				
+					} //end else if debug
+					i++;
+				}
+			} // end foreach node			
 		} // end foreach table
 		try {
 			for (int j = 0;j<qtGroup.length;j++){
@@ -247,23 +251,26 @@ public class DataDistributer {
 		QueryThread[] qtGroup = new QueryThread[concurrentQueries];
 		for (String desthost:desthosts) {
 			String dumpfile=dumpdir+"/"+srchost+"/"+srcDb+"/"+tableName+"_split_"+desthost+".txt";
-			String sqlloadstr="LOAD DATA INFILE '"+dumpfile+"' INTO TABLE `"+tableName+"`;";
-			if (debug) {System.out.println ("SRCHOST="+srchost+", DESTHOST="+desthost+", DESTDB="+destDb+", sqlloadstr="+sqlloadstr);} 
-			else {
-				if (i!=0 && i%(concurrentQueries) == 0) {
-					try {
-						for (int j = 0;j<qtGroup.length;j++){
-							qtGroup[j].join(); // wait until previous thread group is finished
+			// we test first if dumpfile exists, if not all the slots (nodes) are filled then some nodes won't have to load anything and the files won't be there because dumpSplitData didn't create them 
+			if ((new File(dumpfile)).exists()) { 
+				String sqlloadstr="LOAD DATA INFILE '"+dumpfile+"' INTO TABLE `"+tableName+"`;";
+				if (debug) {System.out.println ("SRCHOST="+srchost+", DESTHOST="+desthost+", DESTDB="+destDb+", sqlloadstr="+sqlloadstr);} 
+				else {
+					if (i!=0 && i%(concurrentQueries) == 0) {
+						try {
+							for (int j = 0;j<qtGroup.length;j++){
+								qtGroup[j].join(); // wait until previous thread group is finished
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
 						}
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					i = 0;
-					qtGroup = new QueryThread[concurrentQueries];
-				}			
-				qtGroup[i] = new QueryThread(sqlloadstr,desthost,user,pwd,destDb);
-			} // end else if debug
-			i++;
+						i = 0;
+						qtGroup = new QueryThread[concurrentQueries];
+					}			
+					qtGroup[i] = new QueryThread(sqlloadstr,desthost,user,pwd,destDb);
+				} // end else if debug
+				i++;
+			}
 		} // end foreach desthosts
 		try {
 			for (int j = 0;j<qtGroup.length;j++){
@@ -282,29 +289,65 @@ public class DataDistributer {
 	 * For a certain key and table returns a "data distribution" (kind of evenly distributed) of the data to the nodes
 	 * To be used when we have a table that we are going to split to the nodes
 	 * TODO eventually the code could be cleverer so that the data is actually evenly distributed, right now is only evenly distributed on key ids
-	 * @param key
+	 * @param key a numerical key (int column)
 	 * @param table
 	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
 	 */
-	public HashMap<String,int[]> splitIdsIntoSets(String key, String table){
-		HashMap<String,int[]> idSets =new HashMap<String,int[]>();
+	public HashMap<String,Integer[]> splitNumIdsIntoSets(String key, String table){
+		HashMap<String,Integer[]> idSets =new HashMap<String,Integer[]>();
 		String[] nodes=DataDistribution.getNodes();
 		int numNodes=nodes.length;
 		MySQLConnection conn = this.getConnectionToMaster();
-		int[] allIds=conn.getAllIds4KeyAndTable(key,table);
+		Integer[] allIds=conn.getAllNumIds4KeyAndTable(key,table);
 		conn.close();
 		int numIds=allIds.length;
 		int setSize=numIds/numNodes;
 		int remainder=numIds%numNodes;
 		for (int i=0;i<numNodes;i++){
 			if (i<remainder){ // for the first "remainder" number of nodes we put setSize+1 ids in the node
-				int[] thisnodeidset=new int[setSize+1];
+				Integer[] thisnodeidset=new Integer[setSize+1];
 				for (int j=0;j<thisnodeidset.length;j++){
 					thisnodeidset[j]=allIds[j+i*(setSize+1)];
 				}
 				idSets.put(nodes[i],thisnodeidset);
 			} else {         // for the rest we put only setSize ids
-				int[] thisnodeidset=new int[setSize]; 
+				Integer[] thisnodeidset=new Integer[setSize]; 
+				for (int j=0;j<thisnodeidset.length;j++){
+					thisnodeidset[j]=allIds[j+remainder*(setSize+1)+(i-remainder)*setSize];
+				}
+				idSets.put(nodes[i],thisnodeidset); 
+			}
+		}		
+		return idSets;
+	}
+
+	/**
+	 * For a certain key and table returns a "data distribution" (kind of evenly distributed) of the data to the nodes
+	 * To be used when we have a table that we are going to split to the nodes
+	 * TODO eventually the code could be cleverer so that the data is actually evenly distributed, right now is only evenly distributed on key ids
+	 * @param key a text-based key (char/varchar column)
+	 * @param table
+	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
+	 */
+	public HashMap<String,String[]> splitTxtIdsIntoSets(String key, String table){
+		HashMap<String,String[]> idSets =new HashMap<String,String[]>();
+		String[] nodes=DataDistribution.getNodes();
+		int numNodes=nodes.length;
+		MySQLConnection conn = this.getConnectionToMaster();
+		String[] allIds=conn.getAllTxtIds4KeyAndTable(key,table);
+		conn.close();
+		int numIds=allIds.length;
+		int setSize=numIds/numNodes;
+		int remainder=numIds%numNodes;
+		for (int i=0;i<numNodes;i++){
+			if (i<remainder){ // for the first "remainder" number of nodes we put setSize+1 ids in the node
+				String[] thisnodeidset=new String[setSize+1];
+				for (int j=0;j<thisnodeidset.length;j++){
+					thisnodeidset[j]=allIds[j+i*(setSize+1)];
+				}
+				idSets.put(nodes[i],thisnodeidset);
+			} else {         // for the rest we put only setSize ids
+				String[] thisnodeidset=new String[setSize]; 
 				for (int j=0;j<thisnodeidset.length;j++){
 					thisnodeidset[j]=allIds[j+remainder*(setSize+1)+(i-remainder)*setSize];
 				}
@@ -320,35 +363,49 @@ public class DataDistributer {
 	 * @param table 
 	 */
 	public void splitTable (String key,String table){
-		String query;
-		HashMap<String,int[]> idSets = this.splitIdsIntoSets(key,table);
-		String[] splitTables=new String[idSets.size()];
+		String[] nodes=DataDistribution.getNodes();
+		MySQLConnection conn=this.getConnectionToMaster();
+		boolean isNumeric = conn.isKeyNumeric(table,key);
+		String[] splitTables = new String[nodes.length]; // we create an array that will contain the name of all split tables
+		String[] indexes=conn.getAllIndexes4Table(table);
 		try {
-			MySQLConnection conn=this.getConnectionToMaster();
-			int i=0;
-			for (String node:idSets.keySet()) {
-				String splitTbl=table+"_split_"+node;
-				splitTables[i]=splitTbl;
-				i++;
+			// we create split tables and drop indexes before inserting
+			for (int i=0;i<nodes.length;i++) {
+				String splitTbl=table+"_split_"+nodes[i];
+				splitTables[i]=splitTbl; // will be used later while looping over splitTables
 				// we create permanent tables
-				query="CREATE TABLE "+splitTbl+" LIKE "+table+";";
+				String query="CREATE TABLE "+splitTbl+" LIKE "+table+";";
 				conn.executeSql(query);
 				// drop the indexes if there was any, indexes will slow down the creation of split tables
-				String[] indexes=conn.getAllIndexes4Table(table);
 				for (String index:indexes) { 
 					conn.executeSql("DROP INDEX "+index+" ON "+splitTbl+";");
 				}
-				int idmin=idSets.get(node)[0];
-				int idmax=idSets.get(node)[idSets.get(node).length-1];
-				query="INSERT INTO "+splitTbl+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
-				conn.executeSql(query);
-				//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
 			}
-			conn.close();
+			if (isNumeric){ // if key is numeric
+				HashMap<String,Integer[]> idSets = this.splitNumIdsIntoSets(key,table);
+				for (int i=0;i<nodes.length;i++) {
+					int idmin=idSets.get(nodes[i])[0];
+					int idmax=idSets.get(nodes[i])[idSets.get(nodes[i]).length-1];
+					String query="INSERT INTO "+splitTables[i]+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
+					conn.executeSql(query);
+					//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
+				}				
+			} 
+			else { // if key is text-based
+				HashMap<String,String[]> idSets = this.splitTxtIdsIntoSets(key,table);				
+				for (int i=0;i<nodes.length;i++) {
+					String idmin=idSets.get(nodes[i])[0];
+					String idmax=idSets.get(nodes[i])[idSets.get(nodes[i]).length-1];
+					String query="INSERT INTO "+splitTables[i]+" SELECT * FROM "+table+" WHERE "+key+">='"+idmin+"' AND "+key+"<='"+idmax+"';";				
+					conn.executeSql(query);
+					//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
+				}
+			}
 		}
 		catch (SQLException e){
 			e.printStackTrace();
 		}
+		conn.close();
 	}
 
 	/**
@@ -357,16 +414,31 @@ public class DataDistributer {
 	 * @param table 
 	 */
 	public DataDistribution splitTableToCluster (String key,String table){
-		HashMap<String,int[]> idSets = this.splitIdsIntoSets(key,table);
+		System.out.println("Splitting table "+table+" to cluster based on key "+key+"...");
 		String[] tables={table};
 		String[] desthosts=DataDistribution.getNodes();
-		// dumping data with the dumpSplitData method, a modified version of dumpData
-		dumpSplitData(MASTER,tables,key,idSets);
-		// using here loadSplitData rather than loadData because table names are not the same on source and destination, i.e. source: table_split_tla01, dest: table
+		MySQLConnection conn = this.getConnectionToMaster();
+		boolean isNumeric = conn.isKeyNumeric(table,key);
+		conn.close();
+		if (isNumeric){ // key column is numerical
+			HashMap<String,Integer[]> idSets = this.splitNumIdsIntoSets(key,table);
+			// dumping data with the dumpSplitData method, a modified version of dumpData
+			dumpSplitData(MASTER,tables,key,idSets);
+			// putting the ids in the key_master database so we keep track of where everything is
+			insertIdsToKeyMaster(key,table,idSets);
+		}
+		else { // key column is text-based
+			HashMap<String,String[]> idSets = this.splitTxtIdsIntoSets(key,table);
+			// dumping data with the dumpSplitData method, a modified version of dumpData
+			dumpSplitData(MASTER,tables,key,idSets);
+			// putting the ids in the key_master database so we keep track of where everything is
+			insertIdsToKeyMaster(key,table,idSets);
+		}
+		// using here loadSplitData rather than loadData because table names are not the same on source and destination, 
+		// i.e. source: table_split_tla01, dest: table
 		loadSplitData(MASTER,desthosts,table);	
-		// putting the ids in the key_master database so we keep track of where everything is
-		insertIdsToKeyMaster(key,table,idSets);
 		DataDistribution dataDist = new DataDistribution(destDb,user,pwd);
+		System.out.println("Done with splitting.");
 		return dataDist;
 	}
 	
@@ -376,24 +448,27 @@ public class DataDistributer {
 	 * @param table name of table that we are distributing
 	 * @param idSets as returned from splitIdsIntoSets or getIdSetsFromNodes from a DataDistribution object
 	 */
-	public void insertIdsToKeyMaster(String key,String table,HashMap<String,int[]> idSets) {
+	public <T> void insertIdsToKeyMaster(String key,String table,HashMap<String,T[]> idSets) {
+		System.out.println("Updating key_master database with ids to nodes mapping...");
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();		
 		String keyMasterTbl = createNewKeyMasterTbl(key,table);
 		removePK(keyMasterTbl,key); // attention removing primary keys, duplicates won't be checked!!!
 		for (String node:idSets.keySet()){
-			int[] thisNodeIds=idSets.get(node);
-			for (int id:thisNodeIds){
-				String query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
-							"SELECT "+id+",c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
-				try {
-					conn.executeSql(query);
-				} catch (SQLException e) {
-					e.printStackTrace();
+				T[] thisNodeIds=idSets.get(node);				
+				for (T id:thisNodeIds){
+					String query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
+									"SELECT '"+id+"',c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
+					try {
+						conn.executeSql(query);
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
 				}
-			}
 		}
+		conn.close();
 		removeZeros(keyMasterTbl,key); // we only have inserted 0s for records that we didn't want, it's safe now to get rid of them
 		addPK(keyMasterTbl,key); // if there were duplicates, this should barf
+		System.out.println("Done with updating key_master database.");
 	}
 
 	/**
@@ -404,14 +479,24 @@ public class DataDistributer {
 	 * @return the name of the key master table created
 	 */
 	public String createNewKeyMasterTbl(String key,String table) {
+		// find out whether key is numeric or text and setting accordingly query strings
+		String nodes[] = DataDistribution.getNodes(); // we need the list of nodes only to get one of them no matter which
+		MySQLConnection conn=new MySQLConnection(nodes[0],user,pwd,destDb); // here we connect to destDb in one node, needed to getColumnType 
+		String colType = conn.getColumnType(table,key);
+		String autoIncr = "";
+		if (colType.contains("int")){
+			autoIncr = "auto_increment";
+		}
+		conn.close();
+		// key master table name and connection to key master db
 		String keyMasterTbl=destDb+"__"+table;
-		MySQLConnection conn=this.getConnectionToMasterKeyDb();
+		conn=this.getConnectionToMasterKeyDb();
 		try {
 			String query="CREATE TABLE IF NOT EXISTS "+keyMasterTbl+" ("+
-						key+" int(11) NOT NULL auto_increment, " +
-						"client_id smallint(6) NOT NULL default '0', " +
-						"PRIMARY KEY (`"+key+"`) " +
-						") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
+							key+" "+colType+" NOT NULL "+autoIncr+", " +
+							"client_id smallint(6) NOT NULL default '0', " +
+							"PRIMARY KEY (`"+key+"`) " +
+							") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
 			Statement S=conn.createStatement();
 			S.executeUpdate(query);
 			S.close();
@@ -421,7 +506,7 @@ public class DataDistributer {
 		}
 		try {
 			Statement S=conn.createStatement();
-			String query="INSERT INTO dbs_keys (key_name,db,key_master_table) VALUES (\'"+key+"\',\'"+srcDb+"\',\'"+keyMasterTbl+"\');";
+			String query="INSERT INTO dbs_keys (key_name,db,key_master_table) VALUES (\'"+key+"\',\'"+destDb+"\',\'"+keyMasterTbl+"\');";
 			S.executeUpdate(query);
 			S.close();
 		} catch (SQLException e) {
@@ -433,11 +518,16 @@ public class DataDistributer {
 	}
 	
 	public void removePK (String keyMasterTbl,String key){
-		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();
+		boolean isNumeric = conn.isKeyNumeric(keyMasterTbl,key);
+		String colType = conn.getColumnType(keyMasterTbl,key);
 		try {
-			String query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" int(11) NOT NULL default '0';";
-			conn.executeSql(query);
-			query="ALTER TABLE "+keyMasterTbl+" DROP PRIMARY KEY;";
+			if (isNumeric){ // removing the auto_increment, only in numeric keys
+				String query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" "+colType+" NOT NULL;";
+				conn.executeSql(query);
+			}
+			// removing primary key (same sql code for both numeric or text keys
+			String query="ALTER TABLE "+keyMasterTbl+" DROP PRIMARY KEY;";
 			conn.executeSql(query);			
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -446,12 +536,17 @@ public class DataDistributer {
 	}
 	
 	public void addPK (String keyMasterTbl, String key){
-		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
+		MySQLConnection conn=this.getConnectionToMasterKeyDb();
+		boolean isNumeric = conn.isKeyNumeric(keyMasterTbl,key);
+		String colType = conn.getColumnType(keyMasterTbl,key);
 		try {
+			// adding primary key (same sql code for both numeric or text keys
 			String query="ALTER TABLE "+keyMasterTbl+" ADD PRIMARY KEY("+key+");";				
 			conn.executeSql(query);
-			query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" int(11) NOT NULL auto_increment;";
-			conn.executeSql(query);			
+			if (isNumeric){ // adding auto_increment, only in numeric keys
+				query="ALTER TABLE "+keyMasterTbl+" MODIFY "+key+" "+colType+" NOT NULL auto_increment;";
+				conn.executeSql(query);
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -461,7 +556,9 @@ public class DataDistributer {
 	public void removeZeros (String keyMasterTbl, String key){
 		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
 		try {
-			String query="DELETE FROM "+keyMasterTbl+" WHERE "+key+"=0;";				
+			// attention! the quotes around 0 are very important, otherwise if key is text-based all records get deleted
+			// mysql somehow considers all text records = 0, using '0' is ok as is considered as a text literal for char fields and as a number for int fields
+			String query="DELETE FROM "+keyMasterTbl+" WHERE "+key+"='0';";				
 			conn.executeSql(query);
 		} catch (SQLException e) {
 			e.printStackTrace();
