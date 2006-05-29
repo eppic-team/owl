@@ -286,68 +286,32 @@ public class DataDistributer {
 	}
 
 	/**
-	 * For a certain key and table returns a "data distribution" (kind of evenly distributed) of the data to the nodes
+	 * For a certain key (text or numeric) and table returns a "data distribution" (kind of evenly distributed) of the data to the nodes
 	 * To be used when we have a table that we are going to split to the nodes
 	 * TODO eventually the code could be cleverer so that the data is actually evenly distributed, right now is only evenly distributed on key ids
-	 * @param key a numerical key (int column)
+	 * @param key
 	 * @param table
-	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
+	 * @return idSets HashMap, keys are node names, values: Integer/String array with the ids for each node
 	 */
-	public HashMap<String,Integer[]> splitNumIdsIntoSets(String key, String table){
-		HashMap<String,Integer[]> idSets =new HashMap<String,Integer[]>();
+	public HashMap<String,Object[]> splitIdsIntoSets(String key, String table){
+		HashMap<String,Object[]> idSets =new HashMap<String,Object[]>();		
 		String[] nodes=DataDistribution.getNodes();
 		int numNodes=nodes.length;
 		MySQLConnection conn = this.getConnectionToMaster();
-		Integer[] allIds=conn.getAllNumIds4KeyAndTable(key,table);
+		Object[] allIds=conn.getAllIds4KeyAndTable(key,table);
 		conn.close();
 		int numIds=allIds.length;
 		int setSize=numIds/numNodes;
 		int remainder=numIds%numNodes;
 		for (int i=0;i<numNodes;i++){
 			if (i<remainder){ // for the first "remainder" number of nodes we put setSize+1 ids in the node
-				Integer[] thisnodeidset=new Integer[setSize+1];
+				Object[] thisnodeidset=new Object[setSize+1];
 				for (int j=0;j<thisnodeidset.length;j++){
 					thisnodeidset[j]=allIds[j+i*(setSize+1)];
 				}
 				idSets.put(nodes[i],thisnodeidset);
 			} else {         // for the rest we put only setSize ids
-				Integer[] thisnodeidset=new Integer[setSize]; 
-				for (int j=0;j<thisnodeidset.length;j++){
-					thisnodeidset[j]=allIds[j+remainder*(setSize+1)+(i-remainder)*setSize];
-				}
-				idSets.put(nodes[i],thisnodeidset); 
-			}
-		}		
-		return idSets;
-	}
-
-	/**
-	 * For a certain key and table returns a "data distribution" (kind of evenly distributed) of the data to the nodes
-	 * To be used when we have a table that we are going to split to the nodes
-	 * TODO eventually the code could be cleverer so that the data is actually evenly distributed, right now is only evenly distributed on key ids
-	 * @param key a text-based key (char/varchar column)
-	 * @param table
-	 * @return idSets HashMap, keys are node names, values: int array with the ids for each node
-	 */
-	public HashMap<String,String[]> splitTxtIdsIntoSets(String key, String table){
-		HashMap<String,String[]> idSets =new HashMap<String,String[]>();
-		String[] nodes=DataDistribution.getNodes();
-		int numNodes=nodes.length;
-		MySQLConnection conn = this.getConnectionToMaster();
-		String[] allIds=conn.getAllTxtIds4KeyAndTable(key,table);
-		conn.close();
-		int numIds=allIds.length;
-		int setSize=numIds/numNodes;
-		int remainder=numIds%numNodes;
-		for (int i=0;i<numNodes;i++){
-			if (i<remainder){ // for the first "remainder" number of nodes we put setSize+1 ids in the node
-				String[] thisnodeidset=new String[setSize+1];
-				for (int j=0;j<thisnodeidset.length;j++){
-					thisnodeidset[j]=allIds[j+i*(setSize+1)];
-				}
-				idSets.put(nodes[i],thisnodeidset);
-			} else {         // for the rest we put only setSize ids
-				String[] thisnodeidset=new String[setSize]; 
+				Object[] thisnodeidset=new Object[setSize]; 
 				for (int j=0;j<thisnodeidset.length;j++){
 					thisnodeidset[j]=allIds[j+remainder*(setSize+1)+(i-remainder)*setSize];
 				}
@@ -365,7 +329,6 @@ public class DataDistributer {
 	public void splitTable (String key,String table){
 		String[] nodes=DataDistribution.getNodes();
 		MySQLConnection conn=this.getConnectionToMaster();
-		boolean isNumeric = conn.isKeyNumeric(table,key);
 		String[] splitTables = new String[nodes.length]; // we create an array that will contain the name of all split tables
 		String[] indexes=conn.getAllIndexes4Table(table);
 		try {
@@ -380,27 +343,15 @@ public class DataDistributer {
 				for (String index:indexes) { 
 					conn.executeSql("DROP INDEX "+index+" ON "+splitTbl+";");
 				}
-			}
-			if (isNumeric){ // if key is numeric
-				HashMap<String,Integer[]> idSets = this.splitNumIdsIntoSets(key,table);
-				for (int i=0;i<nodes.length;i++) {
-					int idmin=idSets.get(nodes[i])[0];
-					int idmax=idSets.get(nodes[i])[idSets.get(nodes[i]).length-1];
-					String query="INSERT INTO "+splitTables[i]+" SELECT * FROM "+table+" WHERE "+key+">="+idmin+" AND "+key+"<="+idmax+";";				
-					conn.executeSql(query);
-					//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
-				}				
-			} 
-			else { // if key is text-based
-				HashMap<String,String[]> idSets = this.splitTxtIdsIntoSets(key,table);				
-				for (int i=0;i<nodes.length;i++) {
-					String idmin=idSets.get(nodes[i])[0];
-					String idmax=idSets.get(nodes[i])[idSets.get(nodes[i]).length-1];
-					String query="INSERT INTO "+splitTables[i]+" SELECT * FROM "+table+" WHERE "+key+">='"+idmin+"' AND "+key+"<='"+idmax+"';";				
-					conn.executeSql(query);
-					//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
-				}
-			}
+			}			
+			HashMap<String,Object[]> idSets = this.splitIdsIntoSets(key,table);
+			for (int i=0;i<nodes.length;i++) {
+				Object idmin=idSets.get(nodes[i])[0];
+				Object idmax=idSets.get(nodes[i])[idSets.get(nodes[i]).length-1];
+				String query="INSERT INTO "+splitTables[i]+" SELECT * FROM "+table+" WHERE "+key+">='"+idmin+"' AND "+key+"<='"+idmax+"';";				
+				conn.executeSql(query);
+				//TODO recreate indexes, use method getCreateIndex4Table from MySQLConnection
+			}				
 		}
 		catch (SQLException e){
 			e.printStackTrace();
@@ -417,23 +368,11 @@ public class DataDistributer {
 		System.out.println("Splitting table "+table+" to cluster based on key "+key+"...");
 		String[] tables={table};
 		String[] desthosts=DataDistribution.getNodes();
-		MySQLConnection conn = this.getConnectionToMaster();
-		boolean isNumeric = conn.isKeyNumeric(table,key);
-		conn.close();
-		if (isNumeric){ // key column is numerical
-			HashMap<String,Integer[]> idSets = this.splitNumIdsIntoSets(key,table);
-			// dumping data with the dumpSplitData method, a modified version of dumpData
-			dumpSplitData(MASTER,tables,key,idSets);
-			// putting the ids in the key_master database so we keep track of where everything is
-			insertIdsToKeyMaster(key,table,idSets);
-		}
-		else { // key column is text-based
-			HashMap<String,String[]> idSets = this.splitTxtIdsIntoSets(key,table);
-			// dumping data with the dumpSplitData method, a modified version of dumpData
-			dumpSplitData(MASTER,tables,key,idSets);
-			// putting the ids in the key_master database so we keep track of where everything is
-			insertIdsToKeyMaster(key,table,idSets);
-		}
+		HashMap<String,Object[]> idSets = this.splitIdsIntoSets(key,table);
+		// dumping data with the dumpSplitData method, a modified version of dumpData
+		dumpSplitData(MASTER,tables,key,idSets);
+		// putting the ids in the key_master database so we keep track of where everything is
+		insertIdsToKeyMaster(key,table,idSets);
 		// using here loadSplitData rather than loadData because table names are not the same on source and destination, 
 		// i.e. source: table_split_tla01, dest: table
 		loadSplitData(MASTER,desthosts,table);	
