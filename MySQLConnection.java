@@ -605,6 +605,42 @@ public class MySQLConnection {
 		return allIds;
 	}
 
+	/** 
+	 * To get all distinct ordered ids from a certain key and table from this MySQLConnection
+	 * @param key the key name
+	 * @param table the table name
+	 * @return int array containing all ids 
+	 */
+	public Object[] getAllIds4KeyAndTable(String key, String table){
+		Object[] allIds=null;
+		try {
+			Statement S=conn.createStatement();
+			String query="SELECT DISTINCT "+key+" FROM "+table+" ORDER BY "+key+";";
+			ResultSet R=S.executeQuery(query);
+			ArrayList<String> idsAL=new ArrayList<String>();
+			while (R.next()){
+				idsAL.add(R.getString(1));
+			}
+			if (isKeyNumeric(table,key)){
+				allIds=new Integer[idsAL.size()];
+				for (int i=0;i<idsAL.size();i++) {
+					allIds[i]=Integer.parseInt(idsAL.get(i));
+				}
+			} else {
+				allIds=new String[idsAL.size()];
+				for (int i=0;i<idsAL.size();i++){
+					allIds[i]=idsAL.get(i);
+				}
+			}
+			R.close();
+			S.close();
+		}
+		catch (SQLException e){
+			e.printStackTrace();
+		}
+		return allIds;
+	}
+
     /**
      * To set the sql_mode of this connection. 
      * @param sqlmode either NO_UNSIGNED_SUBTRACTION or blank
