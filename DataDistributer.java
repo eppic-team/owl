@@ -392,11 +392,17 @@ public class DataDistributer {
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();		
 		String keyMasterTbl = createNewKeyMasterTbl(key,table);
 		removePK(keyMasterTbl,key); // attention removing primary keys, duplicates won't be checked!!!
+		// getting first mapping between nodes names and node ids
+		HashMap<String,Integer> nodes2nodeids = new HashMap<String,Integer>();
+		for (String node:idSets.keySet()){
+			String query="SELECT client_id FROM clients_names WHERE client_name='"+node+"';";
+			int id = conn.getIntFromDb(query);
+			nodes2nodeids.put(node,id);
+		}
 		for (String node:idSets.keySet()){
 				T[] thisNodeIds=idSets.get(node);				
 				for (T id:thisNodeIds){
-					String query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) " +
-									"SELECT '"+id+"',c.client_id FROM clients_names AS c WHERE client_name='"+node+"';";
+					String query="INSERT INTO "+keyMasterTbl+" ("+key+",client_id) VALUES ('"+id+"',"+nodes2nodeids.get(node)+");";
 					try {
 						conn.executeSql(query);
 					} catch (SQLException e) {
