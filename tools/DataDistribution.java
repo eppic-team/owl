@@ -15,7 +15,13 @@ public class DataDistribution {
 	public String db;
 	private String user;
 	private String pwd;
-	public boolean isSplit; // for future use 
+	public boolean isSplit; // for future use
+	//TODO fields that we might want to implement in future:
+	//public String splitTable;
+	//public String splitKey;
+	//public String keyTable; // this is normally dbOnNodes__splitTable (as stored on dbs_keys table in key_master db)
+	//public String dbOnMaster; // use it in checkCountsAllTables in cases master and nodes db have different names
+	//public String dbOnNodes;  // use it in checkCountsAllTables in cases master and nodes db have different names
 	
 
 	public DataDistribution(String db,String user,String pwd) {
@@ -193,8 +199,8 @@ public class DataDistribution {
 			else if (thisNodeCount[0]!=masterCount) {
 				System.out.println("Key counts do not coincide for key "+key+" in master and node "+node+". MASTER COUNT="+masterCount+", NODE COUNT="+thisNodeCount[0]);
 				System.out.print("Differing "+key+"'s are: ");
-				int[] diffKeys = getDifferingKeys(key,node);
-				for (int k:diffKeys){
+				String[] diffKeys = getDifferingKeys(key,node);
+				for (String k:diffKeys){
 					System.out.print(k+" ");
 				}
 				System.out.println();
@@ -213,9 +219,9 @@ public class DataDistribution {
 	 * @param node the host name of the cluster node
 	 * @return array of ints with all differing keys for this key and node
 	 */
-	public int[] getDifferingKeys (String key,String node) {
-		ArrayList<Integer> diffKeys = new ArrayList<Integer>();
-		int[] diffKeysAr;
+	public String[] getDifferingKeys (String key,String node) {
+		ArrayList<String> diffKeys = new ArrayList<String>();
+		String[] diffKeysAr;
 		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd);
 		String keyTable=cconn.getTableOnNode();
 		String masterKeyTable=cconn.getKeyTable();
@@ -224,14 +230,15 @@ public class DataDistribution {
 		MySQLConnection mconn=null;
 		try {				
 			MySQLConnection nconn = this.getConnectionToNode(node);
-			mconn = this.getConnectionToMasterKeyDb();
+			String colType = nconn.getColumnType(keyTable,key);
+			mconn = this.getConnectionToMasterKeyDb();			
 			Statement S=nconn.createStatement();
 			ResultSet R=S.executeQuery(query);
-			mconn.executeSql("CREATE TEMPORARY TABLE tmp_keys ("+key+" int(11) default NULL) ENGINE=MEMORY;");
-			int thisKey=0;
+			mconn.executeSql("CREATE TEMPORARY TABLE tmp_keys ("+key+" "+colType+" default NULL) ENGINE=MEMORY;");
+			String thisKey=null;
 			while (R.next()){
-				thisKey=R.getInt(1);
-				query="INSERT INTO tmp_keys VALUES ("+thisKey+");";
+				thisKey=R.getString(1);
+				query="INSERT INTO tmp_keys VALUES ('"+thisKey+"');";
 				mconn.executeSql(query);
 			}
 			S.close();
@@ -254,7 +261,7 @@ public class DataDistribution {
 			Statement S=mconn.createStatement();
 			ResultSet R=S.executeQuery(query);
 			while (R.next()){
-				diffKeys.add(R.getInt(1));
+				diffKeys.add(R.getString(1));
 			}
 			S.close();
 			R.close();
@@ -264,7 +271,7 @@ public class DataDistribution {
 			System.err.println("Couldn't execute query: "+query+"in host="+MASTER+", database="+KEYMASTERDB);
 			System.exit(1);
 		}
-		diffKeysAr= new int[diffKeys.size()];
+		diffKeysAr= new String[diffKeys.size()];
 		for (int i=0;i<diffKeys.size();i++) {
 			diffKeysAr[i]=diffKeys.get(i);
 		}
