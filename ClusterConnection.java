@@ -63,15 +63,15 @@ public class ClusterConnection {
 		this.mCon.close();
 	}
 	
-	public String getHost4Idx (int idx) {
+	public <T> String getHost4Idx (T idx) {
 		String host="";
 		String query = "SELECT client_name FROM "+keyTable+" AS m INNER JOIN clients_names AS c "+
-					   "ON (m.client_id=c.client_id) WHERE "+key+"="+idx+";";
+					   "ON (m.client_id=c.client_id) WHERE "+key+"='"+idx+"';";
 		host=this.mCon.getStringFromDb(query);
 		return host;
 	}
 	
-	public void setHostFromIdx(int idx){
+	public <T> void setHostFromIdx(T idx){
 		setHost(getHost4Idx(idx));
 	}
 	
@@ -89,7 +89,7 @@ public class ClusterConnection {
 	 * @param idx the value of the id for a certain key already set
 	 * @return a Stament object with a connection to the node that contains idx for key
 	 */
-	private Statement createStatement(int idx) { // to use when the field "key" is already set
+	private <T> Statement createStatement(T idx) { // to use when the field "key" is already set
 		setKeyTable();
 		Statement S=null;
 		this.setHostFromIdx(idx);
@@ -112,7 +112,7 @@ public class ClusterConnection {
 	 * @param idx the id value for that key
 	 * @return a Statement object with a connection to the node that contains idx for key
 	 */
-	public Statement createStatement(String key,int idx) {
+	public <T> Statement createStatement(String key,T idx) {
 		setKey(key);
 		return createStatement(idx);
 	}
@@ -123,7 +123,7 @@ public class ClusterConnection {
 	 * @param key the name of the key
 	 * @param idx the id value for that key
 	 */
-	public void executeSql(String query,String key, int idx) throws SQLException {
+	public <T> void executeSql(String query,String key, T idx) throws SQLException {
 		Statement stmt;
 		stmt = this.createStatement(key,idx);	
 		stmt.execute(query);
@@ -210,10 +210,10 @@ public class ClusterConnection {
 		return S;
 	}
 	
-	public int[] getAllIdxFromMaster(String key) { 
+	public Object[] getAllIdxFromMaster(String key) { 
 		this.setKey(key);
-		int[] ids=null;
-		ArrayList<Integer> idsAL=new ArrayList<Integer>();
+		Object[] ids=null;
+		ArrayList<Object> idsAL=new ArrayList<Object>();
 		try {			
 			String query="SELECT "+key+" FROM "+keyTable+";";
 			Statement S=this.mCon.createStatement();
@@ -230,26 +230,27 @@ public class ClusterConnection {
 			System.err.println("Couldn't get all indices from columnn "+key+" in table "+keyTable+" from "+MASTERDB+" database in "+MASTERHOST+", exiting.");
 			System.exit(2);									
 		}
-		ids=new int[idsAL.size()];
+		ids=new Object[idsAL.size()];
 		for (int i=0;i<idsAL.size();i++){
 			ids[i]=idsAL.get(i);
 		}
 		return ids;
 	}
+	
 	/**
 	 * To get all ids and clients_names pairs for a certain key. Useful when need to submit to all hosts using qsub -q
 	 * @param key the name of the key
 	 * @return HashMap with keys = indices, and values = node names where the corresponding index is stored
 	 */
-	public HashMap<Integer,String> getAllIdxAndClients (String key){
+	public HashMap<Object,String> getAllIdxAndClients (String key){
 		this.setKey(key);
-		HashMap<Integer,String> idsAndClients=new HashMap<Integer,String>();
+		HashMap<Object,String> idsAndClients=new HashMap<Object,String>();
 		try {
 			String query="SELECT a."+key+",c.client_name FROM "+keyTable+" AS a INNER JOIN clients_names AS c ON (a.client_id=c.client_id);";
 			Statement S=this.mCon.createStatement();
 			ResultSet R=S.executeQuery(query);
 			while (R.next()){
-				idsAndClients.put(R.getInt(1),R.getString(2));
+				idsAndClients.put(R.getString(1),R.getString(2));
 			}
 			R.close();
 			S.close();
@@ -266,16 +267,16 @@ public class ClusterConnection {
 	/**
 	 * To get client_id for a certain idx and key
 	 * @param key the key name
-	 * @param idx the id value for that key
+	 * @param idx the id value for that key (either a String or an int)
 	 * @return the client_id for node that has the data for the idx for that key
 	 */
 	//TODO will need to change the query. In general this method would return more than 1 client_id if the idx is not unique
-	public int getHostId4Idx (String key,int idx) { 
+	public <T> int getHostId4Idx (String key,T idx) { 
 		int hostId=0;
 		this.setKey(key);
 		String query;
 		int countCids=0;
-		query="SELECT count(client_id) FROM "+keyTable+" WHERE "+key+"="+idx+";";
+		query="SELECT count(client_id) FROM "+keyTable+" WHERE "+key+"='"+idx+"';";
 		countCids=this.mCon.getIntFromDb(query);
 		if (countCids!=1){
 			System.err.println("the query was: "+query);
@@ -284,12 +285,13 @@ public class ClusterConnection {
 			System.exit(2);
 		}
 		else {
-			query="SELECT client_id FROM "+keyTable+" WHERE "+key+"="+idx+";";
+			query="SELECT client_id FROM "+keyTable+" WHERE "+key+"='"+idx+"';";
 			hostId=this.mCon.getIntFromDb(query);
 		}
 		return hostId;
 	}
 	
+	// next 4 methods here refer purely to numeric keys, won't change them to be general text/numeric
 	public void insertIdxInMaster(String key, int clientId) {
 		String query;
 		this.setKey(key);
