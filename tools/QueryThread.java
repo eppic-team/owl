@@ -19,6 +19,15 @@ public class QueryThread extends Thread {
 		start();
 	}
 	
+	public QueryThread(String query, MySQLConnection conn){
+		this.query = query;
+		this.host = conn.getHost();
+		this.user = conn.getUser();
+		this.pwd = conn.getPassword();
+		this.db = conn.getDbname();
+		start();		
+	}
+	
 	public void run(){
 		try {
 			long start = System.currentTimeMillis();
