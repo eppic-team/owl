@@ -29,7 +29,7 @@ public class DataDistributer {
 	String user;
 	String pwd;
 	boolean debug = false;
-	boolean force = false;
+	String rmvtmp = "force"; // 3 possible values: force, noremove and prompt
 	
 	/**
 	 * Construct DataDistributer object passing only source db. The destination db will be same as source.
@@ -64,11 +64,14 @@ public class DataDistributer {
 		this.debug=debug;
 	}
 	
-	public void setForce(boolean force){
-		this.force=force;
+	public void setRmv(String rmvtmp){
+		this.rmvtmp=rmvtmp;
 	}
 	
 	public void setDumpDir(String dumpdir){
+		// before reseting the dumpdir, we get rid of the existent dumpdir created when this DataDistributer object was constructed
+		// in the case where we set the dumpdir using setDumpDir clearly the randomly named dumpdir created while constructing is not needed
+		SystemCmd.exec("rmdir "+this.dumpdir);
 		this.dumpdir=dumpdir;
 	}
 	
@@ -95,11 +98,11 @@ public class DataDistributer {
 	    if (debug) {
 	    	System.out.println("Temporary directory "+dumpdir+" was not removed. You must remove it manually");
 	    } else {
-	    	if (force) {
+	    	if (rmvtmp.equals("force")) {
 	    		System.out.println("Removing temporary directory "+dumpdir);
 	    		//TODO must capture exit state and print to error if problems deleting dir
 	    		SystemCmd.exec("rm -rf "+dumpdir);
-	    	} else {
+	    	} else if (rmvtmp.equals("prompt")){
 	    		System.out.println("Would you like to remove the temporary data directory '"+dumpdir+"' ? (y/n)");
 	    		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 	    		try {
@@ -115,6 +118,8 @@ public class DataDistributer {
 	    			e.printStackTrace();
 	    			System.exit(2);
 	    		}
+	    	} else if (rmvtmp.equals("noremove")){
+	    		System.out.println("Temporary directory "+dumpdir+" was not removed.");
 	    	}
 	    }
 	}
