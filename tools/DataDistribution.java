@@ -8,7 +8,7 @@ import java.util.HashMap;
 public class DataDistribution {
 
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
-	final static String HOSTSFILE=ADMINDIR+"/hosts_ss.txt";
+	final static String HOSTSFILE=ADMINDIR+"/hosts_mysql_server.txt";
 	public final static String MASTER="white";
 	public final static String KEYMASTERDB="key_master";
 
