@@ -24,11 +24,15 @@ import java.io.*;
  * 		SystemCmd.exec(cmd);
  * 
  * Changelog:
+ * 19/09/06 Added functionality to run commands in threads by JD
  * 14/03/06 Added exec method to take only a string as argument by JD
  * 03/03/06 first created/copied by IF
  */
 
-public class SystemCmd {
+public class SystemCmd extends Thread {
+	
+	String command;
+	int exitVal;
 	
 	public static String exec(String[] cmd) {		
 		String output = "";
@@ -63,7 +67,33 @@ public class SystemCmd {
 		}		
 		return output;		
 	}
+
+	/**
+	 * Constructor. To be used if we want to run a command as a new thread.
+	 * When running the command in threads the only thing we get back from them is the exit value (see run method)
+	 * @param cmd
+	 */
+	public SystemCmd(String cmd) {
+		this.command=cmd;
+		this.exitVal=-1;
+	}
+
+	@Override
+	public void run(){
+		try {
+			Process p = Runtime.getRuntime().exec(command);
+			p.waitFor();
+			exitVal = p.exitValue();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.err.println("Couldn't execute command: "+command);
+		} catch (InterruptedException e) {			
+			e.printStackTrace();
+		}		
+	}
 	
-	
+	public int getExitVal(){
+		return exitVal;
+	}
 }
 
