@@ -326,7 +326,7 @@ public class DataDistributer {
 	 */
 	public HashMap<String,Object[]> splitIdsIntoSets(String key, String table){
 		HashMap<String,Object[]> idSets =new HashMap<String,Object[]>();		
-		String[] nodes=DataDistribution.getNodes();
+		String[] nodes=DataDistribution.getMySQLNodes();
 		int numNodes=nodes.length;
 		MySQLConnection conn = this.getConnectionToMaster();
 		Object[] allIds=conn.getAllIds4KeyAndTable(key,table);
@@ -358,7 +358,7 @@ public class DataDistributer {
 	 * @param table 
 	 */
 	public void splitTable (String key,String table){
-		String[] nodes=DataDistribution.getNodes();
+		String[] nodes=DataDistribution.getMySQLNodes();
 		MySQLConnection conn=this.getConnectionToMaster();
 		String[] splitTables = new String[nodes.length]; // we create an array that will contain the name of all split tables
 		String[] indexes=conn.getAllIndexes4Table(table);
@@ -398,7 +398,7 @@ public class DataDistributer {
 	public DataDistribution splitTableToCluster (String key,String table){
 		System.out.println("Splitting table "+table+" to cluster based on key "+key+"...");
 		String[] tables={table};
-		String[] desthosts=DataDistribution.getNodes();
+		String[] desthosts=DataDistribution.getMySQLNodes();
 		HashMap<String,Object[]> idSets = this.splitIdsIntoSets(key,table);
 		// dumping data with the dumpSplitData method, a modified version of dumpData
 		dumpSplitData(MASTER,tables,key,idSets);
@@ -456,7 +456,7 @@ public class DataDistributer {
 	 */
 	public String createNewKeyMasterTbl(String key,String table) {
 		// find out whether key is numeric or text and setting accordingly query strings
-		String nodes[] = DataDistribution.getNodes(); // we need the list of nodes only to get one of them no matter which
+		String nodes[] = DataDistribution.getMySQLNodes(); // we need the list of nodes only to get one of them no matter which
 		MySQLConnection conn=new MySQLConnection(nodes[0],user,pwd,destDb); // here we connect to destDb in one node, needed to getColumnType 
 		String colType = conn.getColumnType(table,key);
 		String autoIncr = "";
@@ -549,7 +549,7 @@ public class DataDistributer {
 	 * @param query
 	 */
 	public void clusterExecuteQuery(String query){
-		String[] nodes = DataDistribution.getNodes();
+		String[] nodes = DataDistribution.getMySQLNodes();
 		for (String node: nodes){
 			try {
 				MySQLConnection conn = this.getConnectionToNode(node);
@@ -572,7 +572,7 @@ public class DataDistributer {
 	 * @param queries a HashMap containing a query per node
 	 */
 	public void clusterExecuteQuery(HashMap<String,String> queries){
-		String[] nodes = DataDistribution.getNodes();
+		String[] nodes = DataDistribution.getMySQLNodes();
 		for (String node: nodes){
 			String query="";
 			try {

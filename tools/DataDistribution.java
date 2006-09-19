@@ -4,6 +4,7 @@ import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Collections;
 
 public class DataDistribution {
 
@@ -11,12 +12,17 @@ public class DataDistribution {
 	final static String HOSTSFILE=ADMINDIR+"/hosts_mysql_server.txt";
 	public final static String MASTER="white";
 	public final static String KEYMASTERDB="key_master";
+	
+	final static long TIME_OUT = 3000;
 
 	public String db;
 	private String user;
 	private String pwd;
-	public boolean isSplit; // for future use
+	
+	public String[] nodes;
+	
 	//TODO fields that we might want to implement in future:
+	//public boolean isSplit; //whether data distribution is a split distribution or an all data in all distribution
 	//public String splitTable;
 	//public String splitKey;
 	//public String keyTable; // this is normally dbOnNodes__splitTable (as stored on dbs_keys table in key_master db)
@@ -28,8 +34,14 @@ public class DataDistribution {
 		this.db=db;
 		this.user=user;
 		this.pwd=pwd;
+		// check that mysql server running in node and that database db exists on it
+		nodes = nodesAlive(getMySQLNodes());
+		//TODO implement method tablesCoincide
+		//nodes = tablesCoincide(nodes);
+		//TODO implement compareNodesList2MasterKeyTable, see half-way implemented code below
+		//compareNodesList2MasterKeyTable();		
 	}
-	
+		
 	private MySQLConnection getConnectionToMaster() {
 		MySQLConnection conn=this.getConnectionToNode(MASTER);
 		return conn;
@@ -45,25 +57,91 @@ public class DataDistribution {
 		return conn;
 	}
 	
-	public static String[] getNodes() {
-		String[] nodes=null;	    
+	public String[] getNodes(){		
+		return nodes; 
+	}
+
+	public String[] nodesAlive(String[] testNodes){
+		HashMap<String,MySQLConnectionCheck> allchecks = new HashMap<String,MySQLConnectionCheck>(); 
+		ArrayList<String> nodesAL = new ArrayList<String>();
+		for (String node:testNodes){
+			MySQLConnectionCheck check = new MySQLConnectionCheck(node,user,pwd,db);
+			allchecks.put(node, check);
+			check.start();
+		}
+		for (String node:testNodes){
+			try {
+				MySQLConnectionCheck check = allchecks.get(node);
+				check.join(TIME_OUT);
+				if (check.connTestPassed()) {
+					nodesAL.add(check.dbServer);
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}						
+		}
+		Collections.sort(nodesAL);
+		String[] passedNodes=new String[nodesAL.size()];		
+		nodesAL.toArray(passedNodes);
+
+		return passedNodes;		
+	}
+	
+//	public String[] compareNodesList2MasterKeyTable() {
+//		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd); // where do we get key from?
+//		String keyTable=cconn.getTableOnNode();
+//		String masterKeyTable=cconn.getKeyTable();
+//		cconn.close();
+//		// getting distinct client_names from masterKeyTable
+//		ArrayList<String> nodesAL = new ArrayList<String>();
+//		for (String node:nodes){
+//			String query="SELECT client_name FROM clients_names AS c WHERE c.client_id IN (SELECT DISTINCT client_id FROM "+masterKeyTable+") ORDER BY client_name;";
+//			try {
+//				MySQLConnection conn = this.getConnectionToMasterKeyDb();
+//				Statement S=conn.createStatement();
+//				ResultSet R=S.executeQuery(query);
+//				while (R.next()){
+//					nodesAL.add(R.getString(1));
+//				}
+//				S.close();
+//				R.close();
+//				conn.close();
+//			}
+//			catch(SQLException e){
+//				e.printStackTrace();
+//				System.err.println("Couldn't execute query in host="+MASTER+", database="+KEYMASTERDB);
+//			}
+//		} 
+//		for (String node:nodes){
+//			//TODO compare nodesAL and nodes
+//		}
+//		//TODO return a nodes array string with non matching nodes
+//		//return ;
+//	}
+	
+	/**
+	 * Gets all potentially working MySQL server nodes that we have by reading the file HOSTSFILE
+	 * which contains all of our working MySQL server nodes (checked with script check-nodes.py) 
+	 * @return String array with node names
+	 */
+	public static String[] getMySQLNodes() {
+		String[] mysqlnodes=null;	    
 	    try {
 			File inputFile = new File(HOSTSFILE);
 	    	BufferedReader hostsFile = new BufferedReader(new FileReader(inputFile)); // open BufferedReader to the file
 	    	String nodesstr=hostsFile.readLine();
-	    	nodes=nodesstr.split(" ");
+	    	mysqlnodes=nodesstr.split(" ");
 	    	hostsFile.close();
 	    }
 	    catch (IOException e){
 	    	e.printStackTrace();
 	    	System.err.println("Couldn't read from file "+HOSTSFILE);
 	    }
-	    return nodes;
+	    return mysqlnodes;
 	}
 	
 	public boolean checkCountsAllTables (){
 		boolean checkResult=true;
-		String[] nodes = getNodes();
 		MySQLConnection mconn = this.getConnectionToMaster();
 		String[] tables = mconn.getTables4Db();
 		mconn.close();
@@ -143,7 +221,6 @@ public class DataDistribution {
 		String masterKeyTable=cconn.getKeyTable();
 		cconn.close();
 		// getting hashmap of counts of keys from nodes
-		String[] nodes = getNodes();
 		HashMap<String,int[]> countsNodes=new HashMap<String,int[]>();
 		String query="SELECT count("+key+"),count(DISTINCT "+key+") FROM "+keyTable+";";
 		for (String node:nodes){
@@ -290,7 +367,6 @@ public class DataDistribution {
 	 */
 	public HashMap<String,Object[]> getIdSetsFromNodes(String key, String table){
 		HashMap<String,Object[]> idSets =new HashMap<String,Object[]>();
-		String[] nodes = getNodes();
 		for (String node:nodes){
 			MySQLConnection conn = this.getConnectionToNode(node);
 			idSets.put(node,conn.getAllIds4KeyAndTable(key,table));
