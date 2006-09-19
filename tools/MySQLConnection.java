@@ -130,7 +130,7 @@ public class MySQLConnection {
 	
 	/*---------------------- methods -------------------------*/
 	
-	private void loadMySQLDriver() {
+	public static void loadMySQLDriver() {
 		try {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		}
