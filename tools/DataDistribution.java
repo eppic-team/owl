@@ -140,6 +140,25 @@ public class DataDistribution {
 	    return mysqlnodes;
 	}
 	
+	public static int getIdFromMaster(MySQLConnection conn, String keyTable, String host) {
+		int id=0;		
+		try {
+			String query = "SELECT client_id FROM clients_names WHERE client_name='"+host+"';";
+			int clientId=conn.getIntFromDb(query);
+			query="INSERT INTO "+keyTable+" (client_id) VALUES ("+clientId+");";
+			conn.executeSql(query);
+			query = "SELECT LAST_INSERT_ID() FROM "+keyTable+" LIMIT 1;";
+			id=conn.getIntFromDb(query);
+		} 
+		catch (SQLException E) {
+			System.err.println("SQLException: " + E.getMessage());
+			System.err.println("SQLState:     " + E.getSQLState());
+			System.err.println("Couldn't insert record in master table "+keyTable+" in host "+conn.getHost()+". Does it exist?");
+		} 
+		return id;
+	}
+
+	
 	public boolean checkCountsAllTables (){
 		boolean checkResult=true;
 		MySQLConnection mconn = this.getConnectionToMaster();
