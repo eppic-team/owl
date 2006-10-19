@@ -140,10 +140,16 @@ public class DataDistribution {
 	    return mysqlnodes;
 	}
 	
-	public static int getIdFromMaster(MySQLConnection conn, String keyTable, String host) {
-		int id=0;		
+	public static int getIdFromMaster(MySQLConnection conn, String key, String keyTable, String host) {
+		int id=0;
 		try {
-			String query = "SELECT client_id FROM clients_names WHERE client_name='"+host+"';";
+			String query="CREATE TABLE IF NOT EXISTS "+keyTable+" ("+
+						key+" int(11) NOT NULL auto_increment, " +
+						"client_id smallint(6) NOT NULL default '0', " +
+						"PRIMARY KEY (`"+key+"`) " +
+						") ENGINE=MyISAM DEFAULT CHARSET=ascii COLLATE=ascii_bin;";
+			conn.executeSql(query);
+			query = "SELECT client_id FROM clients_names WHERE client_name='"+host+"';";
 			int clientId=conn.getIntFromDb(query);
 			query="INSERT INTO "+keyTable+" (client_id) VALUES ("+clientId+");";
 			conn.executeSql(query);
@@ -153,8 +159,8 @@ public class DataDistribution {
 		catch (SQLException E) {
 			System.err.println("SQLException: " + E.getMessage());
 			System.err.println("SQLState:     " + E.getSQLState());
-			System.err.println("Couldn't insert record in master table "+keyTable+" in host "+conn.getHost()+". Does it exist?");
-		} 
+			System.err.println("Couldn't insert record in master table "+keyTable+" in host "+conn.getHost());
+		}
 		return id;
 	}
 
