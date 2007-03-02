@@ -1,10 +1,13 @@
 package tools;
 
 import java.io.*;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
 
 /**
  * Package:		tools
- * Class: 		PyMol
+ * Class: 		Msdsd2Pdb
  * Author:		Ioannis Filippis, filippis@molgen.mpg.de
  * Date:		21/03/2006
  *
@@ -17,39 +20,49 @@ import java.io.*;
  * 
  * Notes:
  * - Hetatoms are excluded (pdb_group = "A") and in case of multiple locations of
- * 	 amino acids, only the default location is considered (alt_code = "A") 
+ * 	 amino acids, only the default location is considered (graph_alt_code_used = 1) 
  * 	 (VendruscoloM_00_PSFG.pdf currently found in LitNet/incomingPDF/LAST_ROUND/)
- * - The filename is either accessionCode_assemblyId_modelId.pdb (biological unit)
- *   or accessionCode.pdb (asu)
- * - There is also the oportunity to send the atom lines directly to PyMol and 
+ * - There is also the possibility to send the atom lines directly to PyMol and 
  * 	 loading the structure without intermediate files. Look at PyMol class and
  *   sendAtomLines method.
  * 
  * Changelog:
  * 21/03/06 first created by IF
+ * 02/03/07 JD, Major changes: adapted to msdsd_00_07_a and using my_msdsd_00_07_a. 
+ * 			Using MySQLConnection and file PrintStream instead of shell mysql client for output
  */
 
 public class Msdsd2Pdb {
+
+	
+	public static String MSDSDDB="msdsd_00_07_a";
+	public static String INFODB="my_msdsd_00_07_a";
+	public static String HOST="white";
+	public static String PWD="nieve";
+	
 	
     /**
-     * exports to file the atom lines of a model (modelId) of a biological unit (assemblyId) 
-     * of a protein (accessionCode) directly from msdsd. The filename is returned.
+     * Exports to file in pdb format the atom lines of a model (modelId) of a biological unit (assemblyId) 
+     * of a protein (accessionCode) directly from msdsd.
      * 
      * Notes:
      * - Hetatoms are excluded (pdb_group = "A") and in case of multiple locations of
-     * 	 amino acids, only the default location is considered (alt_code = "A") 
+     * 	 amino acids, only the default location is considered (graph_alt_code_used = 1) 
      * 	 (VendruscoloM_00_PSFG.pdf currently found in LitNet/incomingPDF/LAST_ROUND/)
-     * - The filename is accessionCode_assemblyId_modelId.pdb (biological unit).
      * - The chain_pdb_code is used in the chainID field in the atom line, while the chain_code is used 
      * 	 the segID field (due to its length). Therefore, "segi" and not "chain" must be used in pymol
      * 	 selections.
-     * - There are two versions of export2File. One that takes the atomic coordinates from the 
-     * 	 partial atom_data tables (needs the table number e.g. 1 for atom_data_1, but is faster), 
-     *	 while the other uses the merged table (really slow - should be avoided)
+     * 
+     * @param accessionCode
+     * @param assemblyId
+     * @param modelId
+     * @param pdbFile
+     * @param user
      */ 
-	public static String export2File(String accessionCode, int assemblyId, int modelId, String pdbDir) {
+	public static void export2File(String accessionCode, int assemblyId, int modelId, String pdbFile, String user) throws FileNotFoundException{
+		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
+		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 
-		String pdbFileName = accessionCode+"_"+assemblyId+"_"+modelId+".pdb";
 		String query = "SELECT CONCAT("+
 		    "RPAD(\"ATOM\", 6, \" \"), "+
 		    "LPAD(serial, 5, \" \"), "+
@@ -69,38 +82,49 @@ public class Msdsd2Pdb {
 		    "REPEAT(\" \", 6), "+
 		    "REPEAT(\" \", 6), "+
 		    "RPAD(chain_code, 4, \" \") "+
-		    ") AS atom_lines FROM msdsd.atom_data WHERE "+
+		    ") AS atom_lines FROM "+MSDSDDB+".atom_data WHERE "+
 		    "(assembly_id = "+assemblyId+") AND "+
 		    "(model_id = "+modelId+") AND "+
-		    "((alt_code = \"A\") OR (alt_code IS NULL)) AND "+
+		    "(graph_alt_code_used = 1) AND "+
 		    "(pdb_group = \"A\") "+
 		    "ORDER BY chain_code, residue_serial, serial;";
 		
-		gen(pdbDir+"/"+pdbFileName, query);
-	
-		return pdbFileName;
-
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(query);
+			while (rsst.next()) {
+				Pdb.println(rsst.getString(1));
+			}
+			stmt.close();
+			rsst.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		Pdb.close();
+		conn.close();
     }
 
+ 
     /**
-     * exports to file the atom lines of a model (modelId) of a biological unit (assemblyId) 
-     * of a protein (accessionCode) directly from msdsd. The filename is returned.
+     * Exports to file in pdb format the atom lines of the assymetric unit of a protein (accessionCode) 
+     * (all chains) directly from msdsd. 
      * 
      * Notes:
      * - Hetatoms are excluded (pdb_group = "A") and in case of multiple locations of
-     * 	 amino acids, only the default location is considered (alt_code = "A") 
+     * 	 amino acids, only the default location is considered (graph_alt_code_used = 1) 
      * 	 (VendruscoloM_00_PSFG.pdf currently found in LitNet/incomingPDF/LAST_ROUND/)
-     * - The filename is accessionCode_assemblyId_modelId.pdb (biological unit).
      * - The chain_pdb_code is used in the chainID field in the atom line, while the chain_code is used 
      * 	 the segID field (due to its length). Therefore, "segi" and not "chain" must be used in pymol
      * 	 selections.
-     * - There are two versions of export2File. One that takes the atomic coordinates from the 
-     * 	 partial atom_data tables (needs the table number e.g. 1 for atom_data_1, but is faster), 
-     *	 while the other uses the merged table (really slow - should be avoided)
-     */ 	
-    public static String export2File(String accessionCode, int assemblyId, int modelId, int atomDataTblNum, String pdbDir) {
+     * 
+     * @param accessionCode
+     * @param pdbFile
+     * @param user
+     */ 
+	public static void export2File(String accessionCode, String pdbFile, String user) throws FileNotFoundException {
+		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
+		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 
-		String pdbFileName = accessionCode+"_"+assemblyId+"_"+modelId+".pdb";
 		String query = "SELECT CONCAT("+
 		    "RPAD(\"ATOM\", 6, \" \"), "+
 		    "LPAD(serial, 5, \" \"), "+
@@ -120,142 +144,120 @@ public class Msdsd2Pdb {
 		    "REPEAT(\" \", 6), "+
 		    "REPEAT(\" \", 6), "+
 		    "RPAD(chain_code, 4, \" \") "+
-		    ") AS atom_lines FROM msdsd.atom_data_"+atomDataTblNum+" WHERE "+
-		    "(assembly_id = "+assemblyId+") AND "+
+		    ") AS atom_lines FROM "+MSDSDDB+".atom_data WHERE "+
+		    "(accession_code = \""+accessionCode+"\") AND "+
+		    "(non_assembly_valid = \"Y\") AND "+
+		    "(graph_alt_code_used = 1) AND "+
+		    "(pdb_group = \"A\") "+
+		    "ORDER BY chain_code, residue_serial, serial;";
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(query);
+			while (rsst.next()) {
+				Pdb.println(rsst.getString(1));
+			}
+			stmt.close();
+			rsst.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		Pdb.close();
+		conn.close();
+    }
+	
+	/**
+	 * Exports to file in pdb format the atom coordinates for the assymetric unit of a protein given model_id and chain_id
+	 * @param chainId
+	 * @param modelId
+	 * @param pdbFile
+	 * @param user
+	 * @return
+	 */
+	public static void export2File(int chainId, int modelId, String pdbFile, String user) throws FileNotFoundException {
+		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
+		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
+
+		String query = "SELECT CONCAT("+
+		    "RPAD(\"ATOM\", 6, \" \"), "+
+		    "LPAD(serial, 5, \" \"), "+
+		    "\" \", "+
+		    "LPAD(chem_atom_name, 4, \" \"), "+
+		    "IF(alt_code IS NULL, \" \", alt_code), "+
+		    "code_3_letter, "+
+		    "\" \", "+
+		    "IF(chain_pdb_code IS NULL, \" \", chain_pdb_code), "+
+		    "LPAD(residue_serial, 4, \" \"), "+// check if this is msd or pdb residue serials, do we care?
+		    "IF(residue_pdb_insert_code IS NULL, \" \", residue_pdb_insert_code), "+
+		    "REPEAT(\" \", 3), "+
+		    "LPAD(x, 8, \" \"), "+
+		    "LPAD(y, 8, \" \"), "+
+		    "LPAD(z, 8, \" \"), "+
+		    "LPAD(occupancy, 6, \" \"), "+
+		    "REPEAT(\" \", 6), "+
+		    "REPEAT(\" \", 6), "+
+		    "RPAD(chain_code, 4, \" \") "+
+		    ") AS atom_lines FROM "+MSDSDDB+".atom_data WHERE "+
 		    "(model_id = "+modelId+") AND "+
-		    "((alt_code = \"A\") OR (alt_code IS NULL)) AND "+
+		    "(chain_id = "+chainId+") AND "+
+		    "(graph_alt_code_used = 1) AND "+
 		    "(pdb_group = \"A\") "+
 		    "ORDER BY chain_code, residue_serial, serial;";
-		
-		gen(pdbDir+"/"+pdbFileName, query);
-
-		return pdbFileName;
-
-    }
-    
-    /**
-     * exports to file the atom lines of the assymetric unit of a protein (accessionCode) 
-     * directly from msdsd. The filename is returned.
-     * 
-     * Notes:
-     * - Hetatoms are excluded (pdb_group = "A") and in case of multiple locations of
-     * 	 amino acids, only the default location is considered (alt_code = "A") 
-     * 	 (VendruscoloM_00_PSFG.pdf currently found in LitNet/incomingPDF/LAST_ROUND/)
-     * - The filename is accessionCode.pdb (asu).
-     * - The chain_pdb_code is used in the chainID field in the atom line, while the chain_code is used 
-     * 	 the segID field (due to its length). Therefore, "segi" and not "chain" must be used in pymol
-     * 	 selections.
-     * - There are two versions of export2File. One that takes the atomic coordinates from the 
-     * 	 partial atom_data tables (needs the table number e.g. 1 for atom_data_1, but is faster), 
-     *	 while the other uses the merged table (really slow - should be avoided)
-     */ 
-	public static String export2File(String accessionCode, String pdbDir) {
-
-		String pdbFileName = accessionCode+".pdb";
-		String query = "SELECT CONCAT("+
-		    "RPAD(\"ATOM\", 6, \" \"), "+
-		    "LPAD(serial, 5, \" \"), "+
-		    "\" \", "+
-		    "LPAD(chem_atom_name, 4, \" \"), "+
-		    "IF(alt_code IS NULL, \" \", alt_code), "+
-		    "code_3_letter, "+
-		    "\" \", "+
-		    "IF(chain_pdb_code IS NULL, \" \", chain_pdb_code), "+
-		    "LPAD(residue_serial, 4, \" \"), "+
-		    "IF(residue_pdb_insert_code IS NULL, \" \", residue_pdb_insert_code), "+
-		    "REPEAT(\" \", 3), "+
-		    "LPAD(x, 8, \" \"), "+
-		    "LPAD(y, 8, \" \"), "+
-		    "LPAD(z, 8, \" \"), "+
-		    "LPAD(occupancy, 6, \" \"), "+
-		    "REPEAT(\" \", 6), "+
-		    "REPEAT(\" \", 6), "+
-		    "RPAD(chain_code, 4, \" \") "+
-		    ") AS atom_lines FROM msdsd.atom_data WHERE "+
-		    "(accession_code = \""+accessionCode+"\") AND "+
-		    "(non_assembly_valid = \"Y\") AND "+
-		    "((alt_code = \"A\") OR (alt_code IS NULL)) AND "+
-		    "(pdb_group = \"A\") "+
-		    "ORDER BY chain_code, residue_serial, serial;";
-		
-		gen(pdbDir+"/"+pdbFileName, query);
-	
-		return pdbFileName;
-
-    }
-
-    /**
-     * exports to file the atom lines of the assymetric unit of a protein (accessionCode) 
-     * directly from msdsd. The filename is returned.
-     * 
-     * Notes:
-     * - Hetatoms are excluded (pdb_group = "A") and in case of multiple locations of
-     * 	 amino acids, only the default location is considered (alt_code = "A") 
-     * 	 (VendruscoloM_00_PSFG.pdf currently found in LitNet/incomingPDF/LAST_ROUND/)
-     * - The filename is accessionCode.pdb (asu).
-     * - The chain_pdb_code is used in the chainID field in the atom line, while the chain_code is used 
-     * 	 the segID field (due to its length). Therefore, "segi" and not "chain" must be used in pymol
-     * 	 selections.
-     * - There are two versions of export2File. One that takes the atomic coordinates from the 
-     * 	 partial atom_data tables (needs the table number e.g. 1 for atom_data_1, but is faster), 
-     *	 while the other uses the merged table (really slow - should be avoided)
-     */ 
-	public static String export2File(String accessionCode, int atomDataTblNum, String pdbDir) {
-
-		String pdbFileName = accessionCode+".pdb";
-		String query = "SELECT CONCAT("+
-		    "RPAD(\"ATOM\", 6, \" \"), "+
-		    "LPAD(serial, 5, \" \"), "+
-		    "\" \", "+
-		    "LPAD(chem_atom_name, 4, \" \"), "+
-		    "IF(alt_code IS NULL, \" \", alt_code), "+
-		    "code_3_letter, "+
-		    "\" \", "+
-		    "IF(chain_pdb_code IS NULL, \" \", chain_pdb_code), "+
-		    "LPAD(residue_serial, 4, \" \"), "+
-		    "IF(residue_pdb_insert_code IS NULL, \" \", residue_pdb_insert_code), "+
-		    "REPEAT(\" \", 3), "+
-		    "LPAD(x, 8, \" \"), "+
-		    "LPAD(y, 8, \" \"), "+
-		    "LPAD(z, 8, \" \"), "+
-		    "LPAD(occupancy, 6, \" \"), "+
-		    "REPEAT(\" \", 6), "+
-		    "REPEAT(\" \", 6), "+
-		    "RPAD(chain_code, 4, \" \") "+
-		    ") AS atom_lines FROM msdsd.atom_data_"+atomDataTblNum+" WHERE "+
-		    "(accession_code = \""+accessionCode+"\") AND "+
-		    "(non_assembly_valid = \"Y\") AND "+
-		    "((alt_code = \"A\") OR (alt_code IS NULL)) AND "+
-		    "(pdb_group = \"A\") "+
-		    "ORDER BY chain_code, residue_serial, serial;";
-		
-		gen(pdbDir+"/"+pdbFileName, query);
-	
-		return pdbFileName;
-
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(query);
+			while (rsst.next()) {
+				Pdb.println(rsst.getString(1));
+			}
+			stmt.close();
+			rsst.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		Pdb.close();
+		conn.close();		
     }
 
 	/**
-     * creates a temporary sql script called export.sql with the necessary sql query to dump the atom lines,
-     * executes the script redirecting the output to a file and deletes the sql script
-     */ 	
-    private static void gen(String pdbFileName, String query) {
-	
-        try {
-
-		    File sqlScript = new File("export.sql");
-		    PrintWriter scriptOut = new PrintWriter(new FileWriter(sqlScript));
-		    scriptOut.println(query);
-		    if (scriptOut != null) { scriptOut.close(); }
-		    
-		    System.out.println(SystemCmd.exec(new String[] {"/bin/sh", "-c", "my_lila < export.sql > "+pdbFileName}));
-	
-		    sqlScript.delete();
-
-		} catch (Exception e) { 
-			System.out.println(e); 
+	 * Exports to file in pdb format the atom coordinates for the assymetric unit of a protein given an accession_code and chain_pdb_code 
+	 * (if NMR just the model with model_serial=1)
+	 * @param accessionCode
+	 * @param chainPdbCode
+	 * @param pdbFile
+	 * @param user
+	 * @return
+	 */
+	public static void export2File(String accessionCode, String chainPdbCode, String pdbFile, String user) throws FileNotFoundException{
+		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
+		int chainId=0;
+		int modelId=0;
+		String chainStr="='"+chainPdbCode+"'";
+		if (chainPdbCode.equals("NULL")) {
+			chainStr="IS NULL";
 		}
-		
-	}
+		String query = "SELECT chain_id, model_id " +
+				"FROM "+INFODB+".mmol_chain_info " +
+				"WHERE accession_code='"+accessionCode+"' " +
+				"AND chain_pdb_code " + chainStr +
+				"AND chain_type='C' " +
+				"AND asu_chain=1 " +
+				"AND model_serial=1;";
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(query);
+			while (rsst.next()) {
+				chainId=rsst.getInt(1);
+				modelId=rsst.getInt(2);
+			}
+			stmt.close();
+			rsst.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		conn.close();
+		export2File(chainId,modelId,pdbFile,user);
+    }
+
+
+
 
 } // end of class Msdsd2Pdb
