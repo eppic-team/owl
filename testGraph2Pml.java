@@ -42,7 +42,12 @@ public class testGraph2Pml {
 		
 		//Edges as lines
 		//export the pdb file directly from msdsd and load it in pymol
-		pdbFileName = Msdsd2Pdb.export2File("1rx4", 20717, 52567, 9, "/project/StruPPi/ioannis/tmp");
+		pdbFileName =  "1rx4_20717_52567";
+		try {
+			Msdsd2Pdb.export2File("1rx4", 20717, 52567, "/project/StruPPi/ioannis/tmp/"+pdbFileName, "filippis");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
 		System.out.println(molObjName);
 		
@@ -162,7 +167,12 @@ public class testGraph2Pml {
 		pml.delete("all", false);
 		
 		//test multi-chain macromolecule with RNA also
-		pdbFileName = Msdsd2Pdb.export2File("1a0a", 1107, 2560, 1, "/project/StruPPi/ioannis/tmp");
+		pdbFileName =  "1a0a_1107_2560";
+		try {
+			Msdsd2Pdb.export2File("1a0a", 1107, 2560, "/project/StruPPi/ioannis/tmp/"+pdbFileName, "filippis");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
 		System.out.println(molObjName);
 		
@@ -242,7 +252,12 @@ public class testGraph2Pml {
 		pml.delete("all", false);
 		
 		//CGO EDGES SECTION
-		pdbFileName = Msdsd2Pdb.export2File("1kj0", 21698, 55132, 9, "/project/StruPPi/ioannis/tmp");
+		pdbFileName =  "1kj0_21698_55132";
+		try {
+			Msdsd2Pdb.export2File("1kj0", 21698, 55132, "/project/StruPPi/ioannis/tmp/"+pdbFileName, "filippis");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		molObjName = pml.loadPDB(pdbFileName, "/project/StruPPi/ioannis/tmp");
 		
 		//Cgo makes sense to be used with directed graph
