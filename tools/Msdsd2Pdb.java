@@ -238,7 +238,7 @@ public class Msdsd2Pdb {
 				"FROM "+INFODB+".mmol_chain_info " +
 				"WHERE accession_code='"+accessionCode+"' " +
 				"AND chain_pdb_code " + chainStr +
-				"AND chain_type='C' " +
+				" AND chain_type='C' " +
 				"AND asu_chain=1 " +
 				"AND model_serial=1;";
 		try {
