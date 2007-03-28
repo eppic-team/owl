@@ -44,6 +44,8 @@ public class PyMol {
     private HashMap<String, Integer> attrs = new HashMap<String, Integer>();
     private DecimalFormat DF = new DecimalFormat("#0.000");
 
+ 
+    
     // constructor
     public PyMol(PrintWriter out) {
     	
@@ -269,6 +271,8 @@ public class PyMol {
      * 	 segi is used instead of chain
      */    
     public String addEdge(String i_cid, int i_num, String j_cid, int j_num, boolean msdsd) {
+    	
+  
 
 		String edgeName = "e."+i_cid+"."+i_num+"."+j_cid+"."+j_num;
 		String iNodeSel = selectNode(i_cid, i_num, msdsd, true);
@@ -279,6 +283,15 @@ public class PyMol {
 	
 		return edgeName;
 
+    }
+    
+    
+    public void setDistance(int resi1, int resi2, String pdbFilename, int selNum, String chain_pdb_code){
+    	if (chain_pdb_code == "is null"){
+    		chain_pdb_code = "";
+    	}
+    	
+    	Out.println("distance "+ pdbFilename+"MapSel"+selNum+" , chain "+chain_pdb_code+" and resi " + resi1 + " and name ca, chain "+chain_pdb_code+" and resi " + resi2 + " and name ca;");
     }
     
     /**
@@ -364,6 +377,18 @@ public class PyMol {
 
     }
 
+    
+    /**
+     * turns on atom/bond representation for all bonds for an object or selection
+     */ 
+    public void myShow(String objectName) {
+	
+		Out.println("cmd.show('"+objectName+"')");
+
+    }
+    
+    
+    
     /**
      * turns on atom/bond representation specified by what for an object or selection
      */ 
@@ -421,6 +446,17 @@ public class PyMol {
 
     }
 
+    
+    /**
+     * turns off atom/bond representation for all bonds for an object or selection
+     */ 
+    public void myHide(String objectName) {
+	
+		Out.println("cmd.hide('"+objectName+"')");
+
+    }
+    
+    
     /**
      * turns off node representation
      */   
@@ -499,6 +535,30 @@ public class PyMol {
     	return "("+(msdsd?"segi ":"chain ")+(cid.equals("")?"\"\"":cid)+")";
 
     }
+    
+    public void select(String name , String residue_nr){
+    	
+    	Out.println("select "+ name+", resi " + residue_nr );
+    }
+    
+    
+    
+    public int set(String objectName, double value, String object) {
+    	if (object   == ""){
+		
+		Out.println("set "+objectName+", " + value);}
+    	
+    	else {
+    		Out.println("set "+objectName+", " + value + " in object " + object);
+    	}
+		//Out.println("cmd.set(\""+attribute+"\", "+DF.format(value)+", "+((!variable)?"\""+objectName+"\"":objectName)+")");
+	
+		return 0;
+		
+    }
+    
+    
+    
     
     /**
      * changes one of the PyMol state variable (attribute) for a specific object or selection
