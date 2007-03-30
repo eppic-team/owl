@@ -291,7 +291,7 @@ public class PyMol {
     		chain_pdb_code = "";
     	}
     	
-    	Out.println("distance "+ pdbFilename+"MapSel"+selNum+" , chain "+chain_pdb_code+" and resi " + resi1 + " and name ca, chain "+chain_pdb_code+" and resi " + resi2 + " and name ca;");
+    	Out.println("distance "+ pdbFilename+"Sel"+selNum+" , chain "+chain_pdb_code+" and resi " + resi1 + " and name ca, chain "+chain_pdb_code+" and resi " + resi2 + " and name ca;");
     }
     
     /**
