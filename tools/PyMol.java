@@ -285,13 +285,19 @@ public class PyMol {
 
     }
     
-    
-    public void setDistance(int resi1, int resi2, String pdbFilename, int selNum, String chain_pdb_code){
-    	if (chain_pdb_code == "is null"){
-    		chain_pdb_code = "";
-    	}
-    	
+    /** Creates an edge between the C-alpha atoms of the given residues in the given chain. 
+     *  The selection in pymol will be names pdbFileName+"Sel"+selNum 
+     */
+    public void setDistance(int resi1, int resi2, String pdbFilename, int selNum, String chain_pdb_code){   	
     	Out.println("distance "+ pdbFilename+"Sel"+selNum+" , chain "+chain_pdb_code+" and resi " + resi1 + " and name ca, chain "+chain_pdb_code+" and resi " + resi2 + " and name ca;");
+    }
+    
+    /** Creates an edge between the C-alpha atoms of the given residues.
+     *  Use this variant if there is only one unnamed chain in the current structure.
+     *  The selection in pymol will be names pdbFileName+"Sel"+selNum 
+     */
+    public void setDistance(int resi1, int resi2, String pdbFilename, int selNum){  	
+    	Out.println("distance "+ pdbFilename+"Sel"+selNum+" , resi " + resi1 + " and name ca, resi " + resi2 + " and name ca;");
     }
     
     /**
