@@ -4,7 +4,7 @@ import java.io.*;
 
 /**
  * Package:		tools
- * Class: 		PyMol
+ * Class: 		SystemCmd
  * Author:		Real Gagnon (http://www.rgagnon.com/javadetails/java-0014.html)
  * 				Copyright by Ioannis Filippis, filippis@molgen.mpg.de
  * Date:		03/03/2006

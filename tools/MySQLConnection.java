@@ -262,6 +262,7 @@ public class MySQLConnection {
 	 * @param query
 	 * @return the first column of the first row of the result of the given query as a string
 	 * or null if no results were returned
+	 * TODO: How to figure out whether a database error occured?
 	 */	
 	public String getStringFromDb(String query) {
 		Statement    stmt;
