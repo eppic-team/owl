@@ -9,12 +9,23 @@ import tools.MySQLConnection;
 public class AA {
 	
 	public final static String MYSQLSERVER="white";
-	public final static String MYSQLUSER="duarte"; //TODO implement getuser method
+	public final static String MYSQLUSER=getUserName();
 	public final static String MYSQLPWD="nieve";
 	public final static String DB = "aa_info";
 
 	//public static final ArrayList<String> AAS = aas();
 	//public static final HashMap<String,String> THREELETTER2ONELETTER = threeletter2oneletter();
+
+	/** get user name from operating system (for use as database username) */
+	private static String getUserName() {
+		String user = null;
+		user = System.getProperty("user.name");
+		if(user == null) {
+			System.err.println("Could not get user name from operating system. Exiting");
+			System.exit(1);
+		}
+		return user;
+	}
 	
 	public static HashMap<String,String> getThreeletter2oneletter() {
 		HashMap<String,String> three2oneletter = new HashMap<String,String>();

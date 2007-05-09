@@ -2,7 +2,6 @@ package proteinstructure;
 
 import tools.MySQLConnection;
 
-import java.security.AccessControlException;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -12,7 +11,7 @@ import java.util.Collections;
 
 public class PdbaseInfo {
 	public final static String MYSQLSERVER="white";
-	public final static String MYSQLUSER="duarte"; //TODO implement getuser method
+	public final static String MYSQLUSER=getUserName();
 	public final static String MYSQLPWD="nieve";
 	public final static String mymsdsdDB="my_msdsd_00_07_a";
 	public final static String msdsdDB="msdsd_00_07_a";
@@ -48,6 +47,17 @@ public class PdbaseInfo {
 	
 	PdbaseInfo (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
 		this(accode,chaincode,1,pdbaseDB);
+	}
+
+	/** get user name from operating system (for use as database username) */
+	private static String getUserName() {
+		String user = null;
+		user = System.getProperty("user.name");
+		if(user == null) {
+			System.err.println("Could not get user name from operating system. Exiting");
+			System.exit(1);
+		}
+		return user;
 	}
 	
 	public void close() {
