@@ -1,12 +1,18 @@
 package proteinstructure;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.PrintStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Pdb {
 	
@@ -34,9 +40,9 @@ public class Pdb {
 		read_pdb_data_from_pdbase(db);
 	}
 	
-	public Pdb (String pdbfile) {
-		//TODO implement read_pdb_data_from_file
-		//read_pdb_data_from_file(pdbfile);
+	public Pdb (String pdbfile) throws FileNotFoundException, IOException {
+		this.accode="";
+		read_pdb_data_from_file(pdbfile);
 	}
 	
 	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
@@ -73,6 +79,62 @@ public class Pdb {
 		}
 	}
 	
+	public void read_pdb_data_from_file(String pdbfile) throws FileNotFoundException, IOException{
+		resser_atom2atomserial = new HashMap<String,Integer>();
+		resser2restype = new HashMap<Integer,String>();
+		atomser2coord = new HashMap<Integer,Double[]>();
+		atomser2resser = new HashMap<Integer,Integer>();
+
+		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
+		String line;
+		while ((line = fpdb.readLine() ) != null ) {
+			Pattern p = Pattern.compile("^ATOM");
+			Matcher m = p.matcher(line);
+			if (m.find()){
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{2}(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				Matcher ml = pl.matcher(line);
+				if (ml.find()) {
+					int atomserial=Integer.parseInt(ml.group(1).trim());
+					String atom = ml.group(2).trim();
+					String res_type = ml.group(3).trim();
+					int res_serial = Integer.parseInt(ml.group(4).trim());
+					double x = Double.parseDouble(ml.group(5).trim());
+					double y = Double.parseDouble(ml.group(6).trim());
+					double z = Double.parseDouble(ml.group(7).trim());
+					Double[] coords = {x, y, z};
+					ArrayList<String> aalist=AA.aas();
+					if (aalist.contains(res_type)) {
+						atomser2coord.put(atomserial, coords);
+						atomser2resser.put(atomserial, res_serial);
+						resser2restype.put(res_serial, res_type);
+						ArrayList<String> atomlist = aas2atoms.get(res_type);
+						if (atomlist.contains(atom)){
+							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+						}
+					}
+				}				
+			}
+		}
+		fpdb.close();
+		// now we read the sequence from the resser2restype HashMap
+		// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
+		ArrayList<Integer> ressers = new ArrayList<Integer>();
+		for (int resser:resser2restype.keySet()) {
+			ressers.add(resser);
+		}
+		Collections.sort(ressers);
+		sequence="";
+		for (int resser:ressers){
+			String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
+			sequence += oneletter;
+		}
+        // finally we set accode and chaincode to unknown 
+        //TODO: we should parse accode and chaincode from appropriate fields in pdb file, 
+		// problem: in case of a non-original pdb file there won't be accession code		
+		accode="?";
+		chaincode="?";
+	}
+
 	public void dump2pdbfile(String outfile) throws IOException {
 		String chainstr=chain;
 		if (chain.equals("NULL")){
@@ -87,7 +149,7 @@ public class Pdb {
 			String res_type = resser2restype.get(res_serial);
 			Double[] coords = atomser2coord.get(atomserial);
 			Object[] fields = {atomserial, atom, res_type, chainstr, res_serial, coords[0], coords[1], coords[2]};
-			Out.printf("ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f",fields);
+			Out.printf("ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",fields);
 		}
 		Out.println("END");
 		Out.close();
