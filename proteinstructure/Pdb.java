@@ -21,12 +21,12 @@ public class Pdb {
 	String db;
 	String chain;
 	
-	public Pdb (String accode, String chaincode) {
+	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
 		this(accode,chaincode,PdbaseInfo.pdbaseDB);
 		
 	}
 	
-	public Pdb (String accode, String chaincode, String db) {
+	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
 		this.accode=accode;
 		this.chaincode=chaincode;
 		this.db=db;
@@ -39,7 +39,7 @@ public class Pdb {
 		//read_pdb_data_from_file(pdbfile);
 	}
 	
-	public void read_pdb_data_from_pdbase(String db){
+	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
