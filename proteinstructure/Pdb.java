@@ -27,17 +27,22 @@ public class Pdb {
 	String db;
 	String chain;
 	
-	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this(accode,chaincode,PdbaseInfo.pdbaseDB);
 		
 	}
 	
-	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this.accode=accode;
 		this.chaincode=chaincode;
 		this.db=db;
-		this.chain=chaincode; // we initialise it to chaincode, in read_pdb_data_from_pdbase gets reset to the right internal chain id
-		read_pdb_data_from_pdbase(db);
+		// we initialise it to chaincode, in read_pdb_data_from_pdbase gets reset to the right internal chain id. If reading msdsd it stays as chaincode
+		this.chain=chaincode; 
+		if (db.contains("msdsd")){
+			read_pdb_data_from_msdsd(db);
+		} else if (db.contains("pdbase")){
+			read_pdb_data_from_pdbase(db);
+		}
 	}
 	
 	public Pdb (String pdbfile) throws FileNotFoundException, IOException {
@@ -65,6 +70,39 @@ public class Pdb {
 			double x = (Double) result.get(5);
 			double y = (Double) result.get(6);
 			double z = (Double) result.get(7);
+			Double[] coords = {x, y, z};
+			ArrayList<String> aalist=AA.aas();
+			if (aalist.contains(res_type)) {
+				atomser2coord.put(atomserial, coords);
+				atomser2resser.put(atomserial, res_serial);
+				resser2restype.put(res_serial, res_type);
+				ArrayList<String> atomlist = aas2atoms.get(res_type);
+				if (atomlist.contains(atom)){
+					resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+				}
+			}
+		}
+	}
+	
+	public void read_pdb_data_from_msdsd(String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+		resser_atom2atomserial = new HashMap<String,Integer>();
+		resser2restype = new HashMap<Integer,String>();
+		atomser2coord = new HashMap<Integer,Double[]>();
+		atomser2resser = new HashMap<Integer,Integer>();
+		
+		MsdsdInfo mymsdsdinfo = new MsdsdInfo(accode,chaincode,db);
+		ArrayList<ArrayList> resultset = mymsdsdinfo.read_atomData();
+		sequence = mymsdsdinfo.read_seq();
+		mymsdsdinfo.close();
+
+		for (ArrayList result:resultset){
+			int atomserial = (Integer) result.get(0);
+			String atom = (String) result.get(1);
+			String res_type = (String) result.get(2);
+			int res_serial = (Integer) result.get(3);
+			double x = (Double) result.get(4);
+			double y = (Double) result.get(5);
+			double z = (Double) result.get(6);
 			Double[] coords = {x, y, z};
 			ArrayList<String> aalist=AA.aas();
 			if (aalist.contains(res_type)) {
@@ -140,6 +178,7 @@ public class Pdb {
 		if (chain.equals("NULL")){
 			chainstr="A";
 		}
+		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println("HEADER  Dumped from "+db+". pdb accession code="+accode+", pdb chain code="+chaincode);
 		for (String resser_atom:resser_atom2atomserial.keySet()){
@@ -149,7 +188,10 @@ public class Pdb {
 			String res_type = resser2restype.get(res_serial);
 			Double[] coords = atomser2coord.get(atomserial);
 			Object[] fields = {atomserial, atom, res_type, chainstr, res_serial, coords[0], coords[1], coords[2]};
-			Out.printf("ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",fields);
+			lines.put(atomserial, fields);
+		}
+		for (int atomserial:lines.keySet()){
+			Out.printf("ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",lines.get(atomserial));
 		}
 		Out.println("END");
 		Out.close();
