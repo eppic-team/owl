@@ -550,21 +550,34 @@ public class ContactMap {
 		}	 
 		return coincides;
 	}
+
+	/**
+	 * Returns a boolean matrix with the contact map
+	 */
+	public boolean[][] getBoolMatrix(){
+		boolean[][] cmbool = new boolean[l][l];
+		for (int i=0;i<l;i++){
+			for (int j=0;j<l;j++) {
+				cmbool[i][j]=CM[i][j].contact();
+			}
+		}
+		return cmbool;
+	}
 	
 	/**
-	 * To print constraint equations for a contact
-	 * @param i_num
-	 * @param j_num
+	 * Returns an int (0,1) matrix with the contact map
 	 */
-	public void printConstraint(int i_num,int j_num){
-		String xi = "x"+i_num;
-		String yi = "y"+i_num;
-		String zi = "z"+i_num;
-		String xj = "x"+j_num;
-		String yj = "y"+j_num;
-		String zj = "z"+j_num;
-		double d = 4.1;
-		double d2 = d*d;
-		System.out.println("("+xi+"-"+xj+")^2+("+yi+"-"+yj+")^2+("+zi+"-"+zj+")^2<="+d2);
+	public int[][] getIntMatrix(){
+		int[][] cmint = new int[l][l];
+		for (int i=0;i<l;i++){
+			for (int j=0;j<l;j++) {
+				cmint[i][j]=0;
+				if (CM[i][j].contact()){
+					cmint[i][j]=1;
+				}
+			}
+		}
+		return cmint;
 	}
+	
 }
