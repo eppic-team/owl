@@ -219,9 +219,21 @@ public class Pdb {
 		return dist_matrix;
 	}
 	
+	/**
+	 * Get the contacts for given contact type and cutoff for this Pdb object.
+	 * Returns a Graph object with the contacts
+	 * The graph is always directional, i.e. in crossed cases xx/yy: i corresponds to xx and j to yy
+	 * ct here can be single contact type (e.g. Ca, BB) or crossed (e.g. BB/SC or Ca/Cb)
+	 * @param ct
+	 * @param cutoff
+	 * @return
+	 */
 	public Graph get_graph(String ct, double cutoff){
 		TreeMap<Contact,Double> dist_matrix = calculate_dist_matrix(ct);
 		ArrayList<Contact> contacts = new ArrayList<Contact>();
+        // we loop here over all indices of dist_matrix, 
+        // we took care already that in symmetric cases (i.e. single contact type, not crossed) we have only one side of the matrix and 
+        // in asymmetrical cases (i.e. crossed cases) we have both sides of the matrix
 		for (Contact pair:dist_matrix.keySet()){
 			int i_atomser=pair.i;
 			int j_atomser=pair.j;
@@ -229,13 +241,19 @@ public class Pdb {
 				int i_resser = atomser2resser.get(i_atomser);
 				int j_resser = atomser2resser.get(j_atomser);
 				Contact resser_pair = new Contact(i_resser,j_resser);
+                // for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
 				if (i_resser!=j_resser && (! contacts.contains(resser_pair))){
 					contacts.add(resser_pair);
 				}
 			}
 		}
 		Collections.sort(contacts);
-		Graph graph = new Graph (contacts,cutoff,ct);
+		TreeMap<Integer,String> nodes = new TreeMap<Integer,String>();
+		for (int resser:resser2restype.keySet()){
+			nodes.put(resser,resser2restype.get(resser));
+		}
+        // NOTE: we pass to the graph object the chain (internal pdbase id) not the pdb chain code!
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,accode,chain);
 		return graph;
 	}
 	

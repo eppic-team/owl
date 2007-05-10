@@ -30,6 +30,58 @@ public class ContactMap {
 	public ContactMap() {		
 	}
 
+	/**
+	 * Constructs a ContactMap passing a list of contacts, the full residue sequence and a map of residue nums to types (only observed standard aas)
+	 * @param contacts ArrayList of contacts (as Contact objects) 
+	 * @param residues map from num to types (only observed standard aas)
+	 * @param sequence String with full sequence (i.e. also unobserved and non-standard residues, denoted by X)
+	 */
+	public ContactMap(ArrayList<Contact> contacts, TreeMap<Integer,String> residues, String sequence) {
+		this.residues=residues;
+		// we create residueTypes and residueNums arrays from full sequence string
+		residueTypes = new String[sequence.length()];
+		residueNums = new Integer[sequence.length()];
+		for (int i=0;i<sequence.length();i++){
+			residueTypes[i] = String.valueOf(sequence.charAt(i));
+			residueNums[i] = i+1;
+		}		
+		// we initialise nums2serials using residues and residueNums
+		nums2serials = new HashMap<Integer,Integer>();
+		for (int i=0;i<residueNums.length;i++){
+			// nums2serials must only contain the standard observed aa, so only members of residues TreeMap
+			if (residues.containsKey(residueNums[i])){
+				nums2serials.put(residueNums[i],i);
+			}
+		}
+		// initialisation of l, numObsStandAA, t, effT from 4 above
+		l = this.residueNums.length;
+		numObsStandAA = this.residues.size();
+		t = (int)((l*(l-1))/2);
+		effT = (int)((numObsStandAA*(numObsStandAA-1))/2);
+		// initialisation of CM
+		CM = new EdgeState[l][l];
+		// first we fill with NONCONTACTs (or SKIPPEDs if the i,j is not in nums2serials)
+		for (int i=0;i<l;i++){
+			for (int j=0;j<l;j++) {
+				if ((!this.nums2serials.containsValue(i)) || (!this.nums2serials.containsValue(j))) {
+					CM[i][j] = EdgeState.SKIPPED;
+				} else {
+					CM[i][j] = EdgeState.NONCONTACT;
+				}
+			}
+		}
+		// then we fill the CONTACTs
+		// the contacts ArrayList we pass as argument must contain the full bidirectional list of contacts
+		for (Contact cont:contacts){
+			int i_num = cont.i;
+			int j_num = cont.j;
+			CM[nums2serials.get(i_num)][nums2serials.get(j_num)]=EdgeState.CONTACT;
+		}
+		// and initialise numContacts
+		numContacts = contacts.size();
+		// finally we initialise the CNs HashMap
+		getAllComNbs();
+	}
 	
 	/**
 	 * Gets the number of contacts, non contacts and skipped cells due to unobserved residues 
