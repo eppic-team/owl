@@ -20,9 +20,11 @@ public class MsdsdInfo {
 	MySQLConnection conn;
 	String accode="";
 	String chaincode="";
-	int model=1;
+	int model=DEFAULT_MODEL;
 	int chainid;
 	int modelid;
+	
+	static int DEFAULT_MODEL=1;
 
 	MsdsdInfo (String accode, String chaincode, int model_serial, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this.accode=accode;
@@ -37,14 +39,14 @@ public class MsdsdInfo {
 	}
 
 	MsdsdInfo (String accode, String chaincode, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
-		this(accode,chaincode,1,db);
+		this(accode,chaincode,DEFAULT_MODEL,db);
 	}
 	MsdsdInfo (String accode, String chaincode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
 		this(accode,chaincode,model_serial,msdsdDB);
 	}
 	
 	MsdsdInfo (String accode, String chaincode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
-		this(accode,chaincode,1,msdsdDB);
+		this(accode,chaincode,DEFAULT_MODEL,msdsdDB);
 	}
 
 	/** get user name from operating system (for use as database username) */

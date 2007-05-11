@@ -24,17 +24,28 @@ public class Pdb {
 	String sequence="";
 	String accode="";
 	String chaincode="";
+	int model=DEFAULT_MODEL;
 	String db;
 	String chain;
 	
-	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
-		this(accode,chaincode,PdbaseInfo.pdbaseDB);
-		
-	}
+	public static int DEFAULT_MODEL=1;
 	
+	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+		this(accode,chaincode,DEFAULT_MODEL,PdbaseInfo.pdbaseDB);		
+	}
+
+	public Pdb (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+		this(accode,chaincode,model_serial,PdbaseInfo.pdbaseDB);		
+	}
+
 	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+		this(accode,chaincode,DEFAULT_MODEL,db);		
+	}
+
+	public Pdb (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this.accode=accode;
 		this.chaincode=chaincode;
+		this.model=model_serial;
 		this.db=db;
 		// we initialise it to chaincode, in read_pdb_data_from_pdbase gets reset to the right internal chain id. If reading msdsd it stays as chaincode
 		this.chain=chaincode; 
@@ -46,17 +57,22 @@ public class Pdb {
 	}
 	
 	public Pdb (String pdbfile) throws FileNotFoundException, IOException {
+		this(pdbfile,DEFAULT_MODEL);
+	}
+
+	public Pdb (String pdbfile, int model_serial) throws FileNotFoundException, IOException {
 		this.accode="";
+		this.model=model_serial;
 		read_pdb_data_from_file(pdbfile);
 	}
-	
+
 	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 
-		PdbaseInfo mypdbaseinfo = new PdbaseInfo(accode,chaincode,db);
+		PdbaseInfo mypdbaseinfo = new PdbaseInfo(accode,chaincode,model,db);
 		ArrayList<ArrayList> resultset = mypdbaseinfo.read_atomData();
 		sequence = mypdbaseinfo.read_seq();
 		mypdbaseinfo.close();
@@ -90,7 +106,7 @@ public class Pdb {
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		
-		MsdsdInfo mymsdsdinfo = new MsdsdInfo(accode,chaincode,db);
+		MsdsdInfo mymsdsdinfo = new MsdsdInfo(accode,chaincode,model,db);
 		ArrayList<ArrayList> resultset = mymsdsdinfo.read_atomData();
 		sequence = mymsdsdinfo.read_seq();
 		mymsdsdinfo.close();
@@ -117,6 +133,13 @@ public class Pdb {
 		}
 	}
 	
+	/**
+	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file
+	 * NOTE: for now they must be single model, single chain files!! Nothing else implemented!
+	 * @param pdbfile
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
 	public void read_pdb_data_from_file(String pdbfile) throws FileNotFoundException, IOException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();

@@ -20,11 +20,13 @@ public class PdbaseInfo {
 	MySQLConnection conn;
 	String accode="";
 	String chaincode="";
-	int model=1;
+	int model=DEFAULT_MODEL;
 	int entrykey;
 	String asymid;
 	int entitykey;
 	String alt_locs_sql_str;
+	
+	static int DEFAULT_MODEL=1;
 	
 	PdbaseInfo (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
 		this.accode=accode;
@@ -39,14 +41,14 @@ public class PdbaseInfo {
 	}
 	
 	PdbaseInfo (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
-		this(accode,chaincode,1,db);
+		this(accode,chaincode,DEFAULT_MODEL,db);
 	}
 	PdbaseInfo (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
 		this(accode,chaincode,model_serial,pdbaseDB);
 	}
 	
 	PdbaseInfo (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
-		this(accode,chaincode,1,pdbaseDB);
+		this(accode,chaincode,DEFAULT_MODEL,pdbaseDB);
 	}
 
 	/** get user name from operating system (for use as database username) */
