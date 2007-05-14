@@ -1,5 +1,9 @@
 package proteinstructure;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.PrintStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,6 +21,17 @@ public class Graph {
 	String ct;
 	boolean directed;
 	
+	/**
+	 * Constructs Graph object by passing ArrayList with contacts and TreeMap with nodes (res serials and types)
+	 * Must also pass contact type, cutoff, accession code and chain
+	 * @param contacts
+	 * @param nodes
+	 * @param sequence
+	 * @param cutoff
+	 * @param ct
+	 * @param accode
+	 * @param chain
+	 */
 	public Graph (ArrayList<Contact> contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
@@ -31,10 +46,42 @@ public class Graph {
 		}
 	}
 
-	//TODO implement (from python) constructors for reading from file and db
-	//TODO implement (from python) read_contacts_from_file
+	/**
+	 * Constructs Graph object by reading a file with contacts
+	 * An object created with this constructor will be missing the fields sequence and nodes
+	 * That means it's not possible to get a ContactMap from it using getCM because CM needs both sequence and nodes
+	 * @param contactsfile
+	 * @param cutoff
+	 * @param ct
+	 * @throws IOException
+	 * @throws FileNotFoundException
+	 */
+	public Graph (String contactsfile, double cutoff,String ct) throws IOException, FileNotFoundException{
+		this.cutoff=cutoff;
+		this.ct=ct;
+		directed=false;
+		if (ct.contains("/")){
+			directed=true;
+		}
+		read_contacts_from_file(contactsfile);
+	}
+
+	//TODO implement (from python) constructors for reading from db
 	//TODO implement (from python) read_contacts_from_db
-	//TODO implement (from python) write_graph_to_db
+	//TODO implement (from python) write_graph_to_db, do we really need this here??
+	
+	public void read_contacts_from_file (String contactsfile) throws FileNotFoundException, IOException {
+		contacts = new ArrayList<Contact>();
+		System.out.println("Reading contacts from file "+contactsfile);
+		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
+		String line;
+		while ((line = fcont.readLine() ) != null ) {
+			int i = Integer.parseInt(line.split("\\s+")[0]);
+			int j = Integer.parseInt(line.split("\\s+")[1]);
+			contacts.add(new Contact(i,j));
+		}
+		fcont.close();
+	}
 	
 	public void write_contacts_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
