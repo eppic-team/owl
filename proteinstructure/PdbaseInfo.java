@@ -21,6 +21,7 @@ public class PdbaseInfo {
 	String accode="";
 	String chaincode="";
 	int model=DEFAULT_MODEL;
+	String chain=""; // the internal pdbase chain identifier (asym_id)
 	int entrykey;
 	String asymid;
 	int entitykey;
@@ -113,6 +114,8 @@ public class PdbaseInfo {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+		// we set the internal chain identifier self.chain from asymid
+		chain = asymid;
 		return asymid;	
 	}
 	
@@ -180,7 +183,7 @@ public class PdbaseInfo {
 	
 	public ArrayList<ArrayList> read_atomData() throws PdbaseInconsistencyError{
 		ArrayList<ArrayList> resultset = new ArrayList<ArrayList>();
-		String sql = "SELECT id, label_atom_id, label_comp_id, label_asym_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
+		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
 				" FROM atom_site " +
 				" WHERE entry_key="+entrykey +
 				" AND label_asym_id='"+asymid+"' " +
@@ -197,11 +200,10 @@ public class PdbaseInfo {
 				thisrecord.add(rsst.getInt(1)); //atomserial
 				thisrecord.add(rsst.getString(2).trim()); // atom
 				thisrecord.add(rsst.getString(3).trim()); // res_type
-				thisrecord.add(rsst.getString(4).trim()); // chain
-				thisrecord.add(rsst.getInt(5)); //res_serial
-				thisrecord.add(rsst.getDouble(6)); // x
-				thisrecord.add(rsst.getDouble(7)); // y
-				thisrecord.add(rsst.getDouble(8)); // z
+				thisrecord.add(rsst.getInt(4)); //res_serial
+				thisrecord.add(rsst.getDouble(5)); // x
+				thisrecord.add(rsst.getDouble(6)); // y
+				thisrecord.add(rsst.getDouble(7)); // z
 				
 				resultset.add(thisrecord);
 			}

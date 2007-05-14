@@ -6,20 +6,33 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.PrintStream;
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import tools.MySQLConnection;
 
 
 public class Graph {
 
+	public final static String MYSQLSERVER="white";
+	public final static String MYSQLUSER=getUserName();
+	public final static String MYSQLPWD="nieve";
+
 	ArrayList<Contact> contacts;
+	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
 	String sequence;
 	String accode;
 	String chain;
 	double cutoff;
 	String ct;
-	boolean directed;
+	boolean directed=false;
+	
+	// these 2 fields only used when reading from db
+	int graphid=0;
+	int sm_id=0;
 	
 	/**
 	 * Constructs Graph object by passing ArrayList with contacts and TreeMap with nodes (res serials and types)
@@ -40,10 +53,34 @@ public class Graph {
 		this.accode=accode;
 		this.chain=chain;
 		this.ct=ct;
-		directed=false;
 		if (ct.contains("/")){
 			directed=true;
 		}
+	}
+	
+	/**
+	 * Constructs Graph object from graph db
+	 * ATTENTION!! chain is the internal database identifier, NOT! the pdb chain code
+	 * TODO: we should also have a method to construct Graph from db using a pdb chain code 
+	 * @param dbname
+	 * @param accode
+	 * @param chain
+	 * @param cutoff
+	 * @param ct
+	 */
+	public Graph(String dbname, String accode, String chain, double cutoff, String ct) throws GraphIdNotFoundError{
+		this.cutoff=cutoff;
+		this.accode=accode;
+		this.chain=chain;
+		this.ct=ct;
+		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
+		if (ct.contains("/")){
+			directed=true;
+		}
+		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,dbname);
+		getgraphid(conn); // initialises graphid and sm_id
+		read_graph_from_db(conn);
+		conn.close();
 	}
 
 	/**
@@ -59,17 +96,25 @@ public class Graph {
 	public Graph (String contactsfile, double cutoff,String ct) throws IOException, FileNotFoundException{
 		this.cutoff=cutoff;
 		this.ct=ct;
-		directed=false;
 		if (ct.contains("/")){
 			directed=true;
 		}
 		read_contacts_from_file(contactsfile);
 	}
 
-	//TODO implement (from python) constructors for reading from db
-	//TODO implement (from python) read_contacts_from_db
-	//TODO implement (from python) write_graph_to_db, do we really need this here??
-	
+	//TODO implement (from python) write_graph_to_db, do we really need it here??
+
+	/** get user name from operating system (for use as database username) */
+	private static String getUserName() {
+		String user = null;
+		user = System.getProperty("user.name");
+		if(user == null) {
+			System.err.println("Could not get user name from operating system. Exiting");
+			System.exit(1);
+		}
+		return user;
+	}
+
 	public void read_contacts_from_file (String contactsfile) throws FileNotFoundException, IOException {
 		contacts = new ArrayList<Contact>();
 		System.out.println("Reading contacts from file "+contactsfile);
@@ -81,6 +126,89 @@ public class Graph {
 			contacts.add(new Contact(i,j));
 		}
 		fcont.close();
+	}
+	
+	/**
+	 * Reads contacts and nodes from db.
+	 * The db must be a graph db following our standard format, i.e. must have tables: 
+	 * chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * We don't care here about the origin of the data (msdsd, pdbase, predicted) for the generation of the graph as long as it follows our data format
+	 * We read both edges and nodes from single_model_edge and single_model_node.
+	 * The sequence is taken from nodes, thus it won't have unobserved or non standard aas.
+	 * @param conn
+	 */
+	public void read_graph_from_db(MySQLConnection conn){
+		contacts = new ArrayList<Contact>();
+		nodes = new TreeMap<Integer, String>();
+		sequence = "";
+		try {
+			String sql="SELECT i_num,j_num FROM single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				int i=rsst.getInt(1);
+				int j=rsst.getInt(2);
+				contacts.add(new Contact(i,j));
+			}
+			rsst.close();
+			stmt.close();
+			sql="SELECT num,res FROM single_model_node WHERE graph_id="+graphid+" ORDER BY num ";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			while (rsst.next()){
+				int num=rsst.getInt(1);
+				String res=rsst.getString(2);
+				nodes.put(num, AA.oneletter2threeletter(res));
+				sequence+=res;
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void getgraphid (MySQLConnection conn) throws GraphIdNotFoundError{
+        // NOTE: as chain we are using our internal identifier, which is the pchain_code in msdsd or the asym_id in pdbase
+        // in the chain_graph table the internal chain identifier is called 'pchain_code'
+		int pgraphid=0;
+		try {
+			String sql="SELECT graph_id FROM chain_graph WHERE accession_code='"+accode+"' AND pchain_code='"+chain+"' AND dist="+cutoff;
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			int check=0;
+			while (rsst.next()) {
+				check++;
+				pgraphid=rsst.getInt(1);
+			}
+			if (check!=1){
+				System.err.println("No pgraph_id match or more than 1 match for accession_code="+accode+", pchain_code="+chain+", dist="+cutoff);
+			}
+			rsst.close();
+			stmt.close();
+			// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
+			String ctstr=ct;
+			if (ct.equals("ALL")){
+				ctstr="BB+SC+BB/SC";
+			}
+			sql="SELECT graph_id,single_model_id FROM single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='(true)' AND CW=1";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			check=0;
+			while (rsst.next()){
+				check++;
+				graphid=rsst.getInt(1);
+				sm_id=rsst.getInt(2);
+			}
+			if (check!=1){
+				System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+				throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void write_contacts_to_file (String outfile) throws IOException {

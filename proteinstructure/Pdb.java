@@ -23,9 +23,14 @@ public class Pdb {
 	HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
 	String sequence="";
 	String accode="";
+    // given "external" pdb chain code, i.e. the classic pdb code ("NULL" if it is blank in original pdb file)	
 	String chaincode="";
 	int model=DEFAULT_MODEL;
 	String db;
+	
+    // Our internal chain identifier (taken from dbs or pdb):
+    // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
+    // - in reading from pdb file it gets set to whatever parsed from the pdb file
 	String chain;
 	
 	public static int DEFAULT_MODEL=1;
@@ -74,6 +79,7 @@ public class Pdb {
 
 		PdbaseInfo mypdbaseinfo = new PdbaseInfo(accode,chaincode,model,db);
 		ArrayList<ArrayList> resultset = mypdbaseinfo.read_atomData();
+		chain = mypdbaseinfo.chain;
 		sequence = mypdbaseinfo.read_seq();
 		mypdbaseinfo.close();
 		
@@ -81,11 +87,10 @@ public class Pdb {
 			int atomserial = (Integer) result.get(0);
 			String atom = (String) result.get(1);
 			String res_type = (String) result.get(2);
-			chain=(String) result.get(3);
-			int res_serial = (Integer) result.get(4);
-			double x = (Double) result.get(5);
-			double y = (Double) result.get(6);
-			double z = (Double) result.get(7);
+			int res_serial = (Integer) result.get(3);
+			double x = (Double) result.get(4);
+			double y = (Double) result.get(5);
+			double z = (Double) result.get(6);
 			Double[] coords = {x, y, z};
 			ArrayList<String> aalist=AA.aas();
 			if (aalist.contains(res_type)) {
@@ -152,16 +157,18 @@ public class Pdb {
 			Pattern p = Pattern.compile("^ATOM");
 			Matcher m = p.matcher(line);
 			if (m.find()){
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{2}(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				//                                 serial    atom   res_type chain res_ser     x     y     z
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}(.)(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					int atomserial=Integer.parseInt(ml.group(1).trim());
 					String atom = ml.group(2).trim();
 					String res_type = ml.group(3).trim();
-					int res_serial = Integer.parseInt(ml.group(4).trim());
-					double x = Double.parseDouble(ml.group(5).trim());
-					double y = Double.parseDouble(ml.group(6).trim());
-					double z = Double.parseDouble(ml.group(7).trim());
+					chain = ml.group(4).trim();
+					int res_serial = Integer.parseInt(ml.group(5).trim());
+					double x = Double.parseDouble(ml.group(6).trim());
+					double y = Double.parseDouble(ml.group(7).trim());
+					double z = Double.parseDouble(ml.group(8).trim());
 					Double[] coords = {x, y, z};
 					ArrayList<String> aalist=AA.aas();
 					if (aalist.contains(res_type)) {
@@ -317,7 +324,7 @@ public class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-        // NOTE: we pass to the graph object the chain (internal pdbase id) not the pdb chain code!
+        // NOTE: we pass to the graph object the chain (internal chain identifier) not the pdb chain code!
 		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,accode,chain);
 		return graph;
 	}

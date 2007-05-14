@@ -57,6 +57,36 @@ public class AA {
 		return three2oneletter.get(three);
 	}
 	
+	public static HashMap<String,String> getOneletter2Threeletter(){
+		HashMap<String,String> one2threeletter = new HashMap<String,String>();
+		one2threeletter.put("C", "CYS");
+		one2threeletter.put("D", "ASP");
+		one2threeletter.put("S", "SER");
+		one2threeletter.put("Q", "GLN");
+		one2threeletter.put("K", "LYS");
+		one2threeletter.put("I", "ILE");
+		one2threeletter.put("P", "PRO");
+		one2threeletter.put("T", "THR");
+		one2threeletter.put("F", "PHE");
+		one2threeletter.put("A", "ALA");
+		one2threeletter.put("G", "GLY");
+		one2threeletter.put("H", "HIS");
+		one2threeletter.put("E", "GLU");
+		one2threeletter.put("L", "LEU");
+		one2threeletter.put("R", "ARG");
+		one2threeletter.put("W", "TRP");
+		one2threeletter.put("V", "VAL");
+		one2threeletter.put("N", "ASN");
+		one2threeletter.put("Y", "TYR");
+		one2threeletter.put("M", "MET");
+		return one2threeletter;
+	}
+	
+	public static String oneletter2threeletter(String one) {
+		HashMap<String,String> one2threeletter = getOneletter2Threeletter();
+		return one2threeletter.get(one);
+	}
+	
 	public static ArrayList<String> aas() {
 		HashMap<String,String> three2oneletter = getThreeletter2oneletter();
 		ArrayList<String> aas = new ArrayList<String>();

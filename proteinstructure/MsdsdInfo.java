@@ -23,6 +23,7 @@ public class MsdsdInfo {
 	int model=DEFAULT_MODEL;
 	int chainid;
 	int modelid;
+	String chain=""; // the internal msdsd/my_msdsd chain identifier (pchain_code)
 	
 	static int DEFAULT_MODEL=1;
 
@@ -70,7 +71,7 @@ public class MsdsdInfo {
 		if (chaincodestr.equals("NULL")){
 			chaincodestr="IS NULL";
 		}
-		String sql = "SELECT chain_id, model_id " +
+		String sql = "SELECT chain_id, model_id, pchain_code " +
 				" FROM "+mymsdsdDB+".mmol_chain_info " +
 				" WHERE accession_code='"+accode+"' " +
 				" AND chain_pdb_code "+chaincodestr +
@@ -83,6 +84,7 @@ public class MsdsdInfo {
 			if (rsst.next()) {
 				chainid = rsst.getInt(1);
 				modelid = rsst.getInt(2);
+				chain=rsst.getString(3);
 				if (! rsst.isLast()) {
 					System.err.println("More than 1 chain_id match for accession_code="+accode+", chain_pdb_code="+chaincode);
 					throw new MsdsdAcCodeNotFoundError("More than 1 chain_id match for accession_code="+accode+", chain_pdb_code="+chaincode);					
