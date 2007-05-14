@@ -59,27 +59,24 @@ public class Graph {
 	}
 	
 	/**
-	 * Constructs Graph object from graph db
-	 * ATTENTION!! chain is the internal database identifier, NOT! the pdb chain code
-	 * TODO: we should also have a method to construct Graph from db using a pdb chain code 
+	 * Constructs Graph object from graph db, given the dbname, accode, chaincode (classic pdb chain code), ct and cutoff
 	 * @param dbname
 	 * @param accode
-	 * @param chain
+	 * @param chaincode
 	 * @param cutoff
 	 * @param ct
 	 */
-	public Graph(String dbname, String accode, String chain, double cutoff, String ct) throws GraphIdNotFoundError{
+	public Graph(String dbname, String accode, String chaincode, double cutoff, String ct) throws GraphIdNotFoundError{
 		this.cutoff=cutoff;
 		this.accode=accode;
-		this.chain=chain;
 		this.ct=ct;
 		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
 		if (ct.contains("/")){
 			directed=true;
 		}
 		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,dbname);
-		getgraphid(conn); // initialises graphid and sm_id
-		read_graph_from_db(conn);
+		getgraphid(conn, chaincode); // initialises graphid, sm_id and chain
+		read_graph_from_db(conn); // gets contacts, nodes and sequence
 		conn.close();
 	}
 
@@ -169,21 +166,27 @@ public class Graph {
 
 	}
 	
-	public void getgraphid (MySQLConnection conn) throws GraphIdNotFoundError{
-        // NOTE: as chain we are using our internal identifier, which is the pchain_code in msdsd or the asym_id in pdbase
-        // in the chain_graph table the internal chain identifier is called 'pchain_code'
+	public void getgraphid (MySQLConnection conn, String chaincode) throws GraphIdNotFoundError{
+		// input is chaincode i.e. pdb chain code
+        // we take chain (internal chain identifier, pchain_code for msdsd and asym_id for pdbase) from pchain_code field in chain_graph 
+        // (in the chain_graph table the internal chain identifier is called 'pchain_code')
 		int pgraphid=0;
+		String chainstr="='"+chaincode+"' ";
+		if (chaincode.equals("NULL")){
+			chainstr=" IS NULL ";
+		}
 		try {
-			String sql="SELECT graph_id FROM chain_graph WHERE accession_code='"+accode+"' AND pchain_code='"+chain+"' AND dist="+cutoff;
+			String sql="SELECT graph_id, pchain_code FROM chain_graph WHERE accession_code='"+accode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			int check=0;
 			while (rsst.next()) {
 				check++;
 				pgraphid=rsst.getInt(1);
+				chain=rsst.getString(2);
 			}
 			if (check!=1){
-				System.err.println("No pgraph_id match or more than 1 match for accession_code="+accode+", pchain_code="+chain+", dist="+cutoff);
+				System.err.println("No pgraph_id match or more than 1 match for accession_code="+accode+", chain_pdb_code="+chaincode+", dist="+cutoff);
 			}
 			rsst.close();
 			stmt.close();
