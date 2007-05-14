@@ -65,6 +65,7 @@ public class Pdb {
 		this(pdbfile,DEFAULT_MODEL);
 	}
 
+	//TODO implement read of pdb file given model
 	public Pdb (String pdbfile, int model_serial) throws FileNotFoundException, IOException {
 		this.accode="";
 		this.model=model_serial;
@@ -200,8 +201,8 @@ public class Pdb {
         // finally we set accode and chaincode to unknown 
         //TODO: we should parse accode and chaincode from appropriate fields in pdb file, 
 		// problem: in case of a non-original pdb file there won't be accession code		
-		accode="?";
-		chaincode="?";
+		accode="Unknown";
+		chaincode="Unknown";
 	}
 
 	public void dump2pdbfile(String outfile) throws IOException {
