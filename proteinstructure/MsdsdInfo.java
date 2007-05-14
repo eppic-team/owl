@@ -68,7 +68,7 @@ public class MsdsdInfo {
 	public void getchainid() throws MsdsdAcCodeNotFoundError {
 		chainid=0;
 		String chaincodestr="='"+chaincode+"'";
-		if (chaincodestr.equals("NULL")){
+		if (chaincode.equals("NULL")){
 			chaincodestr="IS NULL";
 		}
 		String sql = "SELECT chain_id, model_id, pchain_code " +
