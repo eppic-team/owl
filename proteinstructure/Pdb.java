@@ -22,7 +22,7 @@ public class Pdb {
 	HashMap<Integer,Integer> atomser2resser;
 	HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
 	String sequence="";
-	String accode="";
+	public String accode="";
     // given "external" pdb chain code, i.e. the classic pdb code ("NULL" if it is blank in original pdb file)	
 	String chaincode="";
 	int model=DEFAULT_MODEL;
