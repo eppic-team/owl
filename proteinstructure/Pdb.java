@@ -114,6 +114,7 @@ public class Pdb {
 		MsdsdInfo mymsdsdinfo = new MsdsdInfo(accode,chaincode,model,db);
 		ArrayList<ArrayList> resultset = mymsdsdinfo.read_atomData();
 		sequence = mymsdsdinfo.read_seq();
+		chain = mymsdsdinfo.chain;
 		mymsdsdinfo.close();
 
 		for (ArrayList result:resultset){
