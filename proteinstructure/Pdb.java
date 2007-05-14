@@ -31,7 +31,7 @@ public class Pdb {
     // Our internal chain identifier (taken from dbs or pdb):
     // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
     // - in reading from pdb file it gets set to whatever parsed from the pdb file
-	String chain;
+	public String chain;
 	
 	public static int DEFAULT_MODEL=1;
 	
