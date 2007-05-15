@@ -27,7 +27,7 @@ public class Graph {
 	ArrayList<Contact> contacts;
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
-	String sequence;
+	public String sequence;
 	public String accode;
 	public String chain;
 	public String chaincode=""; // when reading graph from file the field will be filled, otherwise no

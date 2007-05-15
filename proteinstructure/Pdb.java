@@ -21,11 +21,11 @@ public class Pdb {
 	HashMap<Integer,Double[]> atomser2coord;
 	HashMap<Integer,Integer> atomser2resser;
 	HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
-	String sequence="";
+	public String sequence="";
 	public String accode="";
     // given "external" pdb chain code, i.e. the classic pdb code ("NULL" if it is blank in original pdb file)	
-	String chaincode="";
-	int model=DEFAULT_MODEL;
+	public String chaincode="";
+	public int model=DEFAULT_MODEL;
 	String db;
 	
     // Our internal chain identifier (taken from dbs or pdb):
