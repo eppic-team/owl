@@ -38,19 +38,31 @@ public class ContactMap {
 	 */
 	public ContactMap(ArrayList<Contact> contacts, TreeMap<Integer,String> residues, String sequence) {
 		this.residues=residues;
-		// we create residueTypes and residueNums arrays from full sequence string
-		residueTypes = new String[sequence.length()];
-		residueNums = new Integer[sequence.length()];
-		for (int i=0;i<sequence.length();i++){
-			residueTypes[i] = String.valueOf(sequence.charAt(i));
-			residueNums[i] = i+1;
-		}		
-		// we initialise nums2serials using residues and residueNums
-		nums2serials = new HashMap<Integer,Integer>();
-		for (int i=0;i<residueNums.length;i++){
-			// nums2serials must only contain the standard observed aa, so only members of residues TreeMap
-			if (residues.containsKey(residueNums[i])){
-				nums2serials.put(residueNums[i],i);
+		if (sequence.equals("")){ // no sequence given: we use residues only to initialise arrays
+			residueTypes = new String[residues.size()];
+			residueNums = new Integer[residues.size()];
+			int i=0;
+			for (int num:residues.keySet()){
+				residueNums[i]=num;
+				residueTypes[i]=residues.get(num);
+				nums2serials.put(num, i);
+				i++;
+			}
+		} else { // if sequence given (full sequence): we use residues+sequence to initialise arrays
+			// we create residueTypes and residueNums arrays from full sequence string
+			residueTypes = new String[sequence.length()];
+			residueNums = new Integer[sequence.length()];
+			for (int i=0;i<sequence.length();i++){
+				residueTypes[i] = String.valueOf(sequence.charAt(i));
+				residueNums[i] = i+1;
+			}		
+			// we initialise nums2serials using residues and residueNums
+			nums2serials = new HashMap<Integer,Integer>();
+			for (int i=0;i<residueNums.length;i++){
+				// nums2serials must only contain the standard observed aa, so only members of residues TreeMap
+				if (residues.containsKey(residueNums[i])){
+					nums2serials.put(residueNums[i],i);
+				}
 			}
 		}
 		// initialisation of l, numObsStandAA, t, effT from 4 above

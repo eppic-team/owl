@@ -70,6 +70,9 @@ public class Graph {
 		this.cutoff=cutoff;
 		this.accode=accode;
 		this.ct=ct;
+		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
+		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
+		this.sequence=""; 
 		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
 		if (ct.contains("/")){
 			directed=true;
@@ -93,6 +96,8 @@ public class Graph {
 	public Graph (String contactsfile, double cutoff,String ct) throws IOException, FileNotFoundException{
 		this.cutoff=cutoff;
 		this.ct=ct;
+		// we set the sequence to blank when we read from file as we don't have the full sequence
+		this.sequence="";
 		if (ct.contains("/")){
 			directed=true;
 		}
@@ -113,6 +118,7 @@ public class Graph {
 	}
 
 	public void read_contacts_from_file (String contactsfile) throws FileNotFoundException, IOException {
+		//TODO eventually should read also nodes: either from file or obtain them from contacts (that would give only anyway nodes with contacts)
 		contacts = new ArrayList<Contact>();
 		System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
@@ -137,8 +143,8 @@ public class Graph {
 	public void read_graph_from_db(MySQLConnection conn){
 		contacts = new ArrayList<Contact>();
 		nodes = new TreeMap<Integer, String>();
-		sequence = "";
 		try {
+			// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
 			String sql="SELECT i_num,j_num FROM single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
@@ -156,7 +162,6 @@ public class Graph {
 				int num=rsst.getInt(1);
 				String res=rsst.getString(2);
 				nodes.put(num, AA.oneletter2threeletter(res));
-				sequence+=res;
 			}
 			rsst.close();
 			stmt.close();
