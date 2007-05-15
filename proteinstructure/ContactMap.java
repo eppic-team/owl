@@ -3,6 +3,7 @@ import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.lang.Math;
+import java.util.Collections;
 
 public class ContactMap {
 	
@@ -39,13 +40,23 @@ public class ContactMap {
 	public ContactMap(ArrayList<Contact> contacts, TreeMap<Integer,String> residues, String sequence) {
 		this.residues=residues;
 		if (sequence.equals("")){ // no sequence given: we use residues only to initialise arrays
-			residueTypes = new String[residues.size()];
-			residueNums = new Integer[residues.size()];
 			int i=0;
-			for (int num:residues.keySet()){
+			int maxnum = Collections.max(residues.keySet());
+			residueTypes = new String[maxnum];
+			residueNums = new Integer[maxnum];
+			// if residues TreeMap has correct residue numbering then this should take care of gaps, except for gaps at the end of the sequence
+			for (int num=1;num<=maxnum;num++) {
+				// residueNums will contain all nums starting from 1 to the maxnum
 				residueNums[i]=num;
-				residueTypes[i]=residues.get(num);
-				nums2serials.put(num, i);
+				if (residues.containsKey(num)) {
+					// we put the observed nums into residueTypes
+					residueTypes[i]=residues.get(num);
+					// in nums2serials we want only observed residues thus we only add nums that are in residues TreeMap
+					nums2serials.put(num, i);
+				} else {
+					// and for the unobserved nums we use an "X" for the residue type
+					residueTypes[i]="X";
+				}
 				i++;
 			}
 		} else { // if sequence given (full sequence): we use residues+sequence to initialise arrays

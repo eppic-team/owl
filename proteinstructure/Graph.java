@@ -24,8 +24,8 @@ public class Graph {
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
 	String sequence;
-	String accode;
-	String chain;
+	public String accode;
+	public String chain;
 	double cutoff;
 	String ct;
 	boolean directed=false;
