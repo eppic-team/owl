@@ -31,8 +31,8 @@ public class Graph {
 	public String accode;
 	public String chain;
 	public String chaincode=""; // when reading graph from file the field will be filled, otherwise no
-	double cutoff;
-	String ct;
+	public double cutoff;
+	public String ct;
 	boolean directed=false;
 	
 	// these 2 fields only used when reading from db
