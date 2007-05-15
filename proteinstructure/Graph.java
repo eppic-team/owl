@@ -11,6 +11,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import tools.MySQLConnection;
 
 
@@ -19,6 +21,8 @@ public class Graph {
 	public final static String MYSQLSERVER="white";
 	public final static String MYSQLUSER=getUserName();
 	public final static String MYSQLPWD="nieve";
+	
+	public final static String GRAPHFILEFORMATVERSION = "1.0";
 
 	ArrayList<Contact> contacts;
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
@@ -26,6 +30,7 @@ public class Graph {
 	String sequence;
 	public String accode;
 	public String chain;
+	public String chaincode=""; // when reading graph from file the field will be filled, otherwise no
 	double cutoff;
 	String ct;
 	boolean directed=false;
@@ -85,23 +90,22 @@ public class Graph {
 
 	/**
 	 * Constructs Graph object by reading a file with contacts
-	 * An object created with this constructor will be missing the fields sequence and nodes
-	 * That means it's not possible to get a ContactMap from it using getCM because CM needs both sequence and nodes
+	 * If the contacts file doesn't have the sequence then the graph object won't have sequence or nodes
+	 * That means it won't be possible to get a ContactMap from it using getCM because CM needs both sequence and nodes
 	 * @param contactsfile
-	 * @param cutoff
-	 * @param ct
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 */
-	public Graph (String contactsfile, double cutoff,String ct) throws IOException, FileNotFoundException{
-		this.cutoff=cutoff;
-		this.ct=ct;
+	public Graph (String contactsfile) throws IOException, FileNotFoundException{
 		// we set the sequence to blank when we read from file as we don't have the full sequence
+		// if sequence is present in contactsfile then is read from there
 		this.sequence="";
+		this.ct="";
+		this.cutoff=0.0;
 		if (ct.contains("/")){
 			directed=true;
 		}
-		read_contacts_from_file(contactsfile);
+		read_graph_from_file(contactsfile);
 	}
 
 	//TODO implement (from python) write_graph_to_db, do we really need it here??
@@ -116,19 +120,67 @@ public class Graph {
 		}
 		return user;
 	}
-
-	public void read_contacts_from_file (String contactsfile) throws FileNotFoundException, IOException {
-		//TODO eventually should read also nodes: either from file or obtain them from contacts (that would give only anyway nodes with contacts)
+	
+	public void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException {
 		contacts = new ArrayList<Contact>();
 		System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		String line;
 		while ((line = fcont.readLine() ) != null ) {
-			int i = Integer.parseInt(line.split("\\s+")[0]);
-			int j = Integer.parseInt(line.split("\\s+")[1]);
-			contacts.add(new Contact(i,j));
+			Pattern p = Pattern.compile("^#");
+			Matcher m = p.matcher(line);
+			if (m.find()){
+//				Pattern ps = Pattern.compile("^#VER: (\\d\\.\\d)");
+//				Matcher ms = ps.matcher(line);
+//				if (ms.find()){
+//					if (!ms.group(1).equals(GRAPHFILEFORMATVERSION)){
+//						throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version");
+//					}
+//				}
+				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
+				Matcher ms = ps.matcher(line);
+				if (ms.find()){
+					sequence=ms.group(1);
+				}
+				ps = Pattern.compile("^#PDB:\\s*(\\w+)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					accode=ms.group(1);
+				}
+				ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					chaincode=ms.group(1);
+				}
+				ps = Pattern.compile("^#CHAIN:\\s*(\\w)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					chain=ms.group(1);
+				}				
+				ps = Pattern.compile("^#CT:\\s*([a-zA-Z/]+)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					ct=ms.group(1);
+				}												
+				ps = Pattern.compile("^#CUTOFF:\\s*(\\d+\\.\\d+)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					cutoff=Double.parseDouble(ms.group(1));
+				}								
+			}
+			else{			
+				int i = Integer.parseInt(line.split("\\s+")[0]);
+				int j = Integer.parseInt(line.split("\\s+")[1]);
+				contacts.add(new Contact(i,j));
+			}
 		}
 		fcont.close();
+		nodes = new TreeMap<Integer, String>();
+		for (int i=0;i<sequence.length();i++){
+			String letter = String.valueOf(sequence.charAt(i));
+			nodes.put(i+1, letter);
+		}		
+
 	}
 	
 	/**
@@ -228,7 +280,24 @@ public class Graph {
 		}
 		Out.close();		
 	}
-	
+
+	public void write_graph_to_file (String outfile) throws IOException {
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
+		Out.println("#VER: "+GRAPHFILEFORMATVERSION);
+		Out.println("#SEQUENCE: "+sequence);
+		Out.println("#PDB: "+accode);
+		Out.println("#PDB CHAIN CODE: "+chaincode);
+		Out.println("#CHAIN: "+chain);
+		Out.println("#CT: "+ct);
+		Out.println("#CUTOFF: "+cutoff);
+		for (Contact pair:contacts){
+			int i_resser=pair.i;
+			int j_resser=pair.j;
+			Out.println(i_resser+"\t"+j_resser);
+		}
+		Out.close();		
+	}
+
 	public ContactMap getCM() {
 		// residues is the map from residue nums to residue types used in ContactMap class, i.e. it is the same as Pdb.resser2restype or Graph.nodes
 		TreeMap<Integer,String> residues = new TreeMap<Integer,String>();
