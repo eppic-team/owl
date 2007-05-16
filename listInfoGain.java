@@ -28,8 +28,8 @@ public class listInfoGain {
 		int l = (int)((nbhood.length()-1)/2); 
 		int N = 1; 
 			System.out.println("ListInfoGain");
-			System.out.print("0 - ("+nbhood+")("+l+") "); 
-			entropy = getEntropy( nbhood); 
+			System.out.print("0 - (%x%)("+l+") "); 
+			entropy = getEntropy( "%x%"); 
 			System.out.println( entropy + " bits."); 
 			System.out.println("Symbols in nbhood :"+l); 
 			
@@ -41,13 +41,14 @@ public class listInfoGain {
 				
 				if (middle.equals("%x")) { // switch from N to C of X  
 					N = -1; 
+					newhood = "%x%"; 
 				} else  {
 				   if (N < 0) // we are in the C-terminal section 
 				       newhood = "%x"+middle+"%"; 
 				   else // N terminal (before X) 
 					   newhood = middle+"%x%";
 				} // end if    
-				System.out.print( newhood); 
+				System.out.print( " -> " + newhood); 
 				newentropy = getEntropy( newhood); 
 				gain = newentropy-entropy; 
 				System.out.println( " : "+newentropy +"bits, gain="+gain);
