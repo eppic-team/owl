@@ -87,6 +87,26 @@ public class Graph {
 		read_graph_from_db(conn); // gets contacts, nodes and sequence
 		conn.close();
 	}
+	
+	/**
+	 * Constructs Graph object from graph db, given the graphid
+	 * @param dbname
+	 * @param graphid
+	 */
+	public Graph(String dbname,int graphid) throws GraphIdNotFoundError{
+		this.graphid=graphid;
+		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
+		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
+		this.sequence="";
+		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,dbname);
+		read_graph_from_db(conn); // gets contacts, nodes and sequence
+		get_db_graph_info(conn); // gets accode, chaincode, chain, ct and cutoff from db (from graph_id)
+		conn.close();
+		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
+		if (ct.contains("/")){
+			directed=true;
+		}
+	}
 
 	/**
 	 * Constructs Graph object by reading a file with contacts
@@ -175,10 +195,11 @@ public class Graph {
 			}
 		}
 		fcont.close();
+		// if sequence was given we take nodes from it
 		nodes = new TreeMap<Integer, String>();
 		for (int i=0;i<sequence.length();i++){
 			String letter = String.valueOf(sequence.charAt(i));
-			nodes.put(i+1, letter);
+			nodes.put(i+1, AA.oneletter2threeletter(letter));
 		}		
 
 	}
@@ -189,7 +210,7 @@ public class Graph {
 	 * chain_graph, single_model_graph, single_model_node, single_model_edge
 	 * We don't care here about the origin of the data (msdsd, pdbase, predicted) for the generation of the graph as long as it follows our data format
 	 * We read both edges and nodes from single_model_edge and single_model_node.
-	 * The sequence is taken from nodes, thus it won't have unobserved or non standard aas.
+	 * The sequence is set to blank, as we can't get the full sequence from graph db
 	 * @param conn
 	 */
 	public void read_graph_from_db(MySQLConnection conn){
@@ -271,6 +292,47 @@ public class Graph {
 		
 	}
 	
+	public void get_db_graph_info(MySQLConnection conn) throws GraphIdNotFoundError {
+		try {
+			int pgraphid=0;
+			String sql="SELECT pgraph_id,CT,dist FROM single_model_graph WHERE graph_id="+graphid;
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			int check=0;
+			while (rsst.next()) {
+				check++;
+				pgraphid=rsst.getInt(1);
+				ct=rsst.getString(2);
+				if (ct.equals("BB+SC+BB/SC")) ct="ALL";
+				cutoff=rsst.getDouble(3);
+			}
+			if (check!=1){
+				System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
+				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db"+conn.getDbname());
+			}
+			rsst.close();
+			stmt.close();
+			sql="SELECT accession_code, chain_pdb_code, pchain_code FROM chain_graph WHERE graph_id="+pgraphid;
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			check=0;
+			while (rsst.next()){
+				check++;
+				accode=rsst.getString(1);
+				chaincode=rsst.getString(2);
+				chain=rsst.getString(3);
+			}
+			if (check!=1){
+				System.err.println("No accession_code+chain_pdb_code+pchain_code match or more than 1 match for graph_id="+pgraphid+" in chain_graph table");
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+	}
+	
 	public void write_contacts_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		for (Contact pair:contacts){
@@ -299,11 +361,12 @@ public class Graph {
 	}
 
 	public ContactMap getCM() {
-		// residues is the map from residue nums to residue types used in ContactMap class, i.e. it is the same as Pdb.resser2restype or Graph.nodes
+		// residues is the map from residue nums to residue types used in ContactMap class, 
+		// i.e. it is the same as Pdb.resser2restype or Graph.nodes, BUT!!! residues has one letter residue codes as opposed to Pdb.resser2restype or Graph.nodes!!
 		TreeMap<Integer,String> residues = new TreeMap<Integer,String>();
 		// we copy residues from nodes (deep copy) 
 		for (int node:nodes.keySet()){
-			residues.put(node, nodes.get(node));
+			residues.put(node, AA.threeletter2oneletter(nodes.get(node)));
 		}
 		// check if we are in directed or undirected case. If undirected we fill the opposite contacts to pass a full list of contacts to ContactMap (which contains full matrix)
 		ArrayList<Contact> contacts2pass = new ArrayList<Contact>();
