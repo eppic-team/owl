@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 
 public class Pdb {
 	
+	public final static int DEFAULT_MODEL=1;
+	
 	HashMap<String,Integer> resser_atom2atomserial;
 	HashMap<Integer,String> resser2restype;
 	HashMap<Integer,Double[]> atomser2coord;
@@ -30,23 +32,65 @@ public class Pdb {
 	
     // Our internal chain identifier (taken from dbs or pdb):
     // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-    // - in reading from pdb file it gets set to whatever parsed from the pdb file
+    // - in reading from pdb file it gets set to whatever parsed from the pdb file (i.e. can be also ' ')
 	public String chain;
 	
-	public static int DEFAULT_MODEL=1;
-	
+	/**
+	 * Constructs Pdb object given accession code and pdb chain code. Model will be DEFAULT_MODEL
+	 * Takes data from default pdbase-like database: PdbaseInfo.pdbaseDB
+	 * @param accode
+	 * @param chaincode
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws MsdsdInconsistentResidueNumbersError
+	 */
 	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this(accode,chaincode,DEFAULT_MODEL,PdbaseInfo.pdbaseDB);		
 	}
 
+	/**
+	 * Constructs Pdb object given accession code, pdb chain code and a model serial
+	 * Takes data from default pdbase-like database: PdbaseInfo.pdbaseDB
+	 * @param accode
+	 * @param chaincode
+	 * @param model_serial
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws MsdsdInconsistentResidueNumbersError
+	 */
 	public Pdb (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this(accode,chaincode,model_serial,PdbaseInfo.pdbaseDB);		
 	}
-
+	
+	/**
+	 * Constructs Pdb object given accession code, pdb chain code and a source db for the data. Model will be DEFAULT_MODEL
+	 * The db can be pdbase-like or msdsd-like
+	 * @param accode
+	 * @param chaincode
+	 * @param db
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws MsdsdInconsistentResidueNumbersError
+	 */
 	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this(accode,chaincode,DEFAULT_MODEL,db);		
 	}
 
+	/**
+	 * Constructs Pdb object given accession code, pdb chain code, model serial and a source db for the data.
+	 * The db can be pdbase-like or msdsd-like 
+	 * @param accode
+	 * @param chaincode
+	 * @param model_serial
+	 * @param db
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws MsdsdInconsistentResidueNumbersError
+	 */
 	public Pdb (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
 		this.accode=accode;
 		this.chaincode=chaincode;
@@ -61,14 +105,32 @@ public class Pdb {
 		}
 	}
 	
-	public Pdb (String pdbfile) throws FileNotFoundException, IOException {
-		this(pdbfile,DEFAULT_MODEL);
+	/**
+	 * Constructs Pdb object reading from pdb file given pdb chain code. Model will be DEFAULT_MODEL
+	 * @param pdbfile
+	 * @param chaincode
+	 * @param dummy dummy parameter to distinguish the method from other with the same signature
+	 * TODO dummy parameter is a dirty hack, must solve it in other way: subclassing
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	public Pdb (String pdbfile, String chaincode, boolean dummy) throws FileNotFoundException, IOException {
+		this(pdbfile,chaincode,DEFAULT_MODEL,dummy);
 	}
-
-	//TODO implement read of pdb file given model
-	public Pdb (String pdbfile, int model_serial) throws FileNotFoundException, IOException {
-		this.accode="";
+	
+	/**
+	 * Constructs Pdb object reading from pdb file given pdb chain code and model serial
+	 * @param pdbfile
+	 * @param chaincode
+	 * @param model_serial
+	 * @param dummy dummy parameter to distinguish the method from other with the same signature
+	 * TODO dummy parameter is a dirty hack, must solve it in other way: subclassing
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	public Pdb (String pdbfile, String chaincode, int model_serial, boolean dummy) throws FileNotFoundException, IOException {
 		this.model=model_serial;
+		this.chaincode=chaincode;
 		read_pdb_data_from_file(pdbfile);
 	}
 
@@ -142,7 +204,9 @@ public class Pdb {
 	
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file
-	 * NOTE: for now they must be single model, single chain files!! Nothing else implemented!
+	 * chain gets set to internal identifier: if input chain code NULL then chain will be ' '
+	 * accode gets set to the one parsed in HEADER or to 'Unknown' if not found
+	 * sequence gets set to the sequence read from ATOM lines (i.e. observed resdiues only)
 	 * @param pdbfile
 	 * @throws FileNotFoundException
 	 * @throws IOException
@@ -152,21 +216,43 @@ public class Pdb {
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
-
+		boolean empty = true; // controls whether we don't find any atom line for given chaincode and model
+		// NULL is a blank chain code in pdb files
+		String chaincodestr=chaincode;
+		if (chaincode.equals("NULL")) chaincodestr=" ";
+		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		String line;
 		while ((line = fpdb.readLine() ) != null ) {
-			Pattern p = Pattern.compile("^ATOM");
+			Pattern p = Pattern.compile("^HEADER");
 			Matcher m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type chain res_ser     x     y     z
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}(.)(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				Pattern ph = Pattern.compile("^HEADER.{56}(\\d\\w{3})");
+				Matcher mh = ph.matcher(line);
+				if (mh.find()) {
+					accode=mh.group(1).toLowerCase();
+				} else {
+					accode="Unknown";
+				}
+			}
+			p = Pattern.compile("^MODEL\\s+(\\d+)");
+			m = p.matcher(line);
+			if (m.find()){
+				thismodel=Integer.parseInt(m.group(1));
+			}
+			if (thismodel!=model) continue; // we skip reading of atom lines if we are not in the desired model
+			p = Pattern.compile("^ATOM");
+			m = p.matcher(line);
+			if (m.find()){
+				//                                 serial    atom   res_type       chain          res_ser     x     y     z
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}("+chaincodestr+")(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
+					empty=false;
 					int atomserial=Integer.parseInt(ml.group(1).trim());
 					String atom = ml.group(2).trim();
 					String res_type = ml.group(3).trim();
-					chain = ml.group(4).trim();
+					chain = ml.group(4); //we don't trim as we want to keep " " as the NULL chain code
 					int res_serial = Integer.parseInt(ml.group(5).trim());
 					double x = Double.parseDouble(ml.group(6).trim());
 					double y = Double.parseDouble(ml.group(7).trim());
@@ -181,11 +267,12 @@ public class Pdb {
 						if (atomlist.contains(atom)){
 							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 						}
-					}
-				}				
+					}					
+				}
 			}
 		}
 		fpdb.close();
+		if (empty) System.err.println("Couldn't find any atom line for given chaincode: "+chaincode+", model: "+model);
 		// now we read the sequence from the resser2restype HashMap
 		// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
 		ArrayList<Integer> ressers = new ArrayList<Integer>();
@@ -198,28 +285,25 @@ public class Pdb {
 			String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
 			sequence += oneletter;
 		}
-        // finally we set accode and chaincode to unknown 
-        //TODO: we should parse accode and chaincode from appropriate fields in pdb file, 
-		// problem: in case of a non-original pdb file there won't be accession code		
-		accode="Unknown";
-		chaincode="Unknown";
 	}
 
+	/**
+	 * Dumps coordinate data into a file in pdb format (ATOM lines only)
+	 * The chain dumped is the value of the chain field, i.e. our internal chain identifier for Pdb objects
+	 * @param outfile
+	 * @throws IOException
+	 */
 	public void dump2pdbfile(String outfile) throws IOException {
-		String chainstr=chain;
-		if (chain.equals("NULL")){
-			chainstr="A";
-		}
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		Out.println("HEADER  Dumped from "+db+". pdb accession code="+accode+", pdb chain code="+chaincode);
+		Out.println("HEADER  Dumped from "+db+". pdb accession code="+accode+", chain='"+chain+"'");
 		for (String resser_atom:resser_atom2atomserial.keySet()){
 			int atomserial = resser_atom2atomserial.get(resser_atom);
 			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
 			String atom = resser_atom.split("_")[1];
 			String res_type = resser2restype.get(res_serial);
 			Double[] coords = atomser2coord.get(atomserial);
-			Object[] fields = {atomserial, atom, res_type, chainstr, res_serial, coords[0], coords[1], coords[2]};
+			Object[] fields = {atomserial, atom, res_type, chain, res_serial, coords[0], coords[1], coords[2]};
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
