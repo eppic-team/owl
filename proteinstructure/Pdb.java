@@ -217,9 +217,9 @@ public class Pdb {
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		boolean empty = true; // controls whether we don't find any atom line for given chaincode and model
-		// NULL is a blank chain code in pdb files
-		String chaincodestr=chaincode;
-		if (chaincode.equals("NULL")) chaincodestr=" ";
+		// we set chain to chaincode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
+		chain=chaincode;
+		if (chaincode.equals("NULL")) chain=" ";
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		String line;
@@ -244,19 +244,18 @@ public class Pdb {
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type       chain          res_ser     x     y     z
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}("+chaincodestr+")(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				//                                 serial    atom   res_type      chain res_ser     x     y     z
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chain+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					empty=false;
 					int atomserial=Integer.parseInt(ml.group(1).trim());
 					String atom = ml.group(2).trim();
 					String res_type = ml.group(3).trim();
-					chain = ml.group(4); //we don't trim as we want to keep " " as the NULL chain code
-					int res_serial = Integer.parseInt(ml.group(5).trim());
-					double x = Double.parseDouble(ml.group(6).trim());
-					double y = Double.parseDouble(ml.group(7).trim());
-					double z = Double.parseDouble(ml.group(8).trim());
+					int res_serial = Integer.parseInt(ml.group(4).trim());
+					double x = Double.parseDouble(ml.group(5).trim());
+					double y = Double.parseDouble(ml.group(6).trim());
+					double z = Double.parseDouble(ml.group(7).trim());
 					Double[] coords = {x, y, z};
 					ArrayList<String> aalist=AA.aas();
 					if (aalist.contains(res_type)) {
