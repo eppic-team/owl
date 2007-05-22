@@ -122,6 +122,10 @@ public class Graph {
 		this.sequence="";
 		this.ct="";
 		this.cutoff=0.0;
+		// we initialise accode, chain and chaincode to empty strings in case the file doesn't specify then
+		this.accode="";
+		this.chain="";
+		this.chaincode="";
 		if (ct.contains("/")){
 			directed=true;
 		}
