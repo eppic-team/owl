@@ -376,7 +376,11 @@ public class Graph {
 		// check if we are in directed or undirected case. If undirected we fill the opposite contacts to pass a full list of contacts to ContactMap (which contains full matrix)
 		ArrayList<Contact> contacts2pass = new ArrayList<Contact>();
 		if (directed){
-			contacts2pass=contacts;
+			for (Contact cont:contacts){
+				int i_resser = cont.i;
+				int j_resser = cont.j;
+				contacts2pass.add(new Contact(i_resser,j_resser));
+			}			
 		} else {
 			for (Contact cont:contacts){
 				int i_resser = cont.i;
