@@ -50,13 +50,14 @@ public class Graph {
 	 * @param accode
 	 * @param chain
 	 */
-	public Graph (ArrayList<Contact> contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain) {
+	public Graph (ArrayList<Contact> contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain, String chaincode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
 		this.sequence=sequence;
 		this.accode=accode;
 		this.chain=chain;
+		this.chaincode=chaincode;
 		this.ct=ct;
 		if (ct.contains("/")){
 			directed=true;
