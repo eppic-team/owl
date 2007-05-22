@@ -325,6 +325,8 @@ public class Graph {
 				check++;
 				accode=rsst.getString(1);
 				chaincode=rsst.getString(2);
+				// java returns a null if the field is a database null, we want actually the "NULL" string in that case
+				if (chaincode==null) chaincode="NULL";
 				chain=rsst.getString(3);
 			}
 			if (check!=1){
