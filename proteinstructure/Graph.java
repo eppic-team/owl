@@ -34,7 +34,7 @@ public class Graph {
 	public String chaincode="";
 	public double cutoff;
 	public String ct;
-	boolean directed=false;
+	public boolean directed=false;
 	
 	// fullLength is length of full sequence or:
 	// -if sequence not provided (when reading from db): length of everything except possible unobserved residues at end of chain
