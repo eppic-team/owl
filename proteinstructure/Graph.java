@@ -428,5 +428,37 @@ public class Graph {
 		return cm;
 	}
 
+	/**
+	 * Gets node neighbourhood given a residue serial
+	 * @param resser
+	 * @return
+	 */
+	public TreeMap<Integer,String> getNodeNbh(int resser){
+		TreeMap<Integer,String> nbh = new TreeMap<Integer, String>();
+		//this could be implemented using the contact map matrix and scanning through 1 column/row
+		//it would be just slightly faster, here we do 2*numContacts iterations, using matrix would be only fullLength iterations
+		for (Contact cont:contacts){
+			if (cont.i==resser) nbh.put(cont.j, nodes.get(cont.j));
+			if (cont.j==resser) nbh.put(cont.i, nodes.get(cont.i));
+		}
+		return nbh;
+	}
+	
+	/**
+	 * Gets edge neighbourhood (common neighbourhood) given a residue serial pair
+	 * @param i_resser
+	 * @param j_resser
+	 * @return
+	 */
+	public TreeMap<Integer,String> getEdgeNbh(int i_resser, int j_resser){
+		TreeMap<Integer,String> nbh = new TreeMap<Integer, String>();
+		TreeMap<Integer,String> i_nbhd = getNodeNbh(i_resser);
+		TreeMap<Integer,String> j_nbhd = getNodeNbh(j_resser);
+		for (int resser:i_nbhd.keySet()) {
+			if (j_nbhd.containsKey(resser)) nbh.put(resser, i_nbhd.get(resser));
+		}
+		return nbh;
+	}
+
 }
 
