@@ -14,40 +14,30 @@ public class testPdb {
 	 */
 	
 	public static void main(String[] args) throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError{
-		
+		String accode="1bxy";
+		String chaincode="A";
 		// data from pdbase
 		System.out.println("loading structure from pdbase");
-		Pdb pdb = new Pdb("1bxy","A"); // pdbase is default source for constructor, a name for a pdbase database can also be passed
+		Pdb pdb = new Pdb(accode,chaincode); // pdbase is default source for constructor, a name for a pdbase database can also be passed
 		System.out.println("dumping structure to pdb file");
 		pdb.dump2pdbfile("testpdb.txt");
+		String chain = pdb.chain;
 		System.out.println("getting graph");
 		Graph graph = pdb.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
 		graph.write_contacts_to_file("test.txt");
-		System.out.println("getting contact map object from graph");
-		ContactMap cm = graph.getCM();
-		ArrayList<Contact> testconts = new ArrayList<Contact>();
-		for (int i=1;i<3;i++){
-			for (int j=1;j<11;j++){
-				testconts.add(new Contact(i,j));
+		System.out.println("getting start of contact map matrix from graph");
+		int[][] mat = graph.getIntMatrix();
+		for (int i=0;i<10;i++){
+			for (int j=0;j<10;j++){
+				System.out.print(mat[i][j]);
 			}
-		}
-		System.out.println("printing some common neighbours");
-		for (Contact con:testconts){
-			int i=con.i;
-			int j=con.j;
-			if (i!=j){
-				TreeMap<Integer,String> cns =cm.getComNbs(i,j);
-				System.out.println("\n"+i+","+j);
-				for (int k:cns.keySet()){
-					System.out.print(k+": "+cns.get(k)+", ");
-				}
-			}
+			System.out.println();
 		}
 
 		// data from msdsd
 		System.out.println("loading structure from msdsd");
-		Pdb pdb2 = new Pdb("1bxy","A","msdsd_00_07_a");
+		Pdb pdb2 = new Pdb(accode,chaincode,"msdsd_00_07_a");
 		System.out.println("dumping structure to pdb file");
 		pdb2.dump2pdbfile("testpdb2.txt");
 		System.out.println("getting graph");
@@ -57,7 +47,7 @@ public class testPdb {
 
 		// data from pdb
 		System.out.println("reading from dumped pdb file");
-		Pdb pdb3 = new Pdb("testpdb.txt"); // we read from the file dumped from pdbase
+		Pdb pdb3 = new Pdb("testpdb.txt",chain,false); // we read from the file dumped from pdbase, not that dumped file contains internal chain identifier
 		System.out.println("getting graph");
 		Graph graph3 = pdb3.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
