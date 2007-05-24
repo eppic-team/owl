@@ -409,7 +409,6 @@ public class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-        // NOTE: we pass to the graph object the chain (internal chain identifier) not the pdb chain code!
 		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,accode,chain,chaincode);
 		return graph;
 	}

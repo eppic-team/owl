@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,13 +28,21 @@ public class Graph {
 	ArrayList<Contact> contacts;
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
-	public String sequence;
+	public String sequence; // the full sequence (with unobserved residues and non-standard aas ='X')
 	public String accode;
 	public String chain;
-	public String chaincode=""; // when reading graph from file the field will be filled, otherwise no
+	public String chaincode="";
 	public double cutoff;
 	public String ct;
 	boolean directed=false;
+	
+	// fullLength is length of full sequence or:
+	// -if sequence not provided (when reading from db): length of everything except possible unobserved residues at end of chain
+	// -if sequence and nodes not provided (when reading from file and sequence field missing): length except possible unobserved residues at end of chain and possible nodes without contacts at end of chain
+	public int fullLength; 
+	public int obsLength;  // length without unobserved, non standard aas 
+	
+	public int numContacts;
 	
 	// these 2 fields only used when reading from db
 	int graphid=0;
@@ -59,6 +68,9 @@ public class Graph {
 		this.chain=chain;
 		this.chaincode=chaincode;
 		this.ct=ct;
+		this.fullLength=sequence.length();
+		this.obsLength=nodes.size();
+		this.numContacts=contacts.size();
 		if (ct.contains("/")){
 			directed=true;
 		}
@@ -87,6 +99,15 @@ public class Graph {
 		getgraphid(conn, chaincode); // initialises graphid, sm_id and chain
 		read_graph_from_db(conn); // gets contacts, nodes and sequence
 		conn.close();
+		this.obsLength=nodes.size();
+		if (!sequence.equals("")){
+			this.fullLength=sequence.length();
+		} else {
+			// if nodes TreeMap has correct residue numbering then this should get the right full length,
+			// we will only miss: gaps (unobserved residues) at the end of the sequence. Those we can't know unless full sequence is given
+			this.fullLength=Collections.max(nodes.keySet());
+		}
+		this.numContacts=contacts.size();
 	}
 	
 	/**
@@ -107,6 +128,15 @@ public class Graph {
 		if (ct.contains("/")){
 			directed=true;
 		}
+		this.obsLength=nodes.size();
+		if (!sequence.equals("")){
+			this.fullLength=sequence.length();
+		} else {
+			// if nodes TreeMap has correct residue numbering then this should get the right full length,
+			// we will only miss: gaps (unobserved residues) at the end of the sequence. Those we can't know unless full sequence is given
+			this.fullLength=Collections.max(nodes.keySet());
+		}
+		this.numContacts=contacts.size();
 	}
 
 	/**
@@ -130,7 +160,20 @@ public class Graph {
 		if (ct.contains("/")){
 			directed=true;
 		}
-		read_graph_from_file(contactsfile);
+		read_graph_from_file(contactsfile); // initialises contacts, and nodes (only if sequence is given)
+		if (!sequence.equals("")){
+			this.fullLength=sequence.length();
+			this.obsLength=nodes.size(); 
+		} else { 
+			// if contacts have correct residue numbering then this should get the right full length up to the maximum node that makes a contact,
+			// we will miss: nodes without contacts at the end of sequence and gaps (unobserved residues) at the end of the sequence.
+			// We don't know more without nodes and sequence
+			Contact maxCont = Collections.max(contacts);
+			this.fullLength= Math.max(maxCont.i,maxCont.j);
+			// in this case nodes has not been initialised so we set obsLength=fullLength as we don't have the information
+			this.obsLength=fullLength;  
+		}
+		this.numContacts=contacts.size();
 	}
 
 	//TODO implement (from python) write_graph_to_db, do we really need it here??
@@ -367,35 +410,23 @@ public class Graph {
 		Out.close();		
 	}
 
-	public ContactMap getCM() {
-		// residues is the map from residue nums to residue types used in ContactMap class, 
-		// i.e. it is the same as Pdb.resser2restype or Graph.nodes, BUT!!! residues has one letter residue codes as opposed to Pdb.resser2restype or Graph.nodes!!
-		TreeMap<Integer,String> residues = new TreeMap<Integer,String>();
-		// we copy residues from nodes (deep copy) 
-		for (int node:nodes.keySet()){
-			residues.put(node, AA.threeletter2oneletter(nodes.get(node)));
+	/**
+	 * Returns an int matrix with 1s for contacts and 0s for non contacts, i.e. the contact map
+	 * In non-crossed cases this should give us the upper half matrix (contacts are only j>i)
+	 * In crossed cases this gives us a full matrix (contacts are both j>i and i>j since they are directed)
+	 * @return
+	 */
+	public int[][] getIntMatrix(){
+		// this initialises the matrix to 0 (i.e. no contact)
+		int[][] cm = new int[fullLength][fullLength];
+		// we put a 1 for all given contacts
+		for (Contact cont:contacts){
+			int i_resser = cont.i;
+			int j_resser = cont.j;
+			cm[i_resser-1][j_resser-1]=1;
 		}
-		// check if we are in directed or undirected case. If undirected we fill the opposite contacts to pass a full list of contacts to ContactMap (which contains full matrix)
-		ArrayList<Contact> contacts2pass = new ArrayList<Contact>();
-		if (directed){
-			for (Contact cont:contacts){
-				int i_resser = cont.i;
-				int j_resser = cont.j;
-				contacts2pass.add(new Contact(i_resser,j_resser));
-			}			
-		} else {
-			for (Contact cont:contacts){
-				int i_resser = cont.i;
-				int j_resser = cont.j;
-				contacts2pass.add(new Contact(i_resser,j_resser));
-				contacts2pass.add(new Contact(j_resser,i_resser));
-			}
-		}
-		// construct the ContactMap object and return it
-		ContactMap cm = new ContactMap(contacts2pass,residues,sequence);
 		return cm;
-		
 	}
-	
+
 }
 
