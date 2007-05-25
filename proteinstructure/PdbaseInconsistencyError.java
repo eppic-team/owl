@@ -2,6 +2,11 @@ package proteinstructure;
 
 public class PdbaseInconsistencyError extends Exception {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public PdbaseInconsistencyError() {
 	}
 

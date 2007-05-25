@@ -2,6 +2,11 @@ package proteinstructure;
 
 public class MsdsdInconsistentResidueNumbersError extends Exception {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	public MsdsdInconsistentResidueNumbersError() {
 	}
 
