@@ -25,7 +25,7 @@ public class Graph {
 	
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 
-	ArrayList<Contact> contacts;
+	ContactList contacts;
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
 	public String sequence; // the full sequence (with unobserved residues and non-standard aas ='X')
@@ -44,6 +44,8 @@ public class Graph {
 	
 	public int numContacts;
 	
+	public boolean modified;
+	
 	// these 2 fields only used when reading from db
 	int graphid=0;
 	int sm_id=0;
@@ -59,7 +61,7 @@ public class Graph {
 	 * @param accode
 	 * @param chain
 	 */
-	public Graph (ArrayList<Contact> contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain, String chaincode) {
+	public Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain, String chaincode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -71,6 +73,7 @@ public class Graph {
 		this.fullLength=sequence.length();
 		this.obsLength=nodes.size();
 		this.numContacts=contacts.size();
+		this.modified=false;
 		if (ct.contains("/")){
 			directed=true;
 		}
@@ -108,6 +111,7 @@ public class Graph {
 			this.fullLength=Collections.max(nodes.keySet());
 		}
 		this.numContacts=contacts.size();
+		this.modified=false;
 	}
 	
 	/**
@@ -137,6 +141,7 @@ public class Graph {
 			this.fullLength=Collections.max(nodes.keySet());
 		}
 		this.numContacts=contacts.size();
+		this.modified=false;
 	}
 
 	/**
@@ -168,12 +173,12 @@ public class Graph {
 			// if contacts have correct residue numbering then this should get the right full length up to the maximum node that makes a contact,
 			// we will miss: nodes without contacts at the end of sequence and gaps (unobserved residues) at the end of the sequence.
 			// We don't know more without nodes and sequence
-			Contact maxCont = Collections.max(contacts);
-			this.fullLength= Math.max(maxCont.i,maxCont.j);
+			this.fullLength=contacts.getMaxNode();
 			// in this case nodes has not been initialised so we set obsLength=fullLength as we don't have the information
 			this.obsLength=fullLength;  
 		}
 		this.numContacts=contacts.size();
+		this.modified=false;
 	}
 
 	//TODO implement (from python) write_graph_to_db, do we really need it here??
@@ -190,7 +195,7 @@ public class Graph {
 	}
 	
 	public void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException {
-		contacts = new ArrayList<Contact>();
+		contacts = new ContactList();
 		System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		String line;
@@ -262,7 +267,7 @@ public class Graph {
 	 * @param conn
 	 */
 	public void read_graph_from_db(MySQLConnection conn){
-		contacts = new ArrayList<Contact>();
+		contacts = new ContactList();
 		nodes = new TreeMap<Integer, String>();
 		try {
 			// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
@@ -409,7 +414,39 @@ public class Graph {
 		}
 		Out.close();		
 	}
-
+	
+	/**
+	 * Gets list of contacts as a new ContactList (deep copied)
+	 * 
+	 */
+	public ContactList getContacts(){
+		ContactList newContacts = new ContactList();
+		for (Contact cont:contacts){
+			newContacts.add(new Contact(cont.i,cont.j));
+		}
+		return newContacts;
+	}
+	
+	/**
+	 * Gets TreeMap of nodes, deep copying  
+	 * 
+	 */
+	public TreeMap<Integer,String> getNodes(){
+		TreeMap<Integer,String> newNodes = new TreeMap<Integer,String>();
+		for (int resser:nodes.keySet()){
+			newNodes.put(resser, nodes.get(resser));
+		}
+		return newNodes;
+	}
+	
+	/**
+	 * Deep copies this Graph object returning new one
+	 * @return
+	 */
+	public Graph copy(){
+		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,accode,chain,chaincode);		
+	}
+	
 	/**
 	 * Returns an int matrix with 1s for contacts and 0s for non contacts, i.e. the contact map
 	 * In non-crossed cases this should give us the upper half matrix (contacts are only j>i)
@@ -454,11 +491,41 @@ public class Graph {
 		TreeMap<Integer,String> nbh = new TreeMap<Integer, String>();
 		TreeMap<Integer,String> i_nbhd = getNodeNbh(i_resser);
 		TreeMap<Integer,String> j_nbhd = getNodeNbh(j_resser);
-		for (int resser:i_nbhd.keySet()) {
-			if (j_nbhd.containsKey(resser)) nbh.put(resser, i_nbhd.get(resser));
+		if (j_nbhd.size()>=i_nbhd.size()) { //with this we will be slightly faster, always iterating through smallest TreeMap
+			for (int resser:i_nbhd.keySet()) {
+				if (j_nbhd.containsKey(resser)) nbh.put(resser, i_nbhd.get(resser));
+			}
+		} else {
+			for (int resser:j_nbhd.keySet()) {
+				if (i_nbhd.containsKey(resser)) nbh.put(resser, j_nbhd.get(resser));			
+			}
 		}
 		return nbh;
 	}
 
+	public void addEdge(Contact cont){
+		contacts.add(cont);
+		numContacts++;
+		modified=true;
+	}
+	
+	public void delEdge(Contact cont){
+		contacts.remove(cont);
+		numContacts--;
+		modified=true;
+	}
+	
+	public void restrictContactsToMaxRange(int range){
+		for (Contact cont:contacts){
+			if (cont.getRange()>range) delEdge(cont);
+		}
+	}
+	
+	public void restrictContactsToMinRange(int range){
+		for (Contact cont:contacts){
+			if (cont.getRange()<range) delEdge(cont);
+		}
+	}
+	
 }
 

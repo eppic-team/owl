@@ -39,5 +39,9 @@ public class Contact implements Comparable {
 		}
 		return eq;
 	}
+	
+	public int getRange(){
+		return Math.abs(this.i-this.j);
+	}
 }
 

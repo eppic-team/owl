@@ -387,7 +387,7 @@ public class Pdb {
 	 */
 	public Graph get_graph(String ct, double cutoff){
 		TreeMap<Contact,Double> dist_matrix = calculate_dist_matrix(ct);
-		ArrayList<Contact> contacts = new ArrayList<Contact>();
+		ContactList contacts = new ContactList();
         // we loop here over all indices of dist_matrix, 
         // we took care already that in symmetric cases (i.e. single contact type, not crossed) we have only one side of the matrix and 
         // in asymmetrical cases (i.e. crossed cases) we have both sides of the matrix
