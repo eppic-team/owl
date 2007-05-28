@@ -154,7 +154,7 @@ public class MySQLConnection {
 	/*---------------------- methods -------------------------*/
 	
 	/** get user name from operating system (for use as database username) */
-	private static String getUserName() {
+	public static String getUserName() {
 		String user = null;
 		user = System.getProperty("user.name");
 		if(user == null) {
