@@ -83,6 +83,29 @@ public class MySQLConnection {
 	}
 
 	/**
+	 * Connect to database using the given server and dbName
+	 * Password taken from default, user name from unix user name
+	 * @param dbServer
+	 * @param dbName
+	 */
+	public MySQLConnection(String dbServer, String dbName) {
+		loadMySQLDriver(); 
+		host=dbServer;
+		user=getUserName();
+		port="";
+		dbname=dbName;
+		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		try {
+			conn = DriverManager.getConnection(connStr, user, password);
+		} catch (SQLException e) {
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+			System.err.println("VendorError:  " + e.getErrorCode());
+			e.printStackTrace();
+		} // end try/catch connection 		 		 		
+	}
+
+	/**
 	 * Connect to database using the given server, user, password, dbname and port
 	 * Only needed if mysql server uses a port different from the standard 3306
 	 * @param dbServer
@@ -129,6 +152,17 @@ public class MySQLConnection {
 	
 	
 	/*---------------------- methods -------------------------*/
+	
+	/** get user name from operating system (for use as database username) */
+	private static String getUserName() {
+		String user = null;
+		user = System.getProperty("user.name");
+		if(user == null) {
+			System.err.println("Could not get user name from operating system. Exiting");
+			System.exit(1);
+		}
+		return user;
+	}
 	
 	public static void loadMySQLDriver() {
 		try {
