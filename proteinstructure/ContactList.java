@@ -18,7 +18,7 @@ public class ContactList extends ArrayList<Contact> {
 	public int getMaxRange() {
 		int max=0;
 		for (Contact cont:this){
-			Math.max(max, cont.getRange());
+			max = Math.max(max, cont.getRange());
 		}
 		return max;
 	}
