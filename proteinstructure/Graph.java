@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -466,14 +465,24 @@ public class Graph {
 	}
 
 	/**
+	 * Gets a node's residue type given the residue serial
+	 * @param resser
+	 * @return
+	 */
+	public String getResType(int resser){
+		return nodes.get(resser);
+	}
+	
+	/**
 	 * Gets node neighbourhood given a residue serial
 	 * @param resser
 	 * @return
 	 */
-	public TreeMap<Integer,String> getNodeNbh(int resser){
-		TreeMap<Integer,String> nbh = new TreeMap<Integer, String>();
+	public NodeNbh getNodeNbh(int resser){
+		NodeNbh nbh = new NodeNbh(resser, getResType(resser));
 		//this could be implemented using the contact map matrix and scanning through 1 column/row
 		//it would be just slightly faster, here we do 2*numContacts iterations, using matrix would be only fullLength iterations
+		//however we would then have the overhead of creating the matrix
 		for (Contact cont:contacts){
 			if (cont.i==resser) nbh.put(cont.j, nodes.get(cont.j));
 			if (cont.j==resser) nbh.put(cont.i, nodes.get(cont.i));
@@ -487,10 +496,10 @@ public class Graph {
 	 * @param j_resser
 	 * @return
 	 */
-	public TreeMap<Integer,String> getEdgeNbh(int i_resser, int j_resser){
-		TreeMap<Integer,String> nbh = new TreeMap<Integer, String>();
-		TreeMap<Integer,String> i_nbhd = getNodeNbh(i_resser);
-		TreeMap<Integer,String> j_nbhd = getNodeNbh(j_resser);
+	public EdgeNbh getEdgeNbh(int i_resser, int j_resser){
+		EdgeNbh nbh = new EdgeNbh(i_resser, getResType(i_resser), j_resser, getResType(j_resser));
+		NodeNbh i_nbhd = getNodeNbh(i_resser);
+		NodeNbh j_nbhd = getNodeNbh(j_resser);
 		if (j_nbhd.size()>=i_nbhd.size()) { //with this we will be slightly faster, always iterating through smallest TreeMap
 			for (int resser:i_nbhd.keySet()) {
 				if (j_nbhd.containsKey(resser)) nbh.put(resser, i_nbhd.get(resser));
@@ -516,14 +525,22 @@ public class Graph {
 	}
 	
 	public void restrictContactsToMaxRange(int range){
+		ContactList edgesToDelete = new ContactList();
 		for (Contact cont:contacts){
-			if (cont.getRange()>range) delEdge(cont);
+			if (cont.getRange()>range) edgesToDelete.add(cont);
+		}
+		for (Contact cont:edgesToDelete){
+			delEdge(cont);
 		}
 	}
 	
 	public void restrictContactsToMinRange(int range){
+		ContactList edgesToDelete = new ContactList();
 		for (Contact cont:contacts){
-			if (cont.getRange()<range) delEdge(cont);
+			if (cont.getRange()<range) edgesToDelete.add(cont);
+		}
+		for (Contact cont:edgesToDelete){
+			delEdge(cont);
 		}
 	}
 	
