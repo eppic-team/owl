@@ -11,7 +11,7 @@ public class iterateUpperNbs {
 	 * exchange of one neighbor at a time by a common neighbor 
 	 * @author lappe
 	 */
-	static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
+	static int maxRank = 31; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
@@ -61,7 +61,7 @@ public class iterateUpperNbs {
 			rsst.close(); 
 			stmt.close(); 
 			
-			/* percolate the environment  
+			// percolate the environment  
 			System.out.println("moving a contact from shell1 -> shell2");  
 			sql = "select j_num, j_res, j_sstype, shell from temp_shell where i_num="+resnr+" and shell = 1 order by rand() limit 1;";
 			stmt = conn.createStatement();
@@ -91,7 +91,6 @@ public class iterateUpperNbs {
 			stmt = conn.createStatement();
 			stmt.executeUpdate("update temp_shell set shell=1 where j_num="+j_num21+";");
 			stmt.close(); 
-	*/ 
 			
 			System.out.println("retrieving the entire 1st and 2nd shell");  
 			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn from temp_shell group by j_num;";
