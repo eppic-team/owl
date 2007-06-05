@@ -135,17 +135,22 @@ public class NodeNbh extends TreeMap<Integer,String> {
 		// 2. substring match ignoring gap length
 		// 3. substring match ignoring gaps
 		// 4. wildcard padded substring match
+		boolean match = false;
 		switch (compareType) {
 		case 1: 
-			if (bgmotif.contains(querymotif)) return true;
+			if (bgmotif.contains(querymotif)) match = true;
+			break;
 		case 2:
-			if (motif2motifNoGapLength(bgmotif).contains(motif2motifNoGapLength(querymotif))) return true;
+			if (motif2motifNoGapLength(bgmotif).contains(motif2motifNoGapLength(querymotif))) match = true;
+			break;
 		case 3:
-			if (motif2motifNoGaps(bgmotif).contains(motif2motifNoGaps(querymotif))) return true;
+			if (motif2motifNoGaps(bgmotif).contains(motif2motifNoGaps(querymotif))) match = true;
+			break;
 		case 4:
-			if (bgmotif.matches(motif2regexStr(querymotif))) return true;
+			if (bgmotif.matches(motif2regexStr(querymotif))) match = true;
+			break;		
 		}
-		return false;
+		return match;
 	}
 	
 }
