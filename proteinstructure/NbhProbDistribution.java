@@ -34,10 +34,11 @@ public class NbhProbDistribution {
 	private double calculateEntropy(){
 		double sumplogp=0.0;
 		for (double prob:dist.values()){
-			sumplogp += prob*(Math.log(prob)/Math.log(2));
+			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
+				sumplogp += prob*(Math.log(prob)/Math.log(2));
+			}
 		}
-		double entropy = (double) (-1)*sumplogp;
-		return entropy;
+		return (double) (-1)*sumplogp;
 	}
 	
 }
