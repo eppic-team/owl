@@ -39,13 +39,22 @@ public class Contact implements Comparable {
 		}
 		return eq;
 	}
+
+	public String toString() {
+		return this.i+" "+this.j;
+	}
 	
+	public int hashCode() {
+		return this.toString().hashCode();
+	}
+
+	/**
+	 * Gets range (i.e. sequence separation) of contact
+	 * @return
+	 */
 	public int getRange(){
 		return Math.abs(this.i-this.j);
 	}
 	
-	public String toString() {
-		return this.i+"\t"+this.j;
-	}
 }
 

@@ -34,14 +34,19 @@ public class GenericContact implements Comparable {
 	public boolean equals(Object o){
 		boolean eq = false;
 		GenericContact other = (GenericContact) o;
-		if (this.i_res==other.i_res && this.j_res==other.j_res){
+		if (this.i_res.equals(other.i_res) && this.j_res.equals(other.j_res)){
 			eq=true;
 		}
 		return eq;
 	}
 	
 	public String toString() {
-		return this.i_res+"\t"+this.j_res;
+		return this.i_res+" "+this.j_res;
 	}
+
+	public int hashCode() {
+		return this.toString().hashCode();
+	}
+	
 }
 
