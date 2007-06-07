@@ -121,7 +121,7 @@ public class NodeNbh extends TreeMap<Integer,String> {
 
 	public static String motif2regexStr(String motif){
 		String motifng = motif2motifNoGaps(motif);
-		String regex = "";
+		String regex = ".*";
 		for (char letter:motifng.toCharArray()){
 			regex+=letter;
 			regex+=".*";
