@@ -1,4 +1,5 @@
 package proteinstructure;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -543,6 +544,32 @@ public class Graph {
 		for (Contact cont:edgesToDelete){
 			delEdge(cont);
 		}
+	}
+
+	/**
+	 * Returns a HashMap with all edge neighbourhood sizes (if they are >0) for each cell in the contact map
+	 * @return
+	 */
+	public HashMap<Contact,Integer> getAllEdgeNbhSizes() {
+		HashMap<Contact,Integer> sizes = new HashMap<Contact, Integer>();
+		if (!directed) {
+			for (int i=1; i<fullLength;i++){
+				for (int j=i+1; j<fullLength;j++){
+					int size = getEdgeNbh(i, j).size();
+					if (size>0)	sizes.put(new Contact(i,j), size);
+				}
+			}			
+		} else {
+			for (int i=1; i<fullLength;i++){
+				for (int j=1; j<fullLength;j++){
+					if (i!=j){
+						int size = getEdgeNbh(i, j).size();
+						if (size>0) sizes.put(new Contact(i,j), size);
+					}
+				}
+			}
+		}
+		return sizes;
 	}
 
 	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
