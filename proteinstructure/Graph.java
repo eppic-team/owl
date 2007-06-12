@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.TreeMap;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import tools.MySQLConnection;
@@ -543,6 +544,37 @@ public class Graph {
 			delEdge(cont);
 		}
 	}
-	
+
+	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
+	public HashMap<String,Graph> compare(Graph other) throws Exception{
+		//first check that other has same sequence than this, otherwise throw exception
+		if (!this.sequence.equals(other.sequence)){
+			//TODO throw specific exception
+			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+		}
+		ContactList common = new ContactList();
+		ContactList onlythis = new ContactList();
+		ContactList onlyother = new ContactList();
+		for (Contact cont:this.contacts){
+			if (other.contacts.contains(cont)) {
+				common.add(cont);
+			} else{
+				onlythis.add(cont);
+			}
+		}
+		for (Contact cont:other.contacts){
+			if (!this.contacts.contains(cont)){
+				onlyother.add(cont);
+			}
+		}
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,accode,chain,chaincode);
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,accode,chain,chaincode);
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.accode,other.chain,other.chaincode);
+		HashMap<String,Graph> result = new HashMap<String,Graph>();
+		result.put("common", commongraph);
+		result.put("onlythis", onlythisgraph);
+		result.put("onlyother",onlyothergraph);
+		return result;
+	}
 }
 
