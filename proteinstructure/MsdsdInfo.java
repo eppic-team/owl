@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MsdsdInfo {
 	public final static String MYSQLSERVER="white";
@@ -154,7 +155,7 @@ public class MsdsdInfo {
 			int count=0;
 			while (rsst.next()){
 				count++;
-				ArrayList thisrecord = new ArrayList();
+				ArrayList<Comparable> thisrecord = new ArrayList<Comparable>();
 				thisrecord.add(rsst.getInt(1)); //atomserial
 				thisrecord.add(rsst.getString(2).trim()); // atom
 				thisrecord.add(rsst.getString(3).trim()); // res_type
@@ -198,4 +199,33 @@ public class MsdsdInfo {
 
 		return allresseq;
 	}
+	
+	public HashMap<String,Integer> get_ressers_mapping() {
+		HashMap<String,Integer> map = new HashMap<String, Integer>();
+		String sql="SELECT serial, concat(pdb_seq,IF(pdb_insert_code IS NULL,'',pdb_insert_code)) " +
+				" FROM residue " +
+				" WHERE chain_id="+chainid+
+				" AND pdb_seq IS NOT NULL";
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			int count=0;
+			while (rsst.next()) {
+				count++;
+				int resser = rsst.getInt(1);
+				String pdbresser = rsst.getString(2);
+				map.put(pdbresser, resser);
+			} 
+			if (count==0) {
+				System.err.println("No residue serials mapping data match for chain_id="+chainid);
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return map;
+	}
+
 }

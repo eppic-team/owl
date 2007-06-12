@@ -22,6 +22,9 @@ public class Pdb {
 	HashMap<Integer,String> resser2restype;
 	HashMap<Integer,Double[]> atomser2coord;
 	HashMap<Integer,Integer> atomser2resser;
+	HashMap<String,Integer> pdbresser2resser; // only used when reading from database
+	HashMap<Integer,String> resser2pdbresser; // only used when reading from database
+	
 	HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
 	public String sequence="";
 	public String accode="";
@@ -103,6 +106,11 @@ public class Pdb {
 		} else if (db.contains("pdbase")){
 			read_pdb_data_from_pdbase(db);
 		}
+		// we initialise resser2pdbresser from the pdbresser2resser HashMap
+		resser2pdbresser = new HashMap<Integer, String>();
+		for (String pdbresser:pdbresser2resser.keySet()){
+			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
+		}
 	}
 	
 	/**
@@ -144,6 +152,7 @@ public class Pdb {
 		ArrayList<ArrayList> resultset = mypdbaseinfo.read_atomData();
 		chain = mypdbaseinfo.chain;
 		sequence = mypdbaseinfo.read_seq();
+		pdbresser2resser = mypdbaseinfo.get_ressers_mapping();
 		mypdbaseinfo.close();
 		
 		for (ArrayList result:resultset){
@@ -178,6 +187,7 @@ public class Pdb {
 		ArrayList<ArrayList> resultset = mymsdsdinfo.read_atomData();
 		sequence = mymsdsdinfo.read_seq();
 		chain = mymsdsdinfo.chain;
+		pdbresser2resser = mymsdsdinfo.get_ressers_mapping();
 		mymsdsdinfo.close();
 
 		for (ArrayList result:resultset){
@@ -385,6 +395,7 @@ public class Pdb {
 	 * @param cutoff
 	 * @return
 	 */
+	@SuppressWarnings("unchecked")
 	public Graph get_graph(String ct, double cutoff){
 		TreeMap<Contact,Double> dist_matrix = calculate_dist_matrix(ct);
 		ContactList contacts = new ContactList();
@@ -416,4 +427,13 @@ public class Pdb {
 	public Double distance(Double[] coords1, Double[] coords2){
 		return Math.sqrt(Math.pow((coords1[0]-coords2[0]),2)+Math.pow((coords1[1]-coords2[1]),2)+Math.pow((coords1[2]-coords2[2]),2));
 	}
+	
+	public int get_resser_from_pdbresser (String pdbresser){
+		return pdbresser2resser.get(pdbresser);
+	}
+	
+	public String get_pdbresser_from_resser (int resser){
+		return resser2pdbresser.get(resser);
+	}
+
 }

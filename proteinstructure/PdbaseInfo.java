@@ -196,7 +196,7 @@ public class PdbaseInfo {
 			int count=0;
 			while (rsst.next()){
 				count++;
-				ArrayList thisrecord = new ArrayList();
+				ArrayList<Comparable> thisrecord = new ArrayList<Comparable>();
 				thisrecord.add(rsst.getInt(1)); //atomserial
 				thisrecord.add(rsst.getString(2).trim()); // atom
 				thisrecord.add(rsst.getString(3).trim()); // res_type
@@ -256,5 +256,42 @@ public class PdbaseInfo {
 		}
 
 		return sequence;
+	}
+	
+	public HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError{
+		String pdbstrandid=chaincode;
+		if (chaincode.equals("NULL")){
+			pdbstrandid="A";
+		}
+
+		HashMap<String,Integer> map = new HashMap<String, Integer>();
+		String sql="SELECT seq_id, concat(auth_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
+					" FROM pdbx_poly_seq_scheme " +
+					" WHERE entry_key=" + entrykey +
+					" AND asym_id='"+asymid+"' " +
+					" AND pdb_strand_id='"+pdbstrandid+"' " +
+					" AND auth_seq_num!='?'" +
+					" ORDER BY seq_id+0";
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			int count=0;
+			while (rsst.next()) {
+				count++;
+				int resser = Integer.parseInt(rsst.getString(1));
+				String pdbresser = rsst.getString(2);
+				map.put(pdbresser, resser);
+			} 
+			if (count==0) {
+				System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+				throw new PdbaseInconsistencyError("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return map;
 	}
 }
