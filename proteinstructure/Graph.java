@@ -26,7 +26,7 @@ public class Graph {
 	
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 
-	ContactList contacts;
+	public ContactList contacts;
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
 	TreeMap<Integer,String> nodes;
 	public String sequence; // the full sequence (with unobserved residues and non-standard aas ='X')
