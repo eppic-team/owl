@@ -66,5 +66,9 @@ public class NodeNbh extends TreeMap<Integer,String> {
 		return motif;
 	}
 
+	public String toString(){
+		if (this.isEmpty()) return "";
+		else return this.getMotif();
+	}
 	
 }

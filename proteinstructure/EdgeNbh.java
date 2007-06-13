@@ -26,6 +26,36 @@ public class EdgeNbh extends TreeMap<Integer,String> {
 		String motif="";
 		int min=Math.min(Math.min(i_resser,j_resser), Collections.min(this.keySet()));
 		int max=Math.max(Math.max(i_resser,j_resser), Collections.max(this.keySet()));
+		int gapSize=0;
+		String gap="";
+		for (int i=min;i<=max;i++){
+			if (this.containsKey(i)){
+				motif+=gap;
+				motif+=AA.threeletter2oneletter(this.get(i));
+				gapSize=0;
+				gap="";
+			} else if (i==i_resser){
+				motif+=gap;
+				motif+="x";
+				gapSize=0;
+				gap="";
+			} else if (i==j_resser){
+				motif+=gap;
+				motif+="y";
+				gapSize=0;
+				gap="";
+			} else {
+				gapSize++;
+				gap="_{"+gapSize+"}";
+			}
+		}
+		return motif;
+	}
+
+	public String getMotifFullGaps(){
+		String motif="";
+		int min=Math.min(Math.min(i_resser,j_resser), Collections.min(this.keySet()));
+		int max=Math.max(Math.max(i_resser,j_resser), Collections.max(this.keySet()));
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
 				motif+=AA.threeletter2oneletter(this.get(i));	
@@ -40,4 +70,8 @@ public class EdgeNbh extends TreeMap<Integer,String> {
 		return motif;
 	}
 	
+	public String toString(){
+		if (this.isEmpty()) return "";
+		else return this.getMotif();
+	}
 }
