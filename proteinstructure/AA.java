@@ -14,16 +14,9 @@ public class AA {
 	public final static String DB = "aa_info";
 
 
-	public static ArrayList<String> contactTypes() {
+	public static String[] contactTypes() {
 		// NOTE: whenever a new contact type is added it needs to be added here as well as in ct2atoms
-		ArrayList<String> cts = new ArrayList<String>();
-		cts.add("Ca");
-		cts.add("Cb");
-		cts.add("C");
-		cts.add("Cg");
-		cts.add("ALL");
-		cts.add("BB");
-		cts.add("SC");
+		String[] cts ={"ALL","BB","SC","Ca","Cb","Cg","C"};
 		return cts;
 	}
 	
