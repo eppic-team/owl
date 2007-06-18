@@ -436,4 +436,7 @@ public class Pdb {
 		return resser2pdbresser.get(resser);
 	}
 
+	public int get_resser_from_atomser(int atomser){
+		return atomser2resser.get(atomser);
+	}
 }

@@ -10,7 +10,54 @@ public class AA {
 		return cts;
 	}
 	
+	public static String[] singleAtomContactTypes() {
+		// NOTE: whenever a new contact type is added it needs to be added here as well as in ct2atoms
+		String[] cts ={"Ca","Cb","Cg","C"};
+		return cts;
+	}
+
+	public static String[] multiAtomContactTypes() {
+		// NOTE: whenever a new contact type is added it needs to be added here as well as in ct2atoms
+		String[] cts ={"ALL","BB","SC"};
+		return cts;
+	}
 	
+	/**
+	 * Returns true if given contact type is a valid one
+	 * @param ct
+	 * @return
+	 */
+	public static boolean isValidCT(String ct){
+		for (String validCt:contactTypes()){
+			if (ct.equals(validCt)) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Returns true if given contact type is a valid single atom contact type
+	 * @param ct
+	 * @return
+	 */
+	public static boolean isValidSingleAtomCT(String ct) {
+		for (String validCt:singleAtomContactTypes()){
+			if (ct.equals(validCt)) return true;
+		}
+		return false;		
+	}
+
+	/**
+	 * Returns true if given contact type is a valid multiple atom contact type
+	 * @param ct
+	 * @return
+	 */
+	public static boolean isValidMultiAtomCT(String ct) {
+		for (String validCt:multiAtomContactTypes()){
+			if (ct.equals(validCt)) return true;
+		}
+		return false;		
+	}
+
 	private static HashMap<String,String> getThreeletter2oneletter() {
 		HashMap<String,String> three2oneletter = new HashMap<String,String>();
 		three2oneletter.put("CYS", "C");
