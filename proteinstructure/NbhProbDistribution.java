@@ -2,6 +2,7 @@ package proteinstructure;
 
 import java.util.TreeMap;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 public class NbhProbDistribution {
 
@@ -28,7 +29,23 @@ public class NbhProbDistribution {
 	}
 
 	private void getRanks(){
-		//TODO implement getRanks method, don't know how to do it!!
+		ranks = new TreeMap<String, Integer>();
+		ArrayList<String> doneRes = new ArrayList<String>(); 
+		for (int rank=1;rank<=20;rank++){
+			double max = 0.0;
+			String maxres="";
+			for (String res:dist.keySet()){
+				if (!doneRes.contains(res)) {
+					double prob = dist.get(res);
+					if (prob>=max){
+						max = prob;
+						maxres = res;
+					}
+				}
+			}
+			ranks.put(maxres,rank);
+			doneRes.add(maxres);			
+		}
 	}
 	
 	private double calculateEntropy(){
