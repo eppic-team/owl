@@ -26,7 +26,7 @@ public class MsdsdInfo {
 	
 	static int DEFAULT_MODEL=1;
 
-	MsdsdInfo (String accode, String chaincode, int model_serial, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	MsdsdInfo (String accode, String chaincode, int model_serial, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this.accode=accode;
 		this.chaincode=chaincode;
 		this.model=model_serial;
@@ -38,14 +38,14 @@ public class MsdsdInfo {
 
 	}
 
-	MsdsdInfo (String accode, String chaincode, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
+	MsdsdInfo (String accode, String chaincode, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
 		this(accode,chaincode,DEFAULT_MODEL,db);
 	}
-	MsdsdInfo (String accode, String chaincode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
+	MsdsdInfo (String accode, String chaincode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
 		this(accode,chaincode,model_serial,msdsdDB);
 	}
 	
-	MsdsdInfo (String accode, String chaincode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError  {
+	MsdsdInfo (String accode, String chaincode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
 		this(accode,chaincode,DEFAULT_MODEL,msdsdDB);
 	}
 

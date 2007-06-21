@@ -29,7 +29,7 @@ public class PdbaseInfo {
 	
 	static int DEFAULT_MODEL=1;
 	
-	PdbaseInfo (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
+	PdbaseInfo (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
 		this.accode=accode;
 		this.chaincode=chaincode;
 		this.model=model_serial;
@@ -41,14 +41,14 @@ public class PdbaseInfo {
 
 	}
 	
-	PdbaseInfo (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	PdbaseInfo (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
 		this(accode,chaincode,DEFAULT_MODEL,db);
 	}
-	PdbaseInfo (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	PdbaseInfo (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
 		this(accode,chaincode,model_serial,pdbaseDB);
 	}
 	
-	PdbaseInfo (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	PdbaseInfo (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
 		this(accode,chaincode,DEFAULT_MODEL,pdbaseDB);
 	}
 

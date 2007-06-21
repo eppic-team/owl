@@ -27,8 +27,9 @@ public class ClusterConnection {
 	 * @param key the key name: e.g. asu_id
 	 * @param user the user name for connection to both master and nodes
 	 * @param password the password for connection to both master and nodes
+	 * @throws SQLException 
 	 */
-	public ClusterConnection (String db,String key, String user,String password) {
+	public ClusterConnection (String db,String key, String user,String password) throws SQLException {
 		setDb(db);
 		setUser(user);
 		setPassword(password);
@@ -46,8 +47,9 @@ public class ClusterConnection {
 	 * @param db the database name
 	 * @param user the user name for connection to both master and nodes
 	 * @param password the password for connection to both master and nodes
+	 * @throws SQLException 
 	 */ 
-	public ClusterConnection (String db, String user,String password) { 
+	public ClusterConnection (String db, String user,String password) throws SQLException { 
 		setDb(db);
 		setUser(user);
 		setPassword(password);		
@@ -71,11 +73,11 @@ public class ClusterConnection {
 		return host;
 	}
 	
-	public <T> void setHostFromIdx(T idx){
+	public <T> void setHostFromIdx(T idx) throws SQLException{
 		setHost(getHost4Idx(idx));
 	}
 	
-	public void setHost(String host) {
+	public void setHost(String host) throws SQLException {
 		this.host=host;
 		//Closing previous connection is essential
 		//If we don't close it a lot of connections stay open after using a ClusterConnection object for a while
@@ -88,8 +90,9 @@ public class ClusterConnection {
 	 * and thus we can't get the client_id from the master key table. Only to be called from createStatement(key,idx)
 	 * @param idx the value of the id for a certain key already set
 	 * @return a Stament object with a connection to the node that contains idx for key
+	 * @throws SQLException 
 	 */
-	private <T> Statement createStatement(T idx) { // to use when the field "key" is already set
+	private <T> Statement createStatement(T idx) throws SQLException { // to use when the field "key" is already set
 		setKeyTable();
 		Statement S=null;
 		this.setHostFromIdx(idx);
@@ -111,8 +114,9 @@ public class ClusterConnection {
 	 * @param idx the key name
 	 * @param idx the id value for that key
 	 * @return a Statement object with a connection to the node that contains idx for key
+	 * @throws SQLException 
 	 */
-	public <T> Statement createStatement(String key,T idx) {
+	public <T> Statement createStatement(String key,T idx) throws SQLException {
 		setKey(key);
 		return createStatement(idx);
 	}
@@ -133,8 +137,9 @@ public class ClusterConnection {
 	/**
 	 * To change the MASTERDB String, i.e. the name of the key master database. To be used in testing.
 	 * @param db the name of the key master db we want to use instead of the default defined in the MASTERDB field
+	 * @throws SQLException 
 	 */
-	public void setKeyDb(String db) { 
+	public void setKeyDb(String db) throws SQLException { 
 		this.MASTERDB=db;
 		//Closing previous connection is essential
 		this.mCon.close(); 

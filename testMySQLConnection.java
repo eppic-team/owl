@@ -14,9 +14,16 @@ public class testMySQLConnection {
 	
 	static String user = "duarte"	; // change user name!!
 	
-	public static void main(String[] args) {
+	public static void main(String[] args){
 				
-		MySQLConnection conn = new MySQLConnection("white",user,"nieve","newmsdgraph");
+		MySQLConnection conn = null;
+		try {
+			conn = new MySQLConnection("white",user,"nieve","newmsdgraph");
+		} catch (SQLException e1) {
+			e1.printStackTrace();
+			System.err.println("Can't connect to the db. Exiting");
+			System.exit(1);
+		}
 		
 		try {
 			String sql = "SELECT num,res FROM nodes limit 3;";

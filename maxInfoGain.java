@@ -15,7 +15,7 @@ public class maxInfoGain {
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		double entropy = 0.0, newentropy=0.0, gain, maxgain=0.0; 
 		String nbhood = "", front, middle, tail, newhood="";
 		if (args.length<1){
@@ -64,8 +64,8 @@ public class maxInfoGain {
 		
 	
 	public static double getEntropy( String nbs) {
-		int total = 0, num; 
-		String sql, res; 
+		int total = 0; 
+		String sql; 
 		Statement stmt;  
 		ResultSet rsst;
 		double p, psum=0.0, logp, plogp, plogpsum=0.0; 
@@ -84,8 +84,8 @@ public class maxInfoGain {
 			rsst = stmt.executeQuery(sql);
 			// System.out.println("res : total t : fraction p : log2(p) : -p*log2(p)");
 			while (rsst.next()) {				
-				res = rsst.getString(1); // 1st column -- res
-				num = rsst.getInt(2); // 2nd column -- num
+				//res = rsst.getString(1); // 1st column -- res
+				//num = rsst.getInt(2); // 2nd column -- num
 				p = rsst.getDouble(3); // 3rd: fraction p 
 				// System.out.print(res+"   : "+num+ " : " + p);
 				logp = Math.log(p)/Math.log(2.0); // to basis 2 for info in bits 

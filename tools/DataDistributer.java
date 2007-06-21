@@ -124,17 +124,17 @@ public class DataDistributer {
 	    }
 	}
 	
-	private MySQLConnection getConnectionToNode(String node) {
+	private MySQLConnection getConnectionToNode(String node) throws SQLException {
 		MySQLConnection conn=new MySQLConnection(node,user,pwd,srcDb);
 		return conn;
 	}
 	
-	private MySQLConnection getConnectionToMaster() {
+	private MySQLConnection getConnectionToMaster() throws SQLException {
 		MySQLConnection conn=this.getConnectionToNode(MASTER);
 		return conn;
 	}
 	
-	private MySQLConnection getConnectionToMasterKeyDb() {
+	private MySQLConnection getConnectionToMasterKeyDb() throws SQLException {
 		MySQLConnection conn=new MySQLConnection(MASTER,user,pwd,KEYMASTERDB);
 		return conn;
 	}
@@ -323,8 +323,9 @@ public class DataDistributer {
 	 * @param key
 	 * @param table
 	 * @return idSets HashMap, keys are node names, values: Integer/String array with the ids for each node
+	 * @throws SQLException 
 	 */
-	public HashMap<String,Object[]> splitIdsIntoSets(String key, String table){
+	public HashMap<String,Object[]> splitIdsIntoSets(String key, String table) throws SQLException{
 		HashMap<String,Object[]> idSets =new HashMap<String,Object[]>();		
 		String[] nodes=DataDistribution.getMySQLNodes();
 		int numNodes=nodes.length;
@@ -356,8 +357,9 @@ public class DataDistributer {
 	 * To split a given table in chunks based on a key, split tables remain in same database and server
 	 * @param key
 	 * @param table 
+	 * @throws SQLException 
 	 */
-	public void splitTable (String key,String table){
+	public void splitTable (String key,String table) throws SQLException{
 		String[] nodes=DataDistribution.getMySQLNodes();
 		MySQLConnection conn=this.getConnectionToMaster();
 		String[] splitTables = new String[nodes.length]; // we create an array that will contain the name of all split tables
@@ -394,8 +396,9 @@ public class DataDistributer {
 	 * To split a given table in chunks based on a key, split tables go to different nodes of cluster 
 	 * @param key
 	 * @param table 
+	 * @throws SQLException 
 	 */
-	public DataDistribution splitTableToCluster (String key,String table){
+	public DataDistribution splitTableToCluster (String key,String table) throws SQLException{
 		System.out.println("Splitting table "+table+" to cluster based on key "+key+"...");
 		String[] tables={table};
 		String[] desthosts=DataDistribution.getMySQLNodes();
@@ -417,8 +420,9 @@ public class DataDistributer {
 	 * @param key name of key on which distribution of table is based
 	 * @param table name of table that we are distributing
 	 * @param idSets as returned from splitIdsIntoSets or getIdSetsFromNodes from a DataDistribution object
+	 * @throws SQLException 
 	 */
-	public <T> void insertIdsToKeyMaster(String key,String table,HashMap<String,T[]> idSets) {
+	public <T> void insertIdsToKeyMaster(String key,String table,HashMap<String,T[]> idSets) throws SQLException {
 		System.out.println("Updating key_master database with ids to nodes mapping...");
 		MySQLConnection conn = this.getConnectionToMasterKeyDb();		
 		String keyMasterTbl = createNewKeyMasterTbl(key,table);
@@ -453,8 +457,9 @@ public class DataDistributer {
 	 * @param key
 	 * @param table
 	 * @return the name of the key master table created
+	 * @throws SQLException 
 	 */
-	public String createNewKeyMasterTbl(String key,String table) {
+	public String createNewKeyMasterTbl(String key,String table) throws SQLException {
 		// find out whether key is numeric or text and setting accordingly query strings
 		String nodes[] = DataDistribution.getMySQLNodes(); // we need the list of nodes only to get one of them no matter which
 		MySQLConnection conn=new MySQLConnection(nodes[0],user,pwd,destDb); // here we connect to destDb in one node, needed to getColumnType 
@@ -493,7 +498,7 @@ public class DataDistributer {
 		return keyMasterTbl;
 	}
 	
-	public void removePK (String keyMasterTbl,String key){
+	public void removePK (String keyMasterTbl,String key) throws SQLException{
 		MySQLConnection conn=this.getConnectionToMasterKeyDb();
 		boolean isNumeric = conn.isKeyNumeric(keyMasterTbl,key);
 		String colType = conn.getColumnType(keyMasterTbl,key);
@@ -511,7 +516,7 @@ public class DataDistributer {
 		conn.close();
 	}
 	
-	public void addPK (String keyMasterTbl, String key){
+	public void addPK (String keyMasterTbl, String key) throws SQLException{
 		MySQLConnection conn=this.getConnectionToMasterKeyDb();
 		boolean isNumeric = conn.isKeyNumeric(keyMasterTbl,key);
 		String colType = conn.getColumnType(keyMasterTbl,key);
@@ -529,7 +534,7 @@ public class DataDistributer {
 		conn.close();		
 	}
 	
-	public void removeZeros (String keyMasterTbl, String key){
+	public void removeZeros (String keyMasterTbl, String key) throws SQLException{
 		MySQLConnection conn=this.getConnectionToMasterKeyDb();		
 		try {
 			// attention! the quotes around 0 are very important, otherwise if key is text-based all records get deleted

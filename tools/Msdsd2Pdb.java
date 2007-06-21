@@ -58,10 +58,12 @@ public class Msdsd2Pdb {
      * @param modelId
      * @param pdbFile
      * @param user
+     * @throws SQLException 
      */ 
-	public static void export2File(String accessionCode, int assemblyId, int modelId, String pdbFile, String user) throws FileNotFoundException{
+	public static void export2File(String accessionCode, int assemblyId, int modelId, String pdbFile, String user) throws FileNotFoundException, SQLException{
 		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
-		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
+		MySQLConnection conn;
+		conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 
 		String query = "SELECT CONCAT("+
 		    "RPAD(\"ATOM\", 6, \" \"), "+
@@ -120,8 +122,9 @@ public class Msdsd2Pdb {
      * @param accessionCode
      * @param pdbFile
      * @param user
+     * @throws SQLException 
      */ 
-	public static void export2File(String accessionCode, String pdbFile, String user) throws FileNotFoundException {
+	public static void export2File(String accessionCode, String pdbFile, String user) throws FileNotFoundException, SQLException {
 		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
 		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 
@@ -172,8 +175,9 @@ public class Msdsd2Pdb {
 	 * @param pdbFile
 	 * @param user
 	 * @return
+	 * @throws SQLException 
 	 */
-	public static void export2File(int chainId, int modelId, String pdbFile, String user) throws FileNotFoundException {
+	public static void export2File(int chainId, int modelId, String pdbFile, String user) throws FileNotFoundException, SQLException {
 		PrintStream Pdb = new PrintStream(new FileOutputStream(pdbFile));
 		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 
@@ -225,8 +229,9 @@ public class Msdsd2Pdb {
 	 * @param pdbFile
 	 * @param user
 	 * @return
+	 * @throws SQLException 
 	 */
-	public static void export2File(String accessionCode, String chainPdbCode, String pdbFile, String user) throws FileNotFoundException{
+	public static void export2File(String accessionCode, String chainPdbCode, String pdbFile, String user) throws FileNotFoundException, SQLException{
 		MySQLConnection conn = new MySQLConnection(HOST,user,PWD,MSDSDDB);
 		int chainId=0;
 		int modelId=0;

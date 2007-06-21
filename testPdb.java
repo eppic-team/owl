@@ -1,9 +1,10 @@
 import java.io.IOException;
-import java.util.ArrayList;
+import java.sql.SQLException;
+//import java.util.ArrayList;
 
 import proteinstructure.*;
 
-import java.util.TreeMap;
+//import java.util.TreeMap;
 
 public class testPdb {
 
@@ -11,9 +12,10 @@ public class testPdb {
 	 * Test class for classes in aglappe.proteinstructure package (Pdb, Graph, AA, Contact) 
 	 * Loads structure data from pdbase, msdsd and pdb file and calculates graph dumping contacts to file
 	 * Also gets contact map object and some common neighbours from it
+	 * @throws SQLException 
 	 */
 	
-	public static void main(String[] args) throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError{
+	public static void main(String[] args) throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException{
 		String accode="1bxy";
 		String chaincode="A";
 		// data from pdbase

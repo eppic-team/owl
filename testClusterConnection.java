@@ -9,8 +9,9 @@ public class testClusterConnection {
 	 */
 	/**
 	 * @param args
+	 * @throws SQLException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		int asuId=30;
 		//ClusterConnection conn=new ClusterConnection();
 		ClusterConnection conn=new ClusterConnection("pdbgraph","duarte","nieve");

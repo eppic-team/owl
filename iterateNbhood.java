@@ -19,7 +19,7 @@ public class iterateNbhood {
 	static int lastRank, lastTotal;  
 	static int orgRank, orgTotal;
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		
 	    if (args.length<2){
 			System.err.println("The graph_id and residue-nr. needs to be given .... i.e. 9 28");
@@ -31,7 +31,7 @@ public class iterateNbhood {
 		conn = new MySQLConnection("white",user,"nieve","pdb_reps_graph_4_2_a"); 
 		String sql, j_res, j_sec, restype="?", ressec="?", nbs_lo, nbs_up; 
 		Statement stmt, jst;  
-		ResultSet rsst, jrs;
+		ResultSet rsst;
 		
 		try {
 			System.out.println("getting direct neighborhood ... "); 
@@ -170,7 +170,7 @@ public class iterateNbhood {
 		Statement stmt;  
 		ResultSet rsst;
 		double p, psum=0.0, logp, plogp, plogpsum=0.0; 
-		int num; 
+		 
 		try {
 			sql = "select count(*) from single_model_node where n like '"+nbs+"';";
 			// System.out.println( sql); 
@@ -194,7 +194,7 @@ public class iterateNbhood {
 			while (rsst.next()) {	
 				rank ++;
 				res = rsst.getString(1); // 1st column -- res
-				num = rsst.getInt(2); // 2nd column -- num
+				//num = rsst.getInt(2); // 2nd column -- num
 				p = rsst.getDouble(3); // 3rd: fraction p 
 				// System.out.print(rank+ " : " + res+"   : "+num+ " : " + p);
 				logp = Math.log(p)/Math.log(2.0); // to basis 2 for info in bits 

@@ -17,7 +17,7 @@ public class listInfoLoss {
 	static double orgFreq, lastFreq, orgAUC, lastAUC; 
 	static int orgRank, lastRank, orgTotal, lastTotal; 
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		double entropy = 0.0, newentropy=0.0, gain; 
 		String nbhood = "", front, middle, tail, newhood="", central ="I";
 		if (args.length<2){
@@ -67,8 +67,7 @@ public class listInfoLoss {
 
 		
 	
-	public static double getEntropy( String nbs, String centRes) {
-		int num; 
+	public static double getEntropy( String nbs, String centRes) { 
 		String sql, res; 
 		Statement stmt;  
 		ResultSet rsst;
@@ -93,7 +92,7 @@ public class listInfoLoss {
 			while (rsst.next()) {	
 				rank ++;
 				res = rsst.getString(1); // 1st column -- res
-				num = rsst.getInt(2); // 2nd column -- num
+				//num = rsst.getInt(2); // 2nd column -- num
 				p = rsst.getDouble(3); // 3rd: fraction p 
 				// System.out.print(rank+ " : " + res+"   : "+num+ " : " + p);
 				logp = Math.log(p)/Math.log(2.0); // to basis 2 for info in bits 

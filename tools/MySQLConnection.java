@@ -37,8 +37,9 @@ public class MySQLConnection {
 	 * @param dbServer
 	 * @param dbUserName
 	 * @param dbPassword
+	 * @throws SQLException 
 	 */
-	public MySQLConnection(String dbServer, String dbUserName, String dbPassword) {
+	public MySQLConnection(String dbServer, String dbUserName, String dbPassword) throws SQLException {
 		loadMySQLDriver();
 		host=dbServer;
 		user=dbUserName;
@@ -46,14 +47,8 @@ public class MySQLConnection {
 		port="";
 		dbname="";		
 		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 
+
+		conn = DriverManager.getConnection(connStr, user, password);
 	}
 
 	/**
@@ -63,8 +58,9 @@ public class MySQLConnection {
 	 * @param dbUserName
 	 * @param dbPassword
 	 * @param dbName 
+	 * @throws SQLException 
 	 */
-	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) {
+	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName) throws SQLException {
 		loadMySQLDriver(); 
 		host=dbServer;
 		user=dbUserName;
@@ -72,14 +68,8 @@ public class MySQLConnection {
 		port="";
 		dbname=dbName;		
 		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 		
+
+		conn = DriverManager.getConnection(connStr, user, password);
 	}
 
 	/**
@@ -87,22 +77,17 @@ public class MySQLConnection {
 	 * Password taken from default, user name from unix user name
 	 * @param dbServer
 	 * @param dbName
+	 * @throws SQLException 
 	 */
-	public MySQLConnection(String dbServer, String dbName) {
+	public MySQLConnection(String dbServer, String dbName) throws SQLException {
 		loadMySQLDriver(); 
 		host=dbServer;
 		user=getUserName();
 		port="";
 		dbname=dbName;
 		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 		
+
+		conn = DriverManager.getConnection(connStr, user, password);
 	}
 
 	/**
@@ -113,8 +98,9 @@ public class MySQLConnection {
 	 * @param dbPassword
 	 * @param dbName
 	 * @param portNum
+	 * @throws SQLException 
 	 */
-	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName, int portNum) {
+	public MySQLConnection(String dbServer, String dbUserName, String dbPassword, String dbName, int portNum) throws SQLException {
 		loadMySQLDriver();
 		host=dbServer;
 		user=dbUserName;
@@ -122,32 +108,21 @@ public class MySQLConnection {
 		port=":"+portNum;
 		dbname=dbName;		
 		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 
+
+		conn = DriverManager.getConnection(connStr, user, password);
 	}
 		
 	/**
 	 * Connect to database giving a connection file
 	 * @param connFile the connection file's name
+	 * @throws SQLException 
 	 */
-	public MySQLConnection(String connFile) {		
+	public MySQLConnection(String connFile) throws SQLException {
 		loadMySQLDriver();
 		readConnectionFile(connFile);
 		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
-		try {
-			conn = DriverManager.getConnection(connStr, user, password);
-		} catch (SQLException e) {
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-			System.err.println("VendorError:  " + e.getErrorCode());
-			e.printStackTrace();
-		} // end try/catch connection 		 		 
+
+		conn = DriverManager.getConnection(connStr, user, password);
 	}
 	
 	

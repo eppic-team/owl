@@ -87,8 +87,10 @@ public class Graph {
 	 * @param chaincode
 	 * @param cutoff
 	 * @param ct
+	 * @throws GraphIdNotFoundError
+	 * @throws SQLException 
 	 */
-	public Graph(String dbname, String accode, String chaincode, double cutoff, String ct) throws GraphIdNotFoundError{
+	public Graph(String dbname, String accode, String chaincode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException{
 		this.cutoff=cutoff;
 		this.accode=accode;
 		this.ct=ct;
@@ -119,8 +121,10 @@ public class Graph {
 	 * Constructs Graph object from graph db, given the graphid
 	 * @param dbname
 	 * @param graphid
+	 * @throws GraphIdNotFoundError
+	 * @throws SQLException 
 	 */
-	public Graph(String dbname,int graphid) throws GraphIdNotFoundError{
+	public Graph(String dbname,int graphid) throws GraphIdNotFoundError, SQLException{
 		this.graphid=graphid;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info

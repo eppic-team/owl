@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.PrintStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.ArrayList;
@@ -47,8 +48,9 @@ public class Pdb {
 	 * @throws PdbaseAcCodeNotFoundError
 	 * @throws MsdsdAcCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
+	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this(accode,chaincode,DEFAULT_MODEL,PdbaseInfo.pdbaseDB);		
 	}
 
@@ -62,8 +64,9 @@ public class Pdb {
 	 * @throws PdbaseAcCodeNotFoundError
 	 * @throws MsdsdAcCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
+	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	public Pdb (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this(accode,chaincode,model_serial,PdbaseInfo.pdbaseDB);		
 	}
 	
@@ -77,8 +80,9 @@ public class Pdb {
 	 * @throws PdbaseAcCodeNotFoundError
 	 * @throws MsdsdAcCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
+	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this(accode,chaincode,DEFAULT_MODEL,db);		
 	}
 
@@ -93,8 +97,9 @@ public class Pdb {
 	 * @throws PdbaseAcCodeNotFoundError
 	 * @throws MsdsdAcCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
+	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	public Pdb (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this.accode=accode;
 		this.chaincode=chaincode;
 		this.model=model_serial;
@@ -142,7 +147,7 @@ public class Pdb {
 		read_pdb_data_from_file(pdbfile);
 	}
 
-	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError{
+	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
@@ -177,7 +182,7 @@ public class Pdb {
 		}
 	}
 	
-	public void read_pdb_data_from_msdsd(String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError {
+	public void read_pdb_data_from_msdsd(String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();

@@ -22,13 +22,13 @@ public class testPymolServer {
 	 */
 	public static void main(String[] args) {
 		
-		String command = "load /project/StruPPi/PDBs/mainPDB/1RX4.pdb, hello";
+		String command = "load /project/StruPPi/Databases/pdb/rx/1rx4.pdb, hello";
 		if(args.length > 0) {
 			command = args[0];
 		}
 		
 	    try {
-	    String myURL = "http://gelb:9123";
+	    String myURL = "http://anthrazit:9123";
 	    XmlRpcClient client = new XmlRpcClient(myURL);
 	    Vector<String> myvector = new Vector<String>();
 	    myvector.add(command);

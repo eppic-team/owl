@@ -17,7 +17,7 @@ public class exchangeOne {
 	static double lastFreq, lastAUC; 
 	static int lastRank, lastTotal; 
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		double entropy = 0.0, newentropy=0.0, addentropy=0.0, gain; 
 		double delFreq, orgFreq, delAUC, orgAUC; 
 		int delRank, orgRank, delTotal, orgTotal;
@@ -93,8 +93,7 @@ public class exchangeOne {
 		String sql, res; 
 		Statement stmt;  
 		ResultSet rsst;
-		double p, psum=0.0, logp, plogp, plogpsum=0.0; 
-		int num; 
+		double p, psum=0.0, logp, plogp, plogpsum=0.0;  
 		try {
 			sql = "select count(*) from single_model_node where n like '"+nbs+"';";
 			// System.out.println( sql); 
@@ -116,7 +115,7 @@ public class exchangeOne {
 			while (rsst.next()) {	
 				rank ++;
 				res = rsst.getString(1); // 1st column -- res
-				num = rsst.getInt(2); // 2nd column -- num
+				//num = rsst.getInt(2); // 2nd column -- num
 				p = rsst.getDouble(3); // 3rd: fraction p 
 				// System.out.print(rank+ " : " + res+"   : "+num+ " : " + p);
 				logp = Math.log(p)/Math.log(2.0); // to basis 2 for info in bits 

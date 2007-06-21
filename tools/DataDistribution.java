@@ -42,17 +42,17 @@ public class DataDistribution {
 		//compareNodesList2MasterKeyTable();		
 	}
 		
-	private MySQLConnection getConnectionToMaster() {
+	private MySQLConnection getConnectionToMaster() throws SQLException {
 		MySQLConnection conn=this.getConnectionToNode(MASTER);
 		return conn;
 	}
 
-	private MySQLConnection getConnectionToMasterKeyDb() {
+	private MySQLConnection getConnectionToMasterKeyDb() throws SQLException {
 		MySQLConnection conn=new MySQLConnection(MASTER,user,pwd,KEYMASTERDB);
 		return conn;
 	}
 	
-	private MySQLConnection getConnectionToNode(String node) {
+	private MySQLConnection getConnectionToNode(String node) throws SQLException {
 		MySQLConnection conn=new MySQLConnection(node,user,pwd,db);
 		return conn;
 	}
@@ -165,7 +165,7 @@ public class DataDistribution {
 	}
 
 	
-	public boolean checkCountsAllTables (){
+	public boolean checkCountsAllTables () throws SQLException{
 		boolean checkResult=true;
 		MySQLConnection mconn = this.getConnectionToMaster();
 		String[] tables = mconn.getTables4Db();
@@ -238,8 +238,9 @@ public class DataDistribution {
 	 * To check the key counts in master and nodes for a certain key.  
 	 * @param key the name of the key
 	 * @return boolean: true if check passed, false if not passed
+	 * @throws SQLException 
 	 */
-	public boolean checkKeyCounts(String key) {
+	public boolean checkKeyCounts(String key) throws SQLException {
 		boolean checkResult=true;
 		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd);
 		String keyTable=cconn.getTableOnNode();
@@ -320,8 +321,9 @@ public class DataDistribution {
 	 * @param key the key name
 	 * @param node the host name of the cluster node
 	 * @return array of ints with all differing keys for this key and node
+	 * @throws SQLException 
 	 */
-	public String[] getDifferingKeys (String key,String node) {
+	public String[] getDifferingKeys (String key,String node) throws SQLException {
 		ArrayList<String> diffKeys = new ArrayList<String>();
 		String[] diffKeysAr;
 		ClusterConnection cconn = new ClusterConnection(db,key,user,pwd);
@@ -389,8 +391,9 @@ public class DataDistribution {
 	 * @param key text-based key (char/varchar)
 	 * @param table 
 	 * @return idSets HashMap, keys are node names, values: Integer/String array with the ids for each node
+	 * @throws SQLException 
 	 */
-	public HashMap<String,Object[]> getIdSetsFromNodes(String key, String table){
+	public HashMap<String,Object[]> getIdSetsFromNodes(String key, String table) throws SQLException{
 		HashMap<String,Object[]> idSets =new HashMap<String,Object[]>();
 		for (String node:nodes){
 			MySQLConnection conn = this.getConnectionToNode(node);

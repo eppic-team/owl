@@ -20,7 +20,7 @@ public class iterateUpperNbs {
 	static int lastRank, lastTotal;  
 	static int orgRank, orgTotal;
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		
 	    if (args.length<2){
 			System.err.println("The graph_id and residue-nr. needs to be given .... i.e. 9 28");
