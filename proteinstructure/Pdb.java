@@ -19,46 +19,46 @@ public class Pdb {
 	
 	public final static int DEFAULT_MODEL=1;
 	
-	HashMap<String,Integer> resser_atom2atomserial;
-	HashMap<Integer,String> resser2restype;
-	HashMap<Integer,Double[]> atomser2coord;
-	HashMap<Integer,Integer> atomser2resser;
-	HashMap<String,Integer> pdbresser2resser; // only used when reading from database
-	HashMap<Integer,String> resser2pdbresser; // only used when reading from database
+	private HashMap<String,Integer> resser_atom2atomserial;
+	private HashMap<Integer,String> resser2restype;
+	private HashMap<Integer,Double[]> atomser2coord;
+	private HashMap<Integer,Integer> atomser2resser;
+	private HashMap<String,Integer> pdbresser2resser; // only used when reading from database
+	private HashMap<Integer,String> resser2pdbresser; // only used when reading from database
 	
-	HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
-	public String sequence="";
-	public String accode="";
+	private HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
+	private String sequence="";
+	private String pdbCode="";
     // given "external" pdb chain code, i.e. the classic pdb code ("NULL" if it is blank in original pdb file)	
-	public String chaincode="";
-	public int model=DEFAULT_MODEL;
-	String db;
+	private String pdbChainCode="";
+	private int model=DEFAULT_MODEL;
+	private String db;
 	
     // Our internal chain identifier (taken from dbs or pdb):
     // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
     // - in reading from pdb file it gets set to whatever parsed from the pdb file (i.e. can be also ' ')
-	public String chain;
+	private String chainCode;
 	
 	/**
-	 * Constructs Pdb object given accession code and pdb chain code. Model will be DEFAULT_MODEL
+	 * Constructs Pdb object given pdb code and pdb chain code. Model will be DEFAULT_MODEL
 	 * Takes data from default pdbase-like database: PdbaseInfo.pdbaseDB
-	 * @param accode
-	 * @param chaincode
+	 * @param pdbCode
+	 * @param pdbChainCode
 	 * @throws PdbaseInconsistencyError
 	 * @throws PdbaseAcCodeNotFoundError
 	 * @throws MsdsdAcCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this(accode,chaincode,DEFAULT_MODEL,PdbaseInfo.pdbaseDB);		
+	public Pdb (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,PdbaseInfo.DEFAULT_PDBASE_DB);		
 	}
 
 	/**
-	 * Constructs Pdb object given accession code, pdb chain code and a model serial
+	 * Constructs Pdb object given pdb code, pdb chain code and a model serial
 	 * Takes data from default pdbase-like database: PdbaseInfo.pdbaseDB
-	 * @param accode
-	 * @param chaincode
+	 * @param pdbCode
+	 * @param pdbChainCode
 	 * @param model_serial
 	 * @throws PdbaseInconsistencyError
 	 * @throws PdbaseAcCodeNotFoundError
@@ -66,15 +66,15 @@ public class Pdb {
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this(accode,chaincode,model_serial,PdbaseInfo.pdbaseDB);		
+	public Pdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+		this(pdbCode,pdbChainCode,model_serial,PdbaseInfo.DEFAULT_PDBASE_DB);		
 	}
 	
 	/**
-	 * Constructs Pdb object given accession code, pdb chain code and a source db for the data. Model will be DEFAULT_MODEL
+	 * Constructs Pdb object given pdb code, pdb chain code and a source db for the data. Model will be DEFAULT_MODEL
 	 * The db can be pdbase-like or msdsd-like
-	 * @param accode
-	 * @param chaincode
+	 * @param pdbCode
+	 * @param pdbChainCode
 	 * @param db
 	 * @throws PdbaseInconsistencyError
 	 * @throws PdbaseAcCodeNotFoundError
@@ -82,15 +82,15 @@ public class Pdb {
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this(accode,chaincode,DEFAULT_MODEL,db);		
+	public Pdb (String pdbCode, String pdbChainCode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db);		
 	}
 
 	/**
-	 * Constructs Pdb object given accession code, pdb chain code, model serial and a source db for the data.
+	 * Constructs Pdb object given pdb code, pdb chain code, model serial and a source db for the data.
 	 * The db can be pdbase-like or msdsd-like 
-	 * @param accode
-	 * @param chaincode
+	 * @param pdbCode
+	 * @param pdbChainCode
 	 * @param model_serial
 	 * @param db
 	 * @throws PdbaseInconsistencyError
@@ -99,13 +99,13 @@ public class Pdb {
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public Pdb (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this.accode=accode;
-		this.chaincode=chaincode;
+	public Pdb (String pdbCode, String pdbChainCode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+		this.pdbCode=pdbCode;
+		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
 		this.db=db;
-		// we initialise it to chaincode, in read_pdb_data_from_pdbase gets reset to the right internal chain id. If reading msdsd it stays as chaincode
-		this.chain=chaincode; 
+		// we initialise it to pdbChainCode, in read_pdb_data_from_pdbase gets reset to the right internal chain id. If reading msdsd it stays as pdbChainCode
+		this.chainCode=pdbChainCode; 
 		if (db.contains("msdsd")){
 			read_pdb_data_from_msdsd(db);
 		} else if (db.contains("pdbase")){
@@ -121,41 +121,41 @@ public class Pdb {
 	/**
 	 * Constructs Pdb object reading from pdb file given pdb chain code. Model will be DEFAULT_MODEL
 	 * @param pdbfile
-	 * @param chaincode
+	 * @param pdbChainCode
 	 * @param dummy dummy parameter to distinguish the method from other with the same signature
 	 * TODO dummy parameter is a dirty hack, must solve it in other way: subclassing
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public Pdb (String pdbfile, String chaincode, boolean dummy) throws FileNotFoundException, IOException {
-		this(pdbfile,chaincode,DEFAULT_MODEL,dummy);
+	public Pdb (String pdbfile, String pdbChainCode, boolean dummy) throws FileNotFoundException, IOException {
+		this(pdbfile,pdbChainCode,DEFAULT_MODEL,dummy);
 	}
 	
 	/**
 	 * Constructs Pdb object reading from pdb file given pdb chain code and model serial
 	 * @param pdbfile
-	 * @param chaincode
+	 * @param pdbChainCode
 	 * @param model_serial
 	 * @param dummy dummy parameter to distinguish the method from other with the same signature
 	 * TODO dummy parameter is a dirty hack, must solve it in other way: subclassing
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public Pdb (String pdbfile, String chaincode, int model_serial, boolean dummy) throws FileNotFoundException, IOException {
+	public Pdb (String pdbfile, String pdbChainCode, int model_serial, boolean dummy) throws FileNotFoundException, IOException {
 		this.model=model_serial;
-		this.chaincode=chaincode;
+		this.pdbChainCode=pdbChainCode;
 		read_pdb_data_from_file(pdbfile);
 	}
 
-	public void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
+	private void read_pdb_data_from_pdbase(String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 
-		PdbaseInfo mypdbaseinfo = new PdbaseInfo(accode,chaincode,model,db);
+		PdbaseInfo mypdbaseinfo = new PdbaseInfo(pdbCode,pdbChainCode,model,db);
 		ArrayList<ArrayList> resultset = mypdbaseinfo.read_atomData();
-		chain = mypdbaseinfo.chain;
+		chainCode = mypdbaseinfo.getChainCode();
 		sequence = mypdbaseinfo.read_seq();
 		pdbresser2resser = mypdbaseinfo.get_ressers_mapping();
 		mypdbaseinfo.close();
@@ -182,16 +182,16 @@ public class Pdb {
 		}
 	}
 	
-	public void read_pdb_data_from_msdsd(String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+	private void read_pdb_data_from_msdsd(String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		
-		MsdsdInfo mymsdsdinfo = new MsdsdInfo(accode,chaincode,model,db);
+		MsdsdInfo mymsdsdinfo = new MsdsdInfo(pdbCode,pdbChainCode,model,db);
 		ArrayList<ArrayList> resultset = mymsdsdinfo.read_atomData();
 		sequence = mymsdsdinfo.read_seq();
-		chain = mymsdsdinfo.chain;
+		chainCode = mymsdsdinfo.getChainCode();
 		pdbresser2resser = mymsdsdinfo.get_ressers_mapping();
 		mymsdsdinfo.close();
 
@@ -219,22 +219,22 @@ public class Pdb {
 	
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file
-	 * chain gets set to internal identifier: if input chain code NULL then chain will be ' '
-	 * accode gets set to the one parsed in HEADER or to 'Unknown' if not found
+	 * chainCode gets set to internal identifier: if input chain code NULL then chainCode will be ' '
+	 * pdbCode gets set to the one parsed in HEADER or to 'Unknown' if not found
 	 * sequence gets set to the sequence read from ATOM lines (i.e. observed resdiues only)
 	 * @param pdbfile
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public void read_pdb_data_from_file(String pdbfile) throws FileNotFoundException, IOException{
+	private void read_pdb_data_from_file(String pdbfile) throws FileNotFoundException, IOException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
-		boolean empty = true; // controls whether we don't find any atom line for given chaincode and model
-		// we set chain to chaincode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
-		chain=chaincode;
-		if (chaincode.equals("NULL")) chain=" ";
+		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
+		// we set chainCode to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
+		chainCode=pdbChainCode;
+		if (pdbChainCode.equals("NULL")) chainCode=" ";
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		String line;
@@ -245,9 +245,9 @@ public class Pdb {
 				Pattern ph = Pattern.compile("^HEADER.{56}(\\d\\w{3})");
 				Matcher mh = ph.matcher(line);
 				if (mh.find()) {
-					accode=mh.group(1).toLowerCase();
+					pdbCode=mh.group(1).toLowerCase();
 				} else {
-					accode="Unknown";
+					pdbCode="Unknown";
 				}
 			}
 			p = Pattern.compile("^MODEL\\s+(\\d+)");
@@ -259,8 +259,8 @@ public class Pdb {
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type      chain res_ser     x     y     z
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chain+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				//                                 serial    atom   res_type      chain 	res_ser     x     y     z
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chainCode+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					empty=false;
@@ -286,7 +286,7 @@ public class Pdb {
 			}
 		}
 		fpdb.close();
-		if (empty) System.err.println("Couldn't find any atom line for given chaincode: "+chaincode+", model: "+model);
+		if (empty) System.err.println("Couldn't find any atom line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		// now we read the sequence from the resser2restype HashMap
 		// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
 		ArrayList<Integer> ressers = new ArrayList<Integer>();
@@ -303,21 +303,21 @@ public class Pdb {
 
 	/**
 	 * Dumps coordinate data into a file in pdb format (ATOM lines only)
-	 * The chain dumped is the value of the chain field, i.e. our internal chain identifier for Pdb objects
+	 * The chain dumped is the value of the chainCode variable, i.e. our internal chain identifier for Pdb objects
 	 * @param outfile
 	 * @throws IOException
 	 */
 	public void dump2pdbfile(String outfile) throws IOException {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		Out.println("HEADER  Dumped from "+db+". pdb accession code="+accode+", chain='"+chain+"'");
+		Out.println("HEADER  Dumped from "+db+". pdb code="+pdbCode+", chain='"+chainCode+"'");
 		for (String resser_atom:resser_atom2atomserial.keySet()){
 			int atomserial = resser_atom2atomserial.get(resser_atom);
 			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
 			String atom = resser_atom.split("_")[1];
 			String res_type = resser2restype.get(res_serial);
 			Double[] coords = atomser2coord.get(atomserial);
-			Object[] fields = {atomserial, atom, res_type, chain, res_serial, coords[0], coords[1], coords[2]};
+			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords[0], coords[1], coords[2]};
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
@@ -329,7 +329,7 @@ public class Pdb {
 	
 	public void dumpseq(String seqfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(seqfile));
-		Out.println(">"+accode+"_"+chaincode);
+		Out.println(">"+pdbCode+"_"+pdbChainCode);
 		Out.println(sequence);
 		Out.close();
 	}
@@ -425,11 +425,11 @@ public class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,accode,chain,chaincode);
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
 		return graph;
 	}
 	
-	public Double distance(Double[] coords1, Double[] coords2){
+	private Double distance(Double[] coords1, Double[] coords2){
 		return Math.sqrt(Math.pow((coords1[0]-coords2[0]),2)+Math.pow((coords1[1]-coords2[1]),2)+Math.pow((coords1[2]-coords2[2]),2));
 	}
 	
@@ -443,5 +443,13 @@ public class Pdb {
 
 	public int get_resser_from_atomser(int atomser){
 		return atomser2resser.get(atomser);
+	}
+	
+	public String getChainCode(){
+		return this.chainCode;
+	}
+	
+	public String getPdbChainCode(){
+		return this.pdbChainCode;
 	}
 }

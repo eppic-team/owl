@@ -20,56 +20,57 @@ import tools.MySQLConnection;
 
 public class Graph {
 
-	public final static String MYSQLSERVER="white";
-	public final static String MYSQLUSER=getUserName();
-	public final static String MYSQLPWD="nieve";
+	private final static String MYSQLSERVER="white";
+	private final static String MYSQLUSER=getUserName();
+	private final static String MYSQLPWD="nieve";
 	
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 
-	public ContactList contacts;
+	public ContactList contacts; // kept it public to be able to re-reference the object directly (getContacts() copies it)
+	
 	// nodes is a TreeMap of residue serials to residue types (3 letter code)
-	TreeMap<Integer,String> nodes;
-	public String sequence; // the full sequence (with unobserved residues and non-standard aas ='X')
-	public String accode;
-	public String chain;
-	public String chaincode="";
-	public double cutoff;
-	public String ct;
-	public boolean directed=false;
+	private TreeMap<Integer,String> nodes;
+	private String sequence; // the full sequence (with unobserved residues and non-standard aas ='X')
+	private String pdbCode;
+	private String chainCode;
+	private String pdbChainCode="";
+	private double cutoff;
+	private String ct;		// the contact type
+	private boolean directed=false;
 	
 	// fullLength is length of full sequence or:
 	// -if sequence not provided (when reading from db): length of everything except possible unobserved residues at end of chain
 	// -if sequence and nodes not provided (when reading from file and sequence field missing): length except possible unobserved residues at end of chain and possible nodes without contacts at end of chain
-	public int fullLength; 
-	public int obsLength;  // length without unobserved, non standard aas 
+	private int fullLength; 
+	private int obsLength;  // length without unobserved, non standard aas 
 	
-	public int numContacts;
+	private int numContacts;
 	
-	public boolean modified;
+	private boolean modified;
 	
 	// these 2 fields only used when reading from db
-	int graphid=0;
-	int sm_id=0;
+	private int graphid=0;
+	//private int sm_id=0; // for future use
 	
 	/**
 	 * Constructs Graph object by passing ArrayList with contacts and TreeMap with nodes (res serials and types)
-	 * Must also pass contact type, cutoff, accession code and chain
+	 * Must also pass contact type, cutoff, pdbCode and chainCode
 	 * @param contacts
 	 * @param nodes
 	 * @param sequence
 	 * @param cutoff
 	 * @param ct
-	 * @param accode
-	 * @param chain
+	 * @param pdbCode
+	 * @param chainCode
 	 */
-	public Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String accode, String chain, String chaincode) {
+	public Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
 		this.sequence=sequence;
-		this.accode=accode;
-		this.chain=chain;
-		this.chaincode=chaincode;
+		this.pdbCode=pdbCode;
+		this.chainCode=chainCode;
+		this.pdbChainCode=pdbChainCode;
 		this.ct=ct;
 		this.fullLength=sequence.length();
 		this.obsLength=nodes.size();
@@ -81,18 +82,18 @@ public class Graph {
 	}
 	
 	/**
-	 * Constructs Graph object from graph db, given the dbname, accode, chaincode (classic pdb chain code), ct and cutoff
+	 * Constructs Graph object from graph db, given the dbname, pdbCode, pdbChainCode (classic pdb chain code), ct and cutoff
 	 * @param dbname
-	 * @param accode
-	 * @param chaincode
+	 * @param pdbCode
+	 * @param pdbChainCode
 	 * @param cutoff
 	 * @param ct
 	 * @throws GraphIdNotFoundError
 	 * @throws SQLException 
 	 */
-	public Graph(String dbname, String accode, String chaincode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException{
+	public Graph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException{
 		this.cutoff=cutoff;
-		this.accode=accode;
+		this.pdbCode=pdbCode;
 		this.ct=ct;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
@@ -102,7 +103,7 @@ public class Graph {
 			directed=true;
 		}
 		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,dbname);
-		getgraphid(conn, chaincode); // initialises graphid, sm_id and chain
+		getgraphid(conn, pdbChainCode); // initialises graphid, sm_id and chainCode
 		read_graph_from_db(conn); // gets contacts, nodes and sequence
 		conn.close();
 		this.obsLength=nodes.size();
@@ -131,7 +132,7 @@ public class Graph {
 		this.sequence="";
 		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,dbname);
 		read_graph_from_db(conn); // gets contacts, nodes and sequence
-		get_db_graph_info(conn); // gets accode, chaincode, chain, ct and cutoff from db (from graph_id)
+		get_db_graph_info(conn); // gets pdbCode, pdbChainCode, chainCode, ct and cutoff from db (from graph_id)
 		conn.close();
 		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
 		if (ct.contains("/")){
@@ -163,10 +164,10 @@ public class Graph {
 		this.sequence="";
 		this.ct="";
 		this.cutoff=0.0;
-		// we initialise accode, chain and chaincode to empty strings in case the file doesn't specify then
-		this.accode="";
-		this.chain="";
-		this.chaincode="";
+		// we initialise pdbCode, chainCode and pdbChainCode to empty strings in case the file doesn't specify then
+		this.pdbCode="";
+		this.chainCode="";
+		this.pdbChainCode="";
 		if (ct.contains("/")){
 			directed=true;
 		}
@@ -223,17 +224,17 @@ public class Graph {
 				ps = Pattern.compile("^#PDB:\\s*(\\w+)");
 				ms = ps.matcher(line);
 				if (ms.find()){
-					accode=ms.group(1);
+					pdbCode=ms.group(1);
 				}
 				ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w)");
 				ms = ps.matcher(line);
 				if (ms.find()){
-					chaincode=ms.group(1);
+					pdbChainCode=ms.group(1);
 				}
 				ps = Pattern.compile("^#CHAIN:\\s*(\\w)");
 				ms = ps.matcher(line);
 				if (ms.find()){
-					chain=ms.group(1);
+					chainCode=ms.group(1);
 				}				
 				ps = Pattern.compile("^#CT:\\s*([a-zA-Z/]+)");
 				ms = ps.matcher(line);
@@ -302,27 +303,27 @@ public class Graph {
 
 	}
 	
-	public void getgraphid (MySQLConnection conn, String chaincode) throws GraphIdNotFoundError{
-		// input is chaincode i.e. pdb chain code
-        // we take chain (internal chain identifier, pchain_code for msdsd and asym_id for pdbase) from pchain_code field in chain_graph 
+	public void getgraphid (MySQLConnection conn, String pdbChainCode) throws GraphIdNotFoundError{
+		// input is pdbChainCode i.e. pdb chain code
+        // we take chainCode (internal chain identifier, pchain_code for msdsd and asym_id for pdbase) from pchain_code field in chain_graph 
         // (in the chain_graph table the internal chain identifier is called 'pchain_code')
 		int pgraphid=0;
-		String chainstr="='"+chaincode+"' ";
-		if (chaincode.equals("NULL")){
+		String chainstr="='"+pdbChainCode+"' ";
+		if (pdbChainCode.equals("NULL")){
 			chainstr=" IS NULL ";
 		}
 		try {
-			String sql="SELECT graph_id, pchain_code FROM chain_graph WHERE accession_code='"+accode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
+			String sql="SELECT graph_id, pchain_code FROM chain_graph WHERE accession_code='"+pdbCode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			int check=0;
 			while (rsst.next()) {
 				check++;
 				pgraphid=rsst.getInt(1);
-				chain=rsst.getString(2);
+				chainCode=rsst.getString(2);
 			}
 			if (check!=1){
-				System.err.println("No pgraph_id match or more than 1 match for accession_code="+accode+", chain_pdb_code="+chaincode+", dist="+cutoff);
+				System.err.println("No pgraph_id match or more than 1 match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode+", dist="+cutoff);
 			}
 			rsst.close();
 			stmt.close();
@@ -338,7 +339,7 @@ public class Graph {
 			while (rsst.next()){
 				check++;
 				graphid=rsst.getInt(1);
-				sm_id=rsst.getInt(2);
+				//sm_id=rsst.getInt(2); // we might want to use it in the future
 			}
 			if (check!=1){
 				System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
@@ -376,11 +377,11 @@ public class Graph {
 			check=0;
 			while (rsst.next()){
 				check++;
-				accode=rsst.getString(1);
-				chaincode=rsst.getString(2);
+				pdbCode=rsst.getString(1);
+				pdbChainCode=rsst.getString(2);
 				// java returns a null if the field is a database null, we want actually the "NULL" string in that case
-				if (chaincode==null) chaincode="NULL";
-				chain=rsst.getString(3);
+				if (pdbChainCode==null) pdbChainCode="NULL";
+				chainCode=rsst.getString(3);
 			}
 			if (check!=1){
 				System.err.println("No accession_code+chain_pdb_code+pchain_code match or more than 1 match for graph_id="+pgraphid+" in chain_graph table");
@@ -407,9 +408,9 @@ public class Graph {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println("#VER: "+GRAPHFILEFORMATVERSION);
 		Out.println("#SEQUENCE: "+sequence);
-		Out.println("#PDB: "+accode);
-		Out.println("#PDB CHAIN CODE: "+chaincode);
-		Out.println("#CHAIN: "+chain);
+		Out.println("#PDB: "+pdbCode);
+		Out.println("#PDB CHAIN CODE: "+pdbChainCode);
+		Out.println("#CHAIN: "+chainCode);
 		Out.println("#CT: "+ct);
 		Out.println("#CUTOFF: "+cutoff);
 		for (Contact pair:contacts){
@@ -449,7 +450,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copy(){
-		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,accode,chain,chaincode);		
+		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);		
 	}
 	
 	/**
@@ -598,14 +599,60 @@ public class Graph {
 				onlyother.add(cont);
 			}
 		}
-		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,accode,chain,chaincode);
-		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,accode,chain,chaincode);
-		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.accode,other.chain,other.chaincode);
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode);
 		HashMap<String,Graph> result = new HashMap<String,Graph>();
 		result.put("common", commongraph);
 		result.put("onlythis", onlythisgraph);
 		result.put("onlyother",onlyothergraph);
 		return result;
+	}
+	
+	public boolean isModified(){
+		return modified;
+	}
+	
+	public boolean isDirected(){
+		return directed;
+	}
+	
+	public String getPdbCode() {
+		return pdbCode;
+	}
+	
+	public String getPdbChainCode(){
+		return pdbChainCode;
+	}
+	
+	public String getChainCode(){
+		return chainCode;
+	}
+	
+	public String getSequence(){
+		return sequence;
+	}
+	
+	public int getFullLength(){
+		return fullLength;
+	}
+	
+	public int getObsLength(){
+		return obsLength;
+	}
+	
+	public int getNumContacts(){
+		// in theory we could return just numContacts, because we have taken care of updating it every time contacts changed
+		// however we call directly contacts.size() as I feel is safer
+		return contacts.size(); 
+	}
+	
+	public String getContactType() {
+		return ct;
+	}
+	
+	public double getCutoff(){
+		return cutoff;
 	}
 }
 

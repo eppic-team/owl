@@ -9,44 +9,45 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class MsdsdInfo {
-	public final static String MYSQLSERVER="white";
-	public final static String MYSQLUSER=getUserName();
-	public final static String MYSQLPWD="nieve";
-	public final static String mymsdsdDB="my_msdsd_00_07_a";
-	public final static String msdsdDB="msdsd_00_07_a";
-	public final static String pdbaseDB="pdbase";
-
-	MySQLConnection conn;
-	String accode="";
-	String chaincode="";
-	int model=DEFAULT_MODEL;
-	int chainid;
-	int modelid;
-	String chain=""; // the internal msdsd/my_msdsd chain identifier (pchain_code)
+	private final static String MYSQLSERVER="white";
+	private final static String MYSQLUSER=getUserName();
+	private final static String MYSQLPWD="nieve";
+	private final static String DEFAULT_MYMSDSD_DB="my_msdsd_00_07_a";
+	private final static String DEFAULT_MSDSD_DB="msdsd_00_07_a";
 	
-	static int DEFAULT_MODEL=1;
+	private static final int DEFAULT_MODEL=1;
 
-	MsdsdInfo (String accode, String chaincode, int model_serial, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this.accode=accode;
-		this.chaincode=chaincode;
+	private MySQLConnection conn;
+	private String pdbCode="";
+	private String pdbChainCode="";
+	private int model=DEFAULT_MODEL;
+	private int chainid;
+	private int modelid;
+	private String chainCode=""; // the internal msdsd/my_msdsd chain identifier (pchain_code)
+	
+	
+
+	public MsdsdInfo (String pdbCode, String pdbChainCode, int model_serial, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+		this.pdbCode=pdbCode;
+		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
 		this.conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,db);
 		getchainid();// initialises chainid and modelid
         if (check_inconsistent_res_numbering()){
-            throw new MsdsdInconsistentResidueNumbersError("Inconsistent residue numbering in msdsd for accession_code "+this.accode+", chain_pdb_code "+this.chaincode);
+            throw new MsdsdInconsistentResidueNumbersError("Inconsistent residue numbering in msdsd for accession_code "+this.pdbCode+", chain_pdb_code "+this.pdbChainCode);
         }
 
 	}
 
-	MsdsdInfo (String accode, String chaincode, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
-		this(accode,chaincode,DEFAULT_MODEL,db);
+	public MsdsdInfo (String pdbCode, String pdbChainCode, String db) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db);
 	}
-	MsdsdInfo (String accode, String chaincode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
-		this(accode,chaincode,model_serial,msdsdDB);
+	public MsdsdInfo (String pdbCode, String pdbChainCode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
+		this(pdbCode,pdbChainCode,model_serial,DEFAULT_MSDSD_DB);
 	}
 	
-	MsdsdInfo (String accode, String chaincode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
-		this(accode,chaincode,DEFAULT_MODEL,msdsdDB);
+	public MsdsdInfo (String pdbCode, String pdbChainCode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException  {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,DEFAULT_MSDSD_DB);
 	}
 
 	/** get user name from operating system (for use as database username) */
@@ -64,15 +65,15 @@ public class MsdsdInfo {
 		conn.close();
 	}
 
-	public void getchainid() throws MsdsdAcCodeNotFoundError {
+	private void getchainid() throws MsdsdAcCodeNotFoundError {
 		chainid=0;
-		String chaincodestr="='"+chaincode+"'";
-		if (chaincode.equals("NULL")){
+		String chaincodestr="='"+pdbChainCode+"'";
+		if (pdbChainCode.equals("NULL")){
 			chaincodestr="IS NULL";
 		}
 		String sql = "SELECT chain_id, model_id, pchain_code " +
-				" FROM "+mymsdsdDB+".mmol_chain_info " +
-				" WHERE accession_code='"+accode+"' " +
+				" FROM "+DEFAULT_MYMSDSD_DB+".mmol_chain_info " +
+				" WHERE accession_code='"+pdbCode+"' " +
 				" AND chain_pdb_code "+chaincodestr +
 				" AND chain_type='C' " +
 				" AND asu_chain=1 " +
@@ -83,14 +84,14 @@ public class MsdsdInfo {
 			if (rsst.next()) {
 				chainid = rsst.getInt(1);
 				modelid = rsst.getInt(2);
-				chain=rsst.getString(3);
+				chainCode=rsst.getString(3);
 				if (! rsst.isLast()) {
-					System.err.println("More than 1 chain_id match for accession_code="+accode+", chain_pdb_code="+chaincode);
-					throw new MsdsdAcCodeNotFoundError("More than 1 chain_id match for accession_code="+accode+", chain_pdb_code="+chaincode);					
+					System.err.println("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+					throw new MsdsdAcCodeNotFoundError("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);					
 				}
 			} else {
-				System.err.println("No chain_id match for accession_code="+accode+", chain_pdb_code="+chaincode);
-				throw new MsdsdAcCodeNotFoundError("No chain_id could be matched for accession_code "+accode+", chain_pdb_code "+chaincode);
+				System.err.println("No chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+				throw new MsdsdAcCodeNotFoundError("No chain_id could be matched for accession_code "+pdbCode+", chain_pdb_code "+pdbChainCode);
 			} 
 			rsst.close();
 			stmt.close();
@@ -100,12 +101,12 @@ public class MsdsdInfo {
 
 	}
 	
-	public boolean check_inconsistent_res_numbering(){
+	private boolean check_inconsistent_res_numbering(){
 		int count=0;
 		int numserial=0;
 		try {
 			String sql="SELECT count(*) " +
-			" FROM "+mymsdsdDB+".problem_serial_chain " +
+			" FROM "+DEFAULT_MYMSDSD_DB+".problem_serial_chain " +
 			" WHERE chain_id="+chainid +
 			" AND (min_serial!=1 OR num_serial!=num_dist_serial OR num_serial!=max_serial-min_serial+1)";
 			Statement stmt = conn.createStatement();
@@ -116,7 +117,7 @@ public class MsdsdInfo {
 					return true;
 				}
 			}
-			sql="SELECT num_serial FROM "+mymsdsdDB+".problem_serial_chain WHERE chain_id="+chainid;
+			sql="SELECT num_serial FROM "+DEFAULT_MYMSDSD_DB+".problem_serial_chain WHERE chain_id="+chainid;
 			rsst = stmt.executeQuery(sql);
 			int check = 0;
 			while (rsst.next()){
@@ -124,11 +125,11 @@ public class MsdsdInfo {
 				numserial=rsst.getInt(1);
 			}
 			if (check!=1){
-				System.err.println("No num_serial match or more than 1 match for accession_code="+accode+", chain_pdb_code="+chaincode);
+				System.err.println("No num_serial match or more than 1 match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
 			}
 			String allresseq = read_seq();
 			if (allresseq.length()!=numserial){
-				System.err.println("num_serial and length of all_res_seq don't match for accession_code="+accode+", chain_pdb_code="+chaincode);
+				System.err.println("num_serial and length of all_res_seq don't match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
 				return true;
 			}
 			rsst.close();
@@ -179,7 +180,7 @@ public class MsdsdInfo {
 	
 	public String read_seq(){
 		String allresseq="";
-		String sql="SELECT all_res_seq FROM "+mymsdsdDB+".chain_seq WHERE chain_id="+chainid;
+		String sql="SELECT all_res_seq FROM "+DEFAULT_MYMSDSD_DB+".chain_seq WHERE chain_id="+chainid;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
@@ -189,7 +190,7 @@ public class MsdsdInfo {
 				allresseq=rsst.getString(1);
 			} 
 			if (check!=1) {
-				System.err.println("No all_res_seq match or more than 1 match for accession_code="+accode+", chain_pdb_code="+chaincode+", chain_id="+chainid);
+				System.err.println("No all_res_seq match or more than 1 match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode+", chain_id="+chainid);
 			} 
 			rsst.close();
 			stmt.close();
@@ -227,5 +228,10 @@ public class MsdsdInfo {
 
 		return map;
 	}
+	
+	public String getChainCode(){
+		return this.chainCode;
+	}
+
 
 }

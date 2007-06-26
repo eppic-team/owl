@@ -10,28 +10,28 @@ import java.util.HashMap;
 import java.util.Collections;
 
 public class PdbaseInfo {
-	public final static String MYSQLSERVER="white";
-	public final static String MYSQLUSER=getUserName();
-	public final static String MYSQLPWD="nieve";
-	public final static String mymsdsdDB="my_msdsd_00_07_a";
-	public final static String msdsdDB="msdsd_00_07_a";
-	public final static String pdbaseDB="pdbase";
+	private final static String MYSQLSERVER="white";
+	private final static String MYSQLUSER=getUserName();
+	private final static String MYSQLPWD="nieve";
+	public final static String DEFAULT_PDBASE_DB="pdbase";
 	
-	MySQLConnection conn;
-	String accode="";
-	String chaincode="";
-	int model=DEFAULT_MODEL;
-	String chain=""; // the internal pdbase chain identifier (asym_id)
-	int entrykey;
-	String asymid;
-	int entitykey;
-	String alt_locs_sql_str;
+	private static final int DEFAULT_MODEL=1;
 	
-	static int DEFAULT_MODEL=1;
+	private MySQLConnection conn;
+	private String pdbCode="";
+	private String pdbChainCode="";
+	private int model=DEFAULT_MODEL;
+	private String chainCode=""; // the internal pdbase chain identifier (asym_id)
+	private int entrykey;
+	private String asymid;
+	private int entitykey;
+	private String alt_locs_sql_str;
 	
-	PdbaseInfo (String accode, String chaincode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
-		this.accode=accode;
-		this.chaincode=chaincode;
+	
+	
+	public PdbaseInfo (String pdbCode, String pdbChainCode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
+		this.pdbCode=pdbCode;
+		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
 		this.conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,db);
         this.entrykey=get_entry_key();
@@ -41,15 +41,15 @@ public class PdbaseInfo {
 
 	}
 	
-	PdbaseInfo (String accode, String chaincode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(accode,chaincode,DEFAULT_MODEL,db);
+	public PdbaseInfo (String pdbCode, String pdbChainCode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db);
 	}
-	PdbaseInfo (String accode, String chaincode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(accode,chaincode,model_serial,pdbaseDB);
+	public PdbaseInfo (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+		this(pdbCode,pdbChainCode,model_serial,DEFAULT_PDBASE_DB);
 	}
 	
-	PdbaseInfo (String accode, String chaincode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(accode,chaincode,DEFAULT_MODEL,pdbaseDB);
+	public PdbaseInfo (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,DEFAULT_PDBASE_DB);
 	}
 
 	/** get user name from operating system (for use as database username) */
@@ -67,19 +67,19 @@ public class PdbaseInfo {
 		conn.close();
 	}
 	
-	public int get_entry_key() throws PdbaseAcCodeNotFoundError {
-		String sql="SELECT entry_key FROM struct WHERE entry_id='"+accode.toUpperCase()+"'";
+	private int get_entry_key() throws PdbaseAcCodeNotFoundError {
+		String sql="SELECT entry_key FROM struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			if (rsst.next()) {
 				entrykey = rsst.getInt(1);
 				if (! rsst.isLast()) {
-					System.err.println("More than 1 entry_key match for accession_code="+accode+", chain_pdb_code="+chaincode);
+					System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
 					throw new PdbaseAcCodeNotFoundError();					
 				}
 			} else {
-				System.err.println("No entry_key match for accession_code="+accode+", chain_pdb_code="+chaincode);
+				System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
 				throw new PdbaseAcCodeNotFoundError();
 			}
 			rsst.close();
@@ -90,9 +90,9 @@ public class PdbaseInfo {
 		return entrykey;
 	}
 	
-	public String get_asym_id() throws PdbaseInconsistencyError {
-		String pdbstrandid=chaincode;
-		if (chaincode.equals("NULL")){
+	private String get_asym_id() throws PdbaseInconsistencyError {
+		String pdbstrandid=pdbChainCode;
+		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
 		}
 		String sql="SELECT asym_id " +
@@ -106,20 +106,20 @@ public class PdbaseInfo {
 			if (rsst.next()) {
 				asymid = rsst.getString(1);
 			} else {
-				System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+chaincode);
-				throw new PdbaseInconsistencyError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+chaincode);
+				System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+				throw new PdbaseInconsistencyError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
 			}
 			rsst.close();
 			stmt.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		// we set the internal chain identifier self.chain from asymid
-		chain = asymid;
+		// we set the internal chain identifier chainCode from asymid
+		chainCode = asymid;
 		return asymid;	
 	}
 	
-	public int get_entity_key() throws PdbaseInconsistencyError {
+	private int get_entity_key() throws PdbaseInconsistencyError {
 		String sql="SELECT entity_key " +
 				" FROM struct_asym " +
 				" WHERE entry_key="+ entrykey +
@@ -145,7 +145,7 @@ public class PdbaseInfo {
 		return entitykey;
 	}
 	
-	public String get_atom_alt_locs() throws PdbaseInconsistencyError{
+	private String get_atom_alt_locs() throws PdbaseInconsistencyError{
 		ArrayList<String> alt_ids = new ArrayList<String>();
 		HashMap<String,Integer> alt_ids2keys = new HashMap<String,Integer>();
 		String alt_loc_field="label_alt_key";
@@ -161,8 +161,8 @@ public class PdbaseInfo {
 			}
 			if (count!=0){
 				if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
-					System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+pdbaseDB+" db!");
-					throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+pdbaseDB+" db!");
+					System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+					throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 				}
 				alt_ids.remove(".");
 				Collections.sort(alt_ids);
@@ -220,8 +220,8 @@ public class PdbaseInfo {
 	
 	public String read_seq() throws PdbaseInconsistencyError{
 		String sequence="";
-		String pdbstrandid=chaincode;
-		if (chaincode.equals("NULL")){
+		String pdbstrandid=pdbChainCode;
+		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
 		}
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
@@ -259,8 +259,8 @@ public class PdbaseInfo {
 	}
 	
 	public HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError{
-		String pdbstrandid=chaincode;
-		if (chaincode.equals("NULL")){
+		String pdbstrandid=pdbChainCode;
+		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
 		}
 
@@ -294,4 +294,9 @@ public class PdbaseInfo {
 
 		return map;
 	}
+	
+	public String getChainCode(){
+		return this.chainCode;
+	}
+	
 }

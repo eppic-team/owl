@@ -23,7 +23,7 @@ public class testPdb {
 		Pdb pdb = new Pdb(accode,chaincode); // pdbase is default source for constructor, a name for a pdbase database can also be passed
 		System.out.println("dumping structure to pdb file");
 		pdb.dump2pdbfile("testpdb.txt");
-		String chain = pdb.chain;
+		String chain = pdb.getChainCode();
 		System.out.println("getting graph");
 		Graph graph = pdb.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
