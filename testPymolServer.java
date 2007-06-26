@@ -1,7 +1,9 @@
 import org.apache.xmlrpc.*;
+import org.apache.xmlrpc.client.XmlRpcClient;
+import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
+
 import java.net.*;
 import java.util.*;
-import java.io.*;
 
 /**
  * Package:		tools
@@ -29,14 +31,15 @@ public class testPymolServer {
 		
 	    try {
 	    String myURL = "http://anthrazit:9123";
-	    XmlRpcClient client = new XmlRpcClient(myURL);
+	    XmlRpcClient client = new XmlRpcClient();
+	    XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+	    config.setServerURL(new URL(myURL));
+	    client.setConfig(config);
+
 	    Vector<String> myvector = new Vector<String>();
 	    myvector.add(command);
 	    try {
 	    	client.execute("do",myvector);	    
-	    }
-	    catch (IOException e) {
-	    	e.printStackTrace();
 	    }
 	    catch( XmlRpcException e) {
 	    	e.printStackTrace();

@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Vector;
-import org.apache.xmlrpc.*;
-
+//import org.apache.xmlrpc.*;
+import org.apache.xmlrpc.client.*;
+//import org.apache.xmlrpc.common.*;
+import org.apache.xmlrpc.XmlRpcException;
 /**
  * Package:		tools
  * Class: 		PymolServerOutput
@@ -39,7 +42,7 @@ public class PymolServerOutputStream extends OutputStream {
 	static final String 	DEFAULTXMLRPCCOMMAND	= "do";
 	static final int		INITIALBUFFERCAPACITY   = 255;
 	static final int		BUFFERCAPACITYINCREASE  = 255;
-	static final int        PYMOLCOMMANDLENGTHLIMIT = 1060;
+	public static final int        PYMOLCOMMANDLENGTHLIMIT = 1060;
 	
 	byte[]			commandBuffer;
 	int				commandBufferPtr,  // current load
@@ -58,7 +61,10 @@ public class PymolServerOutputStream extends OutputStream {
 		
 		try {
 		// initialize connection to server
-	    this.client = new XmlRpcClient(url);
+	    this.client = new XmlRpcClient();
+	    XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+	    config.setServerURL(new URL(url));
+	    client.setConfig(config);
 		} catch(MalformedURLException e) {
 			System.err.println("Error: Malformed URL in constructor of PymolServerOutputStream");
 			e.printStackTrace();
@@ -106,9 +112,9 @@ public class PymolServerOutputStream extends OutputStream {
 	    	this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
 	    	
 	    } catch(XmlRpcException e) {
-	    	System.out.println("XMP-RPC exception occured.");
+	    	// System.out.println("XMP-RPC exception occured.");
 	    	// send IOException instead, so use of XML-RPC is transparent
-	    	throw new IOException(); 
+	    	throw new IOException(e.getMessage()); 
 	    }
 	}
 	
@@ -126,15 +132,18 @@ public class PymolServerOutputStream extends OutputStream {
 		// try to connect directly
     	System.out.println("Trying to connect directly by XML-RPC...");		
 	    try {
-		    XmlRpcClient client = new XmlRpcClient(serverUrl);
+		    
+		    XmlRpcClient client = new XmlRpcClient();
+		    XmlRpcClientConfigImpl config = new XmlRpcClientConfigImpl();
+		    config.setServerURL(new URL(serverUrl));
+		    client.setConfig(config);
+
+		    
 		    Vector<String> myvector = new Vector<String>();
 		    myvector.add(command1);
 		    try {
 		    	client.execute(DEFAULTXMLRPCCOMMAND,myvector);
 		    	System.out.println("done.");
-		    }
-		    catch (IOException e) {
-		    	e.printStackTrace();
 		    }
 		    catch( XmlRpcException e) {
 		    	e.printStackTrace();

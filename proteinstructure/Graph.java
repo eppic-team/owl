@@ -201,7 +201,7 @@ public class Graph {
 	
 	public void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException {
 		contacts = new ContactList();
-		System.out.println("Reading contacts from file "+contactsfile);
+		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		String line;
 		while ((line = fcont.readLine() ) != null ) {
