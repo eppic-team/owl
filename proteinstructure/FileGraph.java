@@ -65,8 +65,10 @@ public class FileGraph extends Graph {
 		contacts = new ContactList();
 		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
+		int linecount=0;
 		String line;
 		while ((line = fcont.readLine() ) != null ) {
+			linecount++;
 			Pattern p = Pattern.compile("^#");
 			Matcher m = p.matcher(line);
 			if (m.find()){
@@ -76,6 +78,8 @@ public class FileGraph extends Graph {
 					if (!ms.group(1).equals(GRAPHFILEFORMATVERSION)){
 						throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version");
 					}
+				} else if (linecount==1){ // #AGLAPPE not found and in first line
+					throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format");
 				}
 				ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
 				ms = ps.matcher(line);
@@ -87,7 +91,7 @@ public class FileGraph extends Graph {
 				if (ms.find()){
 					pdbCode=ms.group(1);
 				}
-				ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w)");
+				ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w+)");
 				ms = ps.matcher(line);
 				if (ms.find()){
 					pdbChainCode=ms.group(1);
