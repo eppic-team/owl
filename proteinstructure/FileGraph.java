@@ -26,8 +26,9 @@ public class FileGraph extends Graph {
 	 * @param contactsfile
 	 * @throws IOException
 	 * @throws FileNotFoundException
+	 * @throws GraphFileFormatError
 	 */
-	public FileGraph (String contactsfile) throws IOException, FileNotFoundException{
+	public FileGraph (String contactsfile) throws IOException, FileNotFoundException, GraphFileFormatError{
 		// we set the sequence to blank when we read from file as we don't have the full sequence
 		// if sequence is present in contactsfile then is read from there
 		this.sequence="";
@@ -37,10 +38,14 @@ public class FileGraph extends Graph {
 		this.pdbCode="";
 		this.chainCode="";
 		this.pdbChainCode="";
+		this.directed=false;
+
+		read_graph_from_file(contactsfile); // initialises contacts, and nodes (only if sequence is given)
+		
 		if (ct.contains("/")){
 			directed=true;
 		}
-		read_graph_from_file(contactsfile); // initialises contacts, and nodes (only if sequence is given)
+
 		if (!sequence.equals("")){
 			this.fullLength=sequence.length();
 			this.obsLength=nodes.size(); 
@@ -56,7 +61,7 @@ public class FileGraph extends Graph {
 		this.modified=false;
 	}
 
-	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException {
+	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException, GraphFileFormatError {
 		contacts = new ContactList();
 		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
@@ -65,15 +70,15 @@ public class FileGraph extends Graph {
 			Pattern p = Pattern.compile("^#");
 			Matcher m = p.matcher(line);
 			if (m.find()){
-//				Pattern ps = Pattern.compile("^#VER: (\\d\\.\\d)");
-//				Matcher ms = ps.matcher(line);
-//				if (ms.find()){
-//					if (!ms.group(1).equals(GRAPHFILEFORMATVERSION)){
-//						throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version");
-//					}
-//				}
-				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
+				Pattern ps = Pattern.compile("^#AGLAPPE.*ver: (\\d\\.\\d)");
 				Matcher ms = ps.matcher(line);
+				if (ms.find()){
+					if (!ms.group(1).equals(GRAPHFILEFORMATVERSION)){
+						throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version");
+					}
+				}
+				ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
+				ms = ps.matcher(line);
 				if (ms.find()){
 					sequence=ms.group(1);
 				}

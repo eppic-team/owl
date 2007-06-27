@@ -15,7 +15,10 @@ public class testPdb {
 	 * @throws SQLException 
 	 */
 	
-	public static void main(String[] args) throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException{
+	public static void main(String[] args) 
+		throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, 
+				MsdsdInconsistentResidueNumbersError, SQLException, PdbfileFormatError{
+		
 		String accode="1bxy";
 		String chaincode="A";
 		// data from pdbase
@@ -27,7 +30,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		Graph graph = pdb.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph.write_contacts_to_file("test.txt");
+		graph.write_graph_to_file("test.txt");
 		System.out.println("getting start of contact map matrix from graph");
 		int[][] mat = graph.getIntMatrix();
 		for (int i=0;i<10;i++){
@@ -45,7 +48,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		Graph graph2 = pdb2.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph2.write_contacts_to_file("test2.txt");
+		graph2.write_graph_to_file("test2.txt");
 
 		// data from pdb
 		System.out.println("reading from dumped pdb file");
@@ -53,7 +56,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		Graph graph3 = pdb3.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph3.write_contacts_to_file("test3.txt");
+		graph3.write_graph_to_file("test3.txt");
 	}
 
 }

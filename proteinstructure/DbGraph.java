@@ -21,6 +21,9 @@ public class DbGraph extends Graph {
 	private final static String MYSQLUSER=MySQLConnection.getUserName();
 	private final static String MYSQLPWD="nieve";
 	
+	private final static String DEFAULT_CR ="(true)"; // default contact range (CR field in graph db)
+	private final static String DEFAULT_CW ="1";      // default contact weight (CW field in graph db)
+	
 	private int graphid=0;
 	//private int sm_id=0; // for future use
 	
@@ -43,7 +46,9 @@ public class DbGraph extends Graph {
 		this.conn=conn;
 		this.cutoff=cutoff;
 		this.pdbCode=pdbCode;
+		this.pdbChainCode=pdbChainCode;
 		this.ct=ct;
+		this.directed=false;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
 		this.sequence=""; 
@@ -198,7 +203,7 @@ public class DbGraph extends Graph {
 			if (ct.equals("ALL")){
 				ctstr="BB+SC+BB/SC";
 			}
-			sql="SELECT graph_id,single_model_id FROM "+dbname+".single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='(true)' AND CW=1";
+			sql="SELECT graph_id,single_model_id FROM "+dbname+".single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='"+DEFAULT_CR+"' AND CW="+DEFAULT_CW;
 			stmt = conn.createStatement();
 			rsst = stmt.executeQuery(sql);
 			check=0;

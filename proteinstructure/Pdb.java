@@ -17,28 +17,30 @@ import java.util.Collections;
  */
 public abstract class Pdb {
 	
-	protected final static int DEFAULT_MODEL=1;
-	public final static String NONSTANDARD_AA_LETTER="X";
+	protected final static int DEFAULT_MODEL=1;				// default model serial (NMR structures)
+	public final static String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
 	
-	protected HashMap<String,Integer> resser_atom2atomserial;
-	protected HashMap<Integer,String> resser2restype;
-	protected HashMap<Integer,Double[]> atomser2coord;
-	protected HashMap<Integer,Integer> atomser2resser;
-	protected HashMap<String,Integer> pdbresser2resser; // only used when reading from database
-	protected HashMap<Integer,String> resser2pdbresser; // only used when reading from database
+	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
+	protected HashMap<Integer,String> resser2restype;   // residue serial to 3 letter residue type 
+	protected HashMap<Integer,Double[]> atomser2coord;  // atom serials to 3D coordinates
+	protected HashMap<Integer,Integer> atomser2resser;  // atom serials to residue serials
+	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
+	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	
-	protected HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms();
-	protected String sequence="";
-	protected String pdbCode="";
-    // given "external" pdb chain code, i.e. the classic pdb code ("NULL" if it is blank in original pdb file)	
-	protected String pdbChainCode="";
-	protected int model=DEFAULT_MODEL;
-	protected String db;
+	protected HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms(); // contains atom names for each aminoacid
 	
-    // Our internal chain identifier (taken from dbs or pdb):
+	protected String sequence; 		// full sequence as it appears in SEQRES field
+	protected String pdbCode;
+    // given "external" pdb chain code, i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)	
+	protected String pdbChainCode;
+    // Our internal chain identifier:
     // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-    // - in reading from pdb file it gets set to whatever parsed from the pdb file (i.e. can be also ' ')
+    // - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"
 	protected String chainCode;
+	protected int model;  			// the model serial for NMR structures
+	
+	protected String db;			// the db from which we have taken the data (if applies)
+	
 	
 	
 

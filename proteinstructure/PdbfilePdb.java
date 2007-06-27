@@ -13,6 +13,9 @@ import java.util.regex.Pattern;
 
 public class PdbfilePdb extends Pdb {
 	
+	private static final String UNKNOWN_STRING ="Unknown";
+	private static final String NULL_chainCode = "A";
+	
 	private String pdbfile;
 
 	/**
@@ -21,8 +24,9 @@ public class PdbfilePdb extends Pdb {
 	 * @param pdbChainCode
 	 * @throws FileNotFoundException
 	 * @throws IOException
+	 * @throws PdbfileFormatError
 	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode) throws FileNotFoundException, IOException {
+	public PdbfilePdb (String pdbfile, String pdbChainCode) throws FileNotFoundException, IOException, PdbfileFormatError {
 		this(pdbfile,pdbChainCode,DEFAULT_MODEL);
 	}
 	
@@ -33,12 +37,29 @@ public class PdbfilePdb extends Pdb {
 	 * @param model_serial
 	 * @throws FileNotFoundException
 	 * @throws IOException
+	 * @throws PdbfileFormatError
 	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode, int model_serial) throws FileNotFoundException, IOException {
+	public PdbfilePdb (String pdbfile, String pdbChainCode, int model_serial) throws FileNotFoundException, IOException, PdbfileFormatError {
 		this.pdbfile = pdbfile;
 		this.model=model_serial;
+		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file 
 		this.pdbChainCode=pdbChainCode;
+		// we set chainCode to pdbChainCode except for case NULL where we use "A"
+		this.chainCode=pdbChainCode;
+		if (pdbChainCode.equals("NULL")) this.chainCode=NULL_chainCode;
+		
+		this.sequence=""; // we initialise it to empty string, then is set inread_pdb_data_from_file 
+		
 		read_pdb_data_from_file();
+		
+		// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
+		//TODO eventually we could assign our own internal residue numbers when reading from pdb and thus this map would be used
+		this.resser2pdbresser = new HashMap<Integer, String>();
+		this.pdbresser2resser = new HashMap<String, Integer>();
+		for (int resser:resser2restype.keySet()){
+			resser2pdbresser.put(resser, String.valueOf(resser));
+			pdbresser2resser.put(String.valueOf(resser), resser);
+		}
 	}
 
 	
@@ -51,20 +72,24 @@ public class PdbfilePdb extends Pdb {
 	 * @param pdbfile
 	 * @throws FileNotFoundException
 	 * @throws IOException
+	 * @throws PdbfileFormatError
 	 */
-	private void read_pdb_data_from_file() throws FileNotFoundException, IOException{
+	private void read_pdb_data_from_file() throws FileNotFoundException, IOException, PdbfileFormatError{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
-		// we set chainCode to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
-		chainCode=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) chainCode=" ";
+		// we set chainCodeStr (for regex) to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
+		String chainCodeStr=pdbChainCode;
+		if (pdbChainCode.equals("NULL")) chainCodeStr=" ";
+		
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
+		int linecount=0;
 		String line;
 		while ((line = fpdb.readLine() ) != null ) {
+			linecount++;
 			Pattern p = Pattern.compile("^HEADER");
 			Matcher m = p.matcher(line);
 			if (m.find()){
@@ -72,9 +97,10 @@ public class PdbfilePdb extends Pdb {
 				Matcher mh = ph.matcher(line);
 				if (mh.find()) {
 					pdbCode=mh.group(1).toLowerCase();
-				} else {
-					pdbCode="Unknown";
 				}
+			} else if (linecount==1) { // header not found and we are in line 1
+				// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
+				throw new PdbfileFormatError("The pdb file "+pdbfile+" doesn't seem to have the right format");
 			}
 			p = Pattern.compile("^MODEL\\s+(\\d+)");
 			m = p.matcher(line);
@@ -85,8 +111,8 @@ public class PdbfilePdb extends Pdb {
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type      chain 	res_ser     x     y     z
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chainCode+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				//                                 serial    atom   res_type      chain 	   res_ser     x     y     z
+				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					empty=false;
@@ -120,7 +146,6 @@ public class PdbfilePdb extends Pdb {
 			ressers.add(resser);
 		}
 		Collections.sort(ressers);
-		sequence="";
 		for (int resser:ressers){
 			String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
 			sequence += oneletter;

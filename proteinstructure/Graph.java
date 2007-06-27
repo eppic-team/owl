@@ -23,10 +23,10 @@ public class Graph {
 	protected String sequence; 				// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;
 	protected String chainCode;
-	protected String pdbChainCode="";
+	protected String pdbChainCode;
 	protected double cutoff;
 	protected String ct;					// the contact type
-	protected boolean directed=false;
+	protected boolean directed;
 	
 	// fullLength is length of full sequence or:
 	// -if sequence not provided (when reading from db): length of everything except possible unobserved residues at end of chain
@@ -66,6 +66,7 @@ public class Graph {
 		this.obsLength=nodes.size();
 		this.numContacts=contacts.size();
 		this.modified=false;
+		this.directed=false;
 		if (ct.contains("/")){
 			directed=true;
 		}
@@ -74,19 +75,9 @@ public class Graph {
 
 	//TODO implement (from python) write_graph_to_db, do we really need it here??
 		
-	public void write_contacts_to_file (String outfile) throws IOException {
-		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		for (Contact pair:contacts){
-			int i_resser=pair.i;
-			int j_resser=pair.j;
-			Out.println(i_resser+"\t"+j_resser);
-		}
-		Out.close();		
-	}
-
 	public void write_graph_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		Out.println("#VER: "+GRAPHFILEFORMATVERSION);
+		Out.println("#AGLAPPE GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
 		Out.println("#SEQUENCE: "+sequence);
 		Out.println("#PDB: "+pdbCode);
 		Out.println("#PDB CHAIN CODE: "+pdbChainCode);
