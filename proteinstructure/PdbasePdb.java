@@ -56,8 +56,9 @@ public class PdbasePdb extends Pdb {
 	 * @param conn
 	 * @throws PdbaseInconsistencyError
 	 * @throws PdbaseAcCodeNotFoundError 
+	 * @throws SQLException 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
 		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db, conn);		
 	}
 
@@ -86,8 +87,9 @@ public class PdbasePdb extends Pdb {
 	 * @param conn
 	 * @throws PdbaseInconsistencyError
 	 * @throws PdbaseAcCodeNotFoundError 
+	 * @throws SQLException 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
 		this.pdbCode=pdbCode;
 		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
@@ -112,30 +114,26 @@ public class PdbasePdb extends Pdb {
 		}
 	}
 
-	private int get_entry_key() throws PdbaseAcCodeNotFoundError {
+	private int get_entry_key() throws PdbaseAcCodeNotFoundError, SQLException {
 		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			if (rsst.next()) {
-				entrykey = rsst.getInt(1);
-				if (! rsst.isLast()) {
-					System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-					throw new PdbaseAcCodeNotFoundError();					
-				}
-			} else {
-				System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-				throw new PdbaseAcCodeNotFoundError();
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			entrykey = rsst.getInt(1);
+			if (! rsst.isLast()) {
+				System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+				throw new PdbaseAcCodeNotFoundError();					
 			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} else {
+			System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+			throw new PdbaseAcCodeNotFoundError();
 		}
+		rsst.close();
+		stmt.close();
 		return entrykey;
 	}
 	
-	private String get_asym_id() throws PdbaseInconsistencyError {
+	private String get_asym_id() throws PdbaseInconsistencyError, SQLException {
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
@@ -145,88 +143,79 @@ public class PdbasePdb extends Pdb {
 				" WHERE entry_key=" + entrykey +
 				" AND pdb_strand_id='"+pdbstrandid+"' " +
 				" LIMIT 1";
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			if (rsst.next()) {
-				asymid = rsst.getString(1);
-			} else {
-				System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-				throw new PdbaseInconsistencyError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			asymid = rsst.getString(1);
+		} else {
+			System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+			throw new PdbaseInconsistencyError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
 		}
+		rsst.close();
+		stmt.close();
 		// we set the internal chain identifier chainCode from asymid
 		chainCode = asymid;
 		return asymid;	
 	}
 	
-	private int get_entity_key() throws PdbaseInconsistencyError {
+	private int get_entity_key() throws PdbaseInconsistencyError, SQLException {
 		String sql="SELECT entity_key " +
 				" FROM "+db+".struct_asym " +
 				" WHERE entry_key="+ entrykey +
 				" AND id='"+asymid+"'";
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			if (rsst.next()) {
-				entitykey = rsst.getInt(1);
-				if (! rsst.isLast()) {
-					System.err.println("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);
-					throw new PdbaseInconsistencyError("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
-				}
-			} else {
-				System.err.println("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
-				throw new PdbaseInconsistencyError("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			entitykey = rsst.getInt(1);
+			if (! rsst.isLast()) {
+				System.err.println("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+				throw new PdbaseInconsistencyError("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
 			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} else {
+			System.err.println("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+			throw new PdbaseInconsistencyError("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 		}
+		rsst.close();
+		stmt.close();
 		return entitykey;
 	}
 	
-	private String get_atom_alt_locs() throws PdbaseInconsistencyError{
+	private String get_atom_alt_locs() throws PdbaseInconsistencyError, SQLException{
 		ArrayList<String> alt_ids = new ArrayList<String>();
 		HashMap<String,Integer> alt_ids2keys = new HashMap<String,Integer>();
 		String alt_loc_field="label_alt_key";
 		String sql="SELECT id, atom_sites_alt_key FROM "+db+".atom_sites_alt WHERE entry_key="+entrykey;
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			int count=0;
-			while (rsst.next()) {
-				count++;
-				alt_ids.add(rsst.getString(1));
-				alt_ids2keys.put(rsst.getString(1), rsst.getInt(2));
-			}
-			if (count!=0){
-				if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
-					System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
-					throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
-				}
-				alt_ids.remove(".");
-				Collections.sort(alt_ids);
-				String lowest_alt_id = alt_ids.get(0);
-				alt_locs_sql_str = "("+alt_loc_field+"="+alt_ids2keys.get(".")+" OR "+alt_loc_field+"="+alt_ids2keys.get(lowest_alt_id)+")";
-			} else {
-				alt_locs_sql_str=alt_loc_field+" IS NULL";
-			} 
 
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int count=0;
+		while (rsst.next()) {
+			count++;
+			alt_ids.add(rsst.getString(1));
+			alt_ids2keys.put(rsst.getString(1), rsst.getInt(2));
 		}
-		
+		if (count!=0){
+			if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
+				System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+				throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+			}
+			alt_ids.remove(".");
+			Collections.sort(alt_ids);
+			String lowest_alt_id = alt_ids.get(0);
+			alt_locs_sql_str = "("+alt_loc_field+"="+alt_ids2keys.get(".")+" OR "+alt_loc_field+"="+alt_ids2keys.get(lowest_alt_id)+")";
+		} else {
+			alt_locs_sql_str=alt_loc_field+" IS NULL";
+		} 
+
+		rsst.close();
+		stmt.close();
+
 		return alt_locs_sql_str;
 	}
 	
-	private void read_atomData() throws PdbaseInconsistencyError{
+	private void read_atomData() throws PdbaseInconsistencyError, SQLException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
@@ -240,44 +229,41 @@ public class PdbasePdb extends Pdb {
 				" AND label_entity_key="+ entitykey +
 				" AND model_num="+ model +
 				" AND "+alt_locs_sql_str;
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			int count=0;
-			while (rsst.next()){
-				count++;
 
-				int atomserial = rsst.getInt(1); 			// atomserial
-				String atom = rsst.getString(2).trim();  	// atom
-				String res_type = rsst.getString(3).trim();	// res_type
-				int res_serial = rsst.getInt(4);			// res_serial
-				double x = rsst.getDouble(5);				// x
-				double y = rsst.getDouble(6);				// y
-				double z = rsst.getDouble(7);				// z
-				Double[] coords = {x, y, z};
-				ArrayList<String> aalist=AA.aas();
-				if (aalist.contains(res_type)) {
-					atomser2coord.put(atomserial, coords);
-					atomser2resser.put(atomserial, res_serial);
-					resser2restype.put(res_serial, res_type);
-					ArrayList<String> atomlist = aas2atoms.get(res_type);
-					if (atomlist.contains(atom)){
-						resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
-					}
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int count=0;
+		while (rsst.next()){
+			count++;
+
+			int atomserial = rsst.getInt(1); 			// atomserial
+			String atom = rsst.getString(2).trim();  	// atom
+			String res_type = rsst.getString(3).trim();	// res_type
+			int res_serial = rsst.getInt(4);			// res_serial
+			double x = rsst.getDouble(5);				// x
+			double y = rsst.getDouble(6);				// y
+			double z = rsst.getDouble(7);				// z
+			Double[] coords = {x, y, z};
+			ArrayList<String> aalist=AA.aas();
+			if (aalist.contains(res_type)) {
+				atomser2coord.put(atomserial, coords);
+				atomser2resser.put(atomserial, res_serial);
+				resser2restype.put(res_serial, res_type);
+				ArrayList<String> atomlist = aas2atoms.get(res_type);
+				if (atomlist.contains(atom)){
+					resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 				}
-								
 			}
-			if (count==0){
-				throw new PdbaseInconsistencyError("atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
-			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+
 		}
+		if (count==0){
+			throw new PdbaseInconsistencyError("atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
+		}
+		rsst.close();
+		stmt.close();
 	}
 	
-	private String read_seq() throws PdbaseInconsistencyError{
+	private String read_seq() throws PdbaseInconsistencyError, SQLException{
 		String sequence="";
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
@@ -290,34 +276,31 @@ public class PdbasePdb extends Pdb {
         		" AND asym_id='"+asymid+"' " +
         		" AND pdb_strand_id='"+pdbstrandid+"' " +
         		" ORDER BY seq_id+0";
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			ArrayList<String> aalist=AA.aas();
-			int count=0;
-			while (rsst.next()) {
-				count++;
-				String res_type = rsst.getString(1);
-				if (aalist.contains(res_type)){
-					sequence+=AA.threeletter2oneletter(res_type);
-				} else {
-					sequence+=NONSTANDARD_AA_LETTER;
-				}
-			} 
-			if (count==0) {
-				System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-				throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+
+        Statement stmt = conn.createStatement();
+        ResultSet rsst = stmt.executeQuery(sql);
+        ArrayList<String> aalist=AA.aas();
+        int count=0;
+        while (rsst.next()) {
+        	count++;
+        	String res_type = rsst.getString(1);
+        	if (aalist.contains(res_type)){
+        		sequence+=AA.threeletter2oneletter(res_type);
+        	} else {
+        		sequence+=NONSTANDARD_AA_LETTER;
+        	}
+        } 
+        if (count==0) {
+        	System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+        	throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+        }
+        rsst.close();
+        stmt.close();
 
 		return sequence;
 	}
 	
-	private HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError{
+	private HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError, SQLException{
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
@@ -331,25 +314,22 @@ public class PdbasePdb extends Pdb {
 					" AND pdb_strand_id='"+pdbstrandid+"' " +
 					" AND auth_seq_num!='?'" +
 					" ORDER BY seq_id+0";
-		try {
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			int count=0;
-			while (rsst.next()) {
-				count++;
-				int resser = Integer.parseInt(rsst.getString(1));
-				String pdbresser = rsst.getString(2);
-				map.put(pdbresser, resser);
-			} 
-			if (count==0) {
-				System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-				throw new PdbaseInconsistencyError("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
+
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int count=0;
+		while (rsst.next()) {
+			count++;
+			int resser = Integer.parseInt(rsst.getString(1));
+			String pdbresser = rsst.getString(2);
+			map.put(pdbresser, resser);
+		} 
+		if (count==0) {
+			System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+			throw new PdbaseInconsistencyError("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 		}
+		rsst.close();
+		stmt.close();
 
 		return map;
 	}

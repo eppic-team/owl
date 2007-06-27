@@ -40,8 +40,9 @@ public class DbGraph extends Graph {
 	 * @param cutoff
 	 * @param ct
 	 * @throws GraphIdNotFoundError 
+	 * @throws SQLException 
 	 */
-	public DbGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError {
+	public DbGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.cutoff=cutoff;
@@ -94,11 +95,13 @@ public class DbGraph extends Graph {
 	 * @param conn
 	 * @param graphid
 	 * @throws GraphIdNotFoundError 
+	 * @throws SQLException 
 	 */
-	public DbGraph(String dbname, MySQLConnection conn, int graphid) throws GraphIdNotFoundError {
+	public DbGraph(String dbname, MySQLConnection conn, int graphid) throws GraphIdNotFoundError, SQLException {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.graphid=graphid;
+		this.directed=false;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
 		this.sequence="";
@@ -142,39 +145,36 @@ public class DbGraph extends Graph {
 	 * We read both edges and nodes from single_model_edge and single_model_node.
 	 * The sequence is set to blank, as we can't get the full sequence from graph db
 	 * @param conn
+	 * @throws SQLException 
 	 */
-	private void read_graph_from_db(){
+	private void read_graph_from_db() throws SQLException{
 		contacts = new ContactList();
 		nodes = new TreeMap<Integer, String>();
-		try {
-			// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
-			String sql="SELECT i_num,j_num FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			while (rsst.next()) {
-				int i=rsst.getInt(1);
-				int j=rsst.getInt(2);
-				contacts.add(new Contact(i,j));
-			}
-			rsst.close();
-			stmt.close();
-			sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid+" ORDER BY num ";
-			stmt = conn.createStatement();
-			rsst = stmt.executeQuery(sql);
-			while (rsst.next()){
-				int num=rsst.getInt(1);
-				String res=rsst.getString(2);
-				nodes.put(num, AA.oneletter2threeletter(res));
-			}
-			rsst.close();
-			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
 
+		// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
+		String sql="SELECT i_num,j_num FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		while (rsst.next()) {
+			int i=rsst.getInt(1);
+			int j=rsst.getInt(2);
+			contacts.add(new Contact(i,j));
+		}
+		rsst.close();
+		stmt.close();
+		sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid+" ORDER BY num ";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		while (rsst.next()){
+			int num=rsst.getInt(1);
+			String res=rsst.getString(2);
+			nodes.put(num, AA.oneletter2threeletter(res));
+		}
+		rsst.close();
+		stmt.close();
 	}
 	
-	private void getgraphid () throws GraphIdNotFoundError{
+	private void getgraphid () throws GraphIdNotFoundError, SQLException{
 		// input is pdbChainCode i.e. pdb chain code
         // we take chainCode (internal chain identifier, pchain_code for msdsd and asym_id for pdbase) from pchain_code field in chain_graph 
         // (in the chain_graph table the internal chain identifier is called 'pchain_code')
@@ -183,47 +183,42 @@ public class DbGraph extends Graph {
 		if (pdbChainCode.equals("NULL")){
 			chainstr=" IS NULL ";
 		}
-		try {
-			String sql="SELECT graph_id, pchain_code FROM "+dbname+".chain_graph WHERE accession_code='"+pdbCode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			int check=0;
-			while (rsst.next()) {
-				check++;
-				pgraphid=rsst.getInt(1);
-				chainCode=rsst.getString(2);
-			}
-			if (check!=1){
-				System.err.println("No pgraph_id match or more than 1 match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode+", dist="+cutoff);
-			}
-			rsst.close();
-			stmt.close();
-			// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
-			String ctstr=ct;
-			if (ct.equals("ALL")){
-				ctstr="BB+SC+BB/SC";
-			}
-			sql="SELECT graph_id,single_model_id FROM "+dbname+".single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='"+DEFAULT_CR+"' AND CW="+DEFAULT_CW;
-			stmt = conn.createStatement();
-			rsst = stmt.executeQuery(sql);
-			check=0;
-			while (rsst.next()){
-				check++;
-				graphid=rsst.getInt(1);
-				//sm_id=rsst.getInt(2); // we might want to use it in the future
-			}
-			if (check!=1){
-				System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
-				throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
+
+		String sql="SELECT graph_id, pchain_code FROM "+dbname+".chain_graph WHERE accession_code='"+pdbCode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int check=0;
+		while (rsst.next()) {
+			check++;
+			pgraphid=rsst.getInt(1);
+			chainCode=rsst.getString(2);
 		}
-		
+		if (check!=1){
+			System.err.println("No pgraph_id match or more than 1 match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode+", dist="+cutoff);
+		}
+		rsst.close();
+		stmt.close();
+		// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
+		String ctstr=ct;
+		if (ct.equals("ALL")){
+			ctstr="BB+SC+BB/SC";
+		}
+		sql="SELECT graph_id,single_model_id FROM "+dbname+".single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='"+DEFAULT_CR+"' AND CW="+DEFAULT_CW;
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		check=0;
+		while (rsst.next()){
+			check++;
+			graphid=rsst.getInt(1);
+			//sm_id=rsst.getInt(2); // we might want to use it in the future
+		}
+		if (check!=1){
+			System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+			throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+		}
 	}
 	
-	private void get_db_graph_info() throws GraphIdNotFoundError {
-		try {
+	private void get_db_graph_info() throws GraphIdNotFoundError, SQLException {
 			int pgraphid=0;
 			String sql="SELECT pgraph_id,CT,dist FROM "+dbname+".single_model_graph WHERE graph_id="+graphid;
 			Statement stmt = conn.createStatement();
@@ -259,10 +254,6 @@ public class DbGraph extends Graph {
 			}
 			rsst.close();
 			stmt.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
 	}
 
 }
