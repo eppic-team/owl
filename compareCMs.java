@@ -1,11 +1,6 @@
 import java.io.IOException;
 
-import proteinstructure.Graph;
-import proteinstructure.MsdsdAcCodeNotFoundError;
-import proteinstructure.MsdsdInconsistentResidueNumbersError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbaseAcCodeNotFoundError;
-import proteinstructure.PdbaseInconsistencyError;
+import proteinstructure.*;
 import java.util.HashMap;
 
 
@@ -28,8 +23,8 @@ public class compareCMs {
 
 		
 		System.out.println("loading structures from pdbase");
-		Pdb pdb1 = new Pdb(pdbcode1,chaincode1); // pdbase is default source for constructor, a name for a pdbase database can also be passed
-		Pdb pdb2 = new Pdb(pdbcode2,chaincode2);
+		Pdb pdb1 = new PdbasePdb(pdbcode1,chaincode1); 
+		Pdb pdb2 = new PdbasePdb(pdbcode2,chaincode2);
 
 		System.out.println("getting graphs");
 		Graph graph1 = pdb1.get_graph("ALL", 4.2);

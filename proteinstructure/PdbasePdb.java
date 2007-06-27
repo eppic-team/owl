@@ -1,74 +1,119 @@
 package proteinstructure;
 
-import tools.MySQLConnection;
-
-import java.sql.Statement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Collections;
+import java.util.HashMap;
 
-public class PdbaseInfo {
+import tools.MySQLConnection;
+
+/**
+ * A single chain pdb protein structure loaded from a PDBASE database
+ * See http://openmms.sdsc.edu/OpenMMS-1.5.1_Std/openmms/docs/guides/PDBase.html to know what PDBASE is
+ * 
+ * @author		Jose Duarte
+ * Class:		PdbasePdb
+ * Package:		proteinstructure
+ */
+public class PdbasePdb extends Pdb {
+
 	private final static String MYSQLSERVER="white";
-	private final static String MYSQLUSER=getUserName();
+	private final static String MYSQLUSER=MySQLConnection.getUserName();
 	private final static String MYSQLPWD="nieve";
-	public final static String DEFAULT_PDBASE_DB="pdbase";
-	
-	private static final int DEFAULT_MODEL=1;
-	
+	private final static String DEFAULT_PDBASE_DB="pdbase";
+
 	private MySQLConnection conn;
-	private String pdbCode="";
-	private String pdbChainCode="";
-	private int model=DEFAULT_MODEL;
-	private String chainCode=""; // the internal pdbase chain identifier (asym_id)
+	
 	private int entrykey;
 	private String asymid;
 	private int entitykey;
 	private String alt_locs_sql_str;
+
+	/**
+	 * Constructs Pdb object given pdb code and pdb chain code. 
+	 * Model will be DEFAULT_MODEL
+	 * MySQLConnection is taken from defaults in PdbasePdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
+	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws SQLException 
+	 */
+	public PdbasePdb (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+		this(pdbCode, pdbChainCode, DEFAULT_MODEL, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
+	}
+
+	/**
+	 * Constructs Pdb object given pdb code, pdb chain code, source db and a MySQLConnection 
+	 * Model will be DEFAULT_MODEL
+	 * The db must be a pdbase database
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param db
+	 * @param conn
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError 
+	 */
+	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
+		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db, conn);		
+	}
+
+	/**
+	 * Constructs Pdb object given pdb code, pdb chain code and model serial.
+	 * MySQLConnection is taken from defaults in PdbasePdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
+	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param model_serial
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws SQLException
+	 */
+	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+		this(pdbCode, pdbChainCode, model_serial, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
+	}
 	
-	
-	
-	public PdbaseInfo (String pdbCode, String pdbChainCode, int model_serial, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException{
+	/**
+	 * Constructs Pdb object given pdb code, pdb chain code, model serial, source db and a MySQLConnection.
+	 * The db must be a pdbase database 
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param model_serial
+	 * @param db
+	 * @param conn
+	 * @throws PdbaseInconsistencyError
+	 * @throws PdbaseAcCodeNotFoundError 
+	 */
+	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError {
 		this.pdbCode=pdbCode;
 		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
-		this.conn = new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD,db);
+		this.db=db;
+		
+		this.conn = conn;
         this.entrykey=get_entry_key();
-        this.asymid=get_asym_id();
+        this.asymid=get_asym_id();		// sets asymid and chainCode
         this.entitykey=get_entity_key();
         this.alt_locs_sql_str=get_atom_alt_locs();
+		
+		this.chainCode = getChainCode();
+		this.sequence = read_seq();
+		this.pdbresser2resser = get_ressers_mapping();
+    
+		this.read_atomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
 
-	}
-	
-	public PdbaseInfo (String pdbCode, String pdbChainCode, String db) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db);
-	}
-	public PdbaseInfo (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(pdbCode,pdbChainCode,model_serial,DEFAULT_PDBASE_DB);
-	}
-	
-	public PdbaseInfo (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
-		this(pdbCode,pdbChainCode,DEFAULT_MODEL,DEFAULT_PDBASE_DB);
-	}
-
-	/** get user name from operating system (for use as database username) */
-	private static String getUserName() {
-		String user = null;
-		user = System.getProperty("user.name");
-		if(user == null) {
-			System.err.println("Could not get user name from operating system. Exiting");
-			System.exit(1);
+		// we initialise resser2pdbresser from the pdbresser2resser HashMap
+		this.resser2pdbresser = new HashMap<Integer, String>();
+		for (String pdbresser:pdbresser2resser.keySet()){
+			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 		}
-		return user;
 	}
-	
-	public void close() {
-		conn.close();
-	}
-	
+
 	private int get_entry_key() throws PdbaseAcCodeNotFoundError {
-		String sql="SELECT entry_key FROM struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
@@ -96,7 +141,7 @@ public class PdbaseInfo {
 			pdbstrandid="A";
 		}
 		String sql="SELECT asym_id " +
-				" FROM pdbx_poly_seq_scheme " +
+				" FROM "+db+".pdbx_poly_seq_scheme " +
 				" WHERE entry_key=" + entrykey +
 				" AND pdb_strand_id='"+pdbstrandid+"' " +
 				" LIMIT 1";
@@ -121,7 +166,7 @@ public class PdbaseInfo {
 	
 	private int get_entity_key() throws PdbaseInconsistencyError {
 		String sql="SELECT entity_key " +
-				" FROM struct_asym " +
+				" FROM "+db+".struct_asym " +
 				" WHERE entry_key="+ entrykey +
 				" AND id='"+asymid+"'";
 		try {
@@ -149,7 +194,7 @@ public class PdbaseInfo {
 		ArrayList<String> alt_ids = new ArrayList<String>();
 		HashMap<String,Integer> alt_ids2keys = new HashMap<String,Integer>();
 		String alt_loc_field="label_alt_key";
-		String sql="SELECT id, atom_sites_alt_key FROM atom_sites_alt WHERE entry_key="+entrykey;
+		String sql="SELECT id, atom_sites_alt_key FROM "+db+".atom_sites_alt WHERE entry_key="+entrykey;
 		try {
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
@@ -181,10 +226,15 @@ public class PdbaseInfo {
 		return alt_locs_sql_str;
 	}
 	
-	public ArrayList<ArrayList> read_atomData() throws PdbaseInconsistencyError{
-		ArrayList<ArrayList> resultset = new ArrayList<ArrayList>();
+	private void read_atomData() throws PdbaseInconsistencyError{
+		resser_atom2atomserial = new HashMap<String,Integer>();
+		resser2restype = new HashMap<Integer,String>();
+		atomser2coord = new HashMap<Integer,Double[]>();
+		atomser2resser = new HashMap<Integer,Integer>();
+
+		
 		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
-				" FROM atom_site " +
+				" FROM "+db+".atom_site " +
 				" WHERE entry_key="+entrykey +
 				" AND label_asym_id='"+asymid+"' " +
 				" AND label_entity_key="+ entitykey +
@@ -196,16 +246,26 @@ public class PdbaseInfo {
 			int count=0;
 			while (rsst.next()){
 				count++;
-				ArrayList<Comparable> thisrecord = new ArrayList<Comparable>();
-				thisrecord.add(rsst.getInt(1)); //atomserial
-				thisrecord.add(rsst.getString(2).trim()); // atom
-				thisrecord.add(rsst.getString(3).trim()); // res_type
-				thisrecord.add(rsst.getInt(4)); //res_serial
-				thisrecord.add(rsst.getDouble(5)); // x
-				thisrecord.add(rsst.getDouble(6)); // y
-				thisrecord.add(rsst.getDouble(7)); // z
-				
-				resultset.add(thisrecord);
+
+				int atomserial = rsst.getInt(1); 			// atomserial
+				String atom = rsst.getString(2).trim();  	// atom
+				String res_type = rsst.getString(3).trim();	// res_type
+				int res_serial = rsst.getInt(4);			// res_serial
+				double x = rsst.getDouble(5);				// x
+				double y = rsst.getDouble(6);				// y
+				double z = rsst.getDouble(7);				// z
+				Double[] coords = {x, y, z};
+				ArrayList<String> aalist=AA.aas();
+				if (aalist.contains(res_type)) {
+					atomser2coord.put(atomserial, coords);
+					atomser2resser.put(atomserial, res_serial);
+					resser2restype.put(res_serial, res_type);
+					ArrayList<String> atomlist = aas2atoms.get(res_type);
+					if (atomlist.contains(atom)){
+						resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+					}
+				}
+								
 			}
 			if (count==0){
 				throw new PdbaseInconsistencyError("atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
@@ -215,10 +275,9 @@ public class PdbaseInfo {
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		return resultset;
 	}
 	
-	public String read_seq() throws PdbaseInconsistencyError{
+	private String read_seq() throws PdbaseInconsistencyError{
 		String sequence="";
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
@@ -226,7 +285,7 @@ public class PdbaseInfo {
 		}
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
         String sql="SELECT mon_id" +
-        		" FROM pdbx_poly_seq_scheme " +
+        		" FROM "+db+".pdbx_poly_seq_scheme " +
         		" WHERE entry_key=" + entrykey +
         		" AND asym_id='"+asymid+"' " +
         		" AND pdb_strand_id='"+pdbstrandid+"' " +
@@ -242,7 +301,7 @@ public class PdbaseInfo {
 				if (aalist.contains(res_type)){
 					sequence+=AA.threeletter2oneletter(res_type);
 				} else {
-					sequence+="X";
+					sequence+=NONSTANDARD_AA_LETTER;
 				}
 			} 
 			if (count==0) {
@@ -258,7 +317,7 @@ public class PdbaseInfo {
 		return sequence;
 	}
 	
-	public HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError{
+	private HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError{
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
@@ -266,7 +325,7 @@ public class PdbaseInfo {
 
 		HashMap<String,Integer> map = new HashMap<String, Integer>();
 		String sql="SELECT seq_id, concat(auth_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
-					" FROM pdbx_poly_seq_scheme " +
+					" FROM "+db+".pdbx_poly_seq_scheme " +
 					" WHERE entry_key=" + entrykey +
 					" AND asym_id='"+asymid+"' " +
 					" AND pdb_strand_id='"+pdbstrandid+"' " +
@@ -294,9 +353,5 @@ public class PdbaseInfo {
 
 		return map;
 	}
-	
-	public String getChainCode(){
-		return this.chainCode;
-	}
-	
+
 }

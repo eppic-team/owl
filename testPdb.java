@@ -20,7 +20,7 @@ public class testPdb {
 		String chaincode="A";
 		// data from pdbase
 		System.out.println("loading structure from pdbase");
-		Pdb pdb = new Pdb(accode,chaincode); // pdbase is default source for constructor, a name for a pdbase database can also be passed
+		Pdb pdb = new PdbasePdb(accode,chaincode); // by default it goes to database "pdbase", a name for another pdbase database + a MySQLConnection can also be passed
 		System.out.println("dumping structure to pdb file");
 		pdb.dump2pdbfile("testpdb.txt");
 		String chain = pdb.getChainCode();
@@ -39,7 +39,7 @@ public class testPdb {
 
 		// data from msdsd
 		System.out.println("loading structure from msdsd");
-		Pdb pdb2 = new Pdb(accode,chaincode,"msdsd_00_07_a");
+		Pdb pdb2 = new MsdsdPdb(accode,chaincode); // by default it goes to database "msdsd_00_07_a", a name for another msdsd database + a MySQLConnection can also be passed 
 		System.out.println("dumping structure to pdb file");
 		pdb2.dump2pdbfile("testpdb2.txt");
 		System.out.println("getting graph");
@@ -49,7 +49,7 @@ public class testPdb {
 
 		// data from pdb
 		System.out.println("reading from dumped pdb file");
-		Pdb pdb3 = new Pdb("testpdb.txt",chain,false); // we read from the file dumped from pdbase, not that dumped file contains internal chain identifier
+		Pdb pdb3 = new PdbfilePdb("testpdb.txt",chain); // we read from the file dumped from pdbase, note that dumped file contains internal chain identifier
 		System.out.println("getting graph");
 		Graph graph3 = pdb3.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
