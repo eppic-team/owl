@@ -69,54 +69,54 @@ public class FileGraph extends Graph {
 		String line;
 		while ((line = fcont.readLine() ) != null ) {
 			linecount++;
-			Pattern p = Pattern.compile("^#");
+			Pattern p = Pattern.compile("^#AGLAPPE.*ver: (\\d\\.\\d)");
 			Matcher m = p.matcher(line);
 			if (m.find()){
-				Pattern ps = Pattern.compile("^#AGLAPPE.*ver: (\\d\\.\\d)");
-				Matcher ms = ps.matcher(line);
-				if (ms.find()){
-					if (!ms.group(1).equals(GRAPHFILEFORMATVERSION)){
-						throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version");
-					}
-				} else if (linecount==1){ // #AGLAPPE not found and in first line
-					throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format");
+				if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
+					throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 				}
-				ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					sequence=ms.group(1);
-				}
-				ps = Pattern.compile("^#PDB:\\s*(\\w+)");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					pdbCode=ms.group(1);
-				}
-				ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w+)");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					pdbChainCode=ms.group(1);
-				}
-				ps = Pattern.compile("^#CHAIN:\\s*(\\w)");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					chainCode=ms.group(1);
-				}				
-				ps = Pattern.compile("^#CT:\\s*([a-zA-Z/]+)");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					ct=ms.group(1);
-				}												
-				ps = Pattern.compile("^#CUTOFF:\\s*(\\d+\\.\\d+)");
-				ms = ps.matcher(line);
-				if (ms.find()){
-					cutoff=Double.parseDouble(ms.group(1));
-				}								
+			} else if (linecount==1){ // #AGLAPPE not found and in first line
+				throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format");
 			}
-			else{			
+			Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
+			Matcher ms = ps.matcher(line);
+			if (ms.find()){
+				sequence=ms.group(1);
+			}
+			ps = Pattern.compile("^#PDB:\\s*(\\w+)");
+			ms = ps.matcher(line);
+			if (ms.find()){
+				pdbCode=ms.group(1);
+			}
+			ps = Pattern.compile("^#PDB CHAIN CODE:\\s*(\\w+)");
+			ms = ps.matcher(line);
+			if (ms.find()){
+				pdbChainCode=ms.group(1);
+			}
+			ps = Pattern.compile("^#CHAIN:\\s*(\\w)");
+			ms = ps.matcher(line);
+			if (ms.find()){
+				chainCode=ms.group(1);
+			}				
+			ps = Pattern.compile("^#CT:\\s*([a-zA-Z/]+)");
+			ms = ps.matcher(line);
+			if (ms.find()){
+				ct=ms.group(1);
+			}												
+			ps = Pattern.compile("^#CUTOFF:\\s*(\\d+\\.\\d+)");
+			ms = ps.matcher(line);
+			if (ms.find()){
+				cutoff=Double.parseDouble(ms.group(1));
+			}								
+
+			Pattern pcontact = Pattern.compile("^\\s+\\d+\\s+\\d+\\s+$");
+			Matcher mcontact = pcontact.matcher(line);
+			if (mcontact.find()){
 				int i = Integer.parseInt(line.split("\\s+")[0]);
 				int j = Integer.parseInt(line.split("\\s+")[1]);
 				contacts.add(new Contact(i,j));
 			}
+
 		}
 		fcont.close();
 		// if sequence was given we take nodes from it
