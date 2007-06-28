@@ -109,7 +109,7 @@ public class FileGraph extends Graph {
 				cutoff=Double.parseDouble(ms.group(1));
 			}								
 
-			Pattern pcontact = Pattern.compile("^\\s+\\d+\\s+\\d+\\s+$");
+			Pattern pcontact = Pattern.compile("^\\s*\\d+\\s+\\d+\\s*$");
 			Matcher mcontact = pcontact.matcher(line);
 			if (mcontact.find()){
 				int i = Integer.parseInt(line.split("\\s+")[0]);
