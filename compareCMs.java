@@ -9,7 +9,7 @@ public class compareCMs {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) throws Exception, IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError{
+	public static void main(String[] args) throws Exception, IOException, PdbaseInconsistencyError, PdbCodeNotFoundError, PdbChainCodeNotFoundError, MsdsdInconsistentResidueNumbersError{
 		
 		String onlyIn1File="onlyin1.graph";
 		String onlyIn2File="onlyin2.graph";

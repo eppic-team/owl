@@ -16,7 +16,7 @@ public class testPdb {
 	 */
 	
 	public static void main(String[] args) 
-		throws IOException, PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, MsdsdAcCodeNotFoundError, 
+		throws IOException, PdbaseInconsistencyError, PdbCodeNotFoundError, PdbChainCodeNotFoundError, 
 				MsdsdInconsistentResidueNumbersError, SQLException, PdbfileFormatError{
 		
 		String accode="1bxy";

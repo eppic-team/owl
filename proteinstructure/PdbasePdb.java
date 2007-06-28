@@ -39,10 +39,11 @@ public class PdbasePdb extends Pdb {
 	 * @param pdbCode
 	 * @param pdbChainCode
 	 * @throws PdbaseInconsistencyError
-	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException 
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+	public PdbasePdb (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this(pdbCode, pdbChainCode, DEFAULT_MODEL, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
 	}
 
@@ -55,10 +56,11 @@ public class PdbasePdb extends Pdb {
 	 * @param db
 	 * @param conn
 	 * @throws PdbaseInconsistencyError
-	 * @throws PdbaseAcCodeNotFoundError 
+	 * @throws PdbCodeNotFoundError 
 	 * @throws SQLException 
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db, conn);		
 	}
 
@@ -70,10 +72,11 @@ public class PdbasePdb extends Pdb {
 	 * @param pdbChainCode
 	 * @param model_serial
 	 * @throws PdbaseInconsistencyError
-	 * @throws PdbaseAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this(pdbCode, pdbChainCode, model_serial, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
 	}
 	
@@ -86,10 +89,11 @@ public class PdbasePdb extends Pdb {
 	 * @param db
 	 * @param conn
 	 * @throws PdbaseInconsistencyError
-	 * @throws PdbaseAcCodeNotFoundError 
+	 * @throws PdbCodeNotFoundError 
 	 * @throws SQLException 
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbaseAcCodeNotFoundError, SQLException {
+	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this.pdbCode=pdbCode;
 		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
@@ -114,26 +118,26 @@ public class PdbasePdb extends Pdb {
 		}
 	}
 
-	private int get_entry_key() throws PdbaseAcCodeNotFoundError, SQLException {
+	private int get_entry_key() throws PdbCodeNotFoundError, SQLException {
 		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
 			entrykey = rsst.getInt(1);
 			if (! rsst.isLast()) {
-				System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-				throw new PdbaseAcCodeNotFoundError();					
+				//System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+				throw new PdbCodeNotFoundError("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);					
 			}
 		} else {
-			System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-			throw new PdbaseAcCodeNotFoundError();
+			//System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+			throw new PdbCodeNotFoundError("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
 		}
 		rsst.close();
 		stmt.close();
 		return entrykey;
 	}
 	
-	private String get_asym_id() throws PdbaseInconsistencyError, SQLException {
+	private String get_asym_id() throws PdbChainCodeNotFoundError, SQLException {
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals("NULL")){
 			pdbstrandid="A";
@@ -149,8 +153,8 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			asymid = rsst.getString(1);
 		} else {
-			System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-			throw new PdbaseInconsistencyError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+			//System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+			throw new PdbChainCodeNotFoundError("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
 		}
 		rsst.close();
 		stmt.close();
@@ -170,11 +174,11 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			entitykey = rsst.getInt(1);
 			if (! rsst.isLast()) {
-				System.err.println("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+				//System.err.println("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 				throw new PdbaseInconsistencyError("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
 			}
 		} else {
-			System.err.println("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+			//System.err.println("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 			throw new PdbaseInconsistencyError("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 		}
 		rsst.close();
@@ -198,7 +202,7 @@ public class PdbasePdb extends Pdb {
 		}
 		if (count!=0){
 			if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
-				System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+				//System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 				throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 			}
 			alt_ids.remove(".");
@@ -291,7 +295,7 @@ public class PdbasePdb extends Pdb {
         	}
         } 
         if (count==0) {
-        	System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+        	//System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
         	throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
         }
         rsst.close();
@@ -325,7 +329,7 @@ public class PdbasePdb extends Pdb {
 			map.put(pdbresser, resser);
 		} 
 		if (count==0) {
-			System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+			//System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 			throw new PdbaseInconsistencyError("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 		}
 		rsst.close();

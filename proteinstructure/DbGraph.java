@@ -213,7 +213,7 @@ public class DbGraph extends Graph {
 			//sm_id=rsst.getInt(2); // we might want to use it in the future
 		}
 		if (check!=1){
-			System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+			//System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
 			throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
 		}
 	}
@@ -232,7 +232,7 @@ public class DbGraph extends Graph {
 				cutoff=rsst.getDouble(3);
 			}
 			if (check!=1){
-				System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
+				//System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
 				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db"+conn.getDbname());
 			}
 			rsst.close();

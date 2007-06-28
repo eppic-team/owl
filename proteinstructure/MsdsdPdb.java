@@ -39,11 +39,11 @@ public class MsdsdPdb extends Pdb {
 	 * Database is taken from default msdsd database in MsdsdPdb class: DEFAULT_MSDSD_DB
 	 * @param pdbCode
 	 * @param pdbChainCode
-	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+	public MsdsdPdb (String pdbCode, String pdbChainCode) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this(pdbCode,pdbChainCode,DEFAULT_MODEL,DEFAULT_MSDSD_DB,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));		
 	}
 
@@ -55,11 +55,11 @@ public class MsdsdPdb extends Pdb {
 	 * @param pdbChainCode
 	 * @param db
 	 * @param conn
-	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError 
 	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {		
+	public MsdsdPdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {		
 		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db,conn);		
 	}
 	
@@ -70,11 +70,11 @@ public class MsdsdPdb extends Pdb {
 	 * @param pdbCode
 	 * @param pdbChainCode
 	 * @param model_serial
-	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this(pdbCode,pdbChainCode,model_serial,DEFAULT_MSDSD_DB,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));		
 	}
 
@@ -86,11 +86,11 @@ public class MsdsdPdb extends Pdb {
 	 * @param model_serial
 	 * @param db
 	 * @param conn
-	 * @throws MsdsdAcCodeNotFoundError
+	 * @throws PdbCodeNotFoundError
 	 * @throws MsdsdInconsistentResidueNumbersError 
 	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws MsdsdAcCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this.pdbCode=pdbCode;
 		this.pdbChainCode=pdbChainCode;
 		this.model=model_serial;
@@ -117,7 +117,7 @@ public class MsdsdPdb extends Pdb {
 		}
 	}
 
-	private void getchainid() throws MsdsdAcCodeNotFoundError, SQLException {
+	private void getchainid() throws PdbCodeNotFoundError, SQLException {
 		chainid=0;
 		String chaincodestr="='"+pdbChainCode+"'";
 		if (pdbChainCode.equals("NULL")){
@@ -138,12 +138,12 @@ public class MsdsdPdb extends Pdb {
 			modelid = rsst.getInt(2);
 			chainCode=rsst.getString(3);
 			if (! rsst.isLast()) {
-				System.err.println("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-				throw new MsdsdAcCodeNotFoundError("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);					
+				//System.err.println("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+				throw new PdbCodeNotFoundError("More than 1 chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);					
 			}
 		} else {
-			System.err.println("No chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-			throw new MsdsdAcCodeNotFoundError("No chain_id could be matched for accession_code "+pdbCode+", chain_pdb_code "+pdbChainCode);
+			//System.err.println("No chain_id match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+			throw new PdbCodeNotFoundError("No chain_id could be matched for accession_code "+pdbCode+", chain_pdb_code "+pdbChainCode);
 		} 
 		rsst.close();
 		stmt.close();

@@ -25,8 +25,9 @@ public class PdbfilePdb extends Pdb {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 * @throws PdbfileFormatError
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode) throws FileNotFoundException, IOException, PdbfileFormatError {
+	public PdbfilePdb (String pdbfile, String pdbChainCode) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		this(pdbfile,pdbChainCode,DEFAULT_MODEL);
 	}
 	
@@ -38,8 +39,9 @@ public class PdbfilePdb extends Pdb {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 * @throws PdbfileFormatError
+	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode, int model_serial) throws FileNotFoundException, IOException, PdbfileFormatError {
+	public PdbfilePdb (String pdbfile, String pdbChainCode, int model_serial) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		this.pdbfile = pdbfile;
 		this.model=model_serial;
 		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file 
@@ -73,8 +75,9 @@ public class PdbfilePdb extends Pdb {
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 * @throws PdbfileFormatError
+	 * @throws PdbChainCodeNotFoundError  
 	 */
-	private void read_pdb_data_from_file() throws FileNotFoundException, IOException, PdbfileFormatError{
+	private void read_pdb_data_from_file() throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Double[]>();
@@ -138,7 +141,10 @@ public class PdbfilePdb extends Pdb {
 			}
 		}
 		fpdb.close();
-		if (empty) System.err.println("Couldn't find any atom line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+		if (empty) {
+			//System.err.println("Couldn't find any atom line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbChainCodeNotFoundError("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+		}
 		// now we read the sequence from the resser2restype HashMap
 		// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
 		ArrayList<Integer> ressers = new ArrayList<Integer>();
