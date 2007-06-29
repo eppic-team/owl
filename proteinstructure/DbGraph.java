@@ -46,8 +46,8 @@ public class DbGraph extends Graph {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.cutoff=cutoff;
-		this.pdbCode=pdbCode;
-		this.pdbChainCode=pdbChainCode;
+		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
+		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.ct=ct;
 		this.directed=false;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db

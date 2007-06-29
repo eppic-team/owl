@@ -53,7 +53,7 @@ public class Graph {
 	 * @param pdbCode
 	 * @param chainCode
 	 */
-	public Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
+	protected Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -70,6 +70,9 @@ public class Graph {
 		if (ct.contains("/")){
 			directed=true;
 		}
+		
+		assert(this.pdbCode.equals(this.pdbCode.toLowerCase()));				// pdb codes should be always lower case 
+		assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case
 	}
 	
 

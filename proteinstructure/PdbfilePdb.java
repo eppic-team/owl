@@ -45,7 +45,7 @@ public class PdbfilePdb extends Pdb {
 		this.pdbfile = pdbfile;
 		this.model=model_serial;
 		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file 
-		this.pdbChainCode=pdbChainCode;
+		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		// we set chainCode to pdbChainCode except for case NULL where we use "A"
 		this.chainCode=pdbChainCode;
 		if (pdbChainCode.equals("NULL")) this.chainCode=NULL_chainCode;

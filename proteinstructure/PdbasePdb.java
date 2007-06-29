@@ -94,8 +94,8 @@ public class PdbasePdb extends Pdb {
 	 * @throws PdbChainCodeNotFoundError 
 	 */
 	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
-		this.pdbCode=pdbCode;
-		this.pdbChainCode=pdbChainCode;
+		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
+		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.model=model_serial;
 		this.db=db;
 		
