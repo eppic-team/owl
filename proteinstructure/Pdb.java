@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,7 +65,8 @@ public abstract class Pdb {
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
-			Out.printf("ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",lines.get(atomserial));
+			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
+			Out.printf(Locale.US,"ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",lines.get(atomserial));
 		}
 		Out.println("END");
 		Out.close();
