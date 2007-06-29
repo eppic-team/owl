@@ -12,7 +12,7 @@ public class hashIterNbhood {
 	 * with subsequent scoring 
 	 * @author lappe
 	 */
-	static int maxRank = 31; // value to replace for non-existence of central redue in the resultvector (rank=0) 
+	static int maxRank = 99; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
@@ -305,6 +305,7 @@ public class hashIterNbhood {
 			// n1 and n2 are known, initialise matrices accordingly. 
 			// nbhood, move, rank, entropy, freq, AUC etc. (evtl.+ degree(?)) 
 			rank = new int[(n1+1)][(n2+1)];
+			rank[0][0]=10;
 			total = new int[(n1+1)][(n2+1)];
 			entropy = new double[(n1+1)][(n2+1)];
 			freq = new double[(n1+1)][(n2+1)];        
@@ -363,7 +364,8 @@ public class hashIterNbhood {
 					moveset[i][j] = mymove;
 					precol = nbstring[i][0]; 
 					getEntropy( nbs, restype, precol);
-					rank[i][j] = lastRank; 
+					if (lastRank==0) lastRank = rank[0][0];
+					rank[i][j] = lastRank;
 					entropy[i][j] = lastEntropy; 
 					freq[i][j] = lastFreq;
 					AUC[i][j]  = lastAUC;
