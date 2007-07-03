@@ -6,6 +6,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import tools.MySQLConnection;
 
@@ -116,6 +118,8 @@ public class PdbasePdb extends Pdb {
 		for (String pdbresser:pdbresser2resser.keySet()){
 			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 		}
+		
+		readSecStructure();
 	}
 
 	private int get_entry_key() throws PdbCodeNotFoundError, SQLException {
@@ -338,4 +342,64 @@ public class PdbasePdb extends Pdb {
 		return map;
 	}
 
+	private void readSecStructure() throws SQLException {
+		this.resser2secstruct = new HashMap<Integer, String>();
+		
+		// HELIX AND TURN -- struct_conf table
+		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +
+				" FROM "+db+".struct_conf " +
+				" WHERE entry_key="+entrykey+
+				" AND beg_label_asym_id='"+asymid+"'";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int count=0;
+		while (rsst.next()) {
+			count++;
+			String id = rsst.getString(1).trim(); // id is either HELIX_Pnn or TURN_Pnn
+			Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
+			Matcher m = p.matcher(id);
+			String ssId="Unknown";
+			if (m.find()){
+				ssId = m.group(1)+m.group(2); // e.g.: Hnn (helices) or Tnn (turns) 				
+			}
+			int beg = rsst.getInt(2);
+			int end =rsst.getInt(3);
+			for (int i=beg;i<=end;i++){
+				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
+					System.err.println("Inconsistency in secondary structure assignment. " +
+							"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+				}
+				resser2secstruct.put(i,ssId);
+			}
+		} 
+		rsst.close();
+		stmt.close();
+		
+		// SHEET -- struct_sheet_range table
+		sql = "SELECT sheet_id, id, beg_label_seq_id, end_label_seq_id " +
+				" FROM "+db+".struct_sheet_range " +
+				" WHERE entry_key="+entrykey+
+				" AND beg_label_asym_id='"+asymid+"'";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		count=0;
+		while (rsst.next()) {
+			count++;
+			String sheetid = rsst.getString(1).trim();
+			int id = rsst.getInt(2);
+			int beg = rsst.getInt(3);
+			int end =rsst.getInt(4);
+			String ssId="S"+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
+			for (int i=beg;i<=end;i++){
+				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
+					System.err.println("Inconsistency in secondary structure assignment. " +
+							"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+				}
+				resser2secstruct.put(i,ssId); 
+			}
+		} 
+		rsst.close();
+		stmt.close();
+
+	}
 }

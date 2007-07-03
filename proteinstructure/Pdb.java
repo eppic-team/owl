@@ -28,6 +28,8 @@ public abstract class Pdb {
 	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	
+	protected HashMap<Integer,String> resser2secstruct; // residue serials to secondary structure
+	
 	protected HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms(); // contains atom names for each aminoacid
 	
 	protected String sequence; 		// full sequence as it appears in SEQRES field
@@ -196,5 +198,9 @@ public abstract class Pdb {
 	
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
+	}
+	
+	public String getSecStructure(int resser){
+		return this.resser2secstruct.get(resser);
 	}
 }

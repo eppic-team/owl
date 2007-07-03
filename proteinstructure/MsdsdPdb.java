@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.TreeMap;
 
 import tools.MySQLConnection;
 
@@ -115,6 +116,8 @@ public class MsdsdPdb extends Pdb {
 		for (String pdbresser:pdbresser2resser.keySet()){
 			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 		}
+		
+		this.readSecStructure();
 	}
 
 	private void getchainid() throws PdbCodeNotFoundError, SQLException {
@@ -279,4 +282,117 @@ public class MsdsdPdb extends Pdb {
 		return map;
 	}
 	
+	private void readSecStructure() throws SQLException{
+		resser2secstruct = new HashMap<Integer, String>();
+		
+		//HELIX -- helix table
+		String sql = "SELECT helix_serial, beg_residue_serial, end_residue_serial " +
+				" FROM "+db+".helix " +
+				" WHERE	(model_id = "+modelid+") " +
+				" AND (chain_id = "+chainid+") ";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int count=0;
+		while (rsst.next()) {
+			count++;
+			int serial = rsst.getInt(1);
+			int beg = rsst.getInt(2);
+			int end =rsst.getInt(3);
+			String ssId = "H"+serial;
+			for (int i=beg;i<=end;i++){
+				if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
+					System.err.println("Inconsistency in secondary structure assignment. " +
+							"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+				}
+				resser2secstruct.put(i,ssId);	
+			}
+		} 
+		rsst.close();
+		stmt.close();
+		//SHEET -- strand table
+		sql = "SELECT sheet_serial, strand_serial, strand_beg_residue_serial, strand_end_residue_serial " +
+				" FROM "+db+".strand " +
+				" WHERE	(model_id = "+modelid+") " +
+				" AND (chain_id = "+chainid+") ";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		// we store everything in these 2 maps to assign later to resser2secstruct based on our own ids (ids are not very consistent in msdsd)
+		HashMap<Integer,int[]> strands2begEnd = new HashMap<Integer, int[]>(); 
+		TreeMap<Integer,ArrayList<Integer>> sheets2strands = new TreeMap<Integer, ArrayList<Integer>>();
+		count=0;
+		while (rsst.next()) {
+			count++;
+			int sheetSerial = rsst.getInt(1);
+			int strandSerial = rsst.getInt(2);
+			int beg = rsst.getInt(3);
+			int end =rsst.getInt(4);
+			int[] begEnd = {beg, end};
+			strands2begEnd.put(strandSerial, begEnd);
+			if (sheets2strands.containsKey(sheetSerial)){
+				sheets2strands.get(sheetSerial).add(strandSerial);
+			} else {
+				ArrayList<Integer> strands = new ArrayList<Integer>();
+				strands.add(strandSerial);
+				sheets2strands.put(sheetSerial, strands);
+			}
+		} 
+		rsst.close();
+		stmt.close();
+		char sheet='A';
+		for (int sheetSerial:sheets2strands.keySet()){
+			int strand=1;
+			for (int strandSerial:sheets2strands.get(sheetSerial)){
+				int[] begEnd = strands2begEnd.get(strandSerial);
+				for (int i=begEnd[0];i<=begEnd[1];i++){
+					String ssId = "S"+sheet+strand;
+					if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
+						System.err.println("Inconsistency in secondary structure assignment. " +
+								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+					} 
+					resser2secstruct.put(i,ssId);
+				}
+				strand++;
+			}
+			sheet++;
+		}
+
+		//TURN -- turn table	
+		// they forgot to fill up the turn_serial field so we have to use turn_id and get a serial from it that is unique within the chain only
+		sql = "SELECT turn_id, res_1_residue_serial, res_2_residue_serial, res_3_residue_serial, res_4_residue_serial " +
+				" FROM "+db+".turn " +
+				" WHERE	(model_id = "+modelid+") " +
+				" AND (chain_id = "+chainid+") ";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		TreeMap<Integer,int[]> turns = new TreeMap<Integer, int[]>();
+		count=0;
+		while (rsst.next()) {
+			count++;
+			int dbId = rsst.getInt(1);
+			int res1 = rsst.getInt(2);
+			int res2 = rsst.getInt(3);
+			int res3 = rsst.getInt(4);
+			int res4 = rsst.getInt(5);
+			int[] residues = {res1,res2,res3,res4};
+			turns.put(dbId, residues);				
+		} 
+		rsst.close();
+		stmt.close();
+		int serial=1;
+		for (int dbId:turns.keySet()){
+			for (int i:turns.get(dbId)){
+				if (i!=0){ // if res1, res2, res3 or res4 where null in database then they are 0 here, we skip them
+					String ssId="T"+serial;
+					if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
+						System.err.println("Inconsistency in secondary structure assignment. " +
+								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+					}
+					resser2secstruct.put(i,ssId);
+				}
+			}
+			serial++;
+		}
+
+	}
 }
+

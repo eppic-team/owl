@@ -52,6 +52,9 @@ public class PdbfilePdb extends Pdb {
 		
 		this.sequence=""; // we initialise it to empty string, then is set inread_pdb_data_from_file 
 		
+		// we initialise the resser2secstruct Map to empty, if no sec structure info is found then it remains empty
+		this.resser2secstruct = new HashMap<Integer, String>();
+		
 		read_pdb_data_from_file();
 		
 		// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
@@ -62,15 +65,18 @@ public class PdbfilePdb extends Pdb {
 			resser2pdbresser.put(resser, String.valueOf(resser));
 			pdbresser2resser.put(String.valueOf(resser), resser);
 		}
+		
 	}
 
 	
 	
 	/**
-	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file
-	 * chainCode gets set to internal identifier: if input chain code NULL then chainCode will be ' '
+	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
+	 * chainCode gets set to same as pdbChainCode, except if input chain code NULL then chainCode will be 'A'
 	 * pdbCode gets set to the one parsed in HEADER or to 'Unknown' if not found
 	 * sequence gets set to the sequence read from ATOM lines (i.e. observed resdiues only)
+	 * No insertion codes are parsed or taken into account at the moment. Thus files with 
+	 * insertion codes will be incorrectly read
 	 * @param pdbfile
 	 * @throws FileNotFoundException
 	 * @throws IOException
@@ -93,6 +99,7 @@ public class PdbfilePdb extends Pdb {
 		String line;
 		while ((line = fpdb.readLine() ) != null ) {
 			linecount++;
+			// HEADER
 			Pattern p = Pattern.compile("^HEADER");
 			Matcher m = p.matcher(line);
 			if (m.find()){
@@ -105,12 +112,72 @@ public class PdbfilePdb extends Pdb {
 				// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
 				throw new PdbfileFormatError("The pdb file "+pdbfile+" doesn't seem to have the right format");
 			}
+			// SECONDARY STRUCTURE
+			// helix
+			//HELIX    1   1 LYS A   17  LEU A   26  1
+			//							helix ser				beg res ser					end res ser
+			p = Pattern.compile("^HELIX..(...).{9}"+chainCodeStr+".(....).{6}"+chainCodeStr+".(....)");
+			m = p.matcher(line);
+			if (m.find()){
+				int serial = Integer.valueOf(m.group(1).trim());
+				int beg = Integer.valueOf(m.group(2).trim());
+				int end = Integer.valueOf(m.group(3).trim());
+				String ssId = "H"+serial;
+				for (int i=beg;i<=end;i++){
+					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
+						System.err.println("Inconsistency in secondary structure assignment. " +
+								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+					}
+					resser2secstruct.put(i,ssId);
+				}
+			}
+			// sheet
+			//SHEET    2   A 5 ILE A  96  THR A  99 -1  N  LYS A  98   O  THR A 107
+			//                       strand ser sheet id			 beg res ser                 end res ser
+			p = Pattern.compile("^SHEET..(...).(...).{7}"+chainCodeStr+"(....).{6}"+chainCodeStr+"(....)");
+			m = p.matcher(line);
+			if (m.find()){
+				int strandSerial = Integer.valueOf(m.group(1).trim());
+				String sheetId = m.group(2).trim();
+				int beg = Integer.valueOf(m.group(3).trim());
+				int end = Integer.valueOf(m.group(4).trim());
+				String ssId = "S"+sheetId+strandSerial;
+				for (int i=beg;i<=end;i++){
+					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
+						System.err.println("Inconsistency in secondary structure assignment. " +
+								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+					}
+					resser2secstruct.put(i,ssId);
+				}
+			}
+			// we've stored the sec structure info in the strands2begEnd and sheets2strands maps.
+			// the assignment to resser2secstruct is done when we reach the ATOM lines, see below
+			// turn
+			//TURN     1 S1A GLY A  16  GLN A  18     SURFACE
+			//							turn ser				beg res ser					end res ser
+			p = Pattern.compile("^TURN...(...).{9}"+chainCodeStr+"(....).{6}"+chainCodeStr+"(....)");
+			m = p.matcher(line);
+			if (m.find()){
+				int serial = Integer.valueOf(m.group(1).trim());
+				int beg = Integer.valueOf(m.group(2).trim());
+				int end = Integer.valueOf(m.group(3).trim());
+				String ssId = "T"+serial;
+				for (int i=beg;i<=end;i++){
+					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
+						System.err.println("Inconsistency in secondary structure assignment. " +
+								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+					}
+					resser2secstruct.put(i,ssId);
+				}
+			}			
+			// MODEL
 			p = Pattern.compile("^MODEL\\s+(\\d+)");
 			m = p.matcher(line);
 			if (m.find()){
 				thismodel=Integer.parseInt(m.group(1));
 			}
 			if (thismodel!=model) continue; // we skip reading of atom lines if we are not in the desired model
+			// ATOM
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
@@ -157,5 +224,5 @@ public class PdbfilePdb extends Pdb {
 			sequence += oneletter;
 		}
 	}
-
+	
 }
