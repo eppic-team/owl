@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -344,6 +345,7 @@ public class PdbasePdb extends Pdb {
 
 	private void readSecStructure() throws SQLException {
 		this.resser2secstruct = new HashMap<Integer, String>();
+		this.secstruct2resinterval = new TreeMap<String, Interval>();
 		
 		// HELIX AND TURN -- struct_conf table
 		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +
@@ -364,6 +366,7 @@ public class PdbasePdb extends Pdb {
 			}
 			int beg = rsst.getInt(2);
 			int end =rsst.getInt(3);
+			secstruct2resinterval.put(ssId, new Interval(beg,end));
 			for (int i=beg;i<=end;i++){
 				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
 					System.err.println("Inconsistency in secondary structure assignment. " +
@@ -390,6 +393,7 @@ public class PdbasePdb extends Pdb {
 			int beg = rsst.getInt(3);
 			int end =rsst.getInt(4);
 			String ssId="S"+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
+			secstruct2resinterval.put(ssId, new Interval(beg,end));
 			for (int i=beg;i<=end;i++){
 				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
 					System.err.println("Inconsistency in secondary structure assignment. " +

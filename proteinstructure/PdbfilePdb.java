@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,8 +53,9 @@ public class PdbfilePdb extends Pdb {
 		
 		this.sequence=""; // we initialise it to empty string, then is set inread_pdb_data_from_file 
 		
-		// we initialise the resser2secstruct Map to empty, if no sec structure info is found then it remains empty
+		// we initialise the resser2secstruct and secstruct2resinterval Maps to empty, if no sec structure info is found then it remains empty
 		this.resser2secstruct = new HashMap<Integer, String>();
+		this.secstruct2resinterval = new TreeMap<String, Interval>();
 		
 		read_pdb_data_from_file();
 		
@@ -123,6 +125,7 @@ public class PdbfilePdb extends Pdb {
 				int beg = Integer.valueOf(m.group(2).trim());
 				int end = Integer.valueOf(m.group(3).trim());
 				String ssId = "H"+serial;
+				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
 						System.err.println("Inconsistency in secondary structure assignment. " +
@@ -142,6 +145,7 @@ public class PdbfilePdb extends Pdb {
 				int beg = Integer.valueOf(m.group(3).trim());
 				int end = Integer.valueOf(m.group(4).trim());
 				String ssId = "S"+sheetId+strandSerial;
+				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
 						System.err.println("Inconsistency in secondary structure assignment. " +
@@ -162,6 +166,7 @@ public class PdbfilePdb extends Pdb {
 				int beg = Integer.valueOf(m.group(2).trim());
 				int end = Integer.valueOf(m.group(3).trim());
 				String ssId = "T"+serial;
+				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
 						System.err.println("Inconsistency in secondary structure assignment. " +
