@@ -45,7 +45,7 @@ public class Contact implements Comparable {
 	}
 	
 	public int hashCode() {
-		return this.toString().hashCode();
+		return i*100000+j; // hash function found after a lot of experimenting!! do not touch!
 	}
 
 	/**

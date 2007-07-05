@@ -110,8 +110,8 @@ public abstract class Pdb {
 		return coords;
 	}
 	
-	public TreeMap<Contact, Double> calculate_dist_matrix(String ct){
-		TreeMap<Contact,Double> dist_matrix = new TreeMap<Contact,Double>();
+	public HashMap<Contact, Double> calculate_dist_matrix(String ct){
+		HashMap<Contact,Double> dist_matrix = new HashMap<Contact,Double>();
 		if (!ct.contains("/")){
 			HashMap<Integer,Double[]> coords = get_coords_for_ct(ct);
 			for (int i_atomser:coords.keySet()){
@@ -150,7 +150,7 @@ public abstract class Pdb {
 	 */
 	@SuppressWarnings("unchecked")
 	public Graph get_graph(String ct, double cutoff){
-		TreeMap<Contact,Double> dist_matrix = calculate_dist_matrix(ct);
+		HashMap<Contact,Double> dist_matrix = calculate_dist_matrix(ct);
 		ContactList contacts = new ContactList();
         // we loop here over all indices of dist_matrix, 
         // we took care already that in symmetric cases (i.e. single contact type, not crossed) we have only one side of the matrix and 
