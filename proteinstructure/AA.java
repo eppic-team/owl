@@ -28,8 +28,15 @@ public class AA {
 	 * @return
 	 */
 	public static boolean isValidCT(String ct){
-		for (String validCt:contactTypes()){
-			if (ct.equals(validCt)) return true;
+		if (!ct.contains("/")){
+			for (String validCt:contactTypes()){
+				if (ct.equals(validCt)) return true;
+			}
+		} else {
+			String[] cts = ct.split("/");
+			String i_ct = cts[0];
+			String j_ct = cts[1];
+			if (isValidCT(i_ct) && isValidCT(j_ct)) return true;
 		}
 		return false;
 	}
