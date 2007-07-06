@@ -10,6 +10,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Point3d;
+
 import tools.MySQLConnection;
 
 /**
@@ -227,7 +229,7 @@ public class PdbasePdb extends Pdb {
 	private void read_atomData() throws PdbaseInconsistencyError, SQLException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
-		atomser2coord = new HashMap<Integer,Double[]>();
+		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 
 		
@@ -252,7 +254,7 @@ public class PdbasePdb extends Pdb {
 			double x = rsst.getDouble(5);				// x
 			double y = rsst.getDouble(6);				// y
 			double z = rsst.getDouble(7);				// z
-			Double[] coords = {x, y, z};
+			Point3d coords = new Point3d(x, y, z);
 			ArrayList<String> aalist=AA.aas();
 			if (aalist.contains(res_type)) {
 				atomser2coord.put(atomserial, coords);

@@ -9,6 +9,9 @@ import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.Collections;
 
+import javax.vecmath.Point3d;
+import javax.vecmath.Point3i;
+
 /**
  * A single chain pdb protein structure
  * 
@@ -23,7 +26,7 @@ public abstract class Pdb {
 	
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
 	protected HashMap<Integer,String> resser2restype;   // residue serial to 3 letter residue type 
-	protected HashMap<Integer,Double[]> atomser2coord;  // atom serials to 3D coordinates
+	protected HashMap<Integer,Point3d> atomser2coord;  // atom serials to 3D coordinates
 	protected HashMap<Integer,Integer> atomser2resser;  // atom serials to residue serials
 	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
@@ -63,8 +66,8 @@ public abstract class Pdb {
 			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
 			String atom = resser_atom.split("_")[1];
 			String res_type = resser2restype.get(res_serial);
-			Double[] coords = atomser2coord.get(atomserial);
-			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords[0], coords[1], coords[2]};
+			Point3d coords = atomser2coord.get(atomserial);
+			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords.x, coords.y, coords.z};
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
@@ -86,20 +89,20 @@ public abstract class Pdb {
 		return resser2restype.size();
 	}
 	
-	public HashMap<Integer,Double[]> get_coords_for_ct(String ct) {
-		HashMap<Integer,Double[]> coords = new HashMap<Integer,Double[]>(); 
+	public TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
+		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>(); 
 		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
 		for (int resser:resser2restype.keySet()){
 			String[] atoms = restype2atoms.get(resser2restype.get(resser));
 			for (String atom:atoms){
 				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
 					int atomser = resser_atom2atomserial.get(resser+"_"+atom);
-					Double[] coord = atomser2coord.get(atomser);
+					Point3d coord = atomser2coord.get(atomser);
 					coords.put(atomser, coord);
 				}
 				else if (atom.equals("O") && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
 					int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
-					Double[] coord = atomser2coord.get(atomser);
+					Point3d coord = atomser2coord.get(atomser);
 					coords.put(atomser, coord);
 				}
 				else {
@@ -113,30 +116,117 @@ public abstract class Pdb {
 	public HashMap<Contact, Double> calculate_dist_matrix(String ct){
 		HashMap<Contact,Double> dist_matrix = new HashMap<Contact,Double>();
 		if (!ct.contains("/")){
-			HashMap<Integer,Double[]> coords = get_coords_for_ct(ct);
+			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
 			for (int i_atomser:coords.keySet()){
 				for (int j_atomser:coords.keySet()){
 					if (j_atomser>i_atomser) {
 						Contact pair = new Contact(i_atomser,j_atomser);
-						dist_matrix.put(pair, distance(coords.get(i_atomser),coords.get(j_atomser)));
+						dist_matrix.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
 					}
 				}
 			}
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			HashMap<Integer,Double[]> i_coords = get_coords_for_ct(i_ct);
-			HashMap<Integer,Double[]> j_coords = get_coords_for_ct(j_ct);
+			TreeMap<Integer,Point3d> i_coords = get_coords_for_ct(i_ct);
+			TreeMap<Integer,Point3d> j_coords = get_coords_for_ct(j_ct);
 			for (int i_atomser:i_coords.keySet()){
 				for (int j_atomser:j_coords.keySet()){
 					if (j_atomser!=i_atomser){
 						Contact pair = new Contact(i_atomser,j_atomser);
-						dist_matrix.put(pair, distance(i_coords.get(i_atomser),j_coords.get(j_atomser)));
+						dist_matrix.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
 					}
 				}
 			}
 		}
 		return dist_matrix;
+	}
+	
+	/**
+	 * Get the graph for given contact type and cutoff for this Pdb object.
+	 * Returns a Graph object with the contacts
+	 * We do geometric hashing for fast contact computation (without needing to calculate full distance matrix)
+	 * At the moment this ONLY works for NON-CROSSED contact types, e.g. Ca/Cb won't work!!
+	 * @param ct
+	 * @param cutoff
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public Graph getGraphGeometricHashing(String ct, double cutoff){ 
+		
+		TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
+		int[] atomserials = new  int[coords.size()]; // map from matrix indices to atomserials
+		
+		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
+		
+		int boxSize = (int) Math.floor(cutoff*SCALE);
+		
+		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
+		int i=0;
+		for (int atomser:coords.keySet()){
+			//coordinates for atom serial atomser, we will use i as its identifier below
+			Point3d coord = coords.get(atomser);
+			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
+			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
+			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
+			Point3i floor = new Point3i(floorX,floorY,floorZ);
+			if (boxes.containsKey(floor)){
+				// we put the coords for atom i in its corresponding box (identified by floor)
+				boxes.get(floor).putPoint(i, coord);
+			} else {
+				Box box = new Box(floor);
+				box.putPoint(i, coord);
+				boxes.put(floor,box);
+			}
+			atomserials[i]=atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
+			i++;
+		}
+		
+		double[][]distMatrix = new double[atomserials.length][atomserials.length];
+		
+		for (Point3i floor:boxes.keySet()){ // for each box
+			// distances of points within this box
+			boxes.get(floor).getDistancesWithinBox(distMatrix);
+
+			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
+			for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
+				for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
+					for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
+						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
+							Point3i neighbor = new Point3i(x,y,z);
+							if (boxes.containsKey(neighbor)){
+								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix);
+							}
+						}
+					}
+				}
+			} 
+		} 
+		
+		ContactList contacts = new ContactList();
+		for (i=0;i<distMatrix.length;i++){
+			for (int j=0;j<distMatrix.length;j++){
+				if (j>i && distMatrix[i][j]!=0.0 && distMatrix[i][j]<=cutoff){
+					int i_resser = atomser2resser.get(atomserials[i]);
+					int j_resser = atomser2resser.get(atomserials[j]);
+					// j>i means also that j_resser>i_resser (order has been conserved in atom indexes because we used a TreeMap for coords)
+					Contact resser_pair = new Contact(i_resser,j_resser);
+	                // for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
+					if (i_resser!=j_resser && (! contacts.contains(resser_pair))){
+						contacts.add(resser_pair);
+					}
+				}
+			}
+		}
+				
+		Collections.sort(contacts);
+		TreeMap<Integer,String> nodes = new TreeMap<Integer,String>();
+		for (int resser:resser2restype.keySet()){
+			nodes.put(resser,resser2restype.get(resser));
+		}
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
+
+		return graph;
 	}
 	
 	/**
@@ -175,10 +265,6 @@ public abstract class Pdb {
 		}
 		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
 		return graph;
-	}
-	
-	private Double distance(Double[] coords1, Double[] coords2){
-		return Math.sqrt(Math.pow((coords1[0]-coords2[0]),2)+Math.pow((coords1[1]-coords2[1]),2)+Math.pow((coords1[2]-coords2[2]),2));
 	}
 	
 	public int get_resser_from_pdbresser (String pdbresser){

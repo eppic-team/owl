@@ -12,6 +12,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Point3d;
+
 public class PdbfilePdb extends Pdb {
 	
 	private static final String UNKNOWN_STRING ="Unknown";
@@ -88,7 +90,7 @@ public class PdbfilePdb extends Pdb {
 	private void read_pdb_data_from_file() throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
-		atomser2coord = new HashMap<Integer,Double[]>();
+		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
 		// we set chainCodeStr (for regex) to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
@@ -198,7 +200,7 @@ public class PdbfilePdb extends Pdb {
 					double x = Double.parseDouble(ml.group(5).trim());
 					double y = Double.parseDouble(ml.group(6).trim());
 					double z = Double.parseDouble(ml.group(7).trim());
-					Double[] coords = {x, y, z};
+					Point3d coords = new Point3d(x,y,z);
 					ArrayList<String> aalist=AA.aas();
 					if (aalist.contains(res_type)) {
 						atomser2coord.put(atomserial, coords);
