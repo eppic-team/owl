@@ -21,7 +21,7 @@ public class cnHashIterNbhood {
 	static int lastRank, lastTotal, lastxcn=0;  
 	static int graphid=0, resnr=0; 
 	static int size1=0, size2=0; // the dimensions of the matrices = |shell1|x|shell2| = nr of direct(1) x indirect(2) nbs 
-	static String rsideline[], rheadline[]={" -->\t(-)1st shell\t0"," |\t        \t-"," |\t(+)     \t0"," V\t2nd shell\t-"};
+	static String rsideline[], rheadline[]={" -->\t(-)1st shell\t0"," |\t        \t-"," |\t(+)     \t0"," V\t2nd shell\t-", "  \t        \tX"};
 	static String sideline[], headline[]={"\t\t0","\t\t-","\t\t0","\t\t-","\t\tX"};
 	static String restype="?", ressec="?", newnbhood=""; 
 	static int cn1[], cn2[]; 
@@ -112,6 +112,7 @@ public class cnHashIterNbhood {
 					rheadline[1]+="\t"+mrsst.getString(2); // res
 					rheadline[2]+="\t"+mrsst.getInt(1); // resnum 
 					rheadline[3]+="\t"+mrsst.getString(3); // SStype
+					rheadline[4]+="\t("+mrsst.getInt(5)+")"; // CN 
 				} // end if 2st shell 
 				if ( mrsst.getInt( 4)==2) { // count 2nd shell entry 
 					o2++;
@@ -121,6 +122,7 @@ public class cnHashIterNbhood {
 			} // end while
 			System.out.println("Orig.SIZE 1st shell "+o1); 
 			System.out.println("Orig.SIZE 2nd shell "+o2);
+			rheadline[4] = rheadline[4].replace("X", ("("+o1)+")");
 			rsideline = new String[o2+1];
 			rsideline[0]="+0\tRnum:S(cn)"; 
 			sumdelta = new int[(o1+1)][(o2+1)];
@@ -253,7 +255,7 @@ public class cnHashIterNbhood {
 		if (what2print==printRank) System.out.println("Overall resulting SumDeltaRank Matrix" ); 
 		if (what2print==printNbstring) System.out.println("Overall tested new nbhoodStrings" ); 
 		if (what2print==printCNSize) System.out.println("Overall cnsize" ); 
-		if (what2print==printCNSxdelta) System.out.print("Overall (cnsize*sumDeltaRank)" ); 
+		if (what2print==printCNSxdelta) System.out.println("Overall (cnsize*sumDeltaRank)" ); 
 		/*if (what2print==printTotal) System.out.print("total[i][j]" ); 
 		if (what2print==printEntropy) System.out.print("entropy[i][j]" );
 		if (what2print==printFreq ) System.out.print("freq[i][j]" ); 
@@ -267,6 +269,7 @@ public class cnHashIterNbhood {
 		System.out.println(rheadline[1]);
 		System.out.println(rheadline[2]);
 		System.out.println(rheadline[3]);
+		System.out.println(rheadline[4]);
 		for (int j=0; j<=o2; j++) {	
 			// print rsideline
 			System.out.print( rsideline[j]+"\t"); 
@@ -311,7 +314,7 @@ public class cnHashIterNbhood {
 					headline[1]+="\t"+rsst.getString(2); // res
 					headline[2]+="\t"+rsst.getInt(1); // resnum 
 					headline[3]+="\t"+rsst.getString(3); // SStype
-					headline[4]+="\t"+rsst.getInt(5); // CNSize
+					headline[4]+="\t("+rsst.getInt(5)+")"; // CNSize
 				} // end if 2st shell 
 				if ( rsst.getInt( 4)==2) { // count 2nd shell entry 
 					n2++;
@@ -324,7 +327,7 @@ public class cnHashIterNbhood {
 			ixcn = n1; 
 			jxcn = n1; 
 			System.out.println("|1st shell|="+size1+" \tx\t |2nd shell|="+size2);
-			headline[4]=headline[4].replace("X",(""+size1));
+			headline[4]=headline[4].replace("X",("("+size1+")"));
 			
 			// n1 and n2 are known, initialise matrices accordingly. 
 			// nbhood, move, rank, entropy, freq, AUC etc. (evtl.+ degree(?)) 
