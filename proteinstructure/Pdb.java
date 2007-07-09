@@ -112,16 +112,24 @@ public abstract class Pdb {
 		}
 		return coords;
 	}
-	
+
+	/**
+	 * Returns the distance matrix as a HashMap with Contacts (residue serial pairs) as keys
+	 * It doesn't make sense to call this method for multi atom contact 
+	 * types (for each residue serial pair there's more than 1 distance)
+	 * Thus before calling this we should check AA.isValidSingleAtomCT(ct)
+	 * @param ct the contact type
+	 * @return
+	 */
 	public HashMap<Contact, Double> calculate_dist_matrix(String ct){
-		HashMap<Contact,Double> dist_matrix = new HashMap<Contact,Double>();
+		HashMap<Contact,Double> distMatrixAtoms = new HashMap<Contact,Double>();
 		if (!ct.contains("/")){
 			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
 			for (int i_atomser:coords.keySet()){
 				for (int j_atomser:coords.keySet()){
 					if (j_atomser>i_atomser) {
 						Contact pair = new Contact(i_atomser,j_atomser);
-						dist_matrix.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
+						distMatrixAtoms.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
 					}
 				}
 			}
@@ -134,12 +142,20 @@ public abstract class Pdb {
 				for (int j_atomser:j_coords.keySet()){
 					if (j_atomser!=i_atomser){
 						Contact pair = new Contact(i_atomser,j_atomser);
-						dist_matrix.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
+						distMatrixAtoms.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
 					}
 				}
 			}
 		}
-		return dist_matrix;
+
+		HashMap<Contact,Double> distMatrixRes = new HashMap<Contact, Double>();
+		for (Contact cont: distMatrixAtoms.keySet()){
+			int i_resser = get_resser_from_atomser(cont.i);
+			int j_resser = get_resser_from_atomser(cont.j);
+			distMatrixRes.put(new Contact(i_resser,j_resser), distMatrixAtoms.get(cont));
+		}
+
+		return distMatrixRes;
 	}
 	
 	/**
