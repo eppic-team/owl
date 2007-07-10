@@ -14,7 +14,7 @@ public class cnEvalTargetNbhood {
 	 */
 	static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
-	static int VL=0; 
+	static int VL=1; // Verbosity Level 
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
 	static String backgrndDB = "pdb_reps_graph_4_2"; 
@@ -223,29 +223,29 @@ public class cnEvalTargetNbhood {
 					// and score this move
 					lastxcn=0; 
 					newnbs[i][j]= newnbhood; 
-					System.out.println("["+i+"]["+j+"] (-"+ixnum+"/+"+jxnum+")\t"+newnbs[i][j]);
+					System.out.print("\n["+i+"]["+j+"]\t-"+ixnum+"/+"+jxnum+"\t"+newnbs[i][j]+"\t ");
 					score = scoreCurrentNbhood( ixnum, jxnum);
 					sumdelta[i][j] = score;
 					cnall[i][j] = lastxcn;
-					reportMatrix( printCNSize );
-					reportMatrix( printdeltaRank );
 					if (VL>=1) {
+						reportMatrix( printCNSize );
+						reportMatrix( printdeltaRank );
 						System.out.println("SumDeltaRank Score = \t"+score);
 						System.out.println("CN1 x CN2 product  = \t"+cnall[i][j]);
 					} else {
-						System.out.print("\t"+(score*cnall[i][j]));
+						System.out.print("\t"+score+"*"+cnall[i][j]+"\t= "+(score*cnall[i][j]));
 					}
 					// reportMatrix( printNbstring ); 
 				} // next i
 				System.out.println("\t"); 
 			} // next j 
 			// report total matrix sumdelta
-			if (VL>=1) {
+			// if (VL>=1) {
 				System.out.println("GraphID "+graphid+" Central residue is "+restype+":"+resnr+":"+ressec); 
 				System.out.println("backgroundDB"+backgrndDB+" \t maxRank : "+maxRank);
 				reportResults( o1, o2, printRank); 
 				reportResults( o1, o2, printCNSize);
-			}
+			//}
 			reportResults( o1, o2, printCNSxdelta ); 
 			// Cleanup ... 
 			mrsst.close(); 
@@ -389,7 +389,7 @@ public class cnEvalTargetNbhood {
 								nbs+=j_res.toUpperCase()+"%"; // it is included
 								if ( j_num==jxnum && j==0) { // This is the direct nb dropped
 									jxcn=j_cnsize;
-									System.out.print("(j"+jxnum+":"+jxcn+")");
+									if (VL>=2) System.out.print("(j"+jxnum+":"+jxcn+")");
 								}
 							} else { // this one IS dropped 
 								mymove += "(-"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")";
@@ -403,7 +403,7 @@ public class cnEvalTargetNbhood {
 								mymove += "(+"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")";
 								if ( j_num==ixnum && i==0) { // This is the dropped direct nb, no 2b found in 2ns shell 
 									ixcn=j_cnsize;
-									System.out.print("(i"+ixnum+":"+ixcn+")");
+									if (VL>=2) System.out.print("(i"+ixnum+":"+ixcn+")");
 								}
 							} // end if 
 							
@@ -433,7 +433,7 @@ public class cnEvalTargetNbhood {
 					AUC[i][j]  = lastAUC;
 					total[i][j]= lastTotal; 
 					cnsize[i][j]=cn1[i]*cn2[j];
-					System.out.print(""+cnsize[i][j]+"\t");
+					if (VL>=1) System.out.print(""+cnsize[i][j]+"\t");
 					if (lastRank > 0) { 
 						sumdeltarank += ( (lastRank-rank[0][0]) );
 						// sumdeltarank += ( (lastRank-rank[0][0]) * (cnsize[i][j]) );
