@@ -17,7 +17,7 @@ public class Graph {
 
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 	
-	public ContactList contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
+	public EdgeSet contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
 	
 	protected TreeMap<Integer,String> nodes; // nodes is a TreeMap of residue serials to residue types (3 letter code)
 	protected String sequence; 				// the full sequence (with unobserved residues and non-standard aas ='X')
@@ -53,7 +53,7 @@ public class Graph {
 	 * @param pdbCode
 	 * @param chainCode
 	 */
-	protected Graph (ContactList contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
+	protected Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -87,7 +87,7 @@ public class Graph {
 		Out.println("#CHAIN: "+chainCode);
 		Out.println("#CT: "+ct);
 		Out.println("#CUTOFF: "+cutoff);
-		for (Contact pair:contacts){
+		for (Edge pair:contacts){
 			int i_resser=pair.i;
 			int j_resser=pair.j;
 			Out.println(i_resser+"\t"+j_resser);
@@ -96,13 +96,13 @@ public class Graph {
 	}
 	
 	/**
-	 * Gets list of contacts as a new ContactList (deep copied)
+	 * Gets list of contacts as a new EdgeSet (deep copied)
 	 * 
 	 */
-	public ContactList getContacts(){
-		ContactList newContacts = new ContactList();
-		for (Contact cont:contacts){
-			newContacts.add(new Contact(cont.i,cont.j));
+	public EdgeSet getContacts(){
+		EdgeSet newContacts = new EdgeSet();
+		for (Edge cont:contacts){
+			newContacts.add(new Edge(cont.i,cont.j));
 		}
 		return newContacts;
 	}
@@ -145,7 +145,7 @@ public class Graph {
 		// this initialises the matrix to 0 (i.e. no contact)
 		int[][] cm = new int[fullLength][fullLength];
 		// we put a 1 for all given contacts
-		for (Contact cont:contacts){
+		for (Edge cont:contacts){
 			int i_resser = cont.i;
 			int j_resser = cont.j;
 			cm[i_resser-1][j_resser-1]=1;
@@ -172,7 +172,7 @@ public class Graph {
 		//this could be implemented using the contact map matrix and scanning through 1 column/row
 		//it would be just slightly faster, here we do 2*numContacts iterations, using matrix would be only fullLength iterations
 		//however we would then have the overhead of creating the matrix
-		for (Contact cont:contacts){
+		for (Edge cont:contacts){
 			if (cont.i==resser) nbh.put(cont.j, nodes.get(cont.j));
 			if (cont.j==resser) nbh.put(cont.i, nodes.get(cont.i));
 		}
@@ -221,36 +221,37 @@ public class Graph {
 		return nbh2ndshell;
 	}
 	
-	public void addEdge(Contact cont){
-		if (!contacts.contains(cont)){ // checking that contact is not already there, we don't want duplicates
-			contacts.add(cont);
-			numContacts++;
-			modified=true;
-		}
+	public void addEdge(Edge cont){
+		contacts.add(cont); // contacts is a TreeSet and thus takes care of duplicates
+		int oldNumContacts = numContacts;
+		numContacts=getNumContacts();
+		// if number of contacts changed that means we actually added a new contact and thus we modified the graph
+		if (numContacts!=oldNumContacts) modified=true;
+		
 	}
 	
-	public void delEdge(Contact cont){
+	public void delEdge(Edge cont){
 		contacts.remove(cont);
 		numContacts--;
 		modified=true;
 	}
 	
 	public void restrictContactsToMaxRange(int range){
-		ContactList edgesToDelete = new ContactList();
-		for (Contact cont:contacts){
+		EdgeSet edgesToDelete = new EdgeSet();
+		for (Edge cont:contacts){
 			if (cont.getRange()>range) edgesToDelete.add(cont);
 		}
-		for (Contact cont:edgesToDelete){
+		for (Edge cont:edgesToDelete){
 			delEdge(cont);
 		}
 	}
 	
 	public void restrictContactsToMinRange(int range){
-		ContactList edgesToDelete = new ContactList();
-		for (Contact cont:contacts){
+		EdgeSet edgesToDelete = new EdgeSet();
+		for (Edge cont:contacts){
 			if (cont.getRange()<range) edgesToDelete.add(cont);
 		}
-		for (Contact cont:edgesToDelete){
+		for (Edge cont:edgesToDelete){
 			delEdge(cont);
 		}
 	}
@@ -259,13 +260,13 @@ public class Graph {
 	 * Returns a HashMap with all edge neighbourhood sizes (if they are >0) for each cell in the contact map
 	 * @return
 	 */
-	public HashMap<Contact,Integer> getAllEdgeNbhSizes() {
-		HashMap<Contact,Integer> sizes = new HashMap<Contact, Integer>();
+	public HashMap<Edge,Integer> getAllEdgeNbhSizes() {
+		HashMap<Edge,Integer> sizes = new HashMap<Edge, Integer>();
 		if (!directed) {
 			for (int i=1; i<fullLength;i++){
 				for (int j=i+1; j<fullLength;j++){
 					int size = getEdgeNbh(i, j).size();
-					if (size>0)	sizes.put(new Contact(i,j), size);
+					if (size>0)	sizes.put(new Edge(i,j), size);
 				}
 			}			
 		} else {
@@ -273,7 +274,7 @@ public class Graph {
 				for (int j=1; j<fullLength;j++){
 					if (i!=j){
 						int size = getEdgeNbh(i, j).size();
-						if (size>0) sizes.put(new Contact(i,j), size);
+						if (size>0) sizes.put(new Edge(i,j), size);
 					}
 				}
 			}
@@ -288,17 +289,17 @@ public class Graph {
 			//TODO throw specific exception
 			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
 		}
-		ContactList common = new ContactList();
-		ContactList onlythis = new ContactList();
-		ContactList onlyother = new ContactList();
-		for (Contact cont:this.contacts){
+		EdgeSet common = new EdgeSet();
+		EdgeSet onlythis = new EdgeSet();
+		EdgeSet onlyother = new EdgeSet();
+		for (Edge cont:this.contacts){
 			if (other.contacts.contains(cont)) {
 				common.add(cont);
 			} else{
 				onlythis.add(cont);
 			}
 		}
-		for (Contact cont:other.contacts){
+		for (Edge cont:other.contacts){
 			if (!this.contacts.contains(cont)){
 				onlyother.add(cont);
 			}

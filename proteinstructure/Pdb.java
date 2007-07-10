@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.ArrayList;
-import java.util.Collections;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -121,14 +120,14 @@ public abstract class Pdb {
 	 * @param ct the contact type
 	 * @return
 	 */
-	public HashMap<Contact, Double> calculate_dist_matrix(String ct){
-		HashMap<Contact,Double> distMatrixAtoms = new HashMap<Contact,Double>();
+	public HashMap<Edge, Double> calculate_dist_matrix(String ct){
+		HashMap<Edge,Double> distMatrixAtoms = new HashMap<Edge,Double>();
 		if (!ct.contains("/")){
 			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
 			for (int i_atomser:coords.keySet()){
 				for (int j_atomser:coords.keySet()){
 					if (j_atomser>i_atomser) {
-						Contact pair = new Contact(i_atomser,j_atomser);
+						Edge pair = new Edge(i_atomser,j_atomser);
 						distMatrixAtoms.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
 					}
 				}
@@ -141,18 +140,18 @@ public abstract class Pdb {
 			for (int i_atomser:i_coords.keySet()){
 				for (int j_atomser:j_coords.keySet()){
 					if (j_atomser!=i_atomser){
-						Contact pair = new Contact(i_atomser,j_atomser);
+						Edge pair = new Edge(i_atomser,j_atomser);
 						distMatrixAtoms.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
 					}
 				}
 			}
 		}
 
-		HashMap<Contact,Double> distMatrixRes = new HashMap<Contact, Double>();
-		for (Contact cont: distMatrixAtoms.keySet()){
+		HashMap<Edge,Double> distMatrixRes = new HashMap<Edge, Double>();
+		for (Edge cont: distMatrixAtoms.keySet()){
 			int i_resser = get_resser_from_atomser(cont.i);
 			int j_resser = get_resser_from_atomser(cont.j);
-			distMatrixRes.put(new Contact(i_resser,j_resser), distMatrixAtoms.get(cont));
+			distMatrixRes.put(new Edge(i_resser,j_resser), distMatrixAtoms.get(cont));
 		}
 
 		return distMatrixRes;
@@ -166,7 +165,6 @@ public abstract class Pdb {
 	 * @param cutoff
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
 	public Graph get_graph(String ct, double cutoff){ 
 		TreeMap<Integer,Point3d> i_coords = null;
 		TreeMap<Integer,Point3d> j_coords = null;
@@ -263,7 +261,7 @@ public abstract class Pdb {
 		} 
 		
 		// getting the contacts (in residue serials) from the atom serials (partial) distance matrix 
-		ContactList contacts = new ContactList();
+		EdgeSet contacts = new EdgeSet();
 		for (i=0;i<distMatrix.length;i++){
 			for (j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
@@ -273,9 +271,9 @@ public abstract class Pdb {
 				if (distMatrix[i][j]!=0.0 && distMatrix[i][j]<=cutoff){
 					int i_resser = atomser2resser.get(i_atomserials[i]);
 					int j_resser = atomser2resser.get(j_atomserials[j]);
-					Contact resser_pair = new Contact(i_resser,j_resser);
+					Edge resser_pair = new Edge(i_resser,j_resser);
 					// for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
-					if (i_resser!=j_resser && (! contacts.contains(resser_pair))){
+					if (i_resser!=j_resser){ // duplicates are automatically taken care by the EdgeSet class wich is a TreeSet and doesn't allow duplicates 
 						contacts.add(resser_pair);
 					}
 				}
@@ -284,7 +282,6 @@ public abstract class Pdb {
 		}
 
 		// creating and returning the graph object
-		Collections.sort(contacts);
 		TreeMap<Integer,String> nodes = new TreeMap<Integer,String>();
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));

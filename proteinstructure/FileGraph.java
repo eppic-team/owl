@@ -62,7 +62,7 @@ public class FileGraph extends Graph {
 	}
 
 	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException, GraphFileFormatError {
-		contacts = new ContactList();
+		contacts = new EdgeSet();
 		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		int linecount=0;
@@ -114,7 +114,7 @@ public class FileGraph extends Graph {
 			if (mcontact.find()){
 				int i = Integer.parseInt(line.split("\\s+")[0]);
 				int j = Integer.parseInt(line.split("\\s+")[1]);
-				contacts.add(new Contact(i,j));
+				contacts.add(new Edge(i,j));
 			}
 
 		}
