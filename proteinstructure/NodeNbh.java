@@ -71,4 +71,13 @@ public class NodeNbh extends TreeMap<Integer,String> {
 		else return this.getMotif();
 	}
 	
+	/**
+	 * Returns a copy (deep) of this NodeNbh as a new NodeNbh object
+	 * @return
+	 */
+	public NodeNbh getCopy(){
+		NodeNbh copy = new NodeNbh(this.central_resser,this.central_resType);
+		copy.putAll(this);
+		return copy;
+	}
 }
