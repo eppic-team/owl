@@ -128,6 +128,14 @@ public class Graph {
 	}
 	
 	/**
+	 * Gets a reference to this Graph deep copying contacts but re-referencing nodes
+	 * @return
+	 */
+	public Graph copyKeepingNodes(){
+		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);		
+	}	
+	
+	/**
 	 * Returns an int matrix with 1s for contacts and 0s for non contacts, i.e. the contact map
 	 * In non-crossed cases this should give us the upper half matrix (contacts are only j>i)
 	 * In crossed cases this gives us a full matrix (contacts are both j>i and i>j since they are directed)
@@ -192,11 +200,33 @@ public class Graph {
 		}
 		return nbh;
 	}
-
+	
+	/**
+	 * Gets 2nd shell node neighbourhood
+	 * @param resser
+	 */
+	public NodeNbh get2ndshellNodeNbh(int resser){
+		// first we create a NodeNbh object for the second shell, central residue is given resser
+		NodeNbh nbh2ndshell = new NodeNbh(resser,getResType(resser));
+		// we get 1st neighbourhood
+		NodeNbh nbh = this.getNodeNbh(resser);
+		for (int nb:nbh.keySet()){
+			NodeNbh nbh2 = this.getNodeNbh(nb); // for each first neighbour we take its neighbourhood
+			for (int nb2:nbh2.keySet()){
+				if (nb2!=resser && !nbh.containsKey(nb2)){ // if the 2nd neighbour nb2 is not the given resser or is not a 1st neighbour
+					nbh2ndshell.put(nb2, getResType(nb2));
+				}
+			}
+		}
+		return nbh2ndshell;
+	}
+	
 	public void addEdge(Contact cont){
-		contacts.add(cont);
-		numContacts++;
-		modified=true;
+		if (!contacts.contains(cont)){ // checking that contact is not already there, we don't want duplicates
+			contacts.add(cont);
+			numContacts++;
+			modified=true;
+		}
 	}
 	
 	public void delEdge(Contact cont){
