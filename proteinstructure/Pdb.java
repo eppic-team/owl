@@ -10,6 +10,11 @@ import java.util.ArrayList;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
+import javax.vecmath.Vector3d;
+import javax.vecmath.Tuple3d;
+
+import Jama.Matrix;
+import Jama.SingularValueDecomposition;
 
 /**
  * A single chain pdb protein structure
@@ -88,7 +93,7 @@ public abstract class Pdb {
 		return resser2restype.size();
 	}
 	
-	public TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
+	private TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
 		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>(); 
 		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
 		for (int resser:resser2restype.keySet()){
@@ -267,13 +272,13 @@ public abstract class Pdb {
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
 				// - diagonal of the matrix in case of undirected
 				// - lower half of matrix in case of undirected
-				// - cells for which we didn't calculate a distance as the 2 points were not in same or neighbouring boxes (i.e. too far apart)
+				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0 && distMatrix[i][j]<=cutoff){
 					int i_resser = atomser2resser.get(i_atomserials[i]);
 					int j_resser = atomser2resser.get(j_atomserials[j]);
 					Edge resser_pair = new Edge(i_resser,j_resser);
 					// for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
-					if (i_resser!=j_resser){ // duplicates are automatically taken care by the EdgeSet class wich is a TreeSet and doesn't allow duplicates 
+					if (i_resser!=j_resser){ // duplicates are automatically taken care by the EdgeSet class which is a TreeSet and doesn't allow duplicates 
 						contacts.add(resser_pair);
 					}
 				}
@@ -318,4 +323,151 @@ public abstract class Pdb {
 	public TreeMap<String,Interval> getAllSecStructElements(){
 		return secstruct2resinterval;
 	}
+	
+	/**
+	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
+	 * @param otherPdb
+	 * @param ct
+	 * @return
+	 */
+	//TODO must deal with unobserved residues and missing atoms for observed residues (see python implementation)
+	public double rmsd(Pdb otherPdb, String ct){
+		TreeMap<Integer,Point3d> thiscoords = this.get_coords_for_ct(ct);
+		TreeMap<Integer,Point3d> othercoords = otherPdb.get_coords_for_ct(ct);
+		
+		// converting the TreeMaps to Vector3d arrays (input format for calculate_rmsd)
+		Vector3d[] conformation1 = new Vector3d[thiscoords.size()]; 
+		Vector3d[] conformation2 = new Vector3d[othercoords.size()];
+		int i=0;
+		for (Tuple3d point:thiscoords.values()){
+			conformation1[i]= new Vector3d(point.x,point.y,point.z);
+			i++;
+		}
+		i=0;
+		for (Tuple3d point:othercoords.values()){
+			conformation2[i]= new Vector3d(point.x,point.y,point.z);
+			i++;
+		}
+		
+		// this as well as calculating the rmsd changes conformation1 and conformation2 to be optimally superposed
+		double rmsd = calculate_rmsd(conformation1, conformation2);
+
+//		// printing out individual distances (conformation1 and conformation2 are now optimally superposed)
+//		for (i=0;i<conformation1.length;i++){
+//			Point3d point1 = new Point3d(conformation1[i].x,conformation1[i].y,conformation1[i].z);
+//			Point3d point2 = new Point3d(conformation2[i].x,conformation2[i].y,conformation2[i].z);
+//			System.out.println(point1.distance(point2));
+//		}
+		
+		return rmsd;
+
+	}
+	
+	/**
+	 * Calculates the RMSD between two conformations.      
+     * conformation1: Vector3d array (matrix of dimensions [N,3])       
+     * conformation2: Vector3d array (matrix of dimensions [N,3]) 
+     * 
+     * Both conformation1 and conformation2 are modified to be optimally superposed
+     * 
+     * Implementation taken (python) from http://bosco.infogami.com/Root_Mean_Square_Deviation, 
+     * then ported to java using Jama matrix package 
+     * (page has moved to: http://boscoh.com/protein/rmsd-root-mean-square-deviation)                
+	 * @param conformation1
+	 * @param conformation2
+	 * @return
+	 */
+	private double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2){
+		if (conformation1.length!=conformation2.length) {
+			System.err.println("Conformations not the same size"); //TODO eventually throw exception
+		}
+		int n_vec = conformation1.length;
+		
+		// 1st we bring both conformations to the same centre by subtracting their respectives centres
+		Vector3d center1 = new Vector3d();
+		Vector3d center2 = new Vector3d();
+		for (int i=0;i<n_vec;i++){ // summing all vectors in each conformation
+			center1.add(conformation1[i]);
+			center2.add(conformation2[i]);
+		}
+		// dividing by n_vec (average)
+		center1.scale((double)1/n_vec);
+		center2.scale((double)1/n_vec);
+		// translating our conformations to the same coordinate system by subtracting centers
+		for (Vector3d vec:conformation1){
+			vec.sub(center1);
+		}
+		for (Vector3d vec:conformation2){
+			vec.sub(center2);
+		}
+
+		//E0: initial sum of squared lengths of both conformations
+		double sum1 = 0.0;
+		double sum2 = 0.0;
+		for (int i=0;i<n_vec;i++){
+			sum1 += conformation1[i].lengthSquared();
+			sum2 += conformation2[i].lengthSquared();
+		}
+		double E0 = sum1 + sum2;
+		
+		// singular value decomposition
+		Matrix vecs1 = vector3dAr2matrix(conformation1);
+		Matrix vecs2 = vector3dAr2matrix(conformation2);
+		
+		Matrix correlation_matrix = vecs2.transpose().times(vecs1); //gives a 3x3 matrix
+
+		SingularValueDecomposition svd = correlation_matrix.svd();
+		Matrix U = svd.getU();
+		Matrix V_trans = svd.getV().transpose(); 
+		double[] singularValues = svd.getSingularValues();
+		
+		boolean is_reflection = false;
+		if (U.det()*V_trans.det()<0.0){ 
+			is_reflection = true;
+		}
+		if (is_reflection){
+			// reflect along smallest principal axis:
+			// we change sign of last coordinate (smallest singular value)
+			singularValues[singularValues.length-2]=-singularValues[singularValues.length-2];  			
+		}
+		
+		// getting sum of singular values
+		double sumSV = 0.0;
+		for (int i=0;i<singularValues.length;i++){
+			sumSV += singularValues[i];
+		}
+		
+		// rmsd square: Kabsch formula
+		double rmsd_sq = (E0 - 2.0*sumSV)/((double) n_vec);
+		rmsd_sq = Math.max(rmsd_sq, 0.0);
+
+		// finally we modify conformation2 to be aligned to conformation1
+		if (is_reflection) { // first we check if we are in is_reflection case: we need to change sign to last row of U
+			for (int j=0;j<U.getColumnDimension();j++){
+				// we change sign to last row of U
+				int lastRow = U.getRowDimension()-1;
+				U.set(lastRow, j, (-1)*U.get(lastRow,j));
+			}
+		}
+		Matrix optimal_rotation = U.times(V_trans); 
+		Matrix conf2 = vecs2.times(optimal_rotation);
+		for (int i=0;i<n_vec;i++){
+			conformation2[i].x = conf2.get(i,0);
+			conformation2[i].y = conf2.get(i,1);
+			conformation2[i].z = conf2.get(i,2);
+		}
+
+		return Math.sqrt(rmsd_sq);
+	}
+	
+	/** Gets a Jama.Matrix object from a Vector3d[] (deep copies) */
+	private Matrix vector3dAr2matrix(Vector3d[] vecArray) {
+		double[][] array = new double[vecArray.length][3];
+		for (int i=0;i<vecArray.length;i++){
+			vecArray[i].get(array[i]);
+		}
+		return new Matrix(array);
+	}
+
 }
+
