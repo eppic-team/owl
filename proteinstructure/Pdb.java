@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
-import javax.vecmath.Tuple3d;
 
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
@@ -32,6 +31,7 @@ public abstract class Pdb {
 	protected HashMap<Integer,String> resser2restype;   // residue serial to 3 letter residue type 
 	protected HashMap<Integer,Point3d> atomser2coord;  // atom serials to 3D coordinates
 	protected HashMap<Integer,Integer> atomser2resser;  // atom serials to residue serials
+	protected HashMap<Integer,String> atomser2atom;     // atom serials to atom names
 	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	
@@ -82,6 +82,11 @@ public abstract class Pdb {
 		Out.close();
 	}
 	
+	/**
+	 * Dump the full sequence of this Pdb object in fasta file format
+	 * @param seqfile
+	 * @throws IOException
+	 */
 	public void dumpseq(String seqfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(seqfile));
 		Out.println(">"+pdbCode+"_"+pdbChainCode);
@@ -93,6 +98,12 @@ public abstract class Pdb {
 		return resser2restype.size();
 	}
 	
+	/**
+	 * Gets a TreeMap with atom serials as keys and their coordinates as values for the given contact type
+	 * The contact type can't be a cross contact type, it doesn't make sense here
+	 * @param ct
+	 * @return
+	 */
 	private TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
 		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>(); 
 		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
@@ -112,6 +123,34 @@ public abstract class Pdb {
 				else {
 					System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
 				}
+			}
+		}
+		return coords;
+	}
+
+	/**
+	 * Gets a TreeMap with residue serials+"_"+atomname as keys and their coordinates as values for the given contact type
+	 * The contact type can't be a cross contact type, it doesn't make sense here
+	 * Used in rmsd method
+	 * @param ct
+	 * @return
+	 */
+	private TreeMap<String,Point3d> get_coords_for_ct_4rmsd(String ct) {
+		TreeMap<String,Point3d> coords = new TreeMap<String,Point3d>(); 
+		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
+		for (int resser:resser2restype.keySet()){
+			String[] atoms = restype2atoms.get(resser2restype.get(resser));
+			for (String atom:atoms){
+				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
+					int atomser = resser_atom2atomserial.get(resser+"_"+atom);
+					Point3d coord = atomser2coord.get(atomser);
+					coords.put(resser+"_"+atom, coord);
+				}
+				else if (atom.equals("O") && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
+					int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
+					Point3d coord = atomser2coord.get(atomser);
+					coords.put(resser+"_"+atom, coord);
+				} 
 			}
 		}
 		return coords;
@@ -326,30 +365,37 @@ public abstract class Pdb {
 	
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
+	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
+	 * 
 	 * @param otherPdb
-	 * @param ct
+	 * @param ct the contact type (crossed contact types don't make sense here)
 	 * @return
+	 * @throws ConformationsNotSameSizeError
 	 */
-	//TODO must deal with unobserved residues and missing atoms for observed residues (see python implementation)
-	public double rmsd(Pdb otherPdb, String ct){
-		TreeMap<Integer,Point3d> thiscoords = this.get_coords_for_ct(ct);
-		TreeMap<Integer,Point3d> othercoords = otherPdb.get_coords_for_ct(ct);
+	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeError {
+		TreeMap<String,Point3d> thiscoords = this.get_coords_for_ct_4rmsd(ct);
+		TreeMap<String,Point3d> othercoords = otherPdb.get_coords_for_ct_4rmsd(ct);
+		
+		// there might be unobserved residues or some missing atoms for a residue
+		// here we get the ones that are in common
+		ArrayList<String> common = new ArrayList<String>();
+		for (String resser_atom:thiscoords.keySet()){
+			if (othercoords.containsKey(resser_atom)){
+				common.add(resser_atom);
+			}
+		}
 		
 		// converting the TreeMaps to Vector3d arrays (input format for calculate_rmsd)
-		Vector3d[] conformation1 = new Vector3d[thiscoords.size()]; 
-		Vector3d[] conformation2 = new Vector3d[othercoords.size()];
-		int i=0;
-		for (Tuple3d point:thiscoords.values()){
-			conformation1[i]= new Vector3d(point.x,point.y,point.z);
+		Vector3d[] conformation1 = new Vector3d[common.size()]; 
+		Vector3d[] conformation2 = new Vector3d[common.size()];
+		int i = 0;
+		for (String resser_atom:common){
+			conformation1[i] = new Vector3d(thiscoords.get(resser_atom).x,thiscoords.get(resser_atom).y,thiscoords.get(resser_atom).z);
+			conformation2[i] = new Vector3d(othercoords.get(resser_atom).x,othercoords.get(resser_atom).y,othercoords.get(resser_atom).z);
 			i++;
 		}
-		i=0;
-		for (Tuple3d point:othercoords.values()){
-			conformation2[i]= new Vector3d(point.x,point.y,point.z);
-			i++;
-		}
-		
-		// this as well as calculating the rmsd changes conformation1 and conformation2 to be optimally superposed
+				
+		// this as well as calculating the rmsd, changes conformation1 and conformation2 to be optimally superposed
 		double rmsd = calculate_rmsd(conformation1, conformation2);
 
 //		// printing out individual distances (conformation1 and conformation2 are now optimally superposed)
@@ -376,10 +422,13 @@ public abstract class Pdb {
 	 * @param conformation1
 	 * @param conformation2
 	 * @return
+	 * @throws ConformationsNotSameSizeError
 	 */
-	private double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2){
+	private double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeError{
 		if (conformation1.length!=conformation2.length) {
-			System.err.println("Conformations not the same size"); //TODO eventually throw exception
+			//System.err.println("Conformations not the same size");
+			throw new ConformationsNotSameSizeError(
+					"Given conformations have different size: conformation1: "+conformation1.length+", conformation2: "+conformation2.length);
 		}
 		int n_vec = conformation1.length;
 		

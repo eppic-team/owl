@@ -70,6 +70,13 @@ public class PdbfilePdb extends Pdb {
 			pdbresser2resser.put(String.valueOf(resser), resser);
 		}
 		
+		// initialising atomser2atom from resser_atom2atomserial
+		atomser2atom = new HashMap<Integer, String>();
+		for (String resser_atom:resser_atom2atomserial.keySet()){
+			int atomserial = resser_atom2atomserial.get(resser_atom);
+			String atom = resser_atom.split("_")[1];
+			atomser2atom.put(atomserial,atom);
+		}
 	}
 
 	
