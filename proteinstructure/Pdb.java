@@ -428,7 +428,7 @@ public abstract class Pdb {
 		if (is_reflection){
 			// reflect along smallest principal axis:
 			// we change sign of last coordinate (smallest singular value)
-			singularValues[singularValues.length-2]=-singularValues[singularValues.length-2];  			
+			singularValues[singularValues.length-1]=(-1)*singularValues[singularValues.length-1];  			
 		}
 		
 		// getting sum of singular values
