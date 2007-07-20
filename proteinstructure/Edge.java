@@ -12,32 +12,30 @@ public class Edge implements Comparable {
 	}
 	
 	public int compareTo(Object o) {
-		int diff=0;
 		Edge other = (Edge) o;
 		if (this.i>other.i){
-			diff=1;
+			return 1;
 		} 
 		else if (this.i<other.i){
-			diff=-1;
+			return -1;
 		}
-		else if (this.i==other.i){
+		else { // only remains case this.i==other.i
 			if (this.j>other.j){
-				diff=1;
+				return 1;
 			}
 			else if (this.j<other.j){
-				diff=-1;
+				return -1;
 			}
 		}				
-		return diff;
+		return 0; // if none of the conditions before returned, then both i and j are equal 
 	}
 
 	public boolean equals(Object o){
-		boolean eq = false;
 		Edge other = (Edge) o;
 		if (this.i==other.i && this.j==other.j){
-			eq=true;
+			return true;
 		}
-		return eq;
+		return false;
 	}
 
 	public String toString() {
