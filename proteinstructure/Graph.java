@@ -222,6 +222,13 @@ public class Graph {
 	}
 	
 	public void addEdge(Edge cont){
+		if (!directed){
+			// we invert in case of undirected and i>j because in undirected we have only the half of the matrix j>i
+			// if we added an edge i>j it could happen that the edge was already there but inverted and wouldn't be detected as a duplicate
+			if (cont.i>cont.j){ 
+				cont = new Edge(cont.j,cont.i); 
+			}
+		}
 		contacts.add(cont); // contacts is a TreeSet and thus takes care of duplicates
 		int oldNumContacts = numContacts;
 		numContacts=getNumContacts();
