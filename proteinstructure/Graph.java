@@ -222,12 +222,10 @@ public class Graph {
 	}
 	
 	public void addEdge(Edge cont){
-		if (!directed){
+		if (!directed && cont.i>cont.j){
 			// we invert in case of undirected and i>j because in undirected we have only the half of the matrix j>i
 			// if we added an edge i>j it could happen that the edge was already there but inverted and wouldn't be detected as a duplicate
-			if (cont.i>cont.j){ 
-				cont = new Edge(cont.j,cont.i); 
-			}
+			cont = new Edge(cont.j,cont.i); 
 		}
 		contacts.add(cont); // contacts is a TreeSet and thus takes care of duplicates
 		int oldNumContacts = numContacts;
@@ -238,9 +236,16 @@ public class Graph {
 	}
 	
 	public void delEdge(Edge cont){
+		if (!directed && cont.i>cont.j){
+			// we invert in case of undirected and i>j because in undirected we have only the half of the matrix j>i
+			// if we try to delete an edge i>j it won't be there, we have to invert it and then try to delete
+			cont = new Edge(cont.j,cont.i); 
+		}
 		contacts.remove(cont);
-		numContacts--;
-		modified=true;
+		int oldNumContacts = numContacts;
+		numContacts=getNumContacts();
+		// if number of contacts changed that means we actually added a new contact and thus we modified the graph
+		if (numContacts!=oldNumContacts) modified=true;
 	}
 	
 	public void restrictContactsToMaxRange(int range){
