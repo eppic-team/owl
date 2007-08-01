@@ -27,7 +27,7 @@ public class cnEvalTargetNbhood {
 	static String rsideline[], rheadline[]={" -->\t(-)1st shell\t0"," |\t        \t-"," |\t(+)     \t0"," V\t2nd shell\t-", "  \t        \tX"};
 	static String sideline[], headline[]={"\t\t0","\t\t-","\t\t0","\t\t-","\t\tX"};
 	static String restype="?", ressec="?", newnbhood=""; 
-	static int cn1[], cn2[]; 
+	static int cn1[], cn2[], matsize[][]; 
 	static int sumdelta[][], rank[][], total[][], cnsize[][], cnall[][];
 	static double entropy[][], freq[][], AUC[][]; 
 	static String newnbs[][], nbstring[][], moveset[][];  
@@ -41,7 +41,9 @@ public class cnEvalTargetNbhood {
 	printMoveset = 7,
 	printdeltaRank=8,
 	printCNSize   =9, 
-	printCNSxdelta=10;
+	printCNSxdelta=10, 
+	printMatSize  =11,
+	printCNSdMSxdelta=12;  
 	
 	public static void main(String[] args) {
 		
@@ -131,6 +133,7 @@ public class cnEvalTargetNbhood {
 			sumdelta = new int[(o1+1)][(o2+1)];
 			newnbs = new String[(o1+1)][(o2+1)];
 			cnall = new int[(o1+1)][(o2+1)];
+			matsize = new int[(o1+1)][(o2+1)];
 			// creating the perturbed version of shell 1 into temp_shell
 			for (j=0; j<=o2; j++) { // <=o2 outer loop through all originally indirect contacts
 				
@@ -227,10 +230,13 @@ public class cnEvalTargetNbhood {
 					score = scoreCurrentNbhood( ixnum, jxnum);
 					sumdelta[i][j] = score;
 					cnall[i][j] = lastxcn;
+					matsize[i][j] = (size1*size2)-1;
 					if (VL>=1) {
-						reportMatrix( printCNSize );
+						reportMatrix( printRank );
+						// reportMatrix( printCNSize );
 						reportMatrix( printdeltaRank );
 						System.out.println("SumDeltaRank Score = \t"+score);
+						System.out.println("Matrix size n1*n2-1= \t("+size1+"*"+size2+")-1 ="+matsize[i][j]);
 						System.out.println("CN1 x CN2 product  = \t"+cnall[i][j]);
 					} else {
 						System.out.print("\t"+score+"*"+cnall[i][j]+"\t= "+(score*cnall[i][j]));
@@ -245,8 +251,10 @@ public class cnEvalTargetNbhood {
 				System.out.println("backgroundDB"+backgrndDB+" \t maxRank : "+maxRank);
 				reportResults( o1, o2, printRank); 
 				reportResults( o1, o2, printCNSize);
+				reportResults( o1, o2, printMatSize);
 			//}
-			reportResults( o1, o2, printCNSxdelta ); 
+			reportResults( o1, o2, printCNSxdelta );
+			reportResults( o1, o2, printCNSdMSxdelta ); 
 			// Cleanup ... 
 			mrsst.close(); 
 			mstmt.close(); 
@@ -288,7 +296,9 @@ public class cnEvalTargetNbhood {
 				if (what2print==printRank) System.out.print( sumdelta[i][j] ); 
 				if (what2print==printNbstring) System.out.print( newnbs[i][j] );
 				if (what2print==printCNSize) System.out.print( cnall[i][j] ); 
-				if (what2print==printCNSxdelta) System.out.print( sumdelta[i][j]*cnall[i][j] ); 
+				if (what2print==printCNSxdelta) System.out.print( sumdelta[i][j]*cnall[i][j] );
+				if (what2print==printMatSize) System.out.print( matsize[i][j] );
+				if (what2print==printCNSdMSxdelta) System.out.print( sumdelta[i][j]*cnall[i][j]/matsize[i][j] );
 				System.out.print("\t"); 
 			} // next i 
 			System.out.println(""); 
@@ -388,7 +398,7 @@ public class cnEvalTargetNbhood {
 							if (ni!=i) {// if this is NOT the one direct nb 2B dropped 
 								nbs+=j_res.toUpperCase()+"%"; // it is included
 								if ( j_num==jxnum && j==0) { // This is the direct nb dropped
-									jxcn=j_cnsize;
+									jxcn=j_cnsize-1;
 									if (VL>=2) System.out.print("(j"+jxnum+":"+jxcn+")");
 								}
 							} else { // this one IS dropped 
@@ -433,7 +443,7 @@ public class cnEvalTargetNbhood {
 					AUC[i][j]  = lastAUC;
 					total[i][j]= lastTotal; 
 					cnsize[i][j]=cn1[i]*cn2[j];
-					if (VL>=1) System.out.print(""+cnsize[i][j]+"\t");
+					// if (VL>=1) System.out.print(""+cnsize[i][j]+"\t");
 					if (lastRank > 0) { 
 						sumdeltarank += ( (lastRank-rank[0][0]) );
 						// sumdeltarank += ( (lastRank-rank[0][0]) * (cnsize[i][j]) );
@@ -441,6 +451,7 @@ public class cnEvalTargetNbhood {
 						sumdeltarank += ( (maxRank-rank[0][0]) );
 						// sumdeltarank += ( (maxRank-rank[0][0]) * (cnsize[i][j]) );
 					} // end if lastRank was defined 
+					if (VL>=1) System.out.print(""+lastRank+"\t");
 				} // close inner loop (i)
 				if (VL>=1) {
 				   System.out.println(".");
@@ -509,7 +520,8 @@ public class cnEvalTargetNbhood {
 		String sql, res, this_n, prec_n; 
 		Statement stmt;  
 		ResultSet rsst;
-		double p, psum=0.0, logp, plogp, plogpsum=0.0; 
+		double p, psum=0.0, logp, plogp, plogpsum=0.0;
+		int counter=0, c=0, lastc=0; 
 		try {
 			// Hashing first row tables comes first
 			// System.out.println("nbs   : "+nbs); 
@@ -548,10 +560,11 @@ public class cnEvalTargetNbhood {
 			lastavgk = 0.0;
 			lastdevk = 0.0;
 			while (rsst.next()) {	
-				rank ++;
+				counter++; 
 				res = rsst.getString(1); // 1st column -- res
+				c = rsst.getInt( 2); // 2nds column : count/residue 
 				p = rsst.getDouble(3); // 3rd: fraction p 
-				// System.out.print(rank+ " : " + res+"   : "+num+ " : " + p);
+				if (VL>=2) System.out.print(counter+"/"+rank+ " : " + res+"   : "+c+ " : " + p);
 				logp = Math.log(p)/Math.log(2.0); // to basis 2 for info in bits 
 				// System.out.print(" : " + logp); 
 				plogp = -1.0 * p * logp;  
@@ -559,18 +572,26 @@ public class cnEvalTargetNbhood {
 				plogpsum += plogp;  
 				psum += p; 
 				
+				if ((c == lastc) && (lastc>0)) { // tie 
+					if (VL>=2) System.out.print(" <-- TIE!");
+					lastRank = counter; 		
+				} // end if 
+					
 				if (res.equals(centRes)) { 
-					// System.out.print(" <==" + centRes);
+					if (VL>=2) System.out.print(" <== " + centRes);
 					seenCentRes = true;
 					lastFreq = p;
 					lastRank = rank; 
 					lastavgk = rsst.getDouble(4);
 					lastdevk = rsst.getDouble(5);
+					lastc = c;
 				}
-				if (seenCentRes) lastAUC += p; 
-				// System.out.println("");
+				if (seenCentRes) lastAUC += p;
+	
+				if (VL>=2) System.out.println("");
 			}
 			// System.out.println("Sum :"+lastTotal+"       : "+psum+"       : "+plogpsum);
+			if (VL>=2) System.out.println("=> rank "+lastRank); 
 			rsst.close(); 
 			stmt.close(); 
 			lastEntropy = plogpsum; 
