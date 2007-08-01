@@ -44,26 +44,24 @@ public class NbhProbDistribution {
 
 	private void getRanks(){
 		ranks = new TreeMap<String, Integer>();
-		ArrayList<String> doneRes = new ArrayList<String>();
 		// first we set the residues with prob=0.0 to MAXRANK
 		for (String res:dist.keySet()){
-			if (!doneRes.contains(res)) {
+			if (!ranks.containsKey(res)) { // we don't check the ones already assigned
 				double prob = dist.get(res);
 				if (prob==0.0){
 					ranks.put(res,MAXRANK);
-					doneRes.add(res);
 				}
 			}
 		}
 		// now we set ranks for the rest
 		int lastRank = 0;
 		double lastMax = 0.0;
-		int numberNonZeroProb = dist.size()-doneRes.size();
+		int numberNonZeroProb = dist.size()-ranks.size();
 		for (int rank=1;rank<=numberNonZeroProb;rank++){
 			double max = 0.0;
 			String maxres="";
 			for (String res:dist.keySet()){
-				if (!doneRes.contains(res)) {
+				if (!ranks.containsKey(res)) {
 					double prob = dist.get(res);
 					if (prob>=max){
 						max = prob;
@@ -77,7 +75,6 @@ public class NbhProbDistribution {
 				ranks.put(maxres,rank);
 				lastRank = rank;
 			}
-			doneRes.add(maxres);
 			lastMax = max;
 		}
 	}
