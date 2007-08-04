@@ -25,6 +25,7 @@ public class Alignment {
 	private static final char GAPCHARACTER = '-';
 	private static final String PIRFORMAT = "PIR";
 	private static final String FASTAFORMAT = "FASTA";
+	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-]+)";
 	
 	/*--------------------------- member variables --------------------------*/		
 	
@@ -119,7 +120,7 @@ public class Alignment {
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
 					sequences.put(currentSeqTag, currentSeq);
 				} else {
-					Pattern p = Pattern.compile("^>\\s*([a-zA-Z0-9_-]+)");
+					Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 					Matcher m = p.matcher(nextLine);
 					if (m.find()){				// start new sequence
 						currentSeq = "";						
@@ -163,7 +164,7 @@ public class Alignment {
 		while((nextLine = fileIn.readLine()) != null) {
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
-				Pattern p = Pattern.compile(">\\s*([a-zA-Z0-9_-]+)");
+				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 				Matcher m = p.matcher(nextLine);
 				if (m.find()){
 					if (!lastSeqTag.equals("")) {
@@ -293,24 +294,24 @@ public class Alignment {
 		Alignment al = new Alignment(fileName,"FASTA");
 		
 		// print columns
-		for (int i=0;i<al.getSequenceLength();i++){
-			System.out.println(al.getColumn(i));
-		}
+		//for (int i=0;i<al.getSequenceLength();i++){
+		//	System.out.println(al.getColumn(i));
+		//}
 		// print all sequences tags and sequences
 		for (String seqTag:al.getSequences().keySet()){
 			System.out.println(seqTag);
 			System.out.println(al.getSequence(seqTag));
 		}
 		// test of al2seq
-		for (int i=0;i<al.getSequenceLength();i++) {
-			System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
-		}
+		//for (int i=0;i<al.getSequenceLength();i++) {
+		//	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
+		//}
 		// test of seq2al 
-		for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
-			System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
-		}
+		//for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
+		//	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
+		//}
 		// print alignment by columns tab delimited
-		al.writeTabDelimited();
+		//al.writeTabDelimited();
 	}
 
 }
