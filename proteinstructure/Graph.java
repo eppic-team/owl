@@ -371,5 +371,15 @@ public class Graph {
 	public double getCutoff(){
 		return cutoff;
 	}
+	
+	public boolean containsContact(Edge cont){
+		// be careful with order, this checks strictly whether the cont.i, cont.j is given, strictly in that order!
+		// in undirected case contacts are stored only in 1 direction (j>i) and thus if wrong order given it won't be found 
+		return contacts.contains(cont);
+	}
+	
+	public void resetContacts(){
+		this.contacts = new EdgeSet();
+	}
 }
 
