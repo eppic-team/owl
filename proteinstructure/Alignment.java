@@ -202,6 +202,15 @@ public class Alignment {
     public int getNumberOfSequences() { return sequences.size(); }
 	
     /**
+     * Returns true if alignment contains the sequence identified by seqTag
+     * @param seqTag
+     * @return
+     */
+    public boolean hasTag(String seqTag){
+    	return sequences.containsKey(seqTag);
+    }
+    
+    /**
      * Returns all sequence tags in a Set<String>
      * @return
      */
