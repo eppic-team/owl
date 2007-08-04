@@ -30,7 +30,8 @@ public class Alignment {
 	
 	String[] sequenceTags;
 
-	int[][] map; // first index is the sequence number, second is the alignment serials (indices)
+	int[][] mapAlign2Seq; // first index is the sequence number, second is the alignment serials (indices)
+	int[][] mapSeq2Align;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -48,14 +49,25 @@ public class Alignment {
 	/*---------------------------- private methods --------------------------*/
 	
 	private void doMapping() {
-		this.map = new int[getNumberOfSequences()][getSequenceLength()]; 
+		this.mapAlign2Seq = new int[getNumberOfSequences()][getSequenceLength()];
+		this.mapSeq2Align = new int[getNumberOfSequences()][getSequenceLength()];
 		for (int i=0;i<getNumberOfSequences();i++){
 			String seq = getSequence(i);
 			int serial = 1;
 			for (int j=0;j<seq.length();j++){
 				if (seq.charAt(j)!=GAPCHARACTER) {
-					map[i][j]=serial;
+					mapAlign2Seq[i][j]=serial;
 					serial++;
+				} else { // for gaps we assing a -1
+					mapAlign2Seq[i][j]=-1;
+				}
+			}
+		}
+		for (int i=0;i<getNumberOfSequences();i++){
+			for (int j=0;j<getSequenceLength();j++){
+				int serial = mapAlign2Seq[i][j];
+				if (serial!=-1){
+					mapSeq2Align[i][serial]=j;
 				}
 			}
 		}
@@ -219,6 +231,14 @@ public class Alignment {
     public int getNumberOfSequences() { return sequences.length; }
 	
     /**
+     * Returns all sequence tags in a String[]
+     * @return
+     */
+    public String[] getTags(){
+    	return sequenceTags;
+    }
+    
+    /**
      * Get sequence's tag as present in fasta file
      * @param i
      * @return
@@ -228,14 +248,42 @@ public class Alignment {
     }
     
     /**
+     * Returns sequence seqNumber with no gaps
+     * @param seqNumber
+     * @return
+     */
+    public String getSequenceNoGaps(int seqNumber){
+    	String seq = "";
+    	for (int i=0;i<getSequenceLength();i++){
+    		char letter = sequences[seqNumber].charAt(i);
+    		if (letter!=GAPCHARACTER){
+    			seq+=letter;
+    		}
+    	}
+    	return seq;
+    }
+    
+    /**
      * Given the alignment serial (starting at 0, with gaps),
      * returns the sequence serial (starting at 1, no gaps) of sequence seqNumber
+     * Returns -1 if sequence at that position is a gap
      * @param seqNumber
      * @param alignmentSerial
      * @return
      */
-    public int getSerialInSequence(int seqNumber, int alignmentSerial){
-    	return map[seqNumber][alignmentSerial];
+    public int al2seq(int seqNumber, int alignmentSerial){
+    	return mapAlign2Seq[seqNumber][alignmentSerial];
+    }
+    
+    /**
+     * Given sequence serial of sequence seqNumber,
+     * returns the alignment serial
+     * @param seqNumber
+     * @param seqSerial
+     * @return
+     */
+    public int seq2al(int seqNumber, int seqSerial) {
+    	return mapSeq2Align[seqNumber][seqSerial];
     }
     
     /**
@@ -263,10 +311,10 @@ public class Alignment {
     		}
     		System.out.print((i+1)+"\t");
     		for (int seqNumber=0;seqNumber<getNumberOfSequences();seqNumber++){
-    			int serial = getSerialInSequence(seqNumber, i); 
-    			if (serial!=0){
+    			int serial = al2seq(seqNumber, i); 
+    			if (serial!=-1){ // everything not gaps
     				System.out.print(serial+"\t");
-    			} else {
+    			} else {  // gaps
     				System.out.print("\\N\t");
     			}
     		}
@@ -286,13 +334,16 @@ public class Alignment {
 //			System.out.println(al.getColumn(i));
 //		}
 		
-		for (int i=0;i<al.getNumberOfSequences();i++){
-			System.out.println(al.getSequenceTag(i));
-			System.out.println(al.getSequence(i));
-		}
-//		for (int i=0;i<al.getSequenceLength();i++) {
-//			System.out.println("alignment serial: "+i+", seq serial: "+al.getSerialInSequence(0,i));
+//		for (int i=0;i<al.getNumberOfSequences();i++){
+//			System.out.println(al.getSequenceTag(i));
+//			System.out.println(al.getSequence(i));
 //		}
+		//for (int i=0;i<al.getSequenceLength();i++) {
+			//System.out.println("alignment serial: "+i+", seq serial: "+al.getSerialInSequence(0,i));
+		//}
+		for (int serial=1;serial<=al.getSequenceNoGaps(0).length();serial++){
+			System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(0, serial));
+		}
 		//al.writeTabDelimited();
 	}
 
