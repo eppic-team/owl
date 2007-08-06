@@ -137,8 +137,8 @@ public class PdbfilePdb extends Pdb {
 				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						System.err.println("Inconsistency in secondary structure assignment. " +
-								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+						//System.err.println("Inconsistency in secondary structure assignment. " +
+						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
 					}
 					resser2secstruct.put(i,ssId);
 				}
@@ -157,8 +157,8 @@ public class PdbfilePdb extends Pdb {
 				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						System.err.println("Inconsistency in secondary structure assignment. " +
-								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+						//System.err.println("Inconsistency in secondary structure assignment. " +
+						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
 					}
 					resser2secstruct.put(i,ssId);
 				}
@@ -178,8 +178,8 @@ public class PdbfilePdb extends Pdb {
 				secstruct2resinterval.put(ssId, new Interval(beg,end));
 				for (int i=beg;i<=end;i++){
 					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						System.err.println("Inconsistency in secondary structure assignment. " +
-								"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
+						//System.err.println("Inconsistency in secondary structure assignment. " +
+						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
 					}
 					resser2secstruct.put(i,ssId);
 				}

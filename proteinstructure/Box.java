@@ -58,4 +58,9 @@ public class Box {
 		}
 	}
 	
+	// Beware, this returns only the size for i
+	public int size() {
+		return i_pointsInBox.size();
+	}
+	
 }

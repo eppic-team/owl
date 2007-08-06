@@ -5,6 +5,7 @@ import java.io.PrintStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.ArrayList;
 
@@ -211,7 +212,7 @@ public abstract class Pdb {
 	 */
 	public Graph get_graph(String ct, double cutoff){ 
 		TreeMap<Integer,Point3d> i_coords = null;
-		TreeMap<Integer,Point3d> j_coords = null;
+		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
 		boolean directed = false;
 		if (!ct.contains("/")){
 			i_coords = get_coords_for_ct(ct);
@@ -334,6 +335,90 @@ public abstract class Pdb {
 
 		return graph;
 	}
+	
+	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
+		TreeMap<Integer,Point3d> i_coords = null;
+		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
+		boolean directed = false;
+		if (!ct.contains("/")){
+			i_coords = get_coords_for_ct(ct);
+			directed = false;
+		} else {
+			String i_ct = ct.split("/")[0];
+			String j_ct = ct.split("/")[1];
+			i_coords = get_coords_for_ct(i_ct);
+			j_coords = get_coords_for_ct(j_ct);
+			directed = true;
+		}
+		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
+		int[] j_atomserials = null;
+		
+		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
+		
+		int boxSize = (int) Math.floor(cutoff*SCALE);
+		
+		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
+		int i=0;
+		for (int i_atomser:i_coords.keySet()){
+			//coordinates for atom serial atomser, we will use i as its identifier below
+			Point3d coord = i_coords.get(i_atomser);
+			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
+			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
+			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
+			Point3i floor = new Point3i(floorX,floorY,floorZ);
+			if (boxes.containsKey(floor)){
+				// we put the coords for atom i in its corresponding box (identified by floor)
+				boxes.get(floor).put_i_Point(i, coord);
+				if (!directed){
+					boxes.get(floor).put_j_Point(i, coord);
+				}
+			} else {
+				Box box = new Box(floor);
+				box.put_i_Point(i, coord);
+				if (!directed){
+					box.put_j_Point(i, coord);
+				}
+				boxes.put(floor,box);
+			}
+			i_atomserials[i]=i_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
+			i++;
+		}
+		int j=0;
+		if (directed) {
+			j_atomserials = new  int[j_coords.size()];
+			for (int j_atomser:j_coords.keySet()){
+				//coordinates for atom serial atomser, we will use j as its identifier below
+				Point3d coord = j_coords.get(j_atomser);
+				int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
+				int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
+				int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
+				Point3i floor = new Point3i(floorX,floorY,floorZ);
+				if (boxes.containsKey(floor)){
+					// we put the coords for atom j in its corresponding box (identified by floor)
+					boxes.get(floor).put_j_Point(j, coord);
+				} else {
+					Box box = new Box(floor);
+					box.put_j_Point(j, coord);
+					boxes.put(floor,box);
+				}
+				j_atomserials[j]=j_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
+				j++;
+			}
+		} else {
+			j_atomserials = i_atomserials;
+		}
+		
+		for(Point3i floor:boxes.keySet()) {
+			int size = boxes.get(floor).size();
+			if(densityCount.containsKey(size)) {
+				int old = densityCount.get(size);
+				densityCount.put(size, ++old);
+			} else {
+				densityCount.put(size, 1);
+			}
+		}
+	}
+	
 	
 	public int get_resser_from_pdbresser (String pdbresser){
 		return pdbresser2resser.get(pdbresser);
