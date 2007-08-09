@@ -99,6 +99,8 @@ public class PdbfilePdb extends Pdb {
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
+		Pattern p;
+		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
 		// we set chainCodeStr (for regex) to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
@@ -108,21 +110,36 @@ public class PdbfilePdb extends Pdb {
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		int linecount=0;
 		String line;
-		while ((line = fpdb.readLine() ) != null ) {
-			linecount++;
+		// read first line
+		if((line = fpdb.readLine()) != null ) {
+			linecount = 1;
 			// HEADER
-			Pattern p = Pattern.compile("^HEADER");
-			Matcher m = p.matcher(line);
+			p = Pattern.compile("^HEADER");
+			m = p.matcher(line);
 			if (m.find()){
 				Pattern ph = Pattern.compile("^HEADER.{56}(\\d\\w{3})");
 				Matcher mh = ph.matcher(line);
 				if (mh.find()) {
 					pdbCode=mh.group(1).toLowerCase();
 				}
-			} else if (linecount==1) { // header not found and we are in line 1
-				// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
-				throw new PdbfileFormatError("The pdb file "+pdbfile+" doesn't seem to have the right format");
+			} else { // header not found
+				// check whether this is a Casp prediction file
+				p = Pattern.compile("^PFRMAT TS");
+				m = p.matcher(line);
+				if(m.find()) {
+					// ok, it is
+					pdbCode = "CASP";
+				} else {
+					// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
+					throw new PdbfileFormatError("The pdb file "+pdbfile+" doesn't seem to have the right format");
+				}
 			}
+		} else {
+			throw new PdbfileFormatError("The file "+pdbfile+" is empty.");
+		}
+		// read further lines
+		while ((line = fpdb.readLine() ) != null ) {
+			linecount++;
 			// SECONDARY STRUCTURE
 			// helix
 			//HELIX    1   1 LYS A   17  LEU A   26  1
