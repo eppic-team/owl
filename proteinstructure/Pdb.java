@@ -1,8 +1,6 @@
 package proteinstructure;
 
-import java.io.FileOutputStream;
-import java.io.PrintStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -52,9 +50,59 @@ public abstract class Pdb {
 	protected int model;  			// the model serial for NMR structures
 	
 	protected String db;			// the db from which we have taken the data (if applies)
+	protected boolean hasSecondaryStructure = false;
 	
+	/** Run DSSP externally and (re)assign the secondary structure annotation from the output */
+	public void runDssp(String dsspExecutable) throws IOException {
+		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
+		String line;
+		int resCount = 0;
+		File test = new File(dsspExecutable);
+		if(!test.canRead()) throw new IOException("DSSP Executable is not readable");
+		Process myDssp = Runtime.getRuntime().exec(dsspExecutable + " --");
+		PrintWriter dsspInput = new PrintWriter(myDssp.getOutputStream());
+		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
+		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
+		writeAtomLines(dsspInput);	// pipe atom lines to dssp
+		dsspInput.close();
+		while((line = dsspOutput.readLine()) != null) {
+			if(line.startsWith(startLine)) {
+				System.out.println("Dssp Output: ");
+				break;
+			}
+		}
+		while((line = dsspOutput.readLine()) != null) {
+			String ssType = line.substring(16,17);
+			System.out.print(ssType);
+			resCount++;
+		}
+		System.out.println();
+		if(resCount != get_length()) System.err.println("Dssp output does not match number of residues.");
+		dsspOutput.close();
+		dsspError.close();
+	}
 	
-	
+	/** Writes atom lines for this structure to the given output stream */
+	private void writeAtomLines(PrintWriter Out) {
+		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
+		Out.println("HEADER  Dumped from "+db+". pdb code="+pdbCode+", chain='"+chainCode+"'");
+		for (String resser_atom:resser_atom2atomserial.keySet()){
+			int atomserial = resser_atom2atomserial.get(resser_atom);
+			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
+			String atom = resser_atom.split("_")[1];
+			String res_type = resser2restype.get(res_serial);
+			Point3d coords = atomser2coord.get(atomserial);
+			String atomType = atom.substring(0,1);
+			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords.x, coords.y, coords.z, atomType};
+			lines.put(atomserial, fields);
+		}
+		for (int atomserial:lines.keySet()){
+			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
+			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f  1.00  0.00           %s\n",lines.get(atomserial));
+		}
+		Out.println("END");
+		Out.close();		
+	}
 
 	/**
 	 * Dumps coordinate data into a file in pdb format (ATOM lines only)
@@ -63,24 +111,8 @@ public abstract class Pdb {
 	 * @throws IOException
 	 */
 	public void dump2pdbfile(String outfile) throws IOException {
-		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
-		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		Out.println("HEADER  Dumped from "+db+". pdb code="+pdbCode+", chain='"+chainCode+"'");
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
-			String atom = resser_atom.split("_")[1];
-			String res_type = resser2restype.get(res_serial);
-			Point3d coords = atomser2coord.get(atomserial);
-			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords.x, coords.y, coords.z};
-			lines.put(atomserial, fields);
-		}
-		for (int atomserial:lines.keySet()){
-			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			Out.printf(Locale.US,"ATOM  %5d  %3s %3s %1s%4d    %8.3f%8.3f%8.3f\n",lines.get(atomserial));
-		}
-		Out.println("END");
-		Out.close();
+		PrintWriter Out = new PrintWriter(new FileOutputStream(outfile));
+		writeAtomLines(Out);
 	}
 	
 	/**
@@ -458,6 +490,10 @@ public abstract class Pdb {
 	
 	public TreeMap<String,Interval> getAllSecStructElements(){
 		return secstruct2resinterval;
+	}
+	
+	public boolean hasSecondaryStructure() {
+		return hasSecondaryStructure;
 	}
 	
 	/**
