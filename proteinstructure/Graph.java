@@ -53,7 +53,7 @@ public class Graph {
 	 * @param pdbCode
 	 * @param chainCode
 	 */
-	protected Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
+	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
