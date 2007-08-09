@@ -95,8 +95,20 @@ public abstract class Pdb {
 		Out.close();
 	}
 	
+	/** 
+	 * Returns length of the protein (number of residues)
+	 * @return
+	 */
 	public int get_length(){
 		return resser2restype.size();
+	}
+	
+	/**
+	 * Returns number of (non-Hydrogen) atoms in the protein
+	 * @return
+	 */
+	public int getNumAtoms() {
+		return atomser2atom.size();
 	}
 	
 	/**
