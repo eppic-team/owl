@@ -1,7 +1,9 @@
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import proteinstructure.Graph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
@@ -42,7 +44,7 @@ public class benchmarkGraphAlgorithm {
 		return user;
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		MySQLConnection conn = null;		
 		String pdbCode, chainCode;
 		int numPdbs = 0;
@@ -76,17 +78,19 @@ public class benchmarkGraphAlgorithm {
 					pdb = new PdbasePdb(pdbCode, chainCode, PDB_DB, conn);
 					int length = pdb.get_length();
 					int atoms = pdb.getNumAtoms();
-					if (atoms>3000) {
-						// get graph
-						long start = System.currentTimeMillis();
-						pdb.get_graph(edgeType, cutoff);
-						long end = System.currentTimeMillis();
-						
-						System.out.print(pdbCode+"_"+chainCode);
-						System.out.print("\t"+length+"\t"+atoms);
-						System.out.printf("\t%4.3f",(double) (end-start)/1000);
-						System.out.println();
-					}
+
+					// get graph
+					long start = System.currentTimeMillis();
+					Graph graph = pdb.get_graph(edgeType, cutoff);
+					long end = System.currentTimeMillis();
+
+					graph.write_graph_to_file(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);
+					
+					System.out.print(pdbCode+"_"+chainCode);
+					System.out.print("\t"+length+"\t"+atoms);
+					System.out.printf("\t%4.3f",(double) (end-start)/1000);
+					System.out.println();
+
 					
 				} catch (PdbaseInconsistencyError e) {
 					System.out.println("Inconsistency in " + pdbCode + chainCode);
