@@ -123,6 +123,10 @@ public class PdbasePdb extends Pdb {
 		}
 		
 		readSecStructure();
+		if(!resser2secstruct.isEmpty()) {
+			hasSecondaryStructure = true;
+			secondaryStructureSource = "Pdbase";
+		}
 		
 		// initialising atomser2atom from resser_atom2atomserial
 		atomser2atom = new HashMap<Integer, String>();

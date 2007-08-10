@@ -50,38 +50,111 @@ public abstract class Pdb {
 	protected int model;  			// the model serial for NMR structures
 	
 	protected String db;			// the db from which we have taken the data (if applies)
-	protected boolean hasSecondaryStructure = false;
+	protected boolean hasSecondaryStructure = false;		// true iff secondary structure information is available
+	protected String secondaryStructureSource = "none";		// source of the secondary structure annotation (DSSP, Author, none)
 	
 	/** Run DSSP externally and (re)assign the secondary structure annotation from the output */
-	public void runDssp(String dsspExecutable) throws IOException {
+	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
 		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
 		String line;
-		int resCount = 0;
+		int resCount = 0, lineCount = 0;
+		char ssType, ssTypes[];
+		int resNum, resNums[];
+		String resNumStr;
 		File test = new File(dsspExecutable);
 		if(!test.canRead()) throw new IOException("DSSP Executable is not readable");
-		Process myDssp = Runtime.getRuntime().exec(dsspExecutable + " --");
+		Process myDssp = Runtime.getRuntime().exec(dsspExecutable + " " + dsspParameters);
 		PrintWriter dsspInput = new PrintWriter(myDssp.getOutputStream());
 		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
 		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
 		writeAtomLines(dsspInput);	// pipe atom lines to dssp
 		dsspInput.close();
+		ssTypes = new char[getFullLength()+1];
 		while((line = dsspOutput.readLine()) != null) {
+			lineCount++;
 			if(line.startsWith(startLine)) {
-				System.out.println("Dssp Output: ");
+				//System.out.println("Dssp Output: ");
 				break;
 			}
 		}
 		while((line = dsspOutput.readLine()) != null) {
-			String ssType = line.substring(16,17);
-			System.out.print(ssType);
-			resCount++;
+			lineCount++;
+			resNumStr = line.substring(5,10).trim();
+			ssType = line.charAt(16);			
+			if(!resNumStr.equals("")) {		// this should only happen if dssp inserts a line indicating a chain break
+				try {
+					resNum = Integer.valueOf(resNumStr);
+					ssTypes[resNum] = ssType;
+					resCount++;
+				} catch (NumberFormatException e) {
+					System.err.println("Error while parsing DSSP output. Expected residue number, found '" + resNumStr + "' in line " + lineCount);
+				}
+			}
 		}
-		System.out.println();
-		if(resCount != get_length()) System.err.println("Dssp output does not match number of residues.");
+		//for(char c:ssTypes) {System.out.print(c);}; System.out.println(".");
 		dsspOutput.close();
 		dsspError.close();
+
+		if(resCount == 0) {
+			throw new IOException("No DSSP output found.");
+		}
+		
+		if(resCount != get_length()) {	// compare with number of observed residues
+			System.err.println("Error: DSSP output " + resCount + " does not match number of observed residues in structure " + get_length() + ".");
+		}
+
+		// assign secondary structure
+		this.resser2secstruct = new HashMap<Integer, String>();
+		this.secstruct2resinterval = new TreeMap<String, Interval>();
+		char lastType = SecStrucElement.getSimpleTypeFromDsspType(ssTypes[0]);
+		char thisType;
+		int start = 0, i, j;
+		int elementCount = 0;
+		String ssId;
+		for(i=1; i < ssTypes.length; i++) {
+			thisType = SecStrucElement.getSimpleTypeFromDsspType(ssTypes[i]);
+			if(thisType != lastType) {
+				// finish previous element, start new one
+				if(lastType != ' ' && lastType != '\0') {
+					elementCount++;
+					ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+					secstruct2resinterval.put(ssId, new Interval(start+1,i));
+					//System.out.println(ssId + ": " + (start+1) + " " + i);
+					for(j = start+1; j <= i; j++) {
+						resser2secstruct.put(j, ssId);
+					}
+				}
+				start = i;
+				lastType = thisType;
+			}
+		}
+		// finish last element
+		if(lastType != ' ') {
+			elementCount++;
+			//System.out.println("From: " + (start+1) + "\t To: " + resCount + "\t Type: " + lastType);
+			ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+			secstruct2resinterval.put(ssId, new Interval(start+1,resCount));
+			//System.out.println(ssId + ": " + (start+1) + " " + i);
+			for(j = start+1; j <= resCount; j++) {
+				resser2secstruct.put(j, ssId);
+			}
+		}
+		// check
+		//System.out.println("Using:");
+//		for(i=1; i <= get_length(); i++) {
+//			if(resser2secstruct.containsKey(i)) {
+//				System.out.print(resser2secstruct.get(i).charAt(0));
+//			} else {
+//				System.out.print(" ");
+//			}
+//		}
+		//System.out.println(".");		
+		// if everything up to here worked out fine, set variable to true
+		hasSecondaryStructure = true;
+		secondaryStructureSource = "DSSP";
 	}
-	
+
+
 	/** Writes atom lines for this structure to the given output stream */
 	private void writeAtomLines(PrintWriter Out) {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
@@ -128,11 +201,16 @@ public abstract class Pdb {
 	}
 	
 	/** 
-	 * Returns length of the protein (number of residues)
-	 * @return
+	 * Returns the number of observed standard residues.
+	 * TODO: Refactor method name
 	 */
 	public int get_length(){
 		return resser2restype.size();
+	}
+	
+	/** Returns the number of residues in the sequence of this protein. */
+	public int getFullLength() {
+		return this.sequence.length();
 	}
 	
 	/**
@@ -484,16 +562,27 @@ public abstract class Pdb {
 		return this.pdbChainCode;
 	}
 	
+	/** For a given residue returns the secondary structure element this residue participates in,
+	 * or null if the residue is not in an assigned secondary structure element
+	 */
 	public String getSecStructure(int resser){
 		return this.resser2secstruct.get(resser);
 	}
 	
+	/** Returns all assigned secondary structure elements of this structure.
+	 * TODO: What happens if no assignment available */
 	public TreeMap<String,Interval> getAllSecStructElements(){
 		return secstruct2resinterval;
 	}
 	
+	/** Returns true iff secondary structure information is available */
 	public boolean hasSecondaryStructure() {
 		return hasSecondaryStructure;
+	}
+	
+	/** Returns the source of the secondary structure annotation (DSSP, Author, none) */
+	public String getSecondaryStructureSource() {
+		return secondaryStructureSource;
 	}
 	
 	/**

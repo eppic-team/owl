@@ -60,6 +60,10 @@ public class PdbfilePdb extends Pdb {
 		this.secstruct2resinterval = new TreeMap<String, Interval>();
 		
 		read_pdb_data_from_file();
+		if(!resser2secstruct.isEmpty()) {
+			hasSecondaryStructure = true;
+			secondaryStructureSource = "Author";
+		}
 		
 		// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
 		//TODO eventually we could assign our own internal residue numbers when reading from pdb and thus this map would be used

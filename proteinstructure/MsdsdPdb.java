@@ -121,6 +121,10 @@ public class MsdsdPdb extends Pdb {
 		}
 		
 		this.readSecStructure();
+		if(!resser2secstruct.isEmpty()) {
+			hasSecondaryStructure = true;
+			secondaryStructureSource = "MSDSD";
+		}
 		
 		// initialising atomser2atom from resser_atom2atomserial
 		atomser2atom = new HashMap<Integer, String>();
