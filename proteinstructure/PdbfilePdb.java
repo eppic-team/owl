@@ -53,7 +53,7 @@ public class PdbfilePdb extends Pdb {
 		this.chainCode=pdbChainCode;
 		if (pdbChainCode.equals("NULL")) this.chainCode=NULL_chainCode;
 		
-		this.sequence=""; // we initialise it to empty string, then is set inread_pdb_data_from_file 
+		this.sequence=""; // we initialise it to empty string, then is set in read_pdb_data_from_file 
 		
 		// we initialise the resser2secstruct and secstruct2resinterval Maps to empty, if no sec structure info is found then it remains empty
 		this.resser2secstruct = new HashMap<Integer, String>();
@@ -85,7 +85,7 @@ public class PdbfilePdb extends Pdb {
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
 	 * chainCode gets set to same as pdbChainCode, except if input chain code NULL then chainCode will be 'A'
 	 * pdbCode gets set to the one parsed in HEADER or to 'Unknown' if not found
-	 * sequence gets set to the sequence read from ATOM lines (i.e. observed resdiues only)
+	 * sequence gets set to the sequence read from ATOM lines (i.e. observed residues only)
 	 * No insertion codes are parsed or taken into account at the moment. Thus files with 
 	 * insertion codes will be incorrectly read
 	 * @param pdbfile
@@ -140,6 +140,17 @@ public class PdbfilePdb extends Pdb {
 		// read further lines
 		while ((line = fpdb.readLine() ) != null ) {
 			linecount++;
+			// SEQRES
+			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
+			p = Pattern.compile("^SEQRES.{5}"+chainCodeStr);
+			m = p.matcher(line);
+			if (m.find()){
+				for (int i=19;i<=67;i+=4) {
+					if (!line.substring(i, i+3).equals("   ")) {
+						sequence+= AA.threeletter2oneletter(line.substring(i, i+3));
+					}
+				}
+			}
 			// SECONDARY STRUCTURE
 			// helix
 			//HELIX    1   1 LYS A   17  LEU A   26  1
@@ -243,16 +254,18 @@ public class PdbfilePdb extends Pdb {
 			//System.err.println("Couldn't find any atom line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 			throw new PdbChainCodeNotFoundError("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
-		// now we read the sequence from the resser2restype HashMap
-		// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
-		ArrayList<Integer> ressers = new ArrayList<Integer>();
-		for (int resser:resser2restype.keySet()) {
-			ressers.add(resser);
-		}
-		Collections.sort(ressers);
-		for (int resser:ressers){
-			String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
-			sequence += oneletter;
+		if (sequence.equals("")){
+			// if we couldn't read anything from SEQRES then we read it from the resser2restype HashMap
+			// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
+			ArrayList<Integer> ressers = new ArrayList<Integer>();
+			for (int resser:resser2restype.keySet()) {
+				ressers.add(resser);
+			}
+			Collections.sort(ressers);
+			for (int resser:ressers){
+				String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
+				sequence += oneletter;
+			}
 		}
 	}
 	
