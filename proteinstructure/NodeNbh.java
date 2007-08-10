@@ -1,7 +1,6 @@
 package proteinstructure;
 
 import java.util.TreeMap;
-import java.util.Collections;
 
 public class NodeNbh extends TreeMap<Integer,String> {
 	
@@ -27,8 +26,8 @@ public class NodeNbh extends TreeMap<Integer,String> {
 
 	public String getMotifFullGaps(){
 		String motif="";
-		int min=Math.min(central_resser, Collections.min(this.keySet()));
-		int max=Math.max(central_resser, Collections.max(this.keySet()));
+		int min=Math.min(central_resser, this.firstKey());
+		int max=Math.max(central_resser, this.lastKey());
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
 				motif+=AA.threeletter2oneletter(this.get(i));
@@ -43,8 +42,8 @@ public class NodeNbh extends TreeMap<Integer,String> {
 	
 	public String getMotif(){
 		String motif="";
-		int min=Math.min(central_resser, Collections.min(this.keySet()));
-		int max=Math.max(central_resser, Collections.max(this.keySet()));
+		int min=Math.min(central_resser, this.firstKey());
+		int max=Math.max(central_resser, this.lastKey());
 		int gapSize=0;
 		String gap="";
 		for (int i=min;i<=max;i++){
@@ -64,6 +63,32 @@ public class NodeNbh extends TreeMap<Integer,String> {
 			}
 		}
 		return motif;
+	}
+
+	public String getMotifNoGaps(){
+		String motif="";
+		int min=Math.min(central_resser, this.firstKey());
+		int max=Math.max(central_resser, this.lastKey());
+		for (int i=min;i<=max;i++){
+			if (this.containsKey(i)){
+				motif+=AA.threeletter2oneletter(this.get(i));
+			} else if (i==central_resser){
+				motif+=centralLetter;
+			}
+		}
+		return motif;
+	}
+	
+	public String getCommaSeparatedResSerials(){
+		String ressers="";
+		for (int resser:this.keySet()){
+			if (this.lastKey()!=resser) {
+				ressers += resser+","; // we are not in last element, we put a comma
+			} else {
+				ressers += resser; // for last element no comma
+			}
+		}
+		return ressers;
 	}
 
 	public String toString(){

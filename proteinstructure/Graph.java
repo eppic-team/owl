@@ -6,6 +6,13 @@ import java.io.IOException;
 import java.util.TreeMap;
 import java.util.HashMap;
 
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import java.sql.ResultSet;
+
+import tools.MySQLConnection;
+
 /**
  * A residue interaction graph derived from a single chain pdb protein structure
  * 
@@ -17,13 +24,17 @@ public class Graph {
 
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 	
+	private final static String SINGLEMODELS_DB = "ioannis";
+	
 	public EdgeSet contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
+	// TODO implement weights
 	
 	protected TreeMap<Integer,String> nodes; // nodes is a TreeMap of residue serials to residue types (3 letter code)
 	protected String sequence; 				// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;
 	protected String chainCode;
 	protected String pdbChainCode;
+	protected int model;
 	protected double cutoff;
 	protected String ct;					// the contact type
 	protected boolean directed;
@@ -52,8 +63,10 @@ public class Graph {
 	 * @param ct
 	 * @param pdbCode
 	 * @param chainCode
+	 * @param pdbChainCode
+	 * @param model
 	 */
-	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode) {
+	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -61,6 +74,7 @@ public class Graph {
 		this.pdbCode=pdbCode;
 		this.chainCode=chainCode;
 		this.pdbChainCode=pdbChainCode;
+		this.model=model;
 		this.ct=ct;
 		this.fullLength=sequence.length();
 		this.obsLength=nodes.size();
@@ -75,9 +89,111 @@ public class Graph {
 		assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case
 	}
 	
-
-	//TODO implement (from python) write_graph_to_db, do we really need it here??
+	/**
+	 * Write graph to given db, using our db graph aglappe format, 
+	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * @param conn
+	 * @param db
+	 * @throws SQLException
+	 */
+	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException{
+		// we are fixing these 3 values to what corresponds to our graphs 
+		String CW = "1";
+		String CR = "(true)";
+		String EXPBB = "0";
 		
+		int pgraphid=0;
+		int graphid=0;
+		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
+					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"' LIMIT 1";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()){	// if the pdbCode + chainCode were already in chain_graph then we take the graph_id as the pgraphid
+			pgraphid = rsst.getInt(1);
+		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
+			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
+			//TODO fill sses field, for now we set it to 1
+			sql = "INSERT INTO "+db+".chain_graph (accession_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+					"VALUES ('"+pdbCode+"', '"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", 1, now())";
+			Statement stmt2 = conn.createStatement();
+			stmt2.executeUpdate(sql);
+			// now we take the newly assigned graph_id as pgraphid
+			sql = "SELECT LAST_INSERT_ID() FROM "+db+".chain_graph LIMIT 1";
+			ResultSet rsst2 = stmt2.executeQuery(sql);
+			if (rsst2.next()){
+				pgraphid = rsst2.getInt(1);
+			}
+			stmt2.close();
+			rsst2.close();
+		}
+		rsst.close();
+		// now we insert the graph info into single_model_graph
+		String ctStr = ct;
+		if (ct.equals("ALL")){
+			ctStr = "BB+SC+BB/SC";
+		}
+		// 1st we grab the single_model_id
+		int singlemodelid = 0;
+		sql = "SELECT single_model_id  FROM "+SINGLEMODELS_DB+".single_model WHERE CR='"+CR+"' AND CW='"+CW+"' AND expBB="+EXPBB+" AND CT='"+ctStr+"' AND dist="+cutoff+";";
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			singlemodelid = rsst.getInt(1);
+		}
+		rsst.close();
+		// and then insert to single_model_graph
+		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,num_nodes,date) " +
+				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+cutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+getObsLength()+", now())";
+		stmt.executeUpdate(sql);
+		// and we grab the graph_id just assigned in single_model_graph
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_graph LIMIT 1";
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			graphid = rsst.getInt(1);
+		}
+		rsst.close();
+		stmt.close();
+		// inserting edges
+		for (Edge cont:contacts){
+			String i_res = AA.threeletter2oneletter(getResType(cont.i));
+			String j_res = AA.threeletter2oneletter(getResType(cont.j));
+			sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,j_num,j_cid,j_res,weight) " +
+					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', "+cont.j+", '"+chainCode+"', '"+j_res+"', 0)";
+			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+		}
+		if (!directed){ // we want both side of the matrix in the table to follow Ioannis' convention
+			// so we insert the reverse contacts by doing the same but swapping i, j in insertion
+			for (Edge cont:contacts){
+				String i_res = AA.threeletter2oneletter(getResType(cont.i));
+				String j_res = AA.threeletter2oneletter(getResType(cont.j));
+				sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,j_num,j_cid,j_res,weight) " +
+						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', "+cont.i+", '"+chainCode+"', '"+i_res+"', 0)";
+				stmt.executeUpdate(sql);
+			}
+		}
+		// inserting nodes
+		for (int resser:nodes.keySet()) {
+			String res = AA.threeletter2oneletter(getResType(resser));
+			NodeNbh nbh = getNodeNbh(resser);
+			if (directed){  // we insert k_in and k_out
+				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,k_in,k_out,n,nwg,n_num) " +
+					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', "+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+			} else {		// we insert k (and no k_in or k_out)
+				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,k,n,nwg,n_num) " +
+				" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', "+getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+			}
+			stmt.executeUpdate(sql);
+		}
+		// TODO insert secondary structure info in single model node and single model edge
+		// TODO insert weights when we have them implemented in the graph object
+		stmt.close();
+	}
+		
+	/**
+	 * Write graph to given outfile in aglappe format
+	 * @param outfile
+	 * @throws IOException
+	 */
 	public void write_graph_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println("#AGLAPPE GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
@@ -124,7 +240,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copy(){
-		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);		
+		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);		
 	}
 	
 	/**
@@ -132,7 +248,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copyKeepingNodes(){
-		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);		
+		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);		
 	}	
 	
 	/**
@@ -316,9 +432,9 @@ public class Graph {
 				onlyother.add(cont);
 			}
 		}
-		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
-		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
-		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode);
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model);
 		HashMap<String,Graph> result = new HashMap<String,Graph>();
 		result.put("common", commongraph);
 		result.put("onlythis", onlythisgraph);
@@ -381,5 +497,48 @@ public class Graph {
 	public void resetContacts(){
 		this.contacts = new EdgeSet();
 	}
+	
+	public int getDegree(int resser){
+		if (directed) {
+			System.err.println("Can't get degree for a directed graph, only in or out degree");
+			return 0;
+		}
+		int k = 0;
+		for (Edge cont:contacts){
+			if (cont.i==resser || cont.j==resser) {
+				k++;
+			}
+		}
+		return k;
+	}
+	
+	public int getInDegree(int resser){
+		if (!directed){
+			System.err.println("Can't get in degree for an undirected graph");
+			return 0;
+		}
+		int k = 0;
+		for (Edge cont:contacts){
+			if (cont.j==resser) {
+				k++;
+			}
+		}		
+		return k;
+	}
+	
+	public int getOutDegree(int resser){
+		if (!directed){
+			System.err.println("Can't get out degree for an undirected graph");
+			return 0;
+		}
+		int k = 0;
+		for (Edge cont:contacts){
+			if (cont.i==resser) {
+				k++;
+			}
+		}		
+		return k;
+	}
+
 }
 

@@ -59,7 +59,7 @@ public abstract class Pdb {
 		String line;
 		int resCount = 0, lineCount = 0;
 		char ssType, ssTypes[];
-		int resNum, resNums[];
+		int resNum;
 		String resNumStr;
 		File test = new File(dsspExecutable);
 		if(!test.canRead()) throw new IOException("DSSP Executable is not readable");
@@ -453,7 +453,7 @@ public abstract class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode);
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
 
 		return graph;
 	}
