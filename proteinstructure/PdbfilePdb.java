@@ -153,6 +153,8 @@ public class PdbfilePdb extends Pdb {
 					if (!line.substring(i, i+3).equals("   ")) {
 						if (AA.threeletter2oneletter(line.substring(i, i+3))!=null) { // for non-standard aas
 							sequence+= AA.threeletter2oneletter(line.substring(i, i+3));
+						} else {
+							sequence+= NONSTANDARD_AA_LETTER;
 						}
 					}
 				}
