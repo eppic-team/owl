@@ -151,7 +151,9 @@ public class PdbfilePdb extends Pdb {
 			if (m.find()){
 				for (int i=19;i<=67;i+=4) {
 					if (!line.substring(i, i+3).equals("   ")) {
-						sequence+= AA.threeletter2oneletter(line.substring(i, i+3));
+						if (AA.threeletter2oneletter(line.substring(i, i+3))!=null) { // for non-standard aas
+							sequence+= AA.threeletter2oneletter(line.substring(i, i+3));
+						}
 					}
 				}
 			}
