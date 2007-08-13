@@ -232,7 +232,7 @@ public class PdbfilePdb extends Pdb {
 			m = p.matcher(line);
 			if (m.find()){
 				//                                 serial    atom   res_type      chain 	   res_ser     x     y     z
-				Pattern pl = Pattern.compile(".{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					empty=false;
