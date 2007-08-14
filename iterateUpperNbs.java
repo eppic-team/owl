@@ -61,37 +61,7 @@ public class iterateUpperNbs {
 			rsst.close(); 
 			stmt.close(); 
 			
-			// percolate the environment  
-			System.out.println("moving a contact from shell1 -> shell2");  
-			sql = "select j_num, j_res, j_sstype, shell from temp_shell where i_num="+resnr+" and shell = 1 order by rand() limit 1;";
-			stmt = conn.createStatement();
-			rsst = stmt.executeQuery(sql);
-			if (rsst.next()) {
-				j_num12 = rsst.getInt( 1); 
-				System.out.println(rsst.getInt( 4)+" -> 2 : ("+rsst.getString( 2)+":"+j_num12+":"+rsst.getString( 3)+")");
-			}
-			rsst.close();
-			stmt.close(); 
-			stmt = conn.createStatement();
-			stmt.executeUpdate("update temp_shell set shell=2 where j_num="+j_num12+";"); 
-			stmt.close(); 
-			
-			
-	        // and move an indirect nbor from shell2 -> shell 1; 
-			System.out.println("moving a contact from shell2 -> shell1");  
-			sql = "select j_num, j_res, j_sstype, shell from temp_shell where i_num!="+resnr+" and j_num!="+resnr+" and shell = 2 order by rand() limit 1;";
-			stmt = conn.createStatement();
-			rsst = stmt.executeQuery(sql);
-			if (rsst.next()) {
-				j_num21 = rsst.getInt( 1); 
-				System.out.println(rsst.getInt( 4)+" -> 1 : ("+rsst.getString( 2)+":"+j_num21+":"+rsst.getString( 3)+")");
-			}
-			rsst.close();
-			stmt.close(); 
-			stmt = conn.createStatement();
-			stmt.executeUpdate("update temp_shell set shell=1 where j_num="+j_num21+";");
-			stmt.close(); 
-			
+			// remove from here for unperturbed version 
 			System.out.println("retrieving the entire 1st and 2nd shell");  
 			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn from temp_shell group by j_num;";
 			stmt = conn.createStatement();
@@ -111,6 +81,83 @@ public class iterateUpperNbs {
 			System.out.println("SIZE 1st shell "+n1); 
 			System.out.println("SIZE 2nd shell "+n2);
 			System.out.println("GraphID "+graphid+" Central residue is "+restype+":"+resnr+":"+ressec); 
+			rsst.close(); 
+			stmt.close(); 
+			
+			// create matrices accordingly 
+			
+			// percolate the environment  
+			System.out.println("removing a contact from shell1 -> shell2");  
+			sql = "select j_num, j_res, j_sstype, shell from temp_shell where i_num="+resnr+" and shell = 1 order by rand() limit 1;";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			if (rsst.next()) {
+				j_num12 = rsst.getInt( 1); 
+				System.out.println(rsst.getInt( 4)+" -> 2 : ("+rsst.getString( 2)+":"+j_num12+":"+rsst.getString( 3)+")");
+			}
+			rsst.close();
+			stmt.close(); 
+			stmt = conn.createStatement();
+			stmt.executeUpdate("delete from temp_shell where j_num="+j_num12+";"); 
+			stmt.close(); 
+			
+			
+	        // and move an indirect nbor from shell2 -> shell 1; 
+			System.out.println("adding a contact from shell2 -> shell1");  
+			sql = "select j_num, j_res, j_sstype, shell from temp_shell where i_num!="+resnr+" and j_num!="+resnr+" and i_num!="+j_num12+" and j_num!="+j_num12+" and shell = 2 order by rand() limit 1;";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			if (rsst.next()) {
+				j_num21 = rsst.getInt( 1); 
+				System.out.println(rsst.getInt( 4)+" -> 1 : ("+rsst.getString( 2)+":"+j_num21+":"+rsst.getString( 3)+")");
+			}
+			rsst.close();
+			stmt.close(); 
+			stmt = conn.createStatement();
+			stmt.executeUpdate("update temp_shell set i_num="+resnr+", i_res='"+restype+"', j_sstype='"+ressec+"', shell=1 where j_num="+j_num21+";");
+			stmt.close(); 
+			stmt = conn.createStatement();
+			stmt.executeUpdate("delete from temp_shell where shell>1;");
+			stmt.close(); 
+			n1 = 0; 
+			System.out.println("re-building the 2nd shell");  
+			sql = "select distinct j_num from temp_shell where shell=1 order by j_num;";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				n1++; 
+				j_num = rsst.getInt(1);
+				System.out.println(n1+":"+j_num); 
+				jst = conn.createStatement();
+				sql = "insert into temp_shell select i_num, i_res, j_num, j_res, j_sstype, 2 as shell from single_model_edge where graph_id="+graphid+" and i_num="+j_num+";";
+				// System.out.println(">"+sql); 
+				jst.executeUpdate( sql); 
+				jst.close(); 
+			} // end while 
+			rsst.close(); 
+			stmt.close(); 
+			// end of remove for unperturbed version 
+			
+			System.out.println("retrieving the entire 1st and 2nd shell");  
+			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn from temp_shell group by j_num order by j_num;";
+			stmt = conn.createStatement();
+			rsst = stmt.executeQuery(sql);
+			// counting shell2
+			n2=0; 
+			while (rsst.next()) {
+				if ( rsst.getInt( 4)==2) { // count 2nd shell entry 
+					n2++;
+					if ( rsst.getInt( 1)==resnr) { // this is the central node -> get type and secondary structure 
+						restype =  rsst.getString( 2).toUpperCase(); 
+						ressec  =  rsst.getString( 3).toUpperCase();
+					} // end if central residue 
+				} // end if 2nds shell 
+				System.out.println(n2+":"+rsst.getInt( 1)+"\t"+rsst.getString( 2)+"\t"+rsst.getString( 3)+"\t"+rsst.getInt( 4)+"\t"+rsst.getInt( 5)); 
+			} // end while 
+			System.out.println("SIZE 1st shell "+n1); 
+			System.out.println("SIZE 2nd shell "+n2);
+			System.out.println("GraphID "+graphid+" Central residue is "+restype+":"+resnr+":"+ressec); 
+			 
 			
 			for (j=0; j<=n2; j++) { // outer loop through all indirect contacts
 				// System.out.print(i+" - "); 
