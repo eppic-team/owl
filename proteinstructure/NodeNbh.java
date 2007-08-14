@@ -26,15 +26,17 @@ public class NodeNbh extends TreeMap<Integer,String> {
 
 	public String getMotifFullGaps(){
 		String motif="";
-		int min=Math.min(central_resser, this.firstKey());
-		int max=Math.max(central_resser, this.lastKey());
-		for (int i=min;i<=max;i++){
-			if (this.containsKey(i)){
-				motif+=AA.threeletter2oneletter(this.get(i));
-			} else if (i==central_resser){
-				motif+=centralLetter;
-			} else {
-				motif+="_";
+		if(!this.isEmpty()) {
+			int min=Math.min(central_resser, this.firstKey());
+			int max=Math.max(central_resser, this.lastKey());
+			for (int i=min;i<=max;i++){
+				if (this.containsKey(i)){
+					motif+=AA.threeletter2oneletter(this.get(i));
+				} else if (i==central_resser){
+					motif+=centralLetter;
+				} else {
+					motif+="_";
+				}
 			}
 		}
 		return motif;
@@ -42,24 +44,26 @@ public class NodeNbh extends TreeMap<Integer,String> {
 	
 	public String getMotif(){
 		String motif="";
-		int min=Math.min(central_resser, this.firstKey());
-		int max=Math.max(central_resser, this.lastKey());
-		int gapSize=0;
-		String gap="";
-		for (int i=min;i<=max;i++){
-			if (this.containsKey(i)){
-				motif+=gap;
-				motif+=AA.threeletter2oneletter(this.get(i));
-				gapSize=0;
-				gap="";
-			} else if (i==central_resser){
-				motif+=gap;
-				motif+=centralLetter;
-				gapSize=0;
-				gap="";
-			} else {
-				gapSize++;
-				gap="_{"+gapSize+"}";
+		if(!this.isEmpty()) {
+			int min=Math.min(central_resser, this.firstKey());
+			int max=Math.max(central_resser, this.lastKey());
+			int gapSize=0;
+			String gap="";
+			for (int i=min;i<=max;i++){
+				if (this.containsKey(i)){
+					motif+=gap;
+					motif+=AA.threeletter2oneletter(this.get(i));
+					gapSize=0;
+					gap="";
+				} else if (i==central_resser){
+					motif+=gap;
+					motif+=centralLetter;
+					gapSize=0;
+					gap="";
+				} else {
+					gapSize++;
+					gap="_{"+gapSize+"}";
+				}
 			}
 		}
 		return motif;
@@ -67,13 +71,15 @@ public class NodeNbh extends TreeMap<Integer,String> {
 
 	public String getMotifNoGaps(){
 		String motif="";
-		int min=Math.min(central_resser, this.firstKey());
-		int max=Math.max(central_resser, this.lastKey());
-		for (int i=min;i<=max;i++){
-			if (this.containsKey(i)){
-				motif+=AA.threeletter2oneletter(this.get(i));
-			} else if (i==central_resser){
-				motif+=centralLetter;
+		if(!this.isEmpty()) {
+			int min=Math.min(central_resser, this.firstKey());
+			int max=Math.max(central_resser, this.lastKey());
+			for (int i=min;i<=max;i++){
+				if (this.containsKey(i)){
+					motif+=AA.threeletter2oneletter(this.get(i));
+				} else if (i==central_resser){
+					motif+=centralLetter;
+				}
 			}
 		}
 		return motif;
