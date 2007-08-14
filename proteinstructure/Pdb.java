@@ -225,7 +225,7 @@ public abstract class Pdb {
 					coords.put(atomser, coord);
 				}
 				else {
-					System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
+					//System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
 				}
 			}
 			// in ct="ALL" we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
@@ -393,7 +393,7 @@ public abstract class Pdb {
 		}
 
 		
-		double[][]distMatrix = new double[i_atomserials.length][j_atomserials.length];
+		float[][]distMatrix = new float[i_atomserials.length][j_atomserials.length];
 		
 		for (Point3i floor:boxes.keySet()){ // for each box
 			// distances of points within this box
@@ -423,7 +423,7 @@ public abstract class Pdb {
 				// - diagonal of the matrix in case of undirected
 				// - lower half of matrix in case of undirected
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
-				if (distMatrix[i][j]!=0.0 && distMatrix[i][j]<=cutoff){
+				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
 					int i_resser = atomser2resser.get(i_atomserials[i]);
 					int j_resser = atomser2resser.get(j_atomserials[j]);
 					Edge resser_pair = new Edge(i_resser,j_resser);
