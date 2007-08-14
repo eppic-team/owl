@@ -16,7 +16,7 @@ public class cnHashIterNbhood {
 	// higher values should penalize non-existence more
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
-	static String backgrndDB = "pdb_reps_graph_4_2"; 
+	static String backgrndDB = "pdb_reps_graph_4_2";
 	static double lastEntropy=0.0, lastFreq, lastAUC, lastavgk, lastdevk; 
 	static int lastRank, lastTotal, lastxcn=0;  
 	static int graphid=0, resnr=0; 
