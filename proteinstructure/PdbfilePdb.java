@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,14 +54,11 @@ public class PdbfilePdb extends Pdb {
 		
 		this.sequence=""; // we initialise it to empty string, then is set in read_pdb_data_from_file 
 		
-		// we initialise the resser2secstruct and secstruct2resinterval Maps to empty, if no sec structure info is found then it remains empty
-		this.resser2secstruct = new HashMap<Integer, String>();
-		this.secstruct2resinterval = new TreeMap<String, Interval>();
-		
+		// we initialise the secondary structure to empty, if no sec structure info is found then they remain empty
+		this.secondaryStructure = new SecondaryStructure();		
 		read_pdb_data_from_file();
-		if(!resser2secstruct.isEmpty()) {
-			hasSecondaryStructure = true;
-			secondaryStructureSource = "Author";
+		if(!secondaryStructure.isEmpty()) {
+			secondaryStructure.setComment("Author");
 		}
 		
 		// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
@@ -169,15 +165,9 @@ public class PdbfilePdb extends Pdb {
 				int serial = Integer.valueOf(m.group(1).trim());
 				int beg = Integer.valueOf(m.group(2).trim());
 				int end = Integer.valueOf(m.group(3).trim());
-				String ssId = "H"+serial;
-				secstruct2resinterval.put(ssId, new Interval(beg,end));
-				for (int i=beg;i<=end;i++){
-					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						//System.err.println("Inconsistency in secondary structure assignment. " +
-						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-					}
-					resser2secstruct.put(i,ssId);
-				}
+				String ssId = new Character(SecStrucElement.HELIX).toString()+serial;
+				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.HELIX,beg,end,ssId);
+				secondaryStructure.add(ssElem);
 			}
 			// sheet
 			//SHEET    2   A 5 ILE A  96  THR A  99 -1  N  LYS A  98   O  THR A 107
@@ -189,15 +179,9 @@ public class PdbfilePdb extends Pdb {
 				String sheetId = m.group(2).trim();
 				int beg = Integer.valueOf(m.group(3).trim());
 				int end = Integer.valueOf(m.group(4).trim());
-				String ssId = "S"+sheetId+strandSerial;
-				secstruct2resinterval.put(ssId, new Interval(beg,end));
-				for (int i=beg;i<=end;i++){
-					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						//System.err.println("Inconsistency in secondary structure assignment. " +
-						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-					}
-					resser2secstruct.put(i,ssId);
-				}
+				String ssId = new Character(SecStrucElement.STRAND).toString()+sheetId+strandSerial;
+				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND,beg,end,ssId);
+				secondaryStructure.add(ssElem);
 			}
 			// we've stored the sec structure info in the strands2begEnd and sheets2strands maps.
 			// the assignment to resser2secstruct is done when we reach the ATOM lines, see below
@@ -210,15 +194,9 @@ public class PdbfilePdb extends Pdb {
 				int serial = Integer.valueOf(m.group(1).trim());
 				int beg = Integer.valueOf(m.group(2).trim());
 				int end = Integer.valueOf(m.group(3).trim());
-				String ssId = "T"+serial;
-				secstruct2resinterval.put(ssId, new Interval(beg,end));
-				for (int i=beg;i<=end;i++){
-					if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-						//System.err.println("Inconsistency in secondary structure assignment. " +
-						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-					}
-					resser2secstruct.put(i,ssId);
-				}
+				String ssId = new Character(SecStrucElement.TURN).toString()+serial;
+				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.TURN,beg,end,ssId);
+				secondaryStructure.add(ssElem);
 			}			
 			// MODEL
 			p = Pattern.compile("^MODEL\\s+(\\d+)");

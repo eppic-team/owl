@@ -120,10 +120,10 @@ public class MsdsdPdb extends Pdb {
 			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 		}
 		
-		this.readSecStructure();
-		if(!resser2secstruct.isEmpty()) {
-			hasSecondaryStructure = true;
-			secondaryStructureSource = "MSDSD";
+		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+		readSecStructure();
+		if(!secondaryStructure.isEmpty()) {
+			secondaryStructure.setComment("MSDSD");
 		}
 		
 		// initialising atomser2atom from resser_atom2atomserial
@@ -298,8 +298,7 @@ public class MsdsdPdb extends Pdb {
 	}
 	
 	private void readSecStructure() throws SQLException{
-		this.resser2secstruct = new HashMap<Integer, String>();
-		this.secstruct2resinterval = new TreeMap<String, Interval>();
+		this.secondaryStructure = new SecondaryStructure();
 		
 		//HELIX -- helix table
 		String sql = "SELECT helix_serial, beg_residue_serial, end_residue_serial " +
@@ -314,15 +313,9 @@ public class MsdsdPdb extends Pdb {
 			int serial = rsst.getInt(1);
 			int beg = rsst.getInt(2);
 			int end =rsst.getInt(3);
-			String ssId = "H"+serial;
-			secstruct2resinterval.put(ssId, new Interval(beg,end));
-			for (int i=beg;i<=end;i++){
-				if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
-					//System.err.println("Inconsistency in secondary structure assignment. " +
-					//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-				}
-				resser2secstruct.put(i,ssId);	
-			}
+			String ssId = "" + SecStrucElement.HELIX+serial;
+			SecStrucElement ssElem = new SecStrucElement(SecStrucElement.HELIX,beg,end,ssId);
+			secondaryStructure.add(ssElem);
 		} 
 		rsst.close();
 		stmt.close();
@@ -359,15 +352,9 @@ public class MsdsdPdb extends Pdb {
 			int strand=1;
 			for (int strandSerial:sheets2strands.get(sheetSerial)){
 				Interval begEnd = strands2begEnd.get(strandSerial);
-				for (int i=begEnd.beg;i<=begEnd.end;i++){
-					String ssId = "S"+sheet+strand;
-					secstruct2resinterval.put(ssId, begEnd);
-					if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
-						//System.err.println("Inconsistency in secondary structure assignment. " +
-						//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-					} 
-					resser2secstruct.put(i,ssId);
-				}
+				String ssId = ""+SecStrucElement.STRAND+sheet+strand;
+				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND,begEnd.beg,begEnd.end,ssId);
+				secondaryStructure.add(ssElem);				
 				strand++;
 			}
 			sheet++;
@@ -401,17 +388,11 @@ public class MsdsdPdb extends Pdb {
 		stmt.close();
 		int serial=1;
 		for (int dbId:turns.keySet()){
-			String ssId="T"+serial;
+			String ssId = "" + SecStrucElement.TURN + serial;
 			int beg = Collections.min(turns.get(dbId));
 			int end = Collections.max(turns.get(dbId));
-			secstruct2resinterval.put(ssId, new Interval(beg,end));
-			for (int i:turns.get(dbId)){
-				if (resser2secstruct.containsKey(i)){ // if already assigned we print a warning and then assign it
-					//System.err.println("Inconsistency in secondary structure assignment. " +
-					//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-				}
-				resser2secstruct.put(i,ssId);
-			}
+			SecStrucElement ssElem = new SecStrucElement(SecStrucElement.TURN,beg,end,ssId);
+			secondaryStructure.add(ssElem);
 			serial++;
 		}
 

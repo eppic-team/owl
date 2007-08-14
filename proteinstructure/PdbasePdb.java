@@ -6,7 +6,6 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -122,10 +121,10 @@ public class PdbasePdb extends Pdb {
 			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 		}
 		
+		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
 		readSecStructure();
-		if(!resser2secstruct.isEmpty()) {
-			hasSecondaryStructure = true;
-			secondaryStructureSource = "Pdbase";
+		if(!secondaryStructure.isEmpty()) {
+			secondaryStructure.setComment("Pdbase");
 		}
 		
 		// initialising atomser2atom from resser_atom2atomserial
@@ -358,8 +357,7 @@ public class PdbasePdb extends Pdb {
 	}
 
 	private void readSecStructure() throws SQLException {
-		this.resser2secstruct = new HashMap<Integer, String>();
-		this.secstruct2resinterval = new TreeMap<String, Interval>();
+		this.secondaryStructure = new SecondaryStructure();
 		
 		// HELIX AND TURN -- struct_conf table
 		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +
@@ -380,13 +378,17 @@ public class PdbasePdb extends Pdb {
 			}
 			int beg = rsst.getInt(2);
 			int end =rsst.getInt(3);
-			secstruct2resinterval.put(ssId, new Interval(beg,end));
-			for (int i=beg;i<=end;i++){
-				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-					//System.err.println("Inconsistency in secondary structure assignment. " +
-					//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-				}
-				resser2secstruct.put(i,ssId);
+			char ssType = SecStrucElement.OTHER;
+			if(id.startsWith("H")) {
+				ssType = SecStrucElement.HELIX;
+			} else if(id.startsWith("T")) {
+				ssType = SecStrucElement.TURN;
+			} else {
+				System.err.println("Unknown secondary structure type " + id + " encountered when reading from Pdbase. Skipping.");
+			}
+			if(ssType != SecStrucElement.OTHER) {
+				SecStrucElement ssElem = new SecStrucElement(ssType, beg, end, ssId);
+				secondaryStructure.add(ssElem);
 			}
 		} 
 		rsst.close();
@@ -406,15 +408,9 @@ public class PdbasePdb extends Pdb {
 			int id = rsst.getInt(2);
 			int beg = rsst.getInt(3);
 			int end =rsst.getInt(4);
-			String ssId="S"+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
-			secstruct2resinterval.put(ssId, new Interval(beg,end));
-			for (int i=beg;i<=end;i++){
-				if (resser2secstruct.containsKey(i)){// if already assigned we print a warning and then assign it
-					//System.err.println("Inconsistency in secondary structure assignment. " +
-					//		"Residue "+i+" is getting reassigned from "+resser2secstruct.get(i)+" to "+ssId);
-				}
-				resser2secstruct.put(i,ssId); 
-			}
+			String ssId=SecStrucElement.STRAND+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
+			SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND, beg, end, ssId);
+			secondaryStructure.add(ssElem);
 		} 
 		rsst.close();
 		stmt.close();

@@ -24,12 +24,15 @@ public class Graph {
 
 	public final static String GRAPHFILEFORMATVERSION = "1.0";
 	
-	private final static String SINGLEMODELS_DB = "ioannis";
+	private final static String SINGLEMODELS_DB = "ioannis";	//TODO: Is this being used??
 	
 	public EdgeSet contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
 	// TODO implement weights
 	
 	protected TreeMap<Integer,String> nodes; // nodes is a TreeMap of residue serials to residue types (3 letter code)
+	protected SecondaryStructure secondaryStructure; // secondary structure annotation for this protein graph
+	//protected Vector<SecStrucElement> secStructElements;		   // set of secondary structure elements or null if not available 
+	//protected HashMap<Integer,SecStrucElement> resser2secstruct;   // node serials to secondary structure or null if not available
 	protected String sequence; 				// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;
 	protected String chainCode;
@@ -65,8 +68,10 @@ public class Graph {
 	 * @param chainCode
 	 * @param pdbChainCode
 	 * @param model
+	 * @param ssElems
+	 * @param rs2ss
 	 */
-	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model) {
+	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -84,7 +89,15 @@ public class Graph {
 		if (ct.contains("/")){
 			directed=true;
 		}
+		if(secStruct == null) {
+			// we allow null to be passed to simplify graph construction
+			this.secondaryStructure = new SecondaryStructure();
+		} else {
+			this.secondaryStructure = secStruct;
+		}
 		
+		// do some verification checks
+		assert(secondaryStructure != null);
 		assert(this.pdbCode.equals(this.pdbCode.toLowerCase()));				// pdb codes should be always lower case 
 		assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case
 	}
@@ -240,7 +253,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copy(){
-		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);		
+		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
 	}
 	
 	/**
@@ -248,7 +261,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copyKeepingNodes(){
-		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);		
+		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
 	}	
 	
 	/**
@@ -432,9 +445,9 @@ public class Graph {
 				onlyother.add(cont);
 			}
 		}
-		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
-		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
-		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model);
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model,secondaryStructure.copy());
 		HashMap<String,Graph> result = new HashMap<String,Graph>();
 		result.put("common", commongraph);
 		result.put("onlythis", onlythisgraph);
@@ -538,6 +551,22 @@ public class Graph {
 			}
 		}		
 		return k;
+	}
+
+	// secondary structure related methods
+	
+	/** 
+	 * Returns true if secondary structure information is available, false otherwise. 
+	 */
+	public boolean hasSecondaryStructure() {
+		return !this.secondaryStructure.isEmpty();
+	}
+	
+	/**
+	 * Returns the secondary structure annotation object of this graph.
+	 */
+	public SecondaryStructure getSecondaryStructure() {
+		return this.secondaryStructure;
 	}
 
 }

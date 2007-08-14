@@ -34,8 +34,7 @@ public abstract class Pdb {
 	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	
-	protected HashMap<Integer,String> resser2secstruct;   // residue serials to secondary structure
-	protected TreeMap<String,Interval> secstruct2resinterval;// secondary structure element to residue serial intervals
+	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
 	
 	protected HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms(); // contains atom names for each aminoacid
 	
@@ -50,8 +49,6 @@ public abstract class Pdb {
 	protected int model;  			// the model serial for NMR structures
 	
 	protected String db;			// the db from which we have taken the data (if applies)
-	protected boolean hasSecondaryStructure = false;		// true iff secondary structure information is available
-	protected String secondaryStructureSource = "none";		// source of the secondary structure annotation (DSSP, Author, none)
 	
 	/** Run DSSP externally and (re)assign the secondary structure annotation from the output */
 	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
@@ -104,25 +101,23 @@ public abstract class Pdb {
 		}
 
 		// assign secondary structure
-		this.resser2secstruct = new HashMap<Integer, String>();
-		this.secstruct2resinterval = new TreeMap<String, Interval>();
-		char lastType = SecStrucElement.getSimpleTypeFromDsspType(ssTypes[0]);
+		this.secondaryStructure = new SecondaryStructure();		// forget the old annotation
+		char lastType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes[0]);
 		char thisType;
-		int start = 0, i, j;
+		int start = 0;
+		int i;
 		int elementCount = 0;
+		SecStrucElement ssElem;
 		String ssId;
 		for(i=1; i < ssTypes.length; i++) {
-			thisType = SecStrucElement.getSimpleTypeFromDsspType(ssTypes[i]);
+			thisType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes[i]);
 			if(thisType != lastType) {
 				// finish previous element, start new one
-				if(lastType != ' ' && lastType != '\0') {
+				if(lastType != SecStrucElement.OTHER) {
 					elementCount++;
 					ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-					secstruct2resinterval.put(ssId, new Interval(start+1,i));
-					//System.out.println(ssId + ": " + (start+1) + " " + i);
-					for(j = start+1; j <= i; j++) {
-						resser2secstruct.put(j, ssId);
-					}
+					ssElem = new SecStrucElement(lastType, start+1,i,ssId);
+					secondaryStructure.add(ssElem);
 				}
 				start = i;
 				lastType = thisType;
@@ -133,25 +128,10 @@ public abstract class Pdb {
 			elementCount++;
 			//System.out.println("From: " + (start+1) + "\t To: " + resCount + "\t Type: " + lastType);
 			ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-			secstruct2resinterval.put(ssId, new Interval(start+1,resCount));
-			//System.out.println(ssId + ": " + (start+1) + " " + i);
-			for(j = start+1; j <= resCount; j++) {
-				resser2secstruct.put(j, ssId);
-			}
+			ssElem = new SecStrucElement(lastType, start+1, resCount, ssId);
+			secondaryStructure.add(ssElem);
 		}
-		// check
-		//System.out.println("Using:");
-//		for(i=1; i <= get_length(); i++) {
-//			if(resser2secstruct.containsKey(i)) {
-//				System.out.print(resser2secstruct.get(i).charAt(0));
-//			} else {
-//				System.out.print(" ");
-//			}
-//		}
-		//System.out.println(".");		
-		// if everything up to here worked out fine, set variable to true
-		hasSecondaryStructure = true;
-		secondaryStructureSource = "DSSP";
+		secondaryStructure.setComment("DSSP");
 	}
 
 
@@ -453,8 +433,7 @@ public abstract class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model);
-
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure);
 		return graph;
 	}
 	
@@ -541,7 +520,6 @@ public abstract class Pdb {
 		}
 	}
 	
-	
 	public int get_resser_from_pdbresser (String pdbresser){
 		return pdbresser2resser.get(pdbresser);
 	}
@@ -561,29 +539,24 @@ public abstract class Pdb {
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
 	}
+		
+	// secondary structure related methods
 	
-	/** For a given residue returns the secondary structure element this residue participates in,
-	 * or null if the residue is not in an assigned secondary structure element
+	/** 
+	 * Returns true if secondary structure information is available, false otherwise. 
 	 */
-	public String getSecStructure(int resser){
-		return this.resser2secstruct.get(resser);
-	}
-	
-	/** Returns all assigned secondary structure elements of this structure.
-	 * TODO: What happens if no assignment available */
-	public TreeMap<String,Interval> getAllSecStructElements(){
-		return secstruct2resinterval;
-	}
-	
-	/** Returns true iff secondary structure information is available */
 	public boolean hasSecondaryStructure() {
-		return hasSecondaryStructure;
+		return !this.secondaryStructure.isEmpty();
 	}
 	
-	/** Returns the source of the secondary structure annotation (DSSP, Author, none) */
-	public String getSecondaryStructureSource() {
-		return secondaryStructureSource;
+	/**
+	 * Returns the secondary structure annotation object of this graph.
+	 */
+	public SecondaryStructure getSecondaryStructure() {
+		return this.secondaryStructure;
 	}
+	
+	// end of secondary structure related methods
 	
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
