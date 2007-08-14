@@ -1,6 +1,7 @@
 import gnu.getopt.Getopt;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -17,7 +18,7 @@ import proteinstructure.PdbfilePdb;
 import tools.MySQLConnection;
 
 
-public class genDbGraph {
+public class genGraph {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
@@ -47,9 +48,9 @@ public class genDbGraph {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] \n" +
-				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] \n" +
-				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> \n" +
+				"1)  genGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
+				"2)  genGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
+				"3)  genGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> \n" +
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n"; 
 
@@ -60,9 +61,9 @@ public class genDbGraph {
 		String pdbaseDb = PDB_DB;
 		String edgeType = "";
 		double cutoff = 0.0;
-		String outputDb = "";
+		String outputDir = "";
 		
-		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:o:D:h?");
+		Getopt g = new Getopt("genGraph", args, "i:p:c:f:d:t:o:D:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -85,7 +86,7 @@ public class genDbGraph {
 				edgeType = g.getOptarg();
 				break;
 			case 'o':
-				outputDb = g.getOptarg();
+				outputDir = g.getOptarg();
 				break;
 			case 'D':
 				pdbaseDb = g.getOptarg();
@@ -98,7 +99,7 @@ public class genDbGraph {
 			}
 		}
 
-		if (outputDb.equals("") || edgeType.equals("") || cutoff==0.0) {
+		if (outputDir.equals("") || edgeType.equals("") || cutoff==0.0) {
 			System.err.println("Some missing option");
 			System.err.println(help);
 			System.exit(1);
@@ -163,11 +164,12 @@ public class genDbGraph {
 					// get graph
 					Graph graph = pdb.get_graph(edgeType, cutoff);
 
-					graph.write_graph_to_db(conn,outputDb);
+					File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
+					graph.write_graph_to_file(outputFile.getAbsolutePath());
 
-					System.out.println(pdbCode+"_"+pdbChainCode);
+					System.out.println("Wrote "+outputFile.getAbsolutePath());
 					numPdbs++;
-					
+
 				} catch (PdbaseInconsistencyError e) {
 					System.err.println("Inconsistency in " + pdbCode + pdbChainCode);
 				} catch (PdbCodeNotFoundError e) {
@@ -181,7 +183,7 @@ public class genDbGraph {
 			}
 
 			// output results
-			System.out.println("Number of structures loaded successfully: " + numPdbs);
+			System.out.println("Number of structures done successfully: " + numPdbs);
 
 
 		} else {
@@ -192,12 +194,10 @@ public class genDbGraph {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
 				Graph graph = pdb.get_graph(edgeType, cutoff);
-				try {
-					graph.write_graph_to_db(conn, outputDb);
-					System.out.println("Loaded to database graph for file "+pdbfile);
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
+
+				File outputFile = new File(outputDir,pdb.getPdbCode()+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
+				graph.write_graph_to_file(outputFile.getAbsolutePath());
+				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
 				
 			} catch (PdbfileFormatError e) {
 				System.err.println("pdb file "+pdbfile+" doesn't have right format");
