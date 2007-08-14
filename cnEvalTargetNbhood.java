@@ -20,7 +20,7 @@ public class cnEvalTargetNbhood {
 	static String backgrndDB = "pdb_reps_graph_4_2"; 
 	static String targetNodes = "target_node";
 	static String targetEdges = "target_edge";
-	static double lastEntropy=0.0, lastFreq, lastAUC, lastavgk, lastdevk; 
+	static double lastEntropy=0.0, lastFreq, lastAUC, lastavgk, lastdevk, lastCorr; 
 	static int lastRank, lastTotal, lastxcn=0;  
 	static int graphid=0, resnr=0; 
 	static int size1=0, size2=0; // the dimensions of the matrices = |shell1|x|shell2| = nr of direct(1) x indirect(2) nbs 
@@ -28,8 +28,8 @@ public class cnEvalTargetNbhood {
 	static String sideline[], headline[]={"\t\t0","\t\t-","\t\t0","\t\t-","\t\tX"};
 	static String restype="?", ressec="?", newnbhood=""; 
 	static int cn1[], cn2[], matsize[][]; 
-	static int sumdelta[][], rank[][], total[][], cnsize[][], cnall[][];
-	static double entropy[][], freq[][], AUC[][]; 
+	static int sumdelta[][], rank[][], total[][], cnall[][];
+	static double cnsize[][], correct[][], entropy[][], freq[][], AUC[][]; 
 	static String newnbs[][], nbstring[][], moveset[][];  
 	
 	static int printRank=1, 
@@ -43,7 +43,9 @@ public class cnEvalTargetNbhood {
 	printCNSize   =9, 
 	printCNSxdelta=10, 
 	printMatSize  =11,
-	printCNSdMSxdelta=12;  
+	printCNSdMSxdelta=12,   
+	printCorrect  = 13,  
+	printCordMSxdelta=14;
 	
 	public static void main(String[] args) {
 		
@@ -134,6 +136,7 @@ public class cnEvalTargetNbhood {
 			newnbs = new String[(o1+1)][(o2+1)];
 			cnall = new int[(o1+1)][(o2+1)];
 			matsize = new int[(o1+1)][(o2+1)];
+			correct = new double[(o1+1)][(o2+1)];
 			// creating the perturbed version of shell 1 into temp_shell
 			for (j=0; j<=o2; j++) { // <=o2 outer loop through all originally indirect contacts
 				
@@ -231,11 +234,14 @@ public class cnEvalTargetNbhood {
 					sumdelta[i][j] = score;
 					cnall[i][j] = lastxcn;
 					matsize[i][j] = (size1*size2)-1;
+					correct[i][j] = lastCorr; 
 					if (VL>=1) {
 						reportMatrix( printRank );
-						// reportMatrix( printCNSize );
 						reportMatrix( printdeltaRank );
+						reportMatrix( printCNSize );
+						reportMatrix( printCNSxdelta); 
 						System.out.println("SumDeltaRank Score = \t"+score);
+						System.out.println("corrected Score    = \t"+correct[i][j]);
 						System.out.println("Matrix size n1*n2-1= \t("+size1+"*"+size2+")-1 ="+matsize[i][j]);
 						System.out.println("CN1 x CN2 product  = \t"+cnall[i][j]);
 					} else {
@@ -255,6 +261,8 @@ public class cnEvalTargetNbhood {
 			//}
 			reportResults( o1, o2, printCNSxdelta );
 			reportResults( o1, o2, printCNSdMSxdelta ); 
+			reportResults( o1, o2, printCorrect);    
+			reportResults( o1, o2, printCordMSxdelta);
 			// Cleanup ... 
 			mrsst.close(); 
 			mstmt.close(); 
@@ -299,6 +307,8 @@ public class cnEvalTargetNbhood {
 				if (what2print==printCNSxdelta) System.out.print( sumdelta[i][j]*cnall[i][j] );
 				if (what2print==printMatSize) System.out.print( matsize[i][j] );
 				if (what2print==printCNSdMSxdelta) System.out.print( sumdelta[i][j]*cnall[i][j]/matsize[i][j] );
+				if (what2print==printCorrect) System.out.print( correct[i][j] ); 
+				if (what2print==printCordMSxdelta) System.out.print( correct[i][j]*cnall[i][j]/matsize[i][j] );
 				System.out.print("\t"); 
 			} // next i 
 			System.out.println(""); 
@@ -310,10 +320,11 @@ public class cnEvalTargetNbhood {
 	public static int scoreCurrentNbhood( int ixnum, int jxnum) {
 		int ixcn=0, jxcn=0, n1=0, n2=0, ni, nj, i, j, j_num, j_shell, j_cnsize, sumdeltarank=0;
 		String sql, j_res, j_sec, nbs, mymove, precol;
-		boolean overx = false;  
+		boolean overx = false;
+		lastCorr = 0.0; 
 		Statement stmt;  
 		ResultSet rsst;
-
+		
 		try {
 			headline[0]="\t\t\t0";
 			headline[1]="\t\t\t-";
@@ -335,7 +346,7 @@ public class cnEvalTargetNbhood {
 					headline[1]+="\t"+rsst.getString(2); // res
 					headline[2]+="\t"+rsst.getInt(1); // resnum 
 					headline[3]+="\t"+rsst.getString(3); // SStype
-					headline[4]+="\t("+rsst.getInt(5)+")"; // CNSize
+					headline[4]+="\t("+((rsst.getInt(5))-1)+")"; // CNSize
 				} // end if 2st shell 
 				if ( rsst.getInt( 4)==2) { // count 2nd shell entry 
 					n2++;
@@ -365,7 +376,7 @@ public class cnEvalTargetNbhood {
 			sideline = new String[n2+1];
 			cn1 = new int[n1+1]; 
 			cn2 = new int[n2+1]; 
-			cnsize = new int[(n1+1)][(n2+1)];
+			cnsize = new double[(n1+1)][(n2+1)];
   
 			for (j=0; j<=n2; j++) { // outer loop through all indirect contacts
 				for (i=0; i<=n1; i++) { // inner loop through all direct contacts
@@ -387,6 +398,9 @@ public class cnEvalTargetNbhood {
 						j_sec = rsst.getString(3);
 						j_shell = rsst.getInt(4);
 						j_cnsize = rsst.getInt(5);
+						
+						// if edge exists between the dropped direct and the new (ind.)nbour then cnsize of dropped+1 
+						
 						if (j_num>resnr) { // we are over x 
 							if (!overx) {
 								nbs+="x%"; 
@@ -398,7 +412,7 @@ public class cnEvalTargetNbhood {
 							if (ni!=i) {// if this is NOT the one direct nb 2B dropped 
 								nbs+=j_res.toUpperCase()+"%"; // it is included
 								if ( j_num==jxnum && j==0) { // This is the direct nb dropped
-									jxcn=j_cnsize-1;
+									jxcn=j_cnsize;
 									if (VL>=2) System.out.print("(j"+jxnum+":"+jxcn+")");
 								}
 							} else { // this one IS dropped 
@@ -415,16 +429,18 @@ public class cnEvalTargetNbhood {
 									ixcn=j_cnsize;
 									if (VL>=2) System.out.print("(i"+ixnum+":"+ixcn+")");
 								}
+								cn2[nj] = j_cnsize; 
 							} // end if 
 							
 //							// only once for building the sidelines
 							if (j==0) {
 								sideline[nj] = "+"+nj+"\t"+j_res+""+j_num+":"+j_sec+"("+j_cnsize+")";
-								cn2[nj] = j_cnsize; 
+								// was here: cn2[nj] = j_cnsize; 
 							} // end if sideline 						
 						} // end if 1st/2nd shell
 						
 					} // end while through the entire nbhood
+					
 					if (!overx) { // in case x is the very last we haven't seen it yet  
 						nbs+="x%"; // add it in the end 
 						overx=true; 
@@ -434,6 +450,7 @@ public class cnEvalTargetNbhood {
 					}
 					nbstring[i][j] = nbs;
 					moveset[i][j] = mymove;
+					if (VL>=2) System.out.print(" "+mymove);
 					precol = nbstring[i][0]; 
 					getEntropy( nbs, restype, precol);
 					if (lastRank==0) lastRank = maxRank;
@@ -442,16 +459,23 @@ public class cnEvalTargetNbhood {
 					freq[i][j] = lastFreq;
 					AUC[i][j]  = lastAUC;
 					total[i][j]= lastTotal; 
-					cnsize[i][j]=cn1[i]*cn2[j];
-					// if (VL>=1) System.out.print(""+cnsize[i][j]+"\t");
+					/*if ( edgeExists( u, v)) {
+						cnsize[i][j]=(double) ((double)cn2[j]-1)/((double)cn1[i]+1);
+						if (VL>=1) System.out.print("+-"+cn2[j]+"/"+cn1[i]+"="+String.format("%.3f",cnsize[i][j])+"\t");
+					} else {	*/ 			
+						cnsize[i][j]=(double) ((double)cn2[j])/((double)cn1[i]);
+						if (VL>=2) System.out.print("= "+cn2[j]+"/"+cn1[i]+"="+String.format("%.3f",cnsize[i][j])+"\t");					
+					// }
+					
 					if (lastRank > 0) { 
 						sumdeltarank += ( (lastRank-rank[0][0]) );
-						// sumdeltarank += ( (lastRank-rank[0][0]) * (cnsize[i][j]) );
+						lastCorr += ( (lastRank-rank[0][0])*cnsize[i][j] );
 					} else {
 						sumdeltarank += ( (maxRank-rank[0][0]) );
-						// sumdeltarank += ( (maxRank-rank[0][0]) * (cnsize[i][j]) );
+						lastCorr += ( (maxRank-rank[0][0])*cnsize[i][j] );
 					} // end if lastRank was defined 
-					if (VL>=1) System.out.print(""+lastRank+"\t");
+					
+					if (VL>=2) System.out.print(""+lastRank+"\t");
 				} // close inner loop (i)
 				if (VL>=1) {
 				   System.out.println(".");
@@ -475,6 +499,27 @@ public class cnEvalTargetNbhood {
 		return sumdeltarank; 
 	}	// end scoreCurrentNbhood
 
+	public static boolean edgeExists( int u_num, int v_num) {
+		int c=0;
+		String sql;
+		boolean found = false;  
+		Statement st;  
+		ResultSet rs;
+		try {
+			sql = "select count(*) from temp_shell where i_num="+u_num+" and j_num="+v_num+";";
+			st = conn.createStatement();
+			rs = st.executeQuery(sql);
+			if (rs.next()) c = rs.getInt(1); 
+			found = (c>0); 
+			rs.close();
+			st.close(); 
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.err.println("SQLException: " + e.getMessage());
+			System.err.println("SQLState:     " + e.getSQLState());
+		} // end try/catch 
+		return found; 
+	} // end edgeExists( u_num, v_num)
 
 	public static void reportMatrix( int what2print) {
 		System.out.println("\nPrinting "+what2print); 
@@ -508,8 +553,8 @@ public class cnEvalTargetNbhood {
 				if (what2print==printNbstring) System.out.print( nbstring[i][j] ); 
 				if (what2print==printMoveset) System.out.print( moveset[i][j] ); 
 				if (what2print==printdeltaRank) System.out.print( rank[i][j]-rank[0][0] );
-				if (what2print==printCNSize) System.out.print( cnsize[i][j] );
-				if (what2print==printCNSxdelta) System.out.print( cnsize[i][j]*(rank[i][j]-rank[0][0]) ); 
+				if (what2print==printCNSize) System.out.print( String.format("%.3f",cnsize[i][j]) );
+				if (what2print==printCNSxdelta) System.out.print( String.format("%.3f", (cnsize[i][j]*(rank[i][j]-rank[0][0]))) ); 
 				System.out.print("\t"); 
 			} // next i 
 			System.out.println(""); 
