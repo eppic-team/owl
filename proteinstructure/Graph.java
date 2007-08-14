@@ -3,6 +3,7 @@ package proteinstructure;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.TreeMap;
 import java.util.HashMap;
 
@@ -81,7 +82,8 @@ public class Graph {
 		this.pdbChainCode=pdbChainCode;
 		this.model=model;
 		this.ct=ct;
-		this.fullLength=sequence.length();
+		// in case of pdb was read from file and there was no SEQRES field then fullLength here shouldn't be sequence length but maximum observed residue (see Pdb class)
+		this.fullLength=Math.max(sequence.length(),Collections.max(nodes.keySet()));
 		this.obsLength=nodes.size();
 		this.numContacts=contacts.size();
 		this.modified=false;
