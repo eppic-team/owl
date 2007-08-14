@@ -57,6 +57,9 @@ public class PdbfilePdb extends Pdb {
 		// we initialise the secondary structure to empty, if no sec structure info is found then they remain empty
 		this.secondaryStructure = new SecondaryStructure();		
 		read_pdb_data_from_file();
+		
+		this.obsLength = resser2restype.size();
+		
 		if(!secondaryStructure.isEmpty()) {
 			secondaryStructure.setComment("Author");
 		}
@@ -253,6 +256,10 @@ public class PdbfilePdb extends Pdb {
 				String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
 				sequence += oneletter;
 			}
+			// not size but maximum: if residue numbering in pdb file is correct, then this takes care of non-observed except for possible non-observed at end of chain
+			fullLength = Collections.max(resser2restype.keySet()); 
+		} else { // we read the sequence from SEQRES
+			fullLength = sequence.length();
 		}
 	}
 	

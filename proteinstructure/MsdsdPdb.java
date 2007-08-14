@@ -110,9 +110,13 @@ public class MsdsdPdb extends Pdb {
         }
 		
 		this.sequence = read_seq();
+		this.fullLength = sequence.length();
+		
 		this.pdbresser2resser = get_ressers_mapping();
 
 		this.read_atomData();
+		
+		this.obsLength = resser2restype.size();
 		
 		// we initialise resser2pdbresser from the pdbresser2resser HashMap
 		this.resser2pdbresser = new HashMap<Integer, String>();

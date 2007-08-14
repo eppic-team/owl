@@ -48,6 +48,12 @@ public abstract class Pdb {
 	protected String chainCode;
 	protected int model;  			// the model serial for NMR structures
 	
+	// in case we read from pdb file, 2 possibilities:
+	// 1) SEQRES field is present: fullLength coincides with sequence length
+	// 2) SEQRES not present: fullLength is maximum observed residue (so if residue numbering is correct that only misses possible non-observed residues at end of chain)
+	protected int fullLength; // length of full sequence as it appears in SEQRES field 
+	protected int obsLength;  // length without unobserved, non standard aas 
+	
 	protected String db;			// the db from which we have taken the data (if applies)
 	
 	/** Run DSSP externally and (re)assign the secondary structure annotation from the output */
@@ -185,12 +191,12 @@ public abstract class Pdb {
 	 * TODO: Refactor method name
 	 */
 	public int get_length(){
-		return resser2restype.size();
+		return obsLength;
 	}
 	
 	/** Returns the number of residues in the sequence of this protein. */
 	public int getFullLength() {
-		return this.sequence.length();
+		return fullLength;
 	}
 	
 	/**

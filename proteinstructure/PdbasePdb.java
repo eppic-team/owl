@@ -111,10 +111,14 @@ public class PdbasePdb extends Pdb {
 		
 		this.chainCode = getChainCode();
 		this.sequence = read_seq();
+		this.fullLength = sequence.length();
+		
 		this.pdbresser2resser = get_ressers_mapping();
     
 		this.read_atomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
 
+		this.obsLength = resser2restype.size();
+		
 		// we initialise resser2pdbresser from the pdbresser2resser HashMap
 		this.resser2pdbresser = new HashMap<Integer, String>();
 		for (String pdbresser:pdbresser2resser.keySet()){
