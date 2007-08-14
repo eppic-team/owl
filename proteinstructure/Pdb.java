@@ -60,8 +60,9 @@ public abstract class Pdb {
 	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
 		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
 		String line;
-		int resCount = 0, lineCount = 0;
-		char ssType, ssTypes[];
+		int lineCount = 0;
+		char ssType;
+		TreeMap<Integer, Character> ssTypes;
 		int resNum;
 		String resNumStr;
 		File test = new File(dsspExecutable);
@@ -72,7 +73,7 @@ public abstract class Pdb {
 		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
 		writeAtomLines(dsspInput);	// pipe atom lines to dssp
 		dsspInput.close();
-		ssTypes = new char[getFullLength()+1];
+		ssTypes = new TreeMap<Integer,Character>();
 		while((line = dsspOutput.readLine()) != null) {
 			lineCount++;
 			if(line.startsWith(startLine)) {
@@ -87,8 +88,7 @@ public abstract class Pdb {
 			if(!resNumStr.equals("")) {		// this should only happen if dssp inserts a line indicating a chain break
 				try {
 					resNum = Integer.valueOf(resNumStr);
-					ssTypes[resNum] = ssType;
-					resCount++;
+					ssTypes.put(resNum, ssType);
 				} catch (NumberFormatException e) {
 					System.err.println("Error while parsing DSSP output. Expected residue number, found '" + resNumStr + "' in line " + lineCount);
 				}
@@ -98,43 +98,43 @@ public abstract class Pdb {
 		dsspOutput.close();
 		dsspError.close();
 
-		if(resCount == 0) {
+		if(ssTypes.size() == 0) {
 			throw new IOException("No DSSP output found.");
 		}
 		
-		if(resCount != get_length()) {	// compare with number of observed residues
-			System.err.println("Error: DSSP output " + resCount + " does not match number of observed residues in structure " + get_length() + ".");
+		if(ssTypes.size() != get_length()) {	// compare with number of observed residues
+			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") does not match number of observed residues in structure (" + get_length() + ").");
 		}
 
 		// assign secondary structure
 		this.secondaryStructure = new SecondaryStructure();		// forget the old annotation
-		char lastType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes[0]);
+		char lastType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()));
+		int lastResSer = ssTypes.firstKey();
 		char thisType;
 		int start = 0;
-		int i;
 		int elementCount = 0;
 		SecStrucElement ssElem;
 		String ssId;
-		for(i=1; i < ssTypes.length; i++) {
-			thisType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes[i]);
-			if(thisType != lastType) {
+		for(int resSer:ssTypes.keySet()) {
+			thisType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes.get(resSer));
+			if(thisType != lastType || resSer > lastResSer+1) {
 				// finish previous element, start new one
 				if(lastType != SecStrucElement.OTHER) {
 					elementCount++;
 					ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-					ssElem = new SecStrucElement(lastType, start+1,i,ssId);
+					ssElem = new SecStrucElement(lastType, start,lastResSer,ssId);
 					secondaryStructure.add(ssElem);
 				}
-				start = i;
+				start = resSer;
 				lastType = thisType;
 			}
+			lastResSer = resSer;
 		}
 		// finish last element
-		if(lastType != ' ') {
+		if(lastType != SecStrucElement.OTHER) {
 			elementCount++;
-			//System.out.println("From: " + (start+1) + "\t To: " + resCount + "\t Type: " + lastType);
 			ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-			ssElem = new SecStrucElement(lastType, start+1, resCount, ssId);
+			ssElem = new SecStrucElement(lastType, start, ssTypes.lastKey(), ssId);
 			secondaryStructure.add(ssElem);
 		}
 		secondaryStructure.setComment("DSSP");
