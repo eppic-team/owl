@@ -46,6 +46,7 @@ public class iterEvalNbhood {
 		graphid = Integer.parseInt( args[0]);
 		resnr = Integer.parseInt( args[1]); 
 		int j_num=0, oj_num=0, oj_shell, oj_cnsize, i, j, x, oi, oj, o1, o2, score=0;
+		boolean overx = false;  
 		String sql, oj_res, oj_sec;  
 		Statement mstmt, mjst, nstmt;  
 		ResultSet mrsst, nrsst;
@@ -138,13 +139,19 @@ public class iterEvalNbhood {
 					oj = 0; 
 					mrsst.beforeFirst();
 					newnbhood=""; 
+					overx = false;
 					while (mrsst.next()) {
 						oj_num = mrsst.getInt( 1); 
 						oj_res = mrsst.getString(2);
 						oj_sec = mrsst.getString(3);
 						oj_shell = mrsst.getInt( 4);
 						oj_cnsize = mrsst.getInt( 5);
-						
+						if (oj_num>resnr) { // we are over x 
+							if (!overx) {
+								newnbhood+="x"; 
+								overx=true; 
+							} // end if over x 
+						} // END IF J > X 
 						if (oj_shell==1) { // a direct 1st shell neighbour 
 							oi++;
 							if (oi!=i) {// if this is NOT the one direct nb 2B dropped
@@ -161,7 +168,7 @@ public class iterEvalNbhood {
 							if (oj==j) { // this is the 2nd shell nb 2B included
 								// put as new 1st shell nbor 
 								nstmt = conn.createStatement();
-								// sql = "insert into temp_shell values("+resnr+",\'"+restype+"\',"+oj_num+",\'"+oj_res+"\',\'"+oj_sec+"\', 1);"; 
+								sql = "insert into temp_shell values("+resnr+",\'"+restype+"\',"+oj_num+",\'"+oj_res+"\',\'"+oj_sec+"\', 1);"; 
 								// System.out.println("oj>"+ sql);
 								nstmt.executeUpdate(sql);
 								nstmt.close(); 		
@@ -173,6 +180,10 @@ public class iterEvalNbhood {
 						} // end if 1st/2nd shell
 						
 					} // end while through the entire nbhood
+					if (!overx) { // we haven't seen a nb > x yet 
+						newnbhood+="x"; // x sits at the end of the nbhoodstring 
+						overx=true; 
+					} // end if over x 
 					System.out.println("new direct nbhood "+newnbhood); 
 					// Now the "updated" / perturbed version of shell 1 is in temp_shell
 					// we can build 2nd shell accordingly. 
@@ -342,7 +353,11 @@ public class iterEvalNbhood {
 								sideline[nj] = "+"+nj+"\t"+j_res+""+j_num+":"+j_sec;
 							} // end if sideline 						
 						} // end if 1st/2nd shell
-					} // end while through the entire nbhood 
+					} // end while through the entire nbhood
+					if (!overx) { // in case x is the very last we haven't seen it yet  
+						nbs+="x%"; // add it in the end 
+						overx=true; 
+					} // end if over x 
 					System.out.print("("+nbs+")\t");
 					getEntropy( nbs, restype);
 					rank[i][j] = lastRank; 
@@ -414,6 +429,9 @@ public class iterEvalNbhood {
 		ResultSet rsst;
 		double p, psum=0.0, logp, plogp, plogpsum=0.0; 
 		try {
+			// Hashing first row tables comes first 
+			
+			// now we can safely derive the estimates from the hashtable
 			sql = "select count(*) from single_model_node where n like '"+nbs+"';";
 			// System.out.println( sql); 
 			stmt = conn.createStatement();
