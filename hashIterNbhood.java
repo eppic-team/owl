@@ -12,7 +12,7 @@ public class hashIterNbhood {
 	 * with subsequent scoring 
 	 * @author lappe
 	 */
-	static int maxRank = 99; // value to replace for non-existence of central redue in the resultvector (rank=0) 
+	static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
@@ -21,10 +21,10 @@ public class hashIterNbhood {
 	static int graphid=0, resnr=0; 
 	static int size1=0, size2=0; // the dimensions of the matrices = |shell1|x|shell2| = nr of direct(1) x indirect(2) nbs 
 	static String rsideline[], rheadline[]={" -->\t(-)1st shell\t0"," |\t        \t-"," |\t(+)     \t0"," V\t2nd shell\t-"};
-	static String sideline[], headline[]={"\t\t0","\t\t-","\t\t0","\t\t-"};
+	static String sideline[], headline[]={"\t\t0","\t\t-","\t\t0","\t\t-","\t\tX"};
 	static String restype="?", ressec="?", newnbhood=""; 
-	
-	static int sumdelta[][], rank[][], total[][];
+	static int cn1[], cn2[]; 
+	static int sumdelta[][], rank[][], total[][], cnsize[][];
 	static double entropy[][], freq[][], AUC[][]; 
 	static String newnbs[][], nbstring[][], moveset[][];  
 	
@@ -35,7 +35,9 @@ public class hashIterNbhood {
 	printAUC     = 5, 
 	printNbstring= 6, 
 	printMoveset = 7,
-	printdeltaRank=8; 
+	printdeltaRank=8,
+	printCNSize   =9, 
+	printCNSxdelta=10;
 	
 	public static void main(String[] args) {
 		
@@ -209,8 +211,9 @@ public class hashIterNbhood {
 					System.out.println("Scoring ["+i+"]["+j+"] "+newnbs[i][j]);
 					score = scoreCurrentNbhood();
 					sumdelta[i][j] = score; 
-					reportMatrix( printRank );
+					reportMatrix( printCNSize );
 					reportMatrix( printdeltaRank ); 
+					reportMatrix( printCNSxdelta ); 
 					System.out.println("SumDeltaRank Score = \t"+score);  		
 					// reportMatrix( printNbstring ); 
 				} // next i
@@ -276,6 +279,8 @@ public class hashIterNbhood {
 			headline[1]="\t\t-";
 			headline[2]="\t\t0";
 			headline[3]="\t\t-";
+			headline[4]="\t\tX";
+	
 			// System.out.println("retrieving the entire nbhood (1st and 2nd shell)");  
 			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn from temp_shell where j_num!="+resnr+" group by j_num order by j_num;";
 			stmt = conn.createStatement();
@@ -290,6 +295,7 @@ public class hashIterNbhood {
 					headline[1]+="\t"+rsst.getString(2); // res
 					headline[2]+="\t"+rsst.getInt(1); // resnum 
 					headline[3]+="\t"+rsst.getString(3); // SStype
+					headline[4]+="\t"+rsst.getInt(5); // CNSize
 				} // end if 2st shell 
 				if ( rsst.getInt( 4)==2) { // count 2nd shell entry 
 					n2++;
@@ -301,19 +307,23 @@ public class hashIterNbhood {
 			size2 = n2; 
 			System.out.println("SIZE 1st shell "+size1); 
 			System.out.println("SIZE 2nd shell "+size2);
-
+			headline[4]=headline[4].replace("X",(""+size1));
+			
 			// n1 and n2 are known, initialise matrices accordingly. 
 			// nbhood, move, rank, entropy, freq, AUC etc. (evtl.+ degree(?)) 
 			rank = new int[(n1+1)][(n2+1)];
-			rank[0][0]=10;
+			rank[0][0]=maxRank;
 			total = new int[(n1+1)][(n2+1)];
 			entropy = new double[(n1+1)][(n2+1)];
 			freq = new double[(n1+1)][(n2+1)];        
 			AUC = new double[(n1+1)][(n2+1)];
 			nbstring = new String[(n1+1)][(n2+1)];
 			moveset = new String[(n1+1)][(n2+1)];
-			sideline = new String[n2+1];			
-
+			sideline = new String[n2+1];
+			cn1 = new int[n1+1]; 
+			cn2 = new int[n2+1]; 
+			cnsize = new int[(n1+1)][(n2+1)];
+  
 			for (j=0; j<=n2; j++) { // outer loop through all indirect contacts
 				for (i=0; i<=n1; i++) { // inner loop through all direct contacts
 					mymove = "";
@@ -321,7 +331,9 @@ public class hashIterNbhood {
 					System.out.print("("+i+","+j+")\t");
 					ni = 0; 
 					nj = 0; 
-					sideline[0]="+0\tRnum:S"; 
+					sideline[0]="+0\tRnum:S("+n1+")";
+					cn1[0]=n1; 
+					cn2[0]=n1; 
 					nbs="%";
 					rsst.beforeFirst();
 					while (rsst.next()) {
@@ -341,17 +353,20 @@ public class hashIterNbhood {
 							if (ni!=i) {// if this is NOT the one direct nb 2B dropped 
 								nbs+=j_res.toUpperCase()+"%"; // it is included 								
 							} else { // this one IS dropped 
-								mymove += "(-"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")"; 
+								mymove += "(-"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")";
+								cn1[ni]=j_cnsize; 
 							} // end if ni!=i 
 						} else { // 2nd shell neighbour 
 							nj++; 
 							if (nj==j) { // this is the 2nd shell nb 2B included
 								nbs+=j_res.toUpperCase()+"%";
-								mymove += "(+"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")"; 
+								mymove += "(+"+j_res+":"+j_num+":"+j_sec+"/"+j_cnsize+")";
+								
 							} // end if 
 //							// only once for building the sidelines
 							if (j==0) {
-								sideline[nj] = "+"+nj+"\t"+j_res+""+j_num+":"+j_sec;
+								sideline[nj] = "+"+nj+"\t"+j_res+""+j_num+":"+j_sec+"("+j_cnsize+")";
+								cn2[nj] = j_cnsize; 
 							} // end if sideline 						
 						} // end if 1st/2nd shell
 					} // end while through the entire nbhood
@@ -370,11 +385,11 @@ public class hashIterNbhood {
 					freq[i][j] = lastFreq;
 					AUC[i][j]  = lastAUC;
 					total[i][j]= lastTotal; 
-
+					cnsize[i][j]=cn1[i]*cn2[j]; 
 					if (lastRank > 0) { 
-						sumdeltarank += (lastRank-(rank[0][0]));
+						sumdeltarank += ((lastRank-(rank[0][0]))*(cnsize[i][j]));
 					} else {
-						sumdeltarank += (maxRank-(rank[0][0]));
+						sumdeltarank += ((maxRank-(rank[0][0]))*(cnsize[i][j]));
 					} // end if lastRank was defined 
 				} // close inner loop (i)
 				System.out.println(".");
@@ -402,12 +417,16 @@ public class hashIterNbhood {
 		if (what2print==printNbstring) System.out.print("nbstring[i][j]" ); 
 		if (what2print==printMoveset) System.out.print("moveset[i][j]" );
 		if (what2print==printdeltaRank) System.out.print("rank[i][j]-rank[0][0]" );
+		if (what2print==printCNSize) System.out.print("cnsize[i][j]" );
+		if (what2print==printCNSxdelta) System.out.print("cnsize[i][j]*(rank[i][j]-rank[0][0])" );
+		
 		System.out.println("..."); 
 		// print headerline(s)
 		System.out.println(headline[0]);
 		System.out.println(headline[1]);
 		System.out.println(headline[2]);
 		System.out.println(headline[3]);
+		System.out.println(headline[4]);
 		for (int j=0; j<=size2; j++) {	
 			// print sideline
 			System.out.print( sideline[j]+"\t"); 
@@ -420,6 +439,8 @@ public class hashIterNbhood {
 				if (what2print==printNbstring) System.out.print( nbstring[i][j] ); 
 				if (what2print==printMoveset) System.out.print( moveset[i][j] ); 
 				if (what2print==printdeltaRank) System.out.print( rank[i][j]-rank[0][0] );
+				if (what2print==printCNSize) System.out.print( cnsize[i][j] );
+				if (what2print==printCNSxdelta) System.out.print( cnsize[i][j]*(rank[i][j]-rank[0][0]) ); 
 				System.out.print("\t"); 
 			} // next i 
 			System.out.println(""); 
