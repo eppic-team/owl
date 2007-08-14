@@ -125,9 +125,8 @@ public class Graph {
 			pgraphid = rsst.getInt(1);
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
-			//TODO fill sses field, for now we set it to 1
 			sql = "INSERT INTO "+db+".chain_graph (accession_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', '"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", 1, now())";
+					"VALUES ('"+pdbCode+"', '"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
@@ -169,8 +168,16 @@ public class Graph {
 		for (Edge cont:contacts){
 			String i_res = AA.threeletter2oneletter(getResType(cont.i));
 			String j_res = AA.threeletter2oneletter(getResType(cont.j));
-			sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,j_num,j_cid,j_res,weight) " +
-					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', "+cont.j+", '"+chainCode+"', '"+j_res+"', 0)";
+			char i_secStructType=SecStrucElement.OTHER;
+			if (secondaryStructure.getSecStrucElement(cont.i)!=null){
+				i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
+			}
+			char j_secStructType=SecStrucElement.OTHER;
+			if (secondaryStructure.getSecStrucElement(cont.j)!=null){
+				j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
+			}
+			sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
+					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"',"+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"', 0)";
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
 		}
@@ -179,8 +186,16 @@ public class Graph {
 			for (Edge cont:contacts){
 				String i_res = AA.threeletter2oneletter(getResType(cont.i));
 				String j_res = AA.threeletter2oneletter(getResType(cont.j));
-				sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,j_num,j_cid,j_res,weight) " +
-						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', "+cont.i+", '"+chainCode+"', '"+i_res+"', 0)";
+				char i_secStructType=SecStrucElement.OTHER;
+				if (secondaryStructure.getSecStrucElement(cont.i)!=null){
+					i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
+				}
+				char j_secStructType=SecStrucElement.OTHER;
+				if (secondaryStructure.getSecStrucElement(cont.j)!=null){
+					j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
+				}
+				sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
+						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"',"+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"', 0)";
 				stmt.executeUpdate(sql);
 			}
 		}
@@ -188,16 +203,19 @@ public class Graph {
 		for (int resser:nodes.keySet()) {
 			String res = AA.threeletter2oneletter(getResType(resser));
 			NodeNbh nbh = getNodeNbh(resser);
+			char secStructType=SecStrucElement.OTHER;
+			if (secondaryStructure.getSecStrucElement(resser)!=null){
+				secStructType = secondaryStructure.getSecStrucElement(resser).getType();
+			}
 			if (directed){  // we insert k_in and k_out
-				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,k_in,k_out,n,nwg,n_num) " +
-					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', "+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k_in,k_out,n,nwg,n_num) " +
+					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"',"+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			} else {		// we insert k (and no k_in or k_out)
-				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,k,n,nwg,n_num) " +
-				" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', "+getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k,n,nwg,n_num) " +
+				" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"',"+getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
 			stmt.executeUpdate(sql);
 		}
-		// TODO insert secondary structure info in single model node and single model edge
 		// TODO insert weights when we have them implemented in the graph object
 		stmt.close();
 	}

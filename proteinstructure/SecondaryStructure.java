@@ -84,4 +84,8 @@ public class SecondaryStructure {
 		return this.comment;
 	}
 	
+	/** Returns the number of secondary structure elements in this SecondaryStructure object */
+	public int getNumElements() {
+		return this.secStructElements.size();
+	}
 }
