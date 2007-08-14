@@ -228,6 +228,7 @@ public class PdbfilePdb extends Pdb {
 						atomser2resser.put(atomserial, res_serial);
 						resser2restype.put(res_serial, res_type);
 						ArrayList<String> atomlist = aas2atoms.get(res_type);
+						atomlist.add("OXT"); // the extra atom OXT is there in the last residue of the chain
 						if (atomlist.contains(atom)){
 							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 						}
