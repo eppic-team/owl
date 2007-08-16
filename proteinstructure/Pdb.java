@@ -417,6 +417,7 @@ public abstract class Pdb {
 		
 		// getting the contacts (in residue serials) from the atom serials (partial) distance matrix 
 		EdgeSet contacts = new EdgeSet();
+		TreeMap<Edge,Double> weights = new TreeMap<Edge,Double>();
 		for (i=0;i<distMatrix.length;i++){
 			for (j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
@@ -430,6 +431,12 @@ public abstract class Pdb {
 					// for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
 					if (i_resser!=j_resser){ // duplicates are automatically taken care by the EdgeSet class which is a TreeSet and doesn't allow duplicates 
 						contacts.add(resser_pair);
+						// as weights we count the number of atom-edges per residue-edge
+						if (weights.containsKey(resser_pair)) {
+							weights.put(resser_pair, weights.get(resser_pair)+1.0);
+						} else {
+							weights.put(resser_pair, 1.0);
+						}
 					}
 				}
 
@@ -441,7 +448,7 @@ public abstract class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure.copy());
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure.copy(), weights);
 		return graph;
 	}
 	

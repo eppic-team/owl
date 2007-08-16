@@ -149,16 +149,20 @@ public class DbGraph extends Graph {
 	 */
 	private void read_graph_from_db() throws SQLException{
 		contacts = new EdgeSet();
+		weights = new TreeMap<Edge, Double>();
 		nodes = new TreeMap<Integer, String>();
 
 		// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
-		String sql="SELECT i_num,j_num FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
+		String sql="SELECT i_num,j_num,weight FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		while (rsst.next()) {
 			int i=rsst.getInt(1);
 			int j=rsst.getInt(2);
-			contacts.add(new Edge(i,j));
+			double weight=rsst.getDouble(3);
+			Edge cont = new Edge(i,j);
+			contacts.add(cont);
+			weights.put(cont,weight);
 		}
 		rsst.close();
 		stmt.close();

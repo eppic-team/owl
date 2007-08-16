@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.HashMap;
 
@@ -28,12 +29,12 @@ public class Graph {
 	private final static String SINGLEMODELS_DB = "ioannis";	//TODO: Is this being used??
 	
 	public EdgeSet contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
-	// TODO implement weights
+	
+	protected TreeMap<Edge,Double> weights;
 	
 	protected TreeMap<Integer,String> nodes; // nodes is a TreeMap of residue serials to residue types (3 letter code)
 	protected SecondaryStructure secondaryStructure; // secondary structure annotation for this protein graph
-	//protected Vector<SecStrucElement> secStructElements;		   // set of secondary structure elements or null if not available 
-	//protected HashMap<Integer,SecStrucElement> resser2secstruct;   // node serials to secondary structure or null if not available
+
 	protected String sequence; 				// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;
 	protected String chainCode;
@@ -72,8 +73,9 @@ public class Graph {
 	 * @param ssElems
 	 * @param rs2ss
 	 */
-	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
+	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct, TreeMap<Edge,Double> weights) {
 		this.contacts=contacts;
+		this.weights=weights;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
 		this.sequence=sequence;
@@ -179,7 +181,7 @@ public class Graph {
 				j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
 			}
 			sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
-					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"',"+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"', 0)";
+					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"',"+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"', "+Math.round(weights.get(cont))+")";
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
 		}
@@ -197,7 +199,7 @@ public class Graph {
 					j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
 				}
 				sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
-						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"',"+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"', 0)";
+						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"',"+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"', "+Math.round(weights.get(cont))+")";
 				stmt.executeUpdate(sql);
 			}
 		}
@@ -210,15 +212,14 @@ public class Graph {
 				secStructType = secondaryStructure.getSecStrucElement(resser).getType();
 			}
 			if (directed){  // we insert k_in and k_out
-				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k_in,k_out,n,nwg,n_num) " +
-					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"',"+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k,k_in,k_out,n,nwg,n_num) " +
+					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"', "+0+", "+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			} else {		// we insert k (and no k_in or k_out)
 				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k,n,nwg,n_num) " +
 				" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"',"+getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
 			stmt.executeUpdate(sql);
 		}
-		// TODO insert weights when we have them implemented in the graph object
 		stmt.close();
 	}
 		
@@ -239,7 +240,8 @@ public class Graph {
 		for (Edge pair:contacts){
 			int i_resser=pair.i;
 			int j_resser=pair.j;
-			Out.println(i_resser+"\t"+j_resser);
+			double weight=weights.get(pair);
+			Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t%6.3f\n",weight);
 		}
 		Out.close();		
 	}
@@ -269,11 +271,23 @@ public class Graph {
 	}
 	
 	/**
+	 * Gets TreeMap of weights, deep copyingg
+	 * @return
+	 */
+	public TreeMap<Edge,Double> getWeights(){
+		TreeMap<Edge,Double> newWeights = new TreeMap<Edge, Double>();
+		for (Edge cont:weights.keySet()){
+			newWeights.put(new Edge(cont.i,cont.j), weights.get(cont));
+		}
+		return newWeights;
+	}
+	
+	/**
 	 * Deep copies this Graph object returning new one
 	 * @return
 	 */
 	public Graph copy(){
-		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
+		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());		
 	}
 	
 	/**
@@ -281,7 +295,7 @@ public class Graph {
 	 * @return
 	 */
 	public Graph copyKeepingNodes(){
-		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
+		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());		
 	}	
 	
 	/**
@@ -465,9 +479,9 @@ public class Graph {
 				onlyother.add(cont);
 			}
 		}
-		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());
-		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());
-		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model,secondaryStructure.copy());
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model,secondaryStructure.copy(),getWeights());
 		HashMap<String,Graph> result = new HashMap<String,Graph>();
 		result.put("common", commongraph);
 		result.put("onlythis", onlythisgraph);
@@ -519,6 +533,10 @@ public class Graph {
 	
 	public double getCutoff(){
 		return cutoff;
+	}
+	
+	public double getWeight(Edge cont){
+		return this.weights.get(cont);
 	}
 	
 	public boolean containsContact(Edge cont){

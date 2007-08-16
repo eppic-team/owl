@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
  */
 public class FileGraph extends Graph {
 	
+	private static double DEFAULT_WEIGHT = 1.0;
 	
 	/**
 	 * Constructs Graph object by reading a file with contacts
@@ -63,6 +64,7 @@ public class FileGraph extends Graph {
 
 	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException, GraphFileFormatError {
 		contacts = new EdgeSet();
+		weights = new TreeMap<Edge, Double>();
 		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		int linecount=0;
@@ -109,12 +111,18 @@ public class FileGraph extends Graph {
 				cutoff=Double.parseDouble(ms.group(1));
 			}								
 
-			Pattern pcontact = Pattern.compile("^\\s*\\d+\\s+\\d+\\s*$");
+			Pattern pcontact = Pattern.compile("^\\s*(\\d+)\\s+(\\d+)(?:\\s+(\\d+\\.\\d+))?\\s*$");
 			Matcher mcontact = pcontact.matcher(line);
 			if (mcontact.find()){
-				int i = Integer.parseInt(line.split("\\s+")[0]);
-				int j = Integer.parseInt(line.split("\\s+")[1]);
-				contacts.add(new Edge(i,j));
+				int i = Integer.valueOf(mcontact.group(1));
+				int j = Integer.valueOf(mcontact.group(2));
+				double weight = DEFAULT_WEIGHT;
+				if (mcontact.group(3)!=null) {
+					weight = Double.valueOf(mcontact.group(3));
+				}
+				Edge cont = new Edge(i,j);
+				contacts.add(cont);
+				weights.put(cont,weight);
 			}
 
 		}
