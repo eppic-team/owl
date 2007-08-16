@@ -133,15 +133,15 @@ public class genDbGraph {
 				int numLines = 0;
 				fpdb.mark(100000);
 				while ((line = fpdb.readLine() ) != null ) {
-					numLines++;
+					if (line.length()>0) numLines++;
 				}
 				fpdb.reset();
 				pdbCodes = new String[numLines];
 				pdbChainCodes = new String[numLines];
 				numLines = 0;
 				while ((line = fpdb.readLine() ) != null ) {
-					pdbCodes[numLines] = line.split("\\s")[0].toLowerCase();
-					pdbChainCodes[numLines] = line.split("\\s")[1];
+					pdbCodes[numLines] = line.split("\\s+")[0].toLowerCase();
+					pdbChainCodes[numLines] = line.split("\\s+")[1];
 					numLines++;
 				}
 			}
@@ -152,12 +152,10 @@ public class genDbGraph {
 				String pdbCode = pdbCodes[i];
 				String pdbChainCode = pdbChainCodes[i];
 
-				if(pdbChainCode == null) {
-					pdbChainCode = "NULL";
-				}
-
-				
 				try {
+					
+					long start = System.currentTimeMillis();
+					
 					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
 
 					// get graph
@@ -165,7 +163,10 @@ public class genDbGraph {
 
 					graph.write_graph_to_db(conn,outputDb);
 
-					System.out.println(pdbCode+"_"+pdbChainCode);
+					long end = System.currentTimeMillis();
+					double time = (double) (end -start)/1000;
+					
+					System.out.printf(pdbCode+"_"+pdbChainCode+" - %5.3f s\n",time);
 					numPdbs++;
 					
 				} catch (PdbaseInconsistencyError e) {
@@ -173,7 +174,7 @@ public class genDbGraph {
 				} catch (PdbCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
 				} catch (SQLException e) {
-					e.printStackTrace();
+					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
 				} catch (PdbChainCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
 				}
