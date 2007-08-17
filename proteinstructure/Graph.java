@@ -464,9 +464,18 @@ public class Graph {
 	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
 	public HashMap<String,Graph> compare(Graph other) throws Exception{
 		//first check that other has same sequence than this, otherwise throw exception
-		if (!this.sequence.equals(other.sequence)){
+		if (this.getFullLength()!=other.getFullLength()) {
 			//TODO throw specific exception
-		throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+		} else {
+			for (int resser:this.nodes.keySet()){
+				String this_res = this.nodes.get(resser);
+				String other_res = other.nodes.get(resser);
+				if (!this_res.equals("X") && !other_res.equals("X") && !this_res.equals(other_res)) {
+					//TODO throw specific exception
+					throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+				}
+			}
 		}
 		
 		EdgeSet common = new EdgeSet();
