@@ -129,8 +129,12 @@ public class Graph {
 			pgraphid = rsst.getInt(1);
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
-			sql = "INSERT INTO "+db+".chain_graph (accession_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', '"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+			String pdbChainCodeStr = pdbChainCode;
+			if (!pdbChainCode.equals("NULL")) {
+				pdbChainCodeStr="'"+pdbChainCode+"'";
+			}
+			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
