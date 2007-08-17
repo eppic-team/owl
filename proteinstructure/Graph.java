@@ -462,26 +462,33 @@ public class Graph {
 		//first check that other has same sequence than this, otherwise throw exception
 		if (!this.sequence.equals(other.sequence)){
 			//TODO throw specific exception
-			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+		throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
 		}
+		
 		EdgeSet common = new EdgeSet();
+		TreeMap<Edge,Double> commonW = new TreeMap<Edge, Double>();
 		EdgeSet onlythis = new EdgeSet();
+		TreeMap<Edge,Double> onlythisW = new TreeMap<Edge, Double>();
 		EdgeSet onlyother = new EdgeSet();
+		TreeMap<Edge,Double> onlyotherW = new TreeMap<Edge, Double>();
 		for (Edge cont:this.contacts){
 			if (other.contacts.contains(cont)) {
 				common.add(cont);
-			} else{
+				commonW.put(cont, this.getWeight(cont));
+			} else {
 				onlythis.add(cont);
+				onlythisW.put(cont, this.getWeight(cont));
 			}
 		}
 		for (Edge cont:other.contacts){
 			if (!this.contacts.contains(cont)){
 				onlyother.add(cont);
+				onlyotherW.put(cont, other.getWeight(cont));
 			}
 		}
-		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());
-		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),getWeights());
-		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model,secondaryStructure.copy(),getWeights());
+		Graph commongraph = new Graph (common,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),commonW);
+		Graph onlythisgraph = new Graph (onlythis,getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy(),onlythisW);
+		Graph onlyothergraph = new Graph (onlyother,getNodes(),sequence,cutoff,ct,other.pdbCode,other.chainCode,other.pdbChainCode,model,secondaryStructure.copy(),onlyotherW);
 		HashMap<String,Graph> result = new HashMap<String,Graph>();
 		result.put("common", commongraph);
 		result.put("onlythis", onlythisgraph);
