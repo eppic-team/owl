@@ -28,25 +28,22 @@ public class writeTargetMoves {
 		Statement mstmt;  
 		ResultSet mrsst; 
 		
-	    if (args.length<1){
-			System.err.println("The graph_id needs to be given .... i.e. 7");
-			System.exit(1);
-		}		
-		graph_id = Integer.parseInt( args[0]);
 		try {
 			conn = new MySQLConnection("white",user,"nieve", backgrndDB); // the UPPERCASE DB!  
 			System.out.println("Writing Target neighborhoods v.0.2. (SC&BB)"); 
 			// retrieve node_id   | cid  | res  | sstype defined by graph_id, num  
-			sql = "select node_id, cid, num, res, sstype from "+targetNodes+" where graph_id="+graph_id+";"; // +" limit 3;"; 
+			// sql = "select node_id, cid, num, res, sstype from "+targetNodes+" where graph_id="+graph_id+" limit 3;"; 
+			sql = "select graph_id, node_id, cid, num, res, sstype from "+targetNodes+";"; //  +" limit 1;"; 
 			mstmt = conn.createStatement();
 			mrsst = mstmt.executeQuery(sql); 
 			while (mrsst.next()) {
 			    // this is the central node -> get type and secondary structure
-				node_id = mrsst.getInt( 1); 
-				cid = mrsst.getString( 2);
-				num = mrsst.getInt( 3); 
-				res = mrsst.getString( 4).toUpperCase();
-				sstype= mrsst.getString( 5).toUpperCase();
+				graph_id = mrsst.getInt( 1); 
+				node_id = mrsst.getInt( 2); 
+				cid = mrsst.getString( 3);
+				num = mrsst.getInt( 4); 
+				res = mrsst.getString( 5).toUpperCase();
+				sstype= mrsst.getString( 6).toUpperCase();
 				System.out.println("GraphID "+graph_id+" Chain "+cid+", Central residue ("+node_id+") "+res+":"+num+":"+sstype); 
 				writeMoves( graph_id, node_id, cid, num, res, sstype); 		
 			} // end if central residue
@@ -63,7 +60,7 @@ public class writeTargetMoves {
 
 	
 	public static void writeMoves( int cgraph_id, int cnode_id, String ccid, int cnum, String cres, String csstype) {
-		int n1=0, n2=0, ni=0, nj=0, i=0, j=0, j_num=0, j_shell=0, j_cnsize=0;
+		int n1=0, n2=0, ni=0, nj=0, i=0, j=0, j_num=0, j_shell=0, j_cnsize=0, j_bb, j_sc;
 		int minus, mcn, plus, pcn; 
 		String sql, j_res, j_sec, mres, mss, pres, pss, nn, nb; 
 		boolean overx = false;
@@ -79,7 +76,9 @@ public class writeTargetMoves {
 			stmt.close(); 
 	
 			stmt = conn.createStatement();
-			stmt.executeUpdate("create table temp_shell as select i_num, i_res, j_num, j_res, j_sstype, 1 as shell from "+targetEdges+" where graph_id="+cgraph_id+" and i_num="+cnum+";");
+			// stmt.executeUpdate("create table temp_shell as select i_num, i_res, j_num, j_res, j_sstype, 1 as shell from "+targetEdges+" where graph_id="+cgraph_id+" and i_num="+cnum+";");
+			stmt.executeUpdate("create table temp_shell as select i_num, i_res, j_num, j_res, j_sstype, 1 as shell, weight_bb as BB, weight_SC as SC " +
+					"from "+targetEdges+" where graph_id="+cgraph_id+" and i_cid='"+ccid+"' and i_num="+cnum+";"); 
 			stmt.close(); 
 	
 			System.out.println("adding the 2nd shell ...");  
@@ -92,7 +91,8 @@ public class writeTargetMoves {
 				j_num = rsst.getInt(1);
 				System.out.println(i+":"+j_num); 
 				mst = conn.createStatement();
-				sql = "insert into temp_shell select i_num, i_res, j_num, j_res, j_sstype, 2 as shell from "+targetEdges+" where graph_id="+cgraph_id+" and i_num="+j_num+";";
+				sql = "insert into temp_shell select i_num, i_res, j_num, j_res, j_sstype, 2 as shell, weight_bb as BB, weight_SC as SC " +
+						"from "+targetEdges+" where graph_id="+cgraph_id+" and i_cid='"+ccid+"' and i_num="+j_num+";";
 				// System.out.println(">"+sql); 
 				mst.executeUpdate( sql); 
 				mst.close(); 
@@ -101,7 +101,8 @@ public class writeTargetMoves {
 			stmt.close(); 
 
 			System.out.println("retrieving the entire nbhood (1st and 2nd shell)");  
-			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn from temp_shell where j_num!="+cnum+" group by j_num order by j_num;";
+			sql = "select j_num, j_res, j_sstype, min(shell) as shell, count(*) as cn, max(BB) as BB, max(SC) as SC " +
+					"from temp_shell where j_num!="+cnum+" group by j_num order by j_num;";
 			stmt = conn.createStatement();
 			rsst = stmt.executeQuery(sql);
 			n1=0; 
@@ -115,7 +116,7 @@ public class writeTargetMoves {
 					n2++;
 					System.out.print("2#"+n2);
 				} // end if 2nd shell 
-				System.out.println(" :\t"+rsst.getInt( 1)+"\t"+rsst.getString( 2)+"\t"+rsst.getString( 3)+"\t"+rsst.getInt( 4)+"\t"+rsst.getInt( 5)); 
+				System.out.println(" :\t"+rsst.getInt( 1)+"\t"+rsst.getString( 2)+"\t"+rsst.getString( 3)+"\t"+rsst.getInt( 4)+"\t"+rsst.getInt( 5)+"\t"+rsst.getInt( 6)+"\t"+rsst.getInt( 7)); 
 			} // end while
 			
 			System.out.println("|1st shell|="+n1+" \tx\t |2nd shell|="+n2);
@@ -146,25 +147,16 @@ public class writeTargetMoves {
 					nb="%";
 					ni=0; nj=0; 
 					rsst.beforeFirst();
+					
 					while (rsst.next()) {
 						j_num = rsst.getInt(1); 
 						j_res = rsst.getString(2);
 						j_sec = rsst.getString(3); 
 						j_shell = rsst.getInt(4);
 						j_cnsize = rsst.getInt(5);
-						/* j_sc = 
-						 * j_bb = 
-						if ( (j_bb>j_sc) ) { // bb dominated -> only symbol for sstype
-        				k_bb++; 
-        				nextnb="o"; // for "other" 
-        				if (j_ss.equals("H")) nextnb="z"; // Helix 
-        				if (j_ss.equals("S")) nextnb="b"; // beta strand 
-        			} else { // sc dominated contact
-        				k_sc++; 
-        				nextnb=j_res; 
-        			} // end if bb dominated
-
-						 */
+						j_bb = rsst.getInt(6);
+						j_sc = rsst.getInt(7);
+						if (VL>=2) System.out.print("\n"+rsst.getInt( 1)+"\t"+rsst.getString( 2)+"\t"+rsst.getString( 3)+"\t"+rsst.getInt( 4)+"\t"+rsst.getInt( 5)+"\t"+rsst.getInt( 6)+"\t"+rsst.getInt( 7));
 
 						if (j_num>cnum) { // we are over central residue  
 							if (!overx) {
@@ -177,12 +169,13 @@ public class writeTargetMoves {
 						if (j_shell==1) { // a direct 1st shell neighbour 
 							ni++;
 							if (ni!=i) {// if this is NOT the one direct nb 2B dropped
-								// if SC
-								nn+=j_res.toUpperCase()+"%"; // it is included
-								nb+=j_res.toUpperCase()+"%";
-								//else 
-								//	nn+=j_sec.toUpperCase()+"%"; // it is included
-								//nb+=xlateSS(j_sec)+"%";
+								if (j_sc>=j_bb) { // SC dominated 
+									nn+=j_res.toUpperCase()+"%"; // it is included
+									nb+=j_res.toUpperCase()+"%";
+								} else { // BB dominated 
+									nn+=xlateSS( j_sec)+"%"; // it is included
+									nb+=xlateSS( j_sec)+"%";
+								} // end if SC/BB domin. 
 							} else { // this one IS dropped
 								minus = j_num; 
 								mres  = j_res; 
@@ -215,7 +208,7 @@ public class writeTargetMoves {
 					
 					// Store the resulting moves (nn for +SC, nb for +BB contact) 
 					// insert into target_score values ( 1, 2, 'C', 0, 'A', 'H', 1, 2, 112, 'V', 'H', 3, 123, 'P', 'O', 2, 'TESTIT', 283, 12, 0, 0.00);
-					// SC move 
+					// SC move into resulting table 
 					mst = conn.createStatement();
 					sql = "insert into target_score values ( "+cgraph_id+", "+cnode_id+", '"+ccid+"', "+cnum+"," +
 							" '"+cres+"', '"+csstype+"', "+i+", "+j+", "+
