@@ -26,8 +26,8 @@ public class scoreTargetMoves {
 	
 	public static void main(String[] args) {
 		
-		int graph_id, node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank;
-		String sql, scoreTableName, cid, res, sstype, nn, pred="";  
+		int graph_id, node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
+		String sql, scoreTableName, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
 		Statement mstmt, nstmt;  
 		ResultSet mrsst;
 				
@@ -44,18 +44,20 @@ public class scoreTargetMoves {
 			mstmt.close(); 
 			//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 and j=0;";
 			//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 or j=0;";
-			sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score;"; // where pss='';"; to exclude ss inserts  
+			sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score;";
+				//	"order by graph_id, node_id, cid, num, i, j limit 23;"; // where pss='';"; to exclude ss inserts  
 			mstmt = conn.createStatement();
 			mstmt.executeUpdate(sql); 
 			mstmt.close(); 
 
-			sql = "select graph_id, node_id, cid, num, res, sstype, i, j, nn from "+scoreTableName+" order by graph_id, node_id, cid, num, i, j;"; 
+			sql = "select graph_id, node_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
+					" from "+scoreTableName+" order by graph_id, node_id, cid, num, i, j;"; 
 			mstmt = conn.createStatement();
 			mrsst = mstmt.executeQuery(sql); 
 			counter=0; 
 			while (mrsst.next()) {
 				counter++;
-				System.out.print("\n"+counter+":\t"); 
+				// System.out.print("\n"+counter+":\t"); 
 				
 				graph_id = mrsst.getInt( 1);
 				node_id  = mrsst.getInt( 2);
@@ -65,26 +67,40 @@ public class scoreTargetMoves {
 				sstype   = mrsst.getString( 6);
 				i        = mrsst.getInt( 7);
 				j        = mrsst.getInt( 8);
-				nn       = mrsst.getString( 9);
+				minus    = mrsst.getInt( 9);
+				mres     = mrsst.getString( 10);
+				mss      = mrsst.getString( 11);
+				mcn      = mrsst.getInt( 12);
+				plus     = mrsst.getInt( 13);
+				pres     = mrsst.getString( 14);
+				pss      = mrsst.getString( 15);
+				pcn      = mrsst.getInt( 16);
+				
+				nn       = mrsst.getString( 17);
 
-				System.out.print(graph_id+"\t"+node_id+"\t"+cid+"\t"+num+"\t"+res+"\t"+sstype+"\t"+i+"\t"+j+"\t"+nn+"\t");
+//				graph_id | node_id | cid | num | res  | sstype | i | j  | minus | mres | mss  | mcn | plus | pres | pss  | pcn | nn | total | rank | deltarank | score
+				System.out.print(graph_id+"\t"+node_id+"\t"+cid+"\t"+num+"\t"+res+"\t"+sstype+"\t"+i+"\t"+j+"\t"); 
+				System.out.print(minus+"\t"+mres+"\t"+mss+"\t"+mcn+"\t"+plus+"\t"+pres+"\t"+pss+"\t"+pcn+"\t"+nn+"\t");
+				
 				if (j==0) { // top entry / column of movematrix 
 					pred=nn; 
 				}
+				if (VL>=2) System.out.println("\n["+i+","+j+"]");
 				getCountRank( nn, res, pred); 
 				total = sTotal; 
 				rank = sRank;
 				if (i==0 && j==0) nullrank = rank; 
 				deltaRank = rank-nullrank; 
-				System.out.print("\t"+total+"\t"+rank); 
+				System.out.println("\t"+total+"\t"+rank+"\t"+deltaRank+"\t"+0.0); 
+				// graph_id | node_id | cid | num | res  | sstype | i | j  | minus | mres | mss  | mcn | plus | pres | pss  | pcn | nn | total | rank | deltarank | score
 				
-				sql = "update "+scoreTableName+" set total="+sTotal+", rank="+sRank+", deltarank="+deltaRank
+				/*sql = "update "+scoreTableName+" set total="+sTotal+", rank="+sRank+", deltarank="+deltaRank
 				+" where graph_id="+graph_id+" and node_id="+node_id+" and cid='"+cid+"' and num="+num
 				+" and i="+i+" and j="+j+";";
 				nstmt = conn.createStatement();
 				nstmt.executeUpdate(sql); 
 				nstmt.close(); 
-				
+				*/ 
 			} // end while 
 			
 			// Cleanup ... 
