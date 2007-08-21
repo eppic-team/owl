@@ -8,9 +8,9 @@ public class rewriteNBHood {
 
 	/**
 	 * rewriting the nbhoodstring such that BB dominated nbs are represented by SSType
-	 * only single gapsymbol is uded for nbhoodstring w/gaps (nwg and fwg)  
+	 * only single gapsymbol is used for nbhood and fullstring _With _Gaps (nwg and fwg)  
 	 * output to stdout such that it can be read by
-	 * load data infile 
+	 * mysql> load data infile '/scratch/local/cullpdb/cullpdb_20.nbhoods' into table nbstrings;
 	 * see bottom for table definition 
 	 * @author lappe
 	 */
@@ -19,7 +19,7 @@ public class rewriteNBHood {
 	static MySQLConnection conn;
 	static int k=0, k_sc=0, k_bb=0;
 	static int minDmeansSC=10; // above this threshold contacts are assumed to be SC dominated 
-	static String backgrndDB = "cullpdb_20"; 
+	static String backgrndDB = "cullpdb_40"; 
 
 	public static void main(String[] args) throws SQLException {
 		String nbhood = "", msql, cid, res, sectype;
@@ -174,4 +174,24 @@ public class rewriteNBHood {
 		return SSymbol; 
 	} // end xlateSS
 
-}
+} // end 
+
+/* table definition for the results
+
+CREATE TABLE `nbstrings` (
+`graph_id` int(10) unsigned DEFAULT NULL,
+`node_id` int(10) unsigned DEFAULT NULL,
+`cid` varchar(6) COLLATE latin1_general_cs DEFAULT NULL,
+`num` int(10) unsigned DEFAULT NULL,
+`res` char(1) COLLATE latin1_general_cs DEFAULT NULL,
+`sstype` char(1) COLLATE latin1_general_cs DEFAULT NULL,
+`k` int(10) unsigned DEFAULT NULL,
+`k_BB` int(10) unsigned DEFAULT NULL,
+`k_SC` int(10) unsigned DEFAULT NULL,
+`n` varchar(30) COLLATE latin1_general_cs DEFAULT NULL,
+`nwg` varchar(40) COLLATE latin1_general_cs DEFAULT NULL,
+`f` varchar(30) COLLATE latin1_general_cs DEFAULT NULL,
+`fwg` varchar(40) COLLATE latin1_general_cs DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_general_cs; 
+
+*/ 
