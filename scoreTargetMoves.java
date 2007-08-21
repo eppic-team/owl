@@ -18,7 +18,7 @@ public class scoreTargetMoves {
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
 	static String prgID = "V02"; 
-	static String backgrndDB = "pdb_reps_graph_4_2";  
+	static String backgrndDB = "cullpdb_20";  
 	static String targetDB = "CASP_decoys"; 
 	static String targetNodes = "target_node";
 	static String targetEdges = "target_edge";
@@ -44,7 +44,7 @@ public class scoreTargetMoves {
 			mstmt.close(); 
 			//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 and j=0;";
 			//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 or j=0;";
-			sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where pss='';"; 
+			sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score;"; // where pss='';"; to exclude ss inserts  
 			mstmt = conn.createStatement();
 			mstmt.executeUpdate(sql); 
 			mstmt.close(); 
@@ -123,7 +123,7 @@ public class scoreTargetMoves {
 			if (VL>=2) System.out.println("prec_n: ["+prec_n+"]");
 			if (prec_n.equals(this_n)) {
 				if (VL>=2) System.out.println("have to create db for this "+prec_n);
-				sql = "create table IF NOT EXISTS nbhashtables."+prec_n+" as select res, n, k from "+backgrndDB+".single_model_node where n like '"+nbs+"';"; 
+				sql = "create table IF NOT EXISTS nbhashtables."+prec_n+" as select res, n, k from "+backgrndDB+".nbstrings where n like '"+nbs+"';"; 
 				if (VL>=2) System.out.println(" >> "+sql); 
 				stmt = conn.createStatement();
 				stmt.executeUpdate( sql); 
