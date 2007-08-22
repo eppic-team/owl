@@ -19,7 +19,7 @@ public class rewriteNBHood {
 	static MySQLConnection conn;
 	static int k=0, k_sc=0, k_bb=0;
 	static int minDmeansSC=10; // above this threshold contacts are assumed to be SC dominated 
-	static String backgrndDB = "cullpdb_40"; 
+	static String backgrndDB = "cullpdb_90"; 
 
 	public static void main(String[] args) throws SQLException {
 		String nbhood = "", msql, cid, res, sectype;
