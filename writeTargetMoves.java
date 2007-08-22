@@ -186,8 +186,8 @@ public class writeTargetMoves {
 						} else { // 2nd shell neighbour 
 							nj++; 
 							if (nj==j) { // this is the 2nd shell nb 2B included
-								nn+=j_res.toUpperCase()+"%";
-								nb+=xlateSS(j_sec)+"%";
+								if (j_sc>=j_bb) nn+=j_res.toUpperCase()+"%"; // SC dominated 
+								else nn+=xlateSS(j_sec)+"%";
 								plus  = j_num; 
 								pres  = j_res; 
 								pss   = j_sec; 
@@ -213,25 +213,13 @@ public class writeTargetMoves {
 					sql = "insert into target_score values ( "+cgraph_id+", "+cnode_id+", '"+ccid+"', "+cnum+"," +
 							" '"+cres+"', '"+csstype+"', "+i+", "+j+", "+
 							minus+", '"+mres+"', '"+mss+"', "+mcn+", "+
-							plus +", '"+pres+"', '', "+pcn+", "+
+							plus +", '"+pres+"', '"+pss+"', "+pcn+", "+
 							"'"+nn+"', 0, 0, 0, 0.00);";
 							
 					// System.out.println(">"+sql); 
 					mst.executeUpdate( sql); 
 					mst.close();
-					// BB move 
-					if (!nn.equals(nb)) { // no need to write again if same for SC/BB move  
-						mst = conn.createStatement();
-						sql = "insert into target_score values ( "+cgraph_id+", "+cnode_id+", '"+ccid+"', "+cnum+"," +
-						" '"+cres+"', '"+csstype+"', "+i+", "+j+", "+
-						minus+", '"+mres+"', '"+mss+"', "+mcn+", "+
-						plus +", '', '"+pss+"', "+pcn+", "+
-						"'"+nb+"', 0, 0, 0, 0.00);";
-
-						// System.out.println(">"+sql); 
-						mst.executeUpdate( sql); 
-						mst.close();
-					} // end if same nbstring 
+					
 				} // close inner loop (i)
 				if (VL>=1) {
 				   System.out.println(".");
