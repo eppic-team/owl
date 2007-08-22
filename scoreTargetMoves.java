@@ -17,7 +17,7 @@ public class scoreTargetMoves {
 	static int VL=1; // Verbosity Level 
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
-	static String prgID = "V02"; 
+	static String prgID = "V03"; 
 	static String backgrndDB = "cullpdb_20";  
 	static String targetDB = "CASP_decoys"; 
 	static String targetNodes = "target_node";
@@ -28,7 +28,7 @@ public class scoreTargetMoves {
 		
 		int graph_id, node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
 		String sql, scoreTableName, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
-		Statement mstmt, nstmt;  
+		Statement mstmt;  
 		ResultSet mrsst;
 				
 		try {
