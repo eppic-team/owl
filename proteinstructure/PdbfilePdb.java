@@ -15,7 +15,7 @@ import javax.vecmath.Point3d;
 
 public class PdbfilePdb extends Pdb {
 	
-	private static final String UNKNOWN_STRING ="Unknown";
+	private static final String UNKNOWN_STRING ="XXXX";
 	private static final String NULL_chainCode = "A";
 	
 	private String pdbfile;
