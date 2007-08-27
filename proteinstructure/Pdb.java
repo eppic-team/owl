@@ -454,10 +454,10 @@ public abstract class Pdb {
 	
 	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
 		TreeMap<Integer,Point3d> i_coords = null;
-		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
+		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymmetric edge types
 		boolean directed = false;
 		if (!ct.contains("/")){
-			i_coords = get_coords_for_ct(ct);
+			i_coords = get_coords_for_ct(ct);			// mapping from atom serials to coordinates
 			directed = false;
 		} else {
 			String i_ct = ct.split("/")[0];
@@ -469,7 +469,7 @@ public abstract class Pdb {
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
 		int[] j_atomserials = null;
 		
-		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
+		int SCALE=100; // i.e. we use units of hundredths of Angstroms (thus cutoffs can be specified with a maximum precission of 0.01A)
 		
 		int boxSize = (int) Math.floor(cutoff*SCALE);
 		
@@ -524,8 +524,10 @@ public abstract class Pdb {
 			j_atomserials = i_atomserials;
 		}
 		
+		// count density
 		for(Point3i floor:boxes.keySet()) {
-			int size = boxes.get(floor).size();
+			//int size = boxes.get(floor).size();
+			int size = getNumGridNbs(boxes, floor, boxSize);	// count number of neighbouring grid cells with points in them
 			if(densityCount.containsKey(size)) {
 				int old = densityCount.get(size);
 				densityCount.put(size, ++old);
@@ -533,6 +535,25 @@ public abstract class Pdb {
 				densityCount.put(size, 1);
 			}
 		}
+		
+		
+	}
+	
+	/** Returns the number of neighbours of this grid cell */
+	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
+		Point3i neighbor;
+		int nbs = 0;
+		for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
+			for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
+				for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
+						neighbor = new Point3i(x,y,z);
+						if (boxes.containsKey(neighbor)) nbs++;
+				}
+			}
+		} 
+		// compensate for counting myself as a neighbour
+		if(boxes.containsKey(floor)) nbs--;
+		return nbs;
 	}
 	
 	public int get_resser_from_pdbresser (String pdbresser){
