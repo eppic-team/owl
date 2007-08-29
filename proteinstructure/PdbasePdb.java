@@ -109,7 +109,6 @@ public class PdbasePdb extends Pdb {
         this.entitykey=get_entity_key();
         this.alt_locs_sql_str=get_atom_alt_locs();
 		
-		this.chainCode = getChainCode();
 		this.sequence = read_seq();
 		this.fullLength = sequence.length();
 		
