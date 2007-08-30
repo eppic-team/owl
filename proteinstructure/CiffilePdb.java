@@ -42,6 +42,8 @@ public class CiffilePdb extends Pdb {
 	private TreeMap<String,Integer> fields2indices;					// map of field names (id.field) to index (for loop elements)
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
 	private TreeMap<Integer,Interval> loopelements2contentIndex;    // begin and end line index of each loop element
+	
+	private String altLoc;
  
 	/**
 	 * Constructs Pdb object given pdb code and pdb chain code. 
@@ -73,6 +75,8 @@ public class CiffilePdb extends Pdb {
 		
 		this.pdbCode = readPdbCode();
 
+		readAtomAltLocs(); // sets altLoc String (needed in parseLoopElements to get the right alt atom locations in reading atom_site)
+		
 		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
 		
 		parseLoopElements(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser, sequence, pdbresser2resser, secondaryStructure
@@ -162,6 +166,43 @@ public class CiffilePdb extends Pdb {
 		return fields2values.get("_entry.id").trim();
 	}
 	
+	private void readAtomAltLocs() throws IOException {
+		// The read of the atom_sites_alt element must be done in a separate scan of the file, previous to scanning the atom_site element
+		// This is because the order of the different elements in the cif files is not guaranteed, so atom_sites_alt can come before or after atom_site
+		// (and altLoc needs to be set before starting reading the atom_site element)
+
+		ArrayList<String> altLocs = new ArrayList<String>();
+		// we initialise to ".", this is the default value in the cif files for the alt loc field. If no atom_sites_alt is present it's ok to stay with this value
+		altLoc = ".";  
+		
+		// atom_sites_alt element is optional
+		Interval intAtomSitesAlt = null;
+		if (ids2elements.containsKey(atomSitesAltId)){
+			intAtomSitesAlt = loopelements2contentIndex.get(ids2elements.get(atomSitesAltId));
+		}
+
+		BufferedReader fcif = new BufferedReader(new FileReader(new File(ciffile)));
+		String line;
+		int linecount=0;
+		while((line = fcif.readLine()) != null ) {
+			linecount++; 
+			// atom_sites_alt (optional element)
+			if (intAtomSitesAlt!=null && linecount>=intAtomSitesAlt.beg && linecount<=intAtomSitesAlt.end){
+				int idIdx = fields2indices.get(atomSitesAltId+".id");
+				// id=0
+				// A ?
+				String[] tokens = line.split("\\s+");
+				if (!tokens[idIdx].equals(".")) {
+					altLocs.add(tokens[idIdx]);
+				}
+			} 
+		}
+		fcif.close();
+		if (!altLocs.isEmpty()){
+			altLoc = Collections.min(altLocs);
+		}
+	}
+	
 	private void parseLoopElements() throws IOException, PdbChainCodeNotFoundError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
@@ -176,15 +217,7 @@ public class CiffilePdb extends Pdb {
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
 		
-		ArrayList<String> altLocs = new ArrayList<String>();
-		String altLoc = ".";
-
 		Interval intAtomSite = loopelements2contentIndex.get(ids2elements.get(atomSiteId));
-		// atom_sites_alt element is optional
-		Interval intAtomSitesAlt = null;
-		if (ids2elements.containsKey(atomSitesAltId)){
-			intAtomSitesAlt = loopelements2contentIndex.get(ids2elements.get(atomSitesAltId));
-		}
 		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
 		// struct_conf element is optional
 		Interval intStructConf = null;
@@ -203,20 +236,6 @@ public class CiffilePdb extends Pdb {
 		int linecount=0;
 		while((line = fcif.readLine()) != null ) {
 			linecount++; 
-			// atom_sites_alt (optional element)
-			if (intAtomSitesAlt!=null && linecount>=intAtomSitesAlt.beg && linecount<=intAtomSitesAlt.end){
-				int idIdx = fields2indices.get(atomSitesAltId+".id");
-				// id=0
-				// A ?
-				String[] tokens = line.split("\\s+");
-				if (!tokens[idIdx].equals(".")) {
-					altLocs.add(tokens[idIdx]);
-				}
-				continue;
-			} 
-			if (!altLocs.isEmpty()){
-				altLoc = Collections.min(altLocs);
-			}
 			// atom_site
 			if (linecount>=intAtomSite.beg && linecount<=intAtomSite.end){ 
 				int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
