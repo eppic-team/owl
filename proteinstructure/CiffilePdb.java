@@ -163,7 +163,38 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	private String readPdbCode(){
-		return fields2values.get("_entry.id").trim();
+		return fields2values.get(entryId+".id").trim();
+	}
+	
+	private void parseStructConfNoLoop() {
+		String chainCodeStr=pdbChainCode;
+		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
+
+		String begPdbChainCode = fields2values.get(structConfId+".beg_auth_asym_id").trim();
+		if (begPdbChainCode.equals(chainCodeStr)) { // we don't have yet chainCode (normally struct_conf appears before atom_site in cif file), so we need to use the auth_asym_id
+			
+			String id = fields2values.get(structConfId+".id").trim();
+			int beg = Integer.parseInt(fields2values.get(structConfId+".beg_label_seq_id").trim());
+			int end = Integer.parseInt(fields2values.get(structConfId+".end_label_seq_id").trim());
+			Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
+			Matcher m = p.matcher(id);
+			String ssId="Unknown";
+			if (m.find()){
+				ssId = m.group(1)+m.group(2); // e.g.: Hnn (helices) or Tnn (turns) 				
+			}
+			char ssType = SecStrucElement.OTHER;
+			if(id.startsWith("H")) {
+				ssType = SecStrucElement.HELIX;
+			} else if(id.startsWith("T")) {
+				ssType = SecStrucElement.TURN;
+			} else {
+				System.err.println("Unknown secondary structure type " + id + " encountered when reading from ciffile. Skipping.");
+			}
+			if(ssType != SecStrucElement.OTHER) {
+				SecStrucElement ssElem = new SecStrucElement(ssType, beg, end, ssId);
+				secondaryStructure.add(ssElem);
+			}
+		}
 	}
 	
 	private void readAtomAltLocs() throws IOException {
@@ -221,8 +252,13 @@ public class CiffilePdb extends Pdb {
 		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
 		// struct_conf element is optional
 		Interval intStructConf = null;
-		if (ids2elements.containsKey(structConfId)){
+		if (ids2elements.containsKey(structConfId)) {
+			// if not a loop element then intStructConf stays null
 			intStructConf = loopelements2contentIndex.get(ids2elements.get(structConfId));
+		} 
+		// taking care of cases where struct_conf is not a loop element but a one value field
+		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
+			parseStructConfNoLoop();
 		}
 		// struct_sheet_range element is optional
 		Interval intStructSheet = null; 
@@ -293,6 +329,7 @@ public class CiffilePdb extends Pdb {
 				String[] tokens = line.split("\\s+");
 				if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 					int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
+					//TODO revise: do we want auth_seq_num or pdb_seq_num here??
 					String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
 					String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
 					String pdb_res_serial_with_icode = pdb_res_serial;

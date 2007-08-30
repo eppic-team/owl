@@ -333,6 +333,7 @@ public class PdbasePdb extends Pdb {
 		}
 
 		HashMap<String,Integer> map = new HashMap<String, Integer>();
+		//TODO revise: do we want auth_seq_num or pdb_seq_num here??
 		String sql="SELECT seq_id, concat(auth_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
 					" FROM "+db+".pdbx_poly_seq_scheme " +
 					" WHERE entry_key=" + entrykey +
