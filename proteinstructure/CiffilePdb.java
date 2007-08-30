@@ -219,6 +219,7 @@ public class CiffilePdb extends Pdb {
 			}
 			// atom_site
 			if (linecount>=intAtomSite.beg && linecount<=intAtomSite.end){ 
+				int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
 				int idIdx = fields2indices.get(atomSiteId+".id");
 				int labelAtomIdIdx = fields2indices.get(atomSiteId+".label_atom_id");
 				int labelAltIdIdx = fields2indices.get(atomSiteId+".label_alt_id");
@@ -230,11 +231,11 @@ public class CiffilePdb extends Pdb {
 				int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
 				int authAsymIdIdx = fields2indices.get(atomSiteId+".auth_asym_id");
 				int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
-				// auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
+				// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
 				//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
 				//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
 				String[] tokens = line.split("\\s+");
-				if (tokens[authAsymIdIdx].equals(chainCodeStr) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
+				if (tokens[groupPdbIdx].equals("ATOM") && tokens[authAsymIdIdx].equals(chainCodeStr) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
 					empty = false;
 					if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
 						int atomserial=Integer.parseInt(tokens[idIdx]); // id
@@ -262,16 +263,16 @@ public class CiffilePdb extends Pdb {
 			}
 			// pdbx_poly_seq_scheme
 			if (linecount>=intPdbxPoly.beg && linecount<=intPdbxPoly.end){
-				int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
 				int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
 				int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
 				int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
 				int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
+				int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
 				// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
 				// 0 1 2     3 4   5   6     7   8 910
 				// A 1 1   ASP 1   1   1   ASP ASP A .
 				String[] tokens = line.split("\\s+");
-				if (tokens[asymIdIdx].equals(chainCode)) { // we already have chainCode from _atom_site element that should appear before pdbx_poly_seq_scheme in cif file
+				if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 					int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
 					String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
 					String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
@@ -287,21 +288,23 @@ public class CiffilePdb extends Pdb {
 		        		sequence+=NONSTANDARD_AA_LETTER;
 		        	}
 					// pdbresser2resser
-					pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
+					if (!pdb_res_serial_with_icode.equals("?")) { // question marks are author missing serials, we don't want them in the map
+						pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
+					}
 				}
 				continue;
 			}
 			// struct_conf (optional element), HELIX and TURN secondary structure
 			if (intStructConf!=null && linecount>=intStructConf.beg && linecount<=intStructConf.end){
 				int idIdx = fields2indices.get(structConfId+".id");
-				int begLabelAsymIdIdx = fields2indices.get(structConfId+".beg_label_asym_id");
+				int begAuthAsymIdIdx = fields2indices.get(structConfId+".beg_auth_asym_id");
 				int begLabelSeqIdIdx = fields2indices.get(structConfId+".beg_label_seq_id");
 				int endLabelSeqIdIdx = fields2indices.get(structConfId+".end_label_seq_id");
 				//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
 				//     0       1  2    3 4 5   6   7 8  9 10  111213    1415 16 1718 19
 				//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
 				String[] tokens = line.split("\\s+");
-				if (tokens[begLabelAsymIdIdx].equals(chainCode)) {
+				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)) { // we don't have yet chainCode (normally struct_conf appears before atom_site in cif file), so we need to use the auth_asym_id
 					String id = tokens[idIdx];
 					Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
 					Matcher m = p.matcher(id);
@@ -330,14 +333,14 @@ public class CiffilePdb extends Pdb {
 			if (intStructSheet!=null && linecount>=intStructSheet.beg && linecount<=intStructSheet.end){
 				int sheetIdIdx = fields2indices.get(structSheetId+".sheet_id");
 				int idIdx = fields2indices.get(structSheetId+".id");
-				int begLabelAsymIdIdx = fields2indices.get(structSheetId+".beg_label_asym_id");
+				int begAuthAsymIdIdx = fields2indices.get(structSheetId+".beg_auth_asym_id");
 				int begLabelSeqIdIdx = fields2indices.get(structSheetId+".beg_label_seq_id");
 				int endLabelSeqIdIdx = fields2indices.get(structSheetId+".end_label_seq_id");
 				//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
 				//0 1   2 3  4 5   6 7  8 910  1112 13  1415 16
 				//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
 				String[] tokens = line.split("\\s+");
-				if (tokens[begLabelAsymIdIdx].equals(chainCode)){
+				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)){ // we don't have yet chainCode (normally struct_sheet_range appears before atom_site in cif file), so we need to use the auth_asym_id
 					String sheetid = tokens[sheetIdIdx];
 					int id = Integer.parseInt(tokens[idIdx]);
 					int beg = Integer.parseInt(tokens[begLabelSeqIdIdx]);
