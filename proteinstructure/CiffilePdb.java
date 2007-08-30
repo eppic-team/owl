@@ -307,7 +307,7 @@ public class CiffilePdb extends Pdb {
 		        		sequence+=NONSTANDARD_AA_LETTER;
 		        	}
 					// pdbresser2resser
-					if (!pdb_res_serial_with_icode.equals("?")) { // question marks are author missing serials, we don't want them in the map
+					if (!pdb_res_serial_with_icode.startsWith("?")) { // question marks are author missing serials, we don't want them in the map
 						pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
 					}
 				}
