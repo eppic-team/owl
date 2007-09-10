@@ -18,7 +18,7 @@ public class scoreTargetMoves {
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
 	static String prgID = "V03"; 
-	static String backgrndDB = "cullpdb_20";  
+	static String backgrndDB = "cullpdb_90";  
 	static String targetDB = "CASP_decoys"; 
 	static String targetNodes = "target_node";
 	static String targetEdges = "target_edge";
