@@ -62,7 +62,7 @@ public class writeTargetMoves {
 	public static void writeMoves( int cgraph_id, int cnode_id, String ccid, int cnum, String cres, String csstype) {
 		int n1=0, n2=0, ni=0, nj=0, i=0, j=0, j_num=0, j_shell=0, j_cnsize=0, j_bb, j_sc;
 		int minus, mcn, plus, pcn; 
-		String sql, j_res, j_sec, mres, mss, pres, pss, nn, nb; 
+		String sql, j_res, j_sec, mres, mss, pres, pss, nn, nb, nextn, lastn="", iks; 
 		boolean overx = false;
 		Statement stmt, mst;  
 		ResultSet rsst;
@@ -121,7 +121,7 @@ public class writeTargetMoves {
 			
 			System.out.println("|1st shell|="+n1+" \tx\t |2nd shell|="+n2);
 			mst = conn.createStatement();
-			sql = "delete from target_score where graph_id="+cgraph_id+" and node_id="+cnode_id+" and cid='"+ccid+"' and num="+cnum+";"; 
+			sql = "delete from target_short where graph_id="+cgraph_id+" and node_id="+cnode_id+" and cid='"+ccid+"' and num="+cnum+";"; 
 			System.out.println(">"+sql); 
 			mst.executeUpdate( sql); 
 			mst.close(); 
@@ -145,7 +145,10 @@ public class writeTargetMoves {
 					pcn   = n1;
 					nn="%";
 					nb="%";
-					ni=0; nj=0; 
+					ni=0; nj=0;
+					lastn="??";
+					nextn=""; 
+					iks=""; 
 					rsst.beforeFirst();
 					
 					while (rsst.next()) {
@@ -156,11 +159,13 @@ public class writeTargetMoves {
 						j_cnsize = rsst.getInt(5);
 						j_bb = rsst.getInt(6);
 						j_sc = rsst.getInt(7);
+						
 						if (VL>=2) System.out.print("\n"+rsst.getInt( 1)+"\t"+rsst.getString( 2)+"\t"+rsst.getString( 3)+"\t"+rsst.getInt( 4)+"\t"+rsst.getInt( 5)+"\t"+rsst.getInt( 6)+"\t"+rsst.getInt( 7));
 
+						iks="";
 						if (j_num>cnum) { // we are over central residue  
 							if (!overx) {
-								nn+="x%";
+								iks="x%";
 								nb+="x%";
 								overx=true; 
 							} // end if over x 
@@ -170,10 +175,10 @@ public class writeTargetMoves {
 							ni++;
 							if (ni!=i) {// if this is NOT the one direct nb 2B dropped
 								if (j_sc>=j_bb) { // SC dominated 
-									nn+=j_res.toUpperCase()+"%"; // it is included
+									nextn=j_res.toUpperCase()+"%"; // it is included
 									nb+=j_res.toUpperCase()+"%";
 								} else { // BB dominated 
-									nn+=xlateSS( j_sec)+"%"; // it is included
+									nextn=xlateSS( j_sec)+"%"; // it is included
 									nb+=xlateSS( j_sec)+"%";
 								} // end if SC/BB domin. 
 							} else { // this one IS dropped
@@ -186,8 +191,14 @@ public class writeTargetMoves {
 						} else { // 2nd shell neighbour 
 							nj++; 
 							if (nj==j) { // this is the 2nd shell nb 2B included
-								if (j_sc>=j_bb) nn+=j_res.toUpperCase()+"%"; // SC dominated 
-								else nn+=xlateSS(j_sec)+"%";
+								if (j_sc>=j_bb) {
+									nextn=j_res.toUpperCase()+"%"; // SC dominated
+									nb += j_res.toUpperCase()+"%";
+								}
+								else {
+									nextn=xlateSS(j_sec)+"%";
+									nb+=xlateSS( j_sec)+"%";
+								}
 								plus  = j_num; 
 								pres  = j_res; 
 								pss   = j_sec; 
@@ -195,28 +206,34 @@ public class writeTargetMoves {
 							} // end if 
 			
 						} // end if 1st/2nd shell
-						
+						nn+=iks; 
+						if (!lastn.equals( nextn)) { 
+						   nn+=nextn;  
+						}
+						lastn = nextn;
+						nextn=""; 
 					} // end while through the entire nbhood
 					if (!overx) { // in case x is the very last we haven't seen it yet  
 						nn+="x%"; // add it in the end
 						nb+="x%"; 
 						overx=true; 
 					} // end if over x
+					
 					if (VL>=1) {
 						System.out.print("("+nn+")\t("+nb+")\t");
 					}
 					
 					// Store the resulting moves (nn for +SC, nb for +BB contact) 
-					// insert into target_score values ( 1, 2, 'C', 0, 'A', 'H', 1, 2, 112, 'V', 'H', 3, 123, 'P', 'O', 2, 'TESTIT', 283, 12, 0, 0.00);
+					// insert into target_short values ( 1, 2, 'C', 0, 'A', 'H', 1, 2, 112, 'V', 'H', 3, 123, 'P', 'O', 2, 'TESTIT', 283, 12, 0, 0.00);
 					// SC move into resulting table 
 					mst = conn.createStatement();
-					sql = "insert into target_score values ( "+cgraph_id+", "+cnode_id+", '"+ccid+"', "+cnum+"," +
+					sql = "insert into target_short values ( "+cgraph_id+", "+cnode_id+", '"+ccid+"', "+cnum+"," +
 							" '"+cres+"', '"+csstype+"', "+i+", "+j+", "+
 							minus+", '"+mres+"', '"+mss+"', "+mcn+", "+
 							plus +", '"+pres+"', '"+pss+"', "+pcn+", "+
 							"'"+nn+"', 0, 0, 0, 0.00);";
 							
-					// System.out.println(">"+sql); 
+					if (VL>=2) System.out.println(">"+sql); 
 					mst.executeUpdate( sql); 
 					mst.close();
 					
