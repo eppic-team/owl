@@ -40,6 +40,7 @@ public class CiffilePdb extends Pdb {
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
 	private TreeMap<String,Integer> fields2indices;					// map of field names (id.field) to index (for loop elements)
+	private TreeMap<String,Integer> ids2fieldsIdx;					// map of element ids to field index counter (after parseCifFile method done it contains the total number of fields per element id)
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
 	private TreeMap<Integer,Interval> loopelements2contentIndex;    // begin and end line index of each loop element
 	
@@ -52,8 +53,9 @@ public class CiffilePdb extends Pdb {
 	 * @param pdbChainCode
 	 * @throws PdbChainCodeNotFoundError
 	 * @throws IOException 
+	 * @throws CiffileFormatError 
 	 */
-	public CiffilePdb (String ciffile, String pdbChainCode) throws PdbChainCodeNotFoundError, IOException {
+	public CiffilePdb (String ciffile, String pdbChainCode) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
 		this(ciffile, pdbChainCode, DEFAULT_MODEL);
 	}
 
@@ -65,8 +67,9 @@ public class CiffilePdb extends Pdb {
 	 * @param model_serial
 	 * @throws PdbChainCodeNotFoundError
 	 * @throws IOException 
+	 * @throws CiffileFormatError 
 	 */
-	public CiffilePdb (String ciffile, String pdbChainCode, int model_serial) throws PdbChainCodeNotFoundError, IOException {
+	public CiffilePdb (String ciffile, String pdbChainCode, int model_serial) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
 		this.ciffile = ciffile;
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.model=model_serial;
@@ -104,19 +107,23 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 
-	private void parseCifFile() throws IOException{
+	private void parseCifFile() throws IOException, CiffileFormatError{
 		// data structures to store the parsed fields
 		ids2elements = new TreeMap<String, Integer>();
 		fields2indices = new TreeMap<String,Integer>();
 		fields2values = new TreeMap<String, String>();
 		loopElements = new TreeSet<Integer>(); // contains list of elements that are of loop type
 		loopelements2contentIndex = new TreeMap<Integer,Interval>();
-		TreeMap<String,Integer> fieldsIdx = new TreeMap<String,Integer>(); // this map holds the field index counters for each element id
+		ids2fieldsIdx = new TreeMap<String,Integer>(); // this map holds the field index counters for each element id
 		
 		BufferedReader fcif = new BufferedReader(new FileReader(new File(ciffile)));
 		int element = 0;
 		String line;
-		line = fcif.readLine(); // skip first line
+		line = fcif.readLine(); // read first line
+		Pattern p = Pattern.compile("^data_\\d\\w\\w\\w");
+		if (!p.matcher(line).find()){
+			throw new CiffileFormatError("The file doesn't seem to be a cif file");
+		}
 		int linecount = 1; // we have read one line already, we initialise count to 1
 		while((line = fcif.readLine()) != null ) {
 			linecount++;
@@ -130,8 +137,8 @@ public class CiffilePdb extends Pdb {
 			}
 			
 			for (String id:ids){
-				if (!fieldsIdx.containsKey(id)) fieldsIdx.put(id,0);
-				Pattern p = Pattern.compile("^"+id+"\\.(\\w+)(?:\\s+(.*))?$");
+				if (!ids2fieldsIdx.containsKey(id)) ids2fieldsIdx.put(id,0);
+				p = Pattern.compile("^"+id+"\\.(\\w+)(?:\\s+(.*))?$");
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					ids2elements.put(id,element);
@@ -139,9 +146,9 @@ public class CiffilePdb extends Pdb {
 					if (!loopElements.contains(element)) { // if not a loop element
 						fields2values.put(field, m.group(2)); // 2nd capture group only matches for non-loops where the value of the field is in same line as field name
 					} else { // for loop elements we fill the fields2indices TreeMap
-						fields2indices.put(field,fieldsIdx.get(id));
+						fields2indices.put(field,ids2fieldsIdx.get(id));
 					}
-					fieldsIdx.put(id,fieldsIdx.get(id)+1); 
+					ids2fieldsIdx.put(id,ids2fieldsIdx.get(id)+1); 
 					continue;
 				}
 			}
@@ -197,7 +204,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readAtomAltLocs() throws IOException {
+	private void readAtomAltLocs() throws IOException, CiffileFormatError {
 		// The read of the atom_sites_alt element must be done in a separate scan of the file, previous to scanning the atom_site element
 		// This is because the order of the different elements in the cif files is not guaranteed, so atom_sites_alt can come before or after atom_site
 		// (and altLoc needs to be set before starting reading the atom_site element)
@@ -222,7 +229,10 @@ public class CiffilePdb extends Pdb {
 				int idIdx = fields2indices.get(atomSitesAltId+".id");
 				// id=0
 				// A ?
-				String[] tokens = line.split("\\s+");
+				String[] tokens = tokeniseFields(line);
+				if (tokens.length!=ids2fieldsIdx.get(atomSitesAltId)) {
+					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+atomSitesAltId);
+				}
 				if (!tokens[idIdx].equals(".")) {
 					altLocs.add(tokens[idIdx]);
 				}
@@ -234,7 +244,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void parseLoopElements() throws IOException, PdbChainCodeNotFoundError {
+	private void parseLoopElements() throws IOException, PdbChainCodeNotFoundError, CiffileFormatError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
@@ -289,7 +299,10 @@ public class CiffilePdb extends Pdb {
 				// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
 				//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
 				//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
-				String[] tokens = line.split("\\s+");
+				String[] tokens = tokeniseFields(line);
+				if (tokens.length!=ids2fieldsIdx.get(atomSiteId)) {
+					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+atomSiteId);
+				}
 				if (tokens[groupPdbIdx].equals("ATOM") && tokens[authAsymIdIdx].equals(chainCodeStr) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
 					empty = false;
 					if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
@@ -326,7 +339,10 @@ public class CiffilePdb extends Pdb {
 				// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
 				// 0 1 2     3 4   5   6     7   8 910
 				// A 1 1   ASP 1   1   1   ASP ASP A .
-				String[] tokens = line.split("\\s+");
+				String[] tokens = tokeniseFields(line);
+				if (tokens.length!=ids2fieldsIdx.get(pdbxPolySeqId)) {
+					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+pdbxPolySeqId);
+				}
 				if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 					int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
 					//TODO revise: do we want auth_seq_num or pdb_seq_num here??
@@ -359,7 +375,10 @@ public class CiffilePdb extends Pdb {
 				//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
 				//     0       1  2    3 4 5   6   7 8  9 10  111213    1415 16 1718 19
 				//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
-				String[] tokens = line.split("\\s+");
+				String[] tokens = tokeniseFields(line);
+				if (tokens.length!=ids2fieldsIdx.get(structConfId)) {
+					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structConfId);
+				}
 				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)) { // we don't have yet chainCode (normally struct_conf appears before atom_site in cif file), so we need to use the auth_asym_id
 					String id = tokens[idIdx];
 					Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
@@ -395,7 +414,10 @@ public class CiffilePdb extends Pdb {
 				//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
 				//0 1   2 3  4 5   6 7  8 910  1112 13  1415 16
 				//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
-				String[] tokens = line.split("\\s+");
+				String[] tokens = tokeniseFields(line);
+				if (tokens.length!=ids2fieldsIdx.get(structSheetId)) {
+					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structSheetId);
+				}
 				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)){ // we don't have yet chainCode (normally struct_sheet_range appears before atom_site in cif file), so we need to use the auth_asym_id
 					String sheetid = tokens[sheetIdIdx];
 					int id = Integer.parseInt(tokens[idIdx]);
@@ -413,4 +435,29 @@ public class CiffilePdb extends Pdb {
 			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 	}
+	
+	/**
+	 * Splits a space separated line into its individual tokens returning an array with all tokens
+	 * Takes care of quoted fields that contain spaces
+	 * e.g. HELX_P HELX_P2 H4 GLY A 111 ? GLU A 127 ? GLY A 112 GLU A 128 1 'SEE REMARK 650' 17
+	 * @param line
+	 * @return
+	 */
+	private String[] tokeniseFields(String line) {
+		String[] tokens;
+		if (line.contains("'")) { // if there are quotes in the line
+			ArrayList<String> tokensAL = new ArrayList<String>();
+			Pattern p = Pattern.compile("'[^']*'|[^ \\t]+"); // note: regex doesn't work inverting the order of expressions in the 'OR' (in python it does!)
+			Matcher m = p.matcher(line);
+			while (m.find()){
+				tokensAL.add(m.group());
+			}
+			tokens = new String[tokensAL.size()];
+			tokensAL.toArray(tokens);
+		} else { // if no quotes we simply split by columns using spaces as delimiters
+			tokens = line.split("\\s+");
+		}
+		return tokens;
+	}
+	
 }
