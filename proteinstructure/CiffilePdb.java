@@ -47,7 +47,7 @@ public class CiffilePdb extends Pdb {
 	private String altLoc;
  
 	/**
-	 * Constructs Pdb object given pdb code and pdb chain code. 
+	 * Constructs Pdb object given cif file and pdb chain code. 
 	 * Model will be DEFAULT_MODEL
 	 * @param ciffile
 	 * @param pdbChainCode
@@ -60,8 +60,7 @@ public class CiffilePdb extends Pdb {
 	}
 
 	/**
-	 * Constructs Pdb object given pdb code, pdb chain code, model serial, source db and a MySQLConnection.
-	 * The db must be a pdbase database 
+	 * Constructs Pdb object given cif file, pdb chain code and model serial 
 	 * @param ciffile
 	 * @param pdbChainCode
 	 * @param model_serial
@@ -110,7 +109,7 @@ public class CiffilePdb extends Pdb {
 			atomser2atom.put(atomserial,atom);
 		}
 	}
-
+	
 	private void parseCifFile() throws IOException, CiffileFormatError{
 		// data structures to store the parsed fields
 		ids2elements = new TreeMap<String, Integer>();
