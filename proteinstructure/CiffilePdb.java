@@ -78,11 +78,15 @@ public class CiffilePdb extends Pdb {
 		
 		this.pdbCode = readPdbCode();
 
-		readAtomAltLocs(); // sets altLoc String (needed in parseLoopElements to get the right alt atom locations in reading atom_site)
+		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)
+		
+		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser
+		
+		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 
 		
 		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
 		
-		parseLoopElements(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser, sequence, pdbresser2resser, secondaryStructure
+		readSecStructure(); // populates secondaryStructure
 		
 		this.fullLength = sequence.length();
 		
@@ -173,37 +177,6 @@ public class CiffilePdb extends Pdb {
 		return fields2values.get(entryId+".id").trim();
 	}
 	
-	private void parseStructConfNoLoop() {
-		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
-
-		String begPdbChainCode = fields2values.get(structConfId+".beg_auth_asym_id").trim();
-		if (begPdbChainCode.equals(chainCodeStr)) { // we don't have yet chainCode (normally struct_conf appears before atom_site in cif file), so we need to use the auth_asym_id
-			
-			String id = fields2values.get(structConfId+".id").trim();
-			int beg = Integer.parseInt(fields2values.get(structConfId+".beg_label_seq_id").trim());
-			int end = Integer.parseInt(fields2values.get(structConfId+".end_label_seq_id").trim());
-			Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
-			Matcher m = p.matcher(id);
-			String ssId="Unknown";
-			if (m.find()){
-				ssId = m.group(1)+m.group(2); // e.g.: Hnn (helices) or Tnn (turns) 				
-			}
-			char ssType = SecStrucElement.OTHER;
-			if(id.startsWith("H")) {
-				ssType = SecStrucElement.HELIX;
-			} else if(id.startsWith("T")) {
-				ssType = SecStrucElement.TURN;
-			} else {
-				System.err.println("Unknown secondary structure type " + id + " encountered when reading from ciffile. Skipping.");
-			}
-			if(ssType != SecStrucElement.OTHER) {
-				SecStrucElement ssElem = new SecStrucElement(ssType, beg, end, ssId);
-				secondaryStructure.add(ssElem);
-			}
-		}
-	}
-	
 	private void readAtomAltLocs() throws IOException, CiffileFormatError {
 		// The read of the atom_sites_alt element must be done in a separate scan of the file, previous to scanning the atom_site element
 		// This is because the order of the different elements in the cif files is not guaranteed, so atom_sites_alt can come before or after atom_site
@@ -244,37 +217,15 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void parseLoopElements() throws IOException, PdbChainCodeNotFoundError, CiffileFormatError {
+	private void readAtomSite() throws IOException, PdbChainCodeNotFoundError, CiffileFormatError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
-		pdbresser2resser = new HashMap<String, Integer>();
-		sequence = "";
-		secondaryStructure = new SecondaryStructure();
 		
 		ArrayList<String> aalist=AA.aas(); // list of standard 3 letter code aminoacids
 		
-		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
-		
 		Interval intAtomSite = loopelements2contentIndex.get(ids2elements.get(atomSiteId));
-		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
-		// struct_conf element is optional
-		Interval intStructConf = null;
-		if (ids2elements.containsKey(structConfId)) {
-			// if not a loop element then intStructConf stays null
-			intStructConf = loopelements2contentIndex.get(ids2elements.get(structConfId));
-		} 
-		// taking care of cases where struct_conf is not a loop element but a one value field
-		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
-			parseStructConfNoLoop();
-		}
-		// struct_sheet_range element is optional
-		Interval intStructSheet = null; 
-		if (ids2elements.containsKey(structSheetId)) {
-			intStructSheet = loopelements2contentIndex.get(ids2elements.get(structSheetId));
-		}
 		
 		boolean empty = true;
 		BufferedReader fcif = new BufferedReader(new FileReader(new File(ciffile)));
@@ -294,7 +245,6 @@ public class CiffilePdb extends Pdb {
 				int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
 				int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
 				int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
-				int authAsymIdIdx = fields2indices.get(atomSiteId+".auth_asym_id");
 				int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
 				// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
 				//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
@@ -303,13 +253,12 @@ public class CiffilePdb extends Pdb {
 				if (tokens.length!=ids2fieldsIdx.get(atomSiteId)) {
 					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+atomSiteId);
 				}
-				if (tokens[groupPdbIdx].equals("ATOM") && tokens[authAsymIdIdx].equals(chainCodeStr) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
+				if (tokens[groupPdbIdx].equals("ATOM") && tokens[labelAsymIdIdx].equals(chainCode) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
 					empty = false;
 					if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
 						int atomserial=Integer.parseInt(tokens[idIdx]); // id
 						String atom = tokens[labelAtomIdIdx]; // label_atom_id
 						String res_type = tokens[labelCompIdIdx]; // label_comp_id
-						chainCode = tokens[labelAsymIdIdx]; // label_asym_id
 						int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
 						double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
 						double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
@@ -329,8 +278,32 @@ public class CiffilePdb extends Pdb {
 				}
 				continue;
 			}
+		}
+		fcif.close();
+		if (empty) { // no atom data was found for given pdb chain code and model
+			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
+		}
+	}
+	
+	private void readPdbxPolySeq() throws IOException, CiffileFormatError {
+		pdbresser2resser = new HashMap<String, Integer>();
+		sequence = "";
+		
+		ArrayList<String> aalist=AA.aas(); // list of standard 3 letter code aminoacids
+
+		String chainCodeStr=pdbChainCode;
+		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
+		
+		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
+		
+		BufferedReader fcif = new BufferedReader(new FileReader(new File(ciffile)));
+		String line;
+		int linecount=0;
+		while((line = fcif.readLine()) != null ) {
+			linecount++; 
 			// pdbx_poly_seq_scheme
 			if (linecount>=intPdbxPoly.beg && linecount<=intPdbxPoly.end){
+				int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
 				int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
 				int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
 				int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
@@ -345,6 +318,7 @@ public class CiffilePdb extends Pdb {
 				}
 				if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 					int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
+					chainCode = tokens[asymIdIdx];
 					//TODO revise: do we want auth_seq_num or pdb_seq_num here??
 					String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
 					String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
@@ -366,10 +340,77 @@ public class CiffilePdb extends Pdb {
 				}
 				continue;
 			}
+
+		}
+		fcif.close();
+	}
+	
+	private void readSecStructure() throws IOException, CiffileFormatError {
+		secondaryStructure = new SecondaryStructure();
+		
+		// struct_conf element is optional
+		Interval intStructConf = null;
+		if (ids2elements.containsKey(structConfId)) {
+			// if not a loop element then intStructConf stays null (because loopelements2contentIndex will return null)
+			intStructConf = loopelements2contentIndex.get(ids2elements.get(structConfId));
+		} 
+		// taking care of cases where struct_conf is not a loop element but a one value field
+		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
+			String begChainCode = fields2values.get(structConfId+".beg_label_asym_id").trim();
+			if (begChainCode.equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme			
+				String id = fields2values.get(structConfId+".id").trim();
+				int beg = Integer.parseInt(fields2values.get(structConfId+".beg_label_seq_id").trim());
+				int end = Integer.parseInt(fields2values.get(structConfId+".end_label_seq_id").trim());
+				Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
+				Matcher m = p.matcher(id);
+				String ssId="Unknown";
+				if (m.find()){
+					ssId = m.group(1)+m.group(2); // e.g.: Hnn (helices) or Tnn (turns) 				
+				}
+				char ssType = SecStrucElement.OTHER;
+				if(id.startsWith("H")) {
+					ssType = SecStrucElement.HELIX;
+				} else if(id.startsWith("T")) {
+					ssType = SecStrucElement.TURN;
+				} else {
+					System.err.println("Unknown secondary structure type " + id + " encountered when reading from ciffile. Skipping.");
+				}
+				if(ssType != SecStrucElement.OTHER) {
+					SecStrucElement ssElem = new SecStrucElement(ssType, beg, end, ssId);
+					secondaryStructure.add(ssElem);
+				}
+			}
+		}
+		// struct_sheet_range element is optional
+		Interval intStructSheet = null; 
+		if (ids2elements.containsKey(structSheetId)) {
+			// if not a loop element intStructSheet stays null (because loopelements2contentIndex will return null)
+			intStructSheet = loopelements2contentIndex.get(ids2elements.get(structSheetId));
+		}
+		// taking care of cases where struct_sheet_range is not a loop element but a one value field
+		if (ids2elements.containsKey(structSheetId) && !loopElements.contains(ids2elements.get(structSheetId))){
+			String begChainCode = fields2values.get(structSheetId+".beg_label_asym_id").trim();
+			if (begChainCode.equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
+				String sheetid = fields2values.get(structSheetId+".sheet_id").trim(); //tokens[sheetIdIdx];
+				int id = Integer.parseInt(fields2values.get(structSheetId+".id").trim()); //Integer.parseInt(tokens[idIdx]);
+				int beg = Integer.parseInt(fields2values.get(structSheetId+".beg_label_seq_id").trim()); //tokens[begLabelSeqIdIdx]);
+				int end = Integer.parseInt(fields2values.get(structSheetId+".end_label_seq_id").trim()); //tokens[endLabelSeqIdIdx]);
+				String ssId=SecStrucElement.STRAND+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
+				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND, beg, end, ssId);
+				secondaryStructure.add(ssElem);
+			}
+
+		}
+		
+		BufferedReader fcif = new BufferedReader(new FileReader(new File(ciffile)));
+		String line;
+		int linecount=0;
+		while((line = fcif.readLine()) != null ) {
+			linecount++;
 			// struct_conf (optional element), HELIX and TURN secondary structure
 			if (intStructConf!=null && linecount>=intStructConf.beg && linecount<=intStructConf.end){
 				int idIdx = fields2indices.get(structConfId+".id");
-				int begAuthAsymIdIdx = fields2indices.get(structConfId+".beg_auth_asym_id");
+				int begLabelAsymIdIdx = fields2indices.get(structConfId+".beg_label_asym_id");
 				int begLabelSeqIdIdx = fields2indices.get(structConfId+".beg_label_seq_id");
 				int endLabelSeqIdIdx = fields2indices.get(structConfId+".end_label_seq_id");
 				//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
@@ -379,7 +420,7 @@ public class CiffilePdb extends Pdb {
 				if (tokens.length!=ids2fieldsIdx.get(structConfId)) {
 					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structConfId);
 				}
-				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)) { // we don't have yet chainCode (normally struct_conf appears before atom_site in cif file), so we need to use the auth_asym_id
+				if (tokens[begLabelAsymIdIdx].equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String id = tokens[idIdx];
 					Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
 					Matcher m = p.matcher(id);
@@ -408,7 +449,7 @@ public class CiffilePdb extends Pdb {
 			if (intStructSheet!=null && linecount>=intStructSheet.beg && linecount<=intStructSheet.end){
 				int sheetIdIdx = fields2indices.get(structSheetId+".sheet_id");
 				int idIdx = fields2indices.get(structSheetId+".id");
-				int begAuthAsymIdIdx = fields2indices.get(structSheetId+".beg_auth_asym_id");
+				int begLabelAsymIdIdx = fields2indices.get(structSheetId+".beg_label_asym_id");
 				int begLabelSeqIdIdx = fields2indices.get(structSheetId+".beg_label_seq_id");
 				int endLabelSeqIdIdx = fields2indices.get(structSheetId+".end_label_seq_id");
 				//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
@@ -418,7 +459,7 @@ public class CiffilePdb extends Pdb {
 				if (tokens.length!=ids2fieldsIdx.get(structSheetId)) {
 					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structSheetId);
 				}
-				if (tokens[begAuthAsymIdIdx].equals(chainCodeStr)){ // we don't have yet chainCode (normally struct_sheet_range appears before atom_site in cif file), so we need to use the auth_asym_id
+				if (tokens[begLabelAsymIdIdx].equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String sheetid = tokens[sheetIdIdx];
 					int id = Integer.parseInt(tokens[idIdx]);
 					int beg = Integer.parseInt(tokens[begLabelSeqIdIdx]);
@@ -429,11 +470,9 @@ public class CiffilePdb extends Pdb {
 				}
 				continue;
 			}
+
 		}
 		fcif.close();
-		if (empty) { // no atom data was found for given pdb chain code and model
-			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
-		}
 	}
 	
 	/**
@@ -445,7 +484,7 @@ public class CiffilePdb extends Pdb {
 	 */
 	private String[] tokeniseFields(String line) {
 		String[] tokens;
-		if (line.contains("'")) { // if there are quotes in the line
+		if (line.contains("'")) { // if there are single quotes in the line
 			ArrayList<String> tokensAL = new ArrayList<String>();
 			Pattern p = Pattern.compile("'[^']*'|[^ \\t]+"); // note: regex doesn't work inverting the order of expressions in the 'OR' (in python it does!)
 			Matcher m = p.matcher(line);
@@ -456,6 +495,11 @@ public class CiffilePdb extends Pdb {
 			tokensAL.toArray(tokens);
 		} else { // if no quotes we simply split by columns using spaces as delimiters
 			tokens = line.split("\\s+");
+		}
+		if (line.contains("\"")){ // in some rare cases some fields are quoted with double quotes, this seems to be to escape single quotes within them (used normally as a "prime" symbol) 
+			for (int i=0;i<tokens.length;i++){ // we get rid of the double quoting
+				tokens[i] = tokens[i].replaceAll("\"", "");
+			}
 		}
 		return tokens;
 	}
