@@ -56,7 +56,13 @@ public abstract class Pdb {
 	
 	protected String db;			// the db from which we have taken the data (if applies)
 	
-	/** Run DSSP externally and (re)assign the secondary structure annotation from the output */
+	/** 
+	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
+	 * Existing secondary structure information will be overwritten.
+	 * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
+	 * after filling out a license agreement. For this version, the dsspParamters variable should be
+	 * set to "--" (two hyphens).
+	 */
 	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
 		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
 		String line;
@@ -269,11 +275,11 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the distance matrix as a HashMap with Contacts (residue serial pairs) as keys
-	 * It doesn't make sense to call this method for multi atom contact 
-	 * types (for each residue serial pair there's more than 1 distance)
-	 * Thus before calling this we should check AA.isValidSingleAtomCT(ct)
-	 * @param ct the contact type
-	 * @return
+	 * It is not clear what this means for multi atom contact types (All, BB, SC, ...) 
+	 * since for each residue serial pair there's more than 1 distance. Thus, we don't allow
+	 * this for the moment. AA.isValidSingleAtomCT(ct) can be used to check before calling.
+	 * @param ct contact type for which distances are being calculated
+	 * @return A map which assings to each edge the corresponding distance
 	 */
 	public HashMap<Edge, Double> calculate_dist_matrix(String ct){
 		HashMap<Edge,Double> distMatrixAtoms = new HashMap<Edge,Double>();
@@ -302,6 +308,10 @@ public abstract class Pdb {
 			}
 		}
 
+		/**
+		 * Helper method which maps atom serials to residue serials.
+		 * TODO: Integrate into above method to avoid storing two distance maps in memory
+		 */
 		HashMap<Edge,Double> distMatrixRes = new HashMap<Edge, Double>();
 		for (Edge cont: distMatrixAtoms.keySet()){
 			int i_resser = get_resser_from_atomser(cont.i);
