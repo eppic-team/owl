@@ -1,4 +1,4 @@
-package proteinstructure;
+package tinker;
 
 public class TinkerError extends Exception {
 
