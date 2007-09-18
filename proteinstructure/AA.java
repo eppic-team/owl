@@ -4,6 +4,9 @@ import java.util.ArrayList;
 
 public class AA {
 	
+	public static final String CONTACT_TYPE_C_ALPHA = "Ca";
+	public static final String CONTACT_TYPE_C_BETA = "Cb";
+	
 	public static String[] contactTypes() {
 		// NOTE: whenever a new contact type is added it needs to be added here as well as in ct2atoms
 		String[] cts ={"ALL","BB","SC","Ca","Cb","Cg","C"};

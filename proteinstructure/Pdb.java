@@ -549,6 +549,32 @@ public abstract class Pdb {
 		
 	}
 	
+	/*
+	 * Calculates and returns the difference of the distance maps of this structure and another pdb object. On error returns null.
+	 */
+	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
+		double dist1, dist2, diff;
+		HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
+		HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
+		if(thisDistMatrix.size() != otherDistMatrix.size()) {
+			System.err.println("Cannot calculate difference distance map. Matrix sizes do not match.");
+			return null;
+		}
+		for(Edge e:otherDistMatrix.keySet()){
+			dist1 = otherDistMatrix.get(e);
+			if(!thisDistMatrix.containsKey(e)) {
+				System.err.println("Error while calculating difference distance map. Entry " + e + " in matrix1 not not found in matrix2.");
+				return null;
+			}
+			dist2 = thisDistMatrix.get(e);
+			diff = Math.abs(dist1-dist2);
+			otherDistMatrix.put(e, diff);
+		}
+		return otherDistMatrix;
+	}
+	// TODO: Version of this where already buffered distance matrices are passed as paremeters
+	// TODO: Version of this where an additional alignment is passed as a parameter
+	
 	/** Returns the number of neighbours of this grid cell */
 	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
 		Point3i neighbor;
