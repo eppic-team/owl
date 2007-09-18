@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.ArrayList;
 
@@ -614,6 +615,14 @@ public abstract class Pdb {
 	
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
+	}
+	
+	public Set<Integer> getAllAtomSerials() {
+		return this.atomser2resser.keySet();
+	}
+	
+	public Point3d getAtomCoord(int atomser) {
+		return this.atomser2coord.get(atomser);
 	}
 		
 	// secondary structure related methods
