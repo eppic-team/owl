@@ -37,8 +37,6 @@ public abstract class Pdb {
 	
 	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
 	
-	protected HashMap<String,ArrayList<String>> aas2atoms = AA.getaas2atoms(); // contains atom names for each aminoacid
-	
 	protected String sequence; 		// full sequence as it appears in SEQRES field
 	protected String pdbCode;
     // given "external" pdb chain code, i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)	
@@ -222,9 +220,8 @@ public abstract class Pdb {
 	 */
 	private TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
 		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>(); 
-		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
 		for (int resser:resser2restype.keySet()){
-			String[] atoms = restype2atoms.get(resser2restype.get(resser));
+			Set<String> atoms = AAinfo.getAtomsForCTAndRes(ct, resser2restype.get(resser));
 			for (String atom:atoms){
 				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
 					int atomser = resser_atom2atomserial.get(resser+"_"+atom);
@@ -254,9 +251,8 @@ public abstract class Pdb {
 	 */
 	private TreeMap<String,Point3d> get_coords_for_ct_4rmsd(String ct) {
 		TreeMap<String,Point3d> coords = new TreeMap<String,Point3d>(); 
-		HashMap<String,String[]> restype2atoms = AA.ct2atoms(ct);
 		for (int resser:resser2restype.keySet()){
-			String[] atoms = restype2atoms.get(resser2restype.get(resser));
+			Set<String> atoms = AAinfo.getAtomsForCTAndRes(ct,resser2restype.get(resser));
 			for (String atom:atoms){
 				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
 					int atomser = resser_atom2atomserial.get(resser+"_"+atom);

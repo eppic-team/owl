@@ -172,7 +172,7 @@ public class DbGraph extends Graph {
 		while (rsst.next()){
 			int num=rsst.getInt(1);
 			String res=rsst.getString(2);
-			nodes.put(num, AA.oneletter2threeletter(res));
+			nodes.put(num, AAinfo.oneletter2threeletter(res));
 		}
 		rsst.close();
 		stmt.close();

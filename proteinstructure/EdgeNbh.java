@@ -31,7 +31,7 @@ public class EdgeNbh extends TreeMap<Integer,String> {
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
 				motif+=gap;
-				motif+=AA.threeletter2oneletter(this.get(i));
+				motif+=AAinfo.threeletter2oneletter(this.get(i));
 				gapSize=0;
 				gap="";
 			} else if (i==i_resser){
@@ -58,7 +58,7 @@ public class EdgeNbh extends TreeMap<Integer,String> {
 		int max=Math.max(Math.max(i_resser,j_resser), Collections.max(this.keySet()));
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
-				motif+=AA.threeletter2oneletter(this.get(i));	
+				motif+=AAinfo.threeletter2oneletter(this.get(i));	
 			} else if (i==i_resser){
 				motif+="x";
 			} else if (i==j_resser){

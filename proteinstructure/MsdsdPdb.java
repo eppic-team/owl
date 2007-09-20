@@ -236,14 +236,11 @@ public class MsdsdPdb extends Pdb {
 			double y = rsst.getDouble(6);				// y
 			double z = rsst.getDouble(7);				// z
 			Point3d coords = new Point3d(x, y, z);
-			ArrayList<String> aalist=AA.aas();
-			if (aalist.contains(res_type)) {
+			if (AAinfo.isValidAA(res_type)) {
 				atomser2coord.put(atomserial, coords);
 				atomser2resser.put(atomserial, res_serial);
 				resser2restype.put(res_serial, res_type);
-				ArrayList<String> atomlist = aas2atoms.get(res_type);
-				atomlist.add("OXT"); // the extra atom OXT is there in the last residue of the chain
-				if (atomlist.contains(atom)){
+				if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 					resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 				}
 			}

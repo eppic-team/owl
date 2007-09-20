@@ -31,7 +31,7 @@ public class NodeNbh extends TreeMap<Integer,String> {
 			int max=Math.max(central_resser, this.lastKey());
 			for (int i=min;i<=max;i++){
 				if (this.containsKey(i)){
-					motif+=AA.threeletter2oneletter(this.get(i));
+					motif+=AAinfo.threeletter2oneletter(this.get(i));
 				} else if (i==central_resser){
 					motif+=centralLetter;
 				} else {
@@ -52,7 +52,7 @@ public class NodeNbh extends TreeMap<Integer,String> {
 			for (int i=min;i<=max;i++){
 				if (this.containsKey(i)){
 					motif+=gap;
-					motif+=AA.threeletter2oneletter(this.get(i));
+					motif+=AAinfo.threeletter2oneletter(this.get(i));
 					gapSize=0;
 					gap="";
 				} else if (i==central_resser){
@@ -76,7 +76,7 @@ public class NodeNbh extends TreeMap<Integer,String> {
 			int max=Math.max(central_resser, this.lastKey());
 			for (int i=min;i<=max;i++){
 				if (this.containsKey(i)){
-					motif+=AA.threeletter2oneletter(this.get(i));
+					motif+=AAinfo.threeletter2oneletter(this.get(i));
 				} else if (i==central_resser){
 					motif+=centralLetter;
 				}

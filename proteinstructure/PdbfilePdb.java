@@ -150,8 +150,8 @@ public class PdbfilePdb extends Pdb {
 			if (m.find()){
 				for (int i=19;i<=67;i+=4) {
 					if (!line.substring(i, i+3).equals("   ")) {
-						if (AA.threeletter2oneletter(line.substring(i, i+3))!=null) { // for non-standard aas
-							sequence+= AA.threeletter2oneletter(line.substring(i, i+3));
+						if (AAinfo.isValidAA(line.substring(i, i+3))) { // for non-standard aas
+							sequence+= AAinfo.threeletter2oneletter(line.substring(i, i+3));
 						} else {
 							sequence+= NONSTANDARD_AA_LETTER;
 						}
@@ -225,14 +225,11 @@ public class PdbfilePdb extends Pdb {
 					double y = Double.parseDouble(ml.group(6).trim());
 					double z = Double.parseDouble(ml.group(7).trim());
 					Point3d coords = new Point3d(x,y,z);
-					ArrayList<String> aalist=AA.aas();
-					if (aalist.contains(res_type)) {
+					if (AAinfo.isValidAA(res_type)) {
 						atomser2coord.put(atomserial, coords);
 						atomser2resser.put(atomserial, res_serial);
 						resser2restype.put(res_serial, res_type);
-						ArrayList<String> atomlist = aas2atoms.get(res_type);
-						atomlist.add("OXT"); // the extra atom OXT is there in the last residue of the chain
-						if (atomlist.contains(atom)){
+						if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 						}
 					}					
@@ -253,7 +250,7 @@ public class PdbfilePdb extends Pdb {
 			}
 			Collections.sort(ressers);
 			for (int resser:ressers){
-				String oneletter = AA.threeletter2oneletter(resser2restype.get(resser));
+				String oneletter = AAinfo.threeletter2oneletter(resser2restype.get(resser));
 				sequence += oneletter;
 			}
 			// not size but maximum: if residue numbering in pdb file is correct, then this takes care of non-observed except for possible non-observed at end of chain

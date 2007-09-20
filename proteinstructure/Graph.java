@@ -174,8 +174,8 @@ public class Graph {
 		stmt.close();
 		// inserting edges
 		for (Edge cont:contacts){
-			String i_res = AA.threeletter2oneletter(getResType(cont.i));
-			String j_res = AA.threeletter2oneletter(getResType(cont.j));
+			String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
+			String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
 			char i_secStructType=SecStrucElement.OTHER;
 			if (secondaryStructure.getSecStrucElement(cont.i)!=null){
 				i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
@@ -192,8 +192,8 @@ public class Graph {
 		if (!directed){ // we want both side of the matrix in the table to follow Ioannis' convention
 			// so we insert the reverse contacts by doing the same but swapping i, j in insertion
 			for (Edge cont:contacts){
-				String i_res = AA.threeletter2oneletter(getResType(cont.i));
-				String j_res = AA.threeletter2oneletter(getResType(cont.j));
+				String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
+				String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
 				char i_secStructType=SecStrucElement.OTHER;
 				if (secondaryStructure.getSecStrucElement(cont.i)!=null){
 					i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
@@ -209,7 +209,7 @@ public class Graph {
 		}
 		// inserting nodes
 		for (int resser:nodes.keySet()) {
-			String res = AA.threeletter2oneletter(getResType(resser));
+			String res = AAinfo.threeletter2oneletter(getResType(resser));
 			NodeNbh nbh = getNodeNbh(resser);
 			char secStructType=SecStrucElement.OTHER;
 			if (secondaryStructure.getSecStrucElement(resser)!=null){

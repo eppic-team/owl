@@ -343,8 +343,6 @@ public class CiffilePdb extends Pdb {
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		
-		ArrayList<String> aalist=AA.aas(); // list of standard 3 letter code aminoacids
-		
 		Interval intAtomSite = loopelements2contentIndex.get(ids2elements.get(atomSiteId));
 		
 		boolean empty = true;
@@ -384,13 +382,11 @@ public class CiffilePdb extends Pdb {
 						double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
 						double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
 						Point3d coords = new Point3d(x,y,z);
-						if (aalist.contains(res_type)) {
+						if (AAinfo.isValidAA(res_type)) {
 							atomser2coord.put(atomserial, coords);
 							atomser2resser.put(atomserial, res_serial);
 							resser2restype.put(res_serial, res_type);
-							ArrayList<String> atomlist = aas2atoms.get(res_type);
-							atomlist.add("OXT"); // the extra atom OXT is there in the last residue of the chain
-							if (atomlist.contains(atom)){
+							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 								resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 							}
 						}
@@ -409,8 +405,6 @@ public class CiffilePdb extends Pdb {
 		pdbresser2resser = new HashMap<String, Integer>();
 		sequence = "";
 		
-		ArrayList<String> aalist=AA.aas(); // list of standard 3 letter code aminoacids
-
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
 		
@@ -448,8 +442,8 @@ public class CiffilePdb extends Pdb {
 					}
 					String res_type = tokens[monIdIdx]; // mon_id
 					// sequence
-					if (aalist.contains(res_type)){
-		        		sequence+=AA.threeletter2oneletter(res_type);
+					if (AAinfo.isValidAA(res_type)){
+		        		sequence+=AAinfo.threeletter2oneletter(res_type);
 		        	} else {
 		        		sequence+=NONSTANDARD_AA_LETTER;
 		        	}
@@ -599,6 +593,8 @@ public class CiffilePdb extends Pdb {
 	 * Splits a space separated line into its individual tokens returning an array with all tokens
 	 * Takes care of quoted fields that contain spaces
 	 * e.g. HELX_P HELX_P2 H4 GLY A 111 ? GLU A 127 ? GLY A 112 GLU A 128 1 'SEE REMARK 650' 17
+	 * 
+	 * TODO maybe StreamTokenizer can do all this with less pain
 	 * @param line
 	 * @return
 	 */

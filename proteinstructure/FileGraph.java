@@ -131,7 +131,7 @@ public class FileGraph extends Graph {
 		nodes = new TreeMap<Integer, String>();
 		for (int i=0;i<sequence.length();i++){
 			String letter = String.valueOf(sequence.charAt(i));
-			nodes.put(i+1, AA.oneletter2threeletter(letter));
+			nodes.put(i+1, AAinfo.oneletter2threeletter(letter));
 		}		
 
 	}
