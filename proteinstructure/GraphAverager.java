@@ -4,25 +4,32 @@ import java.util.TreeMap;
 
 public class GraphAverager {
 
-	private static final double DEFAULT_THRESHOLD = 0.5;
-	
 	private Alignment al;
 	private TreeMap<String,Graph> templateGraphs;
 	private String targetTag;
-	private double threshold;
+	private int numTemplates;
 	
 	private Graph graph;
+	
+	private TreeMap<Edge,Integer> contactVotes;
 	
 	public GraphAverager(Graph graph, Alignment al, TreeMap<String,Graph> templateGraphs, String targetTag) {
 		this.graph = graph;
 		this.al = al;
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
-		this.threshold = DEFAULT_THRESHOLD;
+		
+		this.numTemplates = templateGraphs.size();
 		checkSequences();
+		
+		countVotes(); // does the averaging by counting the votes and putting them into contactVotes
 		
 	}
 	
+	/**
+	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs and between this.al  and this.graph/this.targetTag 
+	 *
+	 */
 	private void checkSequences(){
 		if (!al.hasTag(targetTag)){
 			System.err.println("Alignment doesn't seem to contain the target sequence, check the FASTA tags");
@@ -50,23 +57,20 @@ public class GraphAverager {
 		}
 	}
 	
-	public void setThreshold(double threshold){
-		this.threshold = threshold;
-	}
-
-	public Graph predict() {
-
-		int numTemplates = templateGraphs.size(); 
+	/**
+	 * Counts the votes for each possible alignment edge and puts all the votes in contactVotes TreeMap
+	 *
+	 */
+	private void countVotes() {
 		
-		TreeMap<Edge,Integer> contactVotes = new TreeMap<Edge, Integer>();
+		contactVotes = new TreeMap<Edge, Integer>();
 		
-		// we take all contacts of first template and assign votes based on their presence in the other templates
-
+		// we go through all positions in the alignment
 		for (int i=0; i<al.getAlignmentLength(); i++){
 			for (int j=0; j<al.getAlignmentLength(); j++) {
  
 				int vote = 0; 
-				// scanning other templates to see if they have this contact
+				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){					
 					Edge thisGraphCont = new Edge(al.al2seq(tag, i),al.al2seq(tag, j));
 					if (templateGraphs.get(tag).containsContact(thisGraphCont)) {
@@ -78,8 +82,15 @@ public class GraphAverager {
 					contactVotes.put(new Edge(i,j), vote);
 				}				
 			}
-		}
-
+		}		
+	}
+	
+	/**
+	 * Adds contacts to this.graph when the consensus vote is above the given threshold
+	 * Return is by reference (passed graph object reference)
+	 * @param threshold
+	 */
+	public void doAveraging(double threshold) {
 
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
@@ -92,7 +103,6 @@ public class GraphAverager {
 			}
 		}
 		
-		return this.graph;
 	}
 	
 }
