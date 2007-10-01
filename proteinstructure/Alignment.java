@@ -26,6 +26,7 @@ public class Alignment {
 	private static final String PIRFORMAT = "PIR";
 	private static final String FASTAFORMAT = "FASTA";
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-]+)";
+	private static final String FASTAHEADER_CHAR = ">";
 	
 	/*--------------------------- member variables --------------------------*/		
 	
@@ -36,6 +37,9 @@ public class Alignment {
 	
 	/*----------------------------- constructors ----------------------------*/
 	
+	/**
+	 * Reads an alignment from a file in either FASTA or PIR format
+	 */
 	public Alignment(String fileName, String format) throws IOException, FileNotFoundException {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
@@ -47,6 +51,27 @@ public class Alignment {
 		checkLengths();
 		// map sequence serials (starting at 1, no gaps) to alignment serials (starting at 0, possibly gaps)
 		doMapping();		
+	}
+	
+	/**
+	 * Creates a trivial alignment (i.e. without gaps) for the given sequences. The sequences have to have the same lengths. 
+	 * @param sequence
+	 * @param numberOfCopies
+	 */
+	public Alignment(TreeMap<String, String> sequences) {
+		
+		// check that sequences have the same length
+		int length = sequences.get(sequences.firstKey()).length();
+		for(String seqTag: sequences.keySet()) {
+			if(sequences.get(seqTag).length() != length) {
+				System.err.println("Can not create trivial alignment. Sequence lenghts are not the same.");
+				// TODO: throw exception
+			}
+		}
+		
+		this.sequences = sequences;
+		doMapping();
+		
 	}
 
 	/*---------------------------- private methods --------------------------*/
@@ -212,7 +237,7 @@ public class Alignment {
 	 * @param seqTag
 	 * @return
 	 */
-    public String getSequence(String seqTag) { return sequences.get(seqTag); }
+    public String getAlignedSequence(String seqTag) { return sequences.get(seqTag); }
     
     /**
      * Returns the length of the alignment (including gaps) 
@@ -318,6 +343,25 @@ public class Alignment {
     	}
     }
     
+    /**
+     * Prints the alignment in simple text format (without sequence tags) to stdout
+     */
+    public void printSimple() {
+    	for(String seqTag:sequences.keySet()) {
+    		System.out.println(getAlignedSequence(seqTag));
+    	}
+    }
+    
+    /**
+     * Prints the alignment in fasta format to stdout
+     */
+    public void printFasta() {
+    	for(String seqTag:sequences.keySet()) {
+    		System.out.println(FASTAHEADER_CHAR + seqTag);
+    		System.out.println(getAlignedSequence(seqTag));
+    	}
+    }   	
+    
     /** to test the class */
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 		if (args.length<1){
@@ -334,7 +378,7 @@ public class Alignment {
 		// print all sequences tags and sequences
 		for (String seqTag:al.getSequences().keySet()){
 			System.out.println(seqTag);
-			System.out.println(al.getSequence(seqTag));
+			System.out.println(al.getAlignedSequence(seqTag));
 		}
 		// test of al2seq
 		//for (int i=0;i<al.getSequenceLength();i++) {
