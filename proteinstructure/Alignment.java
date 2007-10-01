@@ -195,10 +195,35 @@ public class Alignment {
 	
 	/*---------------------------- public methods ---------------------------*/
 	
+	/**
+	 * Returns the gap character
+	 * @return The gap character
+	 */
     public char getGapCharacter() { return GAPCHARACTER; }
+    
+    /**
+     * Returns a TreeMap (keys: tags, values: sequences) with all sequences
+     * @return
+     */
 	public TreeMap<String,String> getSequences() { return sequences; }
+	
+	/**
+	 * Returns the sequence (with gaps) given a sequence tag
+	 * @param seqTag
+	 * @return
+	 */
     public String getSequence(String seqTag) { return sequences.get(seqTag); }
-    public int getSequenceLength() { return sequences.get(sequences.firstKey()).length(); }    
+    
+    /**
+     * Returns the length of the alignment (including gaps) 
+     * @return
+     */
+    public int getAlignmentLength() { return sequences.get(sequences.firstKey()).length(); }
+    
+    /**
+     * Returns the total number of sequences in the alignment
+     * @return
+     */
     public int getNumberOfSequences() { return sequences.size(); }
 	
     /**
@@ -225,7 +250,7 @@ public class Alignment {
      */
     public String getSequenceNoGaps(String seqTag){
     	String seq = "";
-    	for (int i=0;i<getSequenceLength();i++){
+    	for (int i=0;i<getAlignmentLength();i++){
     		char letter = sequences.get(seqTag).charAt(i);
     		if (letter!=GAPCHARACTER){
     			seq+=letter;
@@ -247,8 +272,8 @@ public class Alignment {
     }
     
     /**
-     * Given sequence index of sequence seqTag,
-     * returns the alignment index
+     * Given sequence index (starting at 1, no gaps) of sequence seqTag,
+     * returns the alignment index (starting at 0, with gaps)
      * @param seqTag
      * @param seqIndex
      * @return
@@ -276,7 +301,7 @@ public class Alignment {
      *
      */
     public void writeTabDelimited(){
-    	for (int alignIndex=0;alignIndex<getSequenceLength();alignIndex++){
+    	for (int alignIndex=0;alignIndex<getAlignmentLength();alignIndex++){
     		for (String seq:sequences.values()){
     			System.out.print(seq.charAt(alignIndex)+"\t");
     		}

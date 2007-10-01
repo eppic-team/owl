@@ -627,5 +627,48 @@ public class Graph {
 		return this.secondaryStructure;
 	}
 
+	/**
+	 * Evaluate this graph (assuming it is a prediction) against an original graph
+	 * @param originalGraph
+	 * @return
+	 */
+	public PredEval evaluatePrediction(Graph originalGraph){
+		int predicted = this.getNumContacts();
+		int original = originalGraph.getNumContacts();
+		
+		int cmtotal = 0;
+		if (originalGraph.isDirected()){
+			cmtotal = originalGraph.getFullLength()*(originalGraph.getFullLength()-1);
+		} else {
+			cmtotal = (int)((originalGraph.getFullLength()*(originalGraph.getFullLength()-1))/2);
+		}
+		int TruePos=0, FalsePos=0, TrueNeg=0, FalseNeg=0;
+		
+		EdgeSet origContacts = originalGraph.getContacts();
+		EdgeSet predictedContacts = this.getContacts();
+
+		// directed/ non-directed graphs should be both fine with this code (as long as in the predicted directed graph we store the contacts as j>i)
+		// the only thing that changes between directed/non-directed is the count of total cells in contact map (taken care for above)
+		for (Edge predictedCont:predictedContacts){
+			//System.out.println(predictedCont);
+			if (origContacts.contains(predictedCont)) {
+				TruePos++;
+			}
+			else {
+				FalsePos++;
+			}
+		}
+
+		for (Edge origCont:origContacts){
+			//System.out.println(origCont);
+			if (!predictedContacts.contains(origCont)) {
+				//System.out.println(origCont);
+				FalseNeg++;
+			}
+		}
+		TrueNeg=cmtotal-TruePos-FalsePos-FalseNeg;
+		PredEval eval = new PredEval(TruePos,FalsePos,TrueNeg,FalseNeg,0,predicted,original,cmtotal);
+		return eval;
+	}
 }
 
