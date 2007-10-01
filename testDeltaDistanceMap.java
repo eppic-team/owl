@@ -25,13 +25,13 @@ public class testDeltaDistanceMap {
 			assert(pdb2 != null);
 			
 			System.out.println("Calculating distance maps...");
-			HashMap<Edge,Double> distMap1 = pdb1.calculate_dist_matrix(AA.CONTACT_TYPE_C_ALPHA);
+			HashMap<Edge,Double> distMap1 = pdb1.calculate_dist_matrix("Ca");
 			assert(distMap1 != null);
-			HashMap<Edge,Double> distMap2 = pdb2.calculate_dist_matrix(AA.CONTACT_TYPE_C_ALPHA);
+			HashMap<Edge,Double> distMap2 = pdb2.calculate_dist_matrix("Ca");
 			assert(distMap2 != null);
 			
 			System.out.println("Calculating difference distance map...");
-			HashMap<Edge,Double> diffDistMap = pdb1.getDiffDistMap(AA.CONTACT_TYPE_C_ALPHA, pdb2, AA.CONTACT_TYPE_C_ALPHA);
+			HashMap<Edge,Double> diffDistMap = pdb1.getDiffDistMap("Ca", pdb2, "Ca");
 			assert(diffDistMap != null);
 			assert(diffDistMap.size() == distMap1.size());
 			assert(diffDistMap.size() == distMap2.size());
