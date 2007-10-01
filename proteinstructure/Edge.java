@@ -5,10 +5,18 @@ public class Edge implements Comparable {
 	
 	public int i;
 	public int j;
+	public double weight;	// Note: two edges are considered the same if i and j are the same, disregarding the weight
 
 	public Edge(int i,int j){
 		this.i=i;
 		this.j=j;
+		this.weight=1;
+	}
+	
+	public Edge(int i,int j, double weight){
+		this.i=i;
+		this.j=j;
+		this.weight=weight;
 	}
 	
 	public int compareTo(Object o) {
