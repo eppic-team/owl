@@ -589,36 +589,97 @@ public abstract class Pdb {
 		return nbs;
 	}
 	
+	/**
+	 * Gets the internal residue serial (cif) given a pdb residue serial (author assignment)
+	 * TODO refactor
+	 * @param pdbresser
+	 * @return
+	 */
 	public int get_resser_from_pdbresser (String pdbresser){
 		return pdbresser2resser.get(pdbresser);
 	}
 	
+	/**
+	 * Gets the pdb residue serial (author assignment) given an internal residue serial (cif)
+	 * TODO refactor
+	 * @param resser
+	 * @return
+	 */
 	public String get_pdbresser_from_resser (int resser){
 		return resser2pdbresser.get(resser);
 	}
 
+	/**
+	 * Gets the residue serial given an atom serial
+	 * TODO refactor
+	 * @param atomser
+	 * @return
+	 */
 	public int get_resser_from_atomser(int atomser){
 		return atomser2resser.get(atomser);
 	}
 	
-	public String getPdbCode() {
-		return this.pdbCode;
+	public String getResTypeFromResSerial(int resser) {
+		return resser2restype.get(resser);
 	}
 	
-	public String getChainCode(){
-		return this.chainCode;
+	/**
+	 * Gets the atom serial given the residue serial and atom name
+	 * @param resser
+	 * @param atom
+	 * @return
+	 */
+	public int getAtomSerFromResSerAndAtom(int resser, String atom) {
+		return resser_atom2atomserial.get(resser+"_"+atom);
 	}
 	
-	public String getPdbChainCode(){
-		return this.pdbChainCode;
+	/**
+	 * Gets the atom coordinates (Point3d object) given the atom serial
+	 * @param atomser
+	 * @return
+	 */
+	public Point3d getAtomCoord(int atomser) {
+		return this.atomser2coord.get(atomser);
 	}
 	
+	/**
+	 * Gets all atom serials in a Set
+	 * @return
+	 */
 	public Set<Integer> getAllAtomSerials() {
 		return this.atomser2resser.keySet();
 	}
 	
-	public Point3d getAtomCoord(int atomser) {
-		return this.atomser2coord.get(atomser);
+	/**
+	 * Gets the 4 letter pdb code identifying this structure
+	 * @return
+	 */
+	public String getPdbCode() {
+		return this.pdbCode;
+	}
+	
+	/**
+	 * Gets the internal chain code (cif)
+	 * @return
+	 */
+	public String getChainCode(){
+		return this.chainCode;
+	}
+	
+	/**
+	 * Gets the pdb chain code (author assignment)
+	 * @return
+	 */
+	public String getPdbChainCode(){
+		return this.pdbChainCode;
+	}
+	
+	/**
+	 * Gets the sequence
+	 * @return
+	 */
+	public String getSequence() {
+		return sequence;
 	}
 		
 	// secondary structure related methods

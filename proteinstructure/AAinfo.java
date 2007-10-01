@@ -51,6 +51,8 @@ public class AAinfo {
 	
 	private final static Map<String,Set<String>> aas2atoms = initialiseAas2atoms(); // depends on cts 
 	
+	private final static Map<String,String> fullname2threeletter = initialiseFullNames2Threeletter();
+	
 	
 	/*----------------------- private methods ----------------------------*/
 	private static Map<String,Double> initialiseLowerBoundDistances() {
@@ -110,6 +112,31 @@ public class AAinfo {
 		three2oneletter.put("TYR", "Y");
 		three2oneletter.put("MET", "M");
 		return three2oneletter;
+	}
+	
+	private static Map<String,String> initialiseFullNames2Threeletter() {
+		Map<String,String> fullnames2threeletter = new HashMap<String,String>();
+		fullnames2threeletter.put("Alanine","ALA");
+		fullnames2threeletter.put("Arginine","ARG");
+		fullnames2threeletter.put("Asparagine","ASN");
+		fullnames2threeletter.put("Aspartic Acid","ASP");
+		fullnames2threeletter.put("Cysteine","CYS");
+		fullnames2threeletter.put("Glutamic Acid","GLU");
+		fullnames2threeletter.put("Glutamine","GLN");
+		fullnames2threeletter.put("Glycine","GLY");
+		fullnames2threeletter.put("Histidine","HIS");
+		fullnames2threeletter.put("Isoleucine","ILE");
+		fullnames2threeletter.put("Leucine","LEU");
+		fullnames2threeletter.put("Lysine","LYS");
+		fullnames2threeletter.put("Methionine","MET");
+		fullnames2threeletter.put("Phenylalanine","PHE");
+		fullnames2threeletter.put("Proline","PRO");
+		fullnames2threeletter.put("Serine","SER");
+		fullnames2threeletter.put("Threonine","THR");
+		fullnames2threeletter.put("Tryptophan","TRP");
+		fullnames2threeletter.put("Tyrosine","TYR");
+		fullnames2threeletter.put("Valine","VAL");
+		return fullnames2threeletter;
 	}
 	
 	private static Set<String> initialiseAAs() {
@@ -334,6 +361,34 @@ public class AAinfo {
 	}
 	
 	/**
+	 * Converts from aminoacid full names (capitalised first letter, rest lower case) 
+	 * to three letter codes
+	 * @param full
+	 * @return
+	 */
+	public static String fullname2threeletter(String full){
+		return fullname2threeletter.get(full);
+	}
+	
+	/**
+	 * Returns true if given String is a valid aminoacid name
+	 * (first letter capitalised, rest lower case)
+	 * @param full
+	 * @return
+	 */
+	public static boolean isValidFullName(String full) {
+		return fullname2threeletter.keySet().contains(full);
+	}
+	
+	/**
+	 * Returns all aminoacid full names in a Set
+	 * @return
+	 */
+	public static Set<String> getAAFullNames(){
+		return fullname2threeletter.keySet();
+	}
+	
+	/**
 	 * Given a three letter code aminoacid and an atom name say whether 
 	 * the atom is a valid atom for that aminoacid 
 	 * Doesn't consider OXT to be a valid atom for any aminoacid
@@ -368,6 +423,15 @@ public class AAinfo {
 	}
 	
 	/**
+	 * Gets the number of non-hydrogen atoms for an aminoacid (three letter code)
+	 * @param aa
+	 * @return
+	 */
+	public static int getNumberAtoms(String aa) {
+		return aas2atoms.get(aa).size();
+	}
+	
+	/**
 	 * Returns a Set of all atom names given an aminoacid and a contact type
 	 * e.g. for aa="SER" and ct="SC" returns ["CB", "CG"] 
 	 * @param ct
@@ -376,6 +440,6 @@ public class AAinfo {
 	 */
 	public static Set<String> getAtomsForCTAndRes(String ct, String aa) {
 		return cts.get(ct).get(aa);
-	}
+	} 
 
 }
