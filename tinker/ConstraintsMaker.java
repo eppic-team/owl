@@ -8,13 +8,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Formatter;
-import java.util.HashMap;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.vecmath.Point3d;
 
 import proteinstructure.AAinfo;
 import proteinstructure.Edge;
@@ -27,7 +23,7 @@ import proteinstructure.PdbfilePdb;
 /**
  * Reads tinker's xyz file and pdb file (result of converting the xyz file using xyzpdb program) and
  * maps the xyz atom serials to the pdb atom serials
- * The mapping is done by using the coordinates (!), that's the only invariant between the 2 files
+ * The mapping is done through the PRMInfo class that reads prm files and map pdb atom names to prm atom identifiers
  * Method createConstraints takes a Graph object and writes to file atom distance constraints in tinker key file format
  *               
  */
@@ -39,11 +35,12 @@ public class ConstraintsMaker {
 	private Pdb pdb;
 	private PrintWriter fkey;
 	
-	private HashMap<String,Integer> pdbcoord2pdbatomser;
 	private TreeMap<Integer,Integer> pdb2xyz;
 	
 	private PRMInfo prminfo;
 	private String type; // amber, charmm, ...
+	
+	private String lastPdbResSerial_Atom;
 	
 	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError{
 		this.xyzFile = xyzFile;
@@ -51,47 +48,12 @@ public class ConstraintsMaker {
 		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath(),"NULL");
 		this.type = type;
 		
+		this.lastPdbResSerial_Atom = "";
+		
 		prminfo = new PRMInfo(prmFile.getAbsolutePath(),type);
 		
 		this.mapAtomSerials();
 	}
-	
-//	private void mapAtomSerials() throws IOException {
-//		pdbcoord2pdbatomser = new HashMap<String, Integer>();
-//		pdb2xyz = new TreeMap<Integer, Integer>();
-//		
-//		// we populate the map of pdb coordinates to pdb atom serials
-//		for (int atomser: this.pdb.getAllAtomSerials()) {
-//			Point3d point = this.pdb.getAtomCoord(atomser);
-//			float x = (float) (point.x);
-//			float y = (float) (point.y);
-//			float z = (float) (point.z);
-//			pdbcoord2pdbatomser.put(new Formatter().format("%.1f %.1f %.1f", x, y, z).toString(), atomser);
-//		}
-//		
-//		// reading xyz file
-//		BufferedReader fxyz = new BufferedReader(new FileReader(xyzFile));
-//		String line;
-//		fxyz.readLine(); // we skip first line which contains the title
-//		while((line = fxyz.readLine()) != null ) {
-//			//                                serial       x          y          z
-//			Pattern p = Pattern.compile(".{1}(.....).{6}(.{11}).{1}(.{11}).{1}(.{11})");
-//			Matcher m = p.matcher(line);
-//			if (m.find()) {
-//				int serial = Integer.parseInt(m.group(1).trim());
-//				//TODO check mapping is correct, in python I was rounding first to the 3rd decimal figure with round and then formatting with printf
-//				float x = (float) (Double.parseDouble(m.group(2).trim()));
-//				float y = (float) (Double.parseDouble(m.group(3).trim()));
-//				float z = (float) (Double.parseDouble(m.group(4).trim()));
-//				String coordstr = new Formatter().format("%.1f %.1f %.1f", x, y, z).toString();
-//				if (pdbcoord2pdbatomser.containsKey(coordstr)){
-//					pdb2xyz.put(pdbcoord2pdbatomser.get(coordstr), serial);
-//				}
-//			}
-//		}
-//		fxyz.close();
-//	}
-	
 	
 	private void mapAtomSerials() throws IOException {
 		pdb2xyz = new TreeMap<Integer, Integer>();
@@ -129,9 +91,10 @@ public class ConstraintsMaker {
 			
 			if (!atom.startsWith("H")) { // we don't want Hydrogens as we don't have them in the pdb object
 				numAtoms++;
-				atom = fixAtomName(res,atom);
+				atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
 				int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);
 				if (!pdb.getResTypeFromResSerial(pdbResSerial).equals(res)){
+					// sanity check, shouldn't happen at all
 					System.err.println("error! res types don't match for res serial "+pdbResSerial+" res type "+res);
 				}
 				// we assign the atom serial mapping
@@ -141,7 +104,16 @@ public class ConstraintsMaker {
 		fxyz.close();
 	}
 	
-	private String fixAtomName(String res, String atom) {
+	private String getCorrectedPdbAtomName(String res, String atom, int pdbResSerial) {
+		boolean first; // if true it is the first time we have this atom and residue serial
+		String thisPdbResSerial_Atom = pdbResSerial+"_"+atom;
+		if (thisPdbResSerial_Atom.equals(lastPdbResSerial_Atom)) {
+			first = true;
+		} else {
+			first = false;
+		}
+		lastPdbResSerial_Atom = thisPdbResSerial_Atom;
+		
 		if (type.equals("amber")) {
 			// amber uses some special atom names as compared to pdb:
 			//		pdb			amber
@@ -157,19 +129,24 @@ public class ConstraintsMaker {
 				return "CD1";
 			}			
 			if (res.equals("ARG") && atom.equals("NH")) {
-				return "NH1"; // or NH2
+				if (first)	return "NH1";
+				else 		return "NH2";
 			}
 			if (res.equals("GLU") && atom.equals("OE")) {
-				return "OE1"; // or OE2
+				if (first) 	return "OE1";
+				else 		return "OE2";
 			}
 			if ((res.equals("PHE") || res.equals("TYR")) && atom.equals("CD")) {
-				return "CD1"; // or CD2
+				if (first) 	return "CD1";
+				else 		return "CD2";
 			}
 			if ((res.equals("PHE") || res.equals("TYR")) && atom.equals("CE")) {
-				return "CE1"; // or CE2
+				if (first) 	return "CE1";
+				else 		return "CE2";
 			}			
 			if (res.equals("ASP") && atom.equals("OD")) {
-				return "OD1"; // or OD2
+				if (first) 	return "OD1"; 
+				else 		return "OD2";
 			}
 		}
 		// if nothing else returned then we return the same atom name as we passed
@@ -205,8 +182,8 @@ public class ConstraintsMaker {
 					int i_pdb = pdb.getAtomSerFromResSerAndAtom(cont.i, i_atom);
 					int i_xyz = pdb2xyz.get(i_pdb);
 					int j_pdb = pdb.getAtomSerFromResSerAndAtom(cont.j, j_atom);
-					int j_xyz = pdb2xyz.get(j_pdb);;
-					fkey.println(new Formatter().format("RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,forceConstant,dist_min,dist_max).toString());
+					int j_xyz = pdb2xyz.get(j_pdb);
+					fkey.println(new Formatter().format(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,forceConstant,dist_min,dist_max).toString());
 				}
 			}
 			
