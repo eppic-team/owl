@@ -28,9 +28,10 @@ import java.util.regex.Pattern;
 public class AAinfo {
 
 	/*--------------------------- constants ------------------------------*/
-	// file with contact type definitions
-	// refers to root of the aglappe package
+	// file with contact type definitions (refers to root of the aglappe package)
 	private static final String CT_DEFS_FILE = "/proteinstructure/contactTypes.dat";
+	// file with aminoacid pairs distance bounds definitions (refers to root of aglappe package)
+	private static final String AAPAIRSBOUNDS_FILE = "/proteinstructure/aapairsBounds.dat";
 	
 	// lower bound distances used for our ConstraintsMaker class
 	// from our "empirical" calculations
@@ -40,7 +41,7 @@ public class AAinfo {
 	public static final double DIST_MIN=2.6;
 
 	
-	/*----------------------- member variables ---------------------------*/
+	/*----------------------- "member" variables ---------------------------*/
 	private final static Map<String,Double> lowerBoundDistances = initialiseLowerBoundDistances(); 
 	
 	private final static Map<String,String> one2threeletter = initialiseOne2threeletter();
@@ -53,6 +54,7 @@ public class AAinfo {
 	
 	private final static Map<String,String> fullname2threeletter = initialiseFullNames2Threeletter();
 	
+	private final static Map<String,double[]> aapairs2bounds = initialiseAapairs2BoundsFromFile();
 	
 	/*----------------------- private methods ----------------------------*/
 	private static Map<String,Double> initialiseLowerBoundDistances() {
@@ -215,12 +217,37 @@ public class AAinfo {
 				}
 			}
 			cts.put(ct, contactType);
+			br.close();
 		} catch (IOException e) {
 			System.err.println("IO error while reading contact types definition file: "+CT_DEFS_FILE+". Exiting.");
 			System.err.println("Error was: "+e.getMessage());
 			System.exit(1);
 		}
 		return cts;
+	}
+	
+	private static Map<String,double[]> initialiseAapairs2BoundsFromFile (){
+		Map<String,double[]> aapairs2bounds = new TreeMap<String,double[]>();
+		InputStream inp = Runtime.getRuntime().getClass().getResourceAsStream(AAPAIRSBOUNDS_FILE);
+		BufferedReader br = new BufferedReader(new InputStreamReader(inp));
+		String line;
+		try {
+			while ((line = br.readLine())!= null) {
+				String[] tokens = line.split("\\s+");
+				String pair = tokens[0];
+				double min = Double.parseDouble(tokens[1]);
+				double max = Double.parseDouble(tokens[2]);
+				double[] bounds = {min,max};
+				aapairs2bounds.put(pair, bounds);
+			}
+			br.close();
+		} 
+		catch (IOException e) {
+			System.err.println("IO error while reading aminoacid pairs distance bounds definition file: "+AAPAIRSBOUNDS_FILE+". Exiting.");
+			System.err.println("Error was: "+e.getMessage());
+			System.exit(1);
+		}
+		return aapairs2bounds;
 	}
 	
 	/*----------------------- public methods ---------------------------*/
@@ -331,13 +358,57 @@ public class AAinfo {
 	}
 	
 	/**
-	 * Gets the lower bound distance for assigning distance restraints 
+	 * Returns the lower bound distance for assigning distance restraints 
 	 * to contacts given a contact type
+	 * Returns -1.0 if contact type is not one of the contact types for which we can assign constraints
 	 * @param ct
+	 * @param aa1
+	 * @param aa2
 	 * @return
 	 */
-	public static double getLowerBoundDistance(String ct) {
-		return lowerBoundDistances.get(ct);
+	public static double getLowerBoundDistance(String ct, String aa1, String aa2) {
+		if (isValidSingleAtomContactType(ct)) {
+			return lowerBoundDistances.get(ct);
+		} else if (ct.equals("BB")){
+			return DIST_MIN_CA;
+		} else if (ct.equals("SC")) {
+			// in aapairs2bounds we have the pairs only in one direction (order defined by alphabetical order)
+			String minAA = aa1;
+			String maxAA = aa2;
+			if (aa1.compareTo(aa2)>0) {
+				minAA = aa2;
+				maxAA = aa1;
+			}
+			return aapairs2bounds.get(minAA+"_"+maxAA)[0];
+		}
+		return -1.0;
+	}
+	
+	/**
+	 * Returns the upper bound distance for assigning distance restraints
+	 * to contacts given a contact type
+	 * Returns -1.0 if contact type is not one of the contact types for which we can assign constraints
+	 * @param ct
+	 * @param aa1
+	 * @param aa2
+	 * @return
+	 */
+	public static double getUpperBoundDistance(String ct, String aa1, String aa2) {
+		if (isValidSingleAtomContactType(ct)) {
+			return 0.0;
+		} else if (ct.equals("BB")) {
+			return BB_DIAMETER_GYRATION;
+		} else if (ct.equals("SC")) {
+			// in aapairs2bounds we have the pairs only in one direction (order defined by alphabetical order)
+			String minAA = aa1;
+			String maxAA = aa2;
+			if (aa1.compareTo(aa2)>0) {
+				minAA = aa2;
+				maxAA = aa1;
+			}
+			return aapairs2bounds.get(minAA+"_"+maxAA)[1];
+		}
+		return -1.0;
 	}
 	
 	/**
@@ -441,5 +512,5 @@ public class AAinfo {
 	public static Set<String> getAtomsForCTAndRes(String ct, String aa) {
 		return cts.get(ct).get(aa);
 	} 
-
+	
 }

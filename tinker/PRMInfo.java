@@ -66,6 +66,18 @@ public class PRMInfo {
 	}
 	
 	private void mapPdbAtomNamesAmber() {
+		//NOTE amber uses some special atom names as compared to pdb:
+		//					pdb			amber
+		// ARG:				NH1,NH2		NH  	atoms are indistinguishable
+		// GLU:				OE1,OE2		OE		atoms are indistinguishable
+		// PHE: 			CD1,CD2		CD		atoms are indistinguishable
+		// 					CE1,CE2		CE		atoms are indistinguishable
+		// TYR: 			CD1,CD2		CD		atoms are indistinguishable
+		//					CE1,CE2		CE		atoms are indistinguishable
+		// ILE:				CD1			CD		change of nomenclature
+		// ASP: 			OD1,OD2		OD		they don't seem to be indistiguishable, why do they use the same name??
+		// all c-term aas:	O, OXT		OXT		they don't seem to be indistiguishable, why do they use the same name??
+
 		prmid2res_atom = new TreeMap<Integer, String>();
 		
 		for (int prmid:prmid2fullname.keySet()){
@@ -75,8 +87,16 @@ public class PRMInfo {
 			molName = molName.replace("C-Term ", "");
 			molName = molName.replace("N-Term ", "");
 			String atomName = fullname.substring(fullname.lastIndexOf(" ")).trim();
+			// amber uses OXT as the atom name for BOTH Oxygens in the mainchain of the C-Term aminoacid
+			// we don't want OXTs so here we replace it by O which is the symbol for the usual backbone Oxygen
+			// After when we map xyz to pdb atom serials, the first amber OXT type atom encountered in the c-term aminoacid of the xyz file will be considered as the backbone Oxygen
+			if (atomName.equals("OXT")) {
+				atomName = "O";
+			}
 			
 			for (String name:AAinfo.getAAFullNames()) {
+				// here we can't just call AAinfo.isValidFullName as we test only if the string STARTS like a full amino acid name
+				// this is because some aminoacid names are 1 word and some 2 words (e.g. Aspartic Acid) 
 				if(molName.startsWith(name)) molName=AAinfo.fullname2threeletter(name);
 			}
 			
@@ -85,18 +105,7 @@ public class PRMInfo {
 				prmid2res_atom.put(prmid, molName.substring(0,3)+"_"+atomName);
 			}
 
-		}
-		
-		//NOTE amber uses some special atom names as compared to pdb:
-		//		pdb			amber
-		// ARG:	NH1,NH2		NH  	atoms are indistinguishable
-		// GLU:	OE1,OE2		OE		atoms are indistinguishable
-		// PHE: CD1,CD2		CD		atoms are indistinguishable
-		// 		CE1,CE2		CE		atoms are indistinguishable
-		// TYR: CD1,CD2		CD		atoms are indistinguishable
-		//		CE1,CE2		CE		atoms are indistinguishable
-		// ILE:	CD1			CD		change of nomenclature
-		// ASP: OD1,OD2		OD		they don't seem to be indistiguishable, why do they use the same name??
+		}		
 		
 	}
 	

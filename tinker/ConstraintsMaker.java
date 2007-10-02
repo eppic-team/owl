@@ -24,8 +24,9 @@ import proteinstructure.PdbfilePdb;
  * Reads tinker's xyz file and pdb file (result of converting the xyz file using xyzpdb program) and
  * maps the xyz atom serials to the pdb atom serials
  * The mapping is done through the PRMInfo class that reads prm files and map pdb atom names to prm atom identifiers
- * Method createConstraints takes a Graph object and writes to file atom distance constraints in tinker key file format
- *               
+ * 
+ * Method createConstraints takes a Graph object and writes to file atom distance constraints in tinker key file format              
+ *  
  */
 public class ConstraintsMaker {
 
@@ -58,11 +59,11 @@ public class ConstraintsMaker {
 	private void mapAtomSerials() throws IOException {
 		pdb2xyz = new TreeMap<Integer, Integer>();
 		
-		int pdbResSerial = 1;
+		int pdbResSerial = 1; // our pointer to the current pdb residue serial as we read the xyz file
 		
 		String sequence = pdb.getSequence();
-		int numAtoms = 0;
-		String resFromSeq = "";
+		int numAtoms = 0; // count of atoms per residue
+		String resFromSeq = ""; // 3 letter residue code that we take from the sequence
 				
 		// reading xyz file
 		BufferedReader fxyz = new BufferedReader(new FileReader(xyzFile));
@@ -72,6 +73,7 @@ public class ConstraintsMaker {
 			int xyzAtomSer = Integer.parseInt(line.substring(0,6).trim());
 			int prmId = Integer.parseInt(line.substring(48,53).trim());
 			
+			// from the prmId we can get residue type and atom from our prminfo object
 			String res_atom = prminfo.getRes_AtomFromPrmid(prmId);
 			String res = res_atom.split("_")[0];
 			String atom = res_atom.split("_")[1];
@@ -79,6 +81,7 @@ public class ConstraintsMaker {
 			resFromSeq = AAinfo.oneletter2threeletter(String.valueOf((sequence.charAt(pdbResSerial-1))));
 			int totalNumAtoms = AAinfo.getNumberAtoms(resFromSeq);
 			
+			// when current atom counts coincides with the totalNumAtoms this residue type should have (Hs excluded) then we increment residue serial and reset atom count
 			if (numAtoms==totalNumAtoms) {
 				pdbResSerial++;
 				numAtoms = 0;
@@ -153,8 +156,19 @@ public class ConstraintsMaker {
 		return atom;
 	}
 	
-	public void createConstraints(Graph graph) throws FileNotFoundException {
-		//TODO right now it works only for single atom contact types (and crosses of single atom contact types)
+	/**
+	 * Writes to keyFile distance constraints in tinker's format (RESTRAIN-DISTANCE lines) b
+	 * based on the mapping of pdb atom serials to xyz atom serials done in mapAtomSerials
+	 * Valid contact types to use are: 
+	 * 	- all single atom types and any cross between them
+	 *  - BB, SC, BB/SC
+	 *  - all crosses between BB, SC and single atom contact types, e.g. BB/Cg
+	 * That means: 'ALL' CANNOT be used
+	 * 
+	 * @param graph
+	 * @throws Exception If the graph's contact type is ALL
+	 */
+	public void createConstraints(Graph graph) throws Exception {
 		
 		for (Edge cont:graph.contacts){
 			String i_res = graph.getResType(cont.i);
@@ -166,6 +180,9 @@ public class ConstraintsMaker {
 				i_ct = ct.split("/")[0];
 				j_ct = ct.split("/")[1];
 			}
+			if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
+				throw new Exception("ALL is not a valid contact type for creating constraints");
+			}
 			double cutoff = graph.getCutoff();
 			double forceConstant = DEFAULT_FORCECONSTANT;
 			//TODO get force constants from weights
@@ -174,8 +191,9 @@ public class ConstraintsMaker {
 			Set<String> j_atoms = AAinfo.getAtomsForCTAndRes(j_ct, j_res);
 
 			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-			double dist_min = (AAinfo.getLowerBoundDistance(i_ct)+AAinfo.getLowerBoundDistance(j_ct))/2;
-			double dist_max = cutoff;
+			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
+			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
 			for (String i_atom:i_atoms) {
 				for (String j_atom:j_atoms) {
