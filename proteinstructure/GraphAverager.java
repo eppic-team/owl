@@ -86,9 +86,12 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Adds contacts to this.graph when the consensus vote is above the given threshold
-	 * Return is by reference (passed graph object reference)
-	 * @param threshold
+	 * Calculates the consensus graph from the set of template graphs. An edge is contained
+	 * in the consensus graph if the fractions of template graphs it is contained in is above
+	 * the given threshold. The resulting consensus edges are added to the output graph passed
+	 * to the construtor on creation. Note that access to this graph is by reference, so the
+	 * original graph is modified.
+	 * @param threshold the threshold above which an edge is taken to be a consensus edge
 	 */
 	public void doAveraging(double threshold) {
 

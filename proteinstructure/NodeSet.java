@@ -5,6 +5,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// TODO: Create a Node class (which can contain node coloring, class, residue type, etc.)
 public class NodeSet extends TreeSet<Integer> {
 
 	private static final long serialVersionUID = 1L;
