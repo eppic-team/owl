@@ -19,6 +19,14 @@ public class Edge implements Comparable {
 		this.weight=weight;
 	}
 	
+	/**
+	 * Return a deep copy if this edge
+	 * @return
+	 */
+	public Edge copy() {
+		return new Edge(i, j, weight);
+	}
+	
 	public int compareTo(Object o) {
 		Edge other = (Edge) o;
 		if (this.i>other.i){

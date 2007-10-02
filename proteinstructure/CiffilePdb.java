@@ -406,7 +406,7 @@ public class CiffilePdb extends Pdb {
 		sequence = "";
 		
 		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) chainCodeStr="A";
+		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr="A";
 		
 		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
 		

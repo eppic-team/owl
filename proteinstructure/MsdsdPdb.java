@@ -142,7 +142,7 @@ public class MsdsdPdb extends Pdb {
 	private void getchainid() throws PdbCodeNotFoundError, SQLException {
 		chainid=0;
 		String chaincodestr="='"+pdbChainCode+"'";
-		if (pdbChainCode.equals("NULL")){
+		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)){
 			chaincodestr="IS NULL";
 		}
 		String sql = "SELECT chain_id, model_id, pchain_code " +

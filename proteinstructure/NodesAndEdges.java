@@ -8,8 +8,8 @@ package proteinstructure;
 public class NodesAndEdges {
 
 	/*--------------------------- member variables --------------------------*/
-	NodeSet nodes;
-	EdgeSet edges;
+	protected NodeSet nodes;
+	protected EdgeSet edges;
 	
 	/*----------------------------- constructors ----------------------------*/
 	/**
@@ -29,6 +29,13 @@ public class NodesAndEdges {
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
+	/**
+	 * Returns a deep copy of this graph
+	 */
+	public NodesAndEdges copy() {
+		return new NodesAndEdges(nodes.copy(), edges.copy());
+	}
+	
 	/**
 	 * Returns the node set of the graph
 	 * @return the node set
@@ -65,6 +72,29 @@ public class NodesAndEdges {
 			}
 		}
 		return consistent;
+	}
+	
+	/**
+	 * Output information about the graph to stdout
+	 * @param printNodes whether to output all nodes
+	 * @param printEdges whether to output all edges
+	 */
+	public void printGraph(boolean printNodes, boolean printEdges) {
+		System.out.println("Nodes: " + nodes.size() + " Edges: " + edges.size());
+		if(printNodes) {
+			System.out.println("Nodes:");
+			for(int node:nodes) {
+				System.out.print(node + " ");
+			}
+			System.out.println();
+		}
+		if(printEdges) {
+			System.out.println("Edges:");
+			for(Edge e:edges) {
+				System.out.print("(" + e.i + "," + e.j + "," + e.weight + ") ");
+			}
+			System.out.println();
+		}
 	}
 	
 }

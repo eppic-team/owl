@@ -50,7 +50,7 @@ public class PdbfilePdb extends Pdb {
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		// we set chainCode to pdbChainCode except for case NULL where we use "A"
 		this.chainCode=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) this.chainCode=NULL_chainCode;
+		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 		
 		this.sequence=""; // we initialise it to empty string, then is set in read_pdb_data_from_file 
 		
@@ -107,7 +107,7 @@ public class PdbfilePdb extends Pdb {
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
 		// we set chainCodeStr (for regex) to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals("NULL")) chainCodeStr=" ";
+		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));

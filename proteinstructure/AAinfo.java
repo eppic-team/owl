@@ -39,6 +39,8 @@ public class AAinfo {
 	public static final double DIST_MIN_CA=2.8;
 	// "guessed" general min distance from hydrogen the hydrogen bond length (we used it in Cb and Cg)
 	public static final double DIST_MIN=2.6;
+	// if two adjacent CAs are more than this distance apart, we assume a chain break (value taken from Casp assessment)
+	public static final double DIST_CHAIN_BREAK=4.5;
 
 	
 	/*----------------------- "member" variables ---------------------------*/

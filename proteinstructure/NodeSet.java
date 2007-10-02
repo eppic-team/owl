@@ -11,6 +11,17 @@ public class NodeSet extends TreeSet<Integer> {
 	private static final long serialVersionUID = 1L;
 	
 	/**
+	 * Returns a deep copy of this NodeSet
+	 */
+	public NodeSet copy() {
+		NodeSet copy = new NodeSet();
+		for(int n:this) {
+			copy.add(n);
+		}
+		return copy;
+	}
+	
+	/**
 	 * Returns the set as a vector of intervals of consecutive elements.
 	 * @return
 	 */

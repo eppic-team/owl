@@ -160,7 +160,7 @@ public class PdbasePdb extends Pdb {
 	
 	private String get_asym_id() throws PdbChainCodeNotFoundError, SQLException {
 		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals("NULL")){
+		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
 		String sql="SELECT asym_id " +
@@ -289,7 +289,7 @@ public class PdbasePdb extends Pdb {
 	private String read_seq() throws PdbaseInconsistencyError, SQLException{
 		String sequence="";
 		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals("NULL")){
+		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
@@ -324,7 +324,7 @@ public class PdbasePdb extends Pdb {
 	
 	private HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError, SQLException{
 		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals("NULL")){
+		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
 

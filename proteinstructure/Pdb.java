@@ -26,6 +26,7 @@ public abstract class Pdb {
 	
 	protected final static int DEFAULT_MODEL=1;				// default model serial (NMR structures)
 	public final static String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
+	public static final String NULL_CHAIN_CODE = "NULL";	// to specify no chain code
 	
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
 	protected HashMap<Integer,String> resser2restype;   // residue serial to 3 letter residue type 
