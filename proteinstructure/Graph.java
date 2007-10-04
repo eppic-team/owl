@@ -30,7 +30,7 @@ public class Graph {
 	
 	public EdgeSet contacts; // we keep it public to be able to re-reference the object directly (getContacts() copies it)
 	
-	protected TreeMap<Edge,Double> weights;
+	protected TreeMap<Edge,Double> weights;	// TODO: Use weight in Edge class
 	
 	protected TreeMap<Integer,String> nodes; // nodes is a TreeMap of residue serials to residue types (3 letter code)
 	protected SecondaryStructure secondaryStructure; // secondary structure annotation for this protein graph
@@ -53,9 +53,52 @@ public class Graph {
 	protected int numContacts;
 	
 	protected boolean modified;
-	
+
+	/**
+	 * Constructs an empty graph object
+	 */
 	public Graph() {
-		
+		this.contacts=new EdgeSet();
+		this.weights=new TreeMap<Edge,Double>();
+		this.cutoff=0;
+		this.nodes=new TreeMap<Integer,String>();
+		this.sequence=null;
+		this.pdbCode=null;
+		this.chainCode=null;
+		this.pdbChainCode=null;
+		this.model=1;
+		this.ct=null;
+		this.fullLength=0;
+		this.obsLength=0;
+		this.numContacts=0;
+		this.modified=false;
+		this.directed=false;
+		this.secondaryStructure = new SecondaryStructure();
+	}
+	
+	/**
+	 * Constructs a graph with a sequence but no edges
+	 */
+	public Graph(String sequence) {
+		this.contacts=new EdgeSet();
+		this.weights=new TreeMap<Edge,Double>();
+		this.cutoff=0;
+		this.nodes=new TreeMap<Integer,String>();
+		for(int i=0; i < sequence.length(); i++) {
+			nodes.put(i, AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
+		}
+		this.sequence=sequence;
+		this.pdbCode=null;
+		this.chainCode=null;
+		this.pdbChainCode=null;
+		this.model=1;
+		this.ct=null;
+		this.fullLength=sequence.length();
+		this.obsLength=fullLength;
+		this.numContacts=0;
+		this.modified=false;
+		this.directed=false;
+		this.secondaryStructure = new SecondaryStructure();
 	}
 		
 	/**
@@ -392,9 +435,10 @@ public class Graph {
 		if (!directed && cont.i>cont.j){
 			// we invert in case of undirected and i>j because in undirected we have only the half of the matrix j>i
 			// if we added an edge i>j it could happen that the edge was already there but inverted and wouldn't be detected as a duplicate
-			cont = new Edge(cont.j,cont.i); 
+			cont = new Edge(cont.j,cont.i);	
 		}
 		contacts.add(cont); // contacts is a TreeSet and thus takes care of duplicates
+		weights.put(cont,Edge.DEFAULT_WEIGHT);
 		int oldNumContacts = numContacts;
 		numContacts=getNumContacts();
 		// if number of contacts changed that means we actually added a new contact and thus we modified the graph

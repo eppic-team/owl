@@ -8,16 +8,15 @@ public class GraphAverager {
 	private TreeMap<String,Graph> templateGraphs;
 	private String targetTag;
 	private int numTemplates;
-	
-	private Graph graph;
+	private String sequence;
 	
 	private TreeMap<Edge,Integer> contactVotes;
 	
-	public GraphAverager(Graph graph, Alignment al, TreeMap<String,Graph> templateGraphs, String targetTag) {
-		this.graph = graph;
+	public GraphAverager(String sequence, Alignment al, TreeMap<String,Graph> templateGraphs, String targetTag) {
 		this.al = al;
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
+		this.sequence = sequence;
 		
 		this.numTemplates = templateGraphs.size();
 		checkSequences();
@@ -45,7 +44,7 @@ public class GraphAverager {
 			System.err.println("Number of sequences in alignment is different from number of templates +1 ");
 			// TODO throw exception
 		}
-		if(!al.getSequenceNoGaps(targetTag).equals(graph.getSequence())) {
+		if(!al.getSequenceNoGaps(targetTag).equals(this.sequence)) {
 			System.err.println("Target sequence in alignment does not match sequence in target graph");
 			// TODO throw exception
 		}
@@ -93,8 +92,10 @@ public class GraphAverager {
 	 * original graph is modified.
 	 * @param threshold the threshold above which an edge is taken to be a consensus edge
 	 */
-	public void doAveraging(double threshold) {
-
+	public Graph doAveraging(double threshold) {
+		
+		Graph graph = new Graph(this.sequence);
+		
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
 		for (Edge alignCont:contactVotes.keySet()){
@@ -105,6 +106,7 @@ public class GraphAverager {
 				}
 			}
 		}
+		return graph;
 		
 	}
 	
