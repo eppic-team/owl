@@ -43,10 +43,16 @@ public class ConstraintsMaker {
 	
 	private String lastPdbResSerial_Atom;
 	
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError{
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile) throws FileNotFoundException, IOException, PdbfileFormatError {
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
-		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath(),"NULL");
+		try {
+			this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath(),"NULL");
+		} catch (PdbChainCodeNotFoundError e){
+			// this shouldn't happen as the pdb chain code is hard coded, we print stack trace and exit
+			System.err.println(e.getMessage());
+			e.printStackTrace();
+		}
 		this.type = type;
 		
 		this.lastPdbResSerial_Atom = "";

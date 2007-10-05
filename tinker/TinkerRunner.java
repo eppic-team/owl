@@ -152,6 +152,8 @@ public class TinkerRunner {
 	/**
 	 * Runs tinker's distgeom program capturing output with restrain violation statistics into member variable arrays
 	 * that can be retrieved using the getters: getMaxLowerBoundViol, getMaxUpperBoundViol, getMaxLowerViol etc... 
+	 * Two files are needed as input for distgeom: an xyz file and a key file, the latter is not passed but instead implicitely 
+	 * defined by xyzFile: must be in same directory and must have same basename with extension .key 
 	 * @param xyzFile
 	 * @param outPath Directory where output files will be written
 	 * @param outBasename Base name of the output files
