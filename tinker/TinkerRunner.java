@@ -161,7 +161,7 @@ public class TinkerRunner {
 	 * @throws TinkerError If an error seen in tinker's output
 	 * @throws IOException
 	 */
-	public void runDistgeom(File xyzFile, String outPath, String outBasename, int n) throws TinkerError, IOException {
+	public void runDistgeom(File xyzFile, String outPath, String outBasename, int n) throws TinkerError, IOException, InterruptedException {
 		boolean tinkerError = false; // to store the exit state of the tinker program
 		if (!new File(outPath).exists()) {
 			throw new FileNotFoundException("Specified directory "+outPath+" does not exist");
@@ -268,12 +268,13 @@ public class TinkerRunner {
 			log.close();
 			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
 		}
+		int exitValue = dgeomProc.waitFor();
 		// throwing exception if exit state is 137: happens in Linux when another instance of distgeom is running in same machine, the OS kills it with exit state 137 
-		if (dgeomProc.exitValue()==137) {
+		if (exitValue==137) {
 			log.close();
 			throw new TinkerError("Distgeom was killed by OS, probably another instance of distgeom is running in this computer");
 		}
-		if (dgeomProc.exitValue()==139) {
+		if (exitValue==139) {
 			log.close();
 			throw new TinkerError("Distgeom was killed with exit code 139. Not enough memory.");
 		}
