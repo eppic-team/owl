@@ -87,10 +87,11 @@ public class GraphAverager {
 	/**
 	 * Calculates the consensus graph from the set of template graphs. An edge is contained
 	 * in the consensus graph if the fractions of template graphs it is contained in is above
-	 * the given threshold. The resulting consensus edges are added to the output graph passed
-	 * to the construtor on creation. Note that access to this graph is by reference, so the
-	 * original graph is modified.
+	 * the given threshold.
+	 * The output is a new Graph object created from the given sequence in the constructor 
+	 * to which we add the averaged edges  
 	 * @param threshold the threshold above which an edge is taken to be a consensus edge
+	 * @return 
 	 */
 	public Graph doAveraging(double threshold) {
 		
