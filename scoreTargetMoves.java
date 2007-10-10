@@ -18,7 +18,8 @@ public class scoreTargetMoves {
 	static String user = "lappe"	; // change user name!!
 	static MySQLConnection conn;
 	static String prgID = "V03"; 
-	static String backgrndDB = "cullpdb_90";  
+	static String backgrndDB = "cullpdb_90";
+	static String hashDB = "nbhashing";
 	static String targetDB = "CASP_decoys"; 
 	static String targetNodes = "target_node";
 	static String targetEdges = "target_edge";
@@ -26,7 +27,9 @@ public class scoreTargetMoves {
 	
 	public static void main(String[] args) {
 		
-		int graph_id, node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
+		int graph_id = Integer.parseInt(args[0]);
+		
+		int node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
 		String sql, scoreTableName, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
 		Statement mstmt;  
 		ResultSet mrsst;
@@ -51,7 +54,10 @@ public class scoreTargetMoves {
 			mstmt.close(); 
 
 			sql = "select graph_id, node_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
-					" from "+scoreTableName+" order by graph_id, node_id, cid, num, i, j;"; 
+					" from "+scoreTableName+
+					" WHERE graph_id="+graph_id+
+					" order by graph_id, node_id, cid, num, i, j ;";
+					 
 			mstmt = conn.createStatement();
 			mrsst = mstmt.executeQuery(sql); 
 			counter=0; 
@@ -59,7 +65,7 @@ public class scoreTargetMoves {
 				counter++;
 				// System.out.print("\n"+counter+":\t"); 
 				
-				graph_id = mrsst.getInt( 1);
+				//graph_id = mrsst.getInt( 1);
 				node_id  = mrsst.getInt( 2);
 				cid      = mrsst.getString( 3);
 				num      = mrsst.getInt( 4);
@@ -124,47 +130,39 @@ public class scoreTargetMoves {
 		boolean seenCentRes = false; 
 		
 		try {
-			// Hashing first row tables comes first
-//			 Hashing first row tables comes first
 			if (VL>=2) {
 				System.out.println("getCountRank for ");
 				System.out.println("nbs    : "+nbs); 
 				System.out.println("centRes: "+centRes);
-				System.out.println("predec : "+predec);
 			}
-			String this_n = nbs.replace("%",""); 
-			String prec_n = predec.replace("%","");
-			// Check that this is really a superstring of predec ?! 
-			if (VL>=2) System.out.println("this_n: ["+this_n+"]"); 
-			if (VL>=2) System.out.println("prec_n: ["+prec_n+"]");
-			if (prec_n.equals(this_n)) {
-				if (VL>=2) System.out.println("have to create db for this "+prec_n);
-				sql = "create table IF NOT EXISTS nbhashtables."+prec_n+" as select res, n, k from "+backgrndDB+".nbstrings where n like '"+nbs+"';"; 
-				if (VL>=2) System.out.println(" >> "+sql); 
+			String hashKey = ""; 
+			String hashTable = "";
+			if (nbs.replace("%", "").length()>2) { // case 1: neighbourhood at least length 2
+				hashKey = nbs.replace("%","").substring(0, 2);
+				hashTable = hashDB+"."+backgrndDB+"_"+hashKey;
+				sql = "select sum(c) from "+hashTable+" where n like '"+nbs+"';";
 				stmt = conn.createStatement();
-				stmt.executeUpdate( sql); 
+				rsst = stmt.executeQuery(sql);
+				if (rsst.next()) sTotal = rsst.getInt( 1);
+				rsst.close(); 
 				stmt.close(); 
-			} else if (VL>=2) System.out.println("using preceding db of "+prec_n); 
-			
-			if (VL>=2) {
-				System.out.println("getCountRank for ");
-				System.out.println("nbs    : "+nbs); 
-				System.out.println("centRes: "+centRes);
+			} else { // case 2: length on neighbourhood is 1: we just have 'x', we query whole table
+				sql = "select sum(c) from "+backgrndDB+".nb_equals;";
+				stmt = conn.createStatement();
+				rsst = stmt.executeQuery(sql);
+				if (rsst.next()) sTotal = rsst.getInt( 1);
+				rsst.close(); 
+				stmt.close(); 				
 			}
 			
-			// sql = "select count(*) from "+backgrndDB+".single_model_node where n like '"+nbs+"';";
-			sql = "select count(*) from nbhashtables."+prec_n+" where n like '"+nbs+"';";
-			if (VL>=2) System.out.println( sql); 
-			stmt = conn.createStatement();
-			rsst = stmt.executeQuery(sql);
-			if (rsst.next()) sTotal = rsst.getInt( 1);
-			rsst.close(); 
-			stmt.close(); 
 			if (VL>=2) System.out.println( "Total : "+sTotal); 
 			
 			if (sTotal>0) {
-				// sql = "select res, count(*) as t from "+backgrndDB+".single_model_node where n like '"+nbs+"' group by res order by t DESC;";
-				sql = "select res, count(*) as t from nbhashtables."+prec_n+" where n like '"+nbs+"' group by res order by t DESC;";
+				if (!hashTable.equals("")) { // i.e. we set hashTable (case 1 above) 
+					sql = "select res, sum(c) as t from "+hashTable+" where n like '"+nbs+"' group by res order by t DESC;";
+				} else { // i.e. we didn't set hashTable (case 2 above)
+					sql = "select res, sum(c) as t from "+backgrndDB+".nb_equals group by res order by t DESC;";
+				}
 				stmt = conn.createStatement();
 				rsst = stmt.executeQuery(sql);
 				if (VL>=2) System.out.println("###\tres\ttotal t");
