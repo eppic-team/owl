@@ -213,7 +213,8 @@ public class reconstruct {
 			System.out.println("Running distgeom...");
 			tr.runDistgeom(xyzFile, outputDir, baseName, n);
 		} catch (TinkerError e1) {
-			System.err.println("Tinker error while running 'distgeom', check log file "+logFile.getAbsolutePath()+". Exiting");
+			System.err.println(e1.getMessage());
+			System.err.println("Exiting");
 			System.exit(1);			
 		} catch (IOException e1) {
 			System.err.println("Couldn't read files "+xyzFile.getAbsolutePath()+" or write 'distgeom' output files to output dir "+outputDir);
@@ -274,7 +275,7 @@ public class reconstruct {
 		
 		for (int i=1;i<=n;i++){
 			System.out.println(pdbCode+"\t"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
-					i+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
+					i+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
 					"\t"+nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsds[i]);
 		}
 		
