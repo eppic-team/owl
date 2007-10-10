@@ -252,7 +252,9 @@ public class TinkerRunner {
 			m = p.matcher(line);
 			if (m.find()) {
 				rmsRestViol[i]=Double.parseDouble(m.group(1));
+				System.out.println("Done model "+i+". Violations: "+numUpperViol[i]+" upper, "+numLowerViol[i]+" lower");
 				i++;
+				
 			}
 		}
 		//renaming files to our chosen outBasename+ext
@@ -264,6 +266,11 @@ public class TinkerRunner {
 		if (tinkerError) {
 			log.close();
 			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+		}
+		// throwing exception if exit state is 137: happens in Linux when another instance of distgeom is running in same machine, the OS kills it with exit state 137 
+		if (dgeomProc.exitValue()==137) {
+			log.close();
+			throw new TinkerError("Distgeom was killed by OS, probably another instance of distgeom is running in this computer");
 		}
 		
 	}
