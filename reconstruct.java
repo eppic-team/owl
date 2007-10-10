@@ -220,6 +220,10 @@ public class reconstruct {
 			System.err.println("Couldn't read files "+xyzFile.getAbsolutePath()+" or write 'distgeom' output files to output dir "+outputDir);
 			System.err.println("Exiting");
 			System.exit(1);
+		} catch(InterruptedException e) {
+			System.err.println("Distgeom was interrupted:" + e.getMessage());
+			System.err.println("Exiting.");
+			System.exit(1);
 		}
 		
 		double[] mubv = tr.getMaxUpperBoundViol();
