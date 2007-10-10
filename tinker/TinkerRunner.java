@@ -193,7 +193,8 @@ public class TinkerRunner {
 		maxLowerViol = new double[n+1];
 		rmsRestViol = new double[n+1];
 		// running distgeom program
-		Process dgeomProc = Runtime.getRuntime().exec(distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+DGEOM_PARAMS);
+		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+DGEOM_PARAMS;
+		Process dgeomProc = Runtime.getRuntime().exec(cmdLine);
 		// logging and capturing output
 		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
 		String line;
@@ -271,6 +272,10 @@ public class TinkerRunner {
 		if (dgeomProc.exitValue()==137) {
 			log.close();
 			throw new TinkerError("Distgeom was killed by OS, probably another instance of distgeom is running in this computer");
+		}
+		if (dgeomProc.exitValue()==139) {
+			log.close();
+			throw new TinkerError("Distgeom was killed with exit code 139. Not enough memory.");
 		}
 		
 	}
