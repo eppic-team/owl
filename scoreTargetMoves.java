@@ -97,7 +97,7 @@ public class scoreTargetMoves {
 				rank = sRank;
 				if (i==0 && j==0) nullrank = rank; 
 				deltaRank = rank-nullrank; 
-				System.out.println("\t"+total+"\t"+rank+"\t"+deltaRank+"\t"+0.0); 
+				System.out.println(total+"\t"+rank+"\t"+deltaRank+"\t"+0.0); 
 				// graph_id | node_id | cid | num | res  | sstype | i | j  | minus | mres | mss  | mcn | plus | pres | pss  | pcn | nn | total | rank | deltarank | score
 				
 				/*sql = "update "+scoreTableName+" set total="+sTotal+", rank="+sRank+", deltarank="+deltaRank
