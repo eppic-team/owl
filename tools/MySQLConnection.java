@@ -143,11 +143,26 @@ public class MySQLConnection {
 		try {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		}
-		catch(Exception e) {
+		catch(IllegalAccessException e) {
 			e.printStackTrace();
 			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
 			System.exit(1);
 		}
+		catch(InstantiationException e) {
+			e.printStackTrace();
+			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
+			System.exit(1);			
+		}
+		catch(ClassNotFoundException e) {
+			e.printStackTrace();
+			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
+			System.exit(1);			
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+			System.err.println("An exception occurred while loading the mysql jdbc driver, exiting.");
+			System.exit(1);			
+		}		
 	}
 
 	/**
