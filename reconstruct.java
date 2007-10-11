@@ -162,7 +162,7 @@ public class reconstruct {
 
 		
 		// defining files
-		File logFile = new File(outputDir,"tinker.log");
+		File logFile = new File(outputDir,baseName+".tinker.log");
 		File prmFile = new File(PRMFILE);
 		File xyzFile = new File(outputDir,baseName+".xyz");
 		File seqFile = new File(outputDir,baseName+".seq");
