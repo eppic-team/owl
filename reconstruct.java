@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.Formatter;
+import java.util.Locale;
 
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
@@ -131,7 +132,6 @@ public class reconstruct {
 			cutoff3 = cutoff1;
 		}
 		
-		
 		Pdb pdb = null;
 		try {
 			pdb = new PdbasePdb(pdbCode,pdbChainCode);
@@ -148,6 +148,15 @@ public class reconstruct {
 			System.err.println("Given pdb chain code "+pdbChainCode+" couldn't be found for pdb code "+pdbCode+". Exiting");
 			System.exit(1);
 		}
+		// we also write the file to the out dir so it can be used later for clustering rmsds etc.
+		File origPdbFile = new File (outputDir,baseName+".orig.pdb");
+		try {
+			pdb.dump2pdbfile(origPdbFile.getAbsolutePath());
+		} catch (IOException e4) {
+			System.err.println("Couldn't write original pdb file "+origPdbFile.getAbsolutePath());
+			System.err.println("Continuing without it, this is not needed for the rest of the reconstruction process but only for post processing (e.g. comparing rmsds to original)");
+		}
+
 		String sequence = pdb.getSequence();
 
 		Graph graph1 = pdb.get_graph(ct1, cutoff1);
@@ -294,9 +303,10 @@ public class reconstruct {
 						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
 
 			for (int i=1;i<=n;i++){
+				String rmsd = String.format(Locale.US,"%6f",rmsds[i]);
 				reportOut.println(pdbCode+"\t"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
 						i+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
-						nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsds[i]);
+						nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsd);
 			}
 			reportOut.close();
 		} catch (FileNotFoundException e) {
