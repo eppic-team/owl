@@ -2,7 +2,6 @@ package proteinstructure;
 
 import java.util.TreeSet;
 
-
 public class EdgeSet extends TreeSet<Edge> {
 
 	private static final long serialVersionUID = 1L;
@@ -46,6 +45,28 @@ public class EdgeSet extends TreeSet<Edge> {
 			copy.add(e.copy());
 		}
 		return copy;
+	}
+	
+	/**
+	 * Returns true if this EdgeSet equals the given other EdgeSet. Edges are considered
+	 * equal if they connect the same node nums.
+	 * @param other the EdgeSet to compare with
+	 * @return true if the two sets are equal, false otherwise
+	 */
+	public boolean equals(EdgeSet other) {
+		if(this.size() != other.size()) return false;
+		for(Edge e:this) {
+			if(!other.contains(e)) {
+				return false;
+			}
+		}
+		// just to be safe:
+		for(Edge e:other) {
+			if(!this.contains(e)) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	/**

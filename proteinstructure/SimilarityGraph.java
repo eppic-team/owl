@@ -1,7 +1,8 @@
 package proteinstructure;
 import java.io.*;
 import java.util.*;
-import tools.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /**
  * This class represents a similarity graph where nodes correspond to objects and edges to similarities (or distances) between them. 
  * It provides provides methods for
@@ -60,7 +61,7 @@ public class SimilarityGraph extends NodesAndEdges {
 		for(String nodeStr:nodeLabels) {
 			int node = Integer.parseInt(nodeStr.trim());
 			nodeVector.add(node);
-			nodes.add(node);
+			nodes.add(new Node(node));
 		}
 		String line;
 		int lineNum = 0;
@@ -91,7 +92,7 @@ public class SimilarityGraph extends NodesAndEdges {
 	 * Read a distance matrix output file of the Maxcluster program
 	 * @param fileName
 	 */
-	public void readMaxclusterMatrix(String fileName) {
+	public void readFromMaxclusterMatrix(String fileName) {
 		try {
 			BufferedReader in = new BufferedReader(new FileReader(fileName));
 			System.out.println("Reading from file " + fileName);
@@ -100,7 +101,10 @@ public class SimilarityGraph extends NodesAndEdges {
 				if(line.startsWith("PDB")) {
 					String[] t = line.split("\\s+");
 					int node = Integer.parseInt(t[2]);
-					nodes.add(node);
+					String fName = t[3];
+					Node newNode = new Node(node);
+					newNode.setProperty("filename", fName);
+					nodes.add(newNode);
 				} else
 				if(line.startsWith("DIST")) {
 					String[] t = line.split("\\s+");
@@ -118,90 +122,39 @@ public class SimilarityGraph extends NodesAndEdges {
 	}
 	
 	/**
-	 * Not implemented: Write graph to database
-	 * @param conn
+	 * Reads a maxCluster ranking file and sets the node properties 'rank' and 'score'.
+	 * The nodes are identified by the property 'filename', so they have to be set,
+	 * for example by calling readFromMaxclsuterMatrix with a corresponding matrix file.
 	 */
-	public void writeToDb(MySQLConnection conn) {
-		
-	}
-	
-	/**
-	 * Not implemented: Read graph from a database
-	 * @param conn
-	 */
-	public void loadFromDb(MySQLConnection conn) {
-		
-	}
-	
-	/**
-	 * Output graph as a GDL file for aiSee
-	 * @param fileName output file
-	 * @param bestModel a workaround before ranking is working to highlight the best model in the graph
-	 * TODO: Move to NodesAndEdges
-	 */
-	public void writeGdlFile(String fileName, int bestModel) {
+	public void readLabelsFromMaxClusterRanking(String rankingFile) {
 		try {
-			PrintWriter fileOut = new PrintWriter(new FileOutputStream(fileName));
-			// ---- init graph ----
-			fileOut.println("graph: {");
-			fileOut.println("layoutalgorithm:forcedir \t attraction:80 \t repulsion:100 \t gravity:0.5");
-			fileOut.println();
-			
-			// Specifying new colours
-			fileOut.println("colorentry 33: 230 230 230");
-
-			//Setting the background colour
-			fileOut.println("color:white");			
-			fileOut.println();
-			
-			// ---- write nodes ----
-			
-			// node parameters
-			fileOut.println("node.shape :circle");		// circle, rhomb
-			fileOut.println("node.width :40");
-			fileOut.println("node.height :40");
-		    fileOut.println("node.color:white");			
-		    fileOut.println("node.textcolor:black");
-			fileOut.println();
-			
-			// write nodes
-			for(int node:nodes) {
-				if(node == bestModel) {
-				    fileOut.println("node.color:red");					
-				} else {
-					fileOut.println("node.color:white");
+			BufferedReader in = new BufferedReader(new FileReader(rankingFile));
+			System.out.println("Reading from file " + rankingFile);
+			String line;
+			while((line = in.readLine()) != null) {
+				Pattern p = Pattern.compile("INFO  : +(\\d+). (.+) vs. (.+)   (GDT|RMSD)= *(\\d+\\.\\d+)");
+				Matcher m = p.matcher(line);
+				if(m.find()) {
+					String rank = m.group(1);
+					//String targetName = m.group(2);
+					String fileName = m.group(3);
+					//String scoreType = m.group(4);
+					String score = m.group(5);
+					//System.out.printf("target=%s file=%s rank=%s type=%s score=%s\n", targetName, fileName, rank, scoreType, score);
+					Node n = nodes.getNodeByProperty("filename",fileName);
+					if(n == null) {
+						System.err.println("No node found with property filename=" + fileName);
+					} else {
+						n.setProperty("rank", rank);
+						n.setProperty("score", score);
+					}
 				}
-				fileOut.println("node: { title: \""+ node +"\"");
-				fileOut.println("\tlabel: \""+ node +"\"\t}");
-				
 			}
-
-			// ---- write edges ----
-		    
-			// edge parameters
-			fileOut.println();
-			fileOut.println("edge.arrowstyle:none");		// none, solid
-			fileOut.println("edge.linestyle:continuous");	// invisible, dotted, continuous
-		    fileOut.println("edge.arrowsize:20");
-			fileOut.println("edge.thickness:2");
-			fileOut.println("edge.color:blue");
-			fileOut.println();
-			
-			// write edges
-			for(Edge e:edges) {
-				fileOut.println("edge: { source: \"" + e.i + "\" \t target: \"" + e.j + "\"}");
-			}
-			
-			// ---- finish graph ----
-			fileOut.println();
-			fileOut.println("}   // end Graph");
-			fileOut.close();
-			System.out.println("GDL output written to " + fileName);
-			
-		} catch(IOException e) {
-			System.err.println("Error writing to file " + fileName);
+		} catch(FileNotFoundException e) {
 			e.printStackTrace();
-		}
+		} catch(IOException e) {
+			e.printStackTrace();
+		}		
 	}
 	
 	/**
@@ -227,16 +180,15 @@ public class SimilarityGraph extends NodesAndEdges {
 	public static void main(String[] args) {
 		
 		if(args.length < 5) {
-			System.out.println("Usage: SimilarityGraph <matrixFile> <outputGdlFile> <cutoff> <s[imilarity]/d[istance]> <numberOfBestModel>");
+			System.out.println("Usage: SimilarityGraph <matrixFile> <rankingFile> <outputGdlFile> <cutoff> <s[imilarity]/d[istance]>");
 			System.exit(1);
 		}
 		String matrixFile = args[0];
-		String gdlFile = args[1];
-		String cutoffStr = args[2];
-		String typeStr = args[3];
-		String bestModelStr = args[4];
+		String rankingFile = args[1];
+		String gdlFile = args[2];
+		String cutoffStr = args[3];
+		String typeStr = args[4];
 		double filterCutoff = Double.parseDouble(cutoffStr);
-		int bestModel = Integer.parseInt(bestModelStr);
 		int scoreType = 0;
 		if(typeStr.startsWith("s")) {
 			scoreType = SIMILARITY;
@@ -255,14 +207,20 @@ public class SimilarityGraph extends NodesAndEdges {
 		
 		SimilarityGraph myGraph = new SimilarityGraph(scoreType);
 
-		myGraph.readMaxclusterMatrix(matrixFile);
-		System.out.println("Before filtering:");
+		myGraph.readFromMaxclusterMatrix(matrixFile);
+		myGraph.readLabelsFromMaxClusterRanking(rankingFile);
+		Node bestModel = myGraph.getNodes().getNodeByProperty("rank", "1");
+		if(bestModel != null) {
+			System.out.println("Best model: " + bestModel.num + " with " + bestModel.getProperty("score"));
+			bestModel.setProperty("color", "red");
+		}
+		System.out.println("Before edge filtering:");
 		myGraph.printGraph(false, false);
 		myGraph.removeDistantEdges(filterCutoff);
-		System.out.println("After filtering:");
+		System.out.println("After edge filtering:");
 		myGraph.printGraph(false, false);
 		System.out.println("Writing GDL file...");
-		myGraph.writeGdlFile(gdlFile, bestModel);				
+		myGraph.writeGdlFile(gdlFile, null, "color");			// labelProperty: 'rank', 'score' or null; colorProperty: 'color' or null		
 		System.out.println("done.");
 	}
 
