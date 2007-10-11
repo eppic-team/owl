@@ -2,7 +2,9 @@ import gnu.getopt.Getopt;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.Formatter;
 
@@ -166,6 +168,7 @@ public class reconstruct {
 		File seqFile = new File(outputDir,baseName+".seq");
 		File pdbFile = new File(outputDir,baseName+".pdb");
 		File keyFile = new File(outputDir,baseName+".key");
+		File reportFile = new File(outputDir,baseName+".report");
 		
 		// creating TinkerRunner object
 		TinkerRunner tr = null;
@@ -253,45 +256,51 @@ public class reconstruct {
 
 		double[] rmsds = new double[n+1];		
 		
-			for (int i = 1; i<=n; i++) {
-				String ext = new Formatter().format(".%03d",i).toString();
-				File outputXyzFile = new File(outputDir, baseName+ext);
-				File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
-				try {
-					tr.runXyzpdb(outputXyzFile, seqFile, outputPdbFile);
-					
-					Pdb outputPdb = new PdbfilePdb(outputPdbFile.getAbsolutePath(),"NULL");
-					rmsds[i] = pdb.rmsd(outputPdb, "Ca");
+		for (int i = 1; i<=n; i++) {
+			String ext = new Formatter().format(".%03d",i).toString();
+			File outputXyzFile = new File(outputDir, baseName+ext);
+			File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
+			try {
+				tr.runXyzpdb(outputXyzFile, seqFile, outputPdbFile);
 
-				} catch (IOException e) {
-					System.err.println("Couldn't read file "+outputXyzFile.getAbsolutePath()+", or "+seqFile.getAbsolutePath()+", or write to "+outputPdbFile.getAbsolutePath()+" while converting with 'xyzpdb'");
-					System.err.println("Can't calculate rmsd for it");
-				} catch (TinkerError e) {
-					System.err.println("Tinker error while running 'xyzpdb' to convert"+outputXyzFile.getAbsolutePath()+", check log file "+logFile.getAbsolutePath());
-					System.err.println("Can't calculate rmsd for it");
-				}
-				catch (PdbfileFormatError e) {
-					System.err.println("Output pdb file "+outputPdbFile.getAbsolutePath()+" doesn't seem to be in the correcet format. Can't calculate rmsd for it");
-				} catch (PdbChainCodeNotFoundError e) {
-					// this shouldn't happen, chain code is hard coded, we throw stack trace and continue if it happens
-					e.printStackTrace();
-				} catch (ConformationsNotSameSizeError e) {
-					System.err.println(pdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
-				}				
-				
-				tr.closeLog();
-			}					
+				Pdb outputPdb = new PdbfilePdb(outputPdbFile.getAbsolutePath(),"NULL");
+				rmsds[i] = pdb.rmsd(outputPdb, "Ca");
+
+			} catch (IOException e) {
+				System.err.println("Couldn't read file "+outputXyzFile.getAbsolutePath()+", or "+seqFile.getAbsolutePath()+", or write to "+outputPdbFile.getAbsolutePath()+" while converting with 'xyzpdb'");
+				System.err.println("Can't calculate rmsd for it");
+			} catch (TinkerError e) {
+				System.err.println("Tinker error while running 'xyzpdb' to convert"+outputXyzFile.getAbsolutePath()+", check log file "+logFile.getAbsolutePath());
+				System.err.println("Can't calculate rmsd for it");
+			}
+			catch (PdbfileFormatError e) {
+				System.err.println("Output pdb file "+outputPdbFile.getAbsolutePath()+" doesn't seem to be in the correcet format. Can't calculate rmsd for it");
+			} catch (PdbChainCodeNotFoundError e) {
+				// this shouldn't happen, chain code is hard coded, we throw stack trace and continue if it happens
+				e.printStackTrace();
+			} catch (ConformationsNotSameSizeError e) {
+				System.err.println(pdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
+			}				
+
+			tr.closeLog();
+		}					
 
 		
 		// 6. report
-		System.out.println("accession_code\tchain_pdb_code\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3" +
-				"\tresult_id\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
-				"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
-		
-		for (int i=1;i<=n;i++){
-			System.out.println(pdbCode+"\t"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
-					i+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
-					"\t"+nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsds[i]);
+		try {
+			PrintWriter reportOut = new PrintWriter(new FileOutputStream(reportFile));
+			reportOut.println("accession_code\tchain_pdb_code\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3" +
+						"\tresult_id\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
+						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
+
+			for (int i=1;i<=n;i++){
+				reportOut.println(pdbCode+"\t"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
+						i+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
+						nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsds[i]);
+			}
+			reportOut.close();
+		} catch (FileNotFoundException e) {
+			System.err.println("Couldn't write to report file "+reportFile.getAbsolutePath() +". Error: "+e.getMessage());
 		}
 		
 	}

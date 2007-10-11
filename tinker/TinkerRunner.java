@@ -274,9 +274,15 @@ public class TinkerRunner {
 			log.close();
 			throw new TinkerError("Distgeom was killed by OS, probably another instance of distgeom is running in this computer");
 		}
-		if (exitValue==139) {
+		else if (exitValue==139) {
 			log.close();
 			throw new TinkerError("Distgeom was killed with exit code 139. Not enough memory.");
+
+		}
+		// this is to catch all other possible errors not caught already by the parse of the error string in output
+		else if (exitValue!=0) { 
+			log.close();
+			throw new TinkerError("Distgeom exited with a non 0 exit code: "+exitValue+". Unknown error.");
 		}
 		
 	}
