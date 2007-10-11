@@ -116,7 +116,7 @@ public class Graph {
 	 * @param ssElems
 	 * @param rs2ss
 	 */
-	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct, TreeMap<Edge,Double> weights) {
+	protected Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct, TreeMap<Edge,Double> weights) {
 		this.contacts=contacts;
 		this.weights=weights;
 		this.cutoff=cutoff;
