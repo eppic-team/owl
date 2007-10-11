@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Formatter;
 
+import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.Graph;
 import proteinstructure.Pdb;
@@ -90,6 +91,21 @@ public class reconstruct {
 		if (pdbCode.equals("") || pdbChainCode.equals("") || ct.equals("") || cutoff1==0.0 || outputDir.equals("") || baseName.equals("")){
 			System.err.println("Must specify at least -p, -c, -t, -d, -o and -b");
 			System.err.println(help);
+			System.exit(1);
+		}
+		
+		if (baseName.contains(".")) {
+			System.err.println("Basename can't contain a dot (not allowed by tinker). Exiting");
+			System.exit(1);
+		}
+		
+		if (!AAinfo.isValidContactType(ct) || ct.contains("ALL")) {
+			System.err.println("Invalid contact type specified. Exiting");
+			System.exit(1);
+		}
+		
+		if (n>999) {
+			System.err.println("Maximum number of models is 999. Specify a lower value. Exiting");
 			System.exit(1);
 		}
 		
@@ -196,16 +212,11 @@ public class reconstruct {
 			System.err.println("pdb file "+pdbFile.getAbsolutePath()+" converted from "+xyzFile.getAbsolutePath()+" doesn't seem to be in the right format. Check log? ("+logFile.getAbsolutePath()+"). Exiting");
 			System.exit(1);
 		} 
-		try {
-			cm.createConstraints(graph1);
-			if (doublecm) cm.createConstraints(graph2);
-			if (cross) cm.createConstraints(graph3);
-		} catch (Exception e2) {
-			System.err.println("Invalid contact type for writing constraints.");
-			System.err.println("Error: "+e2.getMessage());
-			System.err.println("Exiting");
-			System.exit(1);
-		}
+
+		cm.createConstraints(graph1);
+		if (doublecm) cm.createConstraints(graph2);
+		if (cross) cm.createConstraints(graph3);
+
 		cm.closeKeyFile();
 
 		// 3. run tinker's distgeom

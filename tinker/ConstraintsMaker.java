@@ -169,12 +169,11 @@ public class ConstraintsMaker {
 	 * 	- all single atom types and any cross between them
 	 *  - BB, SC, BB/SC
 	 *  - all crosses between BB, SC and single atom contact types, e.g. BB/Cg
-	 * That means: 'ALL' CANNOT be used
+	 * That means: 'ALL' CANNOT be used. No exception will be thrown for that, input must be correct
 	 * 
 	 * @param graph
-	 * @throws Exception If the graph's contact type is ALL
 	 */
-	public void createConstraints(Graph graph) throws Exception {
+	public void createConstraints(Graph graph) {
 		
 		for (Edge cont:graph.contacts){
 			String i_res = graph.getResType(cont.i);
@@ -186,9 +185,11 @@ public class ConstraintsMaker {
 				i_ct = ct.split("/")[0];
 				j_ct = ct.split("/")[1];
 			}
-			if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
-				throw new Exception("ALL is not a valid contact type for creating constraints");
-			}
+			
+			// ALL is not a valid contact type for creating constraints!
+			assert (!i_ct.equals("ALL"));
+			assert (!j_ct.equals("ALL"));
+
 			double cutoff = graph.getCutoff();
 			double forceConstant = DEFAULT_FORCECONSTANT;
 			//TODO get force constants from weights
