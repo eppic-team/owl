@@ -1,12 +1,11 @@
 package proteinstructure;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -26,8 +25,6 @@ import javax.vecmath.Point3d;
  * A single chain pdb protein structure loaded from an mmCIF file or downloaded from the PDB FTP site 
  * 
  * @author		Jose Duarte
- * Class:		CiffilePdb
- * Package:		proteinstructure
  */
 public class CiffilePdb extends Pdb {
 
@@ -54,9 +51,11 @@ public class CiffilePdb extends Pdb {
 	private TreeMap<String,Integer> fields2indices;					// map of field names (id.field) to index (for loop elements)
 	private TreeMap<String,Integer> ids2fieldsIdx;					// map of element ids to field index counter (after parseCifFile method done it contains the total number of fields per element id)
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
-	private TreeMap<Integer,Interval> loopelements2contentIndex;    // begin and end line index of each loop element
+	private TreeMap<Integer,Long[]> loopelements2contentOffset;    // begin and end line index of each loop element
 	
 	private String altLoc;
+	
+	private RandomAccessFile fcif;
  
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -146,13 +145,10 @@ public class CiffilePdb extends Pdb {
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.model=model_serial;
 		
-		parseCifFile();			
-		this.pdbCode = readPdbCode();
-		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
-		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
-		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
-		readSecStructure(); // populates secondaryStructure	
+		fcif = new RandomAccessFile(cifFile,"r");
+		parseCifFile();
+		fcif.close();
+
 		this.fullLength = sequence.length();		
 		this.obsLength = resser2restype.size();		
 		if(!secondaryStructure.isEmpty()) {
@@ -201,13 +197,10 @@ public class CiffilePdb extends Pdb {
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.model=model_serial;
 		
-		parseCifFile();			
-		this.pdbCode = readPdbCode();
-		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
-		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
-		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
-		readSecStructure(); // populates secondaryStructure	
+		fcif = new RandomAccessFile(cifFile,"r");
+		parseCifFile();
+		fcif.close();
+
 		this.fullLength = sequence.length();		
 		this.obsLength = resser2restype.size();		
 		if(!secondaryStructure.isEmpty()) {
@@ -231,16 +224,15 @@ public class CiffilePdb extends Pdb {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private void parseCifFile() throws IOException, CiffileFormatError{
+	private void parseCifFile() throws IOException, CiffileFormatError, PdbChainCodeNotFoundError{
 		// data structures to store the parsed fields
 		ids2elements = new TreeMap<String, Integer>();
 		fields2indices = new TreeMap<String,Integer>();
 		fields2values = new TreeMap<String, String>();
 		loopElements = new TreeSet<Integer>(); // contains list of elements that are of loop type
-		loopelements2contentIndex = new TreeMap<Integer,Interval>();
+		loopelements2contentOffset = new TreeMap<Integer,Long[]>();
 		ids2fieldsIdx = new TreeMap<String,Integer>(); // this map holds the field index counters for each element id
 		
-		BufferedReader fcif = new BufferedReader(new FileReader(cifFile));
 		int element = 0;
 		String line;
 		line = fcif.readLine(); // read first line
@@ -249,7 +241,10 @@ public class CiffilePdb extends Pdb {
 			throw new CiffileFormatError("The file doesn't seem to be a cif file");
 		}
 		int linecount = 1; // we have read one line already, we initialise count to 1
+		// we need to store the last line's byte offset (which indicates the beginning of this line) 
+		long lastLineOffset=fcif.getFilePointer();
 		while((line = fcif.readLine()) != null ) {
+			long currentOffset = fcif.getFilePointer(); //this gets byte offset at end of line
 			linecount++;
 			if (line.startsWith("#")) {
 				element++;
@@ -278,19 +273,28 @@ public class CiffilePdb extends Pdb {
 			}
 			if (!line.startsWith("_") && !line.startsWith("#")){ // not in field definition, we are in values of a loop element 
 				if (ids2elements.containsValue(element)) { // if this is one of the fields we want to parse (members of String[] ids)
-					if (!loopelements2contentIndex.containsKey(element)) {
+					if (!loopelements2contentOffset.containsKey(element)) {
 						//loopelements2content.put(element,line+"\n");
-						Interval interval = new Interval(linecount,linecount);
-						loopelements2contentIndex.put(element,interval);
+						Long[] interval = {lastLineOffset, currentOffset};
+						loopelements2contentOffset.put(element,interval);
 					} else {
 						//loopelements2content.put(element,loopelements2content.get(element)+line+"\n");
-						loopelements2contentIndex.get(element).end=linecount;
+						loopelements2contentOffset.get(element)[1]=currentOffset;
 					}
 				}
-			}			
+			}
+			lastLineOffset = currentOffset; //we store this line's offset to have it for next iteration
 		} // end scanning lines
 		
-		fcif.close();
+		// now reading separate elements separately using private methods
+		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
+		this.pdbCode = readPdbCode();
+		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
+		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
+		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
+		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+		readSecStructure(); // populates secondaryStructure	
+
 	}
 	
 	private String readPdbCode(){
@@ -298,7 +302,7 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	private void readAtomAltLocs() throws IOException, CiffileFormatError {
-		// The read of the atom_sites_alt element must be done in a separate scan of the file, previous to scanning the atom_site element
+		// The read of the atom_sites_alt element must be done previously to scanning the atom_site element
 		// This is because the order of the different elements in the cif files is not guaranteed, so atom_sites_alt can come before or after atom_site
 		// (and altLoc needs to be set before starting reading the atom_site element)
 
@@ -307,95 +311,93 @@ public class CiffilePdb extends Pdb {
 		altLoc = ".";  
 		
 		// atom_sites_alt element is optional
-		Interval intAtomSitesAlt = null;
+		Long[] intAtomSitesAlt = null;
 		if (ids2elements.containsKey(atomSitesAltId)){
-			intAtomSitesAlt = loopelements2contentIndex.get(ids2elements.get(atomSitesAltId));
+			intAtomSitesAlt = loopelements2contentOffset.get(ids2elements.get(atomSitesAltId));
 		}
 
-		BufferedReader fcif = new BufferedReader(new FileReader(cifFile));
-		String line;
-		int linecount=0;
-		while((line = fcif.readLine()) != null ) {
-			linecount++; 
-			// atom_sites_alt (optional element)
-			if (intAtomSitesAlt!=null && linecount>=intAtomSitesAlt.beg && linecount<=intAtomSitesAlt.end){
+		int recordCount = 0;
+		// atom_sites_alt (optional element)
+		if (intAtomSitesAlt!=null) {
+			
+			fcif.seek(intAtomSitesAlt[0]);			
+			while(fcif.getFilePointer()<intAtomSitesAlt[1]) {
+				recordCount++;
+				 
 				int idIdx = fields2indices.get(atomSitesAltId+".id");
 				// id=0
 				// A ?
-				String[] tokens = tokeniseFields(line);
-				if (tokens.length!=ids2fieldsIdx.get(atomSitesAltId)) {
-					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+atomSitesAltId);
+				int numberFields = ids2fieldsIdx.get(atomSitesAltId);
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSitesAltId);
 				}
 				if (!tokens[idIdx].equals(".")) {
 					altLocs.add(tokens[idIdx]);
 				}
-			} 
+			}
 		}
-		fcif.close();
 		if (!altLocs.isEmpty()){
 			altLoc = Collections.min(altLocs);
 		}
 	}
-	
+		
 	private void readAtomSite() throws IOException, PdbChainCodeNotFoundError, CiffileFormatError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		
-		Interval intAtomSite = loopelements2contentIndex.get(ids2elements.get(atomSiteId));
+		Long[] intAtomSite = loopelements2contentOffset.get(ids2elements.get(atomSiteId));
 		
 		boolean empty = true;
-		BufferedReader fcif = new BufferedReader(new FileReader(cifFile));
-		String line;
-		int linecount=0;
-		while((line = fcif.readLine()) != null ) {
-			linecount++; 
-			// atom_site
-			if (linecount>=intAtomSite.beg && linecount<=intAtomSite.end){ 
-				int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
-				int idIdx = fields2indices.get(atomSiteId+".id");
-				int labelAtomIdIdx = fields2indices.get(atomSiteId+".label_atom_id");
-				int labelAltIdIdx = fields2indices.get(atomSiteId+".label_alt_id");
-				int labelCompIdIdx = fields2indices.get(atomSiteId+".label_comp_id");
-				int labelAsymIdIdx = fields2indices.get(atomSiteId+".label_asym_id");
-				int labelSeqIdIdx = fields2indices.get(atomSiteId+".label_seq_id");
-				int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
-				int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
-				int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
-				int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
-				// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
-				//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
-				//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
-				String[] tokens = tokeniseFields(line);
-				if (tokens.length!=ids2fieldsIdx.get(atomSiteId)) {
-					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+atomSiteId);
-				}
-				if (tokens[groupPdbIdx].equals("ATOM") && tokens[labelAsymIdIdx].equals(chainCode) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
-					empty = false;
-					if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
-						int atomserial=Integer.parseInt(tokens[idIdx]); // id
-						String atom = tokens[labelAtomIdIdx]; // label_atom_id
-						String res_type = tokens[labelCompIdIdx]; // label_comp_id
-						int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
-						double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
-						double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
-						double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
-						Point3d coords = new Point3d(x,y,z);
-						if (AAinfo.isValidAA(res_type)) {
-							atomser2coord.put(atomserial, coords);
-							atomser2resser.put(atomserial, res_serial);
-							resser2restype.put(res_serial, res_type);
-							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
-								resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
-							}
+		int recordCount = 0;
+		
+		fcif.seek(intAtomSite[0]);
+		while(fcif.getFilePointer()<intAtomSite[1]) {
+			recordCount++;
+
+			int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
+			int idIdx = fields2indices.get(atomSiteId+".id");
+			int labelAtomIdIdx = fields2indices.get(atomSiteId+".label_atom_id");
+			int labelAltIdIdx = fields2indices.get(atomSiteId+".label_alt_id");
+			int labelCompIdIdx = fields2indices.get(atomSiteId+".label_comp_id");
+			int labelAsymIdIdx = fields2indices.get(atomSiteId+".label_asym_id");
+			int labelSeqIdIdx = fields2indices.get(atomSiteId+".label_seq_id");
+			int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
+			int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
+			int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
+			int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
+			// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
+			//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
+			//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
+			int numberFields = ids2fieldsIdx.get(atomSiteId);
+			String[] tokens = tokeniseFields(numberFields);
+			if (tokens.length!=numberFields) {
+				throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId);
+			}
+			if (tokens[groupPdbIdx].equals("ATOM") && tokens[labelAsymIdIdx].equals(chainCode) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
+				empty = false;
+				if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
+					int atomserial=Integer.parseInt(tokens[idIdx]); // id
+					String atom = tokens[labelAtomIdIdx]; // label_atom_id
+					String res_type = tokens[labelCompIdIdx]; // label_comp_id
+					int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
+					double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
+					double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
+					double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
+					Point3d coords = new Point3d(x,y,z);
+					if (AAinfo.isValidAA(res_type)) {
+						atomser2coord.put(atomserial, coords);
+						atomser2resser.put(atomserial, res_serial);
+						resser2restype.put(res_serial, res_type);
+						if (AAinfo.isValidAtomWithOXT(res_type,atom)){
+							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 						}
 					}
 				}
-				continue;
 			}
 		}
-		fcif.close();
 		if (empty) { // no atom data was found for given pdb chain code and model
 			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
@@ -408,65 +410,61 @@ public class CiffilePdb extends Pdb {
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr="A";
 		
-		Interval intPdbxPoly = loopelements2contentIndex.get(ids2elements.get(pdbxPolySeqId));
+		Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
 		
-		BufferedReader fcif = new BufferedReader(new FileReader(cifFile));
-		String line;
-		int linecount=0;
-		while((line = fcif.readLine()) != null ) {
-			linecount++; 
-			// pdbx_poly_seq_scheme
-			if (linecount>=intPdbxPoly.beg && linecount<=intPdbxPoly.end){
-				int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
-				int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
-				int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
-				int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
-				int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
-				int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
-				// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
-				// 0 1 2     3 4   5   6     7   8 910
-				// A 1 1   ASP 1   1   1   ASP ASP A .
-				String[] tokens = tokeniseFields(line);
-				if (tokens.length!=ids2fieldsIdx.get(pdbxPolySeqId)) {
-					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+pdbxPolySeqId);
-				}
-				if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
-					int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
-					chainCode = tokens[asymIdIdx];
-					//TODO revise: do we want auth_seq_num or pdb_seq_num here??
-					String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
-					String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
-					String pdb_res_serial_with_icode = pdb_res_serial;
-					if (!pdb_ins_code.equals(".")) {
-						pdb_res_serial_with_icode=pdb_res_serial+pdb_ins_code;
-					}
-					String res_type = tokens[monIdIdx]; // mon_id
-					// sequence
-					if (AAinfo.isValidAA(res_type)){
-		        		sequence+=AAinfo.threeletter2oneletter(res_type);
-		        	} else {
-		        		sequence+=NONSTANDARD_AA_LETTER;
-		        	}
-					// pdbresser2resser
-					if (!pdb_res_serial_with_icode.startsWith("?")) { // question marks are author missing serials, we don't want them in the map
-						pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
-					}
-				}
-				continue;
-			}
+		int recordCount=0;
+		
+		fcif.seek(intPdbxPoly[0]);
+		while(fcif.getFilePointer()<intPdbxPoly[1]) {
+			recordCount++; 
 
+			int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
+			int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
+			int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
+			int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
+			int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
+			int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
+			// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
+			// 0 1 2     3 4   5   6     7   8 910
+			// A 1 1   ASP 1   1   1   ASP ASP A .
+			int numberFields = ids2fieldsIdx.get(pdbxPolySeqId);
+			String[] tokens = tokeniseFields(numberFields);
+			if (tokens.length!=numberFields) {
+				throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId);
+			}
+			if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
+				int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
+				chainCode = tokens[asymIdIdx];
+				//TODO revise: do we want auth_seq_num or pdb_seq_num here??
+				String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
+				String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
+				String pdb_res_serial_with_icode = pdb_res_serial;
+				if (!pdb_ins_code.equals(".")) {
+					pdb_res_serial_with_icode=pdb_res_serial+pdb_ins_code;
+				}
+				String res_type = tokens[monIdIdx]; // mon_id
+				// sequence
+				if (AAinfo.isValidAA(res_type)){
+					sequence+=AAinfo.threeletter2oneletter(res_type);
+				} else {
+					sequence+=NONSTANDARD_AA_LETTER;
+				}
+				// pdbresser2resser
+				if (!pdb_res_serial_with_icode.startsWith("?")) { // question marks are author missing serials, we don't want them in the map
+					pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
+				}
+			}
 		}
-		fcif.close();
 	}
 	
 	private void readSecStructure() throws IOException, CiffileFormatError {
 		secondaryStructure = new SecondaryStructure();
 		
 		// struct_conf element is optional
-		Interval intStructConf = null;
+		Long[] intStructConf = null;
 		if (ids2elements.containsKey(structConfId)) {
 			// if not a loop element then intStructConf stays null (because loopelements2contentIndex will return null)
-			intStructConf = loopelements2contentIndex.get(ids2elements.get(structConfId));
+			intStructConf = loopelements2contentOffset.get(ids2elements.get(structConfId));
 		} 
 		// taking care of cases where struct_conf is not a loop element but a one value field
 		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
@@ -496,10 +494,10 @@ public class CiffilePdb extends Pdb {
 			}
 		}
 		// struct_sheet_range element is optional
-		Interval intStructSheet = null; 
+		Long[] intStructSheet = null; 
 		if (ids2elements.containsKey(structSheetId)) {
 			// if not a loop element intStructSheet stays null (because loopelements2contentIndex will return null)
-			intStructSheet = loopelements2contentIndex.get(ids2elements.get(structSheetId));
+			intStructSheet = loopelements2contentOffset.get(ids2elements.get(structSheetId));
 		}
 		// taking care of cases where struct_sheet_range is not a loop element but a one value field
 		if (ids2elements.containsKey(structSheetId) && !loopElements.contains(ids2elements.get(structSheetId))){
@@ -515,14 +513,15 @@ public class CiffilePdb extends Pdb {
 			}
 
 		}
-		
-		BufferedReader fcif = new BufferedReader(new FileReader(cifFile));
-		String line;
-		int linecount=0;
-		while((line = fcif.readLine()) != null ) {
-			linecount++;
-			// struct_conf (optional element), HELIX and TURN secondary structure
-			if (intStructConf!=null && linecount>=intStructConf.beg && linecount<=intStructConf.end){
+				
+		if (intStructConf!=null) {
+			int recordCount=0;
+			
+			fcif.seek(intStructConf[0]);
+			while(fcif.getFilePointer()<intStructConf[1]) {
+				recordCount++;
+				// struct_conf (optional element), HELIX and TURN secondary structure
+
 				int idIdx = fields2indices.get(structConfId+".id");
 				int begLabelAsymIdIdx = fields2indices.get(structConfId+".beg_label_asym_id");
 				int begLabelSeqIdIdx = fields2indices.get(structConfId+".beg_label_seq_id");
@@ -530,9 +529,10 @@ public class CiffilePdb extends Pdb {
 				//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
 				//     0       1  2    3 4 5   6   7 8  9 10  111213    1415 16 1718 19
 				//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
-				String[] tokens = tokeniseFields(line);
-				if (tokens.length!=ids2fieldsIdx.get(structConfId)) {
-					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structConfId);
+				int numFields = ids2fieldsIdx.get(structConfId);
+				String[] tokens = tokeniseFields(numFields);
+				if (tokens.length!=numFields) {
+					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structConfId);
 				}
 				if (tokens[begLabelAsymIdIdx].equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String id = tokens[idIdx];
@@ -557,10 +557,15 @@ public class CiffilePdb extends Pdb {
 						secondaryStructure.add(ssElem);
 					}
 				}
-				continue;
 			}
-			// struct_sheet_range (optional element), SHEETs
-			if (intStructSheet!=null && linecount>=intStructSheet.beg && linecount<=intStructSheet.end){
+		}
+		if (intStructSheet!=null) {
+			int recordCount=0;
+			
+			fcif.seek(intStructSheet[0]);
+			while(fcif.getFilePointer()<intStructSheet[1]) {
+				recordCount++;
+				// struct_sheet_range (optional element), SHEETs
 				int sheetIdIdx = fields2indices.get(structSheetId+".sheet_id");
 				int idIdx = fields2indices.get(structSheetId+".id");
 				int begLabelAsymIdIdx = fields2indices.get(structSheetId+".beg_label_asym_id");
@@ -569,9 +574,10 @@ public class CiffilePdb extends Pdb {
 				//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
 				//0 1   2 3  4 5   6 7  8 910  1112 13  1415 16
 				//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
-				String[] tokens = tokeniseFields(line);
-				if (tokens.length!=ids2fieldsIdx.get(structSheetId)) {
-					throw new CiffileFormatError("Line "+linecount+" doesn't have the right number of fields for loop element "+structSheetId);
+				int numFields = ids2fieldsIdx.get(structSheetId);
+				String[] tokens = tokeniseFields(numFields);
+				if (tokens.length!=numFields) {
+					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structSheetId);
 				}
 				if (tokens[begLabelAsymIdIdx].equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String sheetid = tokens[sheetIdIdx];
@@ -581,43 +587,69 @@ public class CiffilePdb extends Pdb {
 					String ssId=SecStrucElement.STRAND+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
 					SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND, beg, end, ssId);
 					secondaryStructure.add(ssElem);
-				}
-				continue;
+				}	
 			}
-
 		}
-		fcif.close();
 	}
-	
+
 	/**
 	 * Splits a space separated line into its individual tokens returning an array with all tokens
-	 * Takes care of quoted fields that contain spaces
-	 * e.g. HELX_P HELX_P2 H4 GLY A 111 ? GLU A 127 ? GLY A 112 GLU A 128 1 'SEE REMARK 650' 17
+	 * Takes care of all particularities of the format of a record in the ciffiles:
+	 *  - fields within records are separated by spaces
+	 *  - spaces can be used within quoted strings (at the moment this only supports single quotes, not double)
+	 *  - free style with all characters allowed if something is quoted with \n; ;\n 
+	 * The java class StreamTokenizer could have done all this, but it was limited to do all that we needed to do
+	 *  
+	 *  
+	 * This method is black magic. I don't even try to understand as I write it.
+	 * If you need to come back to this and read it, good luck!!
 	 * 
-	 * TODO maybe StreamTokenizer can do all this with less pain
-	 * @param line
+	 * @param numberTokens
 	 * @return
 	 */
-	private String[] tokeniseFields(String line) {
-		String[] tokens;
-		if (line.contains("'")) { // if there are single quotes in the line
-			ArrayList<String> tokensAL = new ArrayList<String>();
-			Pattern p = Pattern.compile("'[^']*'|[^ \\t]+"); // note: regex doesn't work inverting the order of expressions in the 'OR' (in python it does!)
-			Matcher m = p.matcher(line);
-			while (m.find()){
-				tokensAL.add(m.group());
-			}
-			tokens = new String[tokensAL.size()];
-			tokensAL.toArray(tokens);
-		} else { // if no quotes we simply split by columns using spaces as delimiters
-			tokens = line.split("\\s+");
+	private String[] tokeniseFields(int numberTokens) throws IOException {
+		String[] tokens = new String[numberTokens];
+		// initialise tokens to empty strings
+		for (int i=0; i<numberTokens;i++){
+			tokens[i]="";
 		}
-		if (line.contains("\"")){ // in some rare cases some fields are quoted with double quotes, this seems to be to escape single quotes within them (used normally as a "prime" symbol) 
-			for (int i=0;i<tokens.length;i++){ // we get rid of the double quoting
-				tokens[i] = tokens[i].replaceAll("\"", "");
+		
+		int i = 0;
+		char lastChar=' ';
+		boolean withinQuotes=false;
+		while (true) {
+			char currentChar = (char)fcif.readByte(); 
+			if ((currentChar=='\'' && lastChar==' ') || (!withinQuotes && currentChar==';' && lastChar=='\n')){
+				withinQuotes = true;
+			}
+			else if ((currentChar==' ' && lastChar=='\'') || (currentChar=='\n' && lastChar==';')){
+				withinQuotes = false;
+			}
+
+			if (!withinQuotes) {
+				if (currentChar==' ' || currentChar=='\n') { 
+					if (currentChar!=lastChar && !(currentChar=='\n' && lastChar==' ')) i++; // we only increment when we move from a non-space to a space or from non-space to \n
+				} else {
+					tokens[i]+=currentChar;
+				} 
+			} else {
+				tokens[i]+=currentChar;
+				// if string is surrounded by '' then strip them out (except when string is length 1 and thus beginning and end are \')
+				if (tokens[i].length()!=1 && tokens[i].startsWith("'") && tokens[i].endsWith("'")) tokens[i]=tokens[i].replaceAll("'", "");
+				// if string is surrounded by ;; then strip them out including a \n before the last ;
+				if (tokens[i].startsWith(";") && tokens[i].endsWith("\n;")) {
+					tokens[i]=tokens[i].replaceFirst("^;", "");
+					tokens[i]=tokens[i].replaceFirst("\n;","");
+				}				
+			}
+			
+			lastChar = currentChar;
+			 
+			if (i==numberTokens) {
+				fcif.readByte();// read one more byte: the space at the end of the line that otherwise we miss
+				return tokens;
 			}
 		}
-		return tokens;
 	}
-	
+
 }
