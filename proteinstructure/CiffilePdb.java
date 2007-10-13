@@ -619,7 +619,7 @@ public class CiffilePdb extends Pdb {
 		boolean withinQuotes=false;
 		while (true) {
 			char currentChar = (char)fcif.readByte(); 
-			if ((currentChar=='\'' && lastChar==' ') || (!withinQuotes && currentChar==';' && lastChar=='\n')){
+			if ((currentChar=='\'' && (lastChar==' ' || lastChar=='\n')) || (!withinQuotes && currentChar==';' && lastChar=='\n')){
 				withinQuotes = true;
 			}
 			else if ((currentChar==' ' && lastChar=='\'') || (currentChar=='\n' && lastChar==';')){
