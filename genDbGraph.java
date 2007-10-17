@@ -51,7 +51,8 @@ public class genDbGraph {
 				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] \n" +
 				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> \n" +
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
-				"If pdbase_db not specified, the default pdbase will be used\n"; 
+				"\nIf pdbase_db not specified, the default pdbase will be used\n" +
+				"\nSecondary structure will be taken from pdbase database. If reading from pdb file and the pdb file is missing the secondary structure, then it will be assigned using dssp\n"; 
 
 		String listfile = "";
 		String[] pdbCodes = null;
@@ -144,6 +145,7 @@ public class genDbGraph {
 					pdbChainCodes[numLines] = line.split("\\s+")[1];
 					numLines++;
 				}
+				fpdb.close();
 			}
 
 			int numPdbs = 0;
@@ -206,6 +208,9 @@ public class genDbGraph {
 				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
 			}
 		}
+		
+		// closing db connection
+		conn.close();
 	}
 
 }
