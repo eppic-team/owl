@@ -64,7 +64,6 @@ public class FileGraph extends Graph {
 
 	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException, GraphFileFormatError {
 		contacts = new EdgeSet();
-		weights = new TreeMap<Edge, Double>();
 		//System.out.println("Reading contacts from file "+contactsfile);
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
 		int linecount=0;
@@ -120,9 +119,8 @@ public class FileGraph extends Graph {
 				if (mcontact.group(3)!=null) {
 					weight = Double.valueOf(mcontact.group(3));
 				}
-				Edge cont = new Edge(i,j);
+				Edge cont = new Edge(i,j,weight);
 				contacts.add(cont);
-				weights.put(cont,weight);
 			}
 
 		}

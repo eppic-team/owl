@@ -18,9 +18,6 @@ import Jama.SingularValueDecomposition;
 /**
  * A single chain pdb protein structure
  * 
- * @author		Jose Duarte
- * Class:		Pdb
- * Package:		proteinstructure
  */
 public abstract class Pdb {
 	
@@ -273,9 +270,9 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the distance matrix as a HashMap with Contacts (residue serial pairs) as keys
-	 * It is not clear what this means for multi atom contact types (All, BB, SC, ...) 
-	 * since for each residue serial pair there's more than 1 distance. Thus, we don't allow
-	 * this for the moment. AA.isValidSingleAtomCT(ct) can be used to check before calling.
+	 * This method cannot be used for multi atom contact types as a distance matrix on residues
+	 * doesn't make sense for those. 
+	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
 	 * @return A map which assings to each edge the corresponding distance
 	 */
@@ -424,8 +421,7 @@ public abstract class Pdb {
 		} 
 		
 		// getting the contacts (in residue serials) from the atom serials (partial) distance matrix 
-		EdgeSet contacts = new EdgeSet();
-		TreeMap<Edge,Double> weights = new TreeMap<Edge,Double>();
+		TreeMap<Edge,Integer> weights = new TreeMap<Edge,Integer>(); // we use them to keep the edges together with the weights temporarily
 		for (i=0;i<distMatrix.length;i++){
 			for (j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
@@ -437,18 +433,22 @@ public abstract class Pdb {
 					int j_resser = atomser2resser.get(j_atomserials[j]);
 					Edge resser_pair = new Edge(i_resser,j_resser);
 					// for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
-					if (i_resser!=j_resser){ // duplicates are automatically taken care by the EdgeSet class which is a TreeSet and doesn't allow duplicates 
-						contacts.add(resser_pair);
+					if (i_resser!=j_resser){ // duplicates are automatically taken care by the TreeMap which doesn't allow duplicates in its keys 
 						// as weights we count the number of atom-edges per residue-edge
 						if (weights.containsKey(resser_pair)) {
-							weights.put(resser_pair, weights.get(resser_pair)+1.0);
+							weights.put(resser_pair, weights.get(resser_pair)+1);
 						} else {
-							weights.put(resser_pair, 1.0);
+							weights.put(resser_pair, 1);
 						}
 					}
 				}
 
 			}
+		}
+		// finally we put the edges together with their weights into the contacts EdgeSet (right now we just have them in the weights TreeMap):
+		EdgeSet contacts = new EdgeSet();
+		for (Edge cont: weights.keySet()) {
+			contacts.add(new Edge(cont.i,cont.j,weights.get(cont)));
 		}
 
 		// creating and returning the graph object
@@ -456,7 +456,7 @@ public abstract class Pdb {
 		for (int resser:resser2restype.keySet()){
 			nodes.put(resser,resser2restype.get(resser));
 		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure.copy(), weights);
+		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure.copy());
 		return graph;
 	}
 	
@@ -572,7 +572,7 @@ public abstract class Pdb {
 	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
 	// TODO: Version of this where an additional alignment is passed as a parameter
-	
+
 	/** Returns the number of neighbours of this grid cell */
 	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
 		Point3i neighbor;
