@@ -601,7 +601,7 @@ public class CiffilePdb extends Pdb {
 	 * The java class StreamTokenizer could have done all this, but it was limited to do all that we needed to do
 	 *  
 	 *  
-	 * This method is black magic. I don't even try to understand as I write it.
+	 * This method is black magic. I don't fully understand it myself as I write it.
 	 * If you need to come back to this and read it, good luck!!
 	 * 
 	 * @param numberTokens
@@ -616,37 +616,65 @@ public class CiffilePdb extends Pdb {
 		
 		int i = 0;
 		char lastChar=' ';
-		boolean withinQuotes=false;
+		char quoteChar = 0;
 		while (true) {
-			char currentChar = (char)fcif.readByte(); 
-			if ((currentChar=='\'' && (lastChar==' ' || lastChar=='\n')) || (!withinQuotes && currentChar==';' && lastChar=='\n')){
-				withinQuotes = true;
+			char currentChar = (char)fcif.readByte();
+			
+			// '' quoting
+			if (quoteChar!=';' && currentChar=='\'' && (lastChar==' ' || lastChar=='\n')){
+				quoteChar = '\'';
 			}
-			else if ((currentChar==' ' && lastChar=='\'') || (currentChar=='\n' && lastChar==';')){
-				withinQuotes = false;
+			else if (quoteChar!=';' && currentChar==' ' && lastChar=='\''){
+				quoteChar = 0;
 			}
-
-			if (!withinQuotes) {
+			// "" quoting
+			if (quoteChar!=';' && currentChar=='"' && (lastChar==' ' || lastChar=='\n')){
+				quoteChar = '"';
+			}
+			else if (quoteChar!=';' && currentChar==' ' && lastChar=='"'){
+				quoteChar = 0;
+			}			
+			// ;; quoting (multi-line quoting)
+			if (quoteChar!=';' && currentChar==';' && lastChar=='\n'){
+				quoteChar = ';';
+			}
+			else if (quoteChar==';' && currentChar==';' && lastChar=='\n'){
+				quoteChar = 0;
+			}
+			
+			// reading field
+			if (quoteChar==0) { // not within quotes
 				if (currentChar==' ' || currentChar=='\n') { 
 					if (currentChar!=lastChar && !(currentChar=='\n' && lastChar==' ')) i++; // we only increment when we move from a non-space to a space or from non-space to \n
 				} else {
 					tokens[i]+=currentChar;
+					// if we are adding the last ; of a ;;-quoted string then strip the starting ';' and ending "\n;" out 
+					if (currentChar==';' && lastChar=='\n' && tokens[i].startsWith(";") && tokens[i].endsWith("\n;")) {
+						tokens[i]=tokens[i].replaceFirst("^;", "");
+						tokens[i]=tokens[i].replaceFirst("\n;","");
+					}									
 				} 
-			} else {
+			} else {			// within quotes (of type '', ""  or  ;;)
 				tokens[i]+=currentChar;
-				// if string is surrounded by '' then strip them out (except when string is length 1 and thus beginning and end are \')
-				if (tokens[i].length()!=1 && tokens[i].startsWith("'") && tokens[i].endsWith("'")) tokens[i]=tokens[i].replaceAll("'", "");
-				// if string is surrounded by ;; then strip them out including a \n before the last ;
-				if (tokens[i].startsWith(";") && tokens[i].endsWith("\n;")) {
-					tokens[i]=tokens[i].replaceFirst("^;", "");
-					tokens[i]=tokens[i].replaceFirst("\n;","");
-				}				
+				// if string is surrounded by '' or "" then strip them out (except when string is length 1 and thus beginning and end are quoteChar)
+				if (tokens[i].length()!=1 && tokens[i].startsWith(Character.toString(quoteChar)) && tokens[i].endsWith(Character.toString(quoteChar))) tokens[i]=tokens[i].replaceAll(Character.toString(quoteChar), "");
+
 			}
 			
 			lastChar = currentChar;
 			 
 			if (i==numberTokens) {
-				fcif.readByte();// read one more byte: the space at the end of the line that otherwise we miss
+				// for the last record of an element it is important to have read up to the end of the line (including the '\n'), 
+				// otherwise the condition : "while (current_pointer<max_pointer_of_this_element)" won't work
+				// we read one more character at a time: test whether it is a ' ' or a '\n', if not then we have overread so we need to rewind back
+				while (true) {
+					long currentPos = fcif.getFilePointer(); // get current position to rewind back to it if needed
+					currentChar = (char) fcif.readByte();
+					if (currentChar!='\n' && currentChar!=' '){ 
+						fcif.seek(currentPos);
+						break;
+					}
+				}
 				return tokens;
 			}
 		}
