@@ -127,14 +127,14 @@ public class PdbfilePdb extends Pdb {
 				}
 			} else { // header not found
 				// check whether this is a Casp prediction file
-				p = Pattern.compile("^PFRMAT TS");
+				p = Pattern.compile("^PFRMAT\\s+TS");
 				m = p.matcher(line);
 				if(m.find()) {
 					// ok, it is
 					pdbCode = "CASP";
 				} else {
 					// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
-					throw new PdbfileFormatError("The pdb file "+pdbfile+" doesn't seem to have the right format");
+					throw new PdbfileFormatError("The pdb file "+pdbfile+" does not have a HEADER record");
 				}
 			}
 		} else {

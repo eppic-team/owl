@@ -676,15 +676,39 @@ public class Graph {
 	 * @param originalGraph
 	 * @return
 	 */
-	public PredEval evaluatePrediction(Graph originalGraph){
-		int predicted = this.getNumContacts();
-		int original = originalGraph.getNumContacts();
+	public PredEval evaluatePrediction(Graph originalGraph) {
+		return evaluatePrediction(originalGraph, 1);
+	}
+	
+	/**
+	 * Evaluate this graph (assuming it is a prediction) against an original graph,
+	 * considering only edges with sequence separation at least minSeqSep.
+	 * @param originalGraph
+	 * @return
+	 */
+	public PredEval evaluatePrediction(Graph originalGraph, int minSeqSep) {
+		// total predicted contacts
+		int predicted = 0;
+		for(Edge e:this.getContacts()) {
+			if(Math.abs(e.j-e.i) >= minSeqSep) {
+				predicted++;
+			}
+		}
 		
+		// total native contacts
+		int original = 0;
+		for(Edge e:originalGraph.getContacts()) {
+			if(Math.abs(e.j-e.i) >= minSeqSep) {
+				original++;
+			}
+		}		
+				
+		// total size of contact map (potential contacts)
 		int cmtotal = 0;
 		if (originalGraph.isDirected()){
-			cmtotal = originalGraph.getFullLength()*(originalGraph.getFullLength()-1);
+			cmtotal = (originalGraph.getFullLength()-(minSeqSep-1))*(originalGraph.getFullLength()-minSeqSep);
 		} else {
-			cmtotal = (int)((originalGraph.getFullLength()*(originalGraph.getFullLength()-1))/2);
+			cmtotal = (int)(((originalGraph.getFullLength()-(minSeqSep-1))*(originalGraph.getFullLength()-minSeqSep))/2);
 		}
 		int TruePos=0, FalsePos=0, TrueNeg=0, FalseNeg=0;
 		
@@ -694,20 +718,24 @@ public class Graph {
 		// directed/ non-directed graphs should be both fine with this code (as long as in the predicted directed graph we store the contacts as j>i)
 		// the only thing that changes between directed/non-directed is the count of total cells in contact map (taken care for above)
 		for (Edge predictedCont:predictedContacts){
-			//System.out.println(predictedCont);
-			if (origContacts.contains(predictedCont)) {
-				TruePos++;
-			}
-			else {
-				FalsePos++;
+			if(Math.abs(predictedCont.j-predictedCont.i) >= minSeqSep) {
+				//System.out.println(predictedCont);
+				if (origContacts.contains(predictedCont)) {
+					TruePos++;
+				}
+				else {
+					FalsePos++;
+				}
 			}
 		}
 
-		for (Edge origCont:origContacts){
-			//System.out.println(origCont);
-			if (!predictedContacts.contains(origCont)) {
+		for (Edge origCont:origContacts) {
+			if(Math.abs(origCont.j-origCont.i) >= minSeqSep) {
 				//System.out.println(origCont);
-				FalseNeg++;
+				if (!predictedContacts.contains(origCont)) {
+					//System.out.println(origCont);
+					FalseNeg++;
+				}
 			}
 		}
 		TrueNeg=cmtotal-TruePos-FalsePos-FalseNeg;

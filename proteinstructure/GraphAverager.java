@@ -89,9 +89,9 @@ public class GraphAverager {
 	 * in the consensus graph if the fractions of template graphs it is contained in is above
 	 * the given threshold.
 	 * The output is a new Graph object created from the given sequence in the constructor 
-	 * to which we add the averaged edges  
+	 * to which we add the averaged edges.  
 	 * @param threshold the threshold above which an edge is taken to be a consensus edge
-	 * @return 
+	 * @return the new graph
 	 */
 	public Graph doAveraging(double threshold) {
 		
@@ -108,7 +108,23 @@ public class GraphAverager {
 			}
 		}
 		return graph;
-		
 	}
 	
+	/**
+	 * Returns a graph containing the union of edges of the template graphs weighted by the fraction of occurance in the templates.
+	 * The sequence of the graph is initalized to the sequence of the template.
+	 * @return
+	 */
+	public Graph getAverageGraph() {
+		Graph graph = new Graph(this.sequence);
+		for (Edge alignCont:contactVotes.keySet()){
+			double weight = 1.0 * contactVotes.get(alignCont) / numTemplates;
+			Edge targetGraphCont = new Edge(al.al2seq(targetTag,alignCont.i),al.al2seq(targetTag,alignCont.j), weight);
+			if (targetGraphCont.i!=-1 && targetGraphCont.j!=-1){ // we can't add contacts that map to gaps!!
+				graph.addEdge(targetGraphCont);
+			}
+
+		}		
+		return graph;
+	}
 }
