@@ -19,7 +19,7 @@ public class PredEval {
 	
 	public double sensitivity;
 	public double specificity;
-	public double precision;
+	public double accuracy;
 	public double coverage;
 
 	
@@ -35,7 +35,7 @@ public class PredEval {
 		this.cmtotal=cmtotal;
 		this.sensitivity = (double) TruePos / (TruePos + FalseNeg);
 		this.specificity = (double) TrueNeg / (TrueNeg + FalsePos);
-		this.precision = (double) TruePos / (TruePos + FalsePos);
+		this.accuracy = (double) TruePos / (TruePos + FalsePos);
 		this.coverage = (double) TruePos / original;
 	}
 	
@@ -52,8 +52,8 @@ public class PredEval {
 		System.out.println();
 		System.out.println(String.format("Sensitivity: %4.3f",sensitivity));
 		System.out.println(String.format("Specificity: %4.3f", specificity));
-		System.out.println(String.format("Precision(=accuracy=PPV=TP/TP+FP): %4.3f", precision));
-		System.out.println(String.format("Coverage(=TP/native): %4.3f", precision));		
+		System.out.println(String.format("Accuracy(=precision=PPV=TP/TP+FP): %4.3f", accuracy));
+		System.out.println(String.format("Coverage(=TP/native): %4.3f", accuracy));		
 	}
 	
 	/**
@@ -87,7 +87,7 @@ public class PredEval {
 		System.out.printf("%d\t", FalseNeg);
 		System.out.printf("%4.2f\t", sensitivity);
 		System.out.printf("%4.2f\t", specificity);
-		System.out.printf("%4.2f\t", precision);
+		System.out.printf("%4.2f\t", accuracy);
 		System.out.printf("%4.2f\n", coverage);
 	}
 	
