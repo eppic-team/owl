@@ -289,6 +289,38 @@ public class Graph {
 	}
 	
 	/**
+	 * Write graph to given outfile in network(Ioannis) format
+	 * @param graphId
+	 * @param dirName
+	 * @throws IOException
+	 */
+	public void writeUndirUnweightGraphToNetworkFiles (int graphId, String dirName) throws IOException {
+		if (directed) {
+			System.err.println("This method is only for undirected graphs!");
+			return;
+		}
+		
+		String filePrefix = dirName + "/" + String.valueOf(graphId)+"_"+pdbCode+"_"+chainCode+"_"+ct.replaceAll("/", ".")+"_"+String.valueOf(cutoff).replaceAll("\\.", "_")+"_";
+		PrintStream Out = new PrintStream(new FileOutputStream(filePrefix+"edges.txt"));
+		for (Edge pair:contacts){
+			int i_resser=pair.i;
+			int j_resser=pair.j;
+			if (i_resser < j_resser) {
+				Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t"+1+"\t"+"1.000"+"\n");
+			}
+		}
+		Out.close();
+		Out = new PrintStream(new FileOutputStream(filePrefix+"nodes.txt"));
+		for (int resser:nodes.keySet()) {
+			String res = AAinfo.threeletter2oneletter(getResType(resser));
+			Out.printf(Locale.US,resser+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+getDegree(resser)+"\t"+getDegree(resser)+"\n");
+			
+		}
+		Out.close();
+	}
+	
+	
+	/**
 	 * Gets list of contacts as a new EdgeSet (deep copied)
 	 * 
 	 */
