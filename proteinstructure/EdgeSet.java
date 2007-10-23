@@ -70,7 +70,7 @@ public class EdgeSet extends TreeSet<Edge> {
 	}
 	
 	/**
-	 * Filters the edgeset to remove everything above/below/equal to the given cutoff.
+	 * Filters the edgeset to remove everything above/below/equal to the given weight cutoff.
 	 * If sign < 0 remove edges with weight below the cutoff,
 	 * if sign > 0 remove edges with weight above the cutoff,
 	 * if sign==0 remove edges with weight equal to the cutoff.
@@ -89,5 +89,23 @@ public class EdgeSet extends TreeSet<Edge> {
 				if(e.weight == cutoff) this.remove(e);
 			}
 		}
+	}
+	
+	/**
+	 * Returns the Edge object given the 2 residue serials i_num and j_num.
+	 * If no Edge exists for the given i_num, j_num then returns null 
+	 * NOTE: in non-directed case, edges are stored only in 1 direction (j>i): thus i,j must be passed correctly (j>i)
+	 * @param i_num
+	 * @param j_num
+	 * @return
+	 */
+	//TODO this is a temporary fix, we need to redesign the EdgeSet to be a Map which has a get method
+	public Edge getEdge(int i_num, int j_num){
+		for (Edge cont:this) {
+			if (cont.equals(new Edge(i_num,j_num))) {
+				return cont;
+			}
+		}
+		return null;
 	}
 }
