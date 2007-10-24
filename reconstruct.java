@@ -149,7 +149,7 @@ public class reconstruct {
 			System.exit(1);
 		}
 		// we also write the file to the out dir so it can be used later for clustering rmsds etc.
-		File origPdbFile = new File (outputDir,baseName+".orig.pdb");
+		File origPdbFile = new File (outputDir,baseName+".native.pdb");
 		try {
 			pdb.dump2pdbfile(origPdbFile.getAbsolutePath());
 		} catch (IOException e4) {
