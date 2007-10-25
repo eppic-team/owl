@@ -1,4 +1,18 @@
 package sadp;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Set;
+import java.util.logging.Logger;
+
+import actionTools.Retriever;
+
+import proteinstructure.Alignment;
+import proteinstructure.Edge;
+import proteinstructure.EdgeSet;
+import proteinstructure.PairwiseAlignmentConverter;
+
+
 /**
  * This class implements the softassign + dynamic programming algorithm.
  * 
@@ -75,6 +89,19 @@ public class SADP {
     protected ContactMap Y;
 
     /**
+     * True if the input order of contact maps is preserved in the internal use
+     * of the contact maps. This order might change as X always refers to the
+     * smaller map and Y to the larger one. This variable has to be set
+     * properly whenever a new contact map is set. 
+     */
+    protected boolean preservedInputOrder = true;
+    
+    /**
+     * Holds sequences to the contact maps 
+     */
+    protected String[] sequences = new String[2];
+        
+    /**
      * The number of nodes of graph X.
      */
     protected int nNodes1;
@@ -129,7 +156,26 @@ public class SADP {
      * Clock time needed to perform match
      */
     protected double time;
-
+    
+    /**
+     * the logger 
+     */
+    protected Logger logger = null;
+    
+    /**
+     * retrieves progress information
+     * */
+    protected Retriever retriever = null;
+    
+    /**
+     * Default constructor. 
+     * Do not use this constructor unless your are only interested in
+     * retrieving the default values of this class.  
+     */
+    public SADP() {
+	
+    }
+    
     /**
      * Constructor
      */
@@ -141,9 +187,11 @@ public class SADP {
 	if (x.countNodes() < y.countNodes()) {
 	    this.X = x;
 	    this.Y = y;
+	    preservedInputOrder = true;
 	} else {
 	    this.X = y;
 	    this.Y = x;
+	    preservedInputOrder = false;
 	}
 
 	this.nNodes1 = X.countNodes();
@@ -153,13 +201,19 @@ public class SADP {
 	this.maxEdges = Math.max(X.countEdges(), Y.countEdges());
     }
 
+    /**
+     * Constructs an object instance based on ContactMaps.
+     * Please note that the order of contact maps as passed to this constructor is not necessarily preserved for the internal use. 
+     */
     public SADP(ContactMap x, ContactMap y) {
 	if (x.countNodes() < y.countNodes()) {
 	    this.X = x;
 	    this.Y = y;
+	    preservedInputOrder = true;
 	} else {
 	    this.X = y;
 	    this.Y = x;
+	    preservedInputOrder = false;
 	}
 
 	this.nNodes1 = X.countNodes();
@@ -169,6 +223,62 @@ public class SADP {
 	this.maxEdges = Math.max(X.countEdges(), Y.countEdges());
     }
 
+    public Double getEps0() {
+	return eps0;
+    }
+
+    public void setEps0( Double eps0 ) {
+	SADP.eps0 = eps0;
+    }
+
+    public Double getEps1() {
+	return eps1;
+    }
+
+    public void setEps1( Double eps1 ) {
+	SADP.eps1 = eps1;
+    }
+    
+    public Double getB0() {
+	return b0;
+    }
+
+    public void setB0( Double b0 ) {
+	this.b0 = b0;
+    }
+    
+    public Double getBf() {
+	return bf;
+    }
+
+    public void setBf( Double  bf ) {
+	this.bf = bf;
+    }
+    
+    public Double getBr() {
+	return br;
+    }
+
+    public void setBr( Double  br ) {
+	this.br = br;
+    }
+
+    public Integer getI0() {
+	return I0;
+    }
+
+    public void setI0( Integer I0 ) {
+	this.I0 = I0;
+    }
+
+    public Integer getI1() {
+	return I1;
+    }
+
+    public void getI1( Integer  I1 ) {
+	this.I1 = I1;
+    }
+    
     /**
      * Compares contact maps X and Y.
      * 
@@ -203,6 +313,15 @@ public class SADP {
 	// scale parameters
 	double r = maxNodes / (double) nNodes1;
 
+	// A loop iteration counter
+	int countAloopIterations = 0;
+	int maxAloopIterations   = 0;
+	
+	// initialize counter if logging is enabled
+	if( retriever != null ) {
+	    maxAloopIterations = getAloopIterations();
+	}
+		
 	// A loop
 	this.nIterations = 0;
 	while (b < bf) {
@@ -290,6 +409,18 @@ public class SADP {
 	    } // end B loop
 
 	    b *= br;
+	    
+	    // log progress if a logger is available
+	    if( this.retriever != null ) {
+		++countAloopIterations;
+		try {
+		    retriever.retrieve(100.0*((float) countAloopIterations/(float) maxAloopIterations));
+		} catch (ClassCastException e) {
+		    System.out.println(e.getMessage());
+		}
+//		logger.info("SADP-progress:"+100.0*((float) countAloopIterations/(float) maxAloopIterations));
+	    }
+	    
 	} // end A loop
 
 	cleanup();
@@ -298,6 +429,10 @@ public class SADP {
 	time = System.currentTimeMillis() - time;
 
 	setScore();
+    }
+    
+    private boolean isInputOrderPreserved() {
+	return preservedInputOrder;
     }
 
     private void cleanup() {
@@ -405,6 +540,20 @@ public class SADP {
     }
 
     /**
+     * Compute the maximal iterations in the A loop.
+     * The A loop denote the outer loop in function run(). This function is employed 
+     * to estimate the running time of function run.
+     */
+    private int getAloopIterations() {
+	
+	// at the end we do a change of the logarithm with base 'br' to the logarithm with base 10
+	// stop-criteria: b*br^x > bf
+	// <=> x = \log_{br}(bf/b) = \frac{\log_{10}(bf/b)}{\log_{10}(br)}
+	// x -> maxAloopIterations
+	return (int) Math.floor(Math.log10(bf/b)/Math.log10(br)) + 1; 
+    }
+    
+    /**
      * Returns similarity score of X and Y given the specified match matrix. The
      * score is given by lb/minEdges, where lb denotes the number of common
      * contacts found by softassign and minEdges is the minimum number of edges
@@ -427,6 +576,11 @@ public class SADP {
 	return ncc;
     }
 
+    /**
+     * TODO: What is behind the term "solution is feasible"? 
+     * suggestions: matching contains only noncrossing edges (which is guaranteed by the function noncrossing()), whatever ...
+     * @return true if the matching is feasible
+     */
     public boolean isFeasible() {
 
 	return isFeasible;
@@ -441,15 +595,160 @@ public class SADP {
 
 	return nIterations;
     }
-
+    
     /**
-     * Returns the computation time.
+     * @return computation time in milliseconds
      */
     public double getTime() {
 
 	return time;
     }
+    
+    /**
+     * This sequence refers to the first contact map assigned in any construtor.
+     */
+    public void setFirstSequence( String s ) {
+	
+	sequences[0] = s;
+    }
+    
+    /**
+     * This sequence refers to the second contact map assigned in any construtor.
+     */
+    public void setSecondSequence( String s ) {
+	
+	sequences[1] = s;
+    }
+        
+    /**
+     * Creates the alignment and the resulting protein structures graphs which
+     * are based on the alignment and include nodes representing gaps. If there
+     * is no sequence provided for either of the contact maps a sequence contait is used in the sequ
+     * 
+     * @param tag1  name of the first contact map to be taken as the sequence name tag resulting Alignment object
+     * @param tag2  name of the second contact map 
+     */
+    public Alignment getAlignment( String tag1, String tag2 ) {
+	
+	ContactMap[] cm = new ContactMap[2];
+	
+	if( isInputOrderPreserved() ) {
+	    cm[0] = X;
+	    cm[1] = Y;	    
+	} else {
+	    cm[0] = X;
+	    cm[1] = Y;
+	}
+	
+	EdgeSet matching = getMatching();
+	
+	PairwiseAlignmentConverter pac = null;
+	
+	if( sequences[0] != null ) {
+	    if( sequences[1] != null ) {
+		pac = new PairwiseAlignmentConverter(matching.iterator(), sequences[0],       sequences[1],       tag1,tag2,0);
+	    } else {
+		pac = new PairwiseAlignmentConverter(matching.iterator(), sequences[0],       cm[1].countNodes(), tag1,tag2,0);
+	    }
+	} else {
+	    if( sequences[1] != null ) {
+		pac = new PairwiseAlignmentConverter(matching.iterator(), cm[0].countNodes(), sequences[1],       tag1,tag2,0);
+	    } else {
+		pac = new PairwiseAlignmentConverter(matching.iterator(), cm[0].countNodes(), cm[1].countNodes(), tag1,tag2,0);		
+	    }
+	}
+	
+	return pac.getAlignment();
+    }
 
+    /**
+     * Retrieves the matching of nodes from the first contact map to the second
+     * one in a map. The node indexing starts with 0 (not with 1 as in Graph).
+     * @return edge set containing all noncrossing matching edges
+     * @see #getMatchingAsEdgeList()
+     */
+    public EdgeSet getMatching() {
+
+	EdgeSet matching = new EdgeSet();
+	
+	for (int i = 0; i < nNodes1; i++) {
+	    for (int j = 0; j < nNodes2; j++) { // TODO: as the edge are non-crossing we do not need to start from zero ...
+		if (M[i][j] > 0) {
+		    if ( isInputOrderPreserved() ) {
+			matching.add(new Edge(i,j));			
+		    } else {
+			matching.add(new Edge(j, i));
+		    }
+		}
+	    }
+	}
+	
+	return matching;
+    }
+    
+    /**
+     * Retrieves the matching of nodes from the first contact map to the second
+     * one in a linked list.
+     * @return linked list containg all noncrossing matching edges
+     * @see #getMatching()  
+     */
+    public LinkedList<Edge> getMatchingAsEdgeList() {
+	
+	LinkedList<Edge> matching = new LinkedList<Edge>();
+		
+	for (int i = 0; i < nNodes1; i++) {
+	    for (int j = 0; j < nNodes2; j++) {
+		if (M[i][j] > 0) {
+		    if ( isInputOrderPreserved() ) {
+			matching.add(new Edge(i,j));			
+		    } else {
+			matching.add(new Edge(j, i));
+		    }
+		}
+	    }
+	}
+	
+	return matching;
+    }
+    
+    /**
+     * Sets logger.
+     * Make use of this logging mechanism to send progress status informations to another thread.
+     * @param logger  a logger
+     * @see getLogger()
+     * @deprecated
+     */
+    public void setLogger(Logger logger) {
+	
+	this.logger = logger;
+    }
+    
+    /**
+     * Gets the progress logger.
+     * @return a logger if one has been set, else null.
+     * @deprecated  
+     */
+    public Logger getLogger() {
+	
+	return this.logger;
+    }
+    
+    /**
+     * Sets the progress info retriever.
+     * @param retr  a progress info retriever
+     * */
+    public void setProgressInfoRetriever(Retriever retr) {
+	retriever = retr;
+    }
+    
+    /**
+     * Gets the progress info retriever.
+     * @return the progress info retriever
+     * */
+    public Retriever getProgressInfoRetriever() {
+	return retriever;
+    }
+    
     /**
      * Writes node mapping to standard output.
      */
@@ -466,6 +765,7 @@ public class SADP {
 	}
 	System.out.println();
     }
+    
 
     /**
      * Shows the result.
@@ -486,8 +786,24 @@ public class SADP {
 
     public static void main(String[] args) {
 
+	Logger logger = Logger.getLogger("sasp.SADP");
+	
 	SADP sadp = new SADP(args[0], args[1]);
+	sadp.setLogger(logger);
 	sadp.run();
 	sadp.show();
+	
+	// prints pseudo sequence alignment
+	Alignment ali = sadp.getAlignment(args[0], args[1]);
+	Set<String> tags = ali.getTags();
+	Iterator<String> it = tags.iterator();
+	while( it.hasNext() ) {
+	    String tag = it.next();
+	    System.out.println(tag+':');
+	    System.out.println(ali.getAlignedSequence(tag));
+	}
+	
+	System.out.println(ali.seq2al(args[0], 1));
+	System.out.println(ali.seq2al(args[1], 1));
     }
 }

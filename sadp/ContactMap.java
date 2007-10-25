@@ -1,7 +1,8 @@
 package sadp;
 import java.util.StringTokenizer;
-import java.util.Iterator;
-import proteinstructure.*;
+
+import proteinstructure.Edge;
+import proteinstructure.Graph;
 
 /**
  * This class contains methods and fields to represent contact maps.  
@@ -85,10 +86,12 @@ public class ContactMap {
     }
 
     /**
-     * Constructs a contact map from a Graph. This constructor is for CMView only. It does not provide the System.exit(0) call if the given graph is inconsistent 
+     * Constructs a contact map from a Graph. 
+     * This constructor is for CMView only. It does not provide the 
+     * System.exit(0) call if the given graph was inconsistent. 
      */
-    public ContactMap(Graph g) {
-	this.nNodes = g.getNodes().size();
+    public ContactMap(Graph g) throws ContactMapConstructorError {
+	this.nNodes = g.getFullLength();//g.getNodes.size();
 	this.nEdges = g.getNumContacts();
 	this.deg    = new int[nNodes];
 	this.fn     = "NoName";
@@ -96,13 +99,16 @@ public class ContactMap {
 	this.L      = new int[nNodes][];
 
 	// fill the adjacency matrix and the node degree array
-	EdgeSet contacts  = g.getContacts();
-	Iterator<Edge> it = contacts.iterator();
-	while( it.hasNext() ) {
-	    Edge e = it.next();
-	    A[e.i][e.j] = true;
-	    ++deg[e.i];
-	    ++deg[e.j];
+	for( Edge e : g.getContacts() ) {
+	    if( e.i < 0 || e.j < 0 ) {
+		throw new ContactMapConstructorError("Graph contains negative node indices. I don't like it!");
+	    }
+	    
+	    A[e.i-1][e.j-1] = true;
+	    A[e.j-1][e.i-1] = true;
+	    
+	    ++deg[e.i-1];
+	    ++deg[e.j-1];
 	}
 
 	// create adjacency lists
@@ -120,11 +126,11 @@ public class ContactMap {
 	    }
 	    if(k != deg[i]) {
 		System.err.println("Error!");
-		System.err.println("\t Mismatch of degrees in ContactMap()");
+		System.err.println("\t Mismatch of degrees in ContactMap(): def["+i+"]!="+k);
 	    }
 	}
     }
-
+    
     /**
      * Returns adjacency matrix of this contact map.
      * 
