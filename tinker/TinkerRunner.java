@@ -36,6 +36,7 @@ public class TinkerRunner {
 	private PrintWriter log;
 	
 	// arrays for storing distgeom output data
+	private double[] errorFunctionVal; 
 	private int[] numUpperBoundViol;
 	private int[] numLowerBoundViol;
 	private double[] maxUpperBoundViol;
@@ -182,6 +183,7 @@ public class TinkerRunner {
 			tinkerout[i] = getTinkerOutputFileName(xyzFile, ext);
 		}
 		// initialising arrays were we store captured output data
+		errorFunctionVal = new double[n+1];
 		numUpperBoundViol = new int[n+1];
 		numLowerBoundViol = new int[n+1];
 		maxUpperBoundViol = new double[n+1];
@@ -204,8 +206,13 @@ public class TinkerRunner {
 			if (line.startsWith(TINKER_ERROR_STR)) {
 				tinkerError = true;
 			}
-			Pattern p = Pattern.compile("^ Num Upper Bound Violations :\\s+(\\d+)");
+			Pattern p = Pattern.compile("^ Final Error Function Value :\\s+(\\d+\\.\\d+)");
 			Matcher m = p.matcher(line);
+			if (m.find()) {
+				errorFunctionVal[i]=Double.parseDouble(m.group(1));
+			}						
+			p = Pattern.compile("^ Num Upper Bound Violations :\\s+(\\d+)");
+			m = p.matcher(line);
 			if (m.find()) {
 				numUpperBoundViol[i]=Integer.parseInt(m.group(1));
 			}
@@ -383,6 +390,10 @@ public class TinkerRunner {
 		log.close();
 	} 
 	
+	public double[] getErrorFunctionVal() {
+		return errorFunctionVal;
+	}
+
 	public double[] getMaxLowerBoundViol() {
 		return maxLowerBoundViol;
 	}

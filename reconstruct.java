@@ -249,6 +249,7 @@ public class reconstruct {
 			System.exit(1);
 		}
 		
+		double[] err = tr.getErrorFunctionVal();
 		double[] mubv = tr.getMaxUpperBoundViol();
 		double[] mlbv = tr.getMaxLowerBoundViol();
 		double[] muv = tr.getMaxUpperViol();
@@ -298,14 +299,15 @@ public class reconstruct {
 		// 6. report
 		try {
 			PrintWriter reportOut = new PrintWriter(new FileOutputStream(reportFile));
-			reportOut.println("accession_code\tchain_pdb_code\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3" +
-						"\tresult_id\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
+			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3" +
+						"\tresult_id\terror_val\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
 						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
 
 			for (int i=1;i<=n;i++){
-				String rmsd = String.format(Locale.US,"%6f",rmsds[i]);
-				reportOut.println(pdbCode+"\t"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
-						i+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
+				String rmsd = String.format(Locale.US,"%6.3f",rmsds[i]);
+				String errStr = String.format(Locale.US, "%6.3f", err[i]);
+				reportOut.println(pdbCode+"_"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
+						i+"\t"+errStr+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
 						nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsd);
 			}
 			reportOut.close();
