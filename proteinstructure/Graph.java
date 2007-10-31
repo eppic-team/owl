@@ -20,9 +20,6 @@ import tools.MySQLConnection;
 /**
  * A residue interaction graph derived from a single chain pdb protein structure
  * 
- * @author 		Jose Duarte
- * Class:		Graph
- * Package:		proteinstructure
  */
 public class Graph {
 
@@ -98,9 +95,9 @@ public class Graph {
 		this.directed=false;
 		this.secondaryStructure = new SecondaryStructure();
 	}
-		
+	
 	/**
-	 * Constructs Graph object by passing ArrayList with contacts and TreeMap with nodes (res serials and types)
+	 * Constructs Graph object by passing EdgeSet with contacts and TreeMap with nodes (res serials and types)
 	 * Must also pass contact type, cutoff, pdbCode and chainCode
 	 * @param contacts
 	 * @param nodes
@@ -111,10 +108,9 @@ public class Graph {
 	 * @param chainCode
 	 * @param pdbChainCode
 	 * @param model
-	 * @param ssElems
-	 * @param rs2ss
+	 * @param secStruct
 	 */
-	protected Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
+	public Graph (EdgeSet contacts, TreeMap<Integer,String> nodes, String sequence, double cutoff,String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
 		this.contacts=contacts;
 		this.cutoff=cutoff;
 		this.nodes=nodes;
@@ -410,13 +406,9 @@ public class Graph {
 	/**
 	 * Gets list of contacts as a new EdgeSet (deep copied)
 	 * 
-	 */
+	 */ 
 	public EdgeSet getContacts(){
-		EdgeSet newContacts = new EdgeSet();
-		for (Edge cont:contacts){
-			newContacts.add(new Edge(cont.i,cont.j));
-		}
-		return newContacts;
+		return this.contacts.copy();
 	}
 	
 	/**
@@ -458,14 +450,6 @@ public class Graph {
 	public Graph copy(){
 		return new Graph(getContacts(),getNodes(),sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
 	}
-	
-	/**
-	 * Gets a reference to this Graph deep copying contacts but re-referencing nodes
-	 * @return
-	 */
-	public Graph copyKeepingNodes(){
-		return new Graph(getContacts(),nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model,secondaryStructure.copy());		
-	}	
 	
 	/**
 	 * Returns an int matrix with 1s for contacts and 0s for non contacts, i.e. the contact map
@@ -689,7 +673,7 @@ public class Graph {
 	}
 	
 	public int getModel() {
-	    return model;
+		return model;
 	}
 	
 	public String getSequence(){
@@ -712,6 +696,10 @@ public class Graph {
 	
 	public String getContactType() {
 		return ct;
+	}
+	
+	public void setContactType(String ct) {
+		this.ct=ct;
 	}
 	
 	public double getCutoff(){
