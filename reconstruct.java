@@ -299,16 +299,24 @@ public class reconstruct {
 		// 6. report
 		try {
 			PrintWriter reportOut = new PrintWriter(new FileOutputStream(reportFile));
-			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3" +
-						"\tresult_id\terror_val\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
+			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3\tnum_res" +
+						"\tresult_id\terror_val" +
+						"\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
 						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
 
 			for (int i=1;i<=n;i++){
 				String rmsd = String.format(Locale.US,"%6.3f",rmsds[i]);
 				String errStr = String.format(Locale.US, "%6.3f", err[i]);
-				reportOut.println(pdbCode+"_"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+
-						i+"\t"+errStr+"\t"+nubv[i]+"\t"+nlbv[i]+"\t"+mubv[i]+"\t"+mlbv[i]+"\t"+muv[i]+"\t"+mlv[i]+"\t"+rbv[i]+"\t"+
-						nuv[i]+"\t"+nlv[i]+"\t"+rrv[i]+"\t"+rmsd);
+				//                         run_id                cutoff      cutoff2      cutoff3      ct1      ct2      ct3         num_res
+				reportOut.println(pdbCode+"_"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+sequence.length()+"\t"+
+				//  result_id     error_val         
+						i + "\t" + errStr + "\t" +
+				//   up_bound_viol    low_bound_viol   max_bound_up    max_bound_low      rms_bound
+						nubv[i] + "\t" + nlbv[i] + "\t" + mubv[i] + "\t" + mlbv[i] + "\t" + rbv[i] + "\t" +
+				//      up_viol         low_viol       max_up         max_low         rms_viol
+						nuv[i] + "\t" + nlv[i] + "\t" +	muv[i] + "\t" + mlv[i] + "\t"+ rrv[i] + "\t"+
+				//      rmsd_to_orig
+						rmsd);
 			}
 			reportOut.close();
 		} catch (FileNotFoundException e) {
