@@ -4,6 +4,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.sql.Statement;
 
 import java.sql.ResultSet;
 
+import sadp.ContactMap;
 import tools.MySQLConnection;
 
 /**
@@ -142,6 +144,91 @@ public class Graph {
 		assert(secondaryStructure != null);
 		assert(this.pdbCode.equals(this.pdbCode.toLowerCase()));				// pdb codes should be always lower case 
 		assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case
+	}
+	
+	/**
+	 * Constructs a Graph from a sadp.ContactMap.
+	 * TODO: This constructor might produce erroneous Graph instances.
+	 * 
+	 *  @param cm            the ContactMap
+	 *  @param sequence
+	 *  @param cutoff
+	 *  @param ct
+	 *  @param pdbCode
+	 *  @param chainCode
+	 *  @param pdbChainCode
+	 *  @param model
+	 *  @param secStruct
+	 */
+	public Graph( ContactMap cm, String sequence, double cutoff, String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
+	    
+	    EdgeSet contacts = new EdgeSet();
+	    int[][] adjList  = cm.getAdjacencyList();
+	    
+	    // construct the contacts
+	    for( int i=0; i<adjList.length; ++i ) {
+		for( int j=0; j<adjList[i].length; ++j ) {
+		    // store contacts only once for i < j
+		    if( i<adjList[i][j] ) {
+			contacts.add(new Edge(i,adjList[i][j]));
+		    }
+		}
+	    }
+	    
+	    TreeMap<Integer, String> nodes = new TreeMap<Integer, String>();
+	    
+	    // construct the mapping from node index to 3-lettercode
+	    if( sequence != null ) {
+		for( int i=0; i<sequence.length(); ++i ) {
+		    nodes.put(i,AAinfo.oneletter2threeletter(sequence.substring(i,i)));
+		}
+	    } else {
+		// as there is no sequence information available we assign the
+		// non-defined unknown amino acid 'Xaa' to every residue 
+		for( int i=0; i<cm.countNodes(); ++i ) {
+		    nodes.put(i, "Xaa");
+		}		
+	    }
+	    
+	    // construct dummy sequence if necessary
+	    if( sequence  == null ) {
+		StringBuffer sb = new StringBuffer(cm.countNodes());
+		for( int i=0; i<sb.capacity(); ++i ) {
+		    sb.append('X');
+		}
+		sequence = sb.toString();
+	    }
+	    
+	    this.contacts=contacts;
+	    
+	    this.cutoff=cutoff;
+	    this.nodes=nodes;
+	    this.sequence=sequence;
+	    this.pdbCode      = pdbCode == null ? "" : pdbCode;
+	    this.chainCode    = chainCode == null ? "" : chainCode;
+	    this.pdbChainCode = pdbChainCode == null ? "" : pdbChainCode;
+	    this.model=model;
+	    this.ct=ct;
+	    // in case of pdb was read from file and there was no SEQRES field then fullLength here shouldn't be sequence length but maximum observed residue (see Pdb class)
+	    this.fullLength=Math.max(sequence.length(),Collections.max(nodes.keySet()));
+	    this.obsLength=nodes.size();
+	    this.numContacts=contacts.size();
+	    this.modified=false;
+	    this.directed=false;
+	    if (ct.contains("/")){
+		directed=true;
+	    }
+	    if(secStruct == null) {
+		// we allow null to be passed to simplify graph construction
+		this.secondaryStructure = new SecondaryStructure();
+	    } else {
+		this.secondaryStructure = secStruct;
+	    }
+
+	    // do some verification checks
+	    assert(secondaryStructure != null);
+	    assert(this.pdbCode.equals(this.pdbCode.toLowerCase()));				// pdb codes should be always lower case 
+	    assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case	    
 	}
 	
 	/**
@@ -330,6 +417,26 @@ public class Graph {
 			newContacts.add(new Edge(cont.i,cont.j));
 		}
 		return newContacts;
+	}
+	
+	/**
+	 * Checks if the graphs has the given edge.
+	 * 
+	 * @return false if there is no such contact, else true
+	 * */
+	public boolean hasContact( Edge e ) {
+	    
+	    return contacts.contains(e);
+	}
+	
+	/**
+	 * Gets iterator on the set of edges/contacts.
+	 * 
+	 * @return contact iterator
+	 * */
+	public Iterator<Edge> getContactIterator() {
+	    
+	    return contacts.iterator();
 	}
 	
 	/**
@@ -579,6 +686,10 @@ public class Graph {
 	
 	public String getChainCode(){
 		return chainCode;
+	}
+	
+	public int getModel() {
+	    return model;
 	}
 	
 	public String getSequence(){

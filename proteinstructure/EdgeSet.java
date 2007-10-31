@@ -92,6 +92,19 @@ public class EdgeSet extends TreeSet<Edge> {
 	}
 	
 	/**
+	 * Gets set of all incident nodes to edges of this edge set.
+	 * @return node set of incident nodes 
+	 */
+	public NodeSet getIncidentNodes() {
+	    NodeSet nodes = new NodeSet();
+	    for( Edge e : this ) {
+		nodes.add(new Node(e.i));
+		nodes.add(new Node(e.j));
+	    }
+	    return nodes;
+	}
+	
+	/**
 	 * Returns the Edge object given the 2 residue serials i_num and j_num.
 	 * If no Edge exists for the given i_num, j_num then returns null 
 	 * NOTE: in non-directed case, edges are stored only in 1 direction (j>i): thus i,j must be passed correctly (j>i)

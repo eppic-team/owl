@@ -515,4 +515,16 @@ public class AAinfo {
 		return cts.get(ct).get(aa);
 	} 
 	
+	/**
+	 * Gets the identifier for gap-characters in three-letter-code-sequences. 
+	 * @return a three letter code representation of the gap character.
+	 */
+	public static String getGapCharacterThreeLetter() {
+	    return "GAP";
+	}
+	
+	public static char getGapCharacterOneLetter() {
+	    return '-';
+	}
+	
 }

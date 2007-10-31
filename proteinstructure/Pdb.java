@@ -635,6 +635,15 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Checks whether the given residue serial has any associated coordinates.
+	 * @param ser  the residue serial
+	 * @return true if there is at least one atom with valid coordinates, else false 
+	 */
+	public boolean hasCoordinates(int resser) {
+	    return atomser2resser.values().contains(resser);
+	}
+		
+	/**
 	 * Gets the atom coordinates (Point3d object) given the atom serial
 	 * @param atomser
 	 * @return
@@ -642,7 +651,7 @@ public abstract class Pdb {
 	public Point3d getAtomCoord(int atomser) {
 		return this.atomser2coord.get(atomser);
 	}
-	
+		
 	/**
 	 * Gets all atom serials in a Set
 	 * @return
@@ -650,7 +659,7 @@ public abstract class Pdb {
 	public Set<Integer> getAllAtomSerials() {
 		return this.atomser2resser.keySet();
 	}
-	
+		
 	/**
 	 * Gets the 4 letter pdb code identifying this structure
 	 * @return
