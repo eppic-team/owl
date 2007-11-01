@@ -15,28 +15,35 @@ public class scoreTargetMoves {
 	static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
 	static int VL=1; // Verbosity Level 
-	static String user = "lappe"	; // change user name!!
+	static final String dbserver = "white";
+	static final String user = MySQLConnection.getUserName();
+	static final String pwd = "nieve";
 	static MySQLConnection conn;
-	static String prgID = "V03"; 
-	static String backgrndDB = "cullpdb_90";
+	static String prgID = "V04"; 
+	static String backgrndDB = "cullpdb_90_cacg";
 	static String hashDB = "nbhashing";
-	static String targetDB = "CASP_decoys"; 
-	static String targetNodes = "target_node";
-	static String targetEdges = "target_edge";
+	static String targetDB = "caspm"; 
+	static String targetScore = "target_score";
 	static int sTotal, sRank; 
 	
 	public static void main(String[] args) throws SQLException{
 		
+		if (args.length<2) {
+			System.err.println("Must passed 2 parameters: graph_id and output score table name");
+			System.exit(1);
+		} 
 		int graph_id = Integer.parseInt(args[0]);
+		String scoreTableName = args[1];
+		scoreTableName = targetDB+"."+scoreTableName;
 		
-		int node_id, num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
-		String sql, scoreTableName, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
+		int num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
+		String sql, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
 		Statement mstmt;  
 		ResultSet mrsst;
 				
-		conn = new MySQLConnection("white",user,"nieve", backgrndDB); // connection to the the background DB!  
-		System.out.println("Scoring Target neighborhoods v.0.4. "); 
-		scoreTableName = targetDB+".score_"+prgID+"_"+backgrndDB; 
+		conn = new MySQLConnection(dbserver,user,pwd, backgrndDB); // connection to the the background DB!  
+		System.out.println("Scoring Target neighborhoods "+prgID); 
+ 
 		System.out.println("scoreTableName:"+scoreTableName);
 
 		// preparing the result db 
@@ -44,18 +51,15 @@ public class scoreTargetMoves {
 		mstmt = conn.createStatement();
 		mstmt.executeUpdate(sql); 
 		mstmt.close(); 
-		//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 and j=0;";
-		//sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score where i=0 or j=0;";
-		sql = "create table "+scoreTableName+" select * from "+targetDB+".target_score;";
-		//	"order by graph_id, node_id, cid, num, i, j limit 23;"; // where pss='';"; to exclude ss inserts  
+		sql = "create table "+scoreTableName+" select * from "+targetDB+"."+targetScore;  
 		mstmt = conn.createStatement();
 		mstmt.executeUpdate(sql); 
 		mstmt.close(); 
 
-		sql = "select graph_id, node_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
+		sql = "select graph_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
 		" from "+scoreTableName+
 		" WHERE graph_id="+graph_id+
-		" order by graph_id, node_id, cid, num, i, j ;";
+		" order by graph_id, cid, num, i, j ;";
 
 		mstmt = conn.createStatement();
 		mrsst = mstmt.executeQuery(sql); 
@@ -65,26 +69,24 @@ public class scoreTargetMoves {
 			// System.out.print("\n"+counter+":\t"); 
 
 			//graph_id = mrsst.getInt( 1);
-			node_id  = mrsst.getInt( 2);
-			cid      = mrsst.getString( 3);
-			num      = mrsst.getInt( 4);
-			res      = mrsst.getString( 5);
-			sstype   = mrsst.getString( 6);
-			i        = mrsst.getInt( 7);
-			j        = mrsst.getInt( 8);
-			minus    = mrsst.getInt( 9);
-			mres     = mrsst.getString( 10);
-			mss      = mrsst.getString( 11);
-			mcn      = mrsst.getInt( 12);
-			plus     = mrsst.getInt( 13);
-			pres     = mrsst.getString( 14);
-			pss      = mrsst.getString( 15);
-			pcn      = mrsst.getInt( 16);
+			cid      = mrsst.getString(2);
+			num      = mrsst.getInt(3);
+			res      = mrsst.getString(4);
+			sstype   = mrsst.getString(5);
+			i        = mrsst.getInt(6);
+			j        = mrsst.getInt(7);
+			minus    = mrsst.getInt(8);
+			mres     = mrsst.getString(9);
+			mss      = mrsst.getString(10);
+			mcn      = mrsst.getInt(11);
+			plus     = mrsst.getInt(12);
+			pres     = mrsst.getString(13);
+			pss      = mrsst.getString(14);
+			pcn      = mrsst.getInt(15);
+			nn       = mrsst.getString(16);
 
-			nn       = mrsst.getString( 17);
-
-//			graph_id | node_id | cid | num | res  | sstype | i | j  | minus | mres | mss  | mcn | plus | pres | pss  | pcn | nn | total | rank | deltarank | score
-			System.out.print(graph_id+"\t"+node_id+"\t"+cid+"\t"+num+"\t"+res+"\t"+sstype+"\t"+i+"\t"+j+"\t"); 
+//			graph_id | cid | num | res  | sstype | i | j  | minus | mres | mss  | mcn | plus | pres | pss  | pcn | nn | total | rank | deltarank | score
+			System.out.print(graph_id+"\t"+cid+"\t"+num+"\t"+res+"\t"+sstype+"\t"+i+"\t"+j+"\t"); 
 			System.out.print(minus+"\t"+mres+"\t"+mss+"\t"+mcn+"\t"+plus+"\t"+pres+"\t"+pss+"\t"+pcn+"\t"+nn+"\t");
 
 			if (j==0) { // top entry / column of movematrix 
@@ -116,7 +118,7 @@ public class scoreTargetMoves {
 	}	// end main 
 
 
-	public static void getCountRank( String nbs, String centRes, String predec) throws SQLException {
+	private static void getCountRank( String nbs, String centRes, String predec) throws SQLException {
 		String sql, res; 
 		Statement stmt;  
 		ResultSet rsst;
