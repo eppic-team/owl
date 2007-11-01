@@ -723,7 +723,7 @@ public class Graph {
 	 * @param distCutoff the distance cutoff
 	 */
 	public void setCutoff(double distCutoff) {
-		
+		this.cutoff = distCutoff;
 	}
 	
 	public boolean containsContact(Edge cont){
