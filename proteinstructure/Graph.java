@@ -80,7 +80,7 @@ public class Graph {
 		this.cutoff=0;
 		this.nodes=new TreeMap<Integer,String>();
 		for(int i=0; i < sequence.length(); i++) {
-			nodes.put(i, AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
+			nodes.put(i+1, AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
 		}
 		this.sequence=sequence;
 		this.pdbCode=null;
