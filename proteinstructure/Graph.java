@@ -694,16 +694,36 @@ public class Graph {
 		return contacts.size(); 
 	}
 	
+	/**
+	 * Returns the contact type of this graph.
+	 * @return the contact type
+	 */
 	public String getContactType() {
 		return ct;
 	}
 	
+	/**
+	 * Sets the contact type of this graph.
+	 * @param ct the contact type
+	 */
 	public void setContactType(String ct) {
 		this.ct=ct;
 	}
 	
+	/**
+	 * Returns the distance cutoff for this graph.
+	 * @return the distance cutoff
+	 */
 	public double getCutoff(){
 		return cutoff;
+	}
+	
+	/**
+	 * Sets the distance cutoff for this graph.
+	 * @param distCutoff the distance cutoff
+	 */
+	public void setCutoff(double distCutoff) {
+		
 	}
 	
 	public boolean containsContact(Edge cont){
