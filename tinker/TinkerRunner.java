@@ -12,30 +12,38 @@ import java.nio.channels.FileChannel;
 import java.util.Formatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import proteinstructure.Graph;
+import proteinstructure.Pdb;
+import proteinstructure.PdbChainCodeNotFoundError;
+import proteinstructure.PdbfileFormatError;
+import proteinstructure.PdbfilePdb;
 
 public class TinkerRunner {
 	
+	/*------------------------------ constants ------------------------------*/
+	
 	private static final String PROTEIN_PROG = "protein";
 	private static final String DISTGEOM_PROG = "distgeom";
-	private static final String PDBXYZ_PROG = "pdbxyz";
+//	private static final String PDBXYZ_PROG = "pdbxyz";
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_PARAMS = "Y N Y Y N N A";
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
+	private static final String DEFAULT_FF_FILE_TYPE = "amber";
+	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
 	
+	/*--------------------------- member variables --------------------------*/
+	// input parameters
 	private String tinkerBinDir;
-	
 	private String forceFieldFileName;
-	
+
+	// derived parameters
 	private String proteinProg;
 	private String distgeomProg;
-	private String pdbxyzProg;
+//	private String pdbxyzProg;
 	private String xyzpdbProg;
 	
-	private File logFile;
-	private PrintWriter log;
-	
-	// arrays for storing distgeom output data
+	// variables for storing distgeom output data
 	private double[] errorFunctionVal; 
 	private int[] numUpperBoundViol;
 	private int[] numLowerBoundViol;
@@ -48,25 +56,33 @@ public class TinkerRunner {
 	private double[] maxLowerViol;
 	private double[] rmsRestViol;
 
+	// information about last reconstruct run
+	String lastOutputDir;       // output directory of last reconstruction run
+	String lastBaseName;		// basename of last reconstruction run
+	int lastNumberOfModels;		// number of models in last reconstruction run
+	
+	/*----------------------------- constructors ----------------------------*/
 	
 	/**
 	 * Constructs a TinkerRunner object by passing initial parameters
 	 * @param tinkerBinDir The directory where the tinker executables are
 	 * @param forceFieldFileName The force field file
-	 * @param logFile File where all tinker output will be logged to
 	 * @throws FileNotFoundException If logFile can't be written
 	 */
-	public TinkerRunner(String tinkerBinDir, String forceFieldFileName, File logFile) throws FileNotFoundException {
+	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
 		this.tinkerBinDir = tinkerBinDir;
 		this.forceFieldFileName = forceFieldFileName;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
-		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
+//		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
 		this.xyzpdbProg = new File(this.tinkerBinDir,XYZPDB_PROG).getAbsolutePath();
 		
-		this.logFile = logFile;
-		this.log = new PrintWriter(new FileOutputStream(logFile));
+		this.lastOutputDir = null;
+		this.lastBaseName = null;
+		this.lastNumberOfModels = 0;
 	}
+	
+	/*---------------------------- private methods --------------------------*/
 	
 	/**
 	 * To get the expected File that a tinker program will output given an input file and an extension for the output files
@@ -98,10 +114,11 @@ public class TinkerRunner {
 	 * @param sequence
 	 * @param outPath The directory where output files will be written
 	 * @param outBasename The base name for the output files
+	 * @param log A PrintWriter for logging output
 	 * @throws IOException
 	 * @throws TinkerError
 	 */
-	public void runProtein(String sequence, String outPath, String outBasename) throws IOException, TinkerError {
+	private void runProtein(String sequence, String outPath, String outBasename, PrintWriter log) throws IOException, TinkerError {
 		boolean tinkerError = false; // to store the exit state of the tinker program
 		
 		if (!new File(outPath).exists()) {
@@ -146,7 +163,7 @@ public class TinkerRunner {
 		
 		if (tinkerError) {
 			log.close();
-			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+			throw new TinkerError("Tinker error, revise log file. ");
 		}
 	}
 
@@ -159,10 +176,11 @@ public class TinkerRunner {
 	 * @param outPath Directory where output files will be written
 	 * @param outBasename Base name of the output files
 	 * @param n Number of models that we want distgeom to produce
+	 * @param log A PrintWriter for logging output
 	 * @throws TinkerError If an error seen in tinker's output
 	 * @throws IOException
 	 */
-	public void runDistgeom(File xyzFile, String outPath, String outBasename, int n) throws TinkerError, IOException, InterruptedException {
+	private void runDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException, InterruptedException {
 		boolean tinkerError = false; // to store the exit state of the tinker program
 		if (!new File(outPath).exists()) {
 			throw new FileNotFoundException("Specified directory "+outPath+" does not exist");
@@ -273,13 +291,14 @@ public class TinkerRunner {
 		// throwing exception if error string was caught in output
 		if (tinkerError) {
 			log.close();
-			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+			throw new TinkerError("Tinker error, revise log file. ");
 		}
 		int exitValue = dgeomProc.waitFor();
 		// throwing exception if exit state is 137: happens in Linux when another instance of distgeom is running in same machine, the OS kills it with exit state 137 
 		if (exitValue==137) {
 			log.close();
-			throw new TinkerError("Distgeom was killed by OS, probably another instance of distgeom is running in this computer");
+			throw new TinkerError("Distgeom was killed by OS. There may be another instance of distgeom running in this computer" +
+					" or Tinker could not allocate enough memory.");
 		}
 		else if (exitValue==139) {
 			log.close();
@@ -299,10 +318,11 @@ public class TinkerRunner {
 	 * @param xyzFile
 	 * @param seqFile
 	 * @param pdbFile
+	 * @param log A PrintWriter for logging output
 	 * @throws IOException 
 	 * @throws TinkerError If an error seen in tinker's output
 	 */
-	public void runXyzpdb(File xyzFile, File seqFile, File pdbFile) throws IOException, TinkerError {
+	private void runXyzpdb(File xyzFile, File seqFile, File pdbFile, PrintWriter log) throws IOException, TinkerError {
 		boolean tinkerError = false; // to store the exit state of the tinker program
 		if (!xyzFile.exists()){
 			throw new FileNotFoundException("Specified xyz file "+xyzFile.getAbsolutePath()+" does not exist");
@@ -346,49 +366,217 @@ public class TinkerRunner {
 		
 		if (tinkerError) {
 			log.close();
-			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+			throw new TinkerError("Tinker error, revise log file.");
 		}
 	}
 	
-	/**
-	 * Runs tinker's pdbxyz program to convert a pdbFile to a xyzFile
-	 * @param pdbFile
-	 * @param xyzFile
-	 * @throws IOException
-	 * @throws TinkerError If an error seen in tinker's output
-	 */
-	public void runPdbxyz(File pdbFile, File xyzFile) throws IOException, TinkerError{
-		boolean tinkerError = false; // to store the exit state of the tinker program
-		if (!pdbFile.exists()){
-			throw new FileNotFoundException("Specified pdb file "+pdbFile.getAbsolutePath()+" does not exist");
-		}
-		File tinkerxyzout = getTinkerOutputFileName(pdbFile, "xyz");
-		// running tinker's pdbxyz
-		Process pdbxyzProc = Runtime.getRuntime().exec(pdbxyzProg+" "+pdbFile.getAbsolutePath()+" "+forceFieldFileName);
+//	/**
+//	 * Runs tinker's pdbxyz program to convert a pdbFile to a xyzFile
+//	 * @param pdbFile
+//	 * @param xyzFile
+//	 * @param log A PrintWriter for logging output	
+//	 * @throws IOException
+//	 * @throws TinkerError If an error seen in tinker's output
+//	 */
+//	private void runPdbxyz(File pdbFile, File xyzFile, PrintWriter log) throws IOException, TinkerError{
+//		boolean tinkerError = false; // to store the exit state of the tinker program
+//		if (!pdbFile.exists()){
+//			throw new FileNotFoundException("Specified pdb file "+pdbFile.getAbsolutePath()+" does not exist");
+//		}
+//		File tinkerxyzout = getTinkerOutputFileName(pdbFile, "xyz");
+//		// running tinker's pdbxyz
+//		Process pdbxyzProc = Runtime.getRuntime().exec(pdbxyzProg+" "+pdbFile.getAbsolutePath()+" "+forceFieldFileName);
+//
+//		// logging output
+//		BufferedReader pdbxyzOutput = new BufferedReader(new InputStreamReader(pdbxyzProc.getInputStream()));
+//		String line;
+//		while((line = pdbxyzOutput.readLine()) != null) {
+//			log.println(line);
+//			if (line.startsWith(TINKER_ERROR_STR)) {
+//				tinkerError = true;
+//			}
+//		}
+//		tinkerxyzout.renameTo(xyzFile);
+//		if (tinkerError) {
+//			log.close();
+//			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+//		}
+//	}
+	
+	/*---------------------------- public methods ---------------------------*/
+	
+	// reconstruction
 
-		// logging output
-		BufferedReader pdbxyzOutput = new BufferedReader(new InputStreamReader(pdbxyzProc.getInputStream()));
-		String line;
-		while((line = pdbxyzOutput.readLine()) != null) {
-			log.println(line);
-			if (line.startsWith(TINKER_ERROR_STR)) {
-				tinkerError = true;
+	/** 
+	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * The model is picked based on the number of bound violations reported by Tinker.
+	 * See reconstruct() for more details.
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
+	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @returns A pdb object containg the generated structure
+	 */
+	public Pdb reconstruct(String sequence, Graph[] graphs, int numberOfModels) throws TinkerError, IOException {
+		Pdb resultPdb = null;
+		
+		String outputDir = System.getProperty("java.io.tmpdir");
+		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
+		boolean cleanUp = false;		// TODO: Only for debugging, switch on cleaning later
+		
+		reconstruct(sequence, graphs, numberOfModels, outputDir, baseName, cleanUp);
+		
+		// 5. Pick model (by least bound violations)
+		int minIdx = 1;
+		int minViols = numLowerBoundViol[1] + numUpperBoundViol[1];
+		for (int i = 2; i <= numberOfModels; i++) {
+			int score = numLowerBoundViol[i] + numUpperBoundViol[i];
+			if(score < minViols) {
+				minIdx = i;
+				minViols = score;
 			}
 		}
-		tinkerxyzout.renameTo(xyzFile);
-		if (tinkerError) {
-			log.close();
-			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
+		
+		// 6. Read result into memory
+		resultPdb = getStructure(minIdx);
+		
+		return resultPdb;
+	}
+	
+	/** 
+	 * Reconstruct the given graph(s). Edge types and distance cutoffs are taken from the graph object(s).
+	 * If multiple graphs are specified, tinker simply takes the union of constraints for the reconstruction. 
+	 * Output files starting with baseName will be written to the given outputDir.
+	 * If cleanUp is true, all output files are marked to be deleted on shutdown of the virtual machine.
+	 * The results of the last call to a reconstruct... method can be retrieved by the
+	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods. 
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param outputDir the directory where the temporary and result files will be written to
+	 * @param baseName the basename of the temporary and result files
+	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
+	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @returns A pdb object containg the generated structure
+	 */
+	public void reconstruct(String sequence, Graph[] graphs, int numberOfModels, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+		// defining files
+		File prmFile = new File(this.forceFieldFileName);					// don't delete this one
+		File xyzFile = new File(outputDir,baseName+".xyz");
+		File seqFile = new File(outputDir,baseName+".seq");
+		File pdbFile = new File(outputDir,baseName+".pdb");
+		File keyFile = new File(outputDir,baseName+".key");
+		//File reportFile = new File(outputDir,baseName+".report");
+		File logFile = new File(outputDir,baseName+".tinker.log");		
+		PrintWriter log = new PrintWriter(new FileOutputStream(logFile));
+		
+		
+		// make sure that files are deleted on exit
+		if(cleanUp) {
+			//logFile.deleteOnExit();
+			xyzFile.deleteOnExit();
+			seqFile.deleteOnExit();
+			pdbFile.deleteOnExit();
+			keyFile.deleteOnExit();
+			//reportFile.deleteOnExit();
 		}
+		
+		// 1. run tinker's protein program (create unfolded protein chain)	
+		runProtein(sequence, outputDir, baseName, log);
+
+		// 1a. convert xyz file to pdb to be able to map atom serials after
+		runXyzpdb(xyzFile, seqFile, pdbFile, log);
+
+		// 2. creating constraints into key file
+		ConstraintsMaker cm = null;
+		try {
+			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile);
+		} catch(PdbfileFormatError e) {
+			throw new TinkerError(e);
+		}
+		for(Graph graph:graphs) {
+			cm.createConstraints(graph);
+		}
+		cm.closeKeyFile();
+
+		// 3. run tinker's distgeom
+		try {
+			runDistgeom(xyzFile, outputDir, baseName, numberOfModels, log);
+		} catch(InterruptedException e) {
+			throw new TinkerError(e);
+		}
+
+		// 4. converting xyz output files to pdb files and calculating rmsds
+		for (int i = 1; i<=numberOfModels; i++) {
+			String ext = new Formatter().format(".%03d",i).toString(); // 001, 002, 003, ...
+			File outputXyzFile = new File(outputDir, baseName+ext);
+			File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
+			if(cleanUp) {
+				outputXyzFile.deleteOnExit();
+				outputPdbFile.deleteOnExit();
+			}
+			runXyzpdb(outputXyzFile, seqFile, outputPdbFile, log);
+		}					
+		log.close();
+		
+		this.lastOutputDir = outputDir;
+		this.lastBaseName = baseName;
+		this.lastNumberOfModels = numberOfModels;
+	}
+	
+	// retrieving results
+	
+	/**
+	 * Returns the number of models generated in the last reconstruction run.
+	 * @return the number of models
+	 */
+	public int getLastNumberOfModels() {
+		return lastNumberOfModels;
+	}
+
+	/**
+	 * Returns the directory where temporary and output files of the last reconstruction run were written to.
+	 * @return the output directory
+	 */
+	public String getLastOutputDir() {
+		return lastOutputDir;
 	}
 	
 	/**
-	 * Closes log stream, must be called after no other tinker program will be run with this TinkerRunner object
-	 * (otherwise log is not flushed to file)
+	 * Returns the basename pf the temporary and output files of the last reconstruction run.
+	 * @return the base name
 	 */
-	public void closeLog() {
-		log.close();
-	} 
+	public String getLastBaseName() {
+		return lastBaseName;
+	}
+	
+	/**
+	 * Returns one of the structures generated in the last reconstruction run as a pdb object.
+	 * Structures are numbered from 1 to getLastNumberOfModels().
+	 * @param i the number of the model to be returned.
+	 * @return the generated structure as a pdb object
+	 */
+	public Pdb getStructure(int i) throws TinkerError {
+		Pdb resultPdb = null;
+		
+		String ext = String.format(".%03d",i); // 001, 002, 003, ...
+		File resultPdbFile = new File(lastOutputDir, lastBaseName+ext+".pdb");
+		try {
+			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath(), DEFAULT_RECONSTR_CHAIN_CODE);
+		} catch(FileNotFoundException e) {
+			throw new TinkerError("Model number " + i + " does not exist.");
+		} catch (IOException e) {
+			throw new TinkerError("Could not read from file " + resultPdbFile.getAbsolutePath());
+		} catch(PdbChainCodeNotFoundError e) {
+			throw new TinkerError(e);
+		} catch(PdbfileFormatError e) {
+			throw new TinkerError(e);
+		}
+		
+		return resultPdb;
+	}
 	
 	public double[] getErrorFunctionVal() {
 		return errorFunctionVal;
@@ -433,4 +621,5 @@ public class TinkerRunner {
 	public double[] getRmsRestViol() {
 		return rmsRestViol;
 	}
+	
 }

@@ -17,20 +17,15 @@ import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfileFormatError;
-import proteinstructure.PdbfilePdb;
 
-import tinker.ConstraintsMaker;
 import tinker.TinkerError;
 import tinker.TinkerRunner;
 
 
 public class reconstruct {
 
-	
 	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
 	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
-	private static final String PRMTYPE = "amber";
 	
 	public static void main(String[] args) {
 		
@@ -159,96 +154,51 @@ public class reconstruct {
 
 		String sequence = pdb.getSequence();
 
+		Graph[] graphs =null;
 		Graph graph1 = pdb.get_graph(ct1, cutoff1);
 		Graph graph2 = null;
 		Graph graph3 = null;
 		if (doublecm) {
-			graph2 = pdb.get_graph(ct2, cutoff2);
+			graph2 = pdb.get_graph(ct2, cutoff2);		
+			if (cross) {
+				graph3 = pdb.get_graph(ct3, cutoff3);
+				graphs = new Graph[3];
+				graphs[0] = graph1;
+				graphs[1] = graph2;
+				graphs[2] = graph3;
+			} else {
+				graphs = new Graph[2];
+				graphs[0] = graph1;
+				graphs[1] = graph2;
+			}
+		} else {
+			graphs = new Graph[1];
+			graphs[0] = graph1;
 		}
-		if (cross) {
-			graph3 = pdb.get_graph(ct3, cutoff3);
-		}
-
 		
 		// defining files
-		File logFile = new File(outputDir,baseName+".tinker.log");
-		File prmFile = new File(PRMFILE);
-		File xyzFile = new File(outputDir,baseName+".xyz");
-		File seqFile = new File(outputDir,baseName+".seq");
-		File pdbFile = new File(outputDir,baseName+".pdb");
-		File keyFile = new File(outputDir,baseName+".key");
 		File reportFile = new File(outputDir,baseName+".report");
 		
 		// creating TinkerRunner object
+		
 		TinkerRunner tr = null;
 		try {
-			tr = new TinkerRunner(TINKERBINDIR,PRMFILE,logFile);
+			tr = new TinkerRunner(TINKERBINDIR, PRMFILE);
 		} catch (FileNotFoundException e3) {
 			System.err.println("Couldn't find tinker bin dir "+TINKERBINDIR+". Exiting");
 			System.exit(1);
 		}
 		
-		// 1. run tinker's protein program	
-		try {
-			tr.runProtein(sequence, outputDir, baseName );
-		} catch (IOException e2) {
-			System.err.println("Couldn't read file to run 'protein' "+seqFile.getAbsolutePath());
-			System.err.println("Exiting");
-			System.exit(1);			
-		} catch (TinkerError e2) {
-			System.err.println("Tinker error while running 'protein', check log file "+logFile.getAbsolutePath()+". Exiting");
-			System.exit(1);			
-		}
-
-		// 1a. convert xyz file to pdb to be able to map atom serials after
-		try {
-			tr.runXyzpdb(xyzFile, seqFile, pdbFile);
-		} catch (IOException e1) {
-			System.err.println("Couldn't read files "+xyzFile.getAbsolutePath()+" or "+seqFile.getAbsolutePath()+" or write to "+pdbFile.getAbsolutePath()+" for running 'xyzpdb'");
-			System.err.println("Exiting");
-			System.exit(1);
-		} catch (TinkerError e1) {
-			System.err.println("Tinker error while running xyzpdb, check log file "+logFile.getAbsolutePath()+". Exiting");
-			System.exit(1);
-		}
-
-		// 2. creating constraints into key file
-		ConstraintsMaker cm = null;
-		try {
-			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,PRMTYPE,keyFile);
-		} catch (IOException e3) {
-			System.err.println("Couldn't read files "+xyzFile.getAbsolutePath()+", "+pdbFile.getAbsolutePath()+" or, "+prmFile.getAbsolutePath()+" write to "+keyFile.getAbsolutePath()+" for creating distance constraints");
-			System.err.println("Exiting");
-			System.exit(1);
-		} catch (PdbfileFormatError e3) {
-			System.err.println("pdb file "+pdbFile.getAbsolutePath()+" converted from "+xyzFile.getAbsolutePath()+" doesn't seem to be in the right format. Check log? ("+logFile.getAbsolutePath()+"). Exiting");
-			System.exit(1);
-		} 
-
-		cm.createConstraints(graph1);
-		if (doublecm) cm.createConstraints(graph2);
-		if (cross) cm.createConstraints(graph3);
-
-		cm.closeKeyFile();
-
-		// 3. run tinker's distgeom
-		try {
-			System.out.println("Running distgeom...");
-			tr.runDistgeom(xyzFile, outputDir, baseName, n);
-		} catch (TinkerError e1) {
-			System.err.println(e1.getMessage());
-			System.err.println("Exiting");
-			System.exit(1);			
-		} catch (IOException e1) {
-			System.err.println("Couldn't read files "+xyzFile.getAbsolutePath()+" or write 'distgeom' output files to output dir "+outputDir);
-			System.err.println("Exiting");
-			System.exit(1);
-		} catch(InterruptedException e) {
-			System.err.println("Distgeom was interrupted:" + e.getMessage());
-			System.err.println("Exiting.");
-			System.exit(1);
-		}
+		// call reconstruction
 		
+		try {
+			tr.reconstruct(sequence, graphs, n, outputDir, baseName, false);
+		} catch (IOException e) {
+			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+		} catch (TinkerError e) {
+			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+		}
+				
 		double[] err = tr.getErrorFunctionVal();
 		double[] mubv = tr.getMaxUpperBoundViol();
 		double[] mlbv = tr.getMaxLowerBoundViol();
@@ -262,41 +212,26 @@ public class reconstruct {
 		double[] rrv = tr.getRmsRestViol();
 		
 
-		// 4. converting xyz output files to pdb files and calculating rmsds
+		// calculate rmsds
 
 		double[] rmsds = new double[n+1];		
 		
 		for (int i = 1; i<=n; i++) {
 			String ext = new Formatter().format(".%03d",i).toString();
-			File outputXyzFile = new File(outputDir, baseName+ext);
 			File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
 			try {
-				tr.runXyzpdb(outputXyzFile, seqFile, outputPdbFile);
-
-				Pdb outputPdb = new PdbfilePdb(outputPdbFile.getAbsolutePath(),"NULL");
+				Pdb outputPdb = tr.getStructure(i);
 				rmsds[i] = pdb.rmsd(outputPdb, "Ca");
-
-			} catch (IOException e) {
-				System.err.println("Couldn't read file "+outputXyzFile.getAbsolutePath()+", or "+seqFile.getAbsolutePath()+", or write to "+outputPdbFile.getAbsolutePath()+" while converting with 'xyzpdb'");
-				System.err.println("Can't calculate rmsd for it");
-			} catch (TinkerError e) {
-				System.err.println("Tinker error while running 'xyzpdb' to convert"+outputXyzFile.getAbsolutePath()+", check log file "+logFile.getAbsolutePath());
-				System.err.println("Can't calculate rmsd for it");
 			}
-			catch (PdbfileFormatError e) {
-				System.err.println("Output pdb file "+outputPdbFile.getAbsolutePath()+" doesn't seem to be in the correcet format. Can't calculate rmsd for it");
-			} catch (PdbChainCodeNotFoundError e) {
-				// this shouldn't happen, chain code is hard coded, we throw stack trace and continue if it happens
-				e.printStackTrace();
+			catch (TinkerError e) {
+				System.err.println("Error while trying to retrieve results from Tinker: + e.getMessage()");
 			} catch (ConformationsNotSameSizeError e) {
-				System.err.println(pdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
+				System.err.println(origPdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
 			}				
-
-			tr.closeLog();
 		}					
 
+		// write report file
 		
-		// 6. report
 		try {
 			PrintWriter reportOut = new PrintWriter(new FileOutputStream(reportFile));
 			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3\tnum_res" +

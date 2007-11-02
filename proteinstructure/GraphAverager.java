@@ -8,7 +8,9 @@ public class GraphAverager {
 	private TreeMap<String,Graph> templateGraphs;
 	private String targetTag;
 	private int numTemplates;
-	private String sequence;
+	private String sequence;		// sequence of the final consensus graph
+	private String contactType;		// contact type of the final consensus graph
+	private double distCutoff;		// cutoff of the final consensus graph
 	
 	private TreeMap<Edge,Integer> contactVotes;
 	
@@ -17,6 +19,9 @@ public class GraphAverager {
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
 		this.sequence = sequence;
+		Graph firstGraph = templateGraphs.get(templateGraphs.firstKey());
+		this.contactType = firstGraph.getContactType();
+		this.distCutoff = firstGraph.getCutoff();
 		
 		this.numTemplates = templateGraphs.size();
 		checkSequences();
@@ -96,6 +101,8 @@ public class GraphAverager {
 	public Graph doAveraging(double threshold) {
 		
 		Graph graph = new Graph(this.sequence);
+		graph.setContactType(this.contactType);
+		graph.setCutoff(this.distCutoff);
 		
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
@@ -117,6 +124,9 @@ public class GraphAverager {
 	 */
 	public Graph getAverageGraph() {
 		Graph graph = new Graph(this.sequence);
+		graph.setContactType(this.contactType);
+		graph.setCutoff(this.distCutoff);
+		
 		for (Edge alignCont:contactVotes.keySet()){
 			double weight = 1.0 * contactVotes.get(alignCont) / numTemplates;
 			Edge targetGraphCont = new Edge(al.al2seq(targetTag,alignCont.i),al.al2seq(targetTag,alignCont.j), weight);
