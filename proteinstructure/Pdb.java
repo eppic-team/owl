@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.ArrayList;
+import java.util.TreeSet;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -547,11 +548,19 @@ public abstract class Pdb {
 		
 	}
 	
-	/*
-	 * Calculates and returns the difference of the distance maps of this structure and another pdb object. On error returns null.
+	/**
+	 * Calculates and returns the difference of the distance maps of this 
+	 * structure and another pdb object. On error returns null. Note that 
+	 * the distance maps for the single structures have to have the same 
+	 * size.
+	 * @param contactType1  contact type of this structure
+	 * @param pdb2  the second structure
+	 * @param contactType2  contact type of the second structure
+	 * @return the difference distance map
+	 * @see #getDiffDistMap(String, Pdb, String, Alignment, String, String) 
 	 */
 	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
-		double dist1, dist2, diff;
+	    	double dist1, dist2, diff;
 		HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
 		HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
 		if(thisDistMatrix.size() != otherDistMatrix.size()) {
@@ -570,8 +579,86 @@ public abstract class Pdb {
 		}
 		return otherDistMatrix;
 	}
+	
+	/**
+	 * Calculates the difference distance map of this structure and 
+	 * another pdb object given a sequence alignment of the structures. The 
+	 * resulting difference distance map may contains non-defined distances. 
+	 * This behavior is due to the alignment. If any residue in either 
+	 * structures is aligned with a gap one cannot assign a "difference 
+	 * distance" to another residue pair.   
+	 * @param contactType1  contact type of this structure
+	 * @param pdb2  the second structure
+	 * @param contactType2  contact type of the second structure
+	 * @param ali  sequence alignment of both structures
+	 * @param name1  sequence tag of the this structure in the alignment
+	 * @param name2  sequence tag og the second structure in the alignment
+	 * @return the difference distance map
+	 * @see #getDiffDistMap(String, Pdb, String)
+	 */
+	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
+	    
+	    HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
+	    HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
+	    HashMap<Edge,Double> alignedDistMatrix = new HashMap<Edge, Double>(Math.min(this.getFullLength(), pdb2.getFullLength()));
+	    int i1,i2,j1,j2;
+	    TreeSet<Integer> unobserved1 = new TreeSet<Integer>();
+	    TreeSet<Integer> unobserved2 = new TreeSet<Integer>();
+	    Edge e1 = new Edge(0,0);
+	    Edge e2 = new Edge(0,0);
+
+	    // detect all unobserved residues
+	    for(int i = 0; i < ali.getAlignmentLength(); ++i) {
+		i1 = ali.al2seq(name1, i);
+		i2 = ali.al2seq(name2, i);
+		if( i1 != -1 && !hasCoordinates(i1) ) {
+		    unobserved1.add(i1);
+		}
+		if( i2 != -1 && !pdb2.hasCoordinates(i2) ) {
+		    unobserved2.add(i2);
+		}
+	    }
+
+	    // strategy: we always have to look through the alignment to say 
+	    // whether a difference distance can be assigned to a pair of 
+	    // corresponding residues. To put it differently, for any two 
+	    // alignment columns one always has to ensure that both columns 
+	    // only contain observed residues (no gaps!), otherwise the one 
+	    // cannot obtain a distance in at least one structure as a gap 
+	    // indicates "no coordinates available".  
+	    
+	    for(int i = 0; i < ali.getAlignmentLength()-1; ++i) {
+		
+		i1 = ali.al2seq(name1, i);
+		i2 = ali.al2seq(name2, i);
+
+		// alignment columns must not contain gap characters and both 
+		// residues in the current column have to be observed!
+		if( i1 == -1 || i2 == -1 || unobserved1.contains(i1) || unobserved2.contains(i2) ) {
+		    continue;
+		}
+
+		for(int j = i + 1; j < ali.getAlignmentLength(); ++j) {
+		  
+		    j1 = ali.al2seq(name1, j);
+		    j2 = ali.al2seq(name2, j);
+		    
+		    if( j1 == -1 || j2 == -1 || unobserved1.contains(j1) || unobserved2.contains(j2) ) {
+			continue;
+		    }
+		    
+		    // make the edges
+		    e1.i = i1;
+		    e1.j = j1;
+		    e2.i = i2;
+		    e2.j = j2;
+		    		    
+		    alignedDistMatrix.put(new Edge(i+1,j+1),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
+		}
+	    }
+	    return alignedDistMatrix;
+	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
-	// TODO: Version of this where an additional alignment is passed as a parameter
 
 	/** Returns the number of neighbours of this grid cell */
 	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
