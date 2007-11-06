@@ -1153,11 +1153,33 @@ public abstract class Pdb {
 	public String getSequence() {
 		return sequence;
 	}
-		
+	
+	// csa related methods
+	
+	/** 
+	 * Returns true if csa information is available, false otherwise. 
+	 */
+	public boolean hasCSA() {
+		if (catalSiteSet == null) {
+			return false;
+		} else if (catalSiteSet.isEmpty()) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	/**
+	 * Returns the csa annotation object of this graph.
+	 */
+	public CatalSiteSet getCSA() {
+		return catalSiteSet;
+	}
+	
 	// ec related methods
 	
 	/** 
-	 * Returns true if scop information is available, false otherwise. 
+	 * Returns true if ec information is available, false otherwise. 
 	 */
 	public boolean hasEC() {
 		if (ec == null) {
