@@ -6,11 +6,14 @@ package proteinstructure;
 public class SecStrucElement {
 	
 	/*------------------------------ constants ------------------------------*/
+	public enum ReducedState { THREESTATE, FOURSTATE, EIGHTSTATE };
 	// three/four state secondary structure types (for 3 state, skip turn)
 	public static final char HELIX = 'H';	// a helix
 	public static final char STRAND = 'S';  // a beta strand
 	public static final char TURN = 'T';    // a hydrogen bonded turn
 	public static final char OTHER = 'O';   // all other states
+	public static final char EXTENTED = 'E';// all extented 
+	public static final char LOOP = 'L';  	// all other states 
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -54,7 +57,7 @@ public class SecStrucElement {
 	
 	/** Returns true if this ss element is a beta strand */
 	public boolean isStrand() {
-		return secStrucType == STRAND;
+		return (secStrucType == STRAND || secStrucType == EXTENTED);
 	}
 	
 	/** Returns true if this ss element is a hydrogen bonded turn */
@@ -64,7 +67,7 @@ public class SecStrucElement {
 
 	/*---------------------------- static methods ---------------------------*/
 	
-	public static char getFourStateTypeFromDsspType(char dsspType) {
+	private static char getFourStateTypeFromDsspType(char dsspType) {
 		char type = dsspType;
 		switch(dsspType) {
 		case 'H':
@@ -86,6 +89,40 @@ public class SecStrucElement {
 			type = OTHER;
 		}
 		return type;
+	}
+	
+	private static char getThreeStateTypeFromDsspType(char dsspType) {
+		char type = dsspType;
+		switch(dsspType) {
+		case 'H':
+		case 'G':
+		case 'I': 
+			type = HELIX;
+			break;
+		case 'E':
+		case 'B':
+			type = EXTENTED;
+			break;
+		case 'T':
+		case 'S':
+			type = LOOP;
+			break;
+		default:
+			type = LOOP;
+		}
+		return type;
+	}
+	
+	public static char getReducedStateTypeFromDsspType(char dsspType, ReducedState state) {
+		switch(state) {
+		case THREESTATE:
+			return getThreeStateTypeFromDsspType(dsspType);
+		case FOURSTATE:
+			return getFourStateTypeFromDsspType(dsspType);
+		case EIGHTSTATE:
+		default:
+			return dsspType;
+		}
 	}
 	
 }

@@ -1,6 +1,8 @@
 package proteinstructure;
 
 import java.io.*;
+import java.net.*;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -8,6 +10,9 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.TreeSet;
+import java.util.regex.*;
+import java.util.zip.GZIPInputStream;
+import java.util.Arrays;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -15,6 +20,10 @@ import javax.vecmath.Vector3d;
 
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
+
+import tools.MySQLConnection;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * A single chain pdb protein structure
@@ -27,14 +36,21 @@ public abstract class Pdb {
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify no chain code
 	
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
-	protected HashMap<Integer,String> resser2restype;   // residue serial to 3 letter residue type 
-	protected HashMap<Integer,Point3d> atomser2coord;  // atom serials to 3D coordinates
-	protected HashMap<Integer,Integer> atomser2resser;  // atom serials to residue serials
-	protected HashMap<Integer,String> atomser2atom;     // atom serials to atom names
-	protected HashMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
-	protected HashMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
+	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type 
+	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
+	protected HashMap<Integer,Integer> atomser2resser;  	// atom serials to residue serials
+	protected HashMap<Integer,String> atomser2atom;     	// atom serials to atom names
+	protected HashMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
+	protected HashMap<Integer,String> resser2pdbresser; 	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	
-	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
+	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
+	protected Scop scop;											// the scop annotation for this pdb object
+	protected HashMap<Integer,Double> resser2allrsa;				// internal residue serials to all-atoms rsa
+	protected HashMap<Integer,Double> resser2scrsa;					// internal residue serials to SC rsa
+	protected HashMap<Integer,Double> resser2consurfhsspscore; 		// internal residue serials to SC rsa
+	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to SC rsa
+	protected EC ec;												// the ec annotation for this pdb object
+	protected CatalSiteSet catalSiteSet;							// the catalytic site annotation for this pdb object
 	
 	protected String sequence; 		// full sequence as it appears in SEQRES field
 	protected String pdbCode;
@@ -53,6 +69,287 @@ public abstract class Pdb {
 	protected int obsLength;  // length without unobserved, non standard aas 
 	
 	protected String db;			// the db from which we have taken the data (if applies)
+	protected MySQLConnection conn;
+	
+	public int checkCSA(String version, boolean online) throws IOException {
+		BufferedReader in;
+		String inputLine;
+		
+		if (online) {
+			URL csa = new URL("http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/CSA_"+version.replaceAll("\\.","_")+".dat.gz");
+			URLConnection conn = csa.openConnection();
+			InputStream inURL = conn.getInputStream();
+			OutputStream out = new BufferedOutputStream(new FileOutputStream("CSA_"+version.replaceAll("\\.","_")+".dat.gz"));
+			byte[] buffer = new byte[1024];
+			int numRead;
+			long numWritten = 0;
+			while ((numRead = inURL.read(buffer)) != -1) {
+				out.write(buffer, 0, numRead);
+				numWritten += numRead;
+			}
+			inURL.close();
+			out.close();
+			in = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream("CSA_"+version.replaceAll(".","_")+".dat.gz"))));
+		} else {
+			File csaFile = new File("/project/StruPPi/Databases/CSA/CSA_"+version.replaceAll("\\.","_")+".dat");
+			in = new BufferedReader(new FileReader(csaFile));			
+		}
+		
+		int csaMistakes = 0;
+		this.catalSiteSet = new CatalSiteSet();
+		String curPdbCode, curPdbChainCode, curPdbResSerial, curResType;
+		String prevPdbCode = "";
+		int curSiteId;
+		int prevSiteId = -1;
+		CatalyticSite cs = null;
+		while ((inputLine = in.readLine()) != null) { 
+			String[] fields = inputLine.split(",");
+			curPdbCode = fields[0]; 
+			curPdbChainCode = (fields[3].equals(""))?"NULL":fields[3];
+			if (curPdbCode.equals(pdbCode)) {
+				if (curPdbChainCode.equals(pdbChainCode)) {
+					curPdbResSerial = fields[4];
+					curResType = fields[2];
+					curSiteId = Integer.valueOf(fields[1]);
+					// only if the pdb residue type is a standard AA
+					if (AAinfo.isValidAA(curResType)) {
+						// only if the pdb residue type agrees with our residue type
+						if (getResTypeFromResSerial(get_resser_from_pdbresser(curPdbResSerial)).equals(curResType)) {
+							// each time the site changes except for the first site of a chain,
+							// add the site to the set
+							if ((curSiteId != prevSiteId) & (prevSiteId != -1)) {
+								catalSiteSet.add(cs);
+							}
+							// each time the site changes or it is the first site of a chain,
+							// create a new site
+							if ((curSiteId != prevSiteId) | (prevSiteId == -1)) {
+								String littEntryPdbCode = fields[7].substring(0,4);
+								String littEntryPdbChainCode = fields[7].substring(4).equals("")?"NULL":fields[7].substring(4);
+								cs = new CatalyticSite(curSiteId, fields[6], littEntryPdbCode, littEntryPdbChainCode); 
+							}
+							// add the res to the site
+							cs.addRes(get_resser_from_pdbresser(curPdbResSerial), fields[5]);
+							prevSiteId = curSiteId;
+						} else {
+							csaMistakes++;
+						}
+					}
+				}
+			} else if (prevPdbCode.equals(pdbCode)) {
+				if (prevSiteId != -1) {
+					catalSiteSet.add(cs);
+				}
+				break;
+			}
+			prevPdbCode = curPdbCode;
+		}
+		
+		in.close();
+		if (online) {
+			File csaFile = new File("CSA_"+version.replaceAll(".","_")+".dat.gz");
+			csaFile.delete();
+		}
+		
+		if ((csaMistakes > 0) | (prevSiteId == -1)) {
+			this.catalSiteSet = null;
+		} else {
+			catalSiteSet.print();
+		}
+		
+		return csaMistakes;
+	}
+		
+	public void checkEC(boolean online) throws IOException {
+		
+		this.ec = new EC();	
+		ECRegion er = null;
+		String startPdbResSer = "", endPdbResSer = "";
+		BufferedReader in;
+		String inputLine;
+		Pattern p = Pattern.compile("^ \\d");
+		
+		if (online) {
+			URL pdb2ecMapping = new URL("http://www.bioinf.org.uk/pdbsprotec/mapping.txt");
+			URLConnection p2e= pdb2ecMapping.openConnection();
+			in = new BufferedReader(new InputStreamReader(p2e.getInputStream()));
+		} else {
+			File pdb2ecMapping = new File("/project/StruPPi/Databases/PDBSProtEC/mapping.txt");
+			in = new BufferedReader(new FileReader(pdb2ecMapping));
+		}
+		
+        while ((inputLine = in.readLine()) != null) { 
+        	Matcher m = p.matcher(inputLine);
+        	if (m.find()) {
+	        	String curPdbCode = inputLine.substring(0,9).trim();
+	        	String curPdbChainCode = (inputLine.charAt(11) == ' ')?"NULL":String.valueOf(inputLine.charAt(11));
+	        	if (curPdbCode.equals(pdbCode) && curPdbChainCode.equals(pdbChainCode)) {
+	        		startPdbResSer = inputLine.substring(20,26).trim();
+	        		endPdbResSer = inputLine.substring(27,33).trim();
+	        		String id = inputLine.substring(43).trim();
+	        		//System.out.println(curPdbCode+":"+curPdbChainCode+":"+startPdbResSer+"-"+endPdbResSer+":"+ec);
+	        		er = new ECRegion(id, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
+					ec.add(er);
+	        	}
+        	}
+        }
+        
+        in.close();
+        
+	}
+	
+	public int checkConsurfHssp(boolean online) throws IOException {
+		
+		BufferedReader in;
+		if (online) {
+			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
+			URLConnection ch = consurfhssp.openConnection();
+			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
+		} else {
+			File consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+".grades");
+			in = new BufferedReader(new FileReader(consurfhssp));
+		}
+		String inputLine;
+		Pattern p = Pattern.compile("^\\s+\\d+");
+		int lineCount = 0;
+		int consurfHsspMistakes = 0;
+		
+		Integer[] ressers = new Integer[resser2restype.size()];
+		resser2restype.keySet().toArray(ressers);
+		Arrays.sort(ressers);
+		
+		resser2consurfhsspscore = new HashMap<Integer,Double>();
+		resser2consurfhsspcolor = new HashMap<Integer,Integer>();
+		
+        while ((inputLine = in.readLine()) != null) { 
+        	Matcher m = p.matcher(inputLine);
+        	if (m.find()) {
+        		lineCount++;
+        		int resser = ressers[lineCount-1];
+        		String[] fields = inputLine.split("\\s+");
+    			String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
+    			if (fields[2].equals(AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser))) &
+    					(pdbresser.equals("-") | pdbresser.equals(get_pdbresser_from_resser(resser)))) {
+    				resser2consurfhsspscore.put(resser, Double.valueOf(fields[4]));
+    				resser2consurfhsspcolor.put(resser, Integer.valueOf(fields[5]));
+    			} else {
+    				consurfHsspMistakes++;
+    			}
+        	}
+		}
+        in.close();
+        
+        if ((consurfHsspMistakes > 0) | (resser2consurfhsspscore.size() != ressers.length)) {
+        	resser2consurfhsspscore.clear();
+        	resser2consurfhsspcolor.clear();
+        }
+        
+        return consurfHsspMistakes;
+        
+    }	
+	
+	public void runNaccess(String naccessExecutable, String naccessParameters) throws Exception {
+		String pdbFileName = pdbCode+chainCode+".pdb";
+		dump2pdbfile(pdbFileName);
+		String line;
+		int errorLineCount = 0;
+		
+		File test = new File(naccessExecutable);
+		if(!test.canRead()) throw new IOException("Naccess Executable is not readable");
+		
+		Process myNaccess = Runtime.getRuntime().exec(naccessExecutable + " " + pdbFileName + " " + naccessParameters);
+		BufferedReader naccessOutput = new BufferedReader(new InputStreamReader(myNaccess.getInputStream()));
+		BufferedReader naccessError = new BufferedReader(new InputStreamReader(myNaccess.getErrorStream()));
+		while((line = naccessOutput.readLine()) != null) {
+		}
+		while((line = naccessError.readLine()) != null) {
+			errorLineCount++;
+		}
+		naccessOutput.close();
+		naccessError.close();
+		int exitVal = myNaccess.waitFor();
+		if ((exitVal == 1) || (errorLineCount > 0)) {
+			throw new Exception("Naccess:Wrong arguments or pdb file format!");
+		}
+		
+		File rsa = new File(pdbCode+chainCode+".rsa");
+		if (rsa.exists()) {
+			resser2allrsa = new HashMap<Integer,Double>();
+			resser2scrsa = new HashMap<Integer,Double>();			
+			BufferedReader rsaInput = new BufferedReader(new FileReader(rsa));
+			while ((line = rsaInput.readLine()) != null) {
+				if (line.startsWith("RES")) {
+					int resser = Integer.valueOf(line.substring(9,13).trim());
+					double allrsa = Double.valueOf(line.substring(22,28).trim());
+					double scrsa = Double.valueOf(line.substring(35,41).trim());
+					resser2allrsa.put(resser, allrsa);
+					resser2scrsa.put(resser, scrsa);
+				}
+			}
+			rsaInput.close();
+		}
+		String[] filesToDelete = { ".pdb", ".asa", ".rsa", ".log" };
+		for (int i=0; i < filesToDelete.length; i++) {
+			File fileToDelete = new File(pdbCode+chainCode+filesToDelete[i]);
+			if (fileToDelete.exists()) {
+				fileToDelete.delete();
+			}
+		}
+			
+	}
+	
+	public void checkScop(String version, boolean online) throws IOException {
+		this.scop = new Scop();	
+		ScopRegion sr = null;
+		String startPdbResSer = "", endPdbResSer = "";
+		BufferedReader in;
+		String inputLine;
+		
+		if (online) {
+			URL scop_cla = new URL("http://scop.mrc-lmb.cam.ac.uk/scop/parse/dir.cla.scop.txt_"+version);
+			URLConnection sc = scop_cla.openConnection();
+			in = new BufferedReader(new InputStreamReader(sc.getInputStream()));
+		} else {
+			File scop_cla = new File("/project/StruPPi/Databases/SCOP/dir.cla.scop.txt_"+version);
+			in = new BufferedReader(new FileReader(scop_cla));
+		}
+				
+        while ((inputLine = in.readLine()) != null) 
+			if (inputLine.startsWith(pdbCode,1)) {
+				System.out.println();
+				String[] fields = inputLine.split("\\s+");
+				String[] regions = fields[2].split(",");
+				for (int j=0; j < regions.length; j++) {
+					Pattern p = Pattern.compile("^(-)|([a-zA-Z\\d]):(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|([a-zA-Z\\d]):");
+					Matcher m = p.matcher(regions[j]);
+					if (m.find()) {
+						if (((pdbChainCode.equals("NULL") && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
+								(m.group(2) != null && m.group(2).equals(pdbChainCode)) || 
+								(m.group(7) != null && m.group(7).equals(pdbChainCode))) {
+							if (m.group(3) != null) {
+								startPdbResSer = m.group(3);
+								endPdbResSer = m.group(4);
+							} else if (m.group(5) != null) {
+								startPdbResSer = m.group(5);
+								endPdbResSer = m.group(6);								
+							} else {
+								startPdbResSer = get_pdbresser_from_resser(Collections.min(resser2pdbresser.keySet()));
+								endPdbResSer = get_pdbresser_from_resser(Collections.max(resser2pdbresser.keySet()));
+							}
+							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
+							scop.add(sr);
+						}
+					}
+				}
+				//break;
+			}
+        in.close();
+        
+        scop.setVersion(version);
+    }	
+	
+	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
+		runDssp(dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
+	}
 	
 	/** 
 	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
@@ -61,12 +358,13 @@ public abstract class Pdb {
 	 * after filling out a license agreement. For this version, the dsspParamters variable should be
 	 * set to "--" (two hyphens).
 	 */
-	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
+	public void runDssp(String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
 		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
 		String line;
 		int lineCount = 0;
-		char ssType;
+		char ssType, sheetLabel;
 		TreeMap<Integer, Character> ssTypes;
+		TreeMap<Integer, Character> sheetLabels;
 		int resNum;
 		String resNumStr;
 		File test = new File(dsspExecutable);
@@ -78,6 +376,7 @@ public abstract class Pdb {
 		writeAtomLines(dsspInput);	// pipe atom lines to dssp
 		dsspInput.close();
 		ssTypes = new TreeMap<Integer,Character>();
+		sheetLabels = new TreeMap<Integer,Character>();
 		while((line = dsspOutput.readLine()) != null) {
 			lineCount++;
 			if(line.startsWith(startLine)) {
@@ -89,10 +388,15 @@ public abstract class Pdb {
 			lineCount++;
 			resNumStr = line.substring(5,10).trim();
 			ssType = line.charAt(16);			
+			sheetLabel = line.charAt(33);
+			if (state4Id == SecStrucElement.ReducedState.FOURSTATE && SecStrucElement.getReducedStateTypeFromDsspType(ssType, state4Id) == SecStrucElement.OTHER) {
+				sheetLabel = ' ';
+			}
 			if(!resNumStr.equals("")) {		// this should only happen if dssp inserts a line indicating a chain break
 				try {
 					resNum = Integer.valueOf(resNumStr);
 					ssTypes.put(resNum, ssType);
+					sheetLabels.put(resNum, sheetLabel);
 				} catch (NumberFormatException e) {
 					System.err.println("Error while parsing DSSP output. Expected residue number, found '" + resNumStr + "' in line " + lineCount);
 				}
@@ -112,35 +416,37 @@ public abstract class Pdb {
 
 		// assign secondary structure
 		this.secondaryStructure = new SecondaryStructure();		// forget the old annotation
-		char lastType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()));
+		char lastType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()), state4Id);
 		int lastResSer = ssTypes.firstKey();
-		char thisType;
+		char lastSheet = sheetLabels.get(lastResSer);
+		char thisType, thisSheet, reducedType;
 		int start = 0;
 		int elementCount = 0;
 		SecStrucElement ssElem;
 		String ssId;
 		for(int resSer:ssTypes.keySet()) {
-			thisType = SecStrucElement.getFourStateTypeFromDsspType(ssTypes.get(resSer));
-			if(thisType != lastType || resSer > lastResSer+1) {
+			thisType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(resSer), state4Id);
+			thisSheet = sheetLabels.get(resSer);
+			if(thisType != lastType || thisSheet != lastSheet || resSer > lastResSer+1) {
 				// finish previous element, start new one
-				if(lastType != SecStrucElement.OTHER) {
-					elementCount++;
-					ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-					ssElem = new SecStrucElement(lastType, start,lastResSer,ssId);
-					secondaryStructure.add(ssElem);
-				}
+				elementCount++;
+				reducedType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(lastResSer), state4Type);
+				ssId = new Character(lastType).toString() + (lastSheet==' '?"":String.valueOf(lastSheet)) + new Integer(elementCount).toString();
+				ssElem = new SecStrucElement(reducedType,start,lastResSer,ssId);
+				secondaryStructure.add(ssElem);
 				start = resSer;
 				lastType = thisType;
+				lastSheet = thisSheet;
 			}
 			lastResSer = resSer;
 		}
 		// finish last element
-		if(lastType != SecStrucElement.OTHER) {
-			elementCount++;
-			ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-			ssElem = new SecStrucElement(lastType, start, ssTypes.lastKey(), ssId);
-			secondaryStructure.add(ssElem);
-		}
+		elementCount++;
+		reducedType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.lastKey()), state4Type);
+		ssId = new Character(lastType).toString() + (lastSheet==' '?"":String.valueOf(lastSheet)) + new Integer(elementCount).toString();
+		ssElem = new SecStrucElement(reducedType, start,ssTypes.lastKey(),ssId);
+		secondaryStructure.add(ssElem);
+		
 		secondaryStructure.setComment("DSSP");
 	}
 
@@ -169,6 +475,7 @@ public abstract class Pdb {
 
 	/**
 	 * Dumps coordinate data into a file in pdb format (ATOM lines only)
+	 * The residue serials dumped are the internal ones.
 	 * The chain dumped is the value of the chainCode variable, i.e. our internal chain identifier for Pdb objects
 	 * @param outfile
 	 * @throws IOException
@@ -560,7 +867,7 @@ public abstract class Pdb {
 	 * @see #getDiffDistMap(String, Pdb, String, Alignment, String, String) 
 	 */
 	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
-	    	double dist1, dist2, diff;
+		double dist1, dist2, diff;
 		HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
 		HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
 		if(thisDistMatrix.size() != otherDistMatrix.size()) {
@@ -678,6 +985,74 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Gets the Consurf-HSSP score given an internal residue serial
+	 * @param resser
+	 * @return
+	 */
+	public Double getConsurfhsspScoreFromResSerial(int resser){
+		if (resser2consurfhsspscore != null) {
+			if (resser2consurfhsspscore.get(resser) != null) {
+				return resser2consurfhsspscore.get(resser);
+			} else {
+				return null;
+			}		
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Gets the Consurf-HSSP color rsa given an internal residue serial
+	 * @param resser
+	 * @return
+	 */
+	public Integer getConsurfhsspColorFromResSerial(int resser){
+		if (resser2consurfhsspcolor != null) {
+			if (resser2consurfhsspcolor.get(resser) != null) {
+				return resser2consurfhsspcolor.get(resser);
+			} else {
+				return null;
+			}		
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Gets the all atoms rsa given an internal residue serial
+	 * @param resser
+	 * @return
+	 */
+	public Double getAllRsaFromResSerial(int resser){
+		if (resser2allrsa != null) {
+			if (resser2allrsa.get(resser) != null) {
+				return resser2allrsa.get(resser);
+			} else {
+				return null;
+			}		
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * Gets the sc rsa given an internal residue serial
+	 * @param resser
+	 * @return
+	 */
+	public Double getScRsaFromResSerial(int resser){
+		if (resser2scrsa != null) {
+			if (resser2scrsa.get(resser) != null) {
+				return resser2scrsa.get(resser);
+			} else {
+				return null;
+			}		
+		} else {
+			return null;
+		}
+	}
+	
+	/**
 	 * Gets the internal residue serial (cif) given a pdb residue serial (author assignment)
 	 * TODO refactor
 	 * @param pdbresser
@@ -738,7 +1113,7 @@ public abstract class Pdb {
 	public Point3d getAtomCoord(int atomser) {
 		return this.atomser2coord.get(atomser);
 	}
-		
+	
 	/**
 	 * Gets all atom serials in a Set
 	 * @return
@@ -746,7 +1121,7 @@ public abstract class Pdb {
 	public Set<Integer> getAllAtomSerials() {
 		return this.atomser2resser.keySet();
 	}
-		
+	
 	/**
 	 * Gets the 4 letter pdb code identifying this structure
 	 * @return
@@ -779,6 +1154,54 @@ public abstract class Pdb {
 		return sequence;
 	}
 		
+	// ec related methods
+	
+	/** 
+	 * Returns true if scop information is available, false otherwise. 
+	 */
+	public boolean hasEC() {
+		if (ec == null) {
+			return false;
+		} else if (ec.isEmpty()) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	/**
+	 * Returns the ec annotation object of this graph.
+	 */
+	public EC getEC() {
+		return ec;
+	}
+	
+	// end of secop related methods
+	
+	// scop related methods
+	
+	/** 
+	 * Returns true if scop information is available, false otherwise. 
+	 */
+	public boolean hasScop() {
+		if (scop == null) {
+			return false;
+		} else if (scop.isEmpty()) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	/**
+	 * Returns the scop annotation object of this graph.
+	 */
+	public Scop getScop() {
+		return scop;
+	}
+	
+	// end of secop related methods
+	
 	// secondary structure related methods
 	
 	/** 
@@ -951,6 +1374,86 @@ public abstract class Pdb {
 		}
 		return new Matrix(array);
 	}
+	
+	/**
+	 * Write residue info to given db, using our db graph aglappe format, 
+	 * i.e. tables: residue_info
+	 * @param conn
+	 * @param db
+	 * @throws SQLException
+	 */
+	public void writeToDb(MySQLConnection conn, String db) throws SQLException{
 
+		Statement stmt;
+		String sql = "";
+		
+		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
+		
+		for (int resser:resser2restype.keySet()) {
+			String resType = AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser));
+			String pdbresser = get_pdbresser_from_resser(resser);
+			
+			String secStructType = null;
+			String secStructId = null;
+			if (secondaryStructure != null) {
+				if (secondaryStructure.getSecStrucElement(resser) != null) {
+					secStructType = quote(String.valueOf(secondaryStructure.getSecStrucElement(resser).getType()));
+					secStructId = quote(secondaryStructure.getSecStrucElement(resser).getId());
+				}
+			}
+			
+			String scopId = null;
+			String sccs = null;
+			String sunid = null;
+			String orderIn = null;
+			String domainType = null;
+			String domainNumReg = null;
+			if (scop != null) {
+				if (scop.getScopRegion(resser)!=null) {
+					ScopRegion sr = scop.getScopRegion(resser);
+					scopId = quote(sr.getSId());
+					sccs = quote(sr.getSccs());
+					sunid = String.valueOf(sr.getSunid());
+					orderIn = String.valueOf(sr.getOrder());
+					domainType = quote(String.valueOf(sr.getDomainType()));
+					domainNumReg = String.valueOf(sr.getNumRegions());
+				}
+			}
+			
+			Double allRsa = getAllRsaFromResSerial(resser);
+			Double scRsa = getScRsaFromResSerial(resser);
+			
+			Double consurfhsspScore = getConsurfhsspScoreFromResSerial(resser);
+			Integer consurfhsspColor = getConsurfhsspColorFromResSerial(resser);
+			
+			String ecId = null;
+			if (ec != null) {
+				if (ec.getECRegion(resser) != null) {
+					ecId = quote(ec.getECNum(resser));
+				}
+			}
+			
+			String csaNums = null;
+			String csaChemFuncs = null;
+			String csaEvids = null;
+			if (catalSiteSet != null) {
+				if (catalSiteSet.getCatalSite(resser) != null) {
+					csaNums = quote(catalSiteSet.getCatalSiteNum(resser));
+					csaChemFuncs = quote(catalSiteSet.getCatalSiteChemFunc(resser));
+					csaEvids = quote(catalSiteSet.getCatalSiteEvid(resser));
+				}
+			}
+			
+			sql = "INSERT IGNORE INTO "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid) " +
+			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals("NULL")?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
+			//System.out.println(sql);
+			stmt = conn.createStatement();
+			stmt.executeUpdate(sql);
+		}			
+	}
+
+	private static String quote(String s) {
+		return ("'"+s+"'");
+	}
 }
 
