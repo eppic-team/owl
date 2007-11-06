@@ -50,6 +50,13 @@ public class SecStrucElement {
 		return interval;
 	}
 	
+	private char getSheetSerial() {
+		if (isStrand()) {
+			return Character.isLetter(secStrucId.charAt(1))?secStrucId.charAt(1):0;
+		}
+		return 0;
+	}
+	
 	/** Returns true if this ss element is a helix */
 	public boolean isHelix() {
 		return secStrucType == HELIX;
@@ -64,7 +71,20 @@ public class SecStrucElement {
 	public boolean isTurn() {
 		return secStrucType == TURN;
 	}	
+	
+	/** Returns true if this ss element is other ... */
+	public boolean isOther() {
+		return (secStrucType == OTHER || secStrucType == LOOP);
+	}	
 
+	public boolean inSameSheet(SecStrucElement s) {
+		boolean inSameSheet = false;
+		if (s != null && this.isStrand() && s.isStrand() && (s.getSheetSerial() == this.getSheetSerial() && s.getSheetSerial() != 0)) {
+			inSameSheet = true;
+		}
+		return inSameSheet;
+	}
+	
 	/*---------------------------- static methods ---------------------------*/
 	
 	private static char getFourStateTypeFromDsspType(char dsspType) {
