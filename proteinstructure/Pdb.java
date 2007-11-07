@@ -152,8 +152,6 @@ public abstract class Pdb {
 		
 		if ((csaMistakes > 0) | (prevSiteId == -1)) {
 			this.catalSiteSet = null;
-		} else {
-			catalSiteSet.print();
 		}
 		
 		return csaMistakes;
