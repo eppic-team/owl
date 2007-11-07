@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import actionTools.Retriever;
 
 import proteinstructure.Alignment;
+import proteinstructure.AlignmentConstructionError;
 import proteinstructure.Edge;
 import proteinstructure.EdgeSet;
 import proteinstructure.PairwiseAlignmentConverter;
@@ -628,7 +629,8 @@ public class SADP {
      * @param tag1  name of the first contact map to be taken as the sequence name tag resulting Alignment object
      * @param tag2  name of the second contact map 
      */
-    public Alignment getAlignment( String tag1, String tag2 ) {
+    public Alignment getAlignment( String tag1, String tag2 ) 
+    throws AlignmentConstructionError {
 	
 	ContactMap[] cm = new ContactMap[2];
 	
@@ -785,25 +787,29 @@ public class SADP {
     }
 
     public static void main(String[] args) {
+	try {
+	    Logger logger = Logger.getLogger("sasp.SADP");
 
-	Logger logger = Logger.getLogger("sasp.SADP");
-	
-	SADP sadp = new SADP(args[0], args[1]);
-	sadp.setLogger(logger);
-	sadp.run();
-	sadp.show();
-	
-	// prints pseudo sequence alignment
-	Alignment ali = sadp.getAlignment(args[0], args[1]);
-	Set<String> tags = ali.getTags();
-	Iterator<String> it = tags.iterator();
-	while( it.hasNext() ) {
-	    String tag = it.next();
-	    System.out.println(tag+':');
-	    System.out.println(ali.getAlignedSequence(tag));
+	    SADP sadp = new SADP(args[0], args[1]);
+	    sadp.setLogger(logger);
+	    sadp.run();
+	    sadp.show();
+
+	    // prints pseudo sequence alignment
+	    Alignment ali = sadp.getAlignment(args[0], args[1]);
+	    Set<String> tags = ali.getTags();
+	    Iterator<String> it = tags.iterator();
+	    while( it.hasNext() ) {
+		String tag = it.next();
+		System.out.println(tag+':');
+		System.out.println(ali.getAlignedSequence(tag));
+	    }
+
+	    System.out.println(ali.seq2al(args[0], 1));
+	    System.out.println(ali.seq2al(args[1], 1));
+	} catch(Exception e) {
+	    System.err.println(e.getMessage());
+	    System.exit(-1);
 	}
-	
-	System.out.println(ali.seq2al(args[0], 1));
-	System.out.println(ali.seq2al(args[1], 1));
     }
 }
