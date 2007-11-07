@@ -36,8 +36,8 @@ public class PairwiseAlignmentConverter {
      * @param tag1 sequence name of the first sequence
      * @param tag2 sequence name of the second sequence
      * */
-    public PairwiseAlignmentConverter( Iterator<Edge> it, int len1, int len2, String tag1, String tag2, int fi ) {
-	
+    public PairwiseAlignmentConverter( Iterator<Edge> it, int len1, int len2, String tag1, String tag2, int fi ) 
+    throws AlignmentConstructionError {
         this(it,len1,len2,null,null,tag1,tag2,fi);
     }
 
@@ -51,7 +51,8 @@ public class PairwiseAlignmentConverter {
      * @param tag1 name of the first sequence
      * @param tag2 name of the second sequence
      * */
-    private PairwiseAlignmentConverter( Iterator<Edge> it, int len1, int len2, String seq1, String seq2, String tag1, String tag2, int fi) {
+    private PairwiseAlignmentConverter( Iterator<Edge> it, int len1, int len2, String seq1, String seq2, String tag1, String tag2, int fi) 
+    throws AlignmentConstructionError {
     
         sequences[0] = seq1;
         sequences[1] = seq2;
@@ -65,25 +66,25 @@ public class PairwiseAlignmentConverter {
         buildAlignment();
     }
 
-    public PairwiseAlignmentConverter( Iterator<Edge> it, int len1, String seq2, String tag1, String tag2, int fi) {
-    
+    public PairwiseAlignmentConverter( Iterator<Edge> it, int len1, String seq2, String tag1, String tag2, int fi)
+    throws AlignmentConstructionError {
         this(it,len1,seq2.length(),null,seq2,tag1,tag2,fi);
     }
 
-    public PairwiseAlignmentConverter( Iterator<Edge> it, String seq1, int len2, String tag1, String tag2, int fi) {
-    
+    public PairwiseAlignmentConverter( Iterator<Edge> it, String seq1, int len2, String tag1, String tag2, int fi)
+    throws AlignmentConstructionError {
         this(it,seq1.length(),len2,seq1,null,tag1,tag2,fi);
     }
 
-    public PairwiseAlignmentConverter( Iterator<Edge> it, String seq1, String seq2, String tag1, String tag2, int fi ) {
-    
+    public PairwiseAlignmentConverter( Iterator<Edge> it, String seq1, String seq2, String tag1, String tag2, int fi ) 
+    throws AlignmentConstructionError {
         this(it,seq1.length(),seq2.length(),seq1,seq2,tag1,tag2,fi);
     }
 
     /**
      * Builds the alignment based on the preset members.
      */
-    private void buildAlignment( ) {
+    private void buildAlignment( ) throws AlignmentConstructionError {
     
         // gapped sequences for the respective contact maps
         StringBuffer s1 = new StringBuffer(Math.max(lengths[0],lengths[1]));
@@ -269,10 +270,16 @@ public class PairwiseAlignmentConverter {
         String tag2 = "seq2";
         
         PairwiseAlignmentConverter[] pab = new PairwiseAlignmentConverter[4];
-        pab[0] = new PairwiseAlignmentConverter( edges.iterator(), seq1,          seq2,          tag1, tag2, 0 );
-        pab[1] = new PairwiseAlignmentConverter( edges.iterator(), seq1.length(), seq2,          tag1, tag2, 0 );
-        pab[2] = new PairwiseAlignmentConverter( edges.iterator(), seq1,          seq2.length(), tag1, tag2, 0 );
-        pab[3] = new PairwiseAlignmentConverter( edges.iterator(), seq1.length(), seq2.length(), tag1, tag2, 0 );
+        
+        try {       
+            pab[0] = new PairwiseAlignmentConverter( edges.iterator(), seq1,          seq2,          tag1, tag2, 0 );
+            pab[1] = new PairwiseAlignmentConverter( edges.iterator(), seq1.length(), seq2,          tag1, tag2, 0 );
+            pab[2] = new PairwiseAlignmentConverter( edges.iterator(), seq1,          seq2.length(), tag1, tag2, 0 );
+            pab[3] = new PairwiseAlignmentConverter( edges.iterator(), seq1.length(), seq2.length(), tag1, tag2, 0 );
+        } catch(Exception e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
+        }
         
         for( int i=0; i<pab.length; ++i ) {
             

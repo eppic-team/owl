@@ -49,7 +49,8 @@ public class PairwiseAlignmentGraphConverter {
      *             node index in the matching which could be greater, though
      *             never less!)
      */
-    public PairwiseAlignmentGraphConverter( Iterator<Edge> it, Graph g1, Graph g2, int fi ) {
+    public PairwiseAlignmentGraphConverter( Iterator<Edge> it, Graph g1, Graph g2, int fi )
+    throws AlignmentConstructionError {
 	this( new PairwiseAlignmentConverter(it,g1.getSequence(),g2.getSequence(),"1","2",fi).getAlignment(), "1", "2", g1, g2 );
     }
     
@@ -136,7 +137,8 @@ public class PairwiseAlignmentGraphConverter {
     }
     
     /**
-     * Gets the graph corresponding to the first graph passed to the constructor.
+     * Gets the aligned graph corresponding to the first graph passed to the 
+     * constructor.
      * @return a graph 
      */
     public Graph getFirstGraph() {
@@ -144,7 +146,8 @@ public class PairwiseAlignmentGraphConverter {
     }
     
     /**
-     * Gets the graph corresponding to the first graph passed to the constructor.
+     * Gets the aligned graph corresponding to the first graph passed to the 
+     * constructor.
      * @return a graph 
      */
     public Graph getSecondGraph() {
@@ -173,7 +176,15 @@ public class PairwiseAlignmentGraphConverter {
 	EdgeSet matching = sadp.getMatching();
 	Graph g1 = new Graph(x,null,6.0,AAinfo.getAllContactTypes().iterator().next(),null,null,null,1,null);
 	Graph g2 = new Graph(y,null,6.0,AAinfo.getAllContactTypes().iterator().next(),null,null,null,1,null);
-	PairwiseAlignmentGraphConverter pac = new PairwiseAlignmentGraphConverter(matching.iterator(),g1,g2,0);
+
+	PairwiseAlignmentGraphConverter pac = null;
+	
+	try {
+	    pac = new PairwiseAlignmentGraphConverter(matching.iterator(),g1,g2,0);
+	} catch(Exception e) {
+	    System.err.println(e.getMessage());
+	    System.exit(-1);
+	}
 	
 	try {
 	    pac.getFirstGraph().write_graph_to_file(args[0]+".cm-aglappe");	    

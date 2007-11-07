@@ -4,6 +4,7 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
@@ -14,7 +15,7 @@ import java.util.regex.Pattern;
 /**
  * Package:		proteinstructure
  * Class: 		Alignment
- * Author:		Henning Stehr, Jose Duarte
+ * Author:		Henning Stehr, Jose Duarte, Lars Petzold
  * 
  * A multiple protein sequence alignment. This class represents a set of
  * protein sequences which are globally aligned.
@@ -44,7 +45,7 @@ public class Alignment {
 	/**
 	 * Reads an alignment from a file in either FASTA or PIR format
 	 */
-	public Alignment(String fileName, String format) throws IOException, FileNotFoundException {
+	public Alignment(String fileName, String format) throws IOException, FileNotFoundException, PirFileFormatError, FastaFileFormatError {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
 		} else if (format.equals(FASTAFORMAT)){
@@ -62,14 +63,13 @@ public class Alignment {
 	 * @param sequence
 	 * @param numberOfCopies
 	 */
-	public Alignment(TreeMap<String, String> sequences) {
+	public Alignment(TreeMap<String, String> sequences) throws AlignmentConstructionError {
 		
 		// check that sequences have the same length
 		int length = sequences.get(sequences.firstKey()).length();
 		for(String seqTag: sequences.keySet()) {
 			if(sequences.get(seqTag).length() != length) {
-				System.err.println("Can not create trivial alignment. Sequence lenghts are not the same.");
-				// TODO: throw exception
+				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
 			}
 		}
 		
@@ -77,7 +77,37 @@ public class Alignment {
 		doMapping();
 		
 	}
-
+	
+	/**
+	 * Writes alignment to the given output stream. The output format 
+	 * conforms to the FASTA format.
+	 * @param out  the output stream to be printed to
+	 * @param lineLength  the maximal line length, setting this to null 
+	 *  always results in 80 characters per line
+	 * @param alignedSeqs  toggles the output of the aligned or ungapped 
+	 *  sequences 
+	 * @throws IOException
+	 */
+	public void writeFasta(OutputStream out, Integer lineLength, boolean alignedSeqs) throws IOException {
+	    int len = 80;
+	    String seq = "";
+	    
+	    if( lineLength != null ) {
+		len = lineLength;
+	    }
+	    	    
+	    for( String name : getTags() ) {
+		seq = alignedSeqs ? getAlignedSequence(name) : getSequenceNoGaps(name);
+		out.write('>');
+		out.write(name.getBytes());
+		out.write(System.getProperty("line.separator").getBytes());
+		for(int i=0; i<seq.length(); i+=len) {
+		    out.write(seq.substring(i, Math.min(i+len,seq.length())).getBytes());
+		    out.write(System.getProperty("line.separator").getBytes());
+		}
+	    }
+	}
+	
 	/*---------------------------- private methods --------------------------*/
 	
 	private void doMapping() {
@@ -125,11 +155,12 @@ public class Alignment {
 		}		
 	}
 	
-	private void readFilePIRFormat(String fileName) throws IOException, FileNotFoundException{
+	private void readFilePIRFormat(String fileName) throws IOException, FileNotFoundException, PirFileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				currentSeqTag = "";
 		boolean foundFastaHeader = false;
+		int lineNum = 0;
 
 		// open file
 
@@ -144,6 +175,7 @@ public class Alignment {
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
+		    	++lineNum;
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
@@ -167,18 +199,17 @@ public class Alignment {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-			System.err.println("Error: " + fileName + " is not a "+PIRFORMAT+" file.");
-			System.exit(1);	
-			//TODO throw exception
+		    throw new PirFileFormatError("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
 		}
 		
 	}
 
-	private void readFileFastaFormat(String fileName) throws IOException, FileNotFoundException{
+	private void readFileFastaFormat(String fileName) throws IOException, FileNotFoundException, FastaFileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				lastSeqTag = "";
 		boolean foundFastaHeader = false;
+		long lineNum = 0;
 
 		// open file
 
@@ -191,6 +222,7 @@ public class Alignment {
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
+		    	++lineNum;
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
 				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
@@ -214,9 +246,7 @@ public class Alignment {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-			System.err.println("Error: " + fileName + " is not a "+FASTAFORMAT+" file.");
-			System.exit(1);
-			//TODO throw exception
+		    throw new FastaFileFormatError("File does not conform with Fasta file format (could not find any fasta header in the file).",fileName,lineNum);
 		}
 		
 	}
@@ -228,7 +258,7 @@ public class Alignment {
 	 * Returns the gap character
 	 * @return The gap character
 	 */
-    public char getGapCharacter() { return GAPCHARACTER; }
+    public static char getGapCharacter() { return GAPCHARACTER; }
     
     /**
      * Returns a TreeMap (keys: tags, values: sequences) with all sequences
@@ -640,27 +670,34 @@ public class Alignment {
 			System.exit(1);
 		}
 		String fileName=args[0];
-		Alignment al = new Alignment(fileName,"FASTA");
 		
-		// print columns
-		//for (int i=0;i<al.getSequenceLength();i++){
-		//	System.out.println(al.getColumn(i));
-		//}
-		// print all sequences tags and sequences
-		for (String seqTag:al.getSequences().keySet()){
+		try {
+		    Alignment al = new Alignment(fileName,"FASTA");
+
+
+		    // print columns
+		    //for (int i=0;i<al.getSequenceLength();i++){
+		    //	System.out.println(al.getColumn(i));
+		    //}
+		    // print all sequences tags and sequences
+		    for (String seqTag:al.getSequences().keySet()){
 			System.out.println(seqTag);
 			System.out.println(al.getAlignedSequence(seqTag));
+		    }
+		    // test of al2seq
+		    //for (int i=0;i<al.getSequenceLength();i++) {
+		    //	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
+		    //}
+		    // test of seq2al 
+		    //for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
+		    //	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
+		    //}
+		    // print alignment by columns tab delimited
+		    //al.writeTabDelimited();
+		} catch(Exception e) {
+		    System.err.println(e.getMessage());
+		    System.exit(-1);
 		}
-		// test of al2seq
-		//for (int i=0;i<al.getSequenceLength();i++) {
-		//	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
-		//}
-		// test of seq2al 
-		//for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
-		//	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
-		//}
-		// print alignment by columns tab delimited
-		//al.writeTabDelimited();
 	}
 
 }
