@@ -84,6 +84,35 @@ public class NodeNbh extends TreeMap<Integer,String> {
 		}
 		return motif;
 	}
+
+	public String getMotifReducedAlphabet(Graph graph) {
+		String motif="";
+		if(!this.isEmpty()) {
+			int min=Math.min(this.central_resser, this.firstKey());
+			int max=Math.max(this.central_resser, this.lastKey());
+			for (int i=min;i<=max;i++){
+				if (this.containsKey(i)){
+					Edge edge = graph.contacts.getEdge(Math.min(i, this.central_resser),Math.max(i, this.central_resser));
+					double weight = edge.weight;
+					if (weight>0) { // SC dominated
+						motif+=AAinfo.threeletter2oneletter(this.get(i));
+					} else if (weight<0) { //BB dominated
+						// for the sec structure we take the "seen" node (so not the central but the other), following Michael's convention
+						SecStrucElement elem = graph.getSecondaryStructure().getSecStrucElement(i);
+						char ssType = elem==null?'O':elem.getType();
+						char ssLetter = 'o';
+						if (ssType=='S') ssLetter = 'b';
+						else if (ssType=='H') ssLetter= 'z';
+						else if (ssType=='O') ssLetter = 'o';
+						motif+=ssLetter;
+					}
+				} else if (i==this.central_resser){
+					motif+=NodeNbh.centralLetter;
+				}
+			}
+		}
+		return motif;		
+	}
 	
 	public String getCommaSeparatedResSerials(){
 		String ressers="";
