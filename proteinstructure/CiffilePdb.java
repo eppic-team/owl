@@ -298,7 +298,7 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	private String readPdbCode(){
-		return fields2values.get(entryId+".id").trim();
+		return fields2values.get(entryId+".id").trim().toLowerCase();
 	}
 	
 	private void readAtomAltLocs() throws IOException, CiffileFormatError {
