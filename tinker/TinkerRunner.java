@@ -10,6 +10,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.util.Formatter;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import proteinstructure.Graph;
@@ -17,6 +18,7 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.MaxClusterRunner;
 
 public class TinkerRunner {
 	
@@ -278,7 +280,7 @@ public class TinkerRunner {
 			m = p.matcher(line);
 			if (m.find()) {
 				rmsRestViol[i]=Double.parseDouble(m.group(1));
-				System.out.println("Done model "+i+". Violations: "+numUpperViol[i]+" upper, "+numLowerViol[i]+" lower");
+				//System.out.println("Done model "+i+". Violations: "+numUpperViol[i]+" upper, "+numLowerViol[i]+" lower");
 				i++;
 				
 			}
@@ -405,6 +407,23 @@ public class TinkerRunner {
 	
 	/*---------------------------- public methods ---------------------------*/
 	
+	/** 
+	 * Returns the index of the structure with the least bound violations.
+	 * Note: The structure can then be retrieved using getStructure(i);
+	 */ 
+	public int pickByLeastBoundViols() {
+		int minIdx = 1;
+		int minViols = numLowerBoundViol[1] + numUpperBoundViol[1];
+		for (int i = 2; i <= lastNumberOfModels; i++) {
+			int score = numLowerBoundViol[i] + numUpperBoundViol[i];
+			if(score < minViols) {
+				minIdx = i;
+				minViols = score;
+			}
+		}
+		return minIdx;
+	}
+	
 	// reconstruction
 
 	/** 
@@ -423,23 +442,11 @@ public class TinkerRunner {
 		
 		String outputDir = System.getProperty("java.io.tmpdir");
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
-		boolean cleanUp = false;		// TODO: Only for debugging, switch on cleaning later
+		boolean cleanUp = true;						// TODO: Only for debugging, switch on cleaning later
 		
 		reconstruct(sequence, graphs, numberOfModels, outputDir, baseName, cleanUp);
-		
-		// 5. Pick model (by least bound violations)
-		int minIdx = 1;
-		int minViols = numLowerBoundViol[1] + numUpperBoundViol[1];
-		for (int i = 2; i <= numberOfModels; i++) {
-			int score = numLowerBoundViol[i] + numUpperBoundViol[i];
-			if(score < minViols) {
-				minIdx = i;
-				minViols = score;
-			}
-		}
-		
-		// 6. Read result into memory
-		resultPdb = getStructure(minIdx);
+		int pickedIdx = pickByLeastBoundViols();
+		resultPdb = getStructure(pickedIdx);
 		
 		return resultPdb;
 	}
@@ -620,6 +627,46 @@ public class TinkerRunner {
 
 	public double[] getRmsRestViol() {
 		return rmsRestViol;
+	}
+	
+	/**
+	 * Returns a vector of model file objects for the last reconstruction run.
+	 * Note: To get a particular structures as a Pdb object, use getStructure();
+	 * @return a vector of file objects
+	 */
+	public Vector<File> getLastModelFiles() {
+		Vector<File> ret = new Vector<File>(lastNumberOfModels);
+		for(int i=1; i <= lastNumberOfModels; i++) {
+			String ext = String.format(".%03d",i); // 001, 002, 003, ...
+			File resultPdbFile = new File(lastOutputDir, lastBaseName + ext + ".pdb");
+			ret.add(resultPdbFile);
+		}
+		return ret;
+	}
+	
+	/**
+	 * Calculates a vector of GDT_TS scores for the models of the last run versus the given structure using maxcluster.
+	 * @param nativePdbFileName the name of the pdb file with the native structure
+	 * @param maxClusterExecutable the path to the maxcluster executable
+	 * @return an array of gdt scores
+	 * @throws IOException if anything goes wrong
+	 */
+	public double[] getGdtsToNative(String nativePdbFileName, String maxClusterExecutable) throws IOException {
+		double[] gdtScores = new double[lastNumberOfModels];
+		
+		File file = new File(nativePdbFileName);
+		if(!file.canRead()) {
+			throw new FileNotFoundException("Could not read from file " + nativePdbFileName);
+		}
+		
+		MaxClusterRunner maxCluster = new MaxClusterRunner(maxClusterExecutable);
+		Vector<File> modelFiles = getLastModelFiles();
+		
+		for(int i=1; i <= lastNumberOfModels; i++) {
+			String modelFileName = modelFiles.get(i-1).getAbsolutePath(); 
+			gdtScores[i-1] = maxCluster.calculateGdt(modelFileName, nativePdbFileName);
+		}
+		return gdtScores;
 	}
 	
 }
