@@ -20,21 +20,19 @@ public class scoreTargetMoves {
 	static final String pwd = "nieve";
 	static MySQLConnection conn;
 	static String prgID = "V04"; 
-	static String backgrndDB = "cullpdb_90_cacg";
+	static String backgrndDB = "cullpdb_90";   // change!!
 	static String hashDB = "nbhashing";
 	static String targetDB = "caspm"; 
-	static String targetScore = "target_score";
 	static int sTotal, sRank; 
 	
 	public static void main(String[] args) throws SQLException{
 		
 		if (args.length<2) {
-			System.err.println("Must passed 2 parameters: graph_id and output score table name");
+			System.err.println("Must passed 2 parameters: <graph_id>, <target moves table>");
 			System.exit(1);
 		} 
 		int graph_id = Integer.parseInt(args[0]);
-		String scoreTableName = args[1];
-		scoreTableName = targetDB+"."+scoreTableName;
+		String targetMovesTable = targetDB+"."+args[1];
 		
 		int num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
 		String sql, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
@@ -42,22 +40,21 @@ public class scoreTargetMoves {
 		ResultSet mrsst;
 				
 		conn = new MySQLConnection(dbserver,user,pwd, backgrndDB); // connection to the the background DB!  
-		System.out.println("Scoring Target neighborhoods "+prgID); 
+		//System.out.println("Scoring Target neighborhoods "+prgID); 
  
-		System.out.println("scoreTableName:"+scoreTableName);
 
 		// preparing the result db 
-		sql = "drop table IF EXISTS "+scoreTableName+";";
-		mstmt = conn.createStatement();
-		mstmt.executeUpdate(sql); 
-		mstmt.close(); 
-		sql = "create table "+scoreTableName+" select * from "+targetDB+"."+targetScore;  
-		mstmt = conn.createStatement();
-		mstmt.executeUpdate(sql); 
-		mstmt.close(); 
+		//sql = "drop table IF EXISTS "+scoreTableName+";";
+		//mstmt = conn.createStatement();
+		//mstmt.executeUpdate(sql); 
+		//mstmt.close(); 
+		//sql = "create table "+scoreTableName+" select * from "+targetScore;  
+		//mstmt = conn.createStatement();
+		//mstmt.executeUpdate(sql); 
+		//mstmt.close(); 
 
 		sql = "select graph_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
-		" from "+scoreTableName+
+		" from "+targetMovesTable+
 		" WHERE graph_id="+graph_id+
 		" order by graph_id, cid, num, i, j ;";
 
@@ -114,7 +111,7 @@ public class scoreTargetMoves {
 		mrsst.close(); 
 		mstmt.close(); 
 
-		System.out.println("fin."); 
+		//System.out.println("fin."); 
 	}	// end main 
 
 
