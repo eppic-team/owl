@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.HashMap;
 
@@ -678,6 +679,26 @@ public class Graph {
 	
 	public String getSequence(){
 		return sequence;
+	}
+	
+	/**
+	 * Sets the sequence of this graph to the given one.
+	 * It will also set the nodes labels to the new sequence.
+	 * At the moment there are no checks on the input, if sequence of
+	 * diferrent length than current is passed there will be unexpected
+	 * results 
+	 * @param sequence
+	 */
+	public void setSequence(String sequence) {
+		if (sequence.length()!=this.fullLength) {
+			//TODO throw exception
+			System.err.println("Setting sequence to another sequence with different length. This can cause problems!");
+		}
+		this.sequence = sequence;
+		Set<Integer> allnodes = nodes.keySet();
+		for (int node:allnodes) {
+			nodes.put(node,AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(node-1))));
+		}
 	}
 	
 	public int getFullLength(){
