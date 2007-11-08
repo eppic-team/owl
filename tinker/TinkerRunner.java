@@ -23,13 +23,14 @@ import proteinstructure.MaxClusterRunner;
 public class TinkerRunner {
 	
 	/*------------------------------ constants ------------------------------*/
-	
+
 	private static final String PROTEIN_PROG = "protein";
 	private static final String DISTGEOM_PROG = "distgeom";
 //	private static final String PDBXYZ_PROG = "pdbxyz";
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_PARAMS = "Y N Y Y N N A";
+	private static final double DEFAULT_FORCECONSTANT = 100.0;
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final String DEFAULT_FF_FILE_TYPE = "amber";
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
@@ -499,7 +500,7 @@ public class TinkerRunner {
 		// 2. creating constraints into key file
 		ConstraintsMaker cm = null;
 		try {
-			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile);
+			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile,DEFAULT_FORCECONSTANT);
 		} catch(PdbfileFormatError e) {
 			throw new TinkerError(e);
 		}

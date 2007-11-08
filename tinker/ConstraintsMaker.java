@@ -30,11 +30,10 @@ import proteinstructure.PdbfilePdb;
  */
 public class ConstraintsMaker {
 
-	private static final double DEFAULT_FORCECONSTANT = 100.0;
-	
 	private File xyzFile;
 	private Pdb pdb;
 	private PrintWriter fkey;
+	private double defaultForceConstant;
 	
 	private TreeMap<Integer,Integer> pdb2xyz;
 	
@@ -43,7 +42,8 @@ public class ConstraintsMaker {
 	
 	private String lastPdbResSerial_Atom;
 	
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile) throws FileNotFoundException, IOException, PdbfileFormatError {
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbfileFormatError {
+		this.defaultForceConstant = forceConstant;
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 		try {
@@ -191,7 +191,6 @@ public class ConstraintsMaker {
 			assert (!j_ct.equals("ALL"));
 
 			double cutoff = graph.getCutoff();
-			double forceConstant = DEFAULT_FORCECONSTANT;
 			//TODO get force constants from weights
 
 			Set<String> i_atoms = AAinfo.getAtomsForCTAndRes(i_ct, i_res);
@@ -208,7 +207,7 @@ public class ConstraintsMaker {
 					int i_xyz = pdb2xyz.get(i_pdb);
 					int j_pdb = pdb.getAtomSerFromResSerAndAtom(cont.j, j_atom);
 					int j_xyz = pdb2xyz.get(j_pdb);
-					fkey.println(new Formatter().format(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,forceConstant,dist_min,dist_max).toString());
+					fkey.println(new Formatter().format(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,defaultForceConstant,dist_min,dist_max).toString());
 				}
 			}
 			

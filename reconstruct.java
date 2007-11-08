@@ -43,7 +43,8 @@ public class reconstruct {
 		String baseName = "";
 		boolean cross = false;
 		int n = 1;
-
+		//double forceConstant = 100.0;
+		
 		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
@@ -77,7 +78,10 @@ public class reconstruct {
 				break;
 			case 'n':
 				n = Integer.parseInt(g.getOptarg());
-				break;				
+				break;
+			//case 'f':
+			//	forceConstant = Double.valueOf(g.getOptarg());
+			//	break;				
 			case 'h':
 			case '?':
 				System.out.println(help);
