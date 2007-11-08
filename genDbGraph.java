@@ -26,6 +26,8 @@ public class genDbGraph {
 	public static final String			DB_PWD = "nieve";
 	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
 	public static final String			DSSP_PARAMS = "--";
+	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
+	public static final String			NACCESS_PARAMS = "";
 
 	//public static double			cutoff = 4.2;
 	//public static String			edgeType = "ALL";
@@ -47,9 +49,9 @@ public class genDbGraph {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] \n" +
-				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] \n" +
-				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> \n" +
+				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-m <mode>] \n" +
 				"\nA comma separated list of contact types and distance cutoffs can be given instead of just 1, e.g. -d 8.0,8.5 -t Ca,Cb will generate the graphs for Ca at 8.0 and for Cb at 8.5\n" +
 				"If only 1 contact type given and multiple cutoffs, graphs will be generated at all the cutoffs for the one contact type\n"+
 				"\nIn case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
@@ -64,8 +66,9 @@ public class genDbGraph {
 		String[] edgeTypes = null;
 		double[] cutoffs = null;
 		String outputDb = "";
+		String mode = "GRAPH";
 		
-		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:o:D:h?");
+		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:o:D:m:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -97,6 +100,8 @@ public class genDbGraph {
 			case 'D':
 				pdbaseDb = g.getOptarg();
 				break;
+			case 'm':
+				mode = g.getOptarg();
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -122,6 +127,11 @@ public class genDbGraph {
 		}
 		if ((!listfile.equals("") && pdbCodes!=null) || (!listfile.equals("") && !pdbfile.equals("")) || (pdbCodes!=null && !pdbfile.equals(""))) {
 			System.err.println("Options -p/-c, -i and -f/-c are exclusive. Use only one of them\n");
+			System.err.println(help);
+			System.exit(1);			
+		}
+		if (!(mode.equals("GRAPH") || mode.equals("PDB") || mode.equals("BOTH"))) {
+			System.err.println("Allowed values for mode:GRAPH,PDB,BOTH.");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -179,18 +189,27 @@ public class genDbGraph {
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
 					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
-
-					// get graphs
-					for (int j = 0; j<edgeTypes.length; j++) {
-						System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
-						
-						Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
-
-						graph.write_graph_to_db(conn,outputDb);
-						
-						numPdbs++;
+					if (!mode.equals("GRAPH")) {
+						pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						pdb.checkScop("1.71", false);
+						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+						int mistakes = pdb.checkConsurfHssp(false);
+						pdb.checkEC(false);
+						mistakes = pdb.checkCSA("2.2.5", false);
+						pdb.writeToDb(conn,outputDb);
 					}
-					
+					// get graphs
+					if (!mode.equals("PDB")) {
+						for (int j = 0; j<edgeTypes.length; j++) {
+							System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+							
+							Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+	
+							graph.write_graph_to_db(conn,outputDb);
+							
+							numPdbs++;
+						}
+					}
 					
 				} catch (PdbaseInconsistencyError e) {
 					System.err.println("Inconsistency in " + pdbCode + pdbChainCode);
@@ -200,6 +219,9 @@ public class genDbGraph {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
 				} catch (PdbChainCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
+				} catch (Exception e) {
+					System.out.println(e.getMessage());
+					e.printStackTrace();
 				}
 
 			}
@@ -218,16 +240,26 @@ public class genDbGraph {
 				if (!pdb.hasSecondaryStructure()) {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
-				
-				// get graphs
-				for (int j = 0; j<edgeTypes.length; j++) {
-					System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
-					
-					Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
-
-					graph.write_graph_to_db(conn,outputDb);
+				if (!mode.equals("GRAPH")) {
+					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+					pdb.checkScop("1.71", false);
+					pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+					int mistakes = pdb.checkConsurfHssp(false);
+					pdb.checkEC(false);
+					mistakes = pdb.checkCSA("2.2.5", false);
+					pdb.writeToDb(conn,outputDb);
 				}
 				
+				// get graphs
+				if (!mode.equals("PDB")) {
+					for (int j = 0; j<edgeTypes.length; j++) {
+						System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+						
+						Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+	
+						graph.write_graph_to_db(conn,outputDb);
+					}
+				}
 				
 			} catch (SQLException e) {
 				System.err.println("Couldn't write graph to db, error: "+e.getMessage());
@@ -235,6 +267,9 @@ public class genDbGraph {
 				System.err.println("pdb file "+pdbfile+" doesn't have right format");
 			} catch (PdbChainCodeNotFoundError e) {
 				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
+			} catch (Exception e) {
+				System.out.println(e.getMessage());
+				e.printStackTrace();
 			}
 		}
 		

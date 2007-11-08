@@ -27,6 +27,8 @@ public class genGraph {
 	public static final String			DB_PWD = "nieve";
 	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
 	public static final String			DSSP_PARAMS = "--";
+	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
+	public static final String			NACCESS_PARAMS = "";
 
 	//public static double			cutoff = 4.2;
 	//public static String			edgeType = "ALL";
