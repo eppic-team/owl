@@ -1,11 +1,14 @@
 import gnu.getopt.Getopt;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
 
+//import proteinstructure.CiffilePdb;
+//import proteinstructure.CiffileFormatError;
 import proteinstructure.Graph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
@@ -102,6 +105,7 @@ public class genDbGraph {
 				break;
 			case 'm':
 				mode = g.getOptarg();
+				break;
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -189,13 +193,40 @@ public class genDbGraph {
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
 					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
+					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);
 					if (!mode.equals("GRAPH")) {
-						pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
-						pdb.checkScop("1.71", false);
-						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
-						int mistakes = pdb.checkConsurfHssp(false);
-						pdb.checkEC(false);
-						mistakes = pdb.checkCSA("2.2.5", false);
+						try {
+							pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
+						try {
+							pdb.checkScop("1.71", false);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
+						try {
+							pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
+						try {
+							int mistakes = pdb.checkConsurfHssp(false);
+							System.out.println("ConsurfHssp Mistakes:"+mistakes);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
+						try {
+							pdb.checkEC(false);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
+						try {
+							int mistakes = pdb.checkCSA("2.2.5", false);
+							System.out.println("CSA Mistakes:"+mistakes);
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}
 						pdb.writeToDb(conn,outputDb);
 					}
 					// get graphs
@@ -219,10 +250,9 @@ public class genDbGraph {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
 				} catch (PdbChainCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
-				} catch (Exception e) {
-					System.out.println(e.getMessage());
-					e.printStackTrace();
-				}
+				}/* catch (CiffileFormatError e) {
+					System.err.println(e.getMessage());
+				}*/
 
 			}
 
@@ -241,12 +271,38 @@ public class genDbGraph {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
 				if (!mode.equals("GRAPH")) {
-					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
-					pdb.checkScop("1.71", false);
-					pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
-					int mistakes = pdb.checkConsurfHssp(false);
-					pdb.checkEC(false);
-					mistakes = pdb.checkCSA("2.2.5", false);
+					try {
+						pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					try {
+						pdb.checkScop("1.71", false);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					try {
+						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					try {
+						int mistakes = pdb.checkConsurfHssp(false);
+						System.out.println("ConsurfHssp Mistakes:"+mistakes);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					try {
+						pdb.checkEC(false);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					try {
+						int mistakes = pdb.checkCSA("2.2.5", false);
+						System.out.println("CSA Mistakes:"+mistakes);
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
 					pdb.writeToDb(conn,outputDb);
 				}
 				
@@ -267,9 +323,6 @@ public class genDbGraph {
 				System.err.println("pdb file "+pdbfile+" doesn't have right format");
 			} catch (PdbChainCodeNotFoundError e) {
 				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
-			} catch (Exception e) {
-				System.out.println(e.getMessage());
-				e.printStackTrace();
 			}
 		}
 		
