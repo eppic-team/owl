@@ -335,10 +335,17 @@ public class Alignment {
      * returns the alignment index (starting at 0, with gaps)
      * @param seqTag
      * @param seqIndex
-     * @return
+     * @return the alignment index or -1 on error
      */
     public int seq2al(String seqTag, int seqIndex) {
-    	return mapSeq2Align.get(seqTag).get(seqIndex);
+    	int ret = -1;
+    	TreeMap<Integer,Integer> map = mapSeq2Align.get(seqTag);
+    	if(map.containsKey(seqIndex)) {
+    		ret = map.get(seqIndex);
+    	} else {
+    		System.err.println("Sever error in seq2al: Index " + seqIndex + " out of bounds for sequence " + seqTag + " (max index=" + map.lastKey() + ")");
+    	}
+    	return ret;
     }
     
     /**
