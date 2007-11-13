@@ -420,7 +420,8 @@ public class CiffilePdb extends Pdb {
 
 			int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
 			int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
-			int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
+			//int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
+			int pdbSeqNumIdx = fields2indices.get(pdbxPolySeqId+".pdb_seq_num");
 			int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
 			int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
 			int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
@@ -435,8 +436,7 @@ public class CiffilePdb extends Pdb {
 			if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 				int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
 				chainCode = tokens[asymIdIdx];
-				//TODO revise: do we want auth_seq_num or pdb_seq_num here??
-				String pdb_res_serial = tokens[authSeqNumIdx]; // auth_seq_num
+				String pdb_res_serial = tokens[pdbSeqNumIdx]; // pdb_seq_num
 				String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
 				String pdb_res_serial_with_icode = pdb_res_serial;
 				if (!pdb_ins_code.equals(".")) {
@@ -450,9 +450,8 @@ public class CiffilePdb extends Pdb {
 					sequence+=NONSTANDARD_AA_LETTER;
 				}
 				// pdbresser2resser
-				if (!pdb_res_serial_with_icode.startsWith("?")) { // question marks are author missing serials, we don't want them in the map
-					pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
-				}
+				pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);
+
 			}
 		}
 	}

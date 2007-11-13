@@ -99,6 +99,7 @@ public class PdbasePdb extends Pdb {
 	 */
 	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
+		//NOTE:a non-case sensitive pdb_strand_id can be mapped to more than one asym_ids!!!!!!!!!!
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.model=model_serial;
 		this.db=db;
@@ -163,6 +164,8 @@ public class PdbasePdb extends Pdb {
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
+		// NOTE: 'limit 1' not really needed since there can be only one asym_id
+		// per entry_key,pdb_strand_id combination (pdb_strand_id case sensitive!)
 		String sql="SELECT asym_id " +
 				" FROM "+db+".pdbx_poly_seq_scheme " +
 				" WHERE entry_key=" + entrykey +
@@ -184,6 +187,8 @@ public class PdbasePdb extends Pdb {
 		return asymid;	
 	}
 	
+	// NOTE: Entity key not really needed since there can be only one entity_key
+	// per entry_key,asym_id combination 
 	private int get_entity_key() throws PdbaseInconsistencyError, SQLException {
 		String sql="SELECT entity_key " +
 				" FROM "+db+".struct_asym " +
@@ -246,7 +251,8 @@ public class PdbasePdb extends Pdb {
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 
-		
+		// NOTE: label_entity_key not really needed since there can be only one entity_key
+		// per entry_key,asym_id combination
 		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
 				" FROM "+db+".atom_site " +
 				" WHERE entry_key="+entrykey +
@@ -288,16 +294,12 @@ public class PdbasePdb extends Pdb {
 	
 	private String read_seq() throws PdbaseInconsistencyError, SQLException{
 		String sequence="";
-		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
-			pdbstrandid="A";
-		}
+
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
         String sql="SELECT mon_id" +
         		" FROM "+db+".pdbx_poly_seq_scheme " +
         		" WHERE entry_key=" + entrykey +
         		" AND asym_id='"+asymid+"' " +
-        		" AND pdb_strand_id='"+pdbstrandid+"' " +
         		" ORDER BY seq_id+0";
 
         Statement stmt = conn.createStatement();
@@ -314,7 +316,7 @@ public class PdbasePdb extends Pdb {
         } 
         if (count==0) {
         	//System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-        	throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+        	throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid);
         }
         rsst.close();
         stmt.close();
@@ -329,13 +331,11 @@ public class PdbasePdb extends Pdb {
 		}
 
 		HashMap<String,Integer> map = new HashMap<String, Integer>();
-		//TODO revise: do we want auth_seq_num or pdb_seq_num here??
-		String sql="SELECT seq_id, concat(auth_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
+		String sql="SELECT seq_id, concat(pdb_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
 					" FROM "+db+".pdbx_poly_seq_scheme " +
 					" WHERE entry_key=" + entrykey +
 					" AND asym_id='"+asymid+"' " +
 					" AND pdb_strand_id='"+pdbstrandid+"' " +
-					" AND auth_seq_num!='?'" +
 					" ORDER BY seq_id+0";
 
 		Statement stmt = conn.createStatement();
