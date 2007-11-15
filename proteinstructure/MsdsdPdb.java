@@ -96,7 +96,7 @@ public class MsdsdPdb extends Pdb {
 	 */
 	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
-		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
+		this.pdbChainCode=pdbChainCode;	// NOTE! pdb chain codes are case sensitive!
 		this.model=model_serial;
 		this.db=db;
 		this.myMsdsdDb="my_"+db;  // i.e. for db=msdsd_00_07_a then myMsdsdDb=my_msdsd_00_07_a

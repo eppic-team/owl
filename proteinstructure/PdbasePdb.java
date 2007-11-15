@@ -99,8 +99,8 @@ public class PdbasePdb extends Pdb {
 	 */
 	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
-		//NOTE:a non-case sensitive pdb_strand_id can be mapped to more than one asym_ids!!!!!!!!!!
-		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
+		//NOTE:a case sensitive pdb_strand_id can be mapped to more than one asym_ids!!!!!!!!!!
+		this.pdbChainCode=pdbChainCode;					// NOTE! pdb chain code are case sensitive!
 		this.model=model_serial;
 		this.db=db;
 		
