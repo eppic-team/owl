@@ -142,7 +142,7 @@ public class CiffilePdb extends Pdb {
 		// here we would like to call the constructor this(ciffile, pdbChainCode, model_serial); which does not work, so we use copy/paste:
 		
 		// load from temp file
-		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
+		this.pdbChainCode=pdbChainCode;				// NOTE! pdb chain codes are case sensitive
 		this.model=model_serial;
 		
 		fcif = new RandomAccessFile(cifFile,"r");
@@ -194,7 +194,7 @@ public class CiffilePdb extends Pdb {
 	 */
 	public CiffilePdb (File ciffile, String pdbChainCode, int model_serial) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
 		this.cifFile = ciffile;
-		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
+		this.pdbChainCode=pdbChainCode;				// NOTE! pdb chain codes are case sensitive
 		this.model=model_serial;
 		
 		fcif = new RandomAccessFile(cifFile,"r");
