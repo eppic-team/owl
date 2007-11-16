@@ -536,8 +536,8 @@ public abstract class Pdb {
 					//System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
 				}
 			}
-			// in ct="ALL" we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
-			if (ct.equals("ALL") && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
+			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
+			if ((ct.equals("ALL") || ct.equals("BB")) && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
 				int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
 				Point3d coord = atomser2coord.get(atomser);
 				coords.put(atomser, coord);
@@ -564,8 +564,8 @@ public abstract class Pdb {
 					coords.put(resser+"_"+atom, coord);
 				}
 			}
-			// in ct="ALL" we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
-			if (ct.equals("ALL") && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
+			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
+			if ((ct.equals("ALL") || ct.equals("BB")) && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
 				int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
 				Point3d coord = atomser2coord.get(atomser);
 				coords.put(resser+"_"+"OXT", coord);
