@@ -140,7 +140,6 @@ public class Graph {
 		// do some verification checks
 		assert(secondaryStructure != null);
 		assert(this.pdbCode.equals(this.pdbCode.toLowerCase()));				// pdb codes should be always lower case 
-		assert(this.pdbChainCode.equals(this.pdbChainCode.toUpperCase()));		// pdb chain codes should be always upper case
 	}
 	
 	/**
