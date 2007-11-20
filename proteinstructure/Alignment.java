@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -448,62 +449,62 @@ public class Alignment {
      *  
      * @throws IndexOutOfBoundsException 
      */
-    public EdgeSet getMatchingBlocks(String tag, Collection<String> projectionTags, int begin, int end, int degOfConservation) 
+    public IntervalSet getMatchingBlocks(String tag, Collection<String> projectionTags, int begin, int end, int degOfConservation) 
     throws IndexOutOfBoundsException {
-	
-	if( end > getAlignmentLength() ) {
-	    throw new IndexOutOfBoundsException("end position exceeds alignment length");
-	}
-	
-	/*
-	 * col        - current alignment column
-	 * start      - start column for the next chunk to be added
-	 * foundStart - flag set whenever a start position for the next chunk 
-	 *               to be added has been encountered
-	 * c          - observed character in sequence 'tag' in column 'col'
-	 * limit      - maximal number of tolerated gap characters at a certain 
-	 *               alignment column with respect to the sequences 
-	 *               referencened in 'projectionTags'
-	 * chunks     - the list of consecutive chunks to be returned
-	 */
-	int col = begin;
-	int start = 0;
-	char c = '-';
-	boolean foundStart = false;
-	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
-	EdgeSet chunks = new EdgeSet();
-		
-	while( col<end ) {
-	    c = getAlignedSequence(tag).charAt(col);
-	    
-	    if( c == getGapCharacter() ) {
-		if( foundStart ) {
-		    foundStart = false;
-		    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,Math.max(start, col-1))));
-		}
-	    } else {
-		if( limit >= count(projectionTags,col,getGapCharacter()) ) {
-		    if( !foundStart ) {
-			foundStart = true;
-			start = col;
-		    }
-		} else {
-		    if( foundStart ) {
-			foundStart = false;
-			chunks.add(new Edge(al2seq(tag,start),al2seq(tag,col-1)));
-		    }
-		}
-	    }
-	    ++col;
-	}
-	
-	if( foundStart ) {
-	    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,Math.max(start,col-1))));
-	}
-	
-	return chunks;
+
+    	if( end > getAlignmentLength() ) {
+    		throw new IndexOutOfBoundsException("end position exceeds alignment length");
+    	}
+
+    	/*
+    	 * col        - current alignment column
+    	 * start      - start column for the next chunk to be added
+    	 * foundStart - flag set whenever a start position for the next chunk 
+    	 *               to be added has been encountered
+    	 * c          - observed character in sequence 'tag' in column 'col'
+    	 * limit      - maximal number of tolerated gap characters at a certain 
+    	 *               alignment column with respect to the sequences 
+    	 *               referencened in 'projectionTags'
+    	 * chunks     - the list of consecutive chunks to be returned
+    	 */
+    	int col = begin;
+    	int start = 0;
+    	char c = '-';
+    	boolean foundStart = false;
+    	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
+    	IntervalSet chunks = new IntervalSet();
+
+    	while( col<end ) {
+    		c = getAlignedSequence(tag).charAt(col);
+
+    		if( c == getGapCharacter() ) {
+    			if( foundStart ) {
+    				foundStart = false;
+    				chunks.add(new Interval(al2seq(tag,start),al2seq(tag,Math.max(start, col-1))));
+    			}
+    		} else {
+    			if( limit >= count(projectionTags,col,getGapCharacter()) ) {
+    				if( !foundStart ) {
+    					foundStart = true;
+    					start = col;
+    				}
+    			} else {
+    				if( foundStart ) {
+    					foundStart = false;
+    					chunks.add(new Interval(al2seq(tag,start),al2seq(tag,col-1)));
+    				}
+    			}
+    		}
+    		++col;
+    	}
+
+    	if( foundStart ) {
+    		chunks.add(new Interval(al2seq(tag,start),al2seq(tag,Math.max(start,col-1))));
+    	}
+
+    	return chunks;
     }
-    
+
     /**
      * 
      * @param tag
@@ -513,88 +514,88 @@ public class Alignment {
      * @return The indexing respects the sequence indexing for this class, i.e., index 1 corresponds to the first position in the sequence.
      * @throws IndexOutOfBoundsException 
      */
-    public EdgeSet getMatchingBlocks(String tag, Collection<String> projectionTags, NodeSet positions, int degOfConservation) 
+    public IntervalSet getMatchingBlocks(String tag, Collection<String> projectionTags, TreeSet<Integer> positions, int degOfConservation) 
     throws IndexOutOfBoundsException {
-	
-	/*
-	 * col        - current alignment column
-	 * prevCol    - previous alignment column
-	 * start      - start column for the next chunk to be added
-	 * foundStart - flag set whenever a start position for the next chunk 
-	 *               to be added has been encountered
-	 * c          - observed character in sequence 'tag' in column 'col'
-	 * limit      - maximal number of tolerated gap characters at a certain 
-	 *               alignment column with respect to the sequences 
-	 *               referencened in 'projectionTags'
-	 * chunks     - the list of consecutive chunks to be returned
-	 */
-	int col = positions.iterator().next().num;
-	int prevCol = 0;
-	int start = 0;
-	boolean foundStart = false;
-	char c = '-';
-	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
-	EdgeSet chunks = new EdgeSet();
-	
-	for(Iterator<Node> it = positions.iterator(); it.hasNext(); ) {
-	    prevCol = col;
-	    col = it.next().num;
-	    c = getAlignedSequence(tag).charAt(col);
-	    
-	    if( c == getGapCharacter() ) {
-		if( foundStart ) {
-		    // complete chunk
-		    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,prevCol)));
-		    foundStart = false;
-		}
-	    } else if ( limit >= count(projectionTags,col,getGapCharacter()) ) {
-		if( foundStart ) {
-		    if( col - prevCol > 1 ) {
-			// we allow the in between positions only to consist 
-			// of gap characters. otherwise we have to complete the 
-			// current chunk as the in-between non-gap positions
-			// are not contained in 'positions'
-			if( isBlockOf(tag,prevCol,col,getGapCharacter()) ) {
-			    for( String t : projectionTags) {
-				if( !isBlockOf(t,prevCol,col,getGapCharacter()) ) {
-				    foundStart = false;
-				    break;
-				}
-			    }
-			} else {
-			    foundStart = false;
-			}
-			
-			// please note that the 'foundStart' variable is 
-			// abused in the preceding if-clause to avoid the 
-			// allocation of an additional boolean
-			if( !foundStart ) {
-			    // complete chunk
-			    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,prevCol)));
-			    foundStart = true;
-			    start = col;
-			}
-		    } // else: current chunk can easily be extended
-		} else {
-		    foundStart = true;
-		    start = col;
-		}
-	    } else {
-		if( foundStart ) {
-		    foundStart = false;
-		    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,prevCol)));
-		}
-	    }
-	}
-	
-	if( foundStart ) {
-	    // complete last chunk
-	    chunks.add(new Edge(al2seq(tag,start),al2seq(tag,col)));
-	}
-	
-	return chunks;
+
+    	/*
+    	 * col        - current alignment column
+    	 * prevCol    - previous alignment column
+    	 * start      - start column for the next chunk to be added
+    	 * foundStart - flag set whenever a start position for the next chunk 
+    	 *               to be added has been encountered
+    	 * c          - observed character in sequence 'tag' in column 'col'
+    	 * limit      - maximal number of tolerated gap characters at a certain 
+    	 *               alignment column with respect to the sequences 
+    	 *               referencened in 'projectionTags'
+    	 * chunks     - the list of consecutive chunks to be returned
+    	 */
+    	int col = positions.iterator().next();
+    	int prevCol = 0;
+    	int start = 0;
+    	boolean foundStart = false;
+    	char c = '-';
+    	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
+    	IntervalSet chunks = new IntervalSet();
+
+    	for(Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
+    		prevCol = col;
+    		col = it.next();
+    		c = getAlignedSequence(tag).charAt(col);
+
+    		if( c == getGapCharacter() ) {
+    			if( foundStart ) {
+    				// complete chunk
+    				chunks.add(new Interval(al2seq(tag,start),al2seq(tag,prevCol)));
+    				foundStart = false;
+    			}
+    		} else if ( limit >= count(projectionTags,col,getGapCharacter()) ) {
+    			if( foundStart ) {
+    				if( col - prevCol > 1 ) {
+    					// we allow the in between positions only to consist 
+    					// of gap characters. otherwise we have to complete the 
+    					// current chunk as the in-between non-gap positions
+    					// are not contained in 'positions'
+    					if( isBlockOf(tag,prevCol,col,getGapCharacter()) ) {
+    						for( String t : projectionTags) {
+    							if( !isBlockOf(t,prevCol,col,getGapCharacter()) ) {
+    								foundStart = false;
+    								break;
+    							}
+    						}
+    					} else {
+    						foundStart = false;
+    					}
+
+    					// please note that the 'foundStart' variable is 
+    					// abused in the preceding if-clause to avoid the 
+    					// allocation of an additional boolean
+    					if( !foundStart ) {
+    						// complete chunk
+    						chunks.add(new Interval(al2seq(tag,start),al2seq(tag,prevCol)));
+    						foundStart = true;
+    						start = col;
+    					}
+    				} // else: current chunk can easily be extended
+    			} else {
+    				foundStart = true;
+    				start = col;
+    			}
+    		} else {
+    			if( foundStart ) {
+    				foundStart = false;
+    				chunks.add(new Interval(al2seq(tag,start),al2seq(tag,prevCol)));
+    			}
+    		}
+    	}
+
+    	if( foundStart ) {
+    		// complete last chunk
+    		chunks.add(new Interval(al2seq(tag,start),al2seq(tag,col)));
+    	}
+
+    	return chunks;
     }
-    
+
     /**
      * Extracts from the set of given alignment position those without gaps.
      * @param projectionTags  tags of the sequences to be considered 
@@ -607,41 +608,41 @@ public class Alignment {
      *  parameter 'extractInPlace' has an immense impact on the output 
      *  generating.     
      */
-    public NodeSet getGaplessColumns(Collection<String> projectionTags, NodeSet positions, boolean extractInPlace) {
+    public TreeSet<Integer> getGaplessColumns(Collection<String> projectionTags, TreeSet<Integer> positions, boolean extractInPlace) {
 
-	// this node set will be filled and returned if the in place editing of 
-	// parameter 'positions' is disabled
-	NodeSet output = null;
-	if( !extractInPlace ) {
-	    output = new NodeSet();
-	}
-	
-	int numProjTags = projectionTags.size();
-	int col = 0;
-	
-	for( Iterator<Node> it = positions.iterator(); it.hasNext(); ) {
-	    col = it.next().num;
-	    if( numProjTags != count(projectionTags, col, getGapCharacter()) ) {
-		// this column contains at least one gap
-		if( extractInPlace ) {
-		    // remove corresponding item in 'positions'
-		    it.remove();
-		}
-	    } else if( !extractInPlace ) {
-		// gapless column found -> record this event in 'output' (as 
-		// 'positions' is not editable)
-		output.add(new Node(col));
-	    }
-	}
-	
-	// return the correct node set
-	if( extractInPlace ) {
-	    return positions;
-	} else {
-	    return output;
-	}
+    	// this node set will be filled and returned if the in place editing of 
+    	// parameter 'positions' is disabled
+    	TreeSet<Integer> output = null;
+    	if( !extractInPlace ) {
+    		output = new TreeSet<Integer>();
+    	}
+
+    	int numProjTags = projectionTags.size();
+    	int col = 0;
+
+    	for( Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
+    		col = it.next();
+    		if( numProjTags != count(projectionTags, col, getGapCharacter()) ) {
+    			// this column contains at least one gap
+    			if( extractInPlace ) {
+    				// remove corresponding item in 'positions'
+    				it.remove();
+    			}
+    		} else if( !extractInPlace ) {
+    			// gapless column found -> record this event in 'output' (as 
+    			// 'positions' is not editable)
+    			output.add(col);
+    		}
+    	}
+
+    	// return the correct node set
+    	if( extractInPlace ) {
+    		return positions;
+    	} else {
+    		return output;
+    	}
     }
-    
+
     /**
      * Counts the number of occurrences of the given character at the given 
      * alignment column. The sequences to be considered is limited to the 
@@ -652,59 +653,59 @@ public class Alignment {
      * @return
      */
     public int count(Collection<String> tags, int col, char c) throws IndexOutOfBoundsException {
-	int i=0;
-	for( String t : tags ) {
-	    if( getAlignedSequence(t).charAt(col) == c ) {
-		++i;
-	    }
-	}
-	return i;
+    	int i=0;
+    	for( String t : tags ) {
+    		if( getAlignedSequence(t).charAt(col) == c ) {
+    			++i;
+    		}
+    	}
+    	return i;
     }
-    
+
     public boolean isBlockOf( String tag, int begin, int end, char c ) throws IndexOutOfBoundsException {
-	for(int i=begin; i<end; ++i) {
-	    if( getAlignedSequence(tag).charAt(i) != c ) {
-		return false;
-	    }
-	}
-	return true;
+    	for(int i=begin; i<end; ++i) {
+    		if( getAlignedSequence(tag).charAt(i) != c ) {
+    			return false;
+    		}
+    	}
+    	return true;
     }
-    
+
     /** to test the class */
-	public static void main(String[] args) throws FileNotFoundException, IOException {
-		if (args.length<1){
-			System.err.println("Must provide FASTA file name as argument");
-			System.exit(1);
-		}
-		String fileName=args[0];
-		
-		try {
-		    Alignment al = new Alignment(fileName,"FASTA");
+    public static void main(String[] args) throws FileNotFoundException, IOException {
+    	if (args.length<1){
+    		System.err.println("Must provide FASTA file name as argument");
+    		System.exit(1);
+    	}
+    	String fileName=args[0];
+
+    	try {
+    		Alignment al = new Alignment(fileName,"FASTA");
 
 
-		    // print columns
-		    //for (int i=0;i<al.getSequenceLength();i++){
-		    //	System.out.println(al.getColumn(i));
-		    //}
-		    // print all sequences tags and sequences
-		    for (String seqTag:al.getSequences().keySet()){
-			System.out.println(seqTag);
-			System.out.println(al.getAlignedSequence(seqTag));
-		    }
-		    // test of al2seq
-		    //for (int i=0;i<al.getSequenceLength();i++) {
-		    //	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
-		    //}
-		    // test of seq2al 
-		    //for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
-		    //	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
-		    //}
-		    // print alignment by columns tab delimited
-		    //al.writeTabDelimited();
-		} catch(Exception e) {
-		    System.err.println(e.getMessage());
-		    System.exit(-1);
-		}
-	}
+    		// print columns
+    		//for (int i=0;i<al.getSequenceLength();i++){
+    		//	System.out.println(al.getColumn(i));
+    		//}
+    		// print all sequences tags and sequences
+    		for (String seqTag:al.getSequences().keySet()){
+    			System.out.println(seqTag);
+    			System.out.println(al.getAlignedSequence(seqTag));
+    		}
+    		// test of al2seq
+    		//for (int i=0;i<al.getSequenceLength();i++) {
+    		//	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
+    		//}
+    		// test of seq2al 
+    		//for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
+    		//	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
+    		//}
+    		// print alignment by columns tab delimited
+    		//al.writeTabDelimited();
+    	} catch(Exception e) {
+    		System.err.println(e.getMessage());
+    		System.exit(-1);
+    	}
+    }
 
 }
