@@ -1469,7 +1469,95 @@ public abstract class Pdb {
 			//System.out.println(sql);
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
+			stmt.close();
 		}			
+	}
+
+	/**
+	 * Write residue info to given db, using our db graph aglappe format, 
+	 * i.e. tables: residue_info
+	 * @param conn
+	 * @param db
+	 * @throws SQLException
+	 */
+	public void writeToDbFast(MySQLConnection conn, String db) throws SQLException, IOException {
+
+		Statement stmt;
+		String sql = "";
+		
+		System.out.println("fast");
+		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
+		
+		PrintStream resOut = new PrintStream(new FileOutputStream(pdbCode+chainCode+"_residues.txt"));
+		
+		for (int resser:resser2restype.keySet()) {
+			String resType = AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser));
+			String pdbresser = get_pdbresser_from_resser(resser);
+			
+			String secStructType = "\\N";
+			String secStructId = "\\N";
+			if (secondaryStructure != null) {
+				if (secondaryStructure.getSecStrucElement(resser) != null) {
+					secStructType = String.valueOf(secondaryStructure.getSecStrucElement(resser).getType());
+					secStructId = secondaryStructure.getSecStrucElement(resser).getId();
+				}
+			}
+			
+			String scopId = "\\N";
+			String sccs = "\\N";
+			String sunid = "\\N";
+			String orderIn = "\\N";
+			String domainType = "\\N";
+			String domainNumReg = "\\N";
+			if (scop != null) {
+				if (scop.getScopRegion(resser)!=null) {
+					ScopRegion sr = scop.getScopRegion(resser);
+					scopId = sr.getSId();
+					sccs = sr.getSccs();
+					sunid = String.valueOf(sr.getSunid());
+					orderIn = String.valueOf(sr.getOrder());
+					domainType = String.valueOf(sr.getDomainType());
+					domainNumReg = String.valueOf(sr.getNumRegions());
+				}
+			}
+			
+			Double allRsa = getAllRsaFromResSerial(resser);
+			Double scRsa = getScRsaFromResSerial(resser);
+			
+			Double consurfhsspScore = getConsurfhsspScoreFromResSerial(resser);
+			Integer consurfhsspColor = getConsurfhsspColorFromResSerial(resser);
+			
+			String ecId = "\\N";
+			if (ec != null) {
+				if (ec.getECRegion(resser) != null) {
+					ecId = ec.getECNum(resser);
+				}
+			}
+			
+			String csaNums = "\\N";
+			String csaChemFuncs = "\\N";
+			String csaEvids = "\\N";
+			if (catalSiteSet != null) {
+				if (catalSiteSet.getCatalSite(resser) != null) {
+					csaNums = catalSiteSet.getCatalSiteNum(resser);
+					csaChemFuncs = catalSiteSet.getCatalSiteChemFunc(resser);
+					csaEvids = catalSiteSet.getCatalSiteEvid(resser);
+				}
+			}
+			
+			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals("NULL")?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
+			
+		}
+		resOut.close();
+		sql = "LOAD DATA LOCAL INFILE '"+pdbCode+chainCode+"_residues.txt' INTO TABLE "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid);";
+		//System.out.println(sql);
+		stmt = conn.createStatement();
+		stmt.executeUpdate(sql);
+		stmt.close();
+		File fileToDelete = new File(pdbCode+chainCode+"_residues.txt");
+		if (fileToDelete.exists()) {
+			//fileToDelete.delete();
+		}
 	}
 
 	private static String quote(String s) {

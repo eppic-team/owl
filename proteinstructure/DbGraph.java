@@ -21,9 +21,11 @@ public class DbGraph extends Graph {
 	private final static String MYSQLUSER=MySQLConnection.getUserName();
 	private final static String MYSQLPWD="nieve";
 	
-	private final static String DEFAULT_CR ="(true)"; // default contact range (CR field in graph db)
-	private final static String DEFAULT_CW ="1";      // default contact weight (CW field in graph db)
+	private final static String DEFAULT_CR ="(true)"; 	// default contact range (CR field in graph db)
+	private final static String DEFAULT_CW ="1";      	// default contact weight (CW field in graph db)
 	
+	private final static int DEFAULT_MODEL = 1;			// default model serial (NMR structures)
+
 	private int graphid=0;
 	//private int sm_id=0; // for future use
 	
@@ -42,13 +44,14 @@ public class DbGraph extends Graph {
 	 * @throws GraphIdNotFoundError 
 	 * @throws SQLException 
 	 */
-	public DbGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException {
+	public DbGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct, int model) throws GraphIdNotFoundError, SQLException {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.cutoff=cutoff;
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
 		this.pdbChainCode=pdbChainCode.toUpperCase();	// our convention: chain codes are upper case
 		this.ct=ct;
+		this.model=model;
 		this.directed=false;
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
@@ -84,10 +87,17 @@ public class DbGraph extends Graph {
 	 * @throws GraphIdNotFoundError
 	 * @throws SQLException
 	 */
-	public DbGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException{ 
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct);
+	public DbGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, int model) throws GraphIdNotFoundError, SQLException{ 
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct, model);
 	}
 	
+	public DbGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException {
+		this(dbname,conn,pdbCode,pdbChainCode,cutoff,ct,DEFAULT_MODEL);
+	}
+	
+	public DbGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct) throws GraphIdNotFoundError, SQLException {
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,DEFAULT_MODEL);
+	}
 	
 	/**
 	 * Constructs Graph object from graph db, given the graphid and passing a MySQLConnection
@@ -105,14 +115,10 @@ public class DbGraph extends Graph {
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		// when we pass the sequence in getCM to the ContactMap constructor we want to have either a full sequence (with unobserveds) or a blank in case we don't have the info
 		this.sequence="";
-		
-		read_graph_from_db(); // gets contacts, nodes and sequence
+				
 		get_db_graph_info(); // gets pdbCode, pdbChainCode, chainCode, ct and cutoff from db (from graph_id)
+		read_graph_from_db(); // gets contacts, nodes and sequence
 		
-		//TODO graphs in db are never directed, so this doesn't really apply here. Must solve all this!
-		if (ct.contains("/")){
-			directed=true;
-		}
 		this.obsLength=nodes.size();
 		if (!sequence.equals("")){
 			this.fullLength=sequence.length();
@@ -151,8 +157,12 @@ public class DbGraph extends Graph {
 		contacts = new EdgeSet();
 		nodes = new TreeMap<Integer, String>();
 
-		// we read only half of the matrix (contacts in one direction only) so that we have the same type of contacts as when creating Graph from Pdb object
-		String sql="SELECT i_num,j_num,weight FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" AND j_num>i_num ORDER BY i_num,j_num ";
+		// we read only half of the matrix (contacts in one direction only) when graph undirected so that we have the same type of contacts as when creating Graph from Pdb object
+		String filterStr = "";
+		if (!directed) {
+			filterStr = " AND j_num>i_num ";
+		}
+		String sql="SELECT i_num,j_num,weight FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" "+filterStr+" ORDER BY i_num,j_num ";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		while (rsst.next()) {
@@ -185,8 +195,33 @@ public class DbGraph extends Graph {
 		if (pdbChainCode.equals("NULL")){
 			chainstr=" IS NULL ";
 		}
-
-		String sql="SELECT graph_id, pchain_code FROM "+dbname+".chain_graph WHERE accession_code='"+pdbCode+"' AND chain_pdb_code"+chainstr+" AND dist="+cutoff;
+		
+		String CW = DEFAULT_CW;
+		String CR = DEFAULT_CR;
+		String EXPBB = "0";
+		String ctStr = ct;
+		String weightedStr = "0";
+		String directedStr = directed?"1":"0";
+		
+		if (ct.endsWith("_CAGLY")) {
+			ctStr = ct.replace("_CAGLY", "");
+		}
+		// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
+		if (ctStr.equals("ALL")) {
+			ctStr = "BB+SC+BB/SC";
+		}
+		if (AAinfo.isValidMultiAtomContactType(ct)) {
+			CW = ctStr;
+			weightedStr = "1";
+		}
+		if (ct.endsWith("_CAGLY") || ct.equals("Cb")) {
+			EXPBB = "-1";
+		}		
+				
+		String sql = "SELECT graph_id, pchain_code FROM "+dbname+".chain_graph " +
+					" WHERE accession_code='"+pdbCode+"' AND chain_pdb_code "+chainstr+" " +
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		int check=0;
@@ -200,12 +235,11 @@ public class DbGraph extends Graph {
 		}
 		rsst.close();
 		stmt.close();
-		// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
-		String ctstr=ct;
-		if (ct.equals("ALL")){
-			ctstr="BB+SC+BB/SC";
-		}
-		sql="SELECT graph_id,single_model_id FROM "+dbname+".single_model_graph WHERE pgraph_id="+pgraphid+" AND CT='"+ctstr+"' AND dist="+cutoff+" AND CR='"+DEFAULT_CR+"' AND CW="+DEFAULT_CW;
+		
+		sql="SELECT graph_id, single_model_id FROM "+dbname+".single_model_graph "+
+			" WHERE pgraph_id="+pgraphid+" AND dist="+cutoff+" AND expBB="+EXPBB+
+			" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"' "+
+			" AND w = "+weightedStr+" AND d = "+directedStr+";";
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
 		check=0;
@@ -214,24 +248,28 @@ public class DbGraph extends Graph {
 			graphid=rsst.getInt(1);
 			//sm_id=rsst.getInt(2); // we might want to use it in the future
 		}
+		System.out.println(graphid);
 		if (check!=1){
 			//System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
-			throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+			throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctStr+" and cutoff="+cutoff);
 		}
 	}
 	
 	private void get_db_graph_info() throws GraphIdNotFoundError, SQLException {
 			int pgraphid=0;
-			String sql="SELECT pgraph_id,CT,dist FROM "+dbname+".single_model_graph WHERE graph_id="+graphid;
+			String sql="SELECT pgraph_id,dist,expBB,CT,d FROM "+dbname+".single_model_graph WHERE graph_id="+graphid;
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			int check=0;
 			while (rsst.next()) {
 				check++;
 				pgraphid=rsst.getInt(1);
-				ct=rsst.getString(2);
+				cutoff=rsst.getDouble(2);
+				int expBB=rsst.getInt(3);
+				ct=rsst.getString(4);
 				if (ct.equals("BB+SC+BB/SC")) ct="ALL";
-				cutoff=rsst.getDouble(3);
+				if ((expBB == -1) && (!ct.equals("Cb"))) ct=ct+"_CAGLY";
+				directed = (rsst.getInt(4)==1);
 			}
 			if (check!=1){
 				//System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
@@ -239,7 +277,7 @@ public class DbGraph extends Graph {
 			}
 			rsst.close();
 			stmt.close();
-			sql="SELECT accession_code, chain_pdb_code, pchain_code FROM "+dbname+".chain_graph WHERE graph_id="+pgraphid;
+			sql="SELECT accession_code, chain_pdb_code, pchain_code, model_serial FROM "+dbname+".chain_graph WHERE graph_id="+pgraphid;
 			stmt = conn.createStatement();
 			rsst = stmt.executeQuery(sql);
 			check=0;
@@ -250,6 +288,7 @@ public class DbGraph extends Graph {
 				// java returns a null if the field is a database null, we want actually the "NULL" string in that case
 				if (pdbChainCode==null) pdbChainCode="NULL";
 				chainCode=rsst.getString(3);
+				model=rsst.getInt(4);
 			}
 			if (check!=1){
 				System.err.println("No accession_code+chain_pdb_code+pchain_code match or more than 1 match for graph_id="+pgraphid+" in chain_graph table");

@@ -1,5 +1,6 @@
 package proteinstructure;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
@@ -41,6 +42,8 @@ public class Graph {
 	protected double cutoff;
 	protected String ct;					// the contact type
 	protected boolean directed;
+	protected int minSeqSep = -1;
+	protected int maxSeqSep = -1;
 	
 	// fullLength is length of full sequence or:
 	// -if sequence not provided (when reading from db): length of everything except possible unobserved residues at end of chain
@@ -235,15 +238,40 @@ public class Graph {
 	 * @throws SQLException
 	 */
 	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException{
+		
+		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
+
 		// we are fixing these 3 values to what corresponds to our graphs 
 		String CW = "1";
 		String CR = "(true)";
 		String EXPBB = "0";
+		String ctStr = ct;
+		String weightedStr = "0";
+		String directedStr = directed?"1":"0";
 		
+		if (ct.endsWith("_CAGLY")) {
+			ctStr = ct.replace("_CAGLY", "");
+		}
+		if (ctStr.equals("ALL")) {
+			ctStr = "BB+SC+BB/SC";
+		}
+		if (AAinfo.isValidMultiAtomContactType(ct)) {
+			CW = ctStr;
+			weightedStr = "1";
+		}
+		if (ct.endsWith("_CAGLY") || ct.equals("Cb")) {
+			EXPBB = "-1";
+		}
+		if (minSeqSep != -1) {
+			CR = "((i_cid!=j_cid)OR(abs(i_num-j_num)>="+minSeqSep+"))";
+		}
+				
 		int pgraphid=0;
 		int graphid=0;
 		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
-					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"' LIMIT 1";
+					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()){	// if the pdbCode + chainCode were already in chain_graph then we take the graph_id as the pgraphid
@@ -269,21 +297,18 @@ public class Graph {
 		}
 		rsst.close();
 		// now we insert the graph info into single_model_graph
-		String ctStr = ct;
-		if (ct.equals("ALL")){
-			ctStr = "BB+SC+BB/SC";
-		}
 		// 1st we grab the single_model_id
 		int singlemodelid = 0;
-		sql = "SELECT single_model_id  FROM "+SINGLEMODELS_DB+".single_model WHERE CR='"+CR+"' AND CW='"+CW+"' AND expBB="+EXPBB+" AND CT='"+ctStr+"' AND dist="+cutoff+";";
+		sql = "SELECT single_model_id FROM "+SINGLEMODELS_DB+".single_model WHERE "+
+				" dist="+cutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"';";
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()){
 			singlemodelid = rsst.getInt(1);
 		}
 		rsst.close();
 		// and then insert to single_model_graph
-		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,num_nodes,date) " +
-				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+cutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+getObsLength()+", now())";
+		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,w,d,num_nodes,date) " +
+				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+cutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
 		stmt.executeUpdate(sql);
 		// and we grab the graph_id just assigned in single_model_graph
 		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_graph LIMIT 1";
@@ -293,61 +318,321 @@ public class Graph {
 		}
 		rsst.close();
 		stmt.close();
-		// inserting edges
-		for (Edge cont:contacts){
-			String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
-			String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
-			char i_secStructType=SecStrucElement.OTHER;
-			if (secondaryStructure.getSecStrucElement(cont.i)!=null){
-				i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
-			}
-			char j_secStructType=SecStrucElement.OTHER;
-			if (secondaryStructure.getSecStrucElement(cont.j)!=null){
-				j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
-			}
-			sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
-					" VALUES ("+graphid+", "+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"',"+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"', "+Math.round(cont.weight)+")";
-			stmt = conn.createStatement();
-			stmt.executeUpdate(sql);
-		}
-		if (!directed){ // we want both side of the matrix in the table to follow Ioannis' convention
-			// so we insert the reverse contacts by doing the same but swapping i, j in insertion
-			for (Edge cont:contacts){
-				String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
-				String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
-				char i_secStructType=SecStrucElement.OTHER;
-				if (secondaryStructure.getSecStrucElement(cont.i)!=null){
-					i_secStructType = secondaryStructure.getSecStrucElement(cont.i).getType();
-				}
-				char j_secStructType=SecStrucElement.OTHER;
-				if (secondaryStructure.getSecStrucElement(cont.j)!=null){
-					j_secStructType = secondaryStructure.getSecStrucElement(cont.j).getType();
-				}
-				sql = "INSERT INTO "+db+".single_model_edge (graph_id,i_num,i_cid,i_res,i_sstype,j_num,j_cid,j_res,j_sstype,weight) " +
-						" VALUES ("+graphid+", "+cont.j+", '"+chainCode+"', '"+j_res+"', '"+j_secStructType+"',"+cont.i+", '"+chainCode+"', '"+i_res+"', '"+i_secStructType+"', "+Math.round(cont.weight)+")";
-				stmt.executeUpdate(sql);
-			}
-		}
+		
 		// inserting nodes
+		// get the max node in db
+		int maxNodeId = 0;
+		sql = "SELECT MAX(node_id) FROM "+db+".single_model_node;";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			maxNodeId = rsst.getInt(1);
+		}
+		rsst.close();
+		stmt.close();
+		
+		stmt = conn.createStatement();
 		for (int resser:nodes.keySet()) {
 			String res = AAinfo.threeletter2oneletter(getResType(resser));
 			NodeNbh nbh = getNodeNbh(resser);
-			char secStructType=SecStrucElement.OTHER;
+			String secStructType = null;
+			String secStructId = null;
+			String sheetSerial = null;
+			String turn = null;
 			if (secondaryStructure.getSecStrucElement(resser)!=null){
-				secStructType = secondaryStructure.getSecStrucElement(resser).getType();
+				secStructType = quote(Character.toString(secondaryStructure.getSecStrucElement(resser).getType()));
+				secStructId = quote(secondaryStructure.getSecStrucElement(resser).getId());
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(resser).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					sheetSerial = quote(Character.toString(sheetSerialChar));
+				}
+				turn = secondaryStructure.getSecStrucElement(resser).isTurn()?"1":"0";
 			}
-			if (directed){  // we insert k_in and k_out
-				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k,k_in,k_out,n,nwg,n_num) " +
-					" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"', "+0+", "+getInDegree(resser)+", "+getOutDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+			if (directed){  // we insert k(=k_in+k_out), k_in and k_out
+				sql = "INSERT INTO "+db+".single_model_node "+
+					" (graph_id, node_id, cid, num, res, "+
+					" sstype, ssid, sheet_serial, turn, "+
+					" k, k_in, k_out, "+
+					" n, nwg, n_num) " +
+					" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
+					" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
+					(getInDegree(resser)+getOutDegree(resser))+", "+getInDegree(resser)+", "+getOutDegree(resser)+", "+
+					"'"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			} else {		// we insert k (and no k_in or k_out)
-				sql = "INSERT INTO "+db+".single_model_node (graph_id,num,cid,res,sstype,k,n,nwg,n_num) " +
-				" VALUES ("+graphid+", "+resser+", '"+chainCode+"', '"+res+"', '"+secStructType+"',"+getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+				sql = "INSERT INTO "+db+".single_model_node "+
+				" (graph_id, node_id, cid, num, res, "+
+				" sstype, ssid, sheet_serial, turn, "+
+				" k, n, nwg, n_num) " +
+				" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
+				" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
+				getDegree(resser)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
 			stmt.executeUpdate(sql);
 		}
+		
+		// inserting edges
+		// get the max weight
+		double maxWeight = 0;
+		for (Edge cont:contacts) {
+			maxWeight = (maxWeight<cont.weight)?cont.weight:maxWeight;
+		}
+		for (Edge cont:contacts){
+			String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
+			String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
+
+			String i_secStructType = null;
+			String i_secStructId = null;
+			String i_sheetSerial = null;
+			String i_turn = null;
+			if (secondaryStructure.getSecStrucElement(cont.i)!=null){
+				i_secStructType = quote(Character.toString(secondaryStructure.getSecStrucElement(cont.i).getType()));
+				i_secStructId = quote(secondaryStructure.getSecStrucElement(cont.i).getId());
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(cont.i).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					i_sheetSerial = quote(Character.toString(sheetSerialChar));
+				}
+				i_turn = secondaryStructure.getSecStrucElement(cont.i).isTurn()?"1":"0";
+			}
+			
+			String j_secStructType = null;
+			String j_secStructId = null;
+			String j_sheetSerial = null;
+			String j_turn = null;
+			if (secondaryStructure.getSecStrucElement(cont.j)!=null){
+				j_secStructType = quote(Character.toString(secondaryStructure.getSecStrucElement(cont.j).getType()));
+				j_secStructId = quote(secondaryStructure.getSecStrucElement(cont.j).getId());
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(cont.j).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					j_sheetSerial = quote(Character.toString(sheetSerialChar));
+				}
+				j_turn = secondaryStructure.getSecStrucElement(cont.j).isTurn()?"1":"0";
+			}
+			
+			sql = "INSERT INTO "+db+".single_model_edge "+
+					" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
+					" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight) " +
+					" VALUES ("+graphid+", "+(maxNodeId+cont.i)+", '"+chainCode+"', "+cont.i+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
+					(maxNodeId+cont.j)+", '"+chainCode+"', "+cont.j+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
+					Math.round(cont.weight)+", "+(cont.weight/maxWeight)+")";
+			stmt.executeUpdate(sql);
+			if(!directed) {// we want both side of the matrix in the table to follow Ioannis' convention
+				// so we insert the reverse contact by swapping i, j in insertion
+				sql = "INSERT INTO "+db+".single_model_edge "+
+				" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
+				" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight) " +
+				" VALUES ("+graphid+", "+(maxNodeId+cont.j)+", '"+chainCode+"', "+cont.j+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
+				(maxNodeId+cont.i)+", '"+chainCode+"', "+cont.i+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
+				Math.round(cont.weight)+", "+(cont.weight/maxWeight)+")";
+				stmt.executeUpdate(sql);
+			}
+		}
+		
 		stmt.close();
 	}
 		
+	/**
+	 * Write graph to given db, using our db graph aglappe format, 
+	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * @param conn
+	 * @param db
+	 * @throws SQLException
+	 */
+	public void write_graph_to_db_fast(MySQLConnection conn, String db) throws SQLException, IOException {
+		
+		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
+
+		// we are fixing these 3 values to what corresponds to our graphs 
+		String CW = "1";
+		String CR = "(true)";
+		String EXPBB = "0";
+		String ctStr = ct;
+		String weightedStr = "0";
+		String directedStr = directed?"1":"0";
+		
+		if (ct.endsWith("_CAGLY")) {
+			ctStr = ct.replace("_CAGLY", "");
+		}
+		if (ctStr.equals("ALL")) {
+			ctStr = "BB+SC+BB/SC";
+		}
+		if (AAinfo.isValidMultiAtomContactType(ct)) {
+			CW = ctStr;
+			weightedStr = "1";
+		}
+		if (ct.endsWith("_CAGLY") || ct.equals("Cb")) {
+			EXPBB = "-1";
+		}
+		if (minSeqSep != -1) {
+			CR = "((i_cid!=j_cid)OR(abs(i_num-j_num)>="+minSeqSep+"))";
+		}
+				
+		int pgraphid=0;
+		int graphid=0;
+		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
+					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND method = 'rc-cutoff';";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()){	// if the pdbCode + chainCode were already in chain_graph then we take the graph_id as the pgraphid
+			pgraphid = rsst.getInt(1);
+		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
+			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
+			String pdbChainCodeStr = pdbChainCode;
+			if (!pdbChainCode.equals("NULL")) {
+				pdbChainCodeStr="'"+pdbChainCode+"'";
+			}
+			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+			Statement stmt2 = conn.createStatement();
+			stmt2.executeUpdate(sql);
+			// now we take the newly assigned graph_id as pgraphid
+			sql = "SELECT LAST_INSERT_ID() FROM "+db+".chain_graph LIMIT 1";
+			ResultSet rsst2 = stmt2.executeQuery(sql);
+			if (rsst2.next()){
+				pgraphid = rsst2.getInt(1);
+			}
+			stmt2.close();
+			rsst2.close();
+		}
+		rsst.close();
+		// now we insert the graph info into single_model_graph
+		// 1st we grab the single_model_id
+		int singlemodelid = 0;
+		sql = "SELECT single_model_id FROM "+SINGLEMODELS_DB+".single_model WHERE "+
+				" dist="+cutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"';";
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			singlemodelid = rsst.getInt(1);
+		}
+		rsst.close();
+		// and then insert to single_model_graph
+		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,w,d,num_nodes,date) " +
+				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+cutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
+		stmt.executeUpdate(sql);
+		// and we grab the graph_id just assigned in single_model_graph
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_graph LIMIT 1";
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			graphid = rsst.getInt(1);
+		}
+		rsst.close();
+		stmt.close();
+		
+		// inserting nodes
+		PrintStream nodesOut = new PrintStream(new FileOutputStream(graphid+"_nodes.txt"));
+		// get the max node in db
+		int maxNodeId = 0;
+		sql = "SELECT MAX(node_id) FROM "+db+".single_model_node;";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			maxNodeId = rsst.getInt(1);
+		}
+		rsst.close();
+		stmt.close();
+		
+		for (int resser:nodes.keySet()) {
+			String res = AAinfo.threeletter2oneletter(getResType(resser));
+			NodeNbh nbh = getNodeNbh(resser);
+			String secStructType = "\\N";
+			String secStructId = "\\N";
+			String sheetSerial = "\\N";
+			String turn = null;
+			if (secondaryStructure.getSecStrucElement(resser)!=null){
+				secStructType = Character.toString(secondaryStructure.getSecStrucElement(resser).getType());
+				secStructId = secondaryStructure.getSecStrucElement(resser).getId();
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(resser).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					sheetSerial = Character.toString(sheetSerialChar);
+				}
+				turn = secondaryStructure.getSecStrucElement(resser).isTurn()?"1":"0";
+			}
+			if (directed){  // we insert k(=k_in+k_out), k_in and k_out
+				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
+					secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
+					(getInDegree(resser)+getOutDegree(resser))+"\t"+getInDegree(resser)+"\t"+getOutDegree(resser)+"\t"+
+					nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
+			} else {		// we insert k (and no k_in or k_out)
+				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
+						secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
+						getDegree(resser)+"\t"+"\\N"+"\t"+"\\N"+"\t"+
+						nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
+			}
+		}
+		nodesOut.close();
+		stmt = conn.createStatement();
+		sql = "LOAD DATA LOCAL INFILE '"+graphid+"_nodes.txt' INTO TABLE "+db+".single_model_node "+
+			" (graph_id, node_id, cid, num, res, "+
+			" sstype, ssid, sheet_serial, turn, "+
+			" k, k_in, k_out, n, nwg, n_num);";
+		stmt.executeUpdate(sql);
+		File fileToDelete = new File(graphid+"_nodes.txt");
+		if (fileToDelete.exists()) {
+			fileToDelete.delete();
+		}
+		
+		// inserting edges
+		PrintStream edgesOut = new PrintStream(new FileOutputStream(graphid+"_edges.txt"));
+		// get the max weight
+		double maxWeight = 0;
+		for (Edge cont:contacts) {
+			maxWeight = (maxWeight<cont.weight)?cont.weight:maxWeight;
+		}
+		for (Edge cont:contacts){
+			String i_res = AAinfo.threeletter2oneletter(getResType(cont.i));
+			String j_res = AAinfo.threeletter2oneletter(getResType(cont.j));
+
+			String i_secStructType = "\\N";
+			String i_secStructId = "\\N";
+			String i_sheetSerial = "\\N";
+			String i_turn = null;
+			if (secondaryStructure.getSecStrucElement(cont.i)!=null){
+				i_secStructType = Character.toString(secondaryStructure.getSecStrucElement(cont.i).getType());
+				i_secStructId = secondaryStructure.getSecStrucElement(cont.i).getId();
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(cont.i).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					i_sheetSerial = Character.toString(sheetSerialChar);
+				}
+				i_turn = secondaryStructure.getSecStrucElement(cont.i).isTurn()?"1":"0";
+			}
+			
+			String j_secStructType = "\\N";
+			String j_secStructId = "\\N";
+			String j_sheetSerial = "\\N";
+			String j_turn = null;
+			if (secondaryStructure.getSecStrucElement(cont.j)!=null){
+				j_secStructType = Character.toString(secondaryStructure.getSecStrucElement(cont.j).getType());
+				j_secStructId = secondaryStructure.getSecStrucElement(cont.j).getId();
+				char sheetSerialChar = secondaryStructure.getSecStrucElement(cont.j).getSheetSerial();
+				if (sheetSerialChar != 0) {
+					j_sheetSerial = Character.toString(sheetSerialChar);
+				}
+				j_turn = secondaryStructure.getSecStrucElement(cont.j).isTurn()?"1":"0";
+			}
+			
+			edgesOut.println(graphid+"\t"+(maxNodeId+cont.i)+"\t"+chainCode+"\t"+cont.i+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
+					(maxNodeId+cont.j)+"\t"+chainCode+"\t"+cont.j+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
+					Math.round(cont.weight)+"\t"+(cont.weight/maxWeight));
+			if(!directed) {// we want both side of the matrix in the table to follow Ioannis' convention
+				// so we insert the reverse contact by swapping i, j in insertion
+				edgesOut.println(graphid+"\t"+(maxNodeId+cont.j)+"\t"+chainCode+"\t"+cont.j+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
+						(maxNodeId+cont.i)+"\t"+chainCode+"\t"+cont.i+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
+						Math.round(cont.weight)+"\t"+(cont.weight/maxWeight));
+			}			
+		}
+		edgesOut.close();
+		sql = "LOAD DATA LOCAL INFILE '"+graphid+"_edges.txt' INTO TABLE "+db+".single_model_edge "+
+			" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
+			" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight);";
+		stmt.executeUpdate(sql);
+		stmt.close();
+		fileToDelete = new File(graphid+"_edges.txt");
+		if (fileToDelete.exists()) {
+			fileToDelete.delete();
+		}
+	}
+	
 	/**
 	 * Write graph to given outfile in aglappe format
 	 * @param outfile
@@ -572,6 +857,7 @@ public class Graph {
 		for (Edge cont:edgesToDelete){
 			delEdge(cont);
 		}
+		maxSeqSep = range;
 	}
 	
 	public void restrictContactsToMinRange(int range){
@@ -582,6 +868,7 @@ public class Graph {
 		for (Edge cont:edgesToDelete){
 			delEdge(cont);
 		}
+		minSeqSep = range;
 	}
 
 	/**
@@ -884,6 +1171,10 @@ public class Graph {
 		TrueNeg=cmtotal-TruePos-FalsePos-FalseNeg;
 		PredEval eval = new PredEval(TruePos,FalsePos,TrueNeg,FalseNeg,0,predicted,original,cmtotal);
 		return eval;
+	}
+	
+	private static String quote(String s) {
+		return ("'"+s+"'");
 	}
 }
 

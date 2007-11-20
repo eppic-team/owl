@@ -51,9 +51,9 @@ public class genDbGraph {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
-				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
-				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_db> [-m <mode>] \n" +
+				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-m <mode>] \n" +
 				"\nA comma separated list of contact types and distance cutoffs can be given instead of just 1, e.g. -d 8.0,8.5 -t Ca,Cb will generate the graphs for Ca at 8.0 and for Cb at 8.5\n" +
 				"If only 1 contact type given and multiple cutoffs, graphs will be generated at all the cutoffs for the one contact type\n"+
 				"\nIn case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
@@ -67,10 +67,11 @@ public class genDbGraph {
 		String pdbaseDb = PDB_DB;
 		String[] edgeTypes = null;
 		double[] cutoffs = null;
+		int[] seqseps = null;
 		String outputDb = "";
 		String mode = "GRAPH";
 		
-		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:o:D:m:h?");
+		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:s:o:D:m:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -96,6 +97,13 @@ public class genDbGraph {
 			case 't':
 				edgeTypes = g.getOptarg().split(",");
 				break;
+			case 's':
+				String[] seqsepsStr = g.getOptarg().split(",");
+				seqseps = new int[seqsepsStr.length];
+				for (int i =0;i<seqseps.length;i++) {
+					seqseps[i] = Integer.valueOf(seqsepsStr[i]);
+				}
+				break;
 			case 'o':
 				outputDb = g.getOptarg();
 				break;
@@ -120,6 +128,11 @@ public class genDbGraph {
 		}
 		if (edgeTypes.length!=cutoffs.length && edgeTypes.length!=1) {
 			System.err.println("Not same number of contact types as cutoffs given\n");
+			System.err.println(help);
+			System.exit(1);
+		}
+		if (seqseps != null && edgeTypes.length!=seqseps.length) {
+			System.err.println("Not same number of contact types as sequence separations given\n");
 			System.err.println(help);
 			System.exit(1);
 		}
@@ -153,6 +166,7 @@ public class genDbGraph {
 
 		try{
 			conn = new MySQLConnection(DB_HOST, DB_USER, DB_PWD);
+			conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 		} catch (Exception e) {
 			System.err.println("Error opening database connection. Exiting");
 			System.exit(1);
@@ -226,7 +240,8 @@ public class genDbGraph {
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
-						pdb.writeToDb(conn,outputDb);
+						//pdb.writeToDb(conn,outputDb);
+						pdb.writeToDbFast(conn, outputDb);
 					}
 					// get graphs
 					if (!mode.equals("PDB")) {
@@ -234,8 +249,13 @@ public class genDbGraph {
 							System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
 							Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
-	
-							graph.write_graph_to_db(conn,outputDb);
+							if (seqseps != null) {
+								if (seqseps[j] > 1) {
+									graph.restrictContactsToMinRange(seqseps[j]);
+								}
+							}
+							//graph.write_graph_to_db(conn,outputDb);
+							graph.write_graph_to_db_fast(conn,outputDb);
 							
 							numPdbs++;
 						}
@@ -311,8 +331,13 @@ public class genDbGraph {
 						System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
 						Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
-	
-						graph.write_graph_to_db(conn,outputDb);
+						if (seqseps != null) {
+							if (seqseps[j] > 1) {
+								graph.restrictContactsToMinRange(seqseps[j]);
+							}
+						}
+						//graph.write_graph_to_db(conn,outputDb);
+						graph.write_graph_to_db_fast(conn,outputDb);
 					}
 				}
 				

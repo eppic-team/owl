@@ -50,7 +50,7 @@ public class SecStrucElement {
 		return interval;
 	}
 	
-	private char getSheetSerial() {
+	public char getSheetSerial() {
 		if (isStrand()) {
 			return Character.isLetter(secStrucId.charAt(1))?secStrucId.charAt(1):0;
 		}
