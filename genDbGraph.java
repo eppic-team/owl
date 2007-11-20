@@ -246,17 +246,19 @@ public class genDbGraph {
 					// get graphs
 					if (!mode.equals("PDB")) {
 						for (int j = 0; j<edgeTypes.length; j++) {
-							System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+							System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
 							Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
 							if (seqseps != null) {
 								if (seqseps[j] > 1) {
+									System.out.print(" and sequence separation >= "+seqseps[j]);
 									graph.restrictContactsToMinRange(seqseps[j]);
 								}
 							}
 							//graph.write_graph_to_db(conn,outputDb);
 							graph.write_graph_to_db_fast(conn,outputDb);
 							
+							System.out.println();
 							numPdbs++;
 						}
 					}
@@ -323,21 +325,25 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					pdb.writeToDb(conn,outputDb);
+					pdb.writeToDbFast(conn, outputDb);
 				}
 				
 				// get graphs
 				if (!mode.equals("PDB")) {
 					for (int j = 0; j<edgeTypes.length; j++) {
-						System.out.println("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+						System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
 						Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
 						if (seqseps != null) {
 							if (seqseps[j] > 1) {
+								System.out.print(" and sequence separation >= "+seqseps[j]);
 								graph.restrictContactsToMinRange(seqseps[j]);
 							}
 						}
 						//graph.write_graph_to_db(conn,outputDb);
 						graph.write_graph_to_db_fast(conn,outputDb);
+						
+						System.out.println();
 					}
 				}
 				
