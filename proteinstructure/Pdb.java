@@ -1556,7 +1556,7 @@ public abstract class Pdb {
 		stmt.close();
 		File fileToDelete = new File(pdbCode+chainCode+"_residues.txt");
 		if (fileToDelete.exists()) {
-			//fileToDelete.delete();
+			fileToDelete.delete();
 		}
 	}
 
