@@ -1485,7 +1485,6 @@ public abstract class Pdb {
 		Statement stmt;
 		String sql = "";
 		
-		System.out.println("fast");
 		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 		
 		PrintStream resOut = new PrintStream(new FileOutputStream(pdbCode+chainCode+"_residues.txt"));
