@@ -16,6 +16,7 @@ import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.SecStrucElement;
 import tools.MySQLConnection;
 
 
@@ -200,43 +201,53 @@ public class genDbGraph {
 			for (int i=0;i<pdbCodes.length;i++) {
 				String pdbCode = pdbCodes[i];
 				String pdbChainCode = pdbChainCodes[i];
-
+				
+				boolean dssp = false, scop = false, naccess = false, consurf = false, ec = false, csa = false;
+				int numGraphs = 0;
+				
 				try {
-
+					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
 					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
 					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);
 					if (!mode.equals("GRAPH")) {
 						try {
-							pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+							pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+							//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+							dssp = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
 						try {
 							pdb.checkScop("1.71", false);
+							scop = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
 						try {
 							pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+							naccess = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
 						try {
 							int mistakes = pdb.checkConsurfHssp(false);
 							System.out.println("ConsurfHssp Mistakes:"+mistakes);
+							if (mistakes == 0) consurf = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
 						try {
 							pdb.checkEC(false);
+							ec = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
 						try {
 							int mistakes = pdb.checkCSA("2.2.5", false);
 							System.out.println("CSA Mistakes:"+mistakes);
+							if (mistakes == 0) csa = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
@@ -260,6 +271,7 @@ public class genDbGraph {
 							
 							System.out.println();
 							numPdbs++;
+							numGraphs++;
 						}
 					}
 					
@@ -274,6 +286,8 @@ public class genDbGraph {
 				}/* catch (CiffileFormatError e) {
 					System.err.println(e.getMessage());
 				}*/
+				
+				System.out.println("SUMMARY:"+pdbCode+"_"+pdbChainCode+" dssp:"+dssp+" scop:"+scop+" naccess:"+naccess+" consurf:"+consurf+" ec:"+ec+" csa:"+csa+ " graphs:"+numGraphs);
 
 			}
 
@@ -283,6 +297,9 @@ public class genDbGraph {
 
 		} else {
 			String pdbChainCode = pdbChainCodes[0];
+			boolean dssp = false, scop = false, naccess = false, consurf = false, ec = false, csa = false;
+			int numGraphs = 0;
+			
 			try {
 				
 				System.out.println("Getting chain "+pdbChainCode+" from pdb file "+pdbfile);
@@ -293,38 +310,45 @@ public class genDbGraph {
 				}
 				if (!mode.equals("GRAPH")) {
 					try {
-						pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+						//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						dssp = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
 					try {
 						pdb.checkScop("1.71", false);
+						scop = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
 					try {
 						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+						naccess = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
 					try {
 						int mistakes = pdb.checkConsurfHssp(false);
 						System.out.println("ConsurfHssp Mistakes:"+mistakes);
+						if (mistakes == 0) consurf = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
 					try {
 						pdb.checkEC(false);
+						ec = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
 					try {
 						int mistakes = pdb.checkCSA("2.2.5", false);
 						System.out.println("CSA Mistakes:"+mistakes);
+						if (mistakes == 0) csa = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
-					pdb.writeToDb(conn,outputDb);
+					//pdb.writeToDb(conn,outputDb);
 					pdb.writeToDbFast(conn, outputDb);
 				}
 				
@@ -343,7 +367,8 @@ public class genDbGraph {
 						//graph.write_graph_to_db(conn,outputDb);
 						graph.write_graph_to_db_fast(conn,outputDb);
 						
-						System.out.println();
+						System.out.println();						
+						numGraphs++;
 					}
 				}
 				
@@ -354,6 +379,9 @@ public class genDbGraph {
 			} catch (PdbChainCodeNotFoundError e) {
 				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
 			}
+			
+			System.out.println("SUMMARY:"+pdbfile+"_"+pdbChainCode+" dssp:"+dssp+" scop:"+scop+" naccess:"+naccess+" consurf:"+consurf+" ec:"+ec+" csa:"+csa+ " graphs:"+numGraphs);
+
 		}
 		
 		// closing db connection

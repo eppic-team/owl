@@ -13,6 +13,7 @@ import java.util.TreeSet;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 import java.util.Arrays;
+import java.math.*;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -236,7 +237,8 @@ public abstract class Pdb {
 		}
         in.close();
         
-        if ((consurfHsspMistakes > 0) | (resser2consurfhsspscore.size() != ressers.length)) {
+        consurfHsspMistakes += Math.abs(ressers.length - resser2consurfhsspscore.size());
+        if (consurfHsspMistakes > 0) {
         	resser2consurfhsspscore.clear();
         	resser2consurfhsspcolor.clear();
         }
@@ -247,7 +249,7 @@ public abstract class Pdb {
 	
 	public void runNaccess(String naccessExecutable, String naccessParameters) throws Exception {
 		String pdbFileName = pdbCode+chainCode+".pdb";
-		dump2pdbfile(pdbFileName);
+		dump2pdbfile(pdbFileName, true);
 		String line;
 		int errorLineCount = 0;
 		
@@ -313,7 +315,6 @@ public abstract class Pdb {
 				
         while ((inputLine = in.readLine()) != null) 
 			if (inputLine.startsWith(pdbCode,1)) {
-				System.out.println();
 				String[] fields = inputLine.split("\\s+");
 				String[] regions = fields[2].split(",");
 				for (int j=0; j < regions.length; j++) {
@@ -371,7 +372,7 @@ public abstract class Pdb {
 		PrintWriter dsspInput = new PrintWriter(myDssp.getOutputStream());
 		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
 		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
-		writeAtomLines(dsspInput);	// pipe atom lines to dssp
+		writeAtomLines(dsspInput, true);	// pipe atom lines to dssp
 		dsspInput.close();
 		ssTypes = new TreeMap<Integer,Character>();
 		sheetLabels = new TreeMap<Integer,Character>();
@@ -448,11 +449,18 @@ public abstract class Pdb {
 		secondaryStructure.setComment("DSSP");
 	}
 
-
-	/** Writes atom lines for this structure to the given output stream */
 	private void writeAtomLines(PrintWriter Out) {
+		writeAtomLines(Out, false);
+	}
+	
+	/** Writes atom lines for this structure to the given output stream */
+	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		Out.println("HEADER  Dumped from "+db+". pdb code="+pdbCode+", chain='"+chainCode+"'");
+		String chainCodeStr = chainCode;
+		if (pdbCompatible) {
+			chainCodeStr = chainCode.substring(0,1);
+		}
 		for (String resser_atom:resser_atom2atomserial.keySet()){
 			int atomserial = resser_atom2atomserial.get(resser_atom);
 			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
@@ -460,7 +468,7 @@ public abstract class Pdb {
 			String res_type = resser2restype.get(res_serial);
 			Point3d coords = atomser2coord.get(atomserial);
 			String atomType = atom.substring(0,1);
-			Object[] fields = {atomserial, atom, res_type, chainCode, res_serial, coords.x, coords.y, coords.z, atomType};
+			Object[] fields = {atomserial, atom, res_type, chainCodeStr, res_serial, coords.x, coords.y, coords.z, atomType};
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
@@ -479,8 +487,12 @@ public abstract class Pdb {
 	 * @throws IOException
 	 */
 	public void dump2pdbfile(String outfile) throws IOException {
+		dump2pdbfile(outfile, false);
+	}
+	
+	public void dump2pdbfile(String outfile, boolean pdbCompatible) throws IOException {
 		PrintWriter Out = new PrintWriter(new FileOutputStream(outfile));
-		writeAtomLines(Out);
+		writeAtomLines(Out, pdbCompatible);
 	}
 	
 	/**
