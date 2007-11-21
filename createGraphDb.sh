@@ -66,6 +66,7 @@ $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL1
 	
 	ALTER TABLE chain_graph
 		MODIFY graph_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+		MODIFY pchain_code VARCHAR(2) NOT NULL,
 	  	MODIFY scops INT,
 	  	MODIFY caths INT,
 	  	MODIFY entry_id INT,
@@ -94,6 +95,7 @@ $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL
 	SET sql_mode = "NO_UNSIGNED_SUBTRACTION,TRADITIONAL";	
 	CREATE INDEX NODE_GRAPH_IDX ON single_model_node (graph_id);
 	CREATE INDEX EDGE_GRAPH_IDX ON single_model_edge (graph_id);	
+	CREATE INDEX CHAIN_IDX ON pdb_residue_info (pdb_code, chain_code, pdb_chain_code);
 ENDSQL
 fi
 
