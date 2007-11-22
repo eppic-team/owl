@@ -644,16 +644,16 @@ public abstract class Pdb {
 	private AIGraph getAIGraph(String ct, double cutoff){ 
 		TreeMap<Integer,Point3d> i_coords = null;
 		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
-		boolean directed = false;
+		boolean crossed = false;
 		if (!ct.contains("/")){
 			i_coords = get_coords_for_ct(ct);
-			directed = false;
+			crossed = false;
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
 			i_coords = get_coords_for_ct(i_ct);
 			j_coords = get_coords_for_ct(j_ct);
-			directed = true;
+			crossed = true;
 		}
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
 		int[] j_atomserials = null;
@@ -674,13 +674,13 @@ public abstract class Pdb {
 			if (boxes.containsKey(floor)){
 				// we put the coords for atom i in its corresponding box (identified by floor)
 				boxes.get(floor).put_i_Point(i, coord);
-				if (!directed){
+				if (!crossed){
 					boxes.get(floor).put_j_Point(i, coord);
 				}
 			} else {
 				Box box = new Box(floor);
 				box.put_i_Point(i, coord);
-				if (!directed){
+				if (!crossed){
 					box.put_j_Point(i, coord);
 				}
 				boxes.put(floor,box);
@@ -689,7 +689,7 @@ public abstract class Pdb {
 			i++;
 		}
 		int j=0;
-		if (directed) {
+		if (crossed) {
 			j_atomserials = new  int[j_coords.size()];
 			for (int j_atomser:j_coords.keySet()){
 				//coordinates for atom serial atomser, we will use j as its identifier below
@@ -718,7 +718,7 @@ public abstract class Pdb {
 
 		for (Point3i floor:boxes.keySet()){ // for each box
 			// distances of points within this box
-			boxes.get(floor).getDistancesWithinBox(distMatrix,directed);
+			boxes.get(floor).getDistancesWithinBox(distMatrix,crossed);
 
 			//TODO should iterate only through half of the neighbours here 
 			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
@@ -728,7 +728,7 @@ public abstract class Pdb {
 						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
 							Point3i neighbor = new Point3i(x,y,z);
 							if (boxes.containsKey(neighbor)){
-								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix,directed);
+								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix,crossed);
 							}
 						}
 					}
@@ -768,17 +768,25 @@ public abstract class Pdb {
 		graph.setChainCode(chainCode);
 		graph.setPdbChainCode(pdbChainCode);
 		graph.setModel(model);
-		graph.setCrossed(directed);
+		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 
 		for (i=0;i<distMatrix.length;i++){
 			for (j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
-				// - diagonal of the matrix in case of undirected
-				// - lower half of matrix in case of undirected
+				// - diagonal of the matrix in case of non-crossed
+				// - lower half of matrix in case of non-crossed
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
-					graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
+					if (!crossed) {
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
+					}
+					// This condition is to take care of crossed contact types that have overlapping sets of atoms: 
+					//   the matrix would contain both i,j and j,i but that's only 1 edge in the AIGraph
+					//TODO if our AIGraph didn't allow parallel edges, this extra check woudn't be necessary
+					else if (graph.findEdge(aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]))==null) {
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
+					}
 				}
 
 			}

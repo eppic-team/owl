@@ -81,6 +81,7 @@ public class GraphAverager {
 				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){			
 					RIGraph thisGraph = templateGraphs.get(tag);
+					//NOTE that order in which we give the nodes in findEdge doesn't matter (but ONLY if graph is undirected!)
 					RIGEdge thisGraphCont = thisGraph.findEdge(thisGraph.getNodeFromSerial(al.al2seq(tag, i)), thisGraph.getNodeFromSerial(al.al2seq(tag, j)));
 					Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
 					if (thisGraph.findEdge(thisGraph.getNodeFromSerial(pair.getFirst().getResidueSerial()),thisGraph.getNodeFromSerial(pair.getSecond().getResidueSerial()))!=null) {

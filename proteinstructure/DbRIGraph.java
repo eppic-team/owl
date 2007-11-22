@@ -60,7 +60,7 @@ public class DbRIGraph extends RIGraph {
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		this.sequence=""; 
 		
-		//TODO we still use here as default for "/" directed, eventually this should change by taking another parameter isDirected
+		//TODO we still use here DIRECTED as default for "/", eventually this should change by taking another parameter "boolean directed", so "/" could have DIRECTED/UNDIRECTED versions
 		if (contactType.contains("/")) {
 			directed = true;
 		}

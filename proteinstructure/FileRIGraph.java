@@ -135,6 +135,7 @@ public class FileRIGraph extends RIGraph {
 			}
 		}
 
+		//TODO we still use here DIRECTED as default for "/", eventually this should change by taking another parameter "boolean directed", so "/" could have DIRECTED/UNDIRECTED versions
 		EdgeType et = EdgeType.UNDIRECTED;
 		if (contactType.contains("/")){
 			et = EdgeType.DIRECTED;

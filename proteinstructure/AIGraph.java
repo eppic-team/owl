@@ -47,6 +47,8 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 	 */
 	public RIGraph getRIGraph() {
 		EdgeType et = EdgeType.UNDIRECTED;
+		
+		// TODO we still use here DIRECTED as default for crossed, eventually this should change by taking another parameter "boolean directed", so crossed could have DIRECTED/UNDIRECTED versions 
 		if (this.isCrossed()) {
 			et = EdgeType.DIRECTED;
 		}
@@ -79,6 +81,7 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 			Pair<RIGNode> resPair = new Pair<RIGNode>(v1,v2);
 			if (v1!=v2) {
 				if (!pairs2weights.containsKey(resPair)) {
+					//NOTE the pairs2weights map takes care of eliminating duplicate residue pairs (Maps don't accept duplicate as keys)
 					pairs2weights.put(resPair, 1);
 				} else {
 					pairs2weights.put(resPair,pairs2weights.get(resPair)+1);

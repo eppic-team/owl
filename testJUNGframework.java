@@ -122,18 +122,20 @@ public class testJUNGframework {
 		// TEST adding and getting undirected edges
 		System.out.println("TEST adding and getting undirected edges: ");
 		RIGraph g = new RIGraph("ABCD");
-		EdgeType edgeType = EdgeType.DIRECTED;
+		EdgeType edgeType = EdgeType.UNDIRECTED;
 		RIGNode n1 = g.getNodeFromSerial(1);
 		RIGNode n2 = g.getNodeFromSerial(2);
+		RIGNode n3 = g.getNodeFromSerial(3);
 		g.addEdge(new RIGEdge(1), n1, n2, edgeType);
 		g.addEdge(new RIGEdge(2), n2, n1, edgeType);
 		g.addEdge(new RIGEdge(3), n1, n2, edgeType);
+		g.addEdge(new RIGEdge(4), n1, n3, edgeType);
 		for (RIGEdge e:g.getEdges()) {
 			System.out.println(g.getEndpoints(e).getFirst()+" "+g.getEndpoints(e).getSecond()+", w "+e.getAtomWeight());
 		}
 		System.out.println("vertex count: "+g.getVertexCount());
 		System.out.println("edge count: "+g.getEdgeCount());
-		System.out.println("edge w "+ g.findEdge(n1, n2).getAtomWeight());
+		System.out.println("edge w "+ g.findEdge(n3, n1).getAtomWeight());
 	}
 	
 

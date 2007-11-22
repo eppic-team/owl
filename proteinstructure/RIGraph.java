@@ -129,6 +129,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Collection<RIGNode> iNbs = this.getNeighbors(iNode);
 		Collection<RIGNode> jNbs = this.getNeighbors(jNode);
 		boolean connected = false;
+		//NOTE in DIRECTED case this means strictly an edge from iNode to jNode 
 		if (this.findEdge(iNode, jNode)!=null) connected = true;
 		RIGCommonNbhood comNbhood = new RIGCommonNbhood(iNode, jNode, connected);
 		for (RIGNode iNb: iNbs) {
@@ -221,6 +222,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				Pair<RIGNode> predNodePair = this.getEndpoints(predictedCont);
 				RIGNode node1inOrig = originalGraph.getNodeFromSerial(predNodePair.getFirst().getResidueSerial());
 				RIGNode node2inOrig = originalGraph.getNodeFromSerial(predNodePair.getSecond().getResidueSerial());
+				//NOTE order of nodes in findEdge doesn't matter if UNDIRECTED.
+				//It does matter if DIRECTED. However even in that case we are fine because we use same order in this graph 
 				if (originalGraph.findEdge(node1inOrig, node2inOrig)!=null) {
 					TruePos++;
 				}
@@ -235,6 +238,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				Pair<RIGNode> origNodePair = originalGraph.getEndpoints(origCont);
 				RIGNode node1inPred = this.getNodeFromSerial(origNodePair.getFirst().getResidueSerial());
 				RIGNode node2inPred = this.getNodeFromSerial(origNodePair.getSecond().getResidueSerial());
+				//NOTE order of nodes in findEdge doesn't matter if UNDIRECTED.
+				//It does matter if DIRECTED. However even in that case we are fine because we use same order in originalGraph				
 				if (this.findEdge(node1inPred,node2inPred)==null) {
 					FalseNeg++;
 				}

@@ -25,26 +25,28 @@ public class Box {
 		j_pointsInBox.put(serial, point);
 	}
 
-	public void getDistancesWithinBox(float[][] distMatrix, boolean directed){ //we pass a reference to the distMatrix that we alter within this method
+	public void getDistancesWithinBox(float[][] distMatrix, boolean crossed){ //we pass a reference to the distMatrix that we alter within this method
 		for (int i_serial:i_pointsInBox.keySet()) {
 			for (int j_serial:j_pointsInBox.keySet()) {
-				if (!directed) {
+				if (!crossed) {
 					if (j_serial>i_serial) { 
 						// this only works if previously we have made sure that atom serials are sequential from 0 to MAXATOMSERIAL
 						distMatrix[i_serial][j_serial] = (float)i_pointsInBox.get(i_serial).distance(j_pointsInBox.get(j_serial));
 					} 
 				} else {
-					distMatrix[i_serial][j_serial] = (float)i_pointsInBox.get(i_serial).distance(j_pointsInBox.get(j_serial));
+					if (j_serial!=i_serial) { // we need to check this because it can happen when the 2 contact types (i/j) have overlapping atoms, e.g. ALL/BB
+						distMatrix[i_serial][j_serial] = (float)i_pointsInBox.get(i_serial).distance(j_pointsInBox.get(j_serial));
+					}
 				}
 			}
 		}
 
 	}
 	
-	public void getDistancesToNeighborBox(Box nbBox ,float[][] distMatrix, boolean directed){
+	public void getDistancesToNeighborBox(Box nbBox ,float[][] distMatrix, boolean crossed){
 		for (int i_serial:i_pointsInBox.keySet()){
 			for (int j_serial:nbBox.j_pointsInBox.keySet()){
-				if (!directed) {
+				if (!crossed) {
 					if (j_serial>i_serial) {
 						// this only works if previously we have made sure that atom serials are sequential from 0 to MAXATOMSERIAL
 						if (distMatrix[i_serial][j_serial]==0.0f){ // i.e. if we haven't passed through this cell yet

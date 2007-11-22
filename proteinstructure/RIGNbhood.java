@@ -95,7 +95,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 			int max=Math.max(centralResidue.getResidueSerial(), this.lastKey());
 			for (int i=min;i<=max;i++){
 				if (this.containsKey(i)){
-					//TODO check if the following is correct. If JUNG's SparseGraph is correctly implemented then order of vertices given below shouldn't matter
+					// as long as the graph is undirected, JUNG finds the edge correctly independently of the order in which we give the nodes 
 					RIGEdge edge = graph.findEdge(centralResidue,this.get(i));
 					double weight = edge.getWeight();
 					if (weight>0) { // SC dominated
