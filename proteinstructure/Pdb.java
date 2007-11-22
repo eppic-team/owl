@@ -13,7 +13,6 @@ import java.util.TreeSet;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 import java.util.Arrays;
-import java.math.*;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -449,10 +448,6 @@ public abstract class Pdb {
 		secondaryStructure.setComment("DSSP");
 	}
 
-	private void writeAtomLines(PrintWriter Out) {
-		writeAtomLines(Out, false);
-	}
-	
 	/** Writes atom lines for this structure to the given output stream */
 	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
