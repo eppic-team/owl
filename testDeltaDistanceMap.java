@@ -1,6 +1,8 @@
 import proteinstructure.*;
 import java.util.*;
 
+import edu.uci.ics.jung.graph.util.Pair;
+
 /**
  * Calculate a matrix containing the element-wise differences between the distance maps of two proteins
  * @author stehr
@@ -25,13 +27,13 @@ public class testDeltaDistanceMap {
 			assert(pdb2 != null);
 			
 			System.out.println("Calculating distance maps...");
-			HashMap<Edge,Double> distMap1 = pdb1.calculate_dist_matrix("Ca");
+			HashMap<Pair<Integer>,Double> distMap1 = pdb1.calculate_dist_matrix("Ca");
 			assert(distMap1 != null);
-			HashMap<Edge,Double> distMap2 = pdb2.calculate_dist_matrix("Ca");
+			HashMap<Pair<Integer>,Double> distMap2 = pdb2.calculate_dist_matrix("Ca");
 			assert(distMap2 != null);
 			
 			System.out.println("Calculating difference distance map...");
-			HashMap<Edge,Double> diffDistMap = pdb1.getDiffDistMap("Ca", pdb2, "Ca");
+			HashMap<Pair<Integer>,Double> diffDistMap = pdb1.getDiffDistMap("Ca", pdb2, "Ca");
 			assert(diffDistMap != null);
 			assert(diffDistMap.size() == distMap1.size());
 			assert(diffDistMap.size() == distMap2.size());
@@ -40,7 +42,7 @@ public class testDeltaDistanceMap {
 			int mis = 0;
 			for(int i=1; i<=pdb1.getFullLength();i++) {
 				for(int j=1; j<i;j++) {
-					if(!diffDistMap.containsKey(new Edge(j,i))) {
+					if(!diffDistMap.containsKey(new Pair<Integer>(j,i))) {
 						//System.out.print("(" + i + "," + j + ") ");
 						mis++;
 					}
@@ -48,7 +50,7 @@ public class testDeltaDistanceMap {
 			}
 			System.out.println(mis);
 			
-			Edge e = new Edge(27,30);
+			Pair<Integer> e = new Pair<Integer>(27,30);
 
 			double dist1 = distMap1.get(e);
 			double dist2 = distMap2.get(e);

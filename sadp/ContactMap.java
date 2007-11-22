@@ -1,8 +1,11 @@
 package sadp;
 import java.util.StringTokenizer;
 
-import proteinstructure.Edge;
-import proteinstructure.Graph;
+import edu.uci.ics.jung.graph.util.Pair;
+
+import proteinstructure.RIGEdge;
+import proteinstructure.RIGNode;
+import proteinstructure.RIGraph;
 
 /**
  * This class contains methods and fields to represent contact maps.  
@@ -86,34 +89,35 @@ public class ContactMap {
 	}
 
 	/**
-	 * Constructs a contact map from a Graph. 
+	 * Constructs a contact map from a RIGraph. 
 	 * This constructor is for CMView only. It does not provide the 
 	 * System.exit(0) call if the given graph was inconsistent.
 	 * Requirements to the format of the input graph:
 	 * <ul>
 	 * <li>smallest node index has to be larger than 0</li>
 	 * <li>...</li>
-	 * </ul> 
+	 * </ul>  
 	 */
-	public ContactMap(Graph g) throws ContactMapConstructorError {
+	public ContactMap(RIGraph g) throws ContactMapConstructorError {
 		this.nNodes = g.getFullLength();//g.getNodes.size();
-		this.nEdges = g.getNumContacts();
+		this.nEdges = g.getEdgeCount();
 		this.deg    = new int[nNodes];
 		this.fn     = "NoName";
 		this.A      = new boolean[nNodes][nNodes];
 		this.L      = new int[nNodes][];
 
 		// fill the adjacency matrix and the node degree array
-		for( Edge e : g.getContacts() ) {
-			if( e.i < 0 || e.j < 0 ) {
+		for( RIGEdge e : g.getEdges() ) {
+			Pair<RIGNode> pair = g.getEndpoints(e);
+			if( pair.getFirst().getResidueSerial() < 0 || pair.getSecond().getResidueSerial() < 0 ) {
 				throw new ContactMapConstructorError("Graph contains negative node indices. I don't like it!");
 			}
 
-			A[e.i-1][e.j-1] = true;
-			A[e.j-1][e.i-1] = true;
+			A[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = true;
+			A[pair.getSecond().getResidueSerial()-1][pair.getFirst().getResidueSerial()-1] = true;
 
-			++deg[e.i-1];
-			++deg[e.j-1];
+			++deg[pair.getFirst().getResidueSerial()-1];
+			++deg[pair.getSecond().getResidueSerial()-1];
 		}
 
 		// create adjacency lists

@@ -12,13 +12,16 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
 
+import edu.uci.ics.jung.graph.util.Pair;
+
 import proteinstructure.AAinfo;
-import proteinstructure.Edge;
-import proteinstructure.Graph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.RIGEdge;
+import proteinstructure.RIGNode;
+import proteinstructure.RIGraph;
 
 /**
  * Reads tinker's xyz file and pdb file (result of converting the xyz file using xyzpdb program) and
@@ -173,11 +176,12 @@ public class ConstraintsMaker {
 	 * 
 	 * @param graph
 	 */
-	public void createConstraints(Graph graph) {
+	public void createConstraints(RIGraph graph) {
 		
-		for (Edge cont:graph.contacts){
-			String i_res = graph.getResType(cont.i);
-			String j_res = graph.getResType(cont.j);
+		for (RIGEdge cont:graph.getEdges()){
+			Pair<RIGNode> pair = graph.getEndpoints(cont);
+			String i_res = pair.getFirst().getResidueType();
+			String j_res = pair.getSecond().getResidueType();
 			String ct = graph.getContactType();
 			String i_ct = ct;
 			String j_ct = ct;
@@ -203,9 +207,9 @@ public class ConstraintsMaker {
 			
 			for (String i_atom:i_atoms) {
 				for (String j_atom:j_atoms) {
-					int i_pdb = pdb.getAtomSerFromResSerAndAtom(cont.i, i_atom);
+					int i_pdb = pdb.getAtomSerFromResSerAndAtom(pair.getFirst().getResidueSerial(), i_atom);
 					int i_xyz = pdb2xyz.get(i_pdb);
-					int j_pdb = pdb.getAtomSerFromResSerAndAtom(cont.j, j_atom);
+					int j_pdb = pdb.getAtomSerFromResSerAndAtom(pair.getSecond().getResidueSerial(), j_atom);
 					int j_xyz = pdb2xyz.get(j_pdb);
 					fkey.println(new Formatter().format(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,defaultForceConstant,dist_min,dist_max).toString());
 				}

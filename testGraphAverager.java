@@ -104,11 +104,11 @@ public class testGraphAverager {
 		// local variables
 		String targetFileName = targetFile.getAbsolutePath();					// target file name
 		Pdb target = null;														// target structure
-		Graph targetGraph = null;												// target graph
+		RIGraph targetGraph = null;												// target graph
 		Vector<String> templateFileNames = new Vector<String>();				// vector of template file names
-		Vector<Graph> models = new Vector<Graph>();								// vector of template graphs
-		Graph averageGraph;														// weighted graph with fraction of occurrance for each edge
-		Graph consensusGraph;													// consensus graph after applying threshold
+		Vector<RIGraph> models = new Vector<RIGraph>();								// vector of template graphs
+		RIGraph averageGraph;														// weighted graph with fraction of occurrance for each edge
+		RIGraph consensusGraph;													// consensus graph after applying threshold
 		
 		if(!targetFile.canRead()) {
 			System.err.println("Can not read from file " + targetFileName);
@@ -144,7 +144,7 @@ public class testGraphAverager {
 			String line;
 			File file;
 			Pdb pdb;
-			Graph graph;
+			RIGraph graph;
 			while ((line =  in.readLine()  ) != null) {
 				file = new File(line);
 				if(!file.canRead()) {
@@ -185,7 +185,7 @@ public class testGraphAverager {
 		
 		// create trivial alignment and template graphs
 		TreeMap<String,String> sequences = new TreeMap<String, String>();
-		TreeMap<String, Graph> templateGraphs = new TreeMap<String, Graph>();
+		TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
 		sequences.put(targetFile.getAbsolutePath(), targetGraph.getSequence());
 		for(int i=0; i < models.size(); i++) {
 			sequences.put(templateFileNames.get(i), models.get(i).getSequence());
@@ -213,7 +213,7 @@ public class testGraphAverager {
 		eval.title = targetTitle;
 		evals.add(eval);
 		for (int i = 0; i < models.size(); i++) {
-			Graph g = models.get(i);
+			RIGraph g = models.get(i);
 			String title = templateFileNames.get(i).split("/")[templateFileNames.get(i).split("/").length-1];
 			eval = g.evaluatePrediction(targetGraph,minSeqSep);
 			eval.title = title;
@@ -259,7 +259,7 @@ public class testGraphAverager {
 		// write resulting consensus graph to file
 		if(outputConsensusGraph) {
 			try {
-				consensusGraph.write_graph_to_file(outConsensusGraphFile);
+				consensusGraph.writeToFile(outConsensusGraphFile);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -269,7 +269,7 @@ public class testGraphAverager {
 		// write weighted average graph to file
 		if(outputAverageGraph) {
 			try {
-				averageGraph.write_graph_to_file(outAverageGraphFile);
+				averageGraph.writeToFile(outAverageGraphFile);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -279,7 +279,7 @@ public class testGraphAverager {
 		// write target graph to file
 		if(outputTargetGraph) {
 			try{
-				targetGraph.write_graph_to_file(outTargetGraphFile);
+				targetGraph.writeToFile(outTargetGraphFile);
 
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -290,7 +290,7 @@ public class testGraphAverager {
 		// run reconstruction for consensus graph
 		if(doReconstruct) {
 						
-			Graph[] graphs = {consensusGraph};
+			RIGraph[] graphs = {consensusGraph};
 			String sequence = targetGraph.getSequence();
 			
 			TinkerRunner tr = null;

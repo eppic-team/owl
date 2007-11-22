@@ -13,12 +13,12 @@ import java.util.Formatter;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import proteinstructure.Graph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.MaxClusterRunner;
+import proteinstructure.RIGraph;
 
 public class TinkerRunner {
 	
@@ -438,7 +438,7 @@ public class TinkerRunner {
 	 * @throws IOException  thrown if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, Graph[] graphs, int numberOfModels) throws TinkerError, IOException {
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
 		Pdb resultPdb = null;
 		
 		String outputDir = System.getProperty("java.io.tmpdir");
@@ -469,7 +469,7 @@ public class TinkerRunner {
 	 * @throws IOException  thrown if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public void reconstruct(String sequence, Graph[] graphs, int numberOfModels, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
 		// defining files
 		File prmFile = new File(this.forceFieldFileName);					// don't delete this one
 		File xyzFile = new File(outputDir,baseName+".xyz");
@@ -504,7 +504,7 @@ public class TinkerRunner {
 		} catch(PdbfileFormatError e) {
 			throw new TinkerError(e);
 		}
-		for(Graph graph:graphs) {
+		for(RIGraph graph:graphs) {
 			cm.createConstraints(graph);
 		}
 		cm.closeKeyFile();

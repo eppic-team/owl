@@ -6,8 +6,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
-
-import proteinstructure.Graph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
@@ -15,6 +13,7 @@ import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.RIGraph;
 import tools.MySQLConnection;
 
 
@@ -162,10 +161,10 @@ public class genGraph {
 					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
 
 					// get graph
-					Graph graph = pdb.get_graph(edgeType, cutoff);
+					RIGraph graph = pdb.get_graph(edgeType, cutoff);
 
 					File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
-					graph.write_graph_to_file(outputFile.getAbsolutePath());
+					graph.writeToFile(outputFile.getAbsolutePath());
 
 					long end = System.currentTimeMillis();
 					double time = (double) (end -start)/1000;
@@ -198,10 +197,10 @@ public class genGraph {
 				if (!pdb.hasSecondaryStructure()) {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
-				Graph graph = pdb.get_graph(edgeType, cutoff);
+				RIGraph graph = pdb.get_graph(edgeType, cutoff);
 
 				File outputFile = new File(outputDir,pdb.getPdbCode()+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
-				graph.write_graph_to_file(outputFile.getAbsolutePath());
+				graph.writeToFile(outputFile.getAbsolutePath());
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
 				
 			} catch (PdbfileFormatError e) {

@@ -8,7 +8,7 @@ import java.sql.SQLException;
 
 //import proteinstructure.CiffilePdb;
 //import proteinstructure.CiffileFormatError;
-import proteinstructure.Graph;
+import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
@@ -259,17 +259,17 @@ public class genDbGraph {
 						for (int j = 0; j<edgeTypes.length; j++) {
 							System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
-							Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+							RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
 							if (seqseps != null) {
 								if (seqseps[j] > 1) {
 									System.out.print(" and sequence separation >= "+seqseps[j]);
 									graph.restrictContactsToMinRange(seqseps[j]);
 								}
 							}
-							//graph.write_graph_to_db(conn,outputDb);
+							//graph.writeToDb(conn,outputDb);
 							graph.write_graph_to_db_fast(conn,outputDb);
 							
-							System.out.println();
+							System.out.println();							
 							numPdbs++;
 							numGraphs++;
 						}
@@ -357,14 +357,14 @@ public class genDbGraph {
 					for (int j = 0; j<edgeTypes.length; j++) {
 						System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
-						Graph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+						RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
 						if (seqseps != null) {
 							if (seqseps[j] > 1) {
 								System.out.print(" and sequence separation >= "+seqseps[j]);
 								graph.restrictContactsToMinRange(seqseps[j]);
 							}
 						}
-						//graph.write_graph_to_db(conn,outputDb);
+						//graph.writeToDb(conn,outputDb);
 						graph.write_graph_to_db_fast(conn,outputDb);
 						
 						System.out.println();						

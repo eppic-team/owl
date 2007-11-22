@@ -3,7 +3,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import proteinstructure.Graph;
+import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
@@ -81,10 +81,10 @@ public class benchmarkGraphAlgorithm {
 
 					// get graph
 					long start = System.currentTimeMillis();
-					Graph graph = pdb.get_graph(edgeType, cutoff);
+					RIGraph graph = pdb.get_graph(edgeType, cutoff);
 					long end = System.currentTimeMillis();
 
-					graph.write_graph_to_file(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);
+					graph.writeToFile(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);
 					
 					System.out.print(pdbCode+"_"+chainCode);
 					System.out.print("\t"+length+"\t"+atoms);

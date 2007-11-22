@@ -11,7 +11,7 @@ import java.util.Locale;
 
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
-import proteinstructure.Graph;
+import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
@@ -158,25 +158,25 @@ public class reconstruct {
 
 		String sequence = pdb.getSequence();
 
-		Graph[] graphs =null;
-		Graph graph1 = pdb.get_graph(ct1, cutoff1);
-		Graph graph2 = null;
-		Graph graph3 = null;
+		RIGraph[] graphs =null;
+		RIGraph graph1 = pdb.get_graph(ct1, cutoff1);
+		RIGraph graph2 = null;
+		RIGraph graph3 = null;
 		if (doublecm) {
 			graph2 = pdb.get_graph(ct2, cutoff2);		
 			if (cross) {
 				graph3 = pdb.get_graph(ct3, cutoff3);
-				graphs = new Graph[3];
+				graphs = new RIGraph[3];
 				graphs[0] = graph1;
 				graphs[1] = graph2;
 				graphs[2] = graph3;
 			} else {
-				graphs = new Graph[2];
+				graphs = new RIGraph[2];
 				graphs[0] = graph1;
 				graphs[1] = graph2;
 			}
 		} else {
-			graphs = new Graph[1];
+			graphs = new RIGraph[1];
 			graphs[0] = graph1;
 		}
 		

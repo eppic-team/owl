@@ -18,6 +18,9 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.graph.util.Pair;
+
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 
@@ -30,11 +33,11 @@ import java.sql.Statement;
  * 
  */
 public abstract class Pdb {
-	
+
 	protected final static int DEFAULT_MODEL=1;				// default model serial (NMR structures)
 	public final static String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify no chain code
-	
+
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
 	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type 
 	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
@@ -42,7 +45,7 @@ public abstract class Pdb {
 	protected HashMap<Integer,String> atomser2atom;     	// atom serials to atom names
 	protected HashMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; 	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
-	
+
 	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
 	protected Scop scop;											// the scop annotation for this pdb object
 	protected HashMap<Integer,Double> resser2allrsa;				// internal residue serials to all-atoms rsa
@@ -51,30 +54,30 @@ public abstract class Pdb {
 	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to SC rsa
 	protected EC ec;												// the ec annotation for this pdb object
 	protected CatalSiteSet catalSiteSet;							// the catalytic site annotation for this pdb object
-	
+
 	protected String sequence; 		// full sequence as it appears in SEQRES field
 	protected String pdbCode;
-    // given "external" pdb chain code, i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)	
+	// given "external" pdb chain code, i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)	
 	protected String pdbChainCode;
-    // Our internal chain identifier:
-    // - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-    // - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"
+	// Our internal chain identifier:
+	// - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
+	// - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"
 	protected String chainCode;
 	protected int model;  			// the model serial for NMR structures
-	
+
 	// in case we read from pdb file, 2 possibilities:
 	// 1) SEQRES field is present: fullLength coincides with sequence length
 	// 2) SEQRES not present: fullLength is maximum observed residue (so if residue numbering is correct that only misses possible non-observed residues at end of chain)
 	protected int fullLength; // length of full sequence as it appears in SEQRES field 
 	protected int obsLength;  // length without unobserved, non standard aas 
-	
+
 	protected String db;			// the db from which we have taken the data (if applies)
 	protected MySQLConnection conn;
-	
+
 	public int checkCSA(String version, boolean online) throws IOException {
 		BufferedReader in;
 		String inputLine;
-		
+
 		if (online) {
 			URL csa = new URL("http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/CSA_"+version.replaceAll("\\.","_")+".dat.gz");
 			URLConnection conn = csa.openConnection();
@@ -94,7 +97,7 @@ public abstract class Pdb {
 			File csaFile = new File("/project/StruPPi/Databases/CSA/CSA_"+version.replaceAll("\\.","_")+".dat");
 			in = new BufferedReader(new FileReader(csaFile));			
 		}
-		
+
 		int csaMistakes = 0;
 		this.catalSiteSet = new CatalSiteSet();
 		String curPdbCode, curPdbChainCode, curPdbResSerial, curResType;
@@ -143,29 +146,29 @@ public abstract class Pdb {
 			}
 			prevPdbCode = curPdbCode;
 		}
-		
+
 		in.close();
 		if (online) {
 			File csaFile = new File("CSA_"+version.replaceAll(".","_")+".dat.gz");
 			csaFile.delete();
 		}
-		
+
 		if ((csaMistakes > 0) | (prevSiteId == -1)) {
 			this.catalSiteSet = null;
 		}
-		
+
 		return csaMistakes;
 	}
-		
+
 	public void checkEC(boolean online) throws IOException {
-		
+
 		this.ec = new EC();	
 		ECRegion er = null;
 		String startPdbResSer = "", endPdbResSer = "";
 		BufferedReader in;
 		String inputLine;
 		Pattern p = Pattern.compile("^ \\d");
-		
+
 		if (online) {
 			URL pdb2ecMapping = new URL("http://www.bioinf.org.uk/pdbsprotec/mapping.txt");
 			URLConnection p2e= pdb2ecMapping.openConnection();
@@ -174,29 +177,29 @@ public abstract class Pdb {
 			File pdb2ecMapping = new File("/project/StruPPi/Databases/PDBSProtEC/mapping.txt");
 			in = new BufferedReader(new FileReader(pdb2ecMapping));
 		}
-		
-        while ((inputLine = in.readLine()) != null) { 
-        	Matcher m = p.matcher(inputLine);
-        	if (m.find()) {
-	        	String curPdbCode = inputLine.substring(0,9).trim();
-	        	String curPdbChainCode = (inputLine.charAt(11) == ' ')?"NULL":String.valueOf(inputLine.charAt(11));
-	        	if (curPdbCode.equals(pdbCode) && curPdbChainCode.equals(pdbChainCode)) {
-	        		startPdbResSer = inputLine.substring(20,26).trim();
-	        		endPdbResSer = inputLine.substring(27,33).trim();
-	        		String id = inputLine.substring(43).trim();
-	        		//System.out.println(curPdbCode+":"+curPdbChainCode+":"+startPdbResSer+"-"+endPdbResSer+":"+ec);
-	        		er = new ECRegion(id, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
+
+		while ((inputLine = in.readLine()) != null) { 
+			Matcher m = p.matcher(inputLine);
+			if (m.find()) {
+				String curPdbCode = inputLine.substring(0,9).trim();
+				String curPdbChainCode = (inputLine.charAt(11) == ' ')?"NULL":String.valueOf(inputLine.charAt(11));
+				if (curPdbCode.equals(pdbCode) && curPdbChainCode.equals(pdbChainCode)) {
+					startPdbResSer = inputLine.substring(20,26).trim();
+					endPdbResSer = inputLine.substring(27,33).trim();
+					String id = inputLine.substring(43).trim();
+					//System.out.println(curPdbCode+":"+curPdbChainCode+":"+startPdbResSer+"-"+endPdbResSer+":"+ec);
+					er = new ECRegion(id, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
 					ec.add(er);
-	        	}
-        	}
-        }
-        
-        in.close();
-        
+				}
+			}
+		}
+
+		in.close();
+
 	}
-	
+
 	public int checkConsurfHssp(boolean online) throws IOException {
-		
+
 		BufferedReader in;
 		if (online) {
 			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
@@ -210,51 +213,51 @@ public abstract class Pdb {
 		Pattern p = Pattern.compile("^\\s+\\d+");
 		int lineCount = 0;
 		int consurfHsspMistakes = 0;
-		
+
 		Integer[] ressers = new Integer[resser2restype.size()];
 		resser2restype.keySet().toArray(ressers);
 		Arrays.sort(ressers);
-		
+
 		resser2consurfhsspscore = new HashMap<Integer,Double>();
 		resser2consurfhsspcolor = new HashMap<Integer,Integer>();
-		
-        while ((inputLine = in.readLine()) != null) { 
-        	Matcher m = p.matcher(inputLine);
-        	if (m.find()) {
-        		lineCount++;
-        		int resser = ressers[lineCount-1];
-        		String[] fields = inputLine.split("\\s+");
-    			String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
-    			if (fields[2].equals(AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser))) &
-    					(pdbresser.equals("-") | pdbresser.equals(get_pdbresser_from_resser(resser)))) {
-    				resser2consurfhsspscore.put(resser, Double.valueOf(fields[4]));
-    				resser2consurfhsspcolor.put(resser, Integer.valueOf(fields[5]));
-    			} else {
-    				consurfHsspMistakes++;
-    			}
-        	}
+
+		while ((inputLine = in.readLine()) != null) { 
+			Matcher m = p.matcher(inputLine);
+			if (m.find()) {
+				lineCount++;
+				int resser = ressers[lineCount-1];
+				String[] fields = inputLine.split("\\s+");
+				String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
+				if (fields[2].equals(AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser))) &
+						(pdbresser.equals("-") | pdbresser.equals(get_pdbresser_from_resser(resser)))) {
+					resser2consurfhsspscore.put(resser, Double.valueOf(fields[4]));
+					resser2consurfhsspcolor.put(resser, Integer.valueOf(fields[5]));
+				} else {
+					consurfHsspMistakes++;
+				}
+			}
 		}
-        in.close();
-        
+		in.close();
+
         consurfHsspMistakes += Math.abs(ressers.length - resser2consurfhsspscore.size());
         if (consurfHsspMistakes > 0) {
-        	resser2consurfhsspscore.clear();
-        	resser2consurfhsspcolor.clear();
-        }
-        
-        return consurfHsspMistakes;
-        
-    }	
-	
+			resser2consurfhsspscore.clear();
+			resser2consurfhsspcolor.clear();
+		}
+
+		return consurfHsspMistakes;
+
+	}	
+
 	public void runNaccess(String naccessExecutable, String naccessParameters) throws Exception {
 		String pdbFileName = pdbCode+chainCode+".pdb";
 		dump2pdbfile(pdbFileName, true);
 		String line;
 		int errorLineCount = 0;
-		
+
 		File test = new File(naccessExecutable);
 		if(!test.canRead()) throw new IOException("Naccess Executable is not readable");
-		
+
 		Process myNaccess = Runtime.getRuntime().exec(naccessExecutable + " " + pdbFileName + " " + naccessParameters);
 		BufferedReader naccessOutput = new BufferedReader(new InputStreamReader(myNaccess.getInputStream()));
 		BufferedReader naccessError = new BufferedReader(new InputStreamReader(myNaccess.getErrorStream()));
@@ -269,7 +272,7 @@ public abstract class Pdb {
 		if ((exitVal == 1) || (errorLineCount > 0)) {
 			throw new Exception("Naccess:Wrong arguments or pdb file format!");
 		}
-		
+
 		File rsa = new File(pdbCode+chainCode+".rsa");
 		if (rsa.exists()) {
 			resser2allrsa = new HashMap<Integer,Double>();
@@ -293,16 +296,16 @@ public abstract class Pdb {
 				fileToDelete.delete();
 			}
 		}
-			
+
 	}
-	
+
 	public void checkScop(String version, boolean online) throws IOException {
 		this.scop = new Scop();	
 		ScopRegion sr = null;
 		String startPdbResSer = "", endPdbResSer = "";
 		BufferedReader in;
 		String inputLine;
-		
+
 		if (online) {
 			URL scop_cla = new URL("http://scop.mrc-lmb.cam.ac.uk/scop/parse/dir.cla.scop.txt_"+version);
 			URLConnection sc = scop_cla.openConnection();
@@ -311,8 +314,8 @@ public abstract class Pdb {
 			File scop_cla = new File("/project/StruPPi/Databases/SCOP/dir.cla.scop.txt_"+version);
 			in = new BufferedReader(new FileReader(scop_cla));
 		}
-				
-        while ((inputLine = in.readLine()) != null) 
+
+		while ((inputLine = in.readLine()) != null) 
 			if (inputLine.startsWith(pdbCode,1)) {
 				String[] fields = inputLine.split("\\s+");
 				String[] regions = fields[2].split(",");
@@ -340,15 +343,15 @@ public abstract class Pdb {
 				}
 				//break;
 			}
-        in.close();
-        
-        scop.setVersion(version);
-    }	
-	
+		in.close();
+
+		scop.setVersion(version);
+	}	
+
 	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
 		runDssp(dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
 	}
-	
+
 	/** 
 	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
 	 * Existing secondary structure information will be overwritten.
@@ -407,7 +410,7 @@ public abstract class Pdb {
 		if(ssTypes.size() == 0) {
 			throw new IOException("No DSSP output found.");
 		}
-		
+
 		if(ssTypes.size() != get_length()) {	// compare with number of observed residues
 			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") does not match number of observed residues in structure (" + get_length() + ").");
 		}
@@ -444,7 +447,7 @@ public abstract class Pdb {
 		ssId = new Character(lastType).toString() + (lastSheet==' '?"":String.valueOf(lastSheet)) + new Integer(elementCount).toString();
 		ssElem = new SecStrucElement(reducedType, start,ssTypes.lastKey(),ssId);
 		secondaryStructure.add(ssElem);
-		
+
 		secondaryStructure.setComment("DSSP");
 	}
 
@@ -489,7 +492,7 @@ public abstract class Pdb {
 		PrintWriter Out = new PrintWriter(new FileOutputStream(outfile));
 		writeAtomLines(Out, pdbCompatible);
 	}
-	
+
 	/**
 	 * Dump the full sequence of this Pdb object in fasta file format
 	 * @param seqfile
@@ -501,7 +504,7 @@ public abstract class Pdb {
 		Out.println(sequence);
 		Out.close();
 	}
-	
+
 	/** 
 	 * Returns the number of observed standard residues.
 	 * TODO: Refactor method name
@@ -509,12 +512,12 @@ public abstract class Pdb {
 	public int get_length(){
 		return obsLength;
 	}
-	
+
 	/** Returns the number of residues in the sequence of this protein. */
 	public int getFullLength() {
 		return fullLength;
 	}
-	
+
 	/**
 	 * Returns number of (non-Hydrogen) atoms in the protein
 	 * @return
@@ -522,7 +525,7 @@ public abstract class Pdb {
 	public int getNumAtoms() {
 		return atomser2atom.size();
 	}
-	
+
 	/**
 	 * Gets a TreeMap with atom serials as keys and their coordinates as values for the given contact type
 	 * The contact type can't be a cross contact type, it doesn't make sense here
@@ -589,14 +592,14 @@ public abstract class Pdb {
 	 * @param ct contact type for which distances are being calculated
 	 * @return A map which assings to each edge the corresponding distance
 	 */
-	public HashMap<Edge, Double> calculate_dist_matrix(String ct){
-		HashMap<Edge,Double> distMatrixAtoms = new HashMap<Edge,Double>();
+	public HashMap<Pair<Integer>, Double> calculate_dist_matrix(String ct){
+		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
 			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
 			for (int i_atomser:coords.keySet()){
 				for (int j_atomser:coords.keySet()){
 					if (j_atomser>i_atomser) {
-						Edge pair = new Edge(i_atomser,j_atomser);
+						Pair<Integer> pair = new Pair<Integer>(i_atomser,j_atomser);
 						distMatrixAtoms.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
 					}
 				}
@@ -609,7 +612,7 @@ public abstract class Pdb {
 			for (int i_atomser:i_coords.keySet()){
 				for (int j_atomser:j_coords.keySet()){
 					if (j_atomser!=i_atomser){
-						Edge pair = new Edge(i_atomser,j_atomser);
+						Pair<Integer> pair = new Pair<Integer>(i_atomser,j_atomser);
 						distMatrixAtoms.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
 					}
 				}
@@ -620,16 +623,16 @@ public abstract class Pdb {
 		 * Helper method which maps atom serials to residue serials.
 		 * TODO: Integrate into above method to avoid storing two distance maps in memory
 		 */
-		HashMap<Edge,Double> distMatrixRes = new HashMap<Edge, Double>();
-		for (Edge cont: distMatrixAtoms.keySet()){
-			int i_resser = get_resser_from_atomser(cont.i);
-			int j_resser = get_resser_from_atomser(cont.j);
-			distMatrixRes.put(new Edge(i_resser,j_resser), distMatrixAtoms.get(cont));
+		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
+		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
+			int i_resser = get_resser_from_atomser(cont.getFirst());
+			int j_resser = get_resser_from_atomser(cont.getSecond());
+			distMatrixRes.put(new Pair<Integer>(i_resser,j_resser), distMatrixAtoms.get(cont));
 		}
 
 		return distMatrixRes;
 	}
-	
+
 	/**
 	 * Get the graph for given contact type and cutoff for this Pdb object.
 	 * Returns a Graph object with the contacts
@@ -638,7 +641,7 @@ public abstract class Pdb {
 	 * @param cutoff
 	 * @return
 	 */
-	public Graph get_graph(String ct, double cutoff){ 
+	private AIGraph getAIGraph(String ct, double cutoff){ 
 		TreeMap<Integer,Point3d> i_coords = null;
 		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
 		boolean directed = false;
@@ -654,11 +657,11 @@ public abstract class Pdb {
 		}
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
 		int[] j_atomserials = null;
-		
+
 		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
-		
+
 		int boxSize = (int) Math.floor(cutoff*SCALE);
-		
+
 		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
 		int i=0;
 		for (int i_atomser:i_coords.keySet()){
@@ -710,9 +713,9 @@ public abstract class Pdb {
 			j_atomserials = i_atomserials;
 		}
 
-		
+
 		float[][]distMatrix = new float[i_atomserials.length][j_atomserials.length];
-		
+
 		for (Point3i floor:boxes.keySet()){ // for each box
 			// distances of points within this box
 			boxes.get(floor).getDistancesWithinBox(distMatrix,directed);
@@ -732,9 +735,42 @@ public abstract class Pdb {
 				}
 			} 
 		} 
+
+		// creating the AIGraph
+		AIGraph graph = new AIGraph();
+		TreeMap<Integer,AIGNode> aignodemap = new TreeMap<Integer,AIGNode>();
+		TreeMap<Integer,RIGNode> rignodemap = new TreeMap<Integer,RIGNode>();
+		TreeSet<Integer> atomSerials = new TreeSet<Integer>();
+		atomSerials.addAll(i_coords.keySet());
+		if (j_coords!=null){
+			atomSerials.addAll(j_coords.keySet());
+		}
+		// adding the AIGNodes (including parent RIGNode references)
+		SecondaryStructure secondaryStructureCopy = secondaryStructure.copy();
+		for (int atomSer:atomSerials) {
+			int resser = get_resser_from_atomser(atomSer);
+			SecStrucElement sselem = secondaryStructureCopy.getSecStrucElement(resser);
+			if (!rignodemap.containsKey(resser)) {
+				// NOTE!: we are passing references to the SecStrucElement objects! they point to the same objects as secondaryStructureCopy 
+				RIGNode resNode = new RIGNode(resser, resser2restype.get(resser), sselem);
+				rignodemap.put(resser,resNode);
+			}
+			AIGNode atomNode = new AIGNode(atomSer,atomser2atom.get(atomSer),rignodemap.get(resser));
+			aignodemap.put(atomSer,atomNode);
+			graph.addVertex(atomNode);
+		}
 		
-		// getting the contacts (in residue serials) from the atom serials (partial) distance matrix 
-		TreeMap<Edge,Integer> weights = new TreeMap<Edge,Integer>(); // we use them to keep the edges together with the weights temporarily
+		graph.setSecondaryStructure(secondaryStructureCopy);
+		graph.setSerials2NodesMap(aignodemap);
+		graph.setCutoff(cutoff);
+		graph.setSequence(sequence);
+		graph.setPdbCode(pdbCode);
+		graph.setChainCode(chainCode);
+		graph.setPdbChainCode(pdbChainCode);
+		graph.setModel(model);
+		graph.setCrossed(directed);
+		
+		// populating the AIGraph with AIGEdges 
 		for (i=0;i<distMatrix.length;i++){
 			for (j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
@@ -742,35 +778,38 @@ public abstract class Pdb {
 				// - lower half of matrix in case of undirected
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
-					int i_resser = atomser2resser.get(i_atomserials[i]);
-					int j_resser = atomser2resser.get(j_atomserials[j]);
-					Edge resser_pair = new Edge(i_resser,j_resser);
-					// for multi-atom models (BB, SC, ALL or BB/SC) we need to make sure that we don't have contacts from residue to itself or that we don't have duplicates				
-					if (i_resser!=j_resser){ // duplicates are automatically taken care by the TreeMap which doesn't allow duplicates in its keys 
-						// as weights we count the number of atom-edges per residue-edge
-						if (weights.containsKey(resser_pair)) {
-							weights.put(resser_pair, weights.get(resser_pair)+1);
-						} else {
-							weights.put(resser_pair, 1);
-						}
-					}
+					graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
 				}
 
 			}
 		}
-		// finally we put the edges together with their weights into the contacts EdgeSet (right now we just have them in the weights TreeMap):
-		EdgeSet contacts = new EdgeSet();
-		for (Edge cont: weights.keySet()) {
-			contacts.add(new Edge(cont.i,cont.j,weights.get(cont)));
-		}
 
-		// creating and returning the graph object
-		TreeMap<Integer,String> nodes = new TreeMap<Integer,String>();
-		for (int resser:resser2restype.keySet()){
-			nodes.put(resser,resser2restype.get(resser));
-		}
-		Graph graph = new Graph (contacts,nodes,sequence,cutoff,ct,pdbCode,chainCode,pdbChainCode,model, secondaryStructure.copy());
 		return graph;
+	}
+
+	/**
+	 * Returns a RIGraph for given contact type and cutoff
+	 * @param ct
+	 * @param cutoff
+	 * @return
+	 */
+	public RIGraph get_graph(String ct, double cutoff) {
+		AIGraph atomGraph = getAIGraph(ct, cutoff);
+		RIGraph graph = atomGraph.getRIGraph();
+		
+		graph.setContactType(ct);
+		graph.setCutoff(cutoff);
+
+		return graph;
+	}
+	
+	/**
+	 * Returns an all atom graph in a AIGraph object
+	 * @param cutoff
+	 * @return
+	 */
+	public AIGraph getAllAtomGraph(double cutoff) {
+		return this.getAIGraph("ALL", cutoff);
 	}
 	
 	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
@@ -789,11 +828,11 @@ public abstract class Pdb {
 		}
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
 		int[] j_atomserials = null;
-		
+
 		int SCALE=100; // i.e. we use units of hundredths of Angstroms (thus cutoffs can be specified with a maximum precission of 0.01A)
-		
+
 		int boxSize = (int) Math.floor(cutoff*SCALE);
-		
+
 		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
 		int i=0;
 		for (int i_atomser:i_coords.keySet()){
@@ -844,7 +883,7 @@ public abstract class Pdb {
 		} else {
 			j_atomserials = i_atomserials;
 		}
-		
+
 		// count density
 		for(Point3i floor:boxes.keySet()) {
 			//int size = boxes.get(floor).size();
@@ -856,10 +895,10 @@ public abstract class Pdb {
 				densityCount.put(size, 1);
 			}
 		}
-		
-		
+
+
 	}
-	
+
 	/**
 	 * Calculates and returns the difference of the distance maps of this 
 	 * structure and another pdb object. On error returns null. Note that 
@@ -871,15 +910,15 @@ public abstract class Pdb {
 	 * @return the difference distance map
 	 * @see #getDiffDistMap(String, Pdb, String, Alignment, String, String) 
 	 */
-	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
+	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
 		double dist1, dist2, diff;
-		HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
-		HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
+		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
+		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
 		if(thisDistMatrix.size() != otherDistMatrix.size()) {
 			System.err.println("Cannot calculate difference distance map. Matrix sizes do not match.");
 			return null;
 		}
-		for(Edge e:otherDistMatrix.keySet()){
+		for(Pair<Integer> e:otherDistMatrix.keySet()){
 			dist1 = otherDistMatrix.get(e);
 			if(!thisDistMatrix.containsKey(e)) {
 				System.err.println("Error while calculating difference distance map. Entry " + e + " in matrix1 not not found in matrix2.");
@@ -891,7 +930,7 @@ public abstract class Pdb {
 		}
 		return otherDistMatrix;
 	}
-	
+
 	/**
 	 * Calculates the difference distance map of this structure and 
 	 * another pdb object given a sequence alignment of the structures. The 
@@ -908,67 +947,63 @@ public abstract class Pdb {
 	 * @return the difference distance map
 	 * @see #getDiffDistMap(String, Pdb, String)
 	 */
-	public HashMap<Edge,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
-	    
-	    HashMap<Edge,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
-	    HashMap<Edge,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
-	    HashMap<Edge,Double> alignedDistMatrix = new HashMap<Edge, Double>(Math.min(this.getFullLength(), pdb2.getFullLength()));
-	    int i1,i2,j1,j2;
-	    TreeSet<Integer> unobserved1 = new TreeSet<Integer>();
-	    TreeSet<Integer> unobserved2 = new TreeSet<Integer>();
-	    Edge e1 = new Edge(0,0);
-	    Edge e2 = new Edge(0,0);
+	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
 
-	    // detect all unobserved residues
-	    for(int i = 0; i < ali.getAlignmentLength(); ++i) {
-		i1 = ali.al2seq(name1, i);
-		i2 = ali.al2seq(name2, i);
-		if( i1 != -1 && !hasCoordinates(i1) ) {
-		    unobserved1.add(i1);
-		}
-		if( i2 != -1 && !pdb2.hasCoordinates(i2) ) {
-		    unobserved2.add(i2);
-		}
-	    }
+		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
+		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
+		HashMap<Pair<Integer>,Double> alignedDistMatrix = new HashMap<Pair<Integer>, Double>(Math.min(this.getFullLength(), pdb2.getFullLength()));
+		int i1,i2,j1,j2;
+		TreeSet<Integer> unobserved1 = new TreeSet<Integer>();
+		TreeSet<Integer> unobserved2 = new TreeSet<Integer>();
 
-	    // strategy: we always have to look through the alignment to say 
-	    // whether a difference distance can be assigned to a pair of 
-	    // corresponding residues. To put it differently, for any two 
-	    // alignment columns one always has to ensure that both columns 
-	    // only contain observed residues (no gaps!), otherwise the one 
-	    // cannot obtain a distance in at least one structure as a gap 
-	    // indicates "no coordinates available".  
-	    
-	    for(int i = 0; i < ali.getAlignmentLength()-1; ++i) {
-		
-		i1 = ali.al2seq(name1, i);
-		i2 = ali.al2seq(name2, i);
-
-		// alignment columns must not contain gap characters and both 
-		// residues in the current column have to be observed!
-		if( i1 == -1 || i2 == -1 || unobserved1.contains(i1) || unobserved2.contains(i2) ) {
-		    continue;
+		// detect all unobserved residues
+		for(int i = 0; i < ali.getAlignmentLength(); ++i) {
+			i1 = ali.al2seq(name1, i);
+			i2 = ali.al2seq(name2, i);
+			if( i1 != -1 && !hasCoordinates(i1) ) {
+				unobserved1.add(i1);
+			}
+			if( i2 != -1 && !pdb2.hasCoordinates(i2) ) {
+				unobserved2.add(i2);
+			}
 		}
 
-		for(int j = i + 1; j < ali.getAlignmentLength(); ++j) {
-		  
-		    j1 = ali.al2seq(name1, j);
-		    j2 = ali.al2seq(name2, j);
-		    
-		    if( j1 == -1 || j2 == -1 || unobserved1.contains(j1) || unobserved2.contains(j2) ) {
-			continue;
-		    }
-		    
-		    // make the edges
-		    e1.i = i1;
-		    e1.j = j1;
-		    e2.i = i2;
-		    e2.j = j2;
-		    		    
-		    alignedDistMatrix.put(new Edge(i+1,j+1),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
+		// strategy: we always have to look through the alignment to say 
+		// whether a difference distance can be assigned to a pair of 
+		// corresponding residues. To put it differently, for any two 
+		// alignment columns one always has to ensure that both columns 
+		// only contain observed residues (no gaps!), otherwise the one 
+		// cannot obtain a distance in at least one structure as a gap 
+		// indicates "no coordinates available".  
+
+		for(int i = 0; i < ali.getAlignmentLength()-1; ++i) {
+
+			i1 = ali.al2seq(name1, i);
+			i2 = ali.al2seq(name2, i);
+
+			// alignment columns must not contain gap characters and both 
+			// residues in the current column have to be observed!
+			if( i1 == -1 || i2 == -1 || unobserved1.contains(i1) || unobserved2.contains(i2) ) {
+				continue;
+			}
+
+			for(int j = i + 1; j < ali.getAlignmentLength(); ++j) {
+
+				j1 = ali.al2seq(name1, j);
+				j2 = ali.al2seq(name2, j);
+
+				if( j1 == -1 || j2 == -1 || unobserved1.contains(j1) || unobserved2.contains(j2) ) {
+					continue;
+				}
+
+				// make the edges
+				Pair<Integer> e1 = new Pair<Integer>(i1,j1);
+				Pair<Integer> e2 = new Pair<Integer>(i2,j2);
+
+				alignedDistMatrix.put(new Pair<Integer>(i+1,j+1),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
+			}
 		}
-	    }
-	    return alignedDistMatrix;
+		return alignedDistMatrix;
 	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
 
@@ -979,8 +1014,8 @@ public abstract class Pdb {
 		for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
 			for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
 				for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
-						neighbor = new Point3i(x,y,z);
-						if (boxes.containsKey(neighbor)) nbs++;
+					neighbor = new Point3i(x,y,z);
+					if (boxes.containsKey(neighbor)) nbs++;
 				}
 			}
 		} 
@@ -988,7 +1023,7 @@ public abstract class Pdb {
 		if(boxes.containsKey(floor)) nbs--;
 		return nbs;
 	}
-	
+
 	/**
 	 * Gets the Consurf-HSSP score given an internal residue serial
 	 * @param resser
@@ -1005,7 +1040,7 @@ public abstract class Pdb {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Gets the Consurf-HSSP color rsa given an internal residue serial
 	 * @param resser
@@ -1022,7 +1057,7 @@ public abstract class Pdb {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Gets the all atoms rsa given an internal residue serial
 	 * @param resser
@@ -1039,7 +1074,7 @@ public abstract class Pdb {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Gets the sc rsa given an internal residue serial
 	 * @param resser
@@ -1056,7 +1091,7 @@ public abstract class Pdb {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Gets the internal residue serial (cif) given a pdb residue serial (author assignment)
 	 * TODO refactor
@@ -1066,7 +1101,7 @@ public abstract class Pdb {
 	public int get_resser_from_pdbresser (String pdbresser){
 		return pdbresser2resser.get(pdbresser);
 	}
-	
+
 	/**
 	 * Gets the pdb residue serial (author assignment) given an internal residue serial (cif)
 	 * TODO refactor
@@ -1086,11 +1121,11 @@ public abstract class Pdb {
 	public int get_resser_from_atomser(int atomser){
 		return atomser2resser.get(atomser);
 	}
-	
+
 	public String getResTypeFromResSerial(int resser) {
 		return resser2restype.get(resser);
 	}
-	
+
 	/**
 	 * Gets the atom serial given the residue serial and atom name
 	 * @param resser
@@ -1100,16 +1135,16 @@ public abstract class Pdb {
 	public int getAtomSerFromResSerAndAtom(int resser, String atom) {
 		return resser_atom2atomserial.get(resser+"_"+atom);
 	}
-	
+
 	/**
 	 * Checks whether the given residue serial has any associated coordinates.
 	 * @param ser  the residue serial
 	 * @return true if there is at least one atom with valid coordinates, else false 
 	 */
 	public boolean hasCoordinates(int resser) {
-	    return atomser2resser.values().contains(resser);
+		return atomser2resser.values().contains(resser);
 	}
-		
+
 	/**
 	 * Gets the atom coordinates (Point3d object) given the atom serial
 	 * @param atomser
@@ -1118,7 +1153,7 @@ public abstract class Pdb {
 	public Point3d getAtomCoord(int atomser) {
 		return this.atomser2coord.get(atomser);
 	}
-	
+
 	/**
 	 * Gets all atom serials in a Set
 	 * @return
@@ -1126,7 +1161,7 @@ public abstract class Pdb {
 	public Set<Integer> getAllAtomSerials() {
 		return this.atomser2resser.keySet();
 	}
-	
+
 	/**
 	 * Gets the 4 letter pdb code identifying this structure
 	 * @return
@@ -1134,7 +1169,7 @@ public abstract class Pdb {
 	public String getPdbCode() {
 		return this.pdbCode;
 	}
-	
+
 	/**
 	 * Gets the internal chain code (cif)
 	 * @return
@@ -1142,7 +1177,7 @@ public abstract class Pdb {
 	public String getChainCode(){
 		return this.chainCode;
 	}
-	
+
 	/**
 	 * Gets the pdb chain code (author assignment)
 	 * @return
@@ -1150,7 +1185,7 @@ public abstract class Pdb {
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
 	}
-	
+
 	/**
 	 * Gets the sequence
 	 * @return
@@ -1158,9 +1193,9 @@ public abstract class Pdb {
 	public String getSequence() {
 		return sequence;
 	}
-	
+
 	// csa related methods
-	
+
 	/** 
 	 * Returns true if csa information is available, false otherwise. 
 	 */
@@ -1173,16 +1208,16 @@ public abstract class Pdb {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Returns the csa annotation object of this graph.
 	 */
 	public CatalSiteSet getCSA() {
 		return catalSiteSet;
 	}
-	
+
 	// ec related methods
-	
+
 	/** 
 	 * Returns true if ec information is available, false otherwise. 
 	 */
@@ -1195,18 +1230,18 @@ public abstract class Pdb {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Returns the ec annotation object of this graph.
 	 */
 	public EC getEC() {
 		return ec;
 	}
-	
+
 	// end of secop related methods
-	
+
 	// scop related methods
-	
+
 	/** 
 	 * Returns true if scop information is available, false otherwise. 
 	 */
@@ -1219,34 +1254,34 @@ public abstract class Pdb {
 			return true;
 		}
 	}
-	
+
 	/**
 	 * Returns the scop annotation object of this graph.
 	 */
 	public Scop getScop() {
 		return scop;
 	}
-	
+
 	// end of secop related methods
-	
+
 	// secondary structure related methods
-	
+
 	/** 
 	 * Returns true if secondary structure information is available, false otherwise. 
 	 */
 	public boolean hasSecondaryStructure() {
 		return !this.secondaryStructure.isEmpty();
 	}
-	
+
 	/**
 	 * Returns the secondary structure annotation object of this graph.
 	 */
 	public SecondaryStructure getSecondaryStructure() {
 		return this.secondaryStructure;
 	}
-	
+
 	// end of secondary structure related methods
-	
+
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
@@ -1259,7 +1294,7 @@ public abstract class Pdb {
 	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeError {
 		TreeMap<String,Point3d> thiscoords = this.get_coords_for_ct_4rmsd(ct);
 		TreeMap<String,Point3d> othercoords = otherPdb.get_coords_for_ct_4rmsd(ct);
-		
+
 		// there might be unobserved residues or some missing atoms for a residue
 		// here we get the ones that are in common
 		ArrayList<String> common = new ArrayList<String>();
@@ -1268,7 +1303,7 @@ public abstract class Pdb {
 				common.add(resser_atom);
 			}
 		}
-		
+
 		// converting the TreeMaps to Vector3d arrays (input format for calculate_rmsd)
 		Vector3d[] conformation1 = new Vector3d[common.size()]; 
 		Vector3d[] conformation2 = new Vector3d[common.size()];
@@ -1278,31 +1313,31 @@ public abstract class Pdb {
 			conformation2[i] = new Vector3d(othercoords.get(resser_atom).x,othercoords.get(resser_atom).y,othercoords.get(resser_atom).z);
 			i++;
 		}
-				
+
 		// this as well as calculating the rmsd, changes conformation1 and conformation2 to be optimally superposed
 		double rmsd = calculate_rmsd(conformation1, conformation2);
 
 //		// printing out individual distances (conformation1 and conformation2 are now optimally superposed)
 //		for (i=0;i<conformation1.length;i++){
-//			Point3d point1 = new Point3d(conformation1[i].x,conformation1[i].y,conformation1[i].z);
-//			Point3d point2 = new Point3d(conformation2[i].x,conformation2[i].y,conformation2[i].z);
-//			System.out.println(point1.distance(point2));
+//		Point3d point1 = new Point3d(conformation1[i].x,conformation1[i].y,conformation1[i].z);
+//		Point3d point2 = new Point3d(conformation2[i].x,conformation2[i].y,conformation2[i].z);
+//		System.out.println(point1.distance(point2));
 //		}
-		
+
 		return rmsd;
 
 	}
-	
+
 	/**
 	 * Calculates the RMSD between two conformations.      
-     * conformation1: Vector3d array (matrix of dimensions [N,3])       
-     * conformation2: Vector3d array (matrix of dimensions [N,3]) 
-     * 
-     * Both conformation1 and conformation2 are modified to be optimally superposed
-     * 
-     * Implementation taken (python) from http://bosco.infogami.com/Root_Mean_Square_Deviation, 
-     * then ported to java using Jama matrix package 
-     * (page has moved to: http://boscoh.com/protein/rmsd-root-mean-square-deviation)                
+	 * conformation1: Vector3d array (matrix of dimensions [N,3])       
+	 * conformation2: Vector3d array (matrix of dimensions [N,3]) 
+	 * 
+	 * Both conformation1 and conformation2 are modified to be optimally superposed
+	 * 
+	 * Implementation taken (python) from http://bosco.infogami.com/Root_Mean_Square_Deviation, 
+	 * then ported to java using Jama matrix package 
+	 * (page has moved to: http://boscoh.com/protein/rmsd-root-mean-square-deviation)                
 	 * @param conformation1
 	 * @param conformation2
 	 * @return
@@ -1315,7 +1350,7 @@ public abstract class Pdb {
 					"Given conformations have different size: conformation1: "+conformation1.length+", conformation2: "+conformation2.length);
 		}
 		int n_vec = conformation1.length;
-		
+
 		// 1st we bring both conformations to the same centre by subtracting their respectives centres
 		Vector3d center1 = new Vector3d();
 		Vector3d center2 = new Vector3d();
@@ -1342,18 +1377,18 @@ public abstract class Pdb {
 			sum2 += conformation2[i].lengthSquared();
 		}
 		double E0 = sum1 + sum2;
-		
+
 		// singular value decomposition
 		Matrix vecs1 = vector3dAr2matrix(conformation1);
 		Matrix vecs2 = vector3dAr2matrix(conformation2);
-		
+
 		Matrix correlation_matrix = vecs2.transpose().times(vecs1); //gives a 3x3 matrix
 
 		SingularValueDecomposition svd = correlation_matrix.svd();
 		Matrix U = svd.getU();
 		Matrix V_trans = svd.getV().transpose(); 
 		double[] singularValues = svd.getSingularValues();
-		
+
 		boolean is_reflection = false;
 		if (U.det()*V_trans.det()<0.0){ 
 			is_reflection = true;
@@ -1363,13 +1398,13 @@ public abstract class Pdb {
 			// we change sign of last coordinate (smallest singular value)
 			singularValues[singularValues.length-1]=(-1)*singularValues[singularValues.length-1];  			
 		}
-		
+
 		// getting sum of singular values
 		double sumSV = 0.0;
 		for (int i=0;i<singularValues.length;i++){
 			sumSV += singularValues[i];
 		}
-		
+
 		// rmsd square: Kabsch formula
 		double rmsd_sq = (E0 - 2.0*sumSV)/((double) n_vec);
 		rmsd_sq = Math.max(rmsd_sq, 0.0);
@@ -1392,7 +1427,7 @@ public abstract class Pdb {
 
 		return Math.sqrt(rmsd_sq);
 	}
-	
+
 	/** Gets a Jama.Matrix object from a Vector3d[] (deep copies) */
 	private Matrix vector3dAr2matrix(Vector3d[] vecArray) {
 		double[][] array = new double[vecArray.length][3];
@@ -1401,7 +1436,7 @@ public abstract class Pdb {
 		}
 		return new Matrix(array);
 	}
-	
+
 	/**
 	 * Write residue info to given db, using our db graph aglappe format, 
 	 * i.e. tables: residue_info
@@ -1413,13 +1448,13 @@ public abstract class Pdb {
 
 		Statement stmt;
 		String sql = "";
-		
+
 		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
-		
+
 		for (int resser:resser2restype.keySet()) {
 			String resType = AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser));
 			String pdbresser = get_pdbresser_from_resser(resser);
-			
+
 			String secStructType = null;
 			String secStructId = null;
 			if (secondaryStructure != null) {
@@ -1428,7 +1463,7 @@ public abstract class Pdb {
 					secStructId = quote(secondaryStructure.getSecStrucElement(resser).getId());
 				}
 			}
-			
+
 			String scopId = null;
 			String sccs = null;
 			String sunid = null;
@@ -1446,20 +1481,20 @@ public abstract class Pdb {
 					domainNumReg = String.valueOf(sr.getNumRegions());
 				}
 			}
-			
+
 			Double allRsa = getAllRsaFromResSerial(resser);
 			Double scRsa = getScRsaFromResSerial(resser);
-			
+
 			Double consurfhsspScore = getConsurfhsspScoreFromResSerial(resser);
 			Integer consurfhsspColor = getConsurfhsspColorFromResSerial(resser);
-			
+
 			String ecId = null;
 			if (ec != null) {
 				if (ec.getECRegion(resser) != null) {
 					ecId = quote(ec.getECNum(resser));
 				}
 			}
-			
+
 			String csaNums = null;
 			String csaChemFuncs = null;
 			String csaEvids = null;
@@ -1470,7 +1505,7 @@ public abstract class Pdb {
 					csaEvids = quote(catalSiteSet.getCatalSiteEvid(resser));
 				}
 			}
-			
+
 			sql = "INSERT IGNORE INTO "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid) " +
 			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals("NULL")?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
 			//System.out.println(sql);

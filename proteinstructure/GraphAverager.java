@@ -2,24 +2,28 @@ package proteinstructure;
 
 import java.util.TreeMap;
 
+import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.graph.util.Pair;
+
+//TODO test the class. After rewriting with JUNG2 hasn't been tested
 public class GraphAverager {
 
 	private Alignment al;
-	private TreeMap<String,Graph> templateGraphs;
+	private TreeMap<String,RIGraph> templateGraphs;
 	private String targetTag;
 	private int numTemplates;
 	private String sequence;		// sequence of the final consensus graph
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
-	private TreeMap<Edge,Integer> contactVotes;
+	private TreeMap<Pair<Integer>,Integer> contactVotes;
 	
-	public GraphAverager(String sequence, Alignment al, TreeMap<String,Graph> templateGraphs, String targetTag) {
+	public GraphAverager(String sequence, Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
 		this.al = al;
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
 		this.sequence = sequence;
-		Graph firstGraph = templateGraphs.get(templateGraphs.firstKey());
+		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
 		
@@ -67,7 +71,7 @@ public class GraphAverager {
 	 */
 	private void countVotes() {
 		
-		contactVotes = new TreeMap<Edge, Integer>();
+		contactVotes = new TreeMap<Pair<Integer>, Integer>();
 		
 		// we go through all positions in the alignment
 		for (int i=0; i<al.getAlignmentLength(); i++){
@@ -75,15 +79,17 @@ public class GraphAverager {
  
 				int vote = 0; 
 				// scanning all templates to see if they have this contact
-				for (String tag:templateGraphs.keySet()){					
-					Edge thisGraphCont = new Edge(al.al2seq(tag, i),al.al2seq(tag, j));
-					if (templateGraphs.get(tag).containsContact(thisGraphCont)) {
+				for (String tag:templateGraphs.keySet()){			
+					RIGraph thisGraph = templateGraphs.get(tag);
+					RIGEdge thisGraphCont = thisGraph.findEdge(thisGraph.getNodeFromSerial(al.al2seq(tag, i)), thisGraph.getNodeFromSerial(al.al2seq(tag, j)));
+					Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
+					if (thisGraph.findEdge(thisGraph.getNodeFromSerial(pair.getFirst().getResidueSerial()),thisGraph.getNodeFromSerial(pair.getSecond().getResidueSerial()))!=null) {
 						vote++;
 					}
 				}
 				// putting vote in contactVotes TreeMap
 				if (vote>0){
-					contactVotes.put(new Edge(i,j), vote);
+					contactVotes.put(new Pair<Integer>(i,j), vote);
 				}				
 			}
 		}		
@@ -93,24 +99,25 @@ public class GraphAverager {
 	 * Calculates the consensus graph from the set of template graphs. An edge is contained
 	 * in the consensus graph if the fractions of template graphs it is contained in is above
 	 * the given threshold.
-	 * The output is a new Graph object created from the given sequence in the constructor 
+	 * The output is a new RIGraph object created from the given sequence in the constructor 
 	 * to which we add the averaged edges.  
 	 * @param threshold the threshold above which an edge is taken to be a consensus edge
 	 * @return the new graph
 	 */
-	public Graph doAveraging(double threshold) {
+	public RIGraph doAveraging(double threshold) {
 		
-		Graph graph = new Graph(this.sequence);
+		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
 		
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
-		for (Edge alignCont:contactVotes.keySet()){
+		for (Pair<Integer> alignCont:contactVotes.keySet()){
 			if (contactVotes.get(alignCont)>=voteThreshold) {
-				Edge targetGraphCont = new Edge(al.al2seq(targetTag,alignCont.i),al.al2seq(targetTag,alignCont.j));
-				if (targetGraphCont.i!=-1 && targetGraphCont.j!=-1){ // we can't add contacts that map to gaps!!
-					graph.addEdge(targetGraphCont);
+				int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
+				int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
+				if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
+					graph.addEdge(new RIGEdge(), graph.getNodeFromSerial(target_i_res), graph.getNodeFromSerial(target_j_res), EdgeType.UNDIRECTED);
 				}
 			}
 		}
@@ -118,22 +125,22 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Returns a graph containing the union of edges of the template graphs weighted by the fraction of occurance in the templates.
+	 * Returns a RIGraph containing the union of edges of the template graphs weighted by the fraction of occurance in the templates.
 	 * The sequence of the graph is initalized to the sequence of the template.
 	 * @return
 	 */
-	public Graph getAverageGraph() {
-		Graph graph = new Graph(this.sequence);
+	public RIGraph getAverageGraph() {
+		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
 		
-		for (Edge alignCont:contactVotes.keySet()){
+		for (Pair<Integer> alignCont:contactVotes.keySet()){
 			double weight = 1.0 * contactVotes.get(alignCont) / numTemplates;
-			Edge targetGraphCont = new Edge(al.al2seq(targetTag,alignCont.i),al.al2seq(targetTag,alignCont.j), weight);
-			if (targetGraphCont.i!=-1 && targetGraphCont.j!=-1){ // we can't add contacts that map to gaps!!
-				graph.addEdge(targetGraphCont);
+			int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
+			int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
+			if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
+				graph.addEdge(new RIGEdge(weight), graph.getNodeFromSerial(target_i_res), graph.getNodeFromSerial(target_j_res), EdgeType.UNDIRECTED);				
 			}
-
 		}		
 		return graph;
 	}
