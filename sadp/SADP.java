@@ -67,7 +67,7 @@ public class SADP {
     protected double br = 1.075;
 
     // max # of iterations
-    private int I0 = 4;
+    private int I0 =  4;
 
     private int I1 = 30;
 
