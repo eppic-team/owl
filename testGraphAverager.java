@@ -259,7 +259,7 @@ public class testGraphAverager {
 		// write resulting consensus graph to file
 		if(outputConsensusGraph) {
 			try {
-				consensusGraph.writeToFile(outConsensusGraphFile);
+				consensusGraph.write_graph_to_file(outConsensusGraphFile);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -269,7 +269,7 @@ public class testGraphAverager {
 		// write weighted average graph to file
 		if(outputAverageGraph) {
 			try {
-				averageGraph.writeToFile(outAverageGraphFile);
+				averageGraph.write_graph_to_file(outAverageGraphFile);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -279,7 +279,7 @@ public class testGraphAverager {
 		// write target graph to file
 		if(outputTargetGraph) {
 			try{
-				targetGraph.writeToFile(outTargetGraphFile);
+				targetGraph.write_graph_to_file(outTargetGraphFile);
 
 			} catch (IOException e) {
 				// TODO Auto-generated catch block

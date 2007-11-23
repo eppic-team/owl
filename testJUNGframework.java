@@ -95,18 +95,21 @@ public class testJUNGframework {
 		}
 		System.out.println(set);
 		
-		// TEST of getSuccessorCount, getPredecessorCount, getNeighborCount
-		System.out.println("TEST degree methods: getNeighborCount, getSuccessorCount, getPredecessorCount");
+		// TEST of degree methods and getSuccessorCount, getPredecessorCount, getNeighborCount
+		// degree and neighbor counts are different when the graph has parallel edges (our graphs shouldn't have them anyway)
+		System.out.println("TEST degree and neighbor count methods");
 		// graph is undirected, graph2 is directed
 		System.out.println("undirected graph: ");
 		for (int serial=1;serial<=10;serial++){
 			RIGNode node = graph.getNodeFromSerial(serial);
-			System.out.println("degree for node "+serial+": "+graph.getNeighborCount(node)+", indegree: "+graph.getPredecessorCount(node)+", outdegree: "+graph.getSuccessorCount(node));
+			System.out.println("node "+serial+": nbr count "+graph.getNeighborCount(node)+", predec count: "+graph.getPredecessorCount(node)+", successor count: "+graph.getSuccessorCount(node));
+			System.out.println("node "+serial+": degree "+graph.degree(node)+", in degree: "+graph.inDegree(node)+", out degree: "+graph.outDegree(node));
 		}
 		System.out.println("directed graph: ");
 		for (int serial=1;serial<=10;serial++){
 			RIGNode node = graph2.getNodeFromSerial(serial);
-			System.out.println("degree for node "+serial+": "+graph2.getNeighborCount(node)+", indegree: "+graph2.getPredecessorCount(node)+", outdegree: "+graph2.getSuccessorCount(node));
+			System.out.println("node "+serial+": nbr count "+graph2.getNeighborCount(node)+", predec count: "+graph2.getPredecessorCount(node)+", successor count: "+graph2.getSuccessorCount(node));
+			System.out.println("node "+serial+": degree "+graph2.degree(node)+", in degree: "+graph2.inDegree(node)+", out degree: "+graph2.outDegree(node));
 		}
 
 		// TEST adding and getting directed/undirected edges

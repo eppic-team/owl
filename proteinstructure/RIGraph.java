@@ -378,7 +378,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 					" n, nwg, n_num) " +
 					" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
 					" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
-					(getPredecessorCount(node)+getSuccessorCount(node))+", "+getPredecessorCount(node)+", "+getSuccessorCount(node)+", "+
+					(inDegree(node)+outDegree(node))+", "+inDegree(node)+", "+outDegree(node)+", "+
 					"'"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			} else {		// we insert k (and no k_in or k_out)
 				sql = "INSERT INTO "+db+".single_model_node "+
@@ -387,7 +387,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				" k, n, nwg, n_num) " +
 				" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
 				" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
-				getNeighborCount(node)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
+				degree(node)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
 			stmt.executeUpdate(sql);
 		}
@@ -581,12 +581,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			if (isDirected()){  // we insert k(=k_in+k_out), k_in and k_out
 				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
 					secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
-					(getPredecessorCount(node)+getSuccessorCount(node))+"\t"+getPredecessorCount(node)+"\t"+getSuccessorCount(node)+"\t"+
+					(inDegree(node)+outDegree(node))+"\t"+inDegree(node)+"\t"+outDegree(node)+"\t"+
 					nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
 			} else {		// we insert k (and no k_in or k_out)
 				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
 						secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
-						getNeighborCount(node)+"\t"+"\\N"+"\t"+"\\N"+"\t"+
+						degree(node)+"\t"+"\\N"+"\t"+"\\N"+"\t"+
 						nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
 			}
 		}
@@ -700,6 +700,47 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.close();		
 	}
 	
+	/**
+	 * Write graph to given outfile in network(Ioannis) format
+	 * @param graphId
+	 * @param dirName
+	 * @throws IOException
+	 */
+	//TODO we might want to move this to a graph i/o class
+	//TODO refactor 
+	public void writeUndirUnweightGraphToNetworkFiles (int graphId, String dirName) throws IOException {
+		if (isDirected()) {
+			System.err.println("This method is only for undirected graphs!");
+			return;
+		}
+		
+		String filePrefix = dirName + "/" + String.valueOf(graphId)+"_"+pdbCode+"_"+chainCode+"_"+contactType.replaceAll("/", ".")+"_"+String.valueOf(distCutoff).replaceAll("\\.", "_")+"_";
+		PrintStream Out = new PrintStream(new FileOutputStream(filePrefix+"edges.txt"));
+		for (RIGEdge cont:getEdges()){
+			Pair<RIGNode> pair = getEndpoints(cont);
+			int i_resser=pair.getFirst().getResidueSerial();
+			int j_resser=pair.getSecond().getResidueSerial();
+			if (i_resser < j_resser) {
+				Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t"+1+"\t"+"1.000"+"\n");
+			}
+		}
+		Out.close();
+		Out = new PrintStream(new FileOutputStream(filePrefix+"nodes.txt"));
+		for (int resser:this.serials2nodes.keySet()) {
+			RIGNode node = this.getNodeFromSerial(resser);
+			String res = AAinfo.threeletter2oneletter(node.getResidueType());
+			Out.printf(Locale.US,resser+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+degree(node)+"\t"+degree(node)+"\n");
+			
+		}
+		Out.close();
+	}
+	
+	/**
+	 * Compares this RIGraph to given RIGraph returning 3 graphs: common, onlythis, onlyother in a HashMap
+	 * @param other
+	 * @return
+	 * @throws Exception
+	 */
 	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
 	public HashMap<String,RIGraph> compare(RIGraph other) throws Exception{
 		//first check that other has same sequence than this, otherwise throw exception

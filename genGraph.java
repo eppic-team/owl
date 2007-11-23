@@ -164,7 +164,7 @@ public class genGraph {
 					RIGraph graph = pdb.get_graph(edgeType, cutoff);
 
 					File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
-					graph.writeToFile(outputFile.getAbsolutePath());
+					graph.write_graph_to_file(outputFile.getAbsolutePath());
 
 					long end = System.currentTimeMillis();
 					double time = (double) (end -start)/1000;
@@ -200,7 +200,7 @@ public class genGraph {
 				RIGraph graph = pdb.get_graph(edgeType, cutoff);
 
 				File outputFile = new File(outputDir,pdb.getPdbCode()+"_"+pdbChainCode+"_"+edgeType+"_"+cutoff+".graph");
-				graph.writeToFile(outputFile.getAbsolutePath());
+				graph.write_graph_to_file(outputFile.getAbsolutePath());
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
 				
 			} catch (PdbfileFormatError e) {

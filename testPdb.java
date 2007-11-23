@@ -30,7 +30,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		RIGraph graph = pdb.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph.writeToFile("test.txt");
+		graph.write_graph_to_file("test.txt");
 		System.out.println("getting start of contact map matrix from graph");
 
 		// data from msdsd
@@ -41,7 +41,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		RIGraph graph2 = pdb2.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph2.writeToFile("test2.txt");
+		graph2.write_graph_to_file("test2.txt");
 
 		// data from pdb
 		System.out.println("reading from dumped pdb file");
@@ -49,7 +49,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		RIGraph graph3 = pdb3.get_graph("ALL", 4.1);
 		System.out.println("dumping contacts to file");
-		graph3.writeToFile("test3.txt");
+		graph3.write_graph_to_file("test3.txt");
 	}
 
 }
