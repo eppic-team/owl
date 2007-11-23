@@ -1,4 +1,6 @@
-import proteinstructure.NodeSet;
+import java.util.TreeSet;
+
+import proteinstructure.Interval;
 
 /**
  * Program to test parsing of a residue selection string (e.g. 1-3,5,7-8)
@@ -14,7 +16,7 @@ public class testResidueSelectionString {
 		System.out.println("Positives:");
 		for(String selStr:tp) {
 			System.out.print(selStr + "\t\t");
-			if(NodeSet.isValidSelectionString(selStr)) {
+			if(Interval.isValidSelectionString(selStr)) {
 				System.out.println("ok");
 			} else {
 				System.out.println("error");
@@ -24,7 +26,7 @@ public class testResidueSelectionString {
 		System.out.println("Negatives:");
 		for(String selStr:tn) {
 			System.out.print(selStr + "\t\t");
-			if(!NodeSet.isValidSelectionString(selStr)) {
+			if(!Interval.isValidSelectionString(selStr)) {
 				System.out.println("ok");
 			} else {
 				System.out.println("error");
@@ -37,7 +39,7 @@ public class testResidueSelectionString {
 		System.out.println("Parsing:");
 		for(String selStr:tp) {
 			System.out.print(selStr + "\t\t");
-			NodeSet nodeSet = NodeSet.parseSelectionString(selStr);
+			TreeSet<Integer> nodeSet = Interval.parseSelectionString(selStr);
 			System.out.println(nodeSet);
 		}
 	}
