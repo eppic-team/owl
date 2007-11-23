@@ -258,6 +258,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @throws SQLException
 	 */
 	//TODO we might want to move this to a graph i/o class
+	//TODO refactor to writeToDb. Get rid of this and only keep fast one??
 	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException{
 		
 		// values we fix to constant 
@@ -464,6 +465,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @throws SQLException
 	 */
 	//TODO we might want to move this to a graph i/o class
+	//TODO refactor to writeToDbFast
 	public void write_graph_to_db_fast(MySQLConnection conn, String db) throws SQLException, IOException {
 		
 		// values we fix to constant 
@@ -677,7 +679,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @throws IOException
 	 */
 	//TODO we might want to move this to a graph i/o class
-	public void writeToFile (String outfile) throws IOException {
+	//TODO refactor to writeToFile
+	public void write_graph_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println("#AGLAPPE GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
 		Out.println("#SEQUENCE: "+sequence);
@@ -695,5 +698,92 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t%6.3f\n",weight);
 		}
 		Out.close();		
+	}
+	
+	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
+	public HashMap<String,RIGraph> compare(RIGraph other) throws Exception{
+		//first check that other has same sequence than this, otherwise throw exception
+		if (this.getFullLength()!=other.getFullLength()) {
+			//TODO throw specific exception
+			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+		} else {
+			for (int resser:this.serials2nodes.keySet()){
+				String this_res = getNodeFromSerial(resser).getResidueType();
+				String other_res = other.getNodeFromSerial(resser).getResidueType();
+				if (!this_res.equals("X") && !other_res.equals("X") && !this_res.equals(other_res)) {
+					//TODO throw specific exception
+					throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+				}
+			}
+		}
+		//NOTE: the common graph will have same node/edge properties as this graph, 
+		//      which doesn't make a lot of sense, but anyway one has to choose between this or other, 
+		//      or otherwise make some kind of merge, e.g. merge the weights by averaging? 
+		RIGraph commongraph = this.copy(); 
+		RIGraph onlythisgraph = this.copy();
+		RIGraph onlyothergraph = other.copy();
+
+		for (RIGEdge cont:this.getEdges()){
+			Pair<RIGNode> pair = this.getEndpoints(cont);
+			int i_resser = pair.getFirst().getResidueSerial();
+			int j_resser = pair.getSecond().getResidueSerial();
+			if (other.findEdge(other.getNodeFromSerial(i_resser), other.getNodeFromSerial(j_resser))!=null) {
+				onlythisgraph.removeEdge(onlythisgraph.findEdge(onlythisgraph.getNodeFromSerial(i_resser),onlythisgraph.getNodeFromSerial(j_resser)));
+				onlyothergraph.removeEdge(onlyothergraph.findEdge(onlyothergraph.getNodeFromSerial(i_resser),onlyothergraph.getNodeFromSerial(j_resser)));
+			} else {
+				commongraph.removeEdge(commongraph.findEdge(commongraph.getNodeFromSerial(i_resser),commongraph.getNodeFromSerial(j_resser)));
+			}
+		}
+
+		HashMap<String,RIGraph> result = new HashMap<String,RIGraph>();
+		result.put("common", commongraph);
+		result.put("onlythis", onlythisgraph);
+		result.put("onlyother",onlyothergraph);
+		return result;
+	}
+	
+	/**
+	 * Returns a new RIGraph copy (deep) of this one
+	 * @return
+	 */
+	public RIGraph copy() {
+		RIGraph newGraph = new RIGraph();
+		newGraph.setPdbCode(pdbCode);
+		newGraph.setPdbChainCode(pdbChainCode);
+		newGraph.setChainCode(chainCode);
+		newGraph.setModel(model);
+		newGraph.setContactType(contactType);
+		newGraph.setCutoff(distCutoff);
+		newGraph.setSequence(sequence);
+		
+		// copying nodes and serials2nodes
+		TreeMap<Integer,RIGNode> newSerials2nodes = new TreeMap<Integer,RIGNode>();
+		for (RIGNode node:this.getVertices()) {
+			RIGNode newNode = node.copy();
+			newGraph.addVertex(newNode);
+			newSerials2nodes.put(newNode.getResidueSerial(),newNode);
+		}
+		newGraph.setSerials2NodesMap(newSerials2nodes);
+		
+		// copying edges
+		for (RIGEdge edge:this.getEdges()) {
+			Pair<RIGNode> pair = this.getEndpoints(edge);
+			int i_resser = pair.getFirst().getResidueSerial();
+			int j_resser = pair.getSecond().getResidueSerial();
+			// EdgeType enum should copy correctly because enums are treated as ints in copying (always deep copied)
+			newGraph.addEdge(edge.copy(), newGraph.getNodeFromSerial(i_resser), newGraph.getNodeFromSerial(j_resser), this.getEdgeType(edge));
+		}
+		
+		// copying the SecondaryStructure object by retrieving all references from the new nodes
+		SecondaryStructure secStruct = new SecondaryStructure();
+		for (RIGNode node:newGraph.getVertices()) {
+			SecStrucElement sselem = node.getSecStrucElement();
+			if (sselem!=null && !secStruct.contains(sselem)) {
+				secStruct.add(sselem);
+			}
+		}
+		newGraph.setSecondaryStructure(secStruct);		
+		
+		return newGraph;
 	}
 }

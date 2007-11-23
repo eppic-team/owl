@@ -50,7 +50,8 @@ public class RIGNode {
 	 * @return
 	 */
 	public RIGNode copy() {
-		RIGNode copy = new RIGNode(this.residueSerial, this.residueType, this.sselem.copy());
+		SecStrucElement newsselem = this.sselem==null?null:this.sselem.copy();
+		RIGNode copy = new RIGNode(this.residueSerial, this.residueType, newsselem);
 		return copy;
 	}
 	

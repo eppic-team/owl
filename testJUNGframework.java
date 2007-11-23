@@ -76,16 +76,6 @@ public class testJUNGframework {
 		System.out.println("TEST eval prediction");
 		PredEval pev = graph.evaluatePrediction(graph2);
 		pev.print();
-
-		
-		// TEST of range restrict methods
-		System.out.println();
-		System.out.println("TEST restrict methods");
-		System.out.println("num contacts full range: "+graph.getEdgeCount());
-		graph.restrictContactsToMaxRange(10);
-		System.out.println("num contacts max range 10: "+graph.getEdgeCount());
-		
-		
 		
 		// TEST of isDirected()
 		System.out.println("TEST isDirected");
@@ -119,8 +109,8 @@ public class testJUNGframework {
 			System.out.println("degree for node "+serial+": "+graph2.getNeighborCount(node)+", indegree: "+graph2.getPredecessorCount(node)+", outdegree: "+graph2.getSuccessorCount(node));
 		}
 
-		// TEST adding and getting undirected edges
-		System.out.println("TEST adding and getting undirected edges: ");
+		// TEST adding and getting directed/undirected edges
+		System.out.println("TEST adding and getting directed/undirected edges: ");
 		RIGraph g = new RIGraph("ABCD");
 		EdgeType edgeType = EdgeType.UNDIRECTED;
 		RIGNode n1 = g.getNodeFromSerial(1);
@@ -136,6 +126,21 @@ public class testJUNGframework {
 		System.out.println("vertex count: "+g.getVertexCount());
 		System.out.println("edge count: "+g.getEdgeCount());
 		System.out.println("edge w "+ g.findEdge(n3, n1).getAtomWeight());
+		
+		// TEST copying of RIGraph objects and restrictRange methods
+		System.out.println("TEST copying of RIGraph objects");
+		RIGraph g1 = new PdbasePdb("1bxy","A").get_graph("Ca", 8);
+		RIGraph g2 = new PdbasePdb("1sha","A").get_graph("Ca", 8);
+		System.out.println("g1: "+g1.getPdbCode()+" nodes: "+g1.getVertexCount()+" edges: "+g1.getEdgeCount());
+		System.out.println("g2: "+g2.getPdbCode()+" nodes: "+g2.getVertexCount()+" edges: "+g2.getEdgeCount());
+		RIGraph newgraph = g1.copy();
+		System.out.println("new g: "+newgraph.getPdbCode()+" nodes: "+newgraph.getVertexCount()+" edges: "+newgraph.getEdgeCount());
+		newgraph = g2;
+		System.out.println("new g reassigned to g2: "+newgraph.getPdbCode()+" nodes: "+newgraph.getVertexCount()+" edges: "+newgraph.getEdgeCount());
+		newgraph.restrictContactsToMaxRange(10);
+		System.out.println("new g reassigned to g2, max range 10: "+newgraph.getPdbCode()+" nodes: "+newgraph.getVertexCount()+" edges: "+newgraph.getEdgeCount());
+		System.out.println("g1: "+g1.getPdbCode()+" nodes: "+g1.getVertexCount()+" edges: "+g1.getEdgeCount());
+		
 	}
 	
 

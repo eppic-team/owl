@@ -27,14 +27,14 @@ public class compareCMs {
 		Pdb pdb2 = new PdbasePdb(pdbcode2,chaincode2);
 
 		System.out.println("getting graphs");
-		Graph graph1 = pdb1.get_graph("ALL", 4.2);
-		Graph graph2 = pdb2.get_graph("ALL", 4.2);
+		RIGraph graph1 = pdb1.get_graph("ALL", 4.2);
+		RIGraph graph2 = pdb2.get_graph("ALL", 4.2);
 
-		HashMap<String,Graph> comparison = graph1.compare(graph2);
+		HashMap<String,RIGraph> comparison = graph1.compare(graph2);
 		
-		Graph onlyIn1 = comparison.get("onlythis");
-		Graph onlyIn2 = comparison.get("onlyother");
-		Graph common = comparison.get("common");
+		RIGraph onlyIn1 = comparison.get("onlythis");
+		RIGraph onlyIn2 = comparison.get("onlyother");
+		RIGraph common = comparison.get("common");
 		
 		System.out.println("writing output files "+onlyIn1File+", "+onlyIn2File+", "+commonFile);
 		onlyIn1.write_graph_to_file(onlyIn1File);

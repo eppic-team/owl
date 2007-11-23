@@ -11,10 +11,10 @@ import edu.uci.ics.jung.graph.SparseGraph;
  * classes are RIGraph and AIGraph
  * 
  * TODO we implement SimpleGraph intending to mark the graph as not 
- * 		accepting parallel/loop nodes but that doesn't work:
+ * 		accepting parallel/loop edges but that doesn't work:
  * 		SimpleGraph is simply a marker interface, we would have to 
  * 		implement ourselves a SparseGraph that doesn't accept 
- * 		parallel/loop nodes
+ * 		parallel/loop edges
  *
  * @param <V>
  * @param <E>
@@ -180,4 +180,13 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 		minSeqSep = range;
 	}
 	
+	/**
+	 * Removes all edges from this ProtStructGraph
+	 *
+	 */
+	public void removeAllEdges() {
+		for (E edge:this.getEdges()){
+			this.removeEdge(edge);
+		}
+	}
 }

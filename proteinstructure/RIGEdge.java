@@ -53,4 +53,8 @@ public class RIGEdge {
 		return "E";
 	}
 	
+	public RIGEdge copy() {
+		return new RIGEdge(this.weight,this.distance,this.atomWeight);
+	}
+	
 }

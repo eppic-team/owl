@@ -88,4 +88,13 @@ public class SecondaryStructure {
 	public int getNumElements() {
 		return this.secStructElements.size();
 	}
+	
+	/**
+	 * Returns true if the given SecStrucElement is already in this SecondaryStructure object 
+	 * @param sselem
+	 * @return
+	 */
+	public boolean contains(SecStrucElement sselem) {
+		return secStructElements.contains(sselem);
+	}
 }
