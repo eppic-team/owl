@@ -1,11 +1,16 @@
 package proteinstructure;
 
 import java.io.IOException;
+import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.TreeMap;
+import java.util.TreeSet;
+
+import edu.uci.ics.jung.graph.util.Pair;
 
 import sadp.ContactMap;
-import sadp.IOUtil;
+import sadp.ContactMapConstructorError;
 import sadp.SADP;
 
 /**
@@ -20,10 +25,10 @@ import sadp.SADP;
  * <li>The number of <b>nodes</b> is the same in both output graphs.</li>
  * <li>The number of <b>edges</b> of any output graph corresponds to the number 
  *  edges in the respective input graph.</li>
-  * <li>Let i,j in V1, i &lt j, and k,l in V2, k &lt l. If (i,j) in E1 and (k,l) in E2 
-  *  and (i,l) in M and (j,k) in M then w(i',j')=w(k',l')=w(i,j)+w(k,l) where 
-  *  i',j',k',l' denote the new indices of the original nodes in the output 
-  *  graphs.</li>
+ * <li>Let i,j in V1, i &lt j, and k,l in V2, k &lt l. If (i,j) in E1 and (k,l) in E2 
+ *  and (i,l) in M and (j,k) in M then w(i',j')=w(k',l')=w(i,j)+w(k,l) where 
+ *  i',j',k',l' denote the new indices of the original nodes in the output 
+ *  graphs.</li>
  * </ul>
  * @author Lars Petzold
  *
@@ -31,174 +36,185 @@ import sadp.SADP;
 
 public class PairwiseAlignmentGraphConverter {
 
-    private Graph   alignedG1          = null;
-    private Graph   alignedG2          = null;
-    private EdgeSet commonEdges        = new EdgeSet();
-    private boolean isCommonEdgeFilled = false;
-    
-    /**
-     * Constructs two aligned graphs based on the given matching pointed to by
-     * the passed iterator. This constructor requires the graphs to hold 
-     * sequence information.
-     * @param it  iterator pointing to a matching
-     * @param g1  first graph
-     * @param g2  second graph
-     * @param fi  indicates the index of the first node in the matching (note:
-     *             the first node does not necessarily need to be referenced in
-     *             the matching. Do not confuse this with the value of the lowest
-     *             node index in the matching which could be greater, though
-     *             never less!)
-     */
-    public PairwiseAlignmentGraphConverter( Iterator<Edge> it, Graph g1, Graph g2, int fi )
-    throws AlignmentConstructionError {
-	this( new PairwiseAlignmentConverter(it,g1.getSequence(),g2.getSequence(),"1","2",fi).getAlignment(), "1", "2", g1, g2 );
-    }
-    
-    /**
-     * 
-     * @param a
-     * @param tag1
-     * @param tag2
-     * @param g1
-     * @param g2
-      */
-    public PairwiseAlignmentGraphConverter( Alignment a, String tag1, String tag2, Graph g1, Graph g2 ) {
-	alignedG1 = convertGraph(a,tag1,tag2,g1,g2);
-	isCommonEdgeFilled = true;
-	alignedG2 = convertGraph(a,tag2,tag1,g2,g1);
-    }
-    
-    /**
-     * Creates aligned graph for g1 given g2.
-     * 
-     * @param a     alignment between the two graphs
-     * @param tag1  tag-name for g1 in the alignment
-     * @param tag2  tag-name for g2 in the alignment
-     * @param g1    graph to be converted
-     * @param g2    graph g1 is aligned to
-     */
-    private Graph convertGraph( Alignment a, String tag1, String tag2, Graph g1, Graph g2 ) {
-	TreeMap<Integer,String> nodes    = new TreeMap<Integer, String>();
-	EdgeSet                 contacts = new EdgeSet();
-	String                  sequence = a.getAlignedSequence(tag1);
-	
-	Iterator<Edge> it = g1.getContactIterator();
-	Edge oE1=new Edge(0,0); // holds 'o'riginal 'E'dge in g1
-	int i1=0,j1=0; // positions in the gapped sequence for tag1
-	int p2=0,q2=0; // positions in the ungapped sequence for tag2
-	
-	// make the contacts
-	while( it.hasNext() ) {
-	    oE1 = it.next();
-	    i1  = a.seq2al(tag1,oE1.i); 
-	    j1  = a.seq2al(tag1,oE1.j);
-	    p2  = a.al2seq(tag2,i1);
-	    q2  = a.al2seq(tag2,j1);
-	    
-	    // 'm'apped 'E'dge, +1 as the node numbering in the graph 
-	    // corresponds to the one found in the pdb file which usually 
-	    // starts with 1
-	    Edge mE1 = new Edge(i1+1,j1+1);
-	    
-	    // add contact with the contact-anchors being mapped to the aligned sequence
-	    contacts.add(mE1);
-	    
-	    if( !(p2 == -1 || q2 == -1) ) { 
-		// 'o'riginal 'E'dge in g'2' 
-		Edge oE2 = new Edge(p2,q2);
+	private RIGraph   alignedG1          = null;
+	private RIGraph   alignedG2          = null;
+	private HashSet<Pair<Integer>> commonEdges        = new HashSet<Pair<Integer>>();
+	private boolean isCommonEdgeFilled = false;
+
+	/**
+	 * Constructs two aligned graphs based on the given matching pointed to by
+	 * the passed iterator. This constructor requires the graphs to hold 
+	 * sequence information.
+	 * @param it  iterator pointing to a matching
+	 * @param g1  first graph
+	 * @param g2  second graph
+	 * @param fi  indicates the index of the first node in the matching (note:
+	 *             the first node does not necessarily need to be referenced in
+	 *             the matching. Do not confuse this with the value of the lowest
+	 *             node index in the matching which could be greater, though
+	 *             never less!)
+	 */
+	public PairwiseAlignmentGraphConverter( Iterator<Pair<Integer>> it, RIGraph g1, RIGraph g2, int fi )
+	throws AlignmentConstructionError {
+		this( new PairwiseAlignmentConverter(it,g1.getSequence(),g2.getSequence(),"1","2",fi).getAlignment(), "1", "2", g1, g2 );
+	}
+
+	/**
+	 * 
+	 * @param a
+	 * @param tag1
+	 * @param tag2
+	 * @param g1
+	 * @param g2
+	 */
+	public PairwiseAlignmentGraphConverter( Alignment a, String tag1, String tag2, RIGraph g1, RIGraph g2 ) {
+		alignedG1 = convertGraph(a,tag1,tag2,g1,g2);
+		isCommonEdgeFilled = true;
+		alignedG2 = convertGraph(a,tag2,tag1,g2,g1);
+	}
+
+	/**
+	 * Creates aligned graph for g1 given g2.
+	 * 
+	 * @param a     alignment between the two graphs
+	 * @param tag1  tag-name for g1 in the alignment
+	 * @param tag2  tag-name for g2 in the alignment
+	 * @param g1    graph to be converted
+	 * @param g2    graph g1 is aligned to
+	 */
+	private RIGraph convertGraph( Alignment a, String tag1, String tag2, RIGraph g1, RIGraph g2 ) {
+		String                  sequence = a.getAlignedSequence(tag1);
+
+		RIGraph alignedGraph = new RIGraph();
+		alignedGraph.setPdbCode(g1.getPdbCode());
+		alignedGraph.setPdbChainCode(g1.getPdbChainCode());
+		alignedGraph.setChainCode(g1.getChainCode());
+		alignedGraph.setModel(g1.getModel());
+		alignedGraph.setContactType(g1.getContactType());
+		alignedGraph.setCutoff(g1.getCutoff());
+		alignedGraph.setSequence(sequence);
 		
-		// assign weight to 'mE' in 'contacts'
-		if( g2.hasContact(oE2) ) {
-		    // conserved contacts get the sum of weights of both source contacts
-		    mE1.weight = oE1.weight + oE2.weight;
-		    if( !isCommonEdgeFilled ) {
-			commonEdges.add(mE1);
-		    }
-		} else {
-		    // unconserved contact get the weight of original contact in g1 only
-		    mE1.weight = oE1.weight;
+		TreeMap<Integer,RIGNode> serials2nodes = new TreeMap<Integer,RIGNode>();
+		for (RIGNode node: g1.getVertices()) {
+			// mapped node, +1 as the node numbering in the graph 
+			// corresponds to the one found in the pdb file which  
+			// starts with 1
+			RIGNode alignedNode = new RIGNode(a.seq2al(tag1,node.getResidueSerial()) + 1,node.getResidueType());
+			alignedGraph.addVertex(node);
+			serials2nodes.put(a.seq2al(tag1,node.getResidueSerial())+1,alignedNode);
 		}
-	    } else {
-		mE1.weight = oE1.weight; 
-	    }
-	}
+		alignedGraph.setSerials2NodesMap(serials2nodes);
+		
+		for (RIGEdge edge: g1.getEdges()) { 
+			Pair<RIGNode> pair = g1.getEndpoints(edge);
+			// positions in the gapped sequence for tag1
+			int i1 = a.seq2al(tag1,pair.getFirst().getResidueSerial());
+			int j1 = a.seq2al(tag1,pair.getSecond().getResidueSerial());
+			double weight = edge.getWeight();
 			
-	// make the nodes
-	for( int i=0; i<sequence.length(); ++i ) {
-	    if( sequence.charAt(i) == '-' ) {
-		nodes.put(i+1, AAinfo.getGapCharacterThreeLetter());
-	    } else {
-		nodes.put( i+1, AAinfo.oneletter2threeletter(sequence.substring(i,i+1)) );
-	    }
-	    
-	}
-	
-	return new Graph(contacts, nodes, sequence, g1.getCutoff(), g1.getContactType(), g1.getPdbCode(), g1.getChainCode(), g1.getPdbChainCode(), g1.getModel(), null);
-    }
-    
-    /**
-     * Gets the aligned graph corresponding to the first graph passed to the 
-     * constructor.
-     * @return a graph 
-     */
-    public Graph getFirstGraph() {
-	return alignedG1;
-    }
-    
-    /**
-     * Gets the aligned graph corresponding to the first graph passed to the 
-     * constructor.
-     * @return a graph 
-     */
-    public Graph getSecondGraph() {
-	return alignedG2;
-    }
-    
-    /**
-     * Gets common edge in the resulting graphs.
-     * @return an edge-set containing common edge only
-     * */
-    public EdgeSet getCommonEdges() {
-	return commonEdges;
-    }
-    
-    /**
-     * @param args
-     */
-    public static void main(String[] args) {
-	
-	ContactMap x = IOUtil.read(args[0]);
-	ContactMap y = IOUtil.read(args[1]);
-	
-	SADP sadp = new SADP(x,y);
-	sadp.run();
-	
-	EdgeSet matching = sadp.getMatching();
-	Graph g1 = new Graph(x,null,6.0,AAinfo.getAllContactTypes().iterator().next(),null,null,null,1,null);
-	Graph g2 = new Graph(y,null,6.0,AAinfo.getAllContactTypes().iterator().next(),null,null,null,1,null);
+			// positions in the ungapped sequence for tag2
+			int p2  = a.al2seq(tag2,i1);
+			int q2  = a.al2seq(tag2,j1);
+			RIGEdge edge2;
+			if( !(p2 == -1 || q2 == -1) ) { 
+				if ((edge2 = g2.findEdge(g2.getNodeFromSerial(p2),g2.getNodeFromSerial(q2)))!=null) {
+					// conserved contacts get the sum of weights of both source contacts
+					weight += edge2.getWeight();
+				}
+			}
+			if( !isCommonEdgeFilled ) {
+				commonEdges.add(new Pair<Integer>(i1+1,j1+1));
+			}
+			// mapped Edge, +1 as the node numbering in the graph 
+			// corresponds to the one found in the pdb file which 
+			// starts with 1
+			alignedGraph.addEdge(new RIGEdge(weight), alignedGraph.getNodeFromSerial(i1+1), alignedGraph.getNodeFromSerial(j1+1), alignedGraph.getEdgeType(edge));
+		}
 
-	PairwiseAlignmentGraphConverter pac = null;
-	
-	try {
-	    pac = new PairwiseAlignmentGraphConverter(matching.iterator(),g1,g2,0);
-	} catch(Exception e) {
-	    System.err.println(e.getMessage());
-	    System.exit(-1);
-	}
-	
-	try {
-	    pac.getFirstGraph().write_graph_to_file(args[0]+".cm-aglappe");	    
-	} catch (IOException e) {
-	    System.out.println("Error: Writing aligned graph g1 to file failed!");
+		return alignedGraph;
 	}
 
-	try {
-	    pac.getSecondGraph().write_graph_to_file(args[1]+".cm-aglappe");	    
-	} catch (IOException e) {
-	    System.out.println("Error: Writing aligned graph g1 to file failed!");
+	/**
+	 * Gets the aligned graph corresponding to the first graph passed to the 
+	 * constructor.
+	 * @return a graph 
+	 */
+	public RIGraph getFirstGraph() {
+		return alignedG1;
 	}
-	
-	//System.out.println("Common edges: "+pac.getCommonEdges().toString());
-    }
+
+	/**
+	 * Gets the aligned graph corresponding to the first graph passed to the 
+	 * constructor.
+	 * @return a graph 
+	 */
+	public RIGraph getSecondGraph() {
+		return alignedG2;
+	}
+
+	/**
+	 * Gets common edge in the resulting graphs.
+	 * @return an edge-set containing common edge only
+	 * */
+	public HashSet<Pair<Integer>> getCommonEdges() {
+		return commonEdges;
+	}
+
+	/**
+	 * @param args
+	 * @throws PdbChainCodeNotFoundError 
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbaseInconsistencyError 
+	 * @throws ContactMapConstructorError 
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError, ContactMapConstructorError, IOException {
+
+		String pdbcode1="1bxy";
+		String chaincode1="A";
+		String pdbcode2="1sha";
+		String chaincode2="A";
+
+		Pdb pdb1 = new PdbasePdb(pdbcode1,chaincode1); 
+		Pdb pdb2 = new PdbasePdb(pdbcode2,chaincode2);
+
+		RIGraph g1 = pdb1.get_graph("ALL", 4.2);
+		RIGraph g2 = pdb2.get_graph("ALL", 4.2);
+
+		g1.writeToSADPFile("1bxy.sadp");
+		g2.writeToSADPFile("1sha.sadp");
+		
+		ContactMap x = new ContactMap(g1);
+		ContactMap y = new ContactMap(g2);
+		
+		SADP sadp = new SADP(x,y);
+		sadp.run();
+
+		TreeSet<Pair<Integer>> matching = sadp.getMatching();
+
+		PairwiseAlignmentGraphConverter pac = null;
+
+		try {
+			pac = new PairwiseAlignmentGraphConverter(matching.iterator(),g1,g2,0);
+		} catch(Exception e) {
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
+
+		try {
+			pac.getFirstGraph().write_graph_to_file(pdbcode1+".cm-aglappe");	    
+		} catch (IOException e) {
+			System.out.println("Error: Writing aligned graph g1 to file failed!");
+		}
+
+		try {
+			pac.getSecondGraph().write_graph_to_file(pdbcode2+".cm-aglappe");	    
+		} catch (IOException e) {
+			System.out.println("Error: Writing aligned graph g1 to file failed!");
+		}
+
+		//System.out.println("Common edges: "+pac.getCommonEdges().toString());
+	}
 
 }

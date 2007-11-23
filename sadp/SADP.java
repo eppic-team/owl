@@ -3,14 +3,16 @@ package sadp;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.logging.Logger;
+
+import edu.uci.ics.jung.graph.util.Pair;
 
 import actionTools.Retriever;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
-import proteinstructure.Edge;
-import proteinstructure.EdgeSet;
+import proteinstructure.IntPairComparator;
 import proteinstructure.PairwiseAlignmentConverter;
 
 
@@ -642,7 +644,7 @@ public class SADP {
 	    cm[1] = Y;
 	}
 	
-	EdgeSet matching = getMatching();
+	TreeSet<Pair<Integer>> matching = getMatching();
 	
 	PairwiseAlignmentConverter pac = null;
 	
@@ -669,17 +671,17 @@ public class SADP {
      * @return edge set containing all noncrossing matching edges
      * @see #getMatchingAsEdgeList()
      */
-    public EdgeSet getMatching() {
+    public TreeSet<Pair<Integer>> getMatching() {
 
-	EdgeSet matching = new EdgeSet();
+	TreeSet<Pair<Integer>> matching = new TreeSet<Pair<Integer>>(new IntPairComparator());
 	
 	for (int i = 0; i < nNodes1; i++) {
 	    for (int j = 0; j < nNodes2; j++) { // TODO: as the edge are non-crossing we do not need to start from zero ...
 		if (M[i][j] > 0) {
 		    if ( isInputOrderPreserved() ) {
-			matching.add(new Edge(i,j));			
+			matching.add(new Pair<Integer>(i,j));			
 		    } else {
-			matching.add(new Edge(j, i));
+			matching.add(new Pair<Integer>(j, i));
 		    }
 		}
 	    }
@@ -694,17 +696,17 @@ public class SADP {
      * @return linked list containg all noncrossing matching edges
      * @see #getMatching()  
      */
-    public LinkedList<Edge> getMatchingAsEdgeList() {
+    public LinkedList<Pair<Integer>> getMatchingAsEdgeList() {
 	
-	LinkedList<Edge> matching = new LinkedList<Edge>();
+	LinkedList<Pair<Integer>> matching = new LinkedList<Pair<Integer>>();
 		
 	for (int i = 0; i < nNodes1; i++) {
 	    for (int j = 0; j < nNodes2; j++) {
 		if (M[i][j] > 0) {
 		    if ( isInputOrderPreserved() ) {
-			matching.add(new Edge(i,j));			
+			matching.add(new Pair<Integer>(i,j));			
 		    } else {
-			matching.add(new Edge(j, i));
+			matching.add(new Pair<Integer>(j, i));
 		    }
 		}
 	    }

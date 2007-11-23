@@ -27,7 +27,7 @@ public class Interval implements Comparable {
 		else if (this.beg<other.beg){
 			return -1;
 		}
-		else if (this.beg==other.beg){
+		else {
 			if (this.end>other.end){
 				return 1;
 			}

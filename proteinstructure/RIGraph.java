@@ -689,16 +689,39 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.println("#CHAIN: "+chainCode);
 		Out.println("#CT: "+contactType);
 		Out.println("#CUTOFF: "+distCutoff);
+		
+		// we use a temp TreeMap to be able to order the output
+		TreeMap<Pair<Integer>,Double> pairs = new TreeMap<Pair<Integer>,Double>(new IntPairComparator());
 		for (RIGEdge cont:getEdges()){
 			Pair<RIGNode> pair = getEndpoints(cont);
 			int i_resser=pair.getFirst().getResidueSerial();
 			int j_resser=pair.getSecond().getResidueSerial();
 			//BEWARE!! here we write weights while in writeToDb we write atomWeights (consistent with what we do in FileRIGraph) TODO do we want this behaviour?
 			double weight=cont.getWeight();
-			Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t%6.3f\n",weight);
+			pairs.put(new Pair<Integer>(i_resser,j_resser),weight);
+			
+		}
+		for (Pair<Integer> pair:pairs.keySet()) { 
+			Out.printf(Locale.US,pair.getFirst()+"\t"+pair.getSecond()+"\t%6.3f\n",pairs.get(pair));
 		}
 		Out.close();		
 	}
+
+	
+	public void writeToSADPFile (String outfile) throws IOException {
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
+		Out.println(this.getFullLength());
+		for (RIGEdge cont:getEdges()){
+			Pair<RIGNode> pair = getEndpoints(cont);
+			int i_resser=pair.getFirst().getResidueSerial() - 1;
+			int j_resser=pair.getSecond().getResidueSerial() - 1 ;
+			//BEWARE!! here we write weights while in writeToDb we write atomWeights (consistent with what we do in FileRIGraph) TODO do we want this behaviour?
+			double weight=cont.getWeight();
+			Out.printf(Locale.US,i_resser+"\t"+j_resser+"\t%1.0f\t1\n",weight);
+		}
+		Out.close();		
+	}
+
 	
 	/**
 	 * Write graph to given outfile in network(Ioannis) format
