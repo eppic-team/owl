@@ -161,33 +161,33 @@ public class Graph {
 	 */
 	public Graph( ContactMap cm, String sequence, double cutoff, String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
 	    
-	    EdgeSet contacts = new EdgeSet();
-	    int[][] adjList  = cm.getAdjacencyList();
-	    
-	    // construct the contacts
-	    for( int i=0; i<adjList.length; ++i ) {
-		for( int j=0; j<adjList[i].length; ++j ) {
-		    // store contacts only once for i < j
-		    if( i<adjList[i][j] ) {
-			contacts.add(new Edge(i,adjList[i][j]));
-		    }
+		EdgeSet contacts = new EdgeSet();
+		int[][] adjList  = cm.getAdjacencyList();
+
+		// construct the contacts
+		for( int i=0; i<adjList.length; ++i ) {
+			for( int j=0; j<adjList[i].length; ++j ) {
+				// store contacts only once for i < j
+				if( i<adjList[i][j] ) {
+					contacts.add(new Edge(i+1,adjList[i][j]+1));
+				}
+			}
 		}
-	    }
-	    
-	    TreeMap<Integer, String> nodes = new TreeMap<Integer, String>();
-	    
-	    // construct the mapping from node index to 3-lettercode
-	    if( sequence != null ) {
-		for( int i=0; i<sequence.length(); ++i ) {
-		    nodes.put(i,AAinfo.oneletter2threeletter(sequence.substring(i,i)));
+
+		TreeMap<Integer, String> nodes = new TreeMap<Integer, String>();
+
+		// construct the mapping from node index to 3-lettercode
+		if( sequence != null ) {
+			for( int i=0; i<sequence.length(); ++i ) {
+				nodes.put(i+1,AAinfo.oneletter2threeletter(sequence.substring(i,i)));
+			}
+		} else {
+			// as there is no sequence information available we assign the
+			// non-defined unknown amino acid 'Xaa' to every residue 
+			for( int i=0; i<cm.countNodes(); ++i ) {
+				nodes.put(i+1, "Xaa");
+			}		
 		}
-	    } else {
-		// as there is no sequence information available we assign the
-		// non-defined unknown amino acid 'Xaa' to every residue 
-		for( int i=0; i<cm.countNodes(); ++i ) {
-		    nodes.put(i, "Xaa");
-		}		
-	    }
 	    
 	    // construct dummy sequence if necessary
 	    if( sequence  == null ) {
