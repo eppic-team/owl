@@ -141,21 +141,23 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
-	 * Returns all common neighborhood sizes for each cell of the contact map (contact or non-contact) 
+	 * Returns all common neighborhood sizes (if they are >0) for each cell of the contact map (contact or non-contact) 
 	 * @return
 	 */
-	public HashMap<Pair<RIGNode>,Integer> getAllCommonNbhSizes() {
-		HashMap<Pair<RIGNode>,Integer> comNbhSizes = new HashMap<Pair<RIGNode>, Integer>();
+	public HashMap<Pair<Integer>,Integer> getAllCommonNbhSizes() {
+		HashMap<Pair<Integer>,Integer> comNbhSizes = new HashMap<Pair<Integer>, Integer>();
 		boolean directed = this.isDirected();
 		for (RIGNode n1:this.getVertices()) {
 			for (RIGNode n2:this.getVertices()) {
 				if (directed) {
 					if (n1!=n2) {
-						comNbhSizes.put(new Pair<RIGNode>(n1,n2),getCommonNbhood(n1, n2).size());					
+						int size = getCommonNbhood(n1, n2).size();
+						if (size>0) comNbhSizes.put(new Pair<Integer>(n1.getResidueSerial(),n2.getResidueSerial()),size);					
 					}					
 				} else {
 					if (n1.getResidueSerial()<n2.getResidueSerial()) {
-						comNbhSizes.put(new Pair<RIGNode>(n1,n2),getCommonNbhood(n1, n2).size());					
+						int size = getCommonNbhood(n1, n2).size();
+						if (size>0) comNbhSizes.put(new Pair<Integer>(n1.getResidueSerial(),n2.getResidueSerial()),size);					
 					}
 				}
 			}

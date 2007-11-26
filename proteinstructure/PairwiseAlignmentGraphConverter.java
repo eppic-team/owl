@@ -94,17 +94,27 @@ public class PairwiseAlignmentGraphConverter {
 		alignedGraph.setCutoff(g1.getCutoff());
 		alignedGraph.setSequence(sequence);
 		
+		// adding nodes
 		TreeMap<Integer,RIGNode> serials2nodes = new TreeMap<Integer,RIGNode>();
 		for (RIGNode node: g1.getVertices()) {
 			// mapped node, +1 as the node numbering in the graph 
 			// corresponds to the one found in the pdb file which  
 			// starts with 1
 			RIGNode alignedNode = new RIGNode(a.seq2al(tag1,node.getResidueSerial()) + 1,node.getResidueType());
-			alignedGraph.addVertex(node);
+			alignedGraph.addVertex(alignedNode);
 			serials2nodes.put(a.seq2al(tag1,node.getResidueSerial())+1,alignedNode);
+		}
+		// and then gap nodes
+		for (int resser=1;resser<sequence.length();resser++) {
+			if (!serials2nodes.containsKey(resser)) {
+				RIGNode alignedNode = new RIGNode(resser,AAinfo.getGapCharacterThreeLetter());
+				alignedGraph.addVertex(alignedNode);
+				serials2nodes.put(resser, alignedNode);
+			}
 		}
 		alignedGraph.setSerials2NodesMap(serials2nodes);
 		
+		// now edges
 		for (RIGEdge edge: g1.getEdges()) { 
 			Pair<RIGNode> pair = g1.getEndpoints(edge);
 			// positions in the gapped sequence for tag1
@@ -128,7 +138,7 @@ public class PairwiseAlignmentGraphConverter {
 			// mapped Edge, +1 as the node numbering in the graph 
 			// corresponds to the one found in the pdb file which 
 			// starts with 1
-			alignedGraph.addEdge(new RIGEdge(weight), alignedGraph.getNodeFromSerial(i1+1), alignedGraph.getNodeFromSerial(j1+1), alignedGraph.getEdgeType(edge));
+			alignedGraph.addEdge(new RIGEdge(weight), alignedGraph.getNodeFromSerial(i1+1), alignedGraph.getNodeFromSerial(j1+1), g1.getEdgeType(edge));
 		}
 
 		return alignedGraph;
