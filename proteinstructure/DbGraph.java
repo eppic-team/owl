@@ -269,14 +269,14 @@ public class DbGraph extends Graph {
 				ct=rsst.getString(4);
 				if (ct.equals("BB+SC+BB/SC")) ct="ALL";
 				if ((expBB == -1) && (!ct.equals("Cb"))) ct=ct+"_CAGLY";
-				directed = (rsst.getInt(4)==1);
+				directed = (rsst.getInt(5)==1);
 			}
+			rsst.close();
+			stmt.close();
 			if (check!=1){
 				//System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
 				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db"+conn.getDbname());
 			}
-			rsst.close();
-			stmt.close();
 			sql="SELECT accession_code, chain_pdb_code, pchain_code, model_serial FROM "+dbname+".chain_graph WHERE graph_id="+pgraphid;
 			stmt = conn.createStatement();
 			rsst = stmt.executeQuery(sql);
