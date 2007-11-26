@@ -53,23 +53,27 @@ public class testJUNGframework {
 		
 		// TEST of neighbourhood methods
 		System.out.println("TEST neighbor methods");
-		HashMap<Pair<RIGNode>,Integer> cmNbhSizes = graph.getAllCommonNbhSizes();
-		int i = 109;
-		for (int j=170;j<=180;j++) {
-			RIGNbhood nbh = graph.getNbhood(graph.getNodeFromSerial(j));
-			System.out.println("nbhood of "+j+": "+ nbh);
-			for (RIGNode nb:nbh.values()) {
-				System.out.print(" "+nb);
+		HashMap<Pair<Integer>,Integer> cmNbhSizes = graph.getAllCommonNbhSizes();
+
+		for (Pair<Integer> pair:cmNbhSizes.keySet()) {
+			//for (int j=170;j<=180;j++) {
+			if (pair.getFirst()==109 && pair.getSecond()>=170 && pair.getSecond()<=180) {
+				RIGNbhood nbh = graph.getNbhood(graph.getNodeFromSerial(pair.getSecond()));
+				System.out.println("nbhood of "+pair.getSecond()+": "+ nbh);
+				for (RIGNode nb:nbh.values()) {
+					System.out.print(" "+nb);
+				}
+				System.out.println();
+
+				int size = cmNbhSizes.get(pair);
+				System.out.println("common neighbs for edge "+pair.getFirst()+", "+pair.getSecond()+": "+size);
+				RIGCommonNbhood cmNbh = graph.getCommonNbhood(graph.getNodeFromSerial(pair.getFirst()), graph.getNodeFromSerial(pair.getSecond()));
+				for (RIGNode nb:cmNbh.values()){
+					System.out.print(" "+nb);
+				}
+				System.out.println();
+				System.out.println(cmNbh);
 			}
-			System.out.println();
-			int size = cmNbhSizes.get(new Pair<RIGNode>(graph.getNodeFromSerial(i),graph.getNodeFromSerial(j)));
-			System.out.println("common neighbs for edge "+i+", "+j+": "+size);
-			RIGCommonNbhood cmNbh = graph.getCommonNbhood(graph.getNodeFromSerial(i), graph.getNodeFromSerial(j));
-			for (RIGNode nb:cmNbh.values()){
-				System.out.print(" "+nb);
-			}
-			System.out.println();
-			System.out.println(cmNbh);
 		}
 
 		// TEST of evaluate prediction
