@@ -105,7 +105,7 @@ public class PairwiseAlignmentGraphConverter {
 			serials2nodes.put(a.seq2al(tag1,node.getResidueSerial())+1,alignedNode);
 		}
 		// and then gap nodes
-		for (int resser=1;resser<sequence.length();resser++) {
+		for (int resser=1;resser<=sequence.length();resser++) {
 			if (!serials2nodes.containsKey(resser)) {
 				RIGNode alignedNode = new RIGNode(resser,AAinfo.getGapCharacterThreeLetter());
 				alignedGraph.addVertex(alignedNode);
