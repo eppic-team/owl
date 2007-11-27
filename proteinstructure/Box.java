@@ -34,7 +34,10 @@ public class Box {
 						distMatrix[i_serial][j_serial] = (float)i_pointsInBox.get(i_serial).distance(j_pointsInBox.get(j_serial));
 					} 
 				} else {
-					if (j_serial!=i_serial) { // we need to check this because it can happen when the 2 contact types (i/j) have overlapping atoms, e.g. ALL/BB
+					// We need to check this because it can happen when the 2 contact types (i/j) have overlapping atoms, e.g. ALL/BB
+					// It is not strictly necessary, because distance in case i=j would be 0 (atom to itself). It's just to make sure that 
+					// there wouldn't be rounding problems in comparing to 0.0 in get_graph in Pdb
+					if (j_serial!=i_serial) { 
 						distMatrix[i_serial][j_serial] = (float)i_pointsInBox.get(i_serial).distance(j_pointsInBox.get(j_serial));
 					}
 				}
