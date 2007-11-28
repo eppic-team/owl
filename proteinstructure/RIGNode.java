@@ -9,24 +9,28 @@ public class RIGNode {
 	private int residueSerial;
 	private String residueType;
 	private SecStrucElement sselem;
+	private boolean observed;
 	
 	
 	public RIGNode(int residueSerial, String residueType, SecStrucElement sselem) {
 		this.residueSerial = residueSerial;
 		this.residueType = residueType;
 		this.sselem = sselem;
+		this.observed = true;
 	}
 	
 	public RIGNode(int residueSerial, String residueType) {
 		this.residueSerial = residueSerial;
 		this.residueType = residueType;
 		this.sselem = null;
+		this.observed = true;
 	}
 	
 	public RIGNode(int residueSerial) {
 		this.residueSerial = residueSerial;
 		this.residueType = null;
 		this.sselem = null;
+		this.observed = true;
 	}
 
 	public int getResidueSerial() {
@@ -39,6 +43,14 @@ public class RIGNode {
 	
 	public SecStrucElement getSecStrucElement() {
 		return sselem;
+	}
+	
+	public boolean isObserved()	{
+		return observed;
+	}
+	
+	public void setObserved(boolean observed) {
+		this.observed = observed;
 	}
 	
 	public String toString() {

@@ -87,6 +87,18 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
+	 * Gets the number of observed residues for this RIGraph
+	 * @return
+	 */
+	public int getObsLength() {
+		int count=0;
+		for (RIGNode node:this.getVertices()) {
+			if (node.isObserved()) count++;
+		}
+		return count;
+	}
+	
+	/**
 	 * Returns a RIGNbhood that contains the neighbourhood of given RIGNode
 	 * @param node
 	 * @return

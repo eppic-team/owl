@@ -1201,6 +1201,15 @@ public abstract class Pdb {
 	public String getSequence() {
 		return sequence;
 	}
+	
+	/**
+	 * True if this Pdb has the sequence field set to not blank 
+	 * @return
+	 */
+	public boolean hasSequence() {
+		if (sequence==null) return false;
+		return !sequence.equals("");
+	}
 
 	// csa related methods
 

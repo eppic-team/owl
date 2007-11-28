@@ -119,10 +119,6 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 		return fullLength;
 	}
 
-	public int getObsLength() {
-		return this.getVertexCount();
-	}
-	
 	public String getSequence() {
 		return sequence;
 	}
@@ -152,6 +148,18 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 		// this is valid here because for our AIG/RIG graphs either all edges are directed or undirected
 		if (!this.directed_edges.isEmpty()) return true;
 		return false;
+	}
+	
+	/**
+	 * True if this ProtStructGraph has the sequence field set to not blank
+	 * If sequence is not blank, then we are sure that unobserved RIGNodes are 
+	 * also in the RIGraph (NOTE in AIGraph even if sequence known we don't fill 
+	 * the unobserved RIGNodes)
+	 * @return
+	 */
+	public boolean hasSequence() {
+		if (sequence==null) return false;
+		return !sequence.equals("");
 	}
 		
 	/**
