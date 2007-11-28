@@ -220,7 +220,7 @@ public class DbGraph extends Graph {
 				
 		String sql = "SELECT graph_id, pchain_code FROM "+dbname+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND chain_pdb_code "+chainstr+" " +
-					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);

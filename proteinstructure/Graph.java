@@ -161,23 +161,23 @@ public class Graph {
 	 */
 	public Graph( ContactMap cm, String sequence, double cutoff, String ct, String pdbCode, String chainCode, String pdbChainCode, int model, SecondaryStructure secStruct) {
 	    
-		EdgeSet contacts = new EdgeSet();
-		int[][] adjList  = cm.getAdjacencyList();
-
-		// construct the contacts
-		for( int i=0; i<adjList.length; ++i ) {
-			for( int j=0; j<adjList[i].length; ++j ) {
-				// store contacts only once for i < j
-				if( i<adjList[i][j] ) {
+	    EdgeSet contacts = new EdgeSet();
+	    int[][] adjList  = cm.getAdjacencyList();
+	    
+	    // construct the contacts
+	    for( int i=0; i<adjList.length; ++i ) {
+	    	for( int j=0; j<adjList[i].length; ++j ) {
+			    // store contacts only once for i < j
+			    if( i<adjList[i][j] ) {
 					contacts.add(new Edge(i+1,adjList[i][j]+1));
-				}
+			    }
 			}
-		}
-
-		TreeMap<Integer, String> nodes = new TreeMap<Integer, String>();
-
-		// construct the mapping from node index to 3-lettercode
-		if( sequence != null ) {
+	    }
+	    
+	    TreeMap<Integer, String> nodes = new TreeMap<Integer, String>();
+	    
+	    // construct the mapping from node index to 3-lettercode
+	    if( sequence != null ) {
 			for( int i=0; i<sequence.length(); ++i ) {
 				nodes.put(i+1,AAinfo.oneletter2threeletter(sequence.substring(i,i)));
 			}
@@ -187,15 +187,15 @@ public class Graph {
 			for( int i=0; i<cm.countNodes(); ++i ) {
 				nodes.put(i+1, "Xaa");
 			}		
-		}
+	    }
 	    
 	    // construct dummy sequence if necessary
 	    if( sequence  == null ) {
-		StringBuffer sb = new StringBuffer(cm.countNodes());
-		for( int i=0; i<sb.capacity(); ++i ) {
-		    sb.append('X');
-		}
-		sequence = sb.toString();
+			StringBuffer sb = new StringBuffer(cm.countNodes());
+			for( int i=0; i<sb.capacity(); ++i ) {
+				sb.append('X');
+			}
+			sequence = sb.toString();
 	    }
 	    
 	    this.contacts=contacts;
@@ -270,7 +270,7 @@ public class Graph {
 		int graphid=0;
 		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
-					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -283,7 +283,7 @@ public class Graph {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
 			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
@@ -470,7 +470,7 @@ public class Graph {
 		int graphid=0;
 		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
-					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND model_serial = "+model+" AND dist = "+cutoff+" AND expBB = "+EXPBB+
 					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -483,7 +483,7 @@ public class Graph {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
 			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+cutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
