@@ -31,4 +31,17 @@ public class AIGNode {
 	public int getResidueSerial() {
 		return this.parentResidue.getResidueSerial();
 	}
+	
+	public boolean equals(Object obj) {
+		if (obj instanceof AIGNode) {
+			AIGNode v = (AIGNode) obj;
+			return ((this.parentResidue.equals(v.getParent())) && (this.atomSerial == v.getAtomSerial()) && (this.atomName.equals(v.getAtomName())));
+		} else {
+			return false;
+		}
+	}
+	
+	public AIGNode copy() {
+		return (new AIGNode(atomSerial, atomName, this.parentResidue.copy()));
+	}
 }

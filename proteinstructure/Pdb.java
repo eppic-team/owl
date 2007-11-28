@@ -801,14 +801,35 @@ public abstract class Pdb {
 	 * @param cutoff
 	 * @return
 	 */
-	public RIGraph get_graph(String ct, double cutoff) {
-		AIGraph atomGraph = getAIGraph(ct, cutoff);
-		RIGraph graph = atomGraph.getRIGraph();
+	public RIGraph get_graph(String ct, double cutoff, boolean directed) {
+		//NOTE:To generate forbidden graphs, AIGraph should become directed and
+		//-the check for adding parallel atomic edges if crossed should be removed
+		//-atomic edges in both directions should be added if !crossed
+		//-make sure in getRIGraph for undirected graphs not to double-count atomic edges
+		if (directed && AAinfo.isOverlapping(ct)) {
+			throw new IllegalArgumentException();
+		}
+		
+		String[] cts = ct.split("\\+");		
+		AIGraph atomGraph = getAIGraph(cts[0], cutoff);
+		for(int i=1; i< cts.length; i++) {
+			atomGraph.addGraph(getAIGraph(cts[i], cutoff));
+		}
+		RIGraph graph = atomGraph.getRIGraph(directed);
 		
 		graph.setContactType(ct);
 		graph.setCutoff(cutoff);
 
 		return graph;
+	}
+	
+	public RIGraph get_graph(String ct, double cutoff) {
+		// TODO eventually we should use the ContactType class as parameter
+		boolean crossed = false;
+		if (ct.contains("/")) {
+			crossed = true;
+		}		
+		return get_graph(ct, cutoff, crossed);
 	}
 	
 	/**

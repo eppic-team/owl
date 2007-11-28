@@ -310,15 +310,16 @@ public class AAinfo {
 	 */
 	public static boolean isValidContactType(String ct){
 		Set<String> allCts = getAllContactTypes(); // depends on cts being initialised
-		if (ct.contains("/")){
-			String[] cts = ct.split("/");
-			if (allCts.contains(cts[0]) && allCts.contains(cts[1])) {
-				return true;
-			} else {
-				return false;
+		String[] cts1 = ct.split("\\+");
+		for(int i = 0; i < cts1.length; i++) {
+			String[] cts2 = cts1[i].split("/");
+			for(int j = 0; i < cts2.length; i++) {
+				if (!allCts.contains(cts2[j])) {
+					return false;
+				}
 			}
 		}
-		return allCts.contains(ct);
+		return true;
 	}
 	
 	/**
@@ -327,17 +328,33 @@ public class AAinfo {
 	 * @param ct
 	 * @return
 	 */
-	public static boolean isValidSingleAtomContactType(String ct){
+	// TODO: contact type object
+	public static boolean isValidSingleAtomContactType(String ct, boolean directed){
 		Set<String> singleAtomCts = getSingleAtomContactTypes(); // depends on cts being initialised
-		if (ct.contains("/")){
-			String[] cts = ct.split("/");
-			if (singleAtomCts.contains(cts[0]) && singleAtomCts.contains(cts[1])) {
-				return true;
-			} else {
+		if (ct.contains("+")) {
+			return false;
+		}
+		if (ct.contains("/")) {
+			if (!directed) {
 				return false;
+			} else {
+				String[] cts = ct.split("/");
+				if (singleAtomCts.contains(cts[0]) && singleAtomCts.contains(cts[1])) {
+					return true;
+				} else {
+					return false;
+				}
 			}
 		}
 		return singleAtomCts.contains(ct);
+	}
+	
+	public static boolean isValidSingleAtomContactType(String ct){
+		boolean crossed = false;
+		if (ct.contains("/")) {
+			crossed = true;
+		}		
+		return isValidSingleAtomContactType(ct, crossed);
 	}
 	
 	/**
@@ -346,17 +363,46 @@ public class AAinfo {
 	 * @param ct
 	 * @return
 	 */
-	public static boolean isValidMultiAtomContactType(String ct){
+	public static boolean isValidMultiAtomContactType(String ct, boolean directed){
 		Set<String> multiAtomCts = getMultiAtomContactTypes(); // depends on cts being initialised
-		if (ct.contains("/")){
-			String[] cts = ct.split("/");
-			if (multiAtomCts.contains(cts[0]) && multiAtomCts.contains(cts[1])) {
-				return true;
+		if (ct.contains("+")) {
+			return isValidContactType(ct);
+		}
+		if (ct.contains("/")) {
+			if (!directed) {
+				return isValidContactType(ct);
 			} else {
-				return false;
+				String[] cts = ct.split("/");
+				if (multiAtomCts.contains(cts[0]) && multiAtomCts.contains(cts[1])) {
+					return true;
+				} else {
+					return false;
+				}			
 			}
 		}
 		return multiAtomCts.contains(ct);
+	}
+	
+	public static boolean isValidMultiAtomContactType(String ct){
+		boolean crossed = false;
+		if (ct.contains("/")) {
+			crossed = true;
+		}		
+		return isValidMultiAtomContactType(ct, crossed);
+	}
+
+	public static boolean isOverlapping(String ct){
+		String[] inputCts = ct.split("[+/]");
+		for(int i=0;i<(inputCts.length-1);i++) {
+			for(int j=(i+1);j<inputCts.length;j++) {
+				for(String aa : aas) {
+					for (String atom : cts.get(inputCts[j]).get(aa)) {
+						if (cts.get(inputCts[i]).get(aa).contains(atom)) return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 	
 	/**

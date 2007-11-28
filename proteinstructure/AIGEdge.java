@@ -24,4 +24,7 @@ public class AIGEdge {
 		return this.distance;
 	}
 
+	public AIGEdge copy() {
+		return (new AIGEdge(weight, distance));
+	}
 }

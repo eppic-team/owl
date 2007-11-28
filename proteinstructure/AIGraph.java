@@ -45,11 +45,10 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 	 * TODO eventually we can pass a parameter for other ways of assigning atom contact weights
 	 * @return
 	 */
-	public RIGraph getRIGraph() {
+	public RIGraph getRIGraph(boolean directed) {
 		EdgeType et = EdgeType.UNDIRECTED;
 		
-		// TODO we still use here DIRECTED as default for crossed, eventually this should change by taking another parameter "boolean directed", so crossed could have DIRECTED/UNDIRECTED versions 
-		if (this.isCrossed()) {
+		if (directed) {
 			et = EdgeType.DIRECTED;
 		}
 		RIGraph resGraph = new RIGraph();
@@ -58,6 +57,7 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		resGraph.setPdbChainCode(this.pdbChainCode);
 		resGraph.setModel(this.model);
 		resGraph.setSequence(this.sequence);
+		resGraph.setSecondaryStructure(this.secondaryStructure);
 	
 		TreeMap<Integer,RIGNode> rignodes = new TreeMap<Integer,RIGNode>();
 		for (AIGNode atomNode:this.getVertices()) {
@@ -74,7 +74,8 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		resGraph.setSerials2NodesMap(rignodes);
 		
 		// collapsing atomPairs into resPairs and counting atom contacts to assign atom weights
-		HashMap<Pair<RIGNode>,Integer> pairs2weights = new HashMap<Pair<RIGNode>, Integer>();  
+		HashMap<Pair<RIGNode>,Integer> pairs2weights = new HashMap<Pair<RIGNode>, Integer>();
+		HashMap<Pair<RIGNode>,Double> pairs2distances = new HashMap<Pair<RIGNode>,Double>();
 		for (AIGEdge atomEdge: this.getEdges()){
 			Pair<AIGNode> atomPair = this.getEndpoints(atomEdge);
 			RIGNode v1 = atomPair.getFirst().getParent();
@@ -84,17 +85,28 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 				if (!pairs2weights.containsKey(resPair)) {
 					//NOTE the pairs2weights map takes care of eliminating duplicate residue pairs (Maps don't accept duplicate as keys)
 					pairs2weights.put(resPair, 1);
+					pairs2distances.put(resPair, atomEdge.getDistance());
 				} else {
 					pairs2weights.put(resPair,pairs2weights.get(resPair)+1);
+					pairs2distances.put(resPair, Math.min(pairs2distances.get(resPair), atomEdge.getDistance()));
 				}
 			}
 		}
 
 		// putting the RIGEdges in the resGraph
 		for (Pair<RIGNode> resPair:pairs2weights.keySet()) {
-			//TODO put distance in the RIGEdge objects (only makes sense in single atom contact types)
-			RIGEdge e = new RIGEdge(pairs2weights.get(resPair));
-			resGraph.addEdge(e, resPair, et);//(e, pair, et);
+			// if undirected and edge already exists
+			if (!directed && (resGraph.findEdge(resPair.getFirst(), resPair.getSecond())!=null)) {
+				//increase weight
+				RIGEdge e = resGraph.findEdge(resPair.getFirst(), resPair.getSecond());
+				e.setAtomWeight(e.getAtomWeight()+pairs2weights.get(resPair));
+				e.setDistance(Math.min(e.getDistance(), pairs2distances.get(resPair)));
+			} else {
+				//add edge
+				RIGEdge e = new RIGEdge(pairs2weights.get(resPair));
+				e.setDistance(pairs2distances.get(resPair));
+				resGraph.addEdge(e, resPair, et);//(e, pair, et);				
+			}
 		}
 		
 		return resGraph;
@@ -104,5 +116,58 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		Pair<AIGNode> pair = this.getEndpoints(edge);
 		return Math.abs(pair.getFirst().getParent().getResidueSerial()-pair.getSecond().getParent().getResidueSerial());
 	}
+	
+	public boolean addGraph(AIGraph graph) {
+		//NOTE:The checks below would make sense only for adding RIGraphs
+		//In AIGraphs we have as nodes only the selected atoms and not all atoms
+		/*
+		if (this.getVertexCount()!=graph.getVertexCount()) {
+			return false;
+		}
+		Iterator<Integer> it = graph.getSerials().iterator();
+		for (int serial:this.getSerials()) {			
+			AIGNode node = this.getNodeFromSerial(serial);
+			AIGNode node2 = graph.getNodeFromSerial(it.next());
+			if (!node.equals(node2)){
+				return false;
+			}
+		}*/
 
+		boolean change = false;
+		
+		TreeMap<Integer,RIGNode> rignodes = new TreeMap<Integer,RIGNode>();
+		for (AIGNode atomNode : this.getVertices()) {
+			rignodes.put(atomNode.getParent().getResidueSerial(), atomNode.getParent());
+		}
+		
+		for (AIGNode atomNode : graph.getVertices()) {
+			RIGNode v = null;
+			if (!rignodes.containsKey(atomNode.getParent().getResidueSerial())) {
+				v = atomNode.getParent();
+				rignodes.put(v.getResidueSerial(), v);
+				change = true;
+			} else {
+				v = rignodes.get(atomNode.getParent().getResidueSerial()); 
+			}
+			if (!this.serials2nodes.containsKey(atomNode.getAtomSerial())) {
+				change = true;
+				AIGNode v1 = new AIGNode (atomNode.getAtomSerial(), atomNode.getAtomName(), v);
+				this.addVertex(v1);
+				this.serials2nodes.put(atomNode.getAtomSerial(), v1);
+			}
+		}
+		
+		for (AIGEdge atomEdge: graph.getEdges()){
+			Pair<AIGNode> atomPair = graph.getEndpoints(atomEdge);
+			AIGNode v1 = this.getNodeFromSerial(atomPair.getFirst().getAtomSerial());
+			AIGNode v2 = this.getNodeFromSerial(atomPair.getSecond().getAtomSerial());
+			// This condition is to take care of not adding multiple instances of the same atomic edge
+			if (this.findEdge(v1, v2)==null) {				
+				change = true;
+				this.addEdge(atomEdge.copy(), v1, v2, graph.getEdgeType(atomEdge));
+			}
+		}
+		this.setCrossed((this.crossed || graph.crossed));
+		return change;
+	}
 }

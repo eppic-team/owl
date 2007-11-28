@@ -194,4 +194,5 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 			this.removeEdge(edge);
 		}
 	}
+		
 }

@@ -41,6 +41,10 @@ public class RIGEdge {
 		return atomWeight;
 	}
 	
+	public void setAtomWeight(int atomWeight) {
+		this.atomWeight = atomWeight;
+	}
+
 	public double getWeight() {
 		return weight;
 	}
@@ -49,6 +53,10 @@ public class RIGEdge {
 		return distance;
 	}
 	
+	public void setDistance(double distance) {
+		this.distance = distance;
+	}
+
 	public String toString() {
 		return "E";
 	}

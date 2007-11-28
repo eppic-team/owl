@@ -29,7 +29,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	// fields
 	protected double distCutoff;
 	protected String contactType;				// use AAinfo.isValidContactType() to test for validity
-
+	
 	public RIGraph() {
 		super();
 		this.distCutoff=0;
@@ -279,17 +279,18 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		String weightedStr = "0";
 		String directedStr = isDirected()?"1":"0";
 		
-		if (contactType.endsWith("_CAGLY")) {
-			ctStr = contactType.replace("_CAGLY", "");
+		if (contactType.contains("_CAGLY")) {
+			ctStr = contactType.replaceAll("_CAGLY", "");
 		}
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType)) {
+		
+		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected())) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
-		if (contactType.endsWith("_CAGLY") || contactType.equals("Cb")) {
+		if (contactType.contains("_CAGLY") || contactType.contains("Cb")) {
 			EXPBB = "-1";
 		}
 		if (minSeqSep != -1) {
@@ -300,7 +301,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		int graphid=0;
 		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
-					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -313,7 +314,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
 			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
@@ -446,19 +447,19 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			
 			sql = "INSERT INTO "+db+".single_model_edge "+
 					" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
-					" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight) " +
+					" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
 					" VALUES ("+graphid+", "+(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
 					(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
-					cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+")";
+					cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+", "+cont.getDistance()+")";
 			stmt.executeUpdate(sql);
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
 				// so we insert the reverse contact by swapping i, j in insertion
 				sql = "INSERT INTO "+db+".single_model_edge "+
 				" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
-				" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight) " +
+				" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
 				" VALUES ("+graphid+", "+(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
 				(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
-				cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+")";
+				cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+", "+cont.getDistance()+")";
 				stmt.executeUpdate(sql);
 			}
 		}
@@ -486,17 +487,17 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		String weightedStr = "0";
 		String directedStr = isDirected()?"1":"0";
 		
-		if (contactType.endsWith("_CAGLY")) {
-			ctStr = contactType.replace("_CAGLY", "");
+		if (contactType.contains("_CAGLY")) {
+			ctStr = contactType.replaceAll("_CAGLY", "");
 		}
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType)) {
+		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected())) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
-		if (contactType.endsWith("_CAGLY") || contactType.equals("Cb")) {
+		if (contactType.contains("_CAGLY") || contactType.contains("Cb")) {
 			EXPBB = "-1";
 		}
 		if (minSeqSep != -1) {
@@ -507,7 +508,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		int graphid=0;
 		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
-					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = '"+EXPBB+"'" + 
+					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -520,7 +521,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
 			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+secondaryStructure.getNumElements()+", now())";
+					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
@@ -657,18 +658,18 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			
 			edgesOut.println(graphid+"\t"+(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
 					(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
-					cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight));
+					cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight)+"\t"+cont.getDistance());
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
 				// so we insert the reverse contact by swapping i, j in insertion
 				edgesOut.println(graphid+"\t"+(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
 						(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
-						cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight));
+						cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight)+"\t"+cont.getDistance());
 			}			
 		}
 		edgesOut.close();
 		sql = "LOAD DATA LOCAL INFILE '"+graphid+"_edges.txt' INTO TABLE "+db+".single_model_edge "+
 			" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
-			" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight);";
+			" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance);";
 		stmt.executeUpdate(sql);
 		stmt.close();
 		fileToDelete = new File(graphid+"_edges.txt");

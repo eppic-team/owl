@@ -55,4 +55,13 @@ public class RIGNode {
 		return copy;
 	}
 	
+	public boolean equals(Object obj) {
+		if (obj instanceof RIGNode) {
+			RIGNode v = (RIGNode) obj;
+			return ((this.residueSerial == v.getResidueSerial()) && (this.residueType.equals(v.getResidueType())));
+		} else {
+			return false;
+		}
+	}
+	
 }

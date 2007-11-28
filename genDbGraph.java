@@ -7,7 +7,6 @@ import java.sql.SQLException;
 
 
 //import proteinstructure.CiffilePdb;
-//import proteinstructure.CiffileFormatError;
 import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbChainCodeNotFoundError;
@@ -52,9 +51,9 @@ public class genDbGraph {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
-				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
-				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -s <seq_sep> -o <output_db> [-m <mode>] \n" +
+				"1)  genDbGraph -i <listfile> -d <distance_cutoff> -t <contact_type> [-r directed] -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"2)  genDbGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> [-r directed] -s <seq_sep> -o <output_db> [-D <pdbase_db>] [-m <mode>] \n" +
+				"3)  genDbGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> [-r directed] -s <seq_sep> -o <output_db> [-m <mode>] \n" +
 				"\nA comma separated list of contact types and distance cutoffs can be given instead of just 1, e.g. -d 8.0,8.5 -t Ca,Cb will generate the graphs for Ca at 8.0 and for Cb at 8.5\n" +
 				"If only 1 contact type given and multiple cutoffs, graphs will be generated at all the cutoffs for the one contact type\n"+
 				"\nIn case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
@@ -69,10 +68,11 @@ public class genDbGraph {
 		String[] edgeTypes = null;
 		double[] cutoffs = null;
 		int[] seqseps = null;
+		boolean[] directed = null; 
 		String outputDb = "";
 		String mode = "GRAPH";
 		
-		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:s:o:D:m:h?");
+		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:r:s:o:D:m:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -98,6 +98,13 @@ public class genDbGraph {
 			case 't':
 				edgeTypes = g.getOptarg().split(",");
 				break;
+			case 'r':
+				String[] directedStr = g.getOptarg().split(",");
+				directed = new boolean[directedStr.length];
+				for (int i =0;i<directed.length;i++) {
+					directed[i] = Boolean.valueOf(directedStr[i]);
+				}
+				break;				
 			case 's':
 				String[] seqsepsStr = g.getOptarg().split(",");
 				seqseps = new int[seqsepsStr.length];
@@ -134,6 +141,11 @@ public class genDbGraph {
 		}
 		if (seqseps != null && edgeTypes.length!=seqseps.length) {
 			System.err.println("Not same number of contact types as sequence separations given\n");
+			System.err.println(help);
+			System.exit(1);
+		}
+		if (directed != null && edgeTypes.length!=directed.length) {
+			System.err.println("Not same number of contact types as directionalities given\n");
 			System.err.println(help);
 			System.exit(1);
 		}
@@ -209,7 +221,7 @@ public class genDbGraph {
 					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
+					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);				
 					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);
 					if (!mode.equals("GRAPH")) {
 						try {
@@ -257,9 +269,9 @@ public class genDbGraph {
 					// get graphs
 					if (!mode.equals("PDB")) {
 						for (int j = 0; j<edgeTypes.length; j++) {
-							System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+							System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
-							RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+							RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
 							if (seqseps != null) {
 								if (seqseps[j] > 1) {
 									System.out.print(" and sequence separation >= "+seqseps[j]);
@@ -283,7 +295,7 @@ public class genDbGraph {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
 				} catch (PdbChainCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
-				}/* catch (CiffileFormatError e) {
+				} /* catch (CiffileFormatError e) {
 					System.err.println(e.getMessage());
 				}*/
 				
@@ -355,9 +367,9 @@ public class genDbGraph {
 				// get graphs
 				if (!mode.equals("PDB")) {
 					for (int j = 0; j<edgeTypes.length; j++) {
-						System.out.print("--> graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
+						System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
-						RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j]);
+						RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
 						if (seqseps != null) {
 							if (seqseps[j] > 1) {
 								System.out.print(" and sequence separation >= "+seqseps[j]);
