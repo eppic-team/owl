@@ -152,9 +152,6 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 	
 	/**
 	 * True if this ProtStructGraph has the sequence field set to not blank
-	 * If sequence is not blank, then we are sure that unobserved RIGNodes are 
-	 * also in the RIGraph (NOTE in AIGraph even if sequence known we don't fill 
-	 * the unobserved RIGNodes)
 	 * @return
 	 */
 	public boolean hasSequence() {

@@ -91,11 +91,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @return
 	 */
 	public int getObsLength() {
-		int count=0;
-		for (RIGNode node:this.getVertices()) {
-			if (node.isObserved()) count++;
-		}
-		return count;
+		return this.getVertexCount();
 	}
 	
 	/**

@@ -70,16 +70,6 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		for (int resser:rignodes.keySet()){
 			resGraph.addVertex(rignodes.get(resser));
 		}
-		// now also adding unobserved residues as RIGNodes (tagged with observed=false) from the sequence
-		for (int resser=1; resser<=sequence.length(); resser++) {
-			if (!rignodes.containsKey(resser)) {
-				String resType = AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(resser-1)));
-				RIGNode resNode = new RIGNode(resser,resType);
-				resNode.setObserved(false);
-				rignodes.put(resser,resNode);
-				resGraph.addVertex(resNode);
-			}
-		}
 		
 		resGraph.setSerials2NodesMap(rignodes);
 		
