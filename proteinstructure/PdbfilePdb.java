@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,68 +22,116 @@ public class PdbfilePdb extends Pdb {
 	private String pdbfile;
 
 	/**
-	 * Constructs Pdb object reading from pdb file given pdb chain code. Model will be DEFAULT_MODEL
+	 * Constructs an empty Pdb object given a pdbfile name
+	 * Data will be loaded from pdb file upon call of load(pdbChainCode, modelSerial) 
 	 * @param pdbfile
-	 * @param pdbChainCode
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 * @throws PdbfileFormatError
-	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
-		this(pdbfile,pdbChainCode,DEFAULT_MODEL);
-	}
-	
-	/**
-	 * Constructs Pdb object reading from pdb file given pdb chain code and model serial
-	 * @param pdbfile
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 * @throws PdbfileFormatError
-	 * @throws PdbChainCodeNotFoundError 
-	 */
-	public PdbfilePdb (String pdbfile, String pdbChainCode, int model_serial) throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
+	public PdbfilePdb (String pdbfile) {
 		this.pdbfile = pdbfile;
-		this.model=model_serial;
-		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file 
-		this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
-		// we set chainCode to pdbChainCode except for case NULL where we use "A"
-		this.chainCode=pdbChainCode;
-		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
+		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file
+		this.dataLoaded = false;
 		
 		this.sequence=""; // we initialise it to empty string, then is set in read_pdb_data_from_file 
 		
 		// we initialise the secondary structure to empty, if no sec structure info is found then they remain empty
 		this.secondaryStructure = new SecondaryStructure();		
-		read_pdb_data_from_file();
 		
-		this.obsLength = resser2restype.size();
-		
-		if(!secondaryStructure.isEmpty()) {
-			secondaryStructure.setComment("Author");
-		}
-		
-		// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
-		//TODO eventually we could assign our own internal residue numbers when reading from pdb and thus this map would be used
-		this.resser2pdbresser = new HashMap<Integer, String>();
-		this.pdbresser2resser = new HashMap<String, Integer>();
-		for (int resser:resser2restype.keySet()){
-			resser2pdbresser.put(resser, String.valueOf(resser));
-			pdbresser2resser.put(String.valueOf(resser), resser);
-		}
-		
-		// initialising atomser2atom from resser_atom2atomserial
-		atomser2atom = new HashMap<Integer, String>();
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			String atom = resser_atom.split("_")[1];
-			atomser2atom.put(atomserial,atom);
-		}
 	}
 
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
+		try {
+			this.model=modelSerial;
+			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
+			// we set chainCode to pdbChainCode except for case NULL where we use "A"
+			this.chainCode=pdbChainCode;
+			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
+
+			read_pdb_data_from_file();
+			
+			this.obsLength = resser2restype.size();
+			
+			if(!secondaryStructure.isEmpty()) {
+				secondaryStructure.setComment("Author");
+			}
+			
+			// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
+			//TODO eventually we could assign our own internal residue numbers when reading from pdb and thus this map would be used
+			this.resser2pdbresser = new HashMap<Integer, String>();
+			this.pdbresser2resser = new HashMap<String, Integer>();
+			for (int resser:resser2restype.keySet()){
+				resser2pdbresser.put(resser, String.valueOf(resser));
+				pdbresser2resser.put(String.valueOf(resser), resser);
+			}
+			
+			// initialising atomser2atom from resser_atom2atomserial
+			atomser2atom = new HashMap<Integer, String>();
+			for (String resser_atom:resser_atom2atomserial.keySet()){
+				int atomserial = resser_atom2atomserial.get(resser_atom);
+				String atom = resser_atom.split("_")[1];
+				atomser2atom.put(atomserial,atom);
+			}
+			
+			dataLoaded = true;
+			
+		} catch (FileNotFoundException e) {
+			throw new PdbLoadError(e);
+		} catch (PdbfileFormatError e) {
+			throw new PdbLoadError(e);
+		} catch (IOException e) {
+			throw new PdbLoadError(e);
+		} catch (PdbChainCodeNotFoundError e) {
+			throw new PdbLoadError(e);
+		}
+	}
 	
+	public String[] getChains() {
+		TreeSet<String> chains = new TreeSet<String>();
+		try {
+			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
+			String  line;
+			while ((line=fpdb.readLine())!=null) {
+				if (line.startsWith("ATOM")) {
+					String chain = line.substring(21, 22);
+					if (chain.equals(" ")) chain="NULL";
+					chains.add(chain);
+				}
+			}
+			fpdb.close();
+		} catch (IOException e) {
+			return null;
+		}
+		
+		if (chains.isEmpty()) return null;
+		
+		String[] chainsArray = new String[chains.size()];
+		chains.toArray(chainsArray);
+		return chainsArray;
+	}
+	
+	public Integer[] getModels() {
+		TreeSet<Integer> models = new TreeSet<Integer>();
+		try {
+			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
+			String  line;
+			while ((line=fpdb.readLine())!=null) {
+				if (line.startsWith("MODEL")) {
+					int model = Integer.parseInt(line.substring(10,14).trim());
+					models.add(model);
+				} else {
+					// when pdb files have no MODEL field then that means that the only model is the default (1), we add that here for convenience
+					models.add(DEFAULT_MODEL);
+				}
+			}
+			fpdb.close();
+		} catch (IOException e) {
+			return null;
+		}
+		
+		if (models.isEmpty()) return null;		
+		Integer[] modelsArray = new Integer[models.size()];
+		models.toArray(modelsArray);
+		return modelsArray;
+	}
 	
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.

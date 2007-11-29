@@ -172,22 +172,23 @@ public class PairwiseAlignmentGraphConverter {
 
 	/**
 	 * @param args
-	 * @throws PdbChainCodeNotFoundError 
+	 * @throws PdbLoadError
 	 * @throws SQLException 
-	 * @throws PdbCodeNotFoundError 
-	 * @throws PdbaseInconsistencyError 
 	 * @throws ContactMapConstructorError 
 	 * @throws IOException 
+	 * @throws PdbCodeNotFoundError 
 	 */
-	public static void main(String[] args) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError, ContactMapConstructorError, IOException {
+	public static void main(String[] args) throws PdbLoadError, SQLException, ContactMapConstructorError, IOException, PdbCodeNotFoundError {
 
 		String pdbcode1="1bxy";
 		String chaincode1="A";
 		String pdbcode2="1sha";
 		String chaincode2="A";
 
-		Pdb pdb1 = new PdbasePdb(pdbcode1,chaincode1); 
-		Pdb pdb2 = new PdbasePdb(pdbcode2,chaincode2);
+		Pdb pdb1 = new PdbasePdb(pdbcode1);
+		pdb1.load(chaincode1);
+		Pdb pdb2 = new PdbasePdb(pdbcode2);
+		pdb2.load(chaincode2);
 
 		RIGraph g1 = pdb1.get_graph("ALL", 4.2);
 		RIGraph g2 = pdb2.get_graph("ALL", 4.2);

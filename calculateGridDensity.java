@@ -57,17 +57,16 @@ public class calculateGridDensity {
 	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) {
 		Pdb pdb = null;
 		try {
-			pdb = new PdbasePdb(pdbCode, chainCode, PDB_DB, conn);
+			pdb = new PdbasePdb(pdbCode, PDB_DB, conn);
+			pdb.load(chainCode);
 			// add to density count vector
 			pdb.calcGridDensity(edgeType, cutoff, densityCount);
 			
-		} catch (PdbaseInconsistencyError e) {
-			System.out.println("Inconsistency in " + pdbCode + chainCode);
+		} catch (PdbLoadError e) {
+			System.out.println("Error loading " + pdbCode + chainCode+", specific error: "+e.getMessage());
 		} catch (PdbCodeNotFoundError e) {
 			e.printStackTrace();
 		} catch (SQLException e) {
-			e.printStackTrace();
-		} catch (PdbChainCodeNotFoundError e) {
 			e.printStackTrace();
 		}
 			

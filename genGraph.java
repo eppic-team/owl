@@ -7,11 +7,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbaseInconsistencyError;
+import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.RIGraph;
 import tools.MySQLConnection;
@@ -158,7 +156,8 @@ public class genGraph {
 					
 					long start = System.currentTimeMillis();
 					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);
+					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+					pdb.load(pdbChainCode);
 
 					// get graph
 					RIGraph graph = pdb.get_graph(edgeType, cutoff);
@@ -176,14 +175,12 @@ public class genGraph {
 					
 					numPdbs++;
 
-				} catch (PdbaseInconsistencyError e) {
-					System.err.println("Inconsistency in " + pdbCode + pdbChainCode);
+				} catch (PdbLoadError e) {
+					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
 				} catch (SQLException e) {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
-				} catch (PdbChainCodeNotFoundError e) {
-					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
 				}
 
 			}
@@ -195,7 +192,8 @@ public class genGraph {
 		} else {
 			String pdbChainCode = pdbChainCodes[0];
 			try {
-				Pdb pdb = new PdbfilePdb(pdbfile,pdbChainCode);
+				Pdb pdb = new PdbfilePdb(pdbfile);
+				pdb.load(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
@@ -207,10 +205,8 @@ public class genGraph {
 				graph.write_graph_to_file(outputFile.getAbsolutePath());
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
 				
-			} catch (PdbfileFormatError e) {
-				System.err.println("pdb file "+pdbfile+" doesn't have right format");
-			} catch (PdbChainCodeNotFoundError e) {
-				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
+			} catch (PdbLoadError e) {
+				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
 			}
 		}
 	}

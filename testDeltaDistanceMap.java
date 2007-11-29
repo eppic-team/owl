@@ -21,9 +21,11 @@ public class testDeltaDistanceMap {
 			String chainCode2 = "B";
 			
 			System.out.println("Loading pdb objects...");
-			Pdb pdb1 = new PdbasePdb("12as", "B");
+			Pdb pdb1 = new PdbasePdb("12as");
+			pdb1.load("B");
 			assert(pdb1 != null);
-			Pdb pdb2 = new PdbasePdb("12as", "A");
+			Pdb pdb2 = new PdbasePdb("12as");
+			pdb2.load("A");
 			assert(pdb2 != null);
 			
 			System.out.println("Calculating distance maps...");

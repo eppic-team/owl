@@ -122,20 +122,12 @@ public class testGraphAverager {
 		// read target graph
 		if(verbose) System.out.println("Reading input files...");
 		try {
-			target = new PdbfilePdb(targetFile.getAbsolutePath(), chainCode);
+			target = new PdbfilePdb(targetFile.getAbsolutePath());
+			target.load(chainCode);
 			targetGraph = target.get_graph(contactType, distCutoff);
-		} catch(PdbChainCodeNotFoundError e) {
-			System.err.println("Chain code " + chainCode + " not found in file " + targetFile.getAbsolutePath());
+		} catch(PdbLoadError e) {
+			System.err.println("Error while trying to load pdb data from file " + targetFile.getAbsolutePath()+", specific error: "+e.getMessage());
 			System.exit(1);
-		} catch(PdbfileFormatError e) {
-			System.err.println("Formating error:" + e.getMessage());	
-			System.exit(1);
-		} catch (FileNotFoundException e) {
-			System.err.println("File " + targetFile.getAbsolutePath() + " not found");	
-			System.exit(1);			
-		} catch(IOException e) {
-			System.err.println("Error reading from file " + targetFile.getAbsolutePath() + ":" + e.getMessage());	
-			System.exit(1);				
 		}
 		
 		// read list of predictions
@@ -153,22 +145,14 @@ public class testGraphAverager {
 				} else {
 					templateFileNames.add(line);
 					try {
-						pdb = new PdbfilePdb(file.getAbsolutePath(),Pdb.NULL_CHAIN_CODE);
+						pdb = new PdbfilePdb(file.getAbsolutePath());
+						pdb.load(Pdb.NULL_CHAIN_CODE);
 						graph = pdb.get_graph(contactType, distCutoff);
 						models.add(graph);
 						if(verbose) System.out.print(".");
-					} catch(PdbChainCodeNotFoundError e) {
-						System.err.println("Chain code " + chainCode + " not found in file " + file.getAbsolutePath());
+					} catch(PdbLoadError e) {
+						System.err.println("Error while trying to load pdb data from file " + file.getAbsolutePath()+", specific error: "+e.getMessage());
 						System.exit(1);
-					} catch(PdbfileFormatError e) {
-						System.err.println("Formating error:" + e.getMessage());	
-						System.exit(1);
-					} catch (FileNotFoundException e) {
-						System.err.println("File " + file.getAbsolutePath() + " not found");	
-						System.exit(1);			
-					} catch(IOException e) {
-						System.err.println("Error reading from file " + file.getAbsolutePath() + ":" + e.getMessage());	
-						System.exit(1);				
 					}
 				}
 			}

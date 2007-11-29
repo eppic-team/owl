@@ -7,13 +7,11 @@ import java.sql.SQLException;
 
 
 //import proteinstructure.CiffilePdb;
+import proteinstructure.PdbLoadError;
 import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfileFormatError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.SecStrucElement;
 import tools.MySQLConnection;
@@ -221,7 +219,8 @@ public class genDbGraph {
 					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbChainCode, pdbaseDb, conn);				
+					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);		
+					pdb.load(pdbChainCode);
 					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);
 					if (!mode.equals("GRAPH")) {
 						try {
@@ -287,15 +286,14 @@ public class genDbGraph {
 						}
 					}
 					
-				} catch (PdbaseInconsistencyError e) {
-					System.err.println("Inconsistency in " + pdbCode + pdbChainCode);
+				} catch (PdbLoadError e) {
+					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
 				} catch (SQLException e) {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
-				} catch (PdbChainCodeNotFoundError e) {
-					System.err.println("Couldn't find pdb chain code "+pdbChainCode+" for pdb code "+pdbCode);
-				} /* catch (CiffileFormatError e) {
+				} 
+				/* catch (CiffileFormatError e) {
 					System.err.println(e.getMessage());
 				}*/
 				
@@ -316,7 +314,8 @@ public class genDbGraph {
 				
 				System.out.println("Getting chain "+pdbChainCode+" from pdb file "+pdbfile);
 				
-				Pdb pdb = new PdbfilePdb(pdbfile,pdbChainCode);
+				Pdb pdb = new PdbfilePdb(pdbfile);
+				pdb.load(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
 					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
@@ -386,11 +385,9 @@ public class genDbGraph {
 				
 			} catch (SQLException e) {
 				System.err.println("Couldn't write graph to db, error: "+e.getMessage());
-			} catch (PdbfileFormatError e) {
-				System.err.println("pdb file "+pdbfile+" doesn't have right format");
-			} catch (PdbChainCodeNotFoundError e) {
-				System.err.println("chain code "+pdbChainCode+" wasn't found in file "+pdbfile);	
-			}
+			} catch (PdbLoadError e) {
+				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
+			} 
 			
 			System.out.println("SUMMARY:"+pdbfile+"_"+pdbChainCode+" dssp:"+dssp+" scop:"+scop+" naccess:"+naccess+" consurf:"+consurf+" ec:"+ec+" csa:"+csa+ " graphs:"+numGraphs);
 

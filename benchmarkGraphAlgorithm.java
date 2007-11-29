@@ -3,11 +3,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import proteinstructure.PdbLoadError;
 import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
 import tools.MySQLConnection;
 
@@ -75,7 +74,8 @@ public class benchmarkGraphAlgorithm {
 			
 				Pdb pdb = null;
 				try {
-					pdb = new PdbasePdb(pdbCode, chainCode, PDB_DB, conn);
+					pdb = new PdbasePdb(pdbCode, PDB_DB, conn);
+					pdb.load(chainCode);
 					int length = pdb.get_length();
 					int atoms = pdb.getNumAtoms();
 
@@ -92,16 +92,13 @@ public class benchmarkGraphAlgorithm {
 					System.out.println();
 
 					
-				} catch (PdbaseInconsistencyError e) {
-					System.out.println("Inconsistency in " + pdbCode + chainCode);
+				} catch (PdbLoadError e) {
+					System.out.println("pdb load error in " + pdbCode + chainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundError e) {
 					e.printStackTrace();
 				} catch (SQLException e) {
 					e.printStackTrace();
-				} catch (PdbChainCodeNotFoundError e) {
-					e.printStackTrace();
-				}
-					
+				}					
 				
 				
 				

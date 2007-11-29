@@ -14,8 +14,7 @@ import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
-import proteinstructure.PdbfileFormatError;
+import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.MaxClusterRunner;
 import proteinstructure.RIGraph;
@@ -70,10 +69,12 @@ public class TinkerRunner {
 	 * Constructs a TinkerRunner object by passing initial parameters
 	 * @param tinkerBinDir The directory where the tinker executables are
 	 * @param forceFieldFileName The force field file
-	 * @throws FileNotFoundException If logFile can't be written
+	 * @throws FileNotFoundException
 	 */
 	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
 		this.tinkerBinDir = tinkerBinDir;
+		File tinkerbindir = new File(tinkerBinDir);
+		if (!(tinkerbindir.isDirectory() && tinkerbindir.canRead())) throw new FileNotFoundException("Can't read tinker bin directory "+tinkerBinDir);
 		this.forceFieldFileName = forceFieldFileName;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
@@ -501,7 +502,7 @@ public class TinkerRunner {
 		ConstraintsMaker cm = null;
 		try {
 			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile,DEFAULT_FORCECONSTANT);
-		} catch(PdbfileFormatError e) {
+		} catch(PdbLoadError e) {
 			throw new TinkerError(e);
 		}
 		for(RIGraph graph:graphs) {
@@ -572,14 +573,9 @@ public class TinkerRunner {
 		String ext = String.format(".%03d",i); // 001, 002, 003, ...
 		File resultPdbFile = new File(lastOutputDir, lastBaseName+ext+".pdb");
 		try {
-			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath(), DEFAULT_RECONSTR_CHAIN_CODE);
-		} catch(FileNotFoundException e) {
-			throw new TinkerError("Model number " + i + " does not exist.");
-		} catch (IOException e) {
-			throw new TinkerError("Could not read from file " + resultPdbFile.getAbsolutePath());
-		} catch(PdbChainCodeNotFoundError e) {
-			throw new TinkerError(e);
-		} catch(PdbfileFormatError e) {
+			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath());
+			resultPdb.load(DEFAULT_RECONSTR_CHAIN_CODE); 
+		} catch(PdbLoadError e) {
 			throw new TinkerError(e);
 		}
 		

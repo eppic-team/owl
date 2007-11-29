@@ -1,5 +1,3 @@
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,8 +12,9 @@ import proteinstructure.*;
 
 public class testJUNGframework {
 
-	public static void main(String[] args) throws FileNotFoundException, IOException, GraphFileFormatError, PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError, GraphIdNotFoundError {
-		Pdb pdb = new PdbasePdb("7adh", "A");
+	public static void main(String[] args) throws GraphFileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundError {
+		Pdb pdb = new PdbasePdb("7adh");
+		pdb.load("A");
 		
 		RIGraph graph = pdb.get_graph("Ca", 8.0);
 		RIGraph graph2 = pdb.get_graph("Ca/Cb", 8.0);
@@ -136,8 +135,12 @@ public class testJUNGframework {
 		
 		// TEST copying of RIGraph objects and restrictRange methods
 		System.out.println("TEST copying of RIGraph objects");
-		RIGraph g1 = new PdbasePdb("1bxy","A").get_graph("Ca", 8);
-		RIGraph g2 = new PdbasePdb("1sha","A").get_graph("Ca", 8);
+		Pdb pdb1 = new PdbasePdb("1bxy");
+		pdb1.load("A");
+		Pdb pdb2 = new PdbasePdb("1sha");
+		pdb2.load("A");
+		RIGraph g1 = pdb1.get_graph("Ca", 8);
+		RIGraph g2 = pdb2.get_graph("Ca", 8);
 		System.out.println("g1: "+g1.getPdbCode()+" nodes: "+g1.getVertexCount()+" edges: "+g1.getEdgeCount());
 		System.out.println("g2: "+g2.getPdbCode()+" nodes: "+g2.getVertexCount()+" edges: "+g2.getEdgeCount());
 		RIGraph newgraph = g1.copy();
