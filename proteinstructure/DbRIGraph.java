@@ -133,11 +133,13 @@ public class DbRIGraph extends RIGraph {
 
 		serials2nodes = new TreeMap<Integer,RIGNode>();
 
-		String sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid+" ORDER BY num ";
+		String sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		//TODO read secondary structure!
+		int checkCount = 0;
 		while (rsst.next()){
+			checkCount++;
 			int num=rsst.getInt(1);
 			String res=rsst.getString(2);
 			RIGNode node = new RIGNode(num,AAinfo.oneletter2threeletter(res));
@@ -147,6 +149,10 @@ public class DbRIGraph extends RIGraph {
 		rsst.close();
 		stmt.close();
 		
+		if (checkCount==0) { // no nodes: empty graph, we return
+			this.fullLength = 0;
+			return;
+		}
 		// if undirected we have to prefilter and read only half of the matrix (contacts in one direction only) 
 		EdgeType et = EdgeType.DIRECTED;
 		String filterStr = "";
@@ -154,7 +160,7 @@ public class DbRIGraph extends RIGraph {
 			filterStr = " AND j_num>i_num ";
 			et = EdgeType.UNDIRECTED;
 		}
-		sql="SELECT i_num,j_num,weight,distance FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" "+filterStr+" ORDER BY i_num,j_num ";
+		sql="SELECT i_num,j_num,weight,distance FROM "+dbname+".single_model_edge WHERE graph_id="+graphid+" "+filterStr;
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
 		while (rsst.next()) {
