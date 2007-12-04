@@ -11,5 +11,5 @@ public abstract class Getter extends Action {
     	super(obj);
     }
     
-    public abstract Object get();
+    public abstract Object get() throws GetterError;
 }
