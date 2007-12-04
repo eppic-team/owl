@@ -268,10 +268,13 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 		String ressers="";
 		for (int resser:this.keySet()){
 			if (resser!=centralResidue.getResidueSerial()) {
-				ressers += resser+","; // we are not in last element, we put a comma
+				ressers += resser+",";
 			} 
 		}
-		ressers = ressers.substring(0, ressers.length()-1);
+		// we chop off the last comma
+		if (ressers.length()!=0) { 
+			ressers = ressers.substring(0, ressers.length()-1);
+		}
 		return ressers;
 	}
 
