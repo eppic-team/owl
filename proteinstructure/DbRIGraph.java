@@ -123,9 +123,9 @@ public class DbRIGraph extends RIGraph {
 	 * Reads contacts and nodes from db.
 	 * The db must be a graph db following our standard format, i.e. must have tables: 
 	 * chain_graph, single_model_graph, single_model_node, single_model_edge
-	 * We don't care here about the origin of the data (msdsd, pdbase, predicted) for the generation of the graph as long as it follows our data format
-	 * We read both edges and nodes from single_model_edge and single_model_node.
-	 * The sequence is set to blank, as we can't get the full sequence from graph db
+	 * We don't care here about the origin of the data (msdsd, pdbase, predictions) for 
+	 * the generation of the graph as long as it follows our data format.
+	 * The sequence is set to blank, as we can't get the full sequence from graph db.
 	 * @param conn
 	 * @throws SQLException 
 	 */
@@ -133,26 +133,38 @@ public class DbRIGraph extends RIGraph {
 
 		serials2nodes = new TreeMap<Integer,RIGNode>();
 
-		String sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid;
+		// reading secondary structure
+		secondaryStructure = new SecondaryStructure();
+		String sql = "SELECT sstype, ssid, min(num), max(num) FROM "+dbname+".single_model_node " +
+				" WHERE graph_id="+graphid+" AND sstype IS NOT NULL "+
+				" GROUP BY ssid";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
-		//TODO read secondary structure!
+		while (rsst.next()){
+			SecStrucElement sselem = new SecStrucElement(rsst.getString(1).charAt(0), rsst.getInt(3), rsst.getInt(4), rsst.getString(2));
+			secondaryStructure.add(sselem);
+		}
+				
+		// reading nodes
+		sql="SELECT num,res FROM "+dbname+".single_model_node WHERE graph_id="+graphid;
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
 		int checkCount = 0;
 		while (rsst.next()){
 			checkCount++;
 			int num=rsst.getInt(1);
 			String res=rsst.getString(2);
-			RIGNode node = new RIGNode(num,AAinfo.oneletter2threeletter(res));
+			RIGNode node = new RIGNode(num,AAinfo.oneletter2threeletter(res),secondaryStructure.getSecStrucElement(num));
 			serials2nodes.put(num,node);
 			this.addVertex(node);
 		}
-		rsst.close();
-		stmt.close();
-		
+				
 		if (checkCount==0) { // no nodes: empty graph, we return
 			this.fullLength = 0;
 			return;
 		}
+		
+		// reading edges
 		// if undirected we have to prefilter and read only half of the matrix (contacts in one direction only) 
 		EdgeType et = EdgeType.DIRECTED;
 		String filterStr = "";
