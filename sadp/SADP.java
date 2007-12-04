@@ -457,7 +457,12 @@ public class SADP {
 		}
 		M = M2;
 	}
-
+	
+	/**
+	 * old buggy version
+	 */
+	
+	@SuppressWarnings("unused")
 	private void noncrossing_() {
 
 		double[][] S = new double[nNodes1][nNodes2];
@@ -491,6 +496,9 @@ public class SADP {
 		M = Q;
 	}
 
+	/**
+	 * new debugged version
+	 */
 	private void noncrossing() {
 		
 		int nNodesX = nNodes1;
