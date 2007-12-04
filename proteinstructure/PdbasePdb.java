@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
+import actionTools.GetterError;
+
 import tools.MySQLConnection;
 
 /**
@@ -65,7 +67,8 @@ public class PdbasePdb extends Pdb {
 		
 		this.conn = conn;
 		
-		this.entrykey=get_entry_key();
+		// this makes sure that we find the pdb code in the database
+		this.entrykey = get_entry_key();
 	}
 
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
@@ -117,7 +120,7 @@ public class PdbasePdb extends Pdb {
 
 	}
 	
-	public String[] getChains()	{
+	public String[] getChains()	throws GetterError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
@@ -129,7 +132,7 @@ public class PdbasePdb extends Pdb {
 			rsst.close();
 			stmt.close();
 		} catch (SQLException e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -139,7 +142,7 @@ public class PdbasePdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() {
+	public Integer[] getModels() throws GetterError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
@@ -152,7 +155,7 @@ public class PdbasePdb extends Pdb {
 			stmt.close();
 	
 		} catch (SQLException e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		}
 		
 		if (models.isEmpty()) return null;		

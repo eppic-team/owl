@@ -20,6 +20,8 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Point3d;
 
+import actionTools.GetterError;
+
 
 /**
  * A single chain pdb protein structure loaded from an mmCIF file or downloaded from the PDB FTP site 
@@ -168,7 +170,7 @@ public class CiffilePdb extends Pdb {
 
 	}
 	
-	public String[] getChains()	{
+	public String[] getChains() throws GetterError {
 		TreeSet<String> chains = new TreeSet<String>();
 	
 		try {
@@ -195,9 +197,9 @@ public class CiffilePdb extends Pdb {
 			fcif.close();
 			
 		} catch (IOException e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		} catch (CiffileFormatError e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -207,7 +209,7 @@ public class CiffilePdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() {
+	public Integer[] getModels() throws GetterError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			fcif = new RandomAccessFile(cifFile,"r");
@@ -233,9 +235,9 @@ public class CiffilePdb extends Pdb {
 			fcif.close();
 			
 		} catch (IOException e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		} catch (CiffileFormatError e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		}
 		
 		if (models.isEmpty()) return null;

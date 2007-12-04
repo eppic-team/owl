@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
+import actionTools.GetterError;
+
 public class PdbfilePdb extends Pdb {
 	
 	private static final String UNKNOWN_STRING ="XXXX";
@@ -84,7 +86,7 @@ public class PdbfilePdb extends Pdb {
 		}
 	}
 	
-	public String[] getChains() {
+	public String[] getChains() throws GetterError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -98,7 +100,7 @@ public class PdbfilePdb extends Pdb {
 			}
 			fpdb.close();
 		} catch (IOException e) {
-			return null;
+			throw new GetterError(e.getMessage());
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -108,26 +110,25 @@ public class PdbfilePdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() {
+	public Integer[] getModels() throws GetterError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 			String  line;
 			while ((line=fpdb.readLine())!=null) {
 				if (line.startsWith("MODEL")) {
-					int model = Integer.parseInt(line.substring(10,14).trim());
+					int model = Integer.parseInt(line.substring(6,line.length()));
 					models.add(model);
-				} else {
-					// when pdb files have no MODEL field then that means that the only model is the default (1), we add that here for convenience
-					models.add(DEFAULT_MODEL);
 				}
 			}
 			fpdb.close();
 		} catch (IOException e) {
-			return null;
+			throw new GetterError(e.getMessage());
+		} catch (NumberFormatException e) {
+			throw new GetterError("Wrong format for MODEL lines!");
 		}
 		
-		if (models.isEmpty()) return null;		
+		if (models.isEmpty()) models.add(DEFAULT_MODEL);//return null;		
 		Integer[] modelsArray = new Integer[models.size()];
 		models.toArray(modelsArray);
 		return modelsArray;
