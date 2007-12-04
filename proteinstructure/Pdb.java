@@ -631,13 +631,43 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the distance matrix as a HashMap with Contacts (residue serial pairs) as keys
-	 * This method cannot be used for multi atom contact types as a distance matrix on residues
-	 * doesn't make sense for those. 
+	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
+	 * residues 
+	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
+	 * @param ct contact type for which distances are being calculated
+	 * @return A map which assings to each edge the corresponding distance
+	 * TODO: 
+	 */
+	public HashMap<Pair<Integer>, Double> calculate_dist_matrix(String ct){
+		HashMap<Pair<Integer>,Double> distMatrixAtoms = calculate_atom_dist_matrix(ct);
+
+		/**
+		 * Helper method which maps atom serials to residue serials.
+		 * TODO: Integrate into above method to avoid storing two distance maps in memory
+		 */
+		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
+		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
+			int i_resser = get_resser_from_atomser(cont.getFirst());
+			int j_resser = get_resser_from_atomser(cont.getSecond());
+			Pair<Integer> edge = new Pair<Integer>(i_resser,j_resser);
+			if (distMatrixRes.containsKey(edge)) {
+				distMatrixRes.put(edge, Math.min(distMatrixRes.get(edge), distMatrixAtoms.get(cont)));
+			} else {
+				distMatrixRes.put(edge, distMatrixAtoms.get(cont));
+			}
+		}
+
+		return distMatrixRes;
+	}
+	
+	/**
+	 * Returns the distance matrix as a HashMap with Contacts (atom serial pairs) as keys
+	 * This method can be used for any contact type
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
 	 * @return A map which assings to each edge the corresponding distance
 	 */
-	public HashMap<Pair<Integer>, Double> calculate_dist_matrix(String ct){
+	public HashMap<Pair<Integer>, Double> calculate_atom_dist_matrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
 			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
@@ -664,20 +694,9 @@ public abstract class Pdb {
 			}
 		}
 
-		/**
-		 * Helper method which maps atom serials to residue serials.
-		 * TODO: Integrate into above method to avoid storing two distance maps in memory
-		 */
-		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
-		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
-			int i_resser = get_resser_from_atomser(cont.getFirst());
-			int j_resser = get_resser_from_atomser(cont.getSecond());
-			distMatrixRes.put(new Pair<Integer>(i_resser,j_resser), distMatrixAtoms.get(cont));
-		}
-
-		return distMatrixRes;
+		return distMatrixAtoms;
 	}
-
+	
 	/**
 	 * Get the graph for given contact type and cutoff for this Pdb object.
 	 * Returns a Graph object with the contacts
