@@ -4,6 +4,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
+import actionTools.GetterError;
+
 import proteinstructure.CiffilePdb;
 //import proteinstructure.MsdsdPdb;
 import proteinstructure.Pdb;
@@ -16,7 +18,7 @@ import tools.MySQLConnection;
 
 public class testGetChains {
 
-	public static void main(String[] args) throws IOException, SQLException{
+	public static void main(String[] args) throws IOException, SQLException, GetterError{
 		
 		String pdbFilesDir = "/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb";
 		String cifFilesDir = "/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF";
