@@ -7,11 +7,13 @@ public class SecStrucElement {
 	
 	/*------------------------------ constants ------------------------------*/
 	public enum ReducedState { THREESTATE, FOURSTATE, EIGHTSTATE };
-	// three/four state secondary structure types (for 3 state, skip turn)
+	// four state secondary structure types
 	public static final char HELIX = 'H';	// a helix
 	public static final char STRAND = 'S';  // a beta strand
 	public static final char TURN = 'T';    // a hydrogen bonded turn
 	public static final char OTHER = 'O';   // all other states
+	
+	// three state secondary structure types, add also HELIX from above
 	public static final char EXTENTED = 'E';// all extented 
 	public static final char LOOP = 'L';  	// all other states 
 	
