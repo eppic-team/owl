@@ -42,7 +42,7 @@ public class RIGNode {
 	}
 	
 	public String toString() {
-		return "V"+residueSerial;
+		return residueSerial+AAinfo.threeletter2oneletter(residueType);
 	}
 	
 	/**

@@ -100,12 +100,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @return
 	 */
 	public RIGNbhood getNbhood (RIGNode node) {
-		Collection<RIGNode> nbs = this.getNeighbors(node);
-		RIGNbhood nbhood = new RIGNbhood(node);
-		for (RIGNode nb:nbs) {
-			nbhood.put(nb.getResidueSerial(), nb);
-		}
-		return nbhood;
+		return new RIGNbhood(node,this.getNeighbors(node));
 	}
 	
 	/**
