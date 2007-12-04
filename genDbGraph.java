@@ -127,6 +127,11 @@ public class genDbGraph {
 			}
 		}
 
+		if (directed==null) {
+			// we set by default all directed to false
+			directed = new boolean[edgeTypes.length];
+		}
+		
 		if (outputDb.equals("") || edgeTypes==null || cutoffs==null) {
 			System.err.println("Some missing option\n");
 			System.err.println(help);
