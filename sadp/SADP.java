@@ -64,12 +64,12 @@ public class SADP {
 
     protected double bf = 10.0;
 
-    protected double br = 1.075;
+    protected double br = 2.0; //1.075;
 
     // max # of iterations
     private int I0 =  4;
 
-    private int I1 = 30;
+    private int I1 = 10; //30;
 
     // precision
     private static double eps0 = 0.5;
@@ -456,7 +456,11 @@ public class SADP {
 	M = M2;
     }
 
-    private void noncrossing() {
+    /**
+     * old buggy version
+     */
+    @SuppressWarnings("unused")
+	private void noncrossing_() {
 
 	double[][] S = new double[nNodes1][nNodes2];
 	double[] sOpt = new double[nNodes2];
@@ -488,6 +492,56 @@ public class SADP {
 	}
 	M = Q;
     }
+
+    /**
+     * new version
+     */
+    private void noncrossing() {
+
+    	int nNodesX = nNodes1;
+    	int nNodesY = nNodes2;
+
+    	double[][] S = new double[nNodesX][nNodesY];
+    	double[] sOpt = new double[nNodesY];
+    	for (int i = 0; i < nNodesX; i++) {
+    		S[i][0] = M[i][0];
+    		double max = 0;
+    		for (int j = 1; j < nNodesY; j++) {
+    			max = Math.max(max, sOpt[j - 1]);
+    			S[i][j] = M[i][j] + max;
+    		}
+    		for (int j = 0; j < nNodesY; j++) {
+    			sOpt[j] = Math.max(sOpt[j], S[i][j]);
+    		}
+    	}
+    	double[][] Q = new double[nNodesX][nNodesY];
+    	int pivX = nNodesX-1;
+    	int pivY = nNodesY-1;
+    	while(pivX > -1 && pivY > -1) {
+
+    		double max = S[pivX][pivY];
+    		int optX = pivX;
+    		int optY = pivY;
+    		for(int j = pivY-1; j > -1; j--) {
+    			if (max < S[pivX][j]) {
+    				max = S[pivX][j];
+    				optY = j;
+    			}
+    		}
+    		for(int i = pivX-1; i > -1; i--) {
+    			if(max < S[i][pivY]) {
+    				max = S[i][pivY];
+    				optX = i;
+    			}
+    		}
+    		pivX = optX-1;
+    		pivY = optY-1;
+    		Q[optX][optY] = 1.0;
+    		//this.pi[optX] = optY;
+    	}		
+    	M = Q;
+    }
+    
 
     public void setScore() {
 
