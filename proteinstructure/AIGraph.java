@@ -182,4 +182,8 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		return super.removeVertex(vertex);
 	}
 	
+	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)
+	// 		At the moment addVertex doesn't update serials2nodes! We work around it by adding the vertices explicitly 
+	//		every time we create a new graph and add vertices to it: e.g. in Pdb.getAIGraph
+
 }
