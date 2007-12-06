@@ -1,6 +1,11 @@
-package proteinstructure;
+package graphAveraging;
 
 import java.util.TreeMap;
+
+import proteinstructure.Alignment;
+import proteinstructure.RIGEdge;
+import proteinstructure.RIGNode;
+import proteinstructure.RIGraph;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;

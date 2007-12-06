@@ -170,4 +170,13 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		this.setCrossed((this.crossed || graph.crossed));
 		return change;
 	}
+	
+	/**
+	 * Removes a vertex from this graph.
+	 * This overridden function also updates the serials2nodes map.
+	 */
+	public boolean removeVertex(AIGNode vertex) {
+		serials2nodes.remove(vertex.getResidueSerial());
+		return super.removeVertex(vertex);
+	}
 }

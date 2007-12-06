@@ -76,6 +76,26 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 	}
 	
 	/**
+	 * Returns the edge connecting the two nodes with the given serials.
+	 * @param i
+	 * @param j
+	 * @return The edge between nodes with serials i and j or null if no such edge exists.
+	 */
+	public E getEdgeFromSerials(int i, int j) {
+		return findEdge(this.getNodeFromSerial(i), this.getNodeFromSerial(j));
+	}
+	
+	/**
+	 * Returns true iff the graph contains an edge between the nodes with serials i and j.
+	 * @param i
+	 * @param j
+	 * @return True if the graph contains an edge from i to j, false otherwise.
+	 */
+	public boolean containsEdgeIJ(int i, int j) {
+		return (getEdgeFromSerials(i,j) != null);
+	}
+	
+	/**
 	 * Returns all ordered residue serials (if RIGraph) or all atom serials (if AIGraph)
 	 * @return
 	 */

@@ -1,3 +1,5 @@
+import graphAveraging.GraphAverager;
+
 import java.io.*;
 import java.util.*;
 import proteinstructure.*;
