@@ -860,7 +860,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	/**
 	 * Removes a vertex from this graph.
 	 * This overridden function also updates the serials2nodes map.
+	 * @return true if vertex is present in this graph and thus can be removed, false if vertex is not present in this graph
 	 */
+	@Override
 	public boolean removeVertex(RIGNode vertex) {
 		serials2nodes.remove(vertex.getResidueSerial());
 		return super.removeVertex(vertex);
