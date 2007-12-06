@@ -174,9 +174,12 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 	/**
 	 * Removes a vertex from this graph.
 	 * This overridden function also updates the serials2nodes map.
+	 * @return true if vertex is present in this graph and thus can be removed, false if vertex is not present in this graph 
 	 */
+	@Override
 	public boolean removeVertex(AIGNode vertex) {
-		serials2nodes.remove(vertex.getResidueSerial());
+		serials2nodes.remove(vertex.getAtomSerial());
 		return super.removeVertex(vertex);
 	}
+	
 }
