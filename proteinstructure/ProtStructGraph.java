@@ -3,23 +3,26 @@ package proteinstructure;
 import java.util.Set;
 import java.util.TreeMap;
 
-import edu.uci.ics.jung.graph.SimpleGraph;
 import edu.uci.ics.jung.graph.SparseGraph;
+import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.graph.util.Pair;
 
 /**
- * Class representing a protein structure graph, known extending 
- * classes are RIGraph and AIGraph
+ * Class representing a protein structure graph,   
+ * subclasses are RIGraph and AIGraph
  * 
- * TODO we implement SimpleGraph intending to mark the graph as not 
- * 		accepting parallel/loop edges but that doesn't work:
- * 		SimpleGraph is simply a marker interface, we would have to 
- * 		implement ourselves a SparseGraph that doesn't accept 
- * 		parallel/loop edges
- *
+ * NOTE: ProtStructGraph extends SparseGraph from jung-impl and thus 
+ * 		it accepts parallel and loop edges.
+ * 		It also accepts a mixed of directed/undirected edges.
+ * 		In our protein structure graphs we want neither 
+ * 		parallel/loop edges nor mixed directed/undirected edges 
+ * TODO: override the addEdge function of SparseGraph so that ProtStructGraph 
+ * 		doesn't accept any of the above
+ * 
  * @param <V>
  * @param <E>
  */
-public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements SimpleGraph<V,E> {
+public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 
 	
 	protected static final int DEFAULT_MODEL = 1;
@@ -214,5 +217,38 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> implements S
 			this.removeEdge(edge);
 		}
 	}
+	
+	/**
+	 * Removes the given edge from this graph
+	 * Overrides removeEdge from SparseGraph just to fix a bug (filed in bug tracker with request ID: 1844767)
+	 * TODO: when bug is fixed in the next JUNG2 release get rid of this
+	 * @return true if the edge is present and thus can be removed, false if the edge is not present
+	 */
+	@Override
+    public boolean removeEdge(E edge)
+    {
+        if (!containsEdge(edge)) 
+            return false;
+        
+        Pair<V> endpoints = getEndpoints(edge);
+        V v1 = endpoints.getFirst();
+        V v2 = endpoints.getSecond();
+        
+        // remove edge from incident vertices' adjacency maps
+        if (getEdgeType(edge) == EdgeType.DIRECTED)
+        {
+            vertex_maps.get(v1)[OUTGOING].remove(v2);
+            vertex_maps.get(v2)[INCOMING].remove(v1);
+            directed_edges.remove(edge);
+        }
+        else
+        {
+            vertex_maps.get(v1)[INCIDENT].remove(v2);
+            vertex_maps.get(v2)[INCIDENT].remove(v1);
+            undirected_edges.remove(edge);
+        }
+
+        return true;
+    }
 		
 }
