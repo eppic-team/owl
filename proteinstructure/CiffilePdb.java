@@ -130,6 +130,10 @@ public class CiffilePdb extends Pdb {
 		
 	}
 	
+	public File getCifFile() {
+		return cifFile;
+	}
+	
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError{
 		try {
 			this.model = modelSerial;
