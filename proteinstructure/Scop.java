@@ -4,12 +4,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
 
-/** This class encapsulates the secondary structure annotation of a single protein chain. */
+/** This class encapsulates the scop annotation of a single protein chain. */
 public class Scop {
 
 	/*------------------------------ constants ------------------------------*/
 	
-	private static final String LATEST_VERSION = "1.71"; // default version
+	public static final String LATEST_VERSION = "1.71"; // default version
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -87,5 +87,39 @@ public class Scop {
 	/** Returns the number of scop regions in this scop object */
 	public int getNumRegions() {
 		return this.scopRegions.size();
+	}
+	
+	/**
+	 * Returns a Vector of scop regions for the given sid
+	 * @param sid
+	 * @return
+	 */
+	public Vector<ScopRegion> getScopRegions (String sid) {
+		Vector<ScopRegion> restrScopRegions = new Vector<ScopRegion>();
+		Iterator<ScopRegion> it = scopRegions.iterator();
+		while(it.hasNext()) {
+			ScopRegion scopRegion = it.next();
+			if (scopRegion.getSId().equals(sid)) {
+				restrScopRegions.add(scopRegion);
+			}
+		}
+		return restrScopRegions;
+	}
+	
+	/**
+	 * Returns a Vector of scop regions for the given sunid
+	 * @param sunid
+	 * @return
+	 */
+	public Vector<ScopRegion> getScopRegions (int sunid) {
+		Vector<ScopRegion> restrScopRegions = new Vector<ScopRegion>();
+		Iterator<ScopRegion> it = scopRegions.iterator();
+		while(it.hasNext()) {
+			ScopRegion scopRegion = it.next();
+			if (scopRegion.getSunid()==(sunid)) {
+				restrScopRegions.add(scopRegion);
+			}
+		}
+		return restrScopRegions;
 	}
 }

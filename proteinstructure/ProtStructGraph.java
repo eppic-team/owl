@@ -36,6 +36,8 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 									// - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
     								// - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"	
 	protected int model;			// model serial number (for NMR structures, for all others is 1)
+	protected String sid;			// the scop id if this ProtStructGraph comes from a Pdb object restricted to a SCOP domain
+	
 	protected int fullLength;		// full length of the protein with all aas (same as sequence length)
 
 	protected int minSeqSep;
@@ -140,6 +142,18 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 
 	public int getFullLength() {
 		return fullLength;
+	}
+	
+	public String getSid() {
+		return sid;
+	}
+	
+	public void setSid(String sid) {
+		this.sid = sid;
+	}
+	
+	public boolean isRestrictedToScopDomain() {
+		return sid!=null;
 	}
 
 	public String getSequence() {

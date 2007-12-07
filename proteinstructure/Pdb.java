@@ -4,12 +4,14 @@ import java.io.*;
 import java.net.*;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.TreeSet;
+import java.util.Vector;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 import java.util.Arrays;
@@ -36,8 +38,8 @@ import java.sql.Statement;
  */
 public abstract class Pdb {
 
-	protected final static int DEFAULT_MODEL=1;				// default model serial (NMR structures)
-	public final static String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
+	protected static final int DEFAULT_MODEL=1;				// default model serial (NMR structures)
+	public static final String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify no chain code
 
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
@@ -66,6 +68,7 @@ public abstract class Pdb {
 	// - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"
 	protected String chainCode;
 	protected int model;  			// the model serial for NMR structures
+	protected String sid;			// the scop id if Pdb has been restricted (restrictToScopDomain)
 
 	// in case we read from pdb file, 2 possibilities:
 	// 1) SEQRES field is present: fullLength coincides with sequence length
@@ -834,6 +837,7 @@ public abstract class Pdb {
 		graph.setChainCode(chainCode);
 		graph.setPdbChainCode(pdbChainCode);
 		graph.setModel(model);
+		graph.setSid(sid);
 		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 
@@ -1240,6 +1244,22 @@ public abstract class Pdb {
 		return atomser2resser.values().contains(resser);
 	}
 
+	/**
+	 * Returns true if this Pdb has been restricted to a specific SCOP domain 
+	 * @return
+	 */
+	public boolean isRestrictedToScopDomain() {
+		return sid!=null;
+	}
+	
+	/**
+	 * Returns the sid of this Pdb 
+	 * It is set when restrictToScopDomain is run
+	 */
+	public String getSid() {
+		return sid;
+	}
+	
 	/**
 	 * Gets the atom coordinates (Point3d object) given the atom serial
 	 * @param atomser
@@ -1707,6 +1727,93 @@ public abstract class Pdb {
 
 	private static String quote(String s) {
 		return ("'"+s+"'");
+	}
+	
+	/**
+	 * Restricts thisPdb object to residues that belong to the given sunid
+	 * Can only be used after calling checkScop()
+	 * @param sunid
+	 */
+	public void restrictToScopDomain (int sunid) {
+		Vector<ScopRegion> scopRegions = this.scop.getScopRegions(sunid);
+		if (scopRegions.size()!=0) {
+			this.sid = scopRegions.get(0).getSId();
+			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
+				restrictToScopRegions(scopRegions);
+			}
+		}
+	}
+	
+	/**
+	 * Restricts thisPdb object to residues that belong to the given sid
+	 * Can only be used after calling checkScop() 
+	 * @param sid
+	 */
+	public void restrictToScopDomain (String sid) {
+		Vector<ScopRegion> scopRegions = this.scop.getScopRegions(sid);
+		if (scopRegions.size()!=0) {
+			this.sid = sid;
+			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
+				restrictToScopRegions(scopRegions);
+			}
+		}
+	}
+	
+	/**
+	 * Restricts this Pdb object to residues within the given ScopRegions 
+	 * @param scopRegions
+	 */
+	private void restrictToScopRegions (Vector<ScopRegion> scopRegions) {
+		IntervalSet intervSet = new IntervalSet();
+		Iterator<ScopRegion> it = scopRegions.iterator();
+		while(it.hasNext()) {
+			ScopRegion scopRegion = it.next();
+			intervSet.add(scopRegion.getInterval());
+		}
+		restrictToIntervalSet(intervSet);
+	}
+	
+	/**
+	 * Restricts this Pdb object to residues within the given IntervalSet
+	 * @param intervSet a set of internal residue serials
+	 */
+	private void restrictToIntervalSet(IntervalSet intervSet) {
+		
+		// getting list of the residue serials to keep
+		TreeSet<Integer> resSersToKeep = intervSet.getIntegerSet();
+
+		// removing residues from resser2restype
+		Iterator<Integer> itressers = resser2restype.keySet().iterator();
+		while (itressers.hasNext()) {
+			int resSer = itressers.next();
+			if (!resSersToKeep.contains(resSer)) {
+				itressers.remove();
+			}
+		}
+		
+		// removing residues(atoms) from resser_atom2atomserial
+		for (int atomSer:atomser2resser.keySet()) {
+			String atom = atomser2atom.get(atomSer);
+			int resSer = atomser2resser.get(atomSer);
+			String resser_atom = resSer+"_"+atom;
+			if (!resSersToKeep.contains(resSer)) {
+				resser_atom2atomserial.remove(resser_atom);
+			}
+		}
+		
+		// removing atoms belonging to unwanted residues from atomser2resser, atomser2atom and atomser2coord
+		Iterator<Integer> itatomsers = atomser2resser.keySet().iterator();
+		while (itatomsers.hasNext()) {
+			int atomSer = itatomsers.next();
+			if (!resSersToKeep.contains(atomser2resser.get(atomSer))) {
+				itatomsers.remove();
+				atomser2atom.remove(atomSer);
+				atomser2coord.remove(atomSer);
+			}
+		}
+		
+		// setting obsLength to new size, we won't touch fullLength or original sequence
+		obsLength = resser2restype.size();
 	}
 }
 
