@@ -1,8 +1,8 @@
 package actionTools;
 
 /**
- * Abstract class designated to perform any kind of task connected to the set 
- * object.
+ * Abstract class designated to perform any kind of task connected to the 
+ * object being set.
  * 
  * @author Lars Petzold
  *

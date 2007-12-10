@@ -23,7 +23,8 @@ public class testGraphClustering {
 			clusters = new TreeSet<Integer>();					// set of all non-empty clusters
 			members = new HashMap<Integer,EdgeSet>();			// cluster members
 			
-			Pdb pdb = new PdbasePdb("3eca","A");
+			Pdb pdb = new PdbasePdb("3eca");
+			pdb.load("A");
 			Graph g = pdb.get_graph("Ca", 8.0);
 			edges = g.getContacts();
 			seqLen = g.getFullLength();

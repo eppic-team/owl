@@ -16,8 +16,7 @@ import proteinstructure.AAinfo;
 import proteinstructure.Edge;
 import proteinstructure.Graph;
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
-import proteinstructure.PdbfileFormatError;
+import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 
 /**
@@ -42,17 +41,13 @@ public class ConstraintsMaker {
 	
 	private String lastPdbResSerial_Atom;
 	
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbfileFormatError {
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbLoadError {
 		this.defaultForceConstant = forceConstant;
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
-		try {
-			this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath(),"NULL");
-		} catch (PdbChainCodeNotFoundError e){
-			// this shouldn't happen as the pdb chain code is hard coded, we print stack trace and exit
-			System.err.println(e.getMessage());
-			e.printStackTrace();
-		}
+
+		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
+		this.pdb.load("NULL");
 		this.type = type;
 		
 		this.lastPdbResSerial_Atom = "";

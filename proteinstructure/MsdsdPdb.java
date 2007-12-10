@@ -7,8 +7,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.vecmath.Point3d;
+
+import actionTools.GetterError;
 
 import tools.MySQLConnection;
 
@@ -33,112 +36,143 @@ public class MsdsdPdb extends Pdb {
 	private int chainid;
 	private int modelid;
 
-	// TODO for this to be able to be used by other people we need to do things without a myMsdsdDb (or also distribute our fixes database)
+	// TODO for this to be used by other people we need to do things without a myMsdsdDb (or also distribute our fixes database)
 	private String myMsdsdDb; // our database with add-ons and fixes to msdsd
 
 	/**
-	 * Constructs Pdb object given pdb code and pdb chain code. 
-	 * Model will be DEFAULT_MODEL
+	 * Constructs an empty Pdb object given pdb code 
+	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)  
 	 * MySQLConnection is taken from defaults in MsdsdPdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
 	 * Database is taken from default msdsd database in MsdsdPdb class: DEFAULT_MSDSD_DB
 	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @throws PdbCodeNotFoundError
-	 * @throws MsdsdInconsistentResidueNumbersError
 	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this(pdbCode,pdbChainCode,DEFAULT_MODEL,DEFAULT_MSDSD_DB,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));		
+	public MsdsdPdb (String pdbCode) throws SQLException {
+		this(pdbCode,DEFAULT_MSDSD_DB,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));		
 	}
 
 	/**
-	 * Constructs Pdb object given pdb code, pdb chain code, db and MySQLConnection
-	 * Model will be DEFAULT_MODEL
-	 * db must be a msdsd database
+	 * Constructs an empty Pdb object given pdb code, a source db and a MySQLConnection.
+	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial) 
 	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param db
+	 * @param db a msdsd database
 	 * @param conn
-	 * @throws PdbCodeNotFoundError
-	 * @throws MsdsdInconsistentResidueNumbersError 
-	 * @throws SQLException 
 	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {		
-		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db,conn);		
-	}
-	
-	/**
-	 * Constructs Pdb object given pdb code, pdb chain code and a model serial
-	 * MySQLConnection is taken from defaults in MsdsdPdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
-	 * Database is taken from default msdsd database in MsdsdPdb class: DEFAULT_MSDSD_DB
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @throws PdbCodeNotFoundError
-	 * @throws MsdsdInconsistentResidueNumbersError
-	 * @throws SQLException 
-	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
-		this(pdbCode,pdbChainCode,model_serial,DEFAULT_MSDSD_DB,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));		
-	}
-
-	/**
-	 * Constructs Pdb object given pdb code, pdb chain code, model serial, a source db and a MySQLConnection.
-	 * db must be a msdsd database
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @param db
-	 * @param conn
-	 * @throws PdbCodeNotFoundError
-	 * @throws MsdsdInconsistentResidueNumbersError 
-	 * @throws SQLException 
-	 */
-	public MsdsdPdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbCodeNotFoundError, MsdsdInconsistentResidueNumbersError, SQLException {
+	public MsdsdPdb (String pdbCode, String db, MySQLConnection conn) {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
-		this.pdbChainCode=pdbChainCode;	// NOTE! pdb chain codes are case sensitive!
-		this.model=model_serial;
 		this.db=db;
 		this.myMsdsdDb="my_"+db;  // i.e. for db=msdsd_00_07_a then myMsdsdDb=my_msdsd_00_07_a
+		this.dataLoaded = false;
 
 		this.conn = conn;
 		
-		this.getchainid();// initialises chainid, modelid and chainCode
-        
-		if (check_inconsistent_res_numbering()){
-            throw new MsdsdInconsistentResidueNumbersError("Inconsistent residue numbering in msdsd for accession_code "+this.pdbCode+", chain_pdb_code "+this.pdbChainCode);
-        }
-		
-		this.sequence = read_seq();
-		this.fullLength = sequence.length();
-		
-		this.pdbresser2resser = get_ressers_mapping();
-
-		this.read_atomData();
-		
-		this.obsLength = resser2restype.size();
-		
-		// we initialise resser2pdbresser from the pdbresser2resser HashMap
-		this.resser2pdbresser = new HashMap<Integer, String>();
-		for (String pdbresser:pdbresser2resser.keySet()){
-			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
-		}
-		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
-		readSecStructure();
-		if(!secondaryStructure.isEmpty()) {
-			secondaryStructure.setComment("MSDSD");
-		}
-		
-		// initialising atomser2atom from resser_atom2atomserial
-		atomser2atom = new HashMap<Integer, String>();
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			String atom = resser_atom.split("_")[1];
-			atomser2atom.put(atomserial,atom);
-		}
 	}
 
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
+		this.model = modelSerial;
+		this.pdbChainCode=pdbChainCode;	// NOTE! pdb chain codes are case sensitive!
+		try {
+			this.getchainid();// initialises chainid, modelid and chainCode
+			
+			if (check_inconsistent_res_numbering()){
+			    throw new MsdsdInconsistentResidueNumbersError("Inconsistent residue numbering in msdsd for accession_code "+this.pdbCode+", chain_pdb_code "+this.pdbChainCode);
+			}
+			
+			this.sequence = read_seq();
+			this.fullLength = sequence.length();
+			
+			this.pdbresser2resser = get_ressers_mapping();
+
+			this.read_atomData();
+			
+			this.obsLength = resser2restype.size();
+			
+			// we initialise resser2pdbresser from the pdbresser2resser HashMap
+			this.resser2pdbresser = new HashMap<Integer, String>();
+			for (String pdbresser:pdbresser2resser.keySet()){
+				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
+			}
+			
+			secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+			readSecStructure();
+			if(!secondaryStructure.isEmpty()) {
+				secondaryStructure.setComment("MSDSD");
+			}
+			
+			// initialising atomser2atom from resser_atom2atomserial
+			atomser2atom = new HashMap<Integer, String>();
+			for (String resser_atom:resser_atom2atomserial.keySet()){
+				int atomserial = resser_atom2atomserial.get(resser_atom);
+				String atom = resser_atom.split("_")[1];
+				atomser2atom.put(atomserial,atom);
+			}
+			
+			dataLoaded = true;
+			
+		} catch (PdbCodeNotFoundError e) {
+			throw new PdbLoadError(e);
+		} catch (SQLException e) {
+			throw new PdbLoadError(e);
+		} catch (MsdsdInconsistentResidueNumbersError e) {
+			throw new PdbLoadError(e);
+		}
+		
+	}
+	
+	public String[] getChains()	throws GetterError {
+		TreeSet<String> chains = new TreeSet<String>();
+		try {
+			String sql = "SELECT DISTINCT chain_pdb_code " + // the DISTINCT is because there can be a multi model entry
+			" FROM "+myMsdsdDb+".mmol_chain_info " +
+			" WHERE accession_code='"+pdbCode+"' " +
+			" AND chain_type='C' " +
+			" AND asu_chain=1 ";
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				String chain = rsst.getString(1);
+				if (chain==null) chain="NULL";
+				chains.add(chain);
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (chains.isEmpty()) return null;
+		
+		String[] chainsArray = new String[chains.size()];
+		chains.toArray(chainsArray);
+		return chainsArray;
+	}
+	
+	public Integer[] getModels() throws GetterError {
+		TreeSet<Integer> models = new TreeSet<Integer>();
+		try {
+			String sql = "SELECT DISTINCT model_serial " +
+			" FROM "+myMsdsdDb+".mmol_chain_info " +
+			" WHERE accession_code='"+pdbCode+"' " +
+			" AND chain_type='C' " +
+			" AND asu_chain=1 ";
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				models.add(rsst.getInt(1));
+			}
+			rsst.close();
+			stmt.close();
+	
+		} catch (SQLException e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (models.isEmpty()) return null;		
+		Integer[] modelsArray = new Integer[models.size()];
+		models.toArray(modelsArray);
+		return modelsArray;
+	}
+	
 	private void getchainid() throws PdbCodeNotFoundError, SQLException {
 		chainid=0;
 		String chaincodestr="='"+pdbChainCode+"'";

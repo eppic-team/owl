@@ -1,5 +1,3 @@
-import java.io.IOException;
-
 import proteinstructure.*;
 import java.util.HashMap;
 
@@ -9,7 +7,7 @@ public class compareCMs {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) throws Exception, IOException, PdbaseInconsistencyError, PdbCodeNotFoundError, PdbChainCodeNotFoundError, MsdsdInconsistentResidueNumbersError{
+	public static void main(String[] args) throws Exception {
 		
 		String onlyIn1File="onlyin1.graph";
 		String onlyIn2File="onlyin2.graph";
@@ -23,8 +21,10 @@ public class compareCMs {
 
 		
 		System.out.println("loading structures from pdbase");
-		Pdb pdb1 = new PdbasePdb(pdbcode1,chaincode1); 
-		Pdb pdb2 = new PdbasePdb(pdbcode2,chaincode2);
+		Pdb pdb1 = new PdbasePdb(pdbcode1);
+		pdb1.load(chaincode1);
+		Pdb pdb2 = new PdbasePdb(pdbcode2);
+		pdb2.load(chaincode2);
 
 		System.out.println("getting graphs");
 		Graph graph1 = pdb1.get_graph("ALL", 4.2);

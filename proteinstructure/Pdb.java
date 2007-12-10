@@ -18,6 +18,8 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import actionTools.GetterError;
+
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 
@@ -68,8 +70,53 @@ public abstract class Pdb {
 	protected int fullLength; // length of full sequence as it appears in SEQRES field 
 	protected int obsLength;  // length without unobserved, non standard aas 
 	
+	protected boolean dataLoaded;	// true if this object has been loaded with pdb data, false when is empty
+	
 	protected String db;			// the db from which we have taken the data (if applies)
 	protected MySQLConnection conn;
+	
+	/*---------------------------------  abstract methods --------------------------------------------*/
+	/**
+	 * Returns all pdb chain codes for this Pdb entry (be it a file or an entry in a database)
+	 * @return pdb chain codes
+	 */
+	public abstract String[] getChains() throws GetterError;
+	
+	/**
+	 * Returns all models for this Pdb entry (be it a file or an entry in a database)
+	 * @return
+	 */
+	public abstract Integer[] getModels() throws GetterError;
+	
+	/**
+	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
+	 * for given pdbChainCode and modelSerial
+	 * @param pdbChainCode
+	 * @param modelSerial
+	 * @throws PdbLoadError
+	 */
+	public abstract void load(String pdbChainCode, int modelSerial) throws PdbLoadError;
+	
+	
+	/*---------------------------------  public methods ----------------------------------------------*/
+
+	/**
+	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
+	 * for given pdbChainCode and default model serial (1)
+	 * @param pdbChainCode
+	 * @throws PdbLoadError	 */
+
+	public void load(String pdbChainCode) throws PdbLoadError {
+		load(pdbChainCode, DEFAULT_MODEL);
+	}
+	
+	/**
+	 * Returns true if this Pdb has been loaded with pdb data (i.e. when 
+	 * load(pdbChainCode) has been called), false if it is empty
+	 */
+	public boolean isDataLoaded() {
+		return dataLoaded;
+	}
 	
 	public int checkCSA(String version, boolean online) throws IOException {
 		BufferedReader in;

@@ -6,10 +6,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
+
+import actionTools.GetterError;
 
 import tools.MySQLConnection;
 
@@ -36,110 +39,131 @@ public class PdbasePdb extends Pdb {
 	private String alt_locs_sql_str;
 
 	/**
-	 * Constructs Pdb object given pdb code and pdb chain code. 
-	 * Model will be DEFAULT_MODEL
+	 * Constructs an empty Pdb object given pdb code
+	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)
 	 * MySQLConnection is taken from defaults in PdbasePdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
 	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
 	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @throws PdbaseInconsistencyError
-	 * @throws PdbCodeNotFoundError
-	 * @throws SQLException 
-	 * @throws PdbChainCodeNotFoundError 
+	 * @throws SQLException  
+	 * @throws PdbCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
-		this(pdbCode, pdbChainCode, DEFAULT_MODEL, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
+	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundError {
+		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
 	}
 
 	/**
-	 * Constructs Pdb object given pdb code, pdb chain code, source db and a MySQLConnection 
-	 * Model will be DEFAULT_MODEL
-	 * The db must be a pdbase database
+	 * Constructs an empty Pdb object given pdb code, source db and a MySQLConnection.
+	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)  
 	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param db
+	 * @param db a pdbase database
 	 * @param conn
-	 * @throws PdbaseInconsistencyError
-	 * @throws PdbCodeNotFoundError 
 	 * @throws SQLException 
-	 * @throws PdbChainCodeNotFoundError 
-	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
-		this(pdbCode,pdbChainCode,DEFAULT_MODEL,db, conn);		
-	}
-
-	/**
-	 * Constructs Pdb object given pdb code, pdb chain code and model serial.
-	 * MySQLConnection is taken from defaults in PdbasePdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
-	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @throws PdbaseInconsistencyError
-	 * @throws PdbCodeNotFoundError
-	 * @throws SQLException
-	 * @throws PdbChainCodeNotFoundError 
-	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
-		this(pdbCode, pdbChainCode, model_serial, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
-	}
-	
-	/**
-	 * Constructs Pdb object given pdb code, pdb chain code, model serial, source db and a MySQLConnection.
-	 * The db must be a pdbase database 
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @param db
-	 * @param conn
-	 * @throws PdbaseInconsistencyError
 	 * @throws PdbCodeNotFoundError 
-	 * @throws SQLException 
-	 * @throws PdbChainCodeNotFoundError 
 	 */
-	public PdbasePdb (String pdbCode, String pdbChainCode, int model_serial, String db, MySQLConnection conn) throws PdbaseInconsistencyError, PdbCodeNotFoundError, SQLException, PdbChainCodeNotFoundError {
+	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, SQLException  {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
-		//NOTE:a case sensitive pdb_strand_id can be mapped to more than one asym_ids!!!!!!!!!!
-		this.pdbChainCode=pdbChainCode;					// NOTE! pdb chain code are case sensitive!
-		this.model=model_serial;
 		this.db=db;
+		this.dataLoaded = false;
 		
 		this.conn = conn;
-        this.entrykey=get_entry_key();
-        this.asymid=get_asym_id();		// sets asymid and chainCode
-        this.entitykey=get_entity_key();
-        this.alt_locs_sql_str=get_atom_alt_locs();
 		
-		this.sequence = read_seq();
-		this.fullLength = sequence.length();
-		
-		this.pdbresser2resser = get_ressers_mapping();
-    
-		this.read_atomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
-
-		this.obsLength = resser2restype.size();
-		
-		// we initialise resser2pdbresser from the pdbresser2resser HashMap
-		this.resser2pdbresser = new HashMap<Integer, String>();
-		for (String pdbresser:pdbresser2resser.keySet()){
-			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
-		}
-		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
-		readSecStructure();
-		if(!secondaryStructure.isEmpty()) {
-			secondaryStructure.setComment("Pdbase");
-		}
-		
-		// initialising atomser2atom from resser_atom2atomserial
-		atomser2atom = new HashMap<Integer, String>();
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			String atom = resser_atom.split("_")[1];
-			atomser2atom.put(atomserial,atom);
-		}
+		// this makes sure that we find the pdb code in the database
+		this.entrykey = get_entry_key();
 	}
 
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
+		try {
+			this.model = modelSerial;
+			this.pdbChainCode=pdbChainCode;					// NOTE! pdb chain code are case sensitive!
+			this.asymid=get_asym_id();		// sets asymid and chainCode
+			this.entitykey=get_entity_key();
+			this.alt_locs_sql_str=get_atom_alt_locs();
+			
+			this.sequence = read_seq();
+			this.fullLength = sequence.length();
+			
+			this.pdbresser2resser = get_ressers_mapping();
+   
+			this.read_atomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
+
+			this.obsLength = resser2restype.size();
+			
+			// we initialise resser2pdbresser from the pdbresser2resser HashMap
+			this.resser2pdbresser = new HashMap<Integer, String>();
+			for (String pdbresser:pdbresser2resser.keySet()){
+				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
+			}
+			
+			secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
+			readSecStructure();
+			if(!secondaryStructure.isEmpty()) {
+				secondaryStructure.setComment("Pdbase");
+			}
+			
+			// initialising atomser2atom from resser_atom2atomserial
+			atomser2atom = new HashMap<Integer, String>();
+			for (String resser_atom:resser_atom2atomserial.keySet()){
+				int atomserial = resser_atom2atomserial.get(resser_atom);
+				String atom = resser_atom.split("_")[1];
+				atomser2atom.put(atomserial,atom);
+			}
+			
+			dataLoaded = true;
+			
+		} catch (SQLException e) {
+			throw new PdbLoadError(e);
+		} catch (PdbChainCodeNotFoundError e) {
+			throw new PdbLoadError(e);
+		} catch (PdbaseInconsistencyError e) {
+			throw new PdbLoadError(e);
+		}
+
+	}
+	
+	public String[] getChains()	throws GetterError {
+		TreeSet<String> chains = new TreeSet<String>();
+		try {
+			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				chains.add(rsst.getString(1));
+			}
+			rsst.close();
+			stmt.close();
+		} catch (SQLException e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (chains.isEmpty()) return null;
+		
+		String[] chainsArray = new String[chains.size()];
+		chains.toArray(chainsArray);
+		return chainsArray;
+	}
+	
+	public Integer[] getModels() throws GetterError {
+		TreeSet<Integer> models = new TreeSet<Integer>();
+		try {
+			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
+			Statement stmt = conn.createStatement();
+			ResultSet rsst = stmt.executeQuery(sql);
+			while (rsst.next()) {
+				models.add(rsst.getInt(1));
+			}
+			rsst.close();
+			stmt.close();
+	
+		} catch (SQLException e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (models.isEmpty()) return null;		
+		Integer[] modelsArray = new Integer[models.size()];
+		models.toArray(modelsArray);
+		return modelsArray;
+	}
+	
 	private int get_entry_key() throws PdbCodeNotFoundError, SQLException {
 		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();

@@ -11,11 +11,10 @@ import java.util.Locale;
 
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
+import proteinstructure.PdbLoadError;
 import proteinstructure.Graph;
 import proteinstructure.Pdb;
-import proteinstructure.PdbChainCodeNotFoundError;
 import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
 
 import tinker.TinkerError;
@@ -133,18 +132,16 @@ public class reconstruct {
 		
 		Pdb pdb = null;
 		try {
-			pdb = new PdbasePdb(pdbCode,pdbChainCode);
-		} catch (PdbaseInconsistencyError e) {
-			System.err.println("Pdbase inconsistency for structure "+pdbCode+". Can't continue, exiting");
+			pdb = new PdbasePdb(pdbCode);
+			pdb.load(pdbChainCode);
+		} catch (PdbLoadError e) {
+			System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
 			System.exit(1);
 		} catch (PdbCodeNotFoundError e) {
 			System.err.println("Given pdb code "+pdbCode+" couldn't be found in pdbase. Exiting");
 			System.exit(1);
 		} catch (SQLException e) {
 			System.err.println("Problems connecting to database for getting pdb data for "+pdbCode+". Exiting");
-			System.exit(1);
-		} catch (PdbChainCodeNotFoundError e) {
-			System.err.println("Given pdb chain code "+pdbChainCode+" couldn't be found for pdb code "+pdbCode+". Exiting");
 			System.exit(1);
 		}
 		// we also write the file to the out dir so it can be used later for clustering rmsds etc.

@@ -20,6 +20,7 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Point3d;
 
+import actionTools.GetterError;
 
 /**
  * A single chain pdb protein structure loaded from an mmCIF file or downloaded from the PDB FTP site 
@@ -57,61 +58,36 @@ public class CiffilePdb extends Pdb {
 	
 	private RandomAccessFile fcif;
  
+	private boolean fieldsTitlesRead;
+	
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Constructs Pdb object from online PDB given pdb code and pdb chain code. 
-	 * The DEFAULT_MODEL (see superclass) and default PDB_FTP_URL are used.
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @throws PdbChainCodeNotFoundError
-	 * @throws IOException 
-	 * @throws CiffileFormatError 
-	 */
-	public CiffilePdb(String pdbCode, String pdbChainCode) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		this(pdbCode, pdbChainCode, DEFAULT_MODEL, PDB_FTP_URL);
-	}	
-
-	/**
-	 * Constructs Pdb object from online PDB given pdb code, pdb chain code and model serial.
+	 * Constructs an empty Pdb object from online PDB given pdb code
+	 * Data will be downloaded an stored in local file
+	 * but will only be loaded from local file upon call of load(pdbChainCode, modelSerial)  
 	 * The default PDB_FTP_URL is used.
 	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @throws PdbChainCodeNotFoundError
 	 * @throws IOException 
-	 * @throws CiffileFormatError 
 	 */
-	public CiffilePdb(String pdbCode, String pdbChainCode, int model_serial) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		this(pdbCode, pdbChainCode, model_serial, PDB_FTP_URL);
+	public CiffilePdb(String pdbCode) throws IOException {
+		this(pdbCode, PDB_FTP_URL);
 	}
 	
 	/**
-	 * Constructs Pdb object from online PDB given pdb code, pdb chain code and pdbFtpUrl. 
-	 * Model will be DEFAULT_MODEL (see superclass).
+	 * Constructs an empty Pdb object from online PDB given pdb code and pdbFtpUrl
+	 * Data will be downloaded an stored in local file
+	 * but will only be loaded from local file upon call of load(pdbChainCode, modelSerial)  
 	 * @param pdbCode
-	 * @param pdbChainCode
 	 * @param pdbFtpUrl
-	 * @throws PdbChainCodeNotFoundError
 	 * @throws IOException 
-	 * @throws CiffileFormatError 
 	 */
-	public CiffilePdb (String pdbCode, String pdbChainCode, String pdbFtpUrl) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		this(pdbCode, pdbChainCode, DEFAULT_MODEL, pdbFtpUrl);
-	}
+	public CiffilePdb (String pdbCode, String pdbFtpUrl) throws IOException {
+		this.dataLoaded = false;
+		this.fieldsTitlesRead = false;
 	
-	/**
-	 * Constructs Pdb object from online PDB given pdb code, pdb chain code, model serial and pdbFtpUrl 
-	 * @param pdbCode
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @param pdbFtpUrl
-	 * @throws PdbChainCodeNotFoundError
-	 * @throws IOException 
-	 * @throws CiffileFormatError 
-	 */
-	public CiffilePdb (String pdbCode, String pdbChainCode, int model_serial, String pdbFtpUrl) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		String tempDir = System.getProperty("java.io.tmpdir");	// TODO: read from FTP directly
+		// we store the file locally instead of reading directly from the ftp stream, so that the file can be cached locally in applications like CMView
+		String tempDir = System.getProperty("java.io.tmpdir");	
 		String gzCifFileName = pdbCode+CIF_FILE_EXTENSION;
 		File gzCifFile = new File(tempDir,gzCifFileName);
 		gzCifFile.deleteOnExit();
@@ -139,64 +115,28 @@ public class CiffilePdb extends Pdb {
 		zis.close();
 		os.close();
 		
-		// here we would like to call the constructor this(ciffile, pdbChainCode, model_serial); which does not work, so we use copy/paste:
+	}
 		
-		// load from temp file
-		this.pdbChainCode=pdbChainCode;				// NOTE! pdb chain codes are case sensitive
-		this.model=model_serial;
+	/**
+	 * Constructs an empty Pdb object given cif file
+	 * Data will be loaded from file upon call of load(pdbChainCode, modelSerial) 
+	 * @param ciffile
+	 */
+	public CiffilePdb (File ciffile) {
+		this.cifFile = ciffile;
+		this.dataLoaded = false;
+		this.fieldsTitlesRead = false;
 		
-		fcif = new RandomAccessFile(cifFile,"r");
-		parseCifFile();
-		fcif.close();
-
-		this.fullLength = sequence.length();		
-		this.obsLength = resser2restype.size();		
-		if(!secondaryStructure.isEmpty()) {
-			secondaryStructure.setComment("CIFfile");
-		}
-		
-		// we initialise resser2pdbresser from the pdbresser2resser HashMap
-		this.resser2pdbresser = new HashMap<Integer, String>();
-		for (String pdbresser:pdbresser2resser.keySet()){
-			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
-		}
-		
-		// initialising atomser2atom from resser_atom2atomserial
-		atomser2atom = new HashMap<Integer, String>();
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			String atom = resser_atom.split("_")[1];
-			atomser2atom.put(atomserial,atom);
-		}
 	}
 	
-	/**
-	 * Constructs Pdb object given cif file and pdb chain code. 
-	 * Model will be DEFAULT_MODEL
-	 * @param ciffile
-	 * @param pdbChainCode
-	 * @throws PdbChainCodeNotFoundError
-	 * @throws IOException 
-	 * @throws CiffileFormatError 
-	 */
-	public CiffilePdb (File ciffile, String pdbChainCode) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		this(ciffile, pdbChainCode, DEFAULT_MODEL);
+	public File getCifFile() {
+		return cifFile;
 	}
-
-	/**
-	 * Constructs Pdb object given cif file, pdb chain code and model serial 
-	 * @param ciffile
-	 * @param pdbChainCode
-	 * @param model_serial
-	 * @throws PdbChainCodeNotFoundError
-	 * @throws IOException 
-	 * @throws CiffileFormatError 
-	 */
-	public CiffilePdb (File ciffile, String pdbChainCode, int model_serial) throws PdbChainCodeNotFoundError, IOException, CiffileFormatError {
-		this.cifFile = ciffile;
+	
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError{
+		try {
+			this.model = modelSerial;
 		this.pdbChainCode=pdbChainCode;				// NOTE! pdb chain codes are case sensitive
-		this.model=model_serial;
-		
 		fcif = new RandomAccessFile(cifFile,"r");
 		parseCifFile();
 		fcif.close();
@@ -220,11 +160,115 @@ public class CiffilePdb extends Pdb {
 			String atom = resser_atom.split("_")[1];
 			atomser2atom.put(atomserial,atom);
 		}
+			
+			dataLoaded = true;
+			
+		} catch (CiffileFormatError e) {
+			throw new PdbLoadError(e);
+		} catch (IOException e) {
+			throw new PdbLoadError(e);
+		} catch (PdbChainCodeNotFoundError e) {
+			throw new PdbLoadError(e);
+	}
+	
+	}
+
+	public String[] getChains() throws GetterError {
+		TreeSet<String> chains = new TreeSet<String>();
+		
+		try {
+		fcif = new RandomAccessFile(cifFile,"r");
+			if (!fieldsTitlesRead) {
+				readFieldsTitles();
+			}
+			Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
+			
+			int recordCount=0;
+			
+			fcif.seek(intPdbxPoly[0]);
+			while(fcif.getFilePointer()<intPdbxPoly[1]) {
+				recordCount++; 
+
+				int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
+				int numberFields = ids2fieldsIdx.get(pdbxPolySeqId);
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId);
+				}
+				chains.add(tokens[pdbStrandIdIdx]);
+			}
+		fcif.close();
+
+		} catch (IOException e) {
+			throw new GetterError(e.getMessage());
+		} catch (CiffileFormatError e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (chains.isEmpty()) return null;
+		
+		String[] chainsArray = new String[chains.size()];
+		chains.toArray(chainsArray);
+		return chainsArray;
+		}
+		
+	public Integer[] getModels() throws GetterError {
+		TreeSet<Integer> models = new TreeSet<Integer>();
+		try {
+			fcif = new RandomAccessFile(cifFile,"r");
+			if (!fieldsTitlesRead) {
+				readFieldsTitles();
+		}
+			Long[] intAtomSite = loopelements2contentOffset.get(ids2elements.get(atomSiteId));
+			
+			int recordCount=0;
+			
+			fcif.seek(intAtomSite[0]);
+			while(fcif.getFilePointer()<intAtomSite[1]) {
+				recordCount++; 
+
+				int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
+				int numberFields = ids2fieldsIdx.get(atomSiteId);
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId);
+	}
+				models.add(Integer.parseInt(tokens[pdbxPDBModelNumIdx]));
+			}
+			fcif.close();
+	
+		} catch (IOException e) {
+			throw new GetterError(e.getMessage());
+		} catch (CiffileFormatError e) {
+			throw new GetterError(e.getMessage());
+		}
+		
+		if (models.isEmpty()) return null;
+		
+		Integer[] modelsArray = new Integer[models.size()];
+		models.toArray(modelsArray);
+		return modelsArray;
 	}
 	
 	/*---------------------------- private methods --------------------------*/
 	
 	private void parseCifFile() throws IOException, CiffileFormatError, PdbChainCodeNotFoundError{
+		
+		if (!fieldsTitlesRead) {
+			readFieldsTitles();
+		}		
+		// now reading separate elements separately using private methods
+		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
+		this.pdbCode = readPdbCode();
+		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
+		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
+		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
+		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+		readSecStructure(); // populates secondaryStructure	
+
+	}
+	
+	private void readFieldsTitles() throws IOException, CiffileFormatError {
 		// data structures to store the parsed fields
 		ids2elements = new TreeMap<String, Integer>();
 		fields2indices = new TreeMap<String,Integer>();
@@ -286,15 +330,7 @@ public class CiffilePdb extends Pdb {
 			lastLineOffset = currentOffset; //we store this line's offset to have it for next iteration
 		} // end scanning lines
 		
-		// now reading separate elements separately using private methods
-		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
-		this.pdbCode = readPdbCode();
-		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
-		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
-		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
-		readSecStructure(); // populates secondaryStructure	
-
+		fieldsTitlesRead = true;
 	}
 	
 	private String readPdbCode(){
