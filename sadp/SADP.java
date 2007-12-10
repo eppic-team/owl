@@ -64,12 +64,12 @@ public class SADP {
 
     protected double bf = 10.0;
 
-    protected double br = 2.0; //1.075;
+	protected double br = 1.075;
 
     // max # of iterations
     private int I0 =  4;
 
-    private int I1 = 10; //30;
+	private int I1 = 30;
 
     // precision
     private static double eps0 = 0.5;
