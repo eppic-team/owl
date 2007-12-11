@@ -114,7 +114,11 @@ public class NbhoodBackgrnd {
 		TreeMap<String,Double> dist = new TreeMap<String, Double>();
 		int i =0 ;
 		for (String aa:AAinfo.getAAs()) {
-			dist.put(aa,(double) countPerAA[i]/countTotal);
+			if (countTotal!=0) {
+				dist.put(aa,(double) countPerAA[i]/countTotal);
+			} else {
+				dist.put(aa,0.0); // we assign 0 as the frequency when there's no observations at all (countTotal = 0)
+			}
 			i++;
 		}
 
