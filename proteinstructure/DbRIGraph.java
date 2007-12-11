@@ -180,7 +180,7 @@ public class DbRIGraph extends RIGraph {
 			int j=rsst.getInt(2);
 			int atomWeight=rsst.getInt(3);
 			double distance=rsst.getDouble(4);
-			RIGEdge e = new RIGEdge(i,j,atomWeight);
+			RIGEdge e = new RIGEdge(atomWeight);
 			this.addEdge(e, serials2nodes.get(i),serials2nodes.get(j),et);
 			e.setDistance(distance);
 		}
