@@ -30,7 +30,7 @@ public class reconstruct {
 		
 		String programName = reconstruct.class.getName();
 		String help = "Usage:\n" +
-			programName+" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>]\n"; 
+			programName+" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] \n"; 
 
 		String pdbCode = "";
 		String pdbChainCode = "";
@@ -43,8 +43,10 @@ public class reconstruct {
 		boolean cross = false;
 		int n = 1;
 		//double forceConstant = 100.0;
+		int minRange = 0;
+		int maxRange = 0;
 		
-		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:h?");
+		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -78,6 +80,12 @@ public class reconstruct {
 			case 'n':
 				n = Integer.parseInt(g.getOptarg());
 				break;
+			case 'm':
+				minRange = Integer.parseInt(g.getOptarg());
+				break;
+			case 'M':
+				maxRange = Integer.parseInt(g.getOptarg());
+				break;				
 			//case 'f':
 			//	forceConstant = Double.valueOf(g.getOptarg());
 			//	break;				
@@ -157,12 +165,18 @@ public class reconstruct {
 
 		RIGraph[] graphs =null;
 		RIGraph graph1 = pdb.get_graph(ct1, cutoff1);
+		if (maxRange>0) graph1.restrictContactsToMaxRange(maxRange);
+		if (minRange>0) graph1.restrictContactsToMinRange(minRange);
 		RIGraph graph2 = null;
 		RIGraph graph3 = null;
 		if (doublecm) {
-			graph2 = pdb.get_graph(ct2, cutoff2);		
+			graph2 = pdb.get_graph(ct2, cutoff2);
+			if (maxRange>0) graph2.restrictContactsToMaxRange(maxRange);
+			if (minRange>0) graph2.restrictContactsToMinRange(minRange);
 			if (cross) {
 				graph3 = pdb.get_graph(ct3, cutoff3);
+				if (maxRange>0) graph3.restrictContactsToMaxRange(maxRange);
+				if (minRange>0) graph3.restrictContactsToMinRange(minRange);
 				graphs = new RIGraph[3];
 				graphs[0] = graph1;
 				graphs[1] = graph2;
@@ -225,7 +239,7 @@ public class reconstruct {
 				rmsds[i] = pdb.rmsd(outputPdb, "Ca");
 			}
 			catch (TinkerError e) {
-				System.err.println("Error while trying to retrieve results from Tinker: + e.getMessage()");
+				System.err.println("Error while trying to retrieve results from Tinker: "+ e.getMessage());
 			} catch (ConformationsNotSameSizeError e) {
 				System.err.println(origPdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
 			}				
