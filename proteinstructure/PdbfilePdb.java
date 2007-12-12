@@ -14,8 +14,6 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
-import actionTools.GetterError;
-
 public class PdbfilePdb extends Pdb {
 	
 	private static final String UNKNOWN_STRING ="XXXX";
@@ -86,7 +84,7 @@ public class PdbfilePdb extends Pdb {
 		}
 	}
 	
-	public String[] getChains() throws GetterError {
+	public String[] getChains() throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -100,7 +98,7 @@ public class PdbfilePdb extends Pdb {
 			}
 			fpdb.close();
 		} catch (IOException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -110,7 +108,7 @@ public class PdbfilePdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() throws GetterError {
+	public Integer[] getModels() throws PdbLoadError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -123,9 +121,9 @@ public class PdbfilePdb extends Pdb {
 			}
 			fpdb.close();
 		} catch (IOException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		} catch (NumberFormatException e) {
-			throw new GetterError("Wrong format for MODEL lines!");
+			throw new PdbLoadError("Wrong format for MODEL lines!");
 		}
 		
 		if (models.isEmpty()) models.add(DEFAULT_MODEL);//return null;		

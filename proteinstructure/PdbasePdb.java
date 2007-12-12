@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
-import actionTools.GetterError;
-
 import tools.MySQLConnection;
 
 /**
@@ -120,7 +118,7 @@ public class PdbasePdb extends Pdb {
 
 	}
 	
-	public String[] getChains()	throws GetterError {
+	public String[] getChains()	throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
@@ -132,7 +130,7 @@ public class PdbasePdb extends Pdb {
 			rsst.close();
 			stmt.close();
 		} catch (SQLException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -142,7 +140,7 @@ public class PdbasePdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() throws GetterError {
+	public Integer[] getModels() throws PdbLoadError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
@@ -155,7 +153,7 @@ public class PdbasePdb extends Pdb {
 			stmt.close();
 	
 		} catch (SQLException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		}
 		
 		if (models.isEmpty()) return null;		

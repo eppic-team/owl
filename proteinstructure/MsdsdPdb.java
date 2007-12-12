@@ -11,8 +11,6 @@ import java.util.TreeSet;
 
 import javax.vecmath.Point3d;
 
-import actionTools.GetterError;
-
 import tools.MySQLConnection;
 
 /**
@@ -119,7 +117,7 @@ public class MsdsdPdb extends Pdb {
 		
 	}
 	
-	public String[] getChains()	throws GetterError {
+	public String[] getChains()	throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			String sql = "SELECT DISTINCT chain_pdb_code " + // the DISTINCT is because there can be a multi model entry
@@ -137,7 +135,7 @@ public class MsdsdPdb extends Pdb {
 			rsst.close();
 			stmt.close();
 		} catch (SQLException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -147,7 +145,7 @@ public class MsdsdPdb extends Pdb {
 		return chainsArray;
 	}
 	
-	public Integer[] getModels() throws GetterError {
+	public Integer[] getModels() throws PdbLoadError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			String sql = "SELECT DISTINCT model_serial " +
@@ -164,7 +162,7 @@ public class MsdsdPdb extends Pdb {
 			stmt.close();
 	
 		} catch (SQLException e) {
-			throw new GetterError(e.getMessage());
+			throw new PdbLoadError(e);
 		}
 		
 		if (models.isEmpty()) return null;		

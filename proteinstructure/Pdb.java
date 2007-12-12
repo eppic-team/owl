@@ -20,8 +20,6 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-import actionTools.GetterError;
-
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -86,13 +84,13 @@ public abstract class Pdb {
 	 * Returns all pdb chain codes for this Pdb entry (be it a file or an entry in a database)
 	 * @return pdb chain codes
 	 */
-	public abstract String[] getChains() throws GetterError;
+	public abstract String[] getChains() throws PdbLoadError;
 	
 	/**
 	 * Returns all models for this Pdb entry (be it a file or an entry in a database)
 	 * @return
 	 */
-	public abstract Integer[] getModels() throws GetterError;
+	public abstract Integer[] getModels() throws PdbLoadError;
 	
 	/**
 	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
