@@ -94,6 +94,45 @@ public class Interval implements Comparable {
 	}
 	
 	/**
+	 * Creates selection string from the given set of integers.
+	 * @param intSet  set of integers
+	 * @return  selection string for PyMol, e.g. 
+	 *  <code>intSet=[1 2 4 5 6 9]</code> yields <code>1-2,4-6,9,</code>
+	 */
+	public static String createSelectionString(TreeSet<Integer> intSet) {
+		
+		switch(intSet.size()) {
+		case 0:
+			return "";
+		case 1:
+			return intSet.first().toString();
+		}
+		
+		int last = intSet.first();
+		int start = last;
+		String resString = "";
+		
+		for(int i:intSet) {
+			if(i > last+1) {
+				resString += (last-start == 0?last:(start + "-" + last)) + ",";
+				start = i;
+				last = i;
+			} else
+				if(i == last) {
+					// skip
+				} else
+					if(i == last+1) {
+						last = i;
+					}
+		}
+		
+		resString += (last-start == 0?last:(start + "-" + last));
+		
+		
+		return resString;
+	}
+	
+	/**
 	 * Returns the set as a vector of intervals of consecutive elements.
 	 * @return
 	 */
