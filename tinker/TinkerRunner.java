@@ -29,7 +29,7 @@ public class TinkerRunner {
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_PARAMS = "Y N Y Y N N A";
-	private static final double DEFAULT_FORCECONSTANT = 100.0;
+	private static final double DEFAULT_FORCECONSTANT = 10.0;
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final String DEFAULT_FF_FILE_TYPE = "amber";
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
@@ -661,7 +661,7 @@ public class TinkerRunner {
 		
 		for(int i=1; i <= lastNumberOfModels; i++) {
 			String modelFileName = modelFiles.get(i-1).getAbsolutePath(); 
-			gdtScores[i-1] = maxCluster.calculateGdt(modelFileName, nativePdbFileName);
+			gdtScores[i-1] = maxCluster.calculatePairwiseScore(modelFileName, nativePdbFileName, MaxClusterRunner.ScoreType.GDT);
 		}
 		return gdtScores;
 	}

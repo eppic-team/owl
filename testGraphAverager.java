@@ -328,7 +328,7 @@ public class testGraphAverager {
 			try {
 				maxCluster = new MaxClusterRunner(maxClusterExecutable);
 				for(String tpl:templateFileNames) {
-					double gdtScore = maxCluster.calculateGdt(tpl, targetFileName);
+					double gdtScore = maxCluster.calculatePairwiseScore(tpl, targetFileName,MaxClusterRunner.ScoreType.GDT);
 					if(gdtScore > bestTemplateGdt) {
 						bestTemplateGdt = gdtScore;
 					}
