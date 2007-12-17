@@ -304,6 +304,9 @@ public class PdbfilePdb extends Pdb {
 			// not size but maximum: if residue numbering in pdb file is correct, then this takes care of non-observed except for possible non-observed at end of chain
 			fullLength = Collections.max(resser2restype.keySet()); 
 		} else { // we read the sequence from SEQRES
+			if( sequence.length() < Collections.max(resser2restype.keySet())) {
+				throw new PdbfileFormatError("Last residue serial in ATOM lines is bigger than SEQRES length!");
+			}
 			fullLength = sequence.length();
 		}
 	}
