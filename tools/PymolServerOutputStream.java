@@ -107,15 +107,20 @@ public class PymolServerOutputStream extends OutputStream {
 	    this.commandBuffer = new byte[INITIALBUFFERCAPACITY];
 	    this.commandBufferCap = INITIALBUFFERCAPACITY;
 	    this.commandBufferPtr = 0;
+	    TimingOutCallback callback = new TimingOutCallback(1000);
+	    
 	    // submit command
 	    try {
-	    	this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
-	    	
+	    	//this.client.execute(DEFAULTXMLRPCCOMMAND, myvector);
+	    	this.client.executeAsync(DEFAULTXMLRPCCOMMAND, myvector, callback);
+	    	callback.waitForResponse();
 	    } catch(XmlRpcException e) {
 	    	// System.out.println("XMP-RPC exception occured.");
 	    	// send IOException instead, so use of XML-RPC is transparent
 	    	throw new IOException(e.getMessage()); 
-	    }
+	    } catch (Throwable e) {
+	    	throw new IOException(e.getMessage());
+		}
 	}
 	
 	// test function for current class
