@@ -633,21 +633,18 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Returns the distance matrix as a HashMap with Contacts (residue serial pairs) as keys
+	 * Returns the distance matrix as a HashMap with residue serial pairs as keys
 	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
 	 * residues 
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
-	 * @return A map which assings to each edge the corresponding distance
-	 * TODO: 
+	 * @return a map which assigns to each edge the corresponding distance 
 	 */
 	public HashMap<Pair<Integer>, Double> calculate_dist_matrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = calculate_atom_dist_matrix(ct);
 
-		/**
-		 * Helper method which maps atom serials to residue serials.
-		 * TODO: Integrate into above method to avoid storing two distance maps in memory
-		 */
+		 // mapping atom serials to residue serials
+		 // TODO: we could integrate this with the code in calculate_atom_dist_matrix to avoid storing two distance maps in memory
 		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
 		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
 			int i_resser = get_resser_from_atomser(cont.getFirst());
@@ -664,11 +661,11 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Returns the distance matrix as a HashMap with Contacts (atom serial pairs) as keys
+	 * Returns the distance matrix as a HashMap with atom serial pairs as keys
 	 * This method can be used for any contact type
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
-	 * @return A map which assings to each edge the corresponding distance
+	 * @return a map which assings to each atom pair the corresponding distance
 	 */
 	public HashMap<Pair<Integer>, Double> calculate_atom_dist_matrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
@@ -698,6 +695,16 @@ public abstract class Pdb {
 		}
 
 		return distMatrixAtoms;
+	}
+	
+	/**
+	 * Calculates the radius of gyration of this Pdb 
+	 * (defined as half of the maximum distance between any 2 CA atoms)
+	 * @return
+	 */
+	public double calculateRadGyration() {
+		//TODO this is a very raw implementation o(n^2): should optimise it if that's really needed
+		return Collections.max(this.calculate_atom_dist_matrix("Ca").values())/2;
 	}
 	
 	/**
