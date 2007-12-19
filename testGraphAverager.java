@@ -187,7 +187,7 @@ public class testGraphAverager {
 		// create GraphAverager
 		GraphAverager grav = new GraphAverager(targetGraph.getSequence(), al, templateGraphs, targetFile.getAbsolutePath());
 		if(verbose) System.out.println("Calculating average...");
-		consensusGraph = grav.doAveraging(graphAveragingThreshold);
+		consensusGraph = grav.getConsensusGraph(graphAveragingThreshold);
 		averageGraph = grav.getAverageGraph();
 
 		// compare consensus graph with target
