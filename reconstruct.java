@@ -210,8 +210,10 @@ public class reconstruct {
 			tr.reconstruct(sequence, graphs, n, outputDir, baseName, false);
 		} catch (IOException e) {
 			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			System.exit(1);
 		} catch (TinkerError e) {
 			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			System.exit(1);
 		}
 				
 		double[] err = tr.getErrorFunctionVal();
