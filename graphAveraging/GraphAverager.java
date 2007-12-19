@@ -1,8 +1,11 @@
 package graphAveraging;
 
+import java.util.Date;
+import java.util.Iterator;
 import java.util.TreeMap;
 
 import proteinstructure.Alignment;
+import proteinstructure.AlignmentConstructionError;
 import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
@@ -10,19 +13,45 @@ import proteinstructure.RIGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
-//TODO test the class. After rewriting with JUNG2 hasn't been tested
+
+/**
+ * Provides methods for an ensemble of RIGs: Calculating a consensus graph,
+ * and consensus scores for individual members or the whole ensemble. 
+ * @author stehr
+ * @date 2007-12-19
+ */
 public class GraphAverager {
 
+	/*--------------------------- member variables --------------------------*/
+	
 	private Alignment al;
-	private TreeMap<String,RIGraph> templateGraphs;
-	private String targetTag;
-	private int numTemplates;
+	private TreeMap<String,RIGraph> templateGraphs;	// identified by tag-string
+	private String targetTag;		// id of target sequence in alignment
 	private String sequence;		// sequence of the final consensus graph
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
 	private TreeMap<Pair<Integer>,Integer> contactVotes;
 	
+	/*----------------------------- constructors ----------------------------*/
+	
+	/**
+	 * TODO: Create a graph averager for an ensemble of RIGs.
+	 */
+	// public GraphAverager(RIGEnsemble rigs) {
+	// - templateGraph = ensembleGraphs
+	// - targetSequence = ensembleSequence
+	// - targetTag = only used internally
+	// - contactType/cutoff /numTemplates: from ensemble
+	// }
+	
+	/**
+	 * Create a graph averager given an alignment of the target sequence to the template graphs.
+	 * @param sequence the target sequence
+	 * @param al a multiple alignment of the target sequence and the template graphs
+	 * @param templateGraphs a collection of template graphs to be averaged
+	 * @param targetTag the identifier of the target sequence in the alignment
+	 */
 	public GraphAverager(String sequence, Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
 		this.al = al;
 		this.templateGraphs = templateGraphs;
@@ -32,12 +61,44 @@ public class GraphAverager {
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
 		
-		this.numTemplates = templateGraphs.size();
-		checkSequences();
-		
+		checkSequences();	
 		countVotes(); // does the averaging by counting the votes and putting them into contactVotes
-		
 	}
+	
+	/**
+	 * Create a graph averager assuming that the target and template structures all have the same size.
+	 * A trivial alignment will be internally created. Fails if sizes do not match.
+	 * @param sequence the target sequence
+	 * @param templateGraphs a collection of template graphs to be averaged
+	 * @param targetTag the identifier of the target sequence in the alignment
+	 */
+	public GraphAverager(String sequence, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
+		this.templateGraphs = templateGraphs;
+		this.targetTag = targetTag;
+		this.sequence = sequence;
+		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
+		this.contactType = firstGraph.getContactType();
+		this.distCutoff = firstGraph.getCutoff();		
+		
+		// create trivial alignment
+		TreeMap<String,String> sequences = new TreeMap<String, String>();
+		sequences.put(Long.toString(new Date().getTime()), sequence);	// a unique identifier
+		for(String id:templateGraphs.keySet()) {
+			sequences.put(id, templateGraphs.get(id).getSequence());
+		}
+		Alignment al = null;
+		try {
+			al = new Alignment(sequences);
+		} catch (AlignmentConstructionError e) {
+			System.err.println("Could not create alignment: " + e.getMessage());
+		}
+		this.al = al;
+		
+		checkSequences();	
+		countVotes(); // does the averaging by counting the votes and putting them into contactVotes		
+	}
+	
+	/*---------------------------- private methods --------------------------*/
 	
 	/**
 	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs and between this.al  and this.graph/this.targetTag 
@@ -101,6 +162,15 @@ public class GraphAverager {
 		}		
 	}
 	
+	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * Returns the number of templates.
+	 */
+	public int getNumberOfTemplates() {
+		return this.templateGraphs.size();
+	}
+	
 	/**
 	 * Calculates the consensus graph from the set of template graphs. An edge is contained
 	 * in the consensus graph if the fractions of template graphs it is contained in is above
@@ -110,11 +180,12 @@ public class GraphAverager {
 	 * @param threshold the threshold above which an edge is taken to be a consensus edge
 	 * @return the new graph
 	 */
-	public RIGraph doAveraging(double threshold) {
+	public RIGraph getConsensusGraph(double threshold) {
 		
 		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
+		int numTemplates = templateGraphs.size();
 		
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
@@ -139,6 +210,7 @@ public class GraphAverager {
 		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
+		int numTemplates = templateGraphs.size();
 		
 		for (Pair<Integer> alignCont:contactVotes.keySet()){
 			double weight = 1.0 * contactVotes.get(alignCont) / numTemplates;
@@ -149,5 +221,82 @@ public class GraphAverager {
 			}
 		}		
 		return graph;
+	}
+	
+	/**
+	 * Calculates the consensus score for the graph g with tag t with respect to the current ensemble of graphs.
+	 * g has to have the same size (i.e. number of nodes) as the graphs in the ensemble.
+	 * This is done by summing over each edge e in g, the number of graphs in the ensemble which also
+	 * contain edge e. This value can be normalized by the number of nodes and the size of the ensemble.
+	 * The normalization makes the values comparable across different targets.
+	 * This score is a rough estimate of model quality. 
+	 * @param g2
+	 * @return the consensus score or -1 if something went wrong
+	 */
+	public double getConsensusScore(String t, boolean normalizeByNumNodes, boolean normalizeByNumTemplates) {
+		double score = 0;
+		RIGraph g = templateGraphs.get(t);
+		if(g != null) {
+			for(RIGEdge e:g.getEdges()) {
+				// TODO: Use index mapping from alignment
+				Pair<RIGNode> n = g.getEndpoints(e);
+				Pair<Integer> i = new Pair<Integer>(n.getFirst().getResidueSerial(), n.getSecond().getResidueSerial());
+				int count = contactVotes.get(i);
+				score = score + count;
+			}
+		} else return -1;
+		if(normalizeByNumNodes) {
+			score = score / al.getAlignmentLength();
+		}
+		if(normalizeByNumTemplates) {
+			score = score / templateGraphs.size();
+		}
+		return score;
+	}
+	
+	/**
+	 * Return the consensus score for the whole ensemble (summed over all members).
+	 * This is a rough estimate of target difficulty.
+	 * @return
+	 */
+	public double getEnsembleConsensusScore() {
+		double score = 0;
+		for(String tag:templateGraphs.keySet()) {
+			double s = getConsensusScore(tag, true, true);
+			if(s > 0) score = score + s;
+		}
+		return score;
+	}
+	
+	/**
+	 * Filters the graphs in this ensemble by the consensus score. All graphs
+	 * whith a consensus score equal to or greater than the given threshold are kept,
+	 * others are thrown away.
+	 * @param minScore the filtering threshold
+	 */
+	public void filterByConsensusScore(double minScore) {
+		// filter
+		Iterator<String> it = templateGraphs.keySet().iterator();
+		while(it.hasNext()) {
+			String tag = it.next();
+			double cs = getConsensusScore(tag, true, true);
+			if(cs < minScore) {
+				// delete from templateGraphs, keep in alignment (to avoid side effects)
+				it.remove();
+			}
+		}
+		// update contact votes
+		countVotes();
+	}
+	
+	// Run graph averaging from the command line
+	public static void main(String[] args) {
+		// Take a list of pdb/cm files, calculate the average & evtl. reconstruct using Tinker
+		// 0. Create graphs (if necessary)
+		// 1. select models (using overall consensus score) [or do this outside?]
+		// 2. create consensus graph
+		// 3. reconstruct (if necessary)
+		
+		// define getopt options
 	}
 }
