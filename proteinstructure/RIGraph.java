@@ -30,6 +30,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	protected double distCutoff;
 	protected String contactType;				// use AAinfo.isValidContactType() to test for validity
 	
+	// optional fields for graphs based on casp predictions
+	protected int targetNum;
+	protected int caspModelNum;
+	protected int groupNum;
+	
 	public RIGraph() {
 		super();
 		this.distCutoff=0;
@@ -713,6 +718,29 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.close();		
 	}
 
+	/**
+	 * Export graph as a Casp contact prediction file.
+	 * Note: Writes weighted edges to file.
+	 * @param outFile name of the output file
+	 * @throws IOException
+	 */
+	public void writeToCaspRRFile(String outFile) throws IOException {
+		PrintStream out = new PrintStream(new FileOutputStream(outFile));
+		CaspRRFileData rrData = new CaspRRFileData();
+		rrData.setSequence(this.sequence);
+		for(RIGEdge cont:getEdges()) {
+			Pair<RIGNode> nodePair = getEndpoints(cont);
+			int i = nodePair.getFirst().getResidueSerial();
+			int j = nodePair.getSecond().getResidueSerial();
+			double minDist = CaspRRFileData.DEFAULT_MIN_DIST;
+			double maxDist = this.getCutoff();
+			double weight = cont.getWeight();
+			CaspRRFileData.RRContact rrCont = rrData.new RRContact(i,j, minDist, maxDist, weight);
+			rrData.addContact(rrCont);
+		}
+		
+		out.close();
+	}
 	
 	public void writeToSADPFile (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
@@ -866,6 +894,48 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	public boolean removeVertex(RIGNode vertex) {
 		serials2nodes.remove(vertex.getResidueSerial());
 		return super.removeVertex(vertex);
+	}
+
+	/**
+	 * @return the caspModelNum
+	 */
+	public int getCaspModelNum() {
+		return caspModelNum;
+	}
+
+	/**
+	 * @return the groupNum
+	 */
+	public int getGroupNum() {
+		return groupNum;
+	}
+
+	/**
+	 * @return the targetNum
+	 */
+	public int getTargetNum() {
+		return targetNum;
+	}
+
+	/**
+	 * @param caspModelNum the caspModelNum to set
+	 */
+	public void setCaspModelNum(int caspModelNum) {
+		this.caspModelNum = caspModelNum;
+	}
+
+	/**
+	 * @param groupNum the groupNum to set
+	 */
+	public void setGroupNum(int groupNum) {
+		this.groupNum = groupNum;
+	}
+
+	/**
+	 * @param targetNum the targetNum to set
+	 */
+	public void setTargetNum(int targetNum) {
+		this.targetNum = targetNum;
 	}
 	
 	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)

@@ -28,7 +28,6 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	protected static final int DEFAULT_MODEL = 1;
 	protected final static String GRAPHFILEFORMATVERSION = "1.0";
 	
-
 	protected String sequence;		// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;		// the lower-case pdb code
 	protected String pdbChainCode;	// The pdb chain code (upper case), i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)
@@ -37,6 +36,7 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
     								// - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"	
 	protected int model;			// model serial number (for NMR structures, for all others is 1)
 	protected String sid;			// the scop id if this ProtStructGraph comes from a Pdb object restricted to a SCOP domain
+	protected String comment;		// a user-defined comment field
 	
 	protected int fullLength;		// full length of the protein with all aas (same as sequence length)
 
@@ -58,6 +58,7 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 		this.minSeqSep = -1;
 		this.maxSeqSep = -1;
 		this.secondaryStructure = null;
+		this.comment = null;
 	}
 
 	/**
@@ -175,6 +176,22 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	
 	public boolean hasSecondaryStructure() {
 		return this.secondaryStructure!=null;
+	}
+
+	/**
+	 * Sets the user comment for this graph.
+	 * @param comment
+	 */
+	public void setComment(String comment) {
+		this.comment = comment;
+	}
+	
+	/**
+	 * Returns the user comment.
+	 * @return the user comment string
+	 */
+	public String getComment() {
+		return this.comment;
 	}
 	
 	/**
