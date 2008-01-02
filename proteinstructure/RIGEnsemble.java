@@ -50,7 +50,9 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	 * The list file may point to files of different types. If the file type can be recognized
 	 * the appropriate loading method will be called. Graphs are being generated from PDB files
 	 * using the global edgeType and distanceCutoff. For contact map files, the edgeType/cutoff
-	 * has to match the global one, otherwise an exception is thrown.
+	 * has to match the global one, otherwise an exception is thrown. Other erros are supressed
+	 * so that if single files contain errors, others will be still loaded. If any file contains
+	 * multiple chains, the first one will be read.
 	 * @param listFile
 	 * @return number of files read
 	 */
@@ -125,13 +127,54 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	}
 	
 	/**
-	 * Generate a RIGEnsemble from a multi-model PDB or mmCIF file. 
+	 * Generate a RIGEnsemble from a multi-model PDB or mmCIF file. If the file contains
+	 * multiple chains, only the first one is read.
+	 * @param file the input file
+	 * @return the number of models read
 	 */
-	public void loadFromMultiModelFile(File file) {
+	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadError {
 		// for each model in file, generate a graph
+		Pdb pdb;
+		RIGraph graph;
+		Integer[] models;
+		String[] chains;
+		String chain;
+		int mr = 0;
+		int fileType = FileTypeGuesser.guessFileType(file);
+		switch(fileType) {
+		case(FileTypeGuesser.PDB_FILE):
+		case(FileTypeGuesser.RAW_PDB_FILE):
+			pdb = new PdbfilePdb(file.getAbsolutePath());
+			models = pdb.getModels();
+			chains = pdb.getChains();
+			chain = chains[0];
+			for(int mod: models) {
+				pdb = new PdbfilePdb(file.getAbsolutePath());
+				pdb.load(chain, mod);
+				graph = pdb.get_graph(this.edgeType, this.distCutoff);
+				this.addRIG(graph);
+				mr++;
+			}
+			break;
+		case(FileTypeGuesser.CIF_FILE):
+			pdb = new PdbfilePdb(file.getAbsolutePath());
+			models = pdb.getModels();
+			chains = pdb.getChains();
+			chain = chains[0];
+			for(int mod: models) {
+				pdb = new CiffilePdb(file.getAbsolutePath());
+				pdb.load(chain, mod);
+				graph = pdb.get_graph(this.edgeType, this.distCutoff);
+				this.addRIG(graph);
+				mr++;
+			}
+			break;			
+		}
+		return mr;
 	}
 
 	/*---------------------------- public methods ---------------------------*/
+	
 	public int getEnsembleSize() {
 		return this.size();
 	}
@@ -153,5 +196,42 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	public RIGraph getRIG(int i) {
 		return this.get(i);
 	}
+		
+	/*--------------------------------- main --------------------------------*/
 	
+	// for testing
+	public static void main(String[] args) throws IOException, PdbLoadError {
+		
+		boolean loadFromList = false;
+		int filesRead = 0;
+		
+		if(args.length < 2) {
+			System.out.println("Usage: RIGEnsemble -l/-m fileName");
+			System.out.println("-l	load from list file");
+			System.out.println("-m  load from multi-model file (cif or pdb)");
+			System.exit(1);
+		}
+		String opt = args[0];
+		if(opt.equals("-l")) {
+			loadFromList = true;
+		} else
+		if(opt.equals("-m")) {
+			loadFromList = false;
+		} else {
+			System.err.println("Unknown option " + opt + ". Expected -l or -m");
+		}
+		
+		String fileName = args[1];
+		File inFile = new File(fileName);
+		
+		RIGEnsemble rigs = new RIGEnsemble();
+		if(loadFromList) {
+			filesRead = rigs.loadFromListFile(inFile);
+		} else {
+			filesRead = rigs.loadFromMultiModelFile(inFile);
+		}
+		
+		System.out.println("RIGs read from file:\t" + filesRead);
+		System.out.println("RIGs in ensemble:\t" + rigs.getEnsembleSize());
+	}
 }
