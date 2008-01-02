@@ -1,4 +1,4 @@
 Name: AgLappeCommon
 Specification-Title: Common java libraries
-Specification-Version: 0.8.5
+Specification-Version: 0.9
 Specification-Vendor: AG Lappe, MPI for Molecular Genetics, Berlin
