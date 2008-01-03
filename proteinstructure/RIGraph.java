@@ -738,7 +738,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			CaspRRFileData.RRContact rrCont = rrData.new RRContact(i,j, minDist, maxDist, weight);
 			rrData.addContact(rrCont);
 		}
-		
+		rrData.writeToStream(out);
 		out.close();
 	}
 	
@@ -850,6 +850,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		newGraph.setPdbChainCode(pdbChainCode);
 		newGraph.setChainCode(chainCode);
 		newGraph.setModel(model);
+		newGraph.setTargetNum(targetNum);
+		newGraph.setGroupNum(groupNum);
+		newGraph.setCaspModelNum(caspModelNum);
 		newGraph.setContactType(contactType);
 		newGraph.setCutoff(distCutoff);
 		newGraph.setSequence(sequence);

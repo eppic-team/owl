@@ -90,6 +90,9 @@ public class PairwiseAlignmentGraphConverter {
 		alignedGraph.setPdbChainCode(g1.getPdbChainCode());
 		alignedGraph.setChainCode(g1.getChainCode());
 		alignedGraph.setModel(g1.getModel());
+		alignedGraph.setGroupNum(g1.getGroupNum());
+		alignedGraph.setTargetNum(g1.getTargetNum());
+		alignedGraph.setCaspModelNum(g1.getCaspModelNum());
 		alignedGraph.setContactType(g1.getContactType());
 		alignedGraph.setCutoff(g1.getCutoff());
 		alignedGraph.setSequence(sequence);
