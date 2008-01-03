@@ -27,7 +27,9 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	
 	protected static final int DEFAULT_MODEL = 1;
 	protected final static String GRAPHFILEFORMATVERSION = "1.0";
-	
+	public static final String NO_CONTACT_TYPE = "";
+	public static final double NO_CUTOFF = 0.0;
+ 	
 	protected String sequence;		// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;		// the lower-case pdb code
 	protected String pdbChainCode;	// The pdb chain code (upper case), i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)

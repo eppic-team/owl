@@ -25,13 +25,12 @@ public class CaspRRFileRIGraph extends RIGraph {
 		// we set the sequence to blank when we read from file as we don't have the full sequence
 		// if sequence is present in RR file then is read from there
 		this.sequence="";
-		this.contactType="";
-		this.distCutoff=0.0;
-		// we initialise pdbCode, chainCode and pdbChainCode to empty strings since file doesn't specify then
-		// TODO: should these be set to null instead?
-		this.pdbCode="";
-		this.chainCode="";
-		this.pdbChainCode="";
+		this.contactType=ProtStructGraph.NO_CONTACT_TYPE;
+		this.distCutoff=ProtStructGraph.NO_CUTOFF;
+		// we initialise pdbCode, chainCode and pdbChainCode to corresponding constants (empty strings at the moment) since file doesn't specify then
+		this.pdbCode=Pdb.NO_PDB_CODE;
+		this.chainCode=Pdb.NO_CHAIN_CODE;
+		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
 		
 		readFromCaspRRFile(fileName);  
 		
