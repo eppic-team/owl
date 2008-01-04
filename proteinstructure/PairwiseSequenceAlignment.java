@@ -66,10 +66,6 @@ import jaligner.util.*;
 			Matrix 		matrix		= null;
 			Alignment	alignment;
 			
-			if(name1.equals(name2)) {
-				name2 = name1 + "_2";
-			}
-			
 			// parse sequences
 			try {
 				s1 = SequenceParser.parse(seq1);
