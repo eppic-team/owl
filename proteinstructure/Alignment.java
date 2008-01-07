@@ -35,6 +35,8 @@ public class Alignment {
 	/*--------------------------- member variables --------------------------*/		
 	
 	private TreeMap<String,String> sequences;
+	
+	private TreeMap<Integer,String> indices2tags; 	// indices of sequences as they appear in the read file (starting at 1) to sequence tags
 
 	private TreeMap<String,TreeMap<Integer,Integer>> mapAlign2Seq; // key is sequence tag, the values are maps of alignment serials to sequence serials 
 	private TreeMap<String,TreeMap<Integer,Integer>> mapSeq2Align; // key is sequence tag, the values are maps of sequence serials to alignment serials
@@ -162,6 +164,7 @@ public class Alignment {
 				currentSeqTag = "";
 		boolean foundFastaHeader = false;
 		int lineNum = 0;
+		int seqIndex = 1;
 
 		// open file
 
@@ -172,6 +175,7 @@ public class Alignment {
 
 		// otherwise initalize TreeMap of sequences and rewind file
 		sequences = new TreeMap<String,String>();
+		indices2tags = new TreeMap<Integer, String>();
 		fileIn.reset();
 
 		// read sequences
@@ -181,6 +185,7 @@ public class Alignment {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
 					sequences.put(currentSeqTag, currentSeq);
+					indices2tags.put(seqIndex,currentSeqTag);
 				} else {
 					Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 					Matcher m = p.matcher(nextLine);
@@ -188,6 +193,7 @@ public class Alignment {
 						currentSeq = "";						
 						currentSeqTag=m.group(1);
 						foundFastaHeader = true;
+						seqIndex++;
 					} else {
 						currentSeq = currentSeq + nextLine;     // read sequence
 					}
@@ -211,7 +217,8 @@ public class Alignment {
 				lastSeqTag = "";
 		boolean foundFastaHeader = false;
 		long lineNum = 0;
-
+		int seqIndex = 1;
+		
 		// open file
 
 		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
@@ -220,6 +227,7 @@ public class Alignment {
 
 		// initalize TreeMap of sequences 
 		sequences = new TreeMap<String,String>();
+		indices2tags = new TreeMap<Integer, String>();
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
@@ -231,7 +239,9 @@ public class Alignment {
 				if (m.find()){
 					if (!lastSeqTag.equals("")) {
 						sequences.put(lastSeqTag,currentSeq);
+						indices2tags.put(seqIndex, lastSeqTag);
 						currentSeq = "";
+						seqIndex++;
 					}
 					lastSeqTag=m.group(1);
 					foundFastaHeader = true;
@@ -242,6 +252,7 @@ public class Alignment {
 		} // end while
 		// inserting last sequence
 		sequences.put(lastSeqTag,currentSeq);
+		indices2tags.put(seqIndex,lastSeqTag);
 
 		fileIn.close();
 		
@@ -293,6 +304,32 @@ public class Alignment {
      */
     public boolean hasTag(String seqTag){
     	return sequences.containsKey(seqTag);
+    }
+    
+    /**
+     * Returns the sequence tag given its index
+     * @return
+     */
+    public String getTagFromIndex(int index) {
+    	return indices2tags.get(index);
+    }
+    
+    /**
+     * Re-sets the tag of sequence at given index to newTag
+     * @param index
+     * @param newTag
+     */
+    public void setTag(int index, String newTag) { 
+    	String oldTag = getTagFromIndex(index);
+    	sequences.put(newTag, sequences.get(oldTag));
+    	indices2tags.put(index, newTag);
+    	mapAlign2Seq.put(newTag, mapAlign2Seq.get(oldTag));
+    	mapSeq2Align.put(newTag, mapSeq2Align.get(oldTag));
+    	if (!oldTag.equals(newTag)) { // we don't want to remove the oldTag if it happened to be the same as the new!!
+    		sequences.remove(oldTag);
+    		mapAlign2Seq.remove(oldTag);
+    		mapSeq2Align.remove(oldTag);
+    	}
     }
     
     /**
@@ -691,6 +728,19 @@ public class Alignment {
     		for (String seqTag:al.getSequences().keySet()){
     			System.out.println(seqTag);
     			System.out.println(al.getAlignedSequence(seqTag));
+    		}
+    		// test of seq indices
+    		for (int index:al.indices2tags.keySet()) {
+    			System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
+    		}
+    		// test for setTag
+    		System.out.println("Re-tagging sequence 1");
+    		al.setTag(1, "mynewTag");
+    		System.out.println("index 1, tag: "+al.indices2tags.get(1));
+    		System.out.println(al.getAlignedSequence("mynewTag"));
+    		System.out.println("all tags after retagging the 1st sequence: ");
+    		for (int index:al.indices2tags.keySet()) {
+    			System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
     		}
     		// test of al2seq
     		//for (int i=0;i<al.getSequenceLength();i++) {
