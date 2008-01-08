@@ -1,7 +1,6 @@
 package proteinstructure;
 
 import java.util.Iterator;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import edu.uci.ics.jung.graph.util.Pair;
@@ -122,11 +121,8 @@ public class PairwiseAlignmentConverter {
 		putColumnsBetweenMatches(cur1+1, lengths[0]-cur1-1, cur2+1, lengths[1]-cur2-1, s1, s2);
 
 		// compose the name to sequence mapping 
-		TreeMap<String, String> name2seq = new TreeMap<String, String>();
-		name2seq.put(tags[0], s1.toString());
-		name2seq.put(tags[1], s2.toString());
-
-		ali = new Alignment(name2seq);
+		String[] seqs = {s1.toString(), s2.toString()};
+		ali = new Alignment(tags,seqs);
 	}
 
 	/**

@@ -1,8 +1,8 @@
 package sadp;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
@@ -853,7 +853,7 @@ public class SADP {
 
 			// prints pseudo sequence alignment
 			Alignment ali = sadp.getAlignment(args[0], args[1]);
-			Set<String> tags = ali.getTags();
+			Collection<String> tags = ali.getTags();
 			Iterator<String> it = tags.iterator();
 			while( it.hasNext() ) {
 				String tag = it.next();

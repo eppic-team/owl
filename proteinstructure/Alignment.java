@@ -2,12 +2,11 @@ package proteinstructure;
 
 import java.io.FileReader;
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -34,40 +33,58 @@ public class Alignment {
 	
 	/*--------------------------- member variables --------------------------*/		
 	
-	private TreeMap<String,String> sequences;
+	private String[] sequences;
 	
-	private TreeMap<Integer,String> indices2tags; 	// indices of sequences as they appear in the read file (starting at 1) to sequence tags
+	private TreeMap<String, Integer> tags2indices; 	// sequence tag to index in the sequences array (starting at 0)
+	private TreeMap<Integer, String> indices2tags;	// sequence index to sequence tag
 
-	private TreeMap<String,TreeMap<Integer,Integer>> mapAlign2Seq; // key is sequence tag, the values are maps of alignment serials to sequence serials 
-	private TreeMap<String,TreeMap<Integer,Integer>> mapSeq2Align; // key is sequence tag, the values are maps of sequence serials to alignment serials
+	// we don't use arrays TreeMap<Integer,Integer>[] because generic arrays are not allowed by java 
+	private TreeMap<Integer,TreeMap<Integer,Integer>> mapAlign2Seq; // map of seq index to maps of alignment serials to sequence serials 
+	private TreeMap<Integer,TreeMap<Integer,Integer>> mapSeq2Align; // map of seq index to maps of sequence serials to alignment serials
 	
 	/*----------------------------- constructors ----------------------------*/
 	
-	public Alignment() {}
-	
 	/**
-	 * Reads an alignment from a file in either FASTA or PIR format
+	 * Creates an Alignment from a file in either FASTA or PIR format
+	 * @param fileName
+	 * @param format either PIR or FASTA
+	 * @throws IOException
+	 * @throws PirFileFormatError
+	 * @throws FastaFileFormatError
+	 * @throws AlignmentConstructionError 
 	 */
-	public Alignment(String fileName, String format) throws IOException, FileNotFoundException, PirFileFormatError, FastaFileFormatError {
+	public Alignment(String fileName, String format) throws IOException, PirFileFormatError, FastaFileFormatError, AlignmentConstructionError {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
 		} else if (format.equals(FASTAFORMAT)){
 			readFileFastaFormat(fileName);
 		} 
 		
-		// checking lenghts, i.e. checking we read correctly from file
+		// checking lengths, i.e. checking we read correctly from file
 		checkLengths();
 		// map sequence serials (starting at 1, no gaps) to alignment serials (starting at 0, possibly gaps)
-		doMapping();		
+		doMapping();
+		
+		// if indices2tags/tags2indices length don't match sequences length then there were duplicate tags in the file
+		if (indices2tags.size()!=sequences.length || tags2indices.size()!=sequences.length) {
+			throw new AlignmentConstructionError("There are duplicate tags in the file "+fileName);
+		}
+
 	}
 		
 	/**
-	 * Creates a trivial alignment (i.e. without gaps) for the given sequences. The sequences have to have the same lengths. 
-	 * @param sequence
-	 * @param numberOfCopies
+	 * Creates a trivial alignment (i.e. without gaps) given a Map of tags to 
+	 * sequences
+	 * The sequences must have the same lengths. 
+	 * @param sequences
+	 * @throws AlignmentConstructionError if sequences lengths differ or if 
+	 * size of given map is 0
 	 */
 	public Alignment(TreeMap<String, String> sequences) throws AlignmentConstructionError {
-		
+
+		if (sequences.size() == 0) {
+			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+		}
 		// check that sequences have the same length
 		int length = sequences.get(sequences.firstKey()).length();
 		for(String seqTag: sequences.keySet()) {
@@ -76,67 +93,83 @@ public class Alignment {
 			}
 		}
 		
-		this.sequences = sequences;
+		this.sequences = new String[sequences.size()];
+		this.indices2tags = new TreeMap<Integer, String>();
+		this.tags2indices = new TreeMap<String, Integer>();
+		
+		int i=0;
+		for (String seqTag: sequences.keySet()) {
+			this.sequences[i]=sequences.get(seqTag);
+			this.indices2tags.put(i,seqTag);
+			this.tags2indices.put(seqTag, i);
+			i++;
+		}
 		doMapping();
 		
 	}
 	
 	/**
-	 * Writes alignment to the given output stream. The output format 
-	 * conforms to the FASTA format.
-	 * @param out  the output stream to be printed to
-	 * @param lineLength  the maximal line length, setting this to null 
-	 *  always results in 80 characters per line
-	 * @param alignedSeqs  toggles the output of the aligned or ungapped 
-	 *  sequences 
-	 * @throws IOException
+	 * Creates a trivial alignment (i.e. without gaps) given a set of tags and
+	 * a set of sequences
+	 * @param seqTags
+	 * @param sequences
+	 * @throws AlignmentConstructionError if different number of sequences and 
+	 * tags given, or if size of given array is 0
 	 */
-	public void writeFasta(OutputStream out, Integer lineLength, boolean alignedSeqs) throws IOException {
-	    int len = 80;
-	    String seq = "";
-	    
-	    if( lineLength != null ) {
-		len = lineLength;
-	    }
-	    	    
-	    for( String name : getTags() ) {
-		seq = alignedSeqs ? getAlignedSequence(name) : getSequenceNoGaps(name);
-		out.write('>');
-		out.write(name.getBytes());
-		out.write(System.getProperty("line.separator").getBytes());
-		for(int i=0; i<seq.length(); i+=len) {
-		    out.write(seq.substring(i, Math.min(i+len,seq.length())).getBytes());
-		    out.write(System.getProperty("line.separator").getBytes());
+	public Alignment(String[] seqTags, String[] sequences) throws AlignmentConstructionError {
+		if (seqTags.length!=sequences.length) {
+			throw new AlignmentConstructionError("Different number of sequences and tags given.");
 		}
-	    }
+		if (sequences.length == 0) {
+			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+		}
+		// check that sequences have the same length
+		int length = sequences[0].length();
+		for(String sequence: sequences) {
+			if(sequence.length() != length) {
+				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
+			}
+		}
+		
+		this.sequences = new String[sequences.length];
+		this.indices2tags = new TreeMap<Integer, String>();
+		this.tags2indices = new TreeMap<String, Integer>();
+		
+		for (int i=0;i<sequences.length;i++) {
+			this.sequences[i]=sequences[i];
+			this.indices2tags.put(i,seqTags[i]);
+			this.tags2indices.put(seqTags[i], i);
+		}
+		doMapping();
+
 	}
 	
 	/*---------------------------- private methods --------------------------*/
 	
 	private void doMapping() {
-		this.mapAlign2Seq = new TreeMap<String, TreeMap<Integer,Integer>>();
-		this.mapSeq2Align = new TreeMap<String, TreeMap<Integer,Integer>>();
-		for (String seqTag:sequences.keySet()){
-			this.mapAlign2Seq.put(seqTag, new TreeMap<Integer,Integer>());
-			this.mapSeq2Align.put(seqTag, new TreeMap<Integer,Integer>());
+		this.mapAlign2Seq = new TreeMap<Integer, TreeMap<Integer,Integer>>();
+		this.mapSeq2Align = new TreeMap<Integer, TreeMap<Integer,Integer>>();
+		for (int i=0;i<sequences.length;i++){
+			this.mapAlign2Seq.put(i, new TreeMap<Integer,Integer>());
+			this.mapSeq2Align.put(i, new TreeMap<Integer,Integer>());
 		}
-		for (String seqTag:sequences.keySet()){
-			String seq = sequences.get(seqTag);
+		for (int i=0;i<sequences.length;i++){
+			String seq = sequences[i];
 			int seqIndex = 1;
 			for (int alignIndex=0;alignIndex<seq.length();alignIndex++){
 				if (seq.charAt(alignIndex)!=GAPCHARACTER) {
-					mapAlign2Seq.get(seqTag).put(alignIndex,seqIndex);
+					mapAlign2Seq.get(i).put(alignIndex,seqIndex);
 					seqIndex++;
 				} else { // for gaps we assing a -1
-					mapAlign2Seq.get(seqTag).put(alignIndex,-1);
+					mapAlign2Seq.get(i).put(alignIndex,-1);
 				}
 			}
 		}
-		for (String seqTag:sequences.keySet()){
-			for (int alignIndex:mapAlign2Seq.get(seqTag).keySet()){
-				int seqIndex = mapAlign2Seq.get(seqTag).get(alignIndex);
+		for (int i=0;i<sequences.length;i++){
+			for (int alignIndex:mapAlign2Seq.get(i).keySet()){
+				int seqIndex = mapAlign2Seq.get(i).get(alignIndex);
 				if (seqIndex!=-1){
-					mapSeq2Align.get(seqTag).put(seqIndex,alignIndex);
+					mapSeq2Align.get(i).put(seqIndex,alignIndex);
 				}
 			}
 		}
@@ -144,27 +177,27 @@ public class Alignment {
 	}
 	
 	private void checkLengths() {
-		// checking all read sequences have same length
-		TreeMap<String,Integer> seqLengths = new TreeMap<String, Integer>(); 
-		for (String seqTag:sequences.keySet()){
-			seqLengths.put(seqTag,sequences.get(seqTag).length());
-		}
-		int lastLength = 0;
-		for (String seqTag:seqLengths.keySet()){
-			if (lastLength!=0 && seqLengths.get(seqTag)!=lastLength) {
-				System.err.println("Warning: Some sequences in alignment have different lengths.");
+		if (sequences.length==0) return;
+		
+		int firstLength = 0;
+		for (int i=0;i<sequences.length;i++) {
+			if (i==0) {
+				firstLength = sequences[i].length();
+			} else {
+				if (sequences[i].length()!=firstLength) {
+					System.err.println("Warning: Some sequences in alignment have different lengths.");
+				}
 			}
-			lastLength = seqLengths.get(seqTag);
-		}		
+		}
 	}
 	
-	private void readFilePIRFormat(String fileName) throws IOException, FileNotFoundException, PirFileFormatError {
+	private void readFilePIRFormat(String fileName) throws IOException, PirFileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				currentSeqTag = "";
 		boolean foundFastaHeader = false;
 		int lineNum = 0;
-		int seqIndex = 1;
+		int seqIndex = 0;
 
 		// open file
 
@@ -174,8 +207,9 @@ public class Alignment {
 
 
 		// otherwise initalize TreeMap of sequences and rewind file
-		sequences = new TreeMap<String,String>();
+		ArrayList<String> seqsAL = new ArrayList<String>();
 		indices2tags = new TreeMap<Integer, String>();
+		tags2indices = new TreeMap<String, Integer>();
 		fileIn.reset();
 
 		// read sequences
@@ -184,8 +218,9 @@ public class Alignment {
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
-					sequences.put(currentSeqTag, currentSeq);
+					seqsAL.add(currentSeq);
 					indices2tags.put(seqIndex,currentSeqTag);
+					tags2indices.put(currentSeqTag,seqIndex);
 				} else {
 					Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 					Matcher m = p.matcher(nextLine);
@@ -201,6 +236,8 @@ public class Alignment {
 			}
 		} // end while
 
+		sequences = new String[seqsAL.size()];
+		seqsAL.toArray(sequences);
 		
 		fileIn.close();
 		
@@ -211,13 +248,13 @@ public class Alignment {
 		
 	}
 
-	private void readFileFastaFormat(String fileName) throws IOException, FileNotFoundException, FastaFileFormatError {
+	private void readFileFastaFormat(String fileName) throws IOException, FastaFileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				lastSeqTag = "";
 		boolean foundFastaHeader = false;
 		long lineNum = 0;
-		int seqIndex = 1;
+		int seqIndex = 0;
 		
 		// open file
 
@@ -225,8 +262,9 @@ public class Alignment {
 
 		// read file  	
 
-		// initalize TreeMap of sequences 
-		sequences = new TreeMap<String,String>();
+		// initialize TreeMap of sequences 
+		ArrayList<String> seqsAL = new ArrayList<String>();
+		tags2indices = new TreeMap<String, Integer>();
 		indices2tags = new TreeMap<Integer, String>();
 
 		// read sequences
@@ -238,8 +276,9 @@ public class Alignment {
 				Matcher m = p.matcher(nextLine);
 				if (m.find()){
 					if (!lastSeqTag.equals("")) {
-						sequences.put(lastSeqTag,currentSeq);
+						seqsAL.add(currentSeq);
 						indices2tags.put(seqIndex, lastSeqTag);
+						tags2indices.put(lastSeqTag, seqIndex);
 						currentSeq = "";
 						seqIndex++;
 					}
@@ -251,9 +290,13 @@ public class Alignment {
 			}
 		} // end while
 		// inserting last sequence
-		sequences.put(lastSeqTag,currentSeq);
+		seqsAL.add(currentSeq);
 		indices2tags.put(seqIndex,lastSeqTag);
+		tags2indices.put(lastSeqTag,seqIndex);
 
+		sequences = new String[seqsAL.size()];
+		seqsAL.toArray(sequences);
+		
 		fileIn.close();
 		
 		// if no fasta headers found, file format is wrong
@@ -270,74 +313,87 @@ public class Alignment {
 	 * Returns the gap character
 	 * @return The gap character
 	 */
-    public static char getGapCharacter() { return GAPCHARACTER; }
-    
-    /**
-     * Returns a TreeMap (keys: tags, values: sequences) with all sequences
-     * @return
-     */
-	public TreeMap<String,String> getSequences() { return sequences; }
+    public static char getGapCharacter() { 
+    	return GAPCHARACTER; 
+    }
 	
 	/**
 	 * Returns the sequence (with gaps) given a sequence tag
 	 * @param seqTag
 	 * @return
 	 */
-    public String getAlignedSequence(String seqTag) { return sequences.get(seqTag); }
+    public String getAlignedSequence(String seqTag) { 
+    	return sequences[tags2indices.get(seqTag)]; 
+    }
     
     /**
      * Returns the length of the alignment (including gaps) 
      * @return
      */
-    public int getAlignmentLength() { return sequences.get(sequences.firstKey()).length(); }
+    public int getAlignmentLength() { 
+    	return sequences[0].length(); 
+    }
     
     /**
      * Returns the total number of sequences in the alignment
      * @return
      */
-    public int getNumberOfSequences() { return sequences.size(); }
+    public int getNumberOfSequences() { 
+    	return sequences.length; 
+    }
 	
+    /**
+     * Gets the sequence tag from the sequence index
+     * @param i
+     * @return
+     */
+    public String getTagFromIndex(int i) {
+    	return indices2tags.get(i);
+    }
+    
+    /**
+     * Gets the sequence index from the sequence tag
+     * @param seqTag
+     * @return
+     */
+    public int getIndexFromTag(int seqTag) {
+    	return tags2indices.get(seqTag);
+    }
+    
     /**
      * Returns true if alignment contains the sequence identified by seqTag
      * @param seqTag
      * @return
      */
     public boolean hasTag(String seqTag){
-    	return sequences.containsKey(seqTag);
+    	return tags2indices.containsKey(seqTag);
     }
     
     /**
-     * Returns the sequence tag given its index
+     * Reset the tags to the given set of tags
+     * @throws IllegalArgumentException if length of array of tags is different
+     *  from number of sequences in this Alignment
+     * @param newTags
+     */
+   	public void resetTags(String[] newTags) {
+   		if (newTags.length!=this.getNumberOfSequences()) {
+   			throw new IllegalArgumentException("Number of tags given for resetting of tags differ from number of sequences in the alignment");
+   		}
+   		tags2indices = new TreeMap<String, Integer>();
+   		indices2tags = new TreeMap<Integer, String>();
+   		for (int i=0; i<newTags.length; i++) {
+   			tags2indices.put(newTags[i],i);
+   			indices2tags.put(i, newTags[i]);
+   		}
+    }
+    
+    /**
+     * Returns all sequence tags in a Collection<String>
+     * Conserves the order of the sequences as they were added to the Alignment
      * @return
      */
-    public String getTagFromIndex(int index) {
-    	return indices2tags.get(index);
-    }
-    
-    /**
-     * Re-sets the tag of sequence at given index to newTag
-     * @param index
-     * @param newTag
-     */
-    public void setTag(int index, String newTag) { 
-    	String oldTag = getTagFromIndex(index);
-    	sequences.put(newTag, sequences.get(oldTag));
-    	indices2tags.put(index, newTag);
-    	mapAlign2Seq.put(newTag, mapAlign2Seq.get(oldTag));
-    	mapSeq2Align.put(newTag, mapSeq2Align.get(oldTag));
-    	if (!oldTag.equals(newTag)) { // we don't want to remove the oldTag if it happened to be the same as the new!!
-    		sequences.remove(oldTag);
-    		mapAlign2Seq.remove(oldTag);
-    		mapSeq2Align.remove(oldTag);
-    	}
-    }
-    
-    /**
-     * Returns all sequence tags in a Set<String>
-     * @return
-     */
-    public Set<String> getTags(){
-    	return sequences.keySet();
+    public Collection<String> getTags(){
+    	return indices2tags.values();
     }
     
     /**
@@ -348,7 +404,7 @@ public class Alignment {
     public String getSequenceNoGaps(String seqTag){
     	String seq = "";
     	for (int i=0;i<getAlignmentLength();i++){
-    		char letter = sequences.get(seqTag).charAt(i);
+    		char letter = getAlignedSequence(seqTag).charAt(i);
     		if (letter!=GAPCHARACTER){
     			seq+=letter;
     		}
@@ -365,7 +421,7 @@ public class Alignment {
      * @return
      */
     public int al2seq(String seqTag, int alignIndex){
-    	return mapAlign2Seq.get(seqTag).get(alignIndex);
+    	return mapAlign2Seq.get(tags2indices.get(seqTag)).get(alignIndex);
     }
     
     /**
@@ -377,7 +433,7 @@ public class Alignment {
      */
     public int seq2al(String seqTag, int seqIndex) {
     	int ret = -1;
-    	TreeMap<Integer,Integer> map = mapSeq2Align.get(seqTag);
+    	TreeMap<Integer,Integer> map = mapSeq2Align.get(tags2indices.get(seqTag));
     	if(map.containsKey(seqIndex)) {
     		ret = map.get(seqIndex);
     	} else {
@@ -393,25 +449,24 @@ public class Alignment {
      */
     public String getColumn(int alignIndex){
     	String col="";
-    	for (String seq:sequences.values()){
+    	for (String seq:sequences){
     		col+=seq.charAt(alignIndex);
     	}
     	return col;
     }
     
     /**
-     * Writes alignment by columns in tab delimited format,
+     * Prints alignment by columns in tab delimited format,
      * useful to import to MySQL
-     *
      */
-    public void writeTabDelimited(){
+    public void printTabDelimited(){
     	for (int alignIndex=0;alignIndex<getAlignmentLength();alignIndex++){
-    		for (String seq:sequences.values()){
+    		for (String seq:sequences){
     			System.out.print(seq.charAt(alignIndex)+"\t");
     		}
     		System.out.print((alignIndex+1)+"\t");
-    		for (String seqTag:sequences.keySet()){
-    			int seqIndex = al2seq(seqTag, alignIndex); 
+    		for (int i=0; i<sequences.length;i++){
+    			int seqIndex = al2seq(indices2tags.get(i), alignIndex); 
     			if (seqIndex!=-1){ // everything not gaps
     				System.out.print(seqIndex+"\t");
     			} else {  // gaps
@@ -426,8 +481,8 @@ public class Alignment {
      * Prints the alignment in simple text format (without sequence tags) to stdout
      */
     public void printSimple() {
-    	for(String seqTag:sequences.keySet()) {
-    		System.out.println(getAlignedSequence(seqTag));
+    	for(String sequence: sequences) {
+    		System.out.println(sequence);
     	}
     }
     
@@ -435,14 +490,44 @@ public class Alignment {
      * Prints the alignment in fasta format to stdout
      */
     public void printFasta() {
-    	for(String seqTag:sequences.keySet()) {
+    	for(String seqTag:getTags()) {
     		System.out.println(FASTAHEADER_CHAR + seqTag);
     		System.out.println(getAlignedSequence(seqTag));
     	}
     }
 
+	/**
+	 * Writes alignment to the given output stream. The output format 
+	 * conforms to the FASTA format.
+	 * @param out  the output stream to be printed to
+	 * @param lineLength  the maximal line length, setting this to null 
+	 *  always results in 80 characters per line
+	 * @param alignedSeqs  toggles the output of the aligned or ungapped 
+	 *  sequences 
+	 * @throws IOException
+	 */
+	public void writeFasta(OutputStream out, Integer lineLength, boolean alignedSeqs) throws IOException {
+		int len = 80;
+		String seq = "";
+
+		if( lineLength != null ) {
+			len = lineLength;
+		}
+
+		for( String name : getTags() ) {
+			seq = alignedSeqs ? getAlignedSequence(name) : getSequenceNoGaps(name);
+			out.write('>');
+			out.write(name.getBytes());
+			out.write(System.getProperty("line.separator").getBytes());
+			for(int i=0; i<seq.length(); i+=len) {
+				out.write(seq.substring(i, Math.min(i+len,seq.length())).getBytes());
+				out.write(System.getProperty("line.separator").getBytes());
+			}
+		}
+	}
+    
     /**
-     * Gets list of consecutive non-gapped sub-sequences (by means of an edge set).
+     * Gets list of consecutive non-gapped sub-sequences (by means of an interval set).
      * Example (X-denote any valid atomic sequence component):
      * <p>
      * 
@@ -708,54 +793,45 @@ public class Alignment {
     	return true;
     }
 
-    /** to test the class */
-    public static void main(String[] args) throws FileNotFoundException, IOException {
+    /** to test the class 
+     * @throws IOException
+     * @throws FastaFileFormatError 
+     * @throws PirFileFormatError 
+     * @throws AlignmentConstructionError */
+    public static void main(String[] args) throws IOException, PirFileFormatError, FastaFileFormatError, AlignmentConstructionError {
     	if (args.length<1){
     		System.err.println("Must provide FASTA file name as argument");
     		System.exit(1);
     	}
     	String fileName=args[0];
 
-    	try {
-    		Alignment al = new Alignment(fileName,"FASTA");
+
+    	Alignment al = new Alignment(fileName,"FASTA");
 
 
-    		// print columns
-    		//for (int i=0;i<al.getSequenceLength();i++){
-    		//	System.out.println(al.getColumn(i));
-    		//}
-    		// print all sequences tags and sequences
-    		for (String seqTag:al.getSequences().keySet()){
-    			System.out.println(seqTag);
-    			System.out.println(al.getAlignedSequence(seqTag));
-    		}
-    		// test of seq indices
-    		for (int index:al.indices2tags.keySet()) {
-    			System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
-    		}
-    		// test for setTag
-    		System.out.println("Re-tagging sequence 1");
-    		al.setTag(1, "mynewTag");
-    		System.out.println("index 1, tag: "+al.indices2tags.get(1));
-    		System.out.println(al.getAlignedSequence("mynewTag"));
-    		System.out.println("all tags after retagging the 1st sequence: ");
-    		for (int index:al.indices2tags.keySet()) {
-    			System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
-    		}
-    		// test of al2seq
-    		//for (int i=0;i<al.getSequenceLength();i++) {
-    		//	System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.sequences.firstKey(),i));
-    		//}
-    		// test of seq2al 
-    		//for (int serial=1;serial<=al.getSequenceNoGaps(al.sequences.firstKey()).length();serial++){
-    		//	System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.sequences.firstKey(), serial));
-    		//}
-    		// print alignment by columns tab delimited
-    		//al.writeTabDelimited();
-    	} catch(Exception e) {
-    		System.err.println(e.getMessage());
-    		System.exit(-1);
+    	// print columns
+    	//for (int i=0;i<al.getSequenceLength();i++){
+    	//	System.out.println(al.getColumn(i));
+    	//}
+    	// print all sequences tags and sequences
+    	for (String seqTag:al.getTags()){
+    		System.out.println(seqTag);
+    		System.out.println(al.getAlignedSequence(seqTag));
     	}
+    	// test of seq indices
+    	for (int index:al.indices2tags.keySet()) {
+    		System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
+    	}
+    	// test of al2seq
+    	for (int i=0;i<al.getAlignmentLength();i++) {
+    		System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.getTagFromIndex(0),i));
+    	}
+    	// test of seq2al 
+    	for (int serial=1;serial<=al.getSequenceNoGaps(al.getTagFromIndex(0)).length();serial++){
+    		System.out.println("seq serial: "+serial+", alignment serial: "+al.seq2al(al.getTagFromIndex(0), serial));
+    	}
+    	// print alignment by columns tab delimited
+    	//al.printTabDelimited();
     }
 
 }
