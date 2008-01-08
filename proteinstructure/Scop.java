@@ -39,6 +39,14 @@ public class Scop {
 		}
 	}
 	
+	public void remove(ScopRegion e) {
+		Interval intv = e.getInterval();
+		for(int i = intv.beg; i <= intv.end; i++) {
+			this.resser2scopregion.remove(i);
+		}
+		this.scopRegions.remove(e);
+	}
+	
 	/**
 	 * Returns true iff this scop object contains no scop regions.
 	 */

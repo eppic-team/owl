@@ -59,6 +59,7 @@ ENDSQL
 $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL1
 	SET sql_mode = "NO_UNSIGNED_SUBTRACTION,TRADITIONAL";
 	CREATE TABLE chain_graph LIKE abstract.chain_graph;
+	CREATE TABLE scop_graph LIKE abstract.scop_graph;
 	CREATE TABLE single_model_graph LIKE abstract.single_model_graph;
 	CREATE TABLE single_model_node LIKE abstract.single_model_node;
 	CREATE TABLE single_model_edge LIKE abstract.single_model_edge;
@@ -74,16 +75,35 @@ $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL1
 	  	MODIFY chain_id INT,
 	  	MODIFY model_id INT;
 	
+	ALTER TABLE scop_graph
+		MODIFY graph_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+		MODIFY pchain_code VARCHAR(2) NOT NULL,
+		MODIFY sunid INT UNSIGNED,
+		MODIFY sccs VARCHAR(10),
+		MODIFY domain_type ENUM('UNKNOWN', 'WHOLECHAIN', 'SINGLEFRAGMENT', 'MULTIFRAGMENT', 'MULTICHAIN'),
+		MODIFY num_chain INT,
+		MODIFY num_fragment INT,
+		MODIFY caths INT,
+	  	MODIFY num_chain_res INT,
+	  	MODIFY chain_scops INT,
+	  	MODIFY entry_id INT,
+	  	MODIFY assembly_id INT,
+	  	MODIFY chain_id VARCHAR(35),
+	  	MODIFY model_id INT;
+	
 	ALTER TABLE single_model_graph
 		MODIFY graph_id INT UNSIGNED NOT NULL AUTO_INCREMENT;
 	
 	ALTER TABLE single_model_node
+		MODIFY num INT NOT NULL,
 		MODIFY ssid VARCHAR(5),
 		MODIFY sheet_serial CHAR(1);
 		
 	ALTER TABLE single_model_edge
+		MODIFY i_num INT NOT NULL,
 		MODIFY i_ssid VARCHAR(5),
 		MODIFY i_sheet_serial CHAR(1),
+		MODIFY j_num INT NOT NULL,
 		MODIFY j_ssid VARCHAR(5),
 		MODIFY j_sheet_serial CHAR(1);		
 ENDSQL1

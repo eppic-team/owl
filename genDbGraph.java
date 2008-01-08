@@ -106,7 +106,7 @@ public class genDbGraph {
 			case 's':
 				String[] seqsepsStr = g.getOptarg().split(",");
 				seqseps = new int[seqsepsStr.length];
-				for (int i =0;i<seqseps.length;i++) {
+				for (int i=0;i<seqseps.length;i++) {
 					seqseps[i] = Integer.valueOf(seqsepsStr[i]);
 				}
 				break;
@@ -224,26 +224,20 @@ public class genDbGraph {
 					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);		
-					pdb.load(pdbChainCode);
-					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);
+					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);	
+					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
+					pdb.load(pdbChainCode);					
+					try {
+						pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+						//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						dssp = true;
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
 					if (!mode.equals("GRAPH")) {
-						try {
-							pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
-							//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
-							dssp = true;
-						} catch (Exception e) {
-							System.err.println(e.getMessage());
-						}
 						try {
 							pdb.checkScop("1.71", false);
 							scop = true;
-						} catch (Exception e) {
-							System.err.println(e.getMessage());
-						}
-						try {
-							pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
-							naccess = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
 						}
@@ -253,7 +247,7 @@ public class genDbGraph {
 							if (mistakes == 0) consurf = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
-						}
+						}	
 						try {
 							pdb.checkEC(false);
 							ec = true;
@@ -266,7 +260,22 @@ public class genDbGraph {
 							if (mistakes == 0) csa = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
+						}/*
+						pdb.restrictToScopDomain("d1pjua2");
+						try {
+							pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+							//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+							dssp = true;
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
+						}*/					
+						try {
+							pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+							naccess = true;
+						} catch (Exception e) {
+							System.err.println(e.getMessage());
 						}
+						
 						//pdb.writeToDb(conn,outputDb);
 						pdb.writeToDbFast(conn, outputDb);
 					}
@@ -276,6 +285,7 @@ public class genDbGraph {
 							System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
 							RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
+							//graph.restrictContactsBetweenSs();
 							if (seqseps != null) {
 								if (seqseps[j] > 1) {
 									System.out.print(" and sequence separation >= "+seqseps[j]);
@@ -322,7 +332,8 @@ public class genDbGraph {
 				Pdb pdb = new PdbfilePdb(pdbfile);
 				pdb.load(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
-					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+					pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+					//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
 				}
 				if (!mode.equals("GRAPH")) {
 					try {
@@ -335,12 +346,6 @@ public class genDbGraph {
 					try {
 						pdb.checkScop("1.71", false);
 						scop = true;
-					} catch (Exception e) {
-						System.err.println(e.getMessage());
-					}
-					try {
-						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
-						naccess = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
@@ -364,6 +369,21 @@ public class genDbGraph {
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}
+					/*pdb.restrictToScopDomain("d1eaka3");
+					try {
+						pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+						//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						dssp = true;
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}*/					
+					try {
+						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+						naccess = true;
+					} catch (Exception e) {
+						System.err.println(e.getMessage());
+					}
+					
 					//pdb.writeToDb(conn,outputDb);
 					pdb.writeToDbFast(conn, outputDb);
 				}
@@ -374,6 +394,7 @@ public class genDbGraph {
 						System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
 						RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
+						//graph.restrictContactsBetweenSs();
 						if (seqseps != null) {
 							if (seqseps[j] > 1) {
 								System.out.print(" and sequence separation >= "+seqseps[j]);

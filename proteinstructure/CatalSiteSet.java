@@ -125,6 +125,21 @@ public class CatalSiteSet {
 		return csEvids;
 	}
 	
+	public void removeCatalSiteRes(int resser) {
+		if (resser2catalsite.containsKey(resser)) {
+			HashSet<CatalyticSite> css = getCatalSite(resser);
+			Iterator it = css.iterator();
+			while (it.hasNext()) {
+				CatalyticSite cs = (CatalyticSite)it.next();
+				cs.remRes(resser);
+				if (cs.getRes().size() == 0) {
+					catalyticSites.remove(cs);
+				}
+			}
+			resser2catalsite.remove(resser);
+		}		
+	}
+	
 	/** Return a deep copy of this catalytic site set object */
 	public CatalSiteSet copy() {
 		CatalSiteSet newS = new CatalSiteSet();

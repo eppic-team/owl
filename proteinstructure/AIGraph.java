@@ -118,6 +118,10 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		return Math.abs(pair.getFirst().getParent().getResidueSerial()-pair.getSecond().getParent().getResidueSerial());
 	}
 	
+	public int getResidueSerial(AIGNode node) {
+		return node.getParent().getResidueSerial();
+	}
+	
 	public boolean addGraph(AIGraph graph) {
 		//NOTE:The checks below would make sense only for adding RIGraphs
 		//In AIGraphs we have as nodes only the selected atoms and not all atoms

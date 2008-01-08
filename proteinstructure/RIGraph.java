@@ -178,6 +178,10 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return Math.abs(pair.getFirst().getResidueSerial()-pair.getSecond().getResidueSerial());
 	}
 
+	public int getResidueSerial(RIGNode node) {
+		return node.getResidueSerial();
+	}
+	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
 	//     But to be able to put them there we would need to pass here a Transformer that gets atom or residue serials depending if we are in AI or RI Graph 
 	/**
@@ -295,14 +299,24 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		if (minSeqSep != -1) {
 			CR = "((i_cid!=j_cid)OR(abs(i_num-j_num)>="+minSeqSep+"))";
+		} else if (interSSE) {
+			CR = "((i_sstype!=j_sstype)OR(i_ssid!=j_ssid))";
 		}
 				
 		int pgraphid=0;
 		int graphid=0;
-		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
+		String sql;		
+		if (sid==null) {
+			sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
 					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
+		} else {
+			sql = "SELECT graph_id FROM "+db+".scop_graph " +
+					" WHERE scop_id = '"+sid+"' "+
+					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
+					" AND method = 'rc-cutoff';";			
+		}		
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()){	// if the pdbCode + chainCode were already in chain_graph then we take the graph_id as the pgraphid
@@ -313,12 +327,17 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			if (!pdbChainCode.equals("NULL")) {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
-			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
+			if (sid==null) {
+				sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+						"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
+			} else {
+				sql = "INSERT INTO "+db+".scop_graph (scop_id,accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+						"VALUES ('"+sid+"', '"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";				
+			}
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
-			sql = "SELECT LAST_INSERT_ID() FROM "+db+".chain_graph LIMIT 1";
+			sql = "SELECT LAST_INSERT_ID() FROM "+db+"."+((sid==null)?"chain":"scop")+"_graph LIMIT 1";
 			ResultSet rsst2 = stmt2.executeQuery(sql);
 			if (rsst2.next()){
 				pgraphid = rsst2.getInt(1);
@@ -339,7 +358,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		rsst.close();
 		// and then insert to single_model_graph
 		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,w,d,num_nodes,date) " +
-				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+distCutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
+				" VALUES ("+pgraphid+", '"+((sid==null)?"chain":"scop")+"', '"+pdbCode+"', "+singlemodelid+", "+distCutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
 		stmt.executeUpdate(sql);
 		// and we grab the graph_id just assigned in single_model_graph
 		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_graph LIMIT 1";
@@ -502,14 +521,24 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		if (minSeqSep != -1) {
 			CR = "((i_cid!=j_cid)OR(abs(i_num-j_num)>="+minSeqSep+"))";
+		} else if (interSSE) {
+			CR = "((i_sstype!=j_sstype)OR(i_ssid!=j_ssid))";
 		}
 				
 		int pgraphid=0;
 		int graphid=0;
-		String sql = "SELECT graph_id FROM "+db+".chain_graph " +
+		String sql;		
+		if (sid==null) {
+			sql = "SELECT graph_id FROM "+db+".chain_graph " +
 					" WHERE accession_code='"+pdbCode+"' AND pchain_code='"+chainCode+"'" +
 					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
 					" AND method = 'rc-cutoff';";
+		} else {
+			sql = "SELECT graph_id FROM "+db+".scop_graph " +
+					" WHERE scop_id = '"+sid+"' "+
+					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
+					" AND method = 'rc-cutoff';";			
+		}		
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()){	// if the pdbCode + chainCode were already in chain_graph then we take the graph_id as the pgraphid
@@ -520,12 +549,17 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			if (!pdbChainCode.equals("NULL")) {
 				pdbChainCodeStr="'"+pdbChainCode+"'";
 			}
-			sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
-					"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
+			if (sid==null) {
+				sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+						"VALUES ('"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";
+			} else {
+				sql = "INSERT INTO "+db+".scop_graph (scop_id,accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
+						"VALUES ('"+sid+"', '"+pdbCode+"', "+pdbChainCodeStr+",'"+chainCode+"', "+model+", "+distCutoff+", "+EXPBB+", 'rc-cutoff', "+getFullLength()+", "+getObsLength()+", "+getObsLength()+", "+((secondaryStructure!=null)?secondaryStructure.getNumElements():0)+", now())";				
+			}
 			Statement stmt2 = conn.createStatement();
 			stmt2.executeUpdate(sql);
 			// now we take the newly assigned graph_id as pgraphid
-			sql = "SELECT LAST_INSERT_ID() FROM "+db+".chain_graph LIMIT 1";
+			sql = "SELECT LAST_INSERT_ID() FROM "+db+"."+((sid==null)?"chain":"scop")+"_graph LIMIT 1";
 			ResultSet rsst2 = stmt2.executeQuery(sql);
 			if (rsst2.next()){
 				pgraphid = rsst2.getInt(1);
@@ -546,7 +580,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		rsst.close();
 		// and then insert to single_model_graph
 		sql = "INSERT INTO "+db+".single_model_graph (pgraph_id,graph_type,accession_code,single_model_id,dist,expBB,CW,CT,CR,w,d,num_nodes,date) " +
-				" VALUES ("+pgraphid+", 'chain', '"+pdbCode+"', "+singlemodelid+", "+distCutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
+				" VALUES ("+pgraphid+", '"+((sid==null)?"chain":"scop")+"', '"+pdbCode+"', "+singlemodelid+", "+distCutoff+", "+EXPBB+", '"+CW+"','"+ctStr+"', '"+CR+"', "+weightedStr+", "+directedStr+", "+getObsLength()+", now())";
 		stmt.executeUpdate(sql);
 		// and we grab the graph_id just assigned in single_model_graph
 		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_graph LIMIT 1";

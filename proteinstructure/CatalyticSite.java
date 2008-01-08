@@ -37,6 +37,11 @@ public class CatalyticSite {
 		resser2chemfunc.put(resser, chemFunc);
 	}
 	
+	// remove a residue
+	public void remRes(int resser) {
+		resser2chemfunc.remove(resser);
+	}
+	
 	// get all residues of the catalytic site
 	public Set<Integer> getRes() {
 		return resser2chemfunc.keySet();

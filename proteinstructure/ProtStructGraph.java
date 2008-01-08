@@ -44,6 +44,7 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 
 	protected int minSeqSep;
 	protected int maxSeqSep;
+	protected boolean interSSE = false;
 	
 	protected SecondaryStructure secondaryStructure;
 	
@@ -70,6 +71,13 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	 */
 	public abstract int getContactRange(E edge);
 	
+	/**
+	 * Returns the residue serial of the given node
+	 * @param node
+	 * @return
+	 */
+	public abstract int getResidueSerial(V node);
+
 	protected void setSerials2NodesMap(TreeMap<Integer,V> serials2nodes) {
 		this.serials2nodes = serials2nodes;
 	}
@@ -241,6 +249,22 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 		minSeqSep = range;
 	}
 	
+	/**
+	 * Removes edges strictly within the same secondary structure element
+	 * @param range
+	 */
+	public void restrictContactsBetweenSs() {
+		for(E edge:this.getEdges()) {
+			Pair<V> pair = this.getEndpoints(edge);
+			SecStrucElement ss1 = secondaryStructure.getSecStrucElement(this.getResidueSerial(pair.getFirst()));
+			SecStrucElement ss2 = secondaryStructure.getSecStrucElement(this.getResidueSerial(pair.getSecond()));
+			if(ss1 != null && ss2 != null && ss1 == ss2) {
+				this.removeEdge(edge);
+			}
+		}
+		interSSE = true;		
+	}
+
 	/**
 	 * Removes all edges from this ProtStructGraph
 	 *

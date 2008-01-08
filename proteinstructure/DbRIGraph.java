@@ -6,13 +6,20 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.TreeMap;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import edu.uci.ics.jung.graph.util.EdgeType;
 
 import tools.MySQLConnection;
 
 /**
- * A residue interaction graph derived from a single chain pdb protein structure loaded from a graph database in aglappe's format 
+ * A residue interaction graph derived from a single chain pdb or scop protein structure loaded from a graph database in aglappe's format 
  * 
+ * NOTE: If someone wants to load graphs with contact range != "(true)", 
+ * 		then the constructor with the graph id should be used.
+ * 		Another way is to load the whole graph if exists with any of the constructors
+ * 		and then apply the corresponding methods to the graph object to get the desired contact range. 
  * @author 		Jose Duarte
  * Class:		DbGraph
  * Package:		proteinstructure
@@ -61,7 +68,7 @@ public class DbRIGraph extends RIGraph {
 		this.sequence=""; 
 		this.directed = directed;
 
-		getgraphid(); // initialises graphid, sm_id and chainCode
+		getgraphid(pdbCode, pdbChainCode); // initialises graphid, sm_id and chainCode
 		read_graph_from_db(); // gets contacts and nodes and sets fullLength
 	}
 	
@@ -86,6 +93,56 @@ public class DbRIGraph extends RIGraph {
 	
 	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
 		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,DEFAULT_MODEL);
+	}
+	
+	/**
+	 * Constructs RIGraph object from graph db, given the dbname, sid, ct and cutoff
+	 * and passing a MySQLConnection
+	 * @param dbname
+	 * @param conn
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param cutoff
+	 * @param ct
+	 * @throws GraphIdNotFoundError 
+	 * @throws SQLException 
+	 */
+	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double distCutoff, String contactType, boolean directed, int model) throws GraphIdNotFoundError, SQLException {
+		this.dbname=dbname;
+		this.conn=conn;
+		this.sid=sid;
+		this.distCutoff=distCutoff;
+		this.contactType=contactType;
+		this.model=model;
+		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
+		this.sequence=""; 
+		this.directed = directed;
+
+		getgraphid(sid); // initialises graphid, sm_id, chainCode, pdbCode and pdbChainCode
+		read_graph_from_db(); // gets contacts and nodes and sets fullLength
+	}
+	
+	/**
+	 * Constructs Graph object from graph db, given the dbname, sid, ct and cutoff
+	 * MySQLConnection is taken from defaults in DbGraph class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
+	 * @param dbname
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param cutoff
+	 * @param ct
+	 * @throws GraphIdNotFoundError
+	 * @throws SQLException
+	 */
+	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, int model) throws GraphIdNotFoundError, SQLException{ 
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,model);
+	}
+	
+	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
+		this(dbname,conn,sid,cutoff,ct,directed,DEFAULT_MODEL);
+	}
+	
+	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,DEFAULT_MODEL);
 	}
 	
 	/**
@@ -189,11 +246,11 @@ public class DbRIGraph extends RIGraph {
 
 		// if db has correct residue numbering then this should get the right full length,
 		// we will only miss: gaps (unobserved residues) at the end of the sequence. Those we can't know unless full sequence is given
-		this.fullLength=Collections.max(serials2nodes.keySet());
+		this.fullLength=serials2nodes.size();
 
 	}
 	
-	private void getgraphid () throws GraphIdNotFoundError, SQLException{
+	private void getgraphid (String pdbCode, String pdbChainCode) throws GraphIdNotFoundError, SQLException{
 		// input is pdbChainCode i.e. pdb chain code
         // we take chainCode (internal chain identifier, pchain_code for msdsd and asym_id for pdbase) from pchain_code field in chain_graph 
         // (in the chain_graph table the internal chain identifier is called 'pchain_code')
@@ -244,7 +301,73 @@ public class DbRIGraph extends RIGraph {
 		stmt.close();
 		
 		sql="SELECT graph_id, single_model_id FROM "+dbname+".single_model_graph "+
-			" WHERE pgraph_id="+pgraphid+" AND dist="+distCutoff+" AND expBB="+EXPBB+
+			" WHERE pgraph_id="+pgraphid+" AND graph_type='chain' AND dist="+distCutoff+" AND expBB="+EXPBB+
+			" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"' "+
+			" AND w = "+weightedStr+" AND d = "+directedStr+";";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		check=0;
+		while (rsst.next()){
+			check++;
+			graphid=rsst.getInt(1);
+			//sm_id=rsst.getInt(2); // we might want to use it in the future
+		}
+		//System.out.println(graphid);
+		if (check!=1){
+			//System.err.println("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctstr+" and cutoff="+cutoff);
+			throw new GraphIdNotFoundError("No graph_id match or more than 1 match for pgraph_id="+pgraphid+", CT="+ctStr+" and cutoff="+distCutoff);
+		}
+	}
+	
+	private void getgraphid (String sid) throws GraphIdNotFoundError, SQLException{
+		int pgraphid=0;
+		
+		String CW = DEFAULT_CW;
+		String CR = DEFAULT_CR;
+		String EXPBB = "0";
+		String ctStr = contactType;
+		String weightedStr = "0";
+		String directedStr = directed?"1":"0";
+		
+		if (contactType.contains("_CAGLY")) {
+			ctStr = contactType.replaceAll("_CAGLY", "");
+		}
+		// we set the ctstr to the same as ct except in ALL case, where it is BB+SC+BB/SC
+		if (ctStr.equals("ALL")) {
+			ctStr = "BB+SC+BB/SC";
+		}
+		if (AAinfo.isValidMultiAtomContactType(contactType, directed)) {
+			CW = ctStr;
+			weightedStr = "1";
+		}
+		if (contactType.contains("_CAGLY") || contactType.contains("Cb")) {
+			EXPBB = "-1";
+		}		
+				
+		String sql = "SELECT graph_id, pchain_code, accession_code, chain_pdb_code FROM "+dbname+".scop_graph " +
+					" WHERE scop_id='"+sid+"' " +
+					" AND model_serial = "+model+" AND dist = "+distCutoff+" AND expBB = "+EXPBB+ 
+					" AND method = 'rc-cutoff';";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int check=0;
+		while (rsst.next()) {
+			check++;
+			pgraphid=rsst.getInt(1);
+			this.chainCode=rsst.getString(2);
+			this.pdbCode=rsst.getString(3);
+			this.pdbChainCode=rsst.getString(4);
+			// java returns a null if the field is a database null, we want actually the "NULL" string in that case
+			if (this.pdbChainCode==null) this.pdbChainCode="NULL";
+		}
+		if (check!=1){
+			System.err.println("No pgraph_id match or more than 1 match for scop id="+sid+", dist="+distCutoff);
+		}
+		rsst.close();
+		stmt.close();
+		
+		sql="SELECT graph_id, single_model_id FROM "+dbname+".single_model_graph "+
+			" WHERE pgraph_id="+pgraphid+" AND graph_type='scop' AND dist="+distCutoff+" AND expBB="+EXPBB+
 			" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"' "+
 			" AND w = "+weightedStr+" AND d = "+directedStr+";";
 		stmt = conn.createStatement();
@@ -264,20 +387,32 @@ public class DbRIGraph extends RIGraph {
 	
 	private void get_db_graph_info() throws GraphIdNotFoundError, SQLException {
 			int pgraphid=0;
-			String sql="SELECT pgraph_id,dist,expBB,CT,d FROM "+dbname+".single_model_graph WHERE graph_id="+graphid;
-			String contactType="";
+			String sql="SELECT graph_type,pgraph_id,dist,expBB,CT,CR,d FROM "+dbname+".single_model_graph WHERE graph_id="+graphid;
+			String contactRange="";
+			String graphType="";
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			int check=0;
+			Pattern p = Pattern.compile("^\\(\\(i_cid!=j_cid\\)OR\\(abs\\(i_num-j_num\\)>=(\\d+)\\)\\)$");
 			while (rsst.next()) {
 				check++;
-				pgraphid=rsst.getInt(1);
-				distCutoff=rsst.getDouble(2);
-				int expBB=rsst.getInt(3);
-				contactType=rsst.getString(4);
+				graphType=rsst.getString(1);
+				pgraphid=rsst.getInt(2);
+				distCutoff=rsst.getDouble(3);
+				int expBB=rsst.getInt(4);
+				contactType=rsst.getString(5);
 				if (contactType.equals("BB+SC+BB/SC")) contactType="ALL";
-				if (expBB == -1) contactType.replaceAll("SC","SC_CAGLY");
-				directed = (rsst.getInt(5)==1);
+				if (expBB == -1) {
+					contactType = contactType.replaceAll("SC","SC_CAGLY");
+				}
+				contactRange=rsst.getString(6);
+				Matcher m = p.matcher(contactRange);
+				if (contactRange.equals("((i_sstype!=j_sstype)OR(i_ssid!=j_ssid))")) {
+					interSSE = true;
+				} else if (m.matches()) {
+					minSeqSep = Integer.valueOf(m.group(1));
+				}
+				directed = (rsst.getInt(7)==1);
 			}
 			rsst.close();
 			stmt.close();
@@ -286,7 +421,7 @@ public class DbRIGraph extends RIGraph {
 				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db"+conn.getDbname());
 			}
 			
-			sql="SELECT accession_code, chain_pdb_code, pchain_code, model_serial FROM "+dbname+".chain_graph WHERE graph_id="+pgraphid;
+			sql="SELECT accession_code, chain_pdb_code, pchain_code, model_serial,"+(graphType.equals("scop")?"scop_id":"NULL")+" FROM "+dbname+"."+graphType+"_graph WHERE graph_id="+pgraphid;
 			stmt = conn.createStatement();
 			rsst = stmt.executeQuery(sql);
 			check=0;
@@ -298,6 +433,7 @@ public class DbRIGraph extends RIGraph {
 				if (pdbChainCode==null) pdbChainCode="NULL";
 				chainCode=rsst.getString(3);
 				model=rsst.getInt(4);
+				sid=rsst.getString(5);
 			}
 			if (check!=1){
 				System.err.println("No accession_code+chain_pdb_code+pchain_code match or more than 1 match for graph_id="+pgraphid+" in chain_graph table");

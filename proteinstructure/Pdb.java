@@ -30,6 +30,8 @@ import tools.MySQLConnection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.Iterator;
+
 /**
  * A single chain pdb protein structure
  * 
@@ -1748,6 +1750,14 @@ public abstract class Pdb {
 			this.sid = scopRegions.get(0).getSId();
 			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
 				restrictToScopRegions(scopRegions);
+				
+				Iterator<ScopRegion> allScopRegions = this.scop.getIterator();
+				while (allScopRegions.hasNext()) {
+					ScopRegion scopRegion = allScopRegions.next();
+					if (!scopRegion.getSId().equals(sid)) {
+						allScopRegions.remove();
+					}					
+				}
 			}
 		}
 	}
@@ -1758,11 +1768,20 @@ public abstract class Pdb {
 	 * @param sid
 	 */
 	public void restrictToScopDomain (String sid) {
+
 		Vector<ScopRegion> scopRegions = this.scop.getScopRegions(sid);
 		if (scopRegions.size()!=0) {
 			this.sid = sid;
 			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
 				restrictToScopRegions(scopRegions);
+				
+				Iterator<ScopRegion> allScopRegions = this.scop.getIterator();
+				while (allScopRegions.hasNext()) {
+					ScopRegion scopRegion = allScopRegions.next();
+					if (!scopRegion.getSId().equals(sid)) {
+						allScopRegions.remove();
+					}					
+				}
 			}
 		}
 	}
@@ -1790,12 +1809,34 @@ public abstract class Pdb {
 		// getting list of the residue serials to keep
 		TreeSet<Integer> resSersToKeep = intervSet.getIntegerSet();
 
-		// removing residues from resser2restype
+		// removing residues from resser2restype and resser2pdbresser
 		Iterator<Integer> itressers = resser2restype.keySet().iterator();
 		while (itressers.hasNext()) {
 			int resSer = itressers.next();
 			if (!resSersToKeep.contains(resSer)) {
 				itressers.remove();
+				resser2pdbresser.remove(resSer);
+				if (resser2allrsa != null) {
+					resser2allrsa.remove(resSer);
+					resser2scrsa.remove(resSer);
+				}
+				if (resser2consurfhsspscore != null) {
+					resser2consurfhsspscore.remove(resSer);
+					resser2consurfhsspcolor.remove(resSer);
+				}
+				if (catalSiteSet != null) {
+					catalSiteSet.removeCatalSiteRes(resSer);
+				}
+			}
+		}
+		
+		// removing residues from pdbresser2resser
+		Iterator<String> pdbressers = pdbresser2resser.keySet().iterator();
+		while (pdbressers.hasNext()) {
+			String pdbresser = pdbressers.next();
+			int resSer = pdbresser2resser.get(pdbresser);
+			if (!resSersToKeep.contains(resSer)) {
+				pdbressers.remove();
 			}
 		}
 		
@@ -1820,8 +1861,17 @@ public abstract class Pdb {
 			}
 		}
 		
-		// setting obsLength to new size, we won't touch fullLength or original sequence
-		obsLength = resser2restype.size();
+		// setting sequence to scop sequence and obsLength and fullLength respectively
+		Iterator<Interval> regionsToKeep = intervSet.iterator();
+		String newSequence = "";
+		while (regionsToKeep.hasNext()) {
+			Interval region = regionsToKeep.next();
+			newSequence += sequence.substring((region.beg-1),region.end);
+		}
+		sequence = newSequence;
+		fullLength = sequence.length();
+		obsLength = resser2restype.size();		
+		
 	}
 }
 
