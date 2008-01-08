@@ -70,7 +70,7 @@ public class EC {
 		if (resser2ecregion.containsKey(resser)) {
 			ecNums = "";
 			HashSet<ECRegion> ecs = getECRegion(resser);
-			Iterator it = ecs.iterator();
+			Iterator<ECRegion> it = ecs.iterator();
 			while (it.hasNext()) {
 				ECRegion er = (ECRegion)it.next();
 				ecNums += er.getECNum();

@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
  * and an end integers
  * 
  */
-public class Interval implements Comparable {
+public class Interval implements Comparable<Interval> {
 	
 	public int beg;
 	public int end;
@@ -19,8 +19,7 @@ public class Interval implements Comparable {
 		this.end=end;
 	}
 	
-	public int compareTo(Object o) {
-		Interval other = (Interval) o;
+	public int compareTo(Interval other) {
 		if (this.beg>other.beg){
 			return 1;
 		} 

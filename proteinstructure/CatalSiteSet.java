@@ -36,7 +36,7 @@ public class CatalSiteSet {
 	public void add(CatalyticSite e) {
 		this.catalyticSites.add(e);
 		Set<Integer> ressers = e.getRes();
-		Iterator iter = ressers.iterator();
+		Iterator<Integer> iter = ressers.iterator();
 	    while (iter.hasNext()) {
 	    	int resser = (Integer)iter.next();
 			HashSet<CatalyticSite> values = resser2catalsite.get(resser);
@@ -79,7 +79,7 @@ public class CatalSiteSet {
 		if (resser2catalsite.containsKey(resser)) {
 			csNums = "";
 			HashSet<CatalyticSite> css = getCatalSite(resser);
-			Iterator it = css.iterator();
+			Iterator<CatalyticSite> it = css.iterator();
 			while (it.hasNext()) {
 				CatalyticSite cs = (CatalyticSite)it.next();
 				csNums += cs.getSerial();
@@ -96,7 +96,7 @@ public class CatalSiteSet {
 		if (resser2catalsite.containsKey(resser)) {
 			csChemFuncs = "";
 			HashSet<CatalyticSite> css = getCatalSite(resser);
-			Iterator it = css.iterator();
+			Iterator<CatalyticSite> it = css.iterator();
 			while (it.hasNext()) {
 				CatalyticSite cs = (CatalyticSite)it.next();
 				csChemFuncs += cs.getChemFuncFromResSerial(resser);
@@ -113,7 +113,7 @@ public class CatalSiteSet {
 		if (resser2catalsite.containsKey(resser)) {
 			csEvids = "";
 			HashSet<CatalyticSite> css = getCatalSite(resser);
-			Iterator it = css.iterator();
+			Iterator<CatalyticSite> it = css.iterator();
 			while (it.hasNext()) {
 				CatalyticSite cs = (CatalyticSite)it.next();
 				csEvids += cs.getEvidence();
@@ -150,7 +150,7 @@ public class CatalSiteSet {
 	}
 	
 	public void print() {
-		Iterator iterator = catalyticSites.iterator ();
+		Iterator<CatalyticSite> iterator = catalyticSites.iterator ();
         while (iterator.hasNext ()) {
         	CatalyticSite cs = (CatalyticSite)iterator.next();
         	cs.print();
