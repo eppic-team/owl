@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
  * Author:		Henning Stehr, Jose Duarte, Lars Petzold
  * 
  * A multiple protein sequence alignment. This class represents a set of
- * protein sequences which are globally aligned.
+ * protein sequences which are globally aligned and provides funtions
+ * to map between the original and the aligned sequences.
  * 
  */
 public class Alignment {
@@ -146,6 +147,9 @@ public class Alignment {
 	
 	/*---------------------------- private methods --------------------------*/
 	
+	/**
+	 * Initializes the maps to map from sequence indices to alignment indices and vice versa.
+	 */
 	private void doMapping() {
 		this.mapAlign2Seq = new TreeMap<Integer, TreeMap<Integer,Integer>>();
 		this.mapSeq2Align = new TreeMap<Integer, TreeMap<Integer,Integer>>();
@@ -437,7 +441,7 @@ public class Alignment {
     	if(map.containsKey(seqIndex)) {
     		ret = map.get(seqIndex);
     	} else {
-    		System.err.println("Sever error in seq2al: Index " + seqIndex + " out of bounds for sequence " + seqTag + " (max index=" + map.lastKey() + ")");
+    		System.err.println("Severe error in seq2al: Index " + seqIndex + " out of bounds for sequence " + seqTag + " (max index=" + map.lastKey() + ")");
     	}
     	return ret;
     }
