@@ -98,20 +98,9 @@ public class PairwiseAlignmentGraphConverter {
 		alignedGraph.setSequence(sequence);
 		
 		// secondary structure
-		SecondaryStructure secStruct = null;
-		if (secStruct!=null) {
-			secStruct = new SecondaryStructure();
-			Iterator<SecStrucElement> it = g1.getSecondaryStructure().getIterator();
-			while (it.hasNext()) {
-				SecStrucElement oldSselem = it.next();
-				SecStrucElement sselem = new SecStrucElement(oldSselem.getType(),
-						a.seq2al(tag1,oldSselem.getInterval().beg) + 1,
-						a.seq2al(tag1,oldSselem.getInterval().end) + 1,
-						oldSselem.getId());
-				secStruct.add(sselem);
-			}
-		}
+		SecondaryStructure secStruct = convertSecondaryStruct(a, g1.getSecondaryStructure(), tag1);
 		alignedGraph.setSecondaryStructure(secStruct);
+		
 		// adding nodes
 		TreeMap<Integer,RIGNode> serials2nodes = new TreeMap<Integer,RIGNode>();
 		for (RIGNode node: g1.getVertices()) {
@@ -249,4 +238,27 @@ public class PairwiseAlignmentGraphConverter {
 		//System.out.println("Common edges: "+pac.getCommonEdges().toString());
 	}
 
+	/**
+	 * Creates a modified copy of a secondary structure object where the residue serials are mapped through an alignment.
+	 * @param a the alignment mapping the original serials to aligned serials
+	 * @param secStruct the original secondary structure object
+	 * @param tag the id in the alignment of the sequence which the secondary structure refers to
+	 * @return the converted secondary structure object or null if the original sec. struc. object was null
+	 */
+	public static SecondaryStructure convertSecondaryStruct(Alignment a, SecondaryStructure secStruct, String tag) {
+		SecondaryStructure newSecStruct = null;
+		if (secStruct!=null) {
+			newSecStruct = new SecondaryStructure();
+			Iterator<SecStrucElement> it = secStruct.getIterator();
+			while (it.hasNext()) {
+				SecStrucElement oldSselem = it.next();
+				SecStrucElement sselem = new SecStrucElement(oldSselem.getType(),
+						a.seq2al(tag,oldSselem.getInterval().beg) + 1,
+						a.seq2al(tag,oldSselem.getInterval().end) + 1,
+						oldSselem.getId());
+				newSecStruct.add(sselem);
+			}
+		}
+		return newSecStruct;
+	}
 }
