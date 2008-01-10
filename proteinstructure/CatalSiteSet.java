@@ -128,7 +128,7 @@ public class CatalSiteSet {
 	public void removeCatalSiteRes(int resser) {
 		if (resser2catalsite.containsKey(resser)) {
 			HashSet<CatalyticSite> css = getCatalSite(resser);
-			Iterator it = css.iterator();
+			Iterator<CatalyticSite> it = css.iterator();
 			while (it.hasNext()) {
 				CatalyticSite cs = (CatalyticSite)it.next();
 				cs.remRes(resser);

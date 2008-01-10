@@ -3,7 +3,6 @@ package proteinstructure;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
 import java.util.TreeMap;
 
 import java.util.regex.Matcher;
