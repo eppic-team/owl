@@ -472,7 +472,7 @@ public abstract class Pdb {
 		int lastResSer = ssTypes.firstKey();
 		char lastSheet = sheetLabels.get(lastResSer);
 		char thisType, thisSheet, reducedType;
-		int start = 0;
+		int start = 1;
 		int elementCount = 0;
 		SecStrucElement ssElem;
 		String ssId;
