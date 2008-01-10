@@ -97,13 +97,31 @@ public class PairwiseAlignmentGraphConverter {
 		alignedGraph.setCutoff(g1.getCutoff());
 		alignedGraph.setSequence(sequence);
 		
+		// secondary structure
+		SecondaryStructure secStruct = null;
+		if (secStruct!=null) {
+			secStruct = new SecondaryStructure();
+			Iterator<SecStrucElement> it = g1.getSecondaryStructure().getIterator();
+			while (it.hasNext()) {
+				SecStrucElement oldSselem = it.next();
+				SecStrucElement sselem = new SecStrucElement(oldSselem.getType(),
+						a.seq2al(tag1,oldSselem.getInterval().beg) + 1,
+						a.seq2al(tag1,oldSselem.getInterval().end) + 1,
+						oldSselem.getId());
+				secStruct.add(sselem);
+			}
+		}
+		alignedGraph.setSecondaryStructure(secStruct);
 		// adding nodes
 		TreeMap<Integer,RIGNode> serials2nodes = new TreeMap<Integer,RIGNode>();
 		for (RIGNode node: g1.getVertices()) {
 			// mapped node, +1 as the node numbering in the graph 
 			// corresponds to the one found in the pdb file which  
 			// starts with 1
-			RIGNode alignedNode = new RIGNode(a.seq2al(tag1,node.getResidueSerial()) + 1,node.getResidueType());
+			int alignedResser = a.seq2al(tag1,node.getResidueSerial()) + 1;
+			RIGNode alignedNode = new RIGNode(alignedResser,
+					node.getResidueType(),
+					secStruct==null?null:secStruct.getSecStrucElement(alignedResser));
 			alignedGraph.addVertex(alignedNode);
 			serials2nodes.put(a.seq2al(tag1,node.getResidueSerial())+1,alignedNode);
 		}
@@ -143,7 +161,7 @@ public class PairwiseAlignmentGraphConverter {
 			// starts with 1
 			alignedGraph.addEdge(new RIGEdge(weight), alignedGraph.getNodeFromSerial(i1+1), alignedGraph.getNodeFromSerial(j1+1), g1.getEdgeType(edge));
 		}
-
+		
 		return alignedGraph;
 	}
 

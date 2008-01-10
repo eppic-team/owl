@@ -25,8 +25,8 @@ public class SecStrucElement {
 	
 	/*----------------------------- constructors ----------------------------*/
 	
-	public SecStrucElement(char secStrucType, int startRes, int endRes, String legacyId) {
-		this.secStrucId = legacyId;
+	public SecStrucElement(char secStrucType, int startRes, int endRes, String secStrucId) {
+		this.secStrucId = secStrucId;
 		this.secStrucType = secStrucType;
 		this.interval = new Interval(startRes, endRes);
 	}
