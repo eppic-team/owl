@@ -9,7 +9,7 @@ public class Scop {
 
 	/*------------------------------ constants ------------------------------*/
 	
-	public static final String LATEST_VERSION = "1.71"; // default version
+	public static final String LATEST_VERSION = "1.73"; // default version
 	
 	/*--------------------------- member variables --------------------------*/
 	

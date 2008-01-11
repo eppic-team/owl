@@ -236,7 +236,7 @@ public class genDbGraph {
 					}
 					if (!mode.equals("GRAPH")) {
 						try {
-							pdb.checkScop("1.71", false);
+							pdb.checkScop("1.73", false);
 							scop = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
@@ -255,7 +255,7 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}
 						try {
-							int mistakes = pdb.checkCSA("2.2.5", false);
+							int mistakes = pdb.checkCSA("2.2.7", false);
 							System.out.println("CSA Mistakes:"+mistakes);
 							if (mistakes == 0) csa = true;
 						} catch (Exception e) {
@@ -344,7 +344,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						pdb.checkScop("1.71", false);
+						pdb.checkScop("1.73", false);
 						scop = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
@@ -363,7 +363,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						int mistakes = pdb.checkCSA("2.2.5", false);
+						int mistakes = pdb.checkCSA("2.2.7", false);
 						System.out.println("CSA Mistakes:"+mistakes);
 						if (mistakes == 0) csa = true;
 					} catch (Exception e) {

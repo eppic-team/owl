@@ -11,7 +11,7 @@ public class CatalSiteSet {
 
 	/*------------------------------ constants ------------------------------*/
 	
-	private static final String LATEST_VERSION = "2.2.5"; // default version
+	private static final String LATEST_VERSION = "2.2.7"; // default version
 	
 	/*--------------------------- member variables --------------------------*/
 	
