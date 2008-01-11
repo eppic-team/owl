@@ -79,6 +79,18 @@ public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 		return motif;
 	}
 	
+	public String getCommaSeparatedResSerials(){
+		String ressers="";
+		for (int resser:this.keySet()){
+			ressers += resser+","; 
+		}
+		// we chop off the last comma
+		if (ressers.length()!=0) { 
+			ressers = ressers.substring(0, ressers.length()-1);
+		}
+		return ressers;
+	}
+	
 	public String toString(){
 		if (this.isEmpty()) return "";
 		else return this.getMotif();
