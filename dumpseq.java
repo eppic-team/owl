@@ -29,7 +29,7 @@ public class dumpseq {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genGraph -i <listfile> -o <output_dir> [-D <pdbase_db>] \n" +
+				"1)  genGraph -i <listfile> [-o <output_dir> | -f <one_output_file>] [-D <pdbase_db>] \n" +
 				"2)  genGraph -p <pdb_code> -c <chain_pdb_code> -o <output_dir> [-D <pdbase_db>] \n" +
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n"; 
@@ -39,8 +39,9 @@ public class dumpseq {
 		String[] pdbChainCodes = null;
 		String pdbaseDb = PDB_DB;
 		String outputDir = "";
+		File oneOutputFile = null;
 		
-		Getopt g = new Getopt("genGraph", args, "i:p:c:o:D:h?");
+		Getopt g = new Getopt("genGraph", args, "i:p:c:o:f:D:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -56,6 +57,9 @@ public class dumpseq {
 			case 'o':
 				outputDir = g.getOptarg();
 				break;
+			case 'f':
+				oneOutputFile = new File(g.getOptarg());
+				break;				
 			case 'D':
 				pdbaseDb = g.getOptarg();
 				break;
@@ -112,6 +116,12 @@ public class dumpseq {
 
 		int numPdbs = 0;
 
+		PrintStream Out = null;
+		
+		if (oneOutputFile!=null) {
+			Out = new PrintStream(new FileOutputStream(oneOutputFile));
+		} 
+
 		for (int i=0;i<pdbCodes.length;i++) {
 			String pdbCode = pdbCodes[i];
 			String pdbChainCode = pdbChainCodes[i];
@@ -125,29 +135,19 @@ public class dumpseq {
 
 				File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+".fasta");
 				
-				PrintStream Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
-				Out.println(">"+pdbCode+"_"+pdbChainCode);
-//				for (int pos=1;pos<=sequence.length();pos++) {
-//					if (pos%10==0){
-//						Out.printf("%10d",pos/10);
-//					} 
-//				}
-//				Out.println();
-//				for (int pos=1;pos<=sequence.length();pos++) {
-//					Out.print(pos%10);
-//				}
-//				Out.println();
-				Out.println(sequence);
-//				for (int pos=1;pos<=sequence.length();pos++) {
-//					if (pdb.hasCoordinates(pos)) {
-//						Out.print(sequence.charAt(pos-1));
-//					} else {
-//						Out.print(GAP_CHARACTER);
-//					}
-//				}
-				Out.close();
+				if (oneOutputFile==null) {
+					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
+				}
 				
-				System.out.println("Wrote "+outputFile.getAbsolutePath());
+				Out.println(">"+pdbCode+"_"+pdbChainCode);
+
+				Out.println(sequence);
+
+				if (oneOutputFile==null) {
+					Out.close();
+				}
+				
+				System.out.println("Wrote "+pdbCode+"_"+pdbChainCode+".fasta");
 
 				numPdbs++;
 
@@ -161,6 +161,10 @@ public class dumpseq {
 
 		}
 
+		if (oneOutputFile!=null) {
+			Out.close();
+		}
+		
 		// output results
 		System.out.println("Number of dumped sequences: " + numPdbs);
 
