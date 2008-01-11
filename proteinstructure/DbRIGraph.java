@@ -3,6 +3,7 @@ package proteinstructure;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.TreeMap;
 
 import java.util.regex.Matcher;
@@ -245,7 +246,11 @@ public class DbRIGraph extends RIGraph {
 
 		// if db has correct residue numbering then this should get the right full length,
 		// we will only miss: gaps (unobserved residues) at the end of the sequence. Those we can't know unless full sequence is given
-		this.fullLength=serials2nodes.size();
+		if (sid == null) {
+			this.fullLength=Collections.max(serials2nodes.keySet());
+		} else {
+			this.fullLength=serials2nodes.size();
+		}
 
 	}
 	
