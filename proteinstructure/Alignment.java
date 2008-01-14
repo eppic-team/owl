@@ -532,7 +532,7 @@ public class Alignment {
     
     /**
      * Gets list of consecutive non-gapped sub-sequences (by means of an interval set).
-     * Example (X-denote any valid atomic sequence component):
+     * Example (X denotes any valid aminoacid):
      * <p>
      * 
      * The data:<br>
@@ -552,21 +552,24 @@ public class Alignment {
      * <code>tagSet1[0] = "s1";</code><br>
      * <code>tagSet2[0] = "s2";</code><br>
      * <code>tagSet2[1] = "s3";</code><br>
-     * <code>System.out.println(ali.getConsecutiveChunks("s2",tagSet1));</code><br>
-     * <code>System.out.println(ali.getConsecutiveChunks("s1",tagSet2));</code><br>
+     * <code>System.out.println(ali.getMatchingBlocks("s2",tagSet1));</code><br>
+     * <code>System.out.println(ali.getMatchingBlocks("s1",tagSet2));</code><br>
      * <p>
      * The output:<br>
      * <code>[0 6, 7 9]</code><br>
      * <code>[0 2, 3 5, 6 6, 7 7]</code><br>
      *
-     * @param tag  tag of the sequence of which the chunk list is be determined
+     * @param tag  tag of the sequence of which the chunk list is to be determined
      * @param projectionTags  list of tags of sequences in the alignment whose 
      *  projection along with sequence named tag is to be used as projection 
      *  from the whole alignment. Note, that invoking this function with 
      *  {@link #getTags()} set to this parameter, considers the whole alignment 
      *  matrix. 
+     * @param begin 
+     * @param end 
+     * @param degOfConservation
      * 
-     * @return edge set representing the sequence of non-gapped sequence chunks, 
+     * @return interval set representing the sequence of non-gapped sequence chunks, 
      *  where for each edge in the set Edge.i denotes the starting position and 
      *  Edge.j the ending position of a chunk, i.e., for a separated atomic 
      *  sequence component (e.g., between two gaps) this notion yields i == j. 
@@ -635,7 +638,7 @@ public class Alignment {
      * 
      * @param tag
      * @param projectionTags
-     * @param positions
+     * @param positions alignment columns for which we want to get the 2 matching interval sets
      * @param degOfConservation
      * @return The indexing respects the sequence indexing for this class, i.e., index 1 corresponds to the first position in the sequence.
      * @throws IndexOutOfBoundsException 

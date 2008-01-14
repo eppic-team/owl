@@ -1083,6 +1083,7 @@ public abstract class Pdb {
 		// cannot obtain a distance in at least one structure as a gap 
 		// indicates "no coordinates available".  
 
+		// TODO beware! this is relying on Alignment counting sequence indices from 0, if we change it this must change too!!!
 		for(int i = 0; i < ali.getAlignmentLength()-1; ++i) {
 
 			i1 = ali.al2seq(name1, i);
@@ -1107,6 +1108,7 @@ public abstract class Pdb {
 				Pair<Integer> e1 = new Pair<Integer>(i1,j1);
 				Pair<Integer> e2 = new Pair<Integer>(i2,j2);
 
+				// TODO the +1 is because we are counting from 0, get rid of it if that changes!!
 				alignedDistMatrix.put(new Pair<Integer>(i+1,j+1),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
 			}
 		}
