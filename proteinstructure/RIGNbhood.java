@@ -2,10 +2,16 @@ package proteinstructure;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.TreeMap;
 
 
-
+/**
+ * A neighbourhood in a RIGraph, i.e. a collection of nodes connected to a 'central' node.
+ * Note that the collection of neighbours now also contains the central residue.
+ * To get strictly the neighbours, use the getNeighbors() method or grab them directly
+ * from the original graph using getNeighbors().
+ */
 public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 	
 
@@ -281,6 +287,20 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 	public String toString(){
 		if (this.isEmpty()) return "";
 		else return this.getMotif();
+	}
+	
+	/**
+	 * Returns a collection of the neighbours in this RIGNbh.
+	 * @return A (possibly empty) collection of RIGNodes.
+	 */
+	public Collection<RIGNode> getNeighbors() {
+		LinkedList<RIGNode> nbs = new LinkedList<RIGNode>();
+		for(RIGNode n:this.values()) {
+			if(n != centralResidue) {
+				nbs.add(n);
+			}
+		}
+		return nbs;
 	}
 	
 	/**

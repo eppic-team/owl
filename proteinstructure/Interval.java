@@ -61,8 +61,8 @@ public class Interval implements Comparable<Interval> {
 	 * @return true if selStr is a syntactically correct selection string, false otherwise
 	 */
 	public static boolean isValidSelectionString(String selStr) {
-		Pattern p = Pattern.compile("\\d+(-\\d+)?(,\\d+(-\\d+)?)*");
-		Matcher m = p.matcher(selStr);
+		Pattern p = Pattern.compile("\\d+(-\\d+)?( *, *\\d+(-\\d+)?)*");
+		Matcher m = p.matcher(selStr.trim()); // allow spaces around whole string and around commas
 		return m.matches();
 	}
 	
@@ -74,10 +74,10 @@ public class Interval implements Comparable<Interval> {
 	public static TreeSet<Integer> parseSelectionString(String selStr) {
 		if(!isValidSelectionString(selStr)) return null;
 		TreeSet<Integer> newSet = new TreeSet<Integer>();
-		String[] tokens = selStr.split(",");
+		String[] tokens = selStr.trim().split(",");		// allow spaces around whole string
 		for(String t:tokens) {
 			if(t.contains("-")) {
-				String[] range = t.split("-");
+				String[] range = t.trim().split("-");	// allow spaces around commas
 				int from = Integer.parseInt(range[0]);
 				int to = Integer.parseInt(range[1]);
 				for(int i=from; i <= to; i++) {
@@ -85,7 +85,7 @@ public class Interval implements Comparable<Interval> {
 				}
 				
 			} else {
-				int num = Integer.parseInt(t);
+				int num = Integer.parseInt(t.trim());	// allow spaces around commas
 				newSet.add(num);
 			}
 		}
