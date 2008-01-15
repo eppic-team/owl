@@ -253,11 +253,16 @@ public abstract class Pdb {
 
 		BufferedReader in;
 		if (online) {
+			// TODO: Check if url exists and if not do the same as for the offline case
 			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 			URLConnection ch = consurfhssp.openConnection();
 			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
 		} else {
 			File consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+".grades");
+			if (!consurfhssp.exists() && pdbChainCode.equals("A")) {
+				System.out.println("consurf");
+				consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+"_.grades");
+			}
 			in = new BufferedReader(new FileReader(consurfhssp));
 		}
 		String inputLine;
