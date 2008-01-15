@@ -63,7 +63,7 @@ public class PairwiseAlignmentConverter {
 		lengths[0]   = len1;
 		lengths[1]   = len2;
 		this.it      = it;
-		offset       = -fi; // flip the sign to achieve a index convertion where 0 is the first index
+		offset       = -fi; // flip the sign to achieve a index conversion where 0 is the first index
 
 		buildAlignment();
 	}
@@ -254,7 +254,7 @@ public class PairwiseAlignmentConverter {
 		//  '-' -> GAP
 		//  'o' -> position
 		//  '|' -> MATCH
-		//  ':' -> "non trusted" MATCH (does not have a reference in in the edge set)
+		//  ':' -> "non trusted" MATCH (does not have a reference in the edge set)
 
 		TreeSet<Pair<Integer>> edges = new TreeSet<Pair<Integer>>(new IntPairComparator());
 		edges.add(new Pair<Integer>(0,2));

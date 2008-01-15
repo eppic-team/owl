@@ -140,8 +140,8 @@ public class GraphAverager {
 		contactVotes = new TreeMap<Pair<Integer>, Integer>();
 		
 		// we go through all positions in the alignment
-		for (int i=0; i<al.getAlignmentLength(); i++){
-			for (int j=0; j<al.getAlignmentLength(); j++) {
+		for (int i=1; i<=al.getAlignmentLength(); i++){
+			for (int j=1; j<=al.getAlignmentLength(); j++) {
  
 				int vote = 0; 
 				// scanning all templates to see if they have this contact

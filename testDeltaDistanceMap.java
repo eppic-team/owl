@@ -34,8 +34,15 @@ public class testDeltaDistanceMap {
 			HashMap<Pair<Integer>,Double> distMap2 = pdb2.calculate_dist_matrix("Ca");
 			assert(distMap2 != null);
 			
+			// create an alignment
+			String name1 = pdbCode1+chainCode1;
+			String name2 = pdbCode2+chainCode2;
+			String[] tags = {name1, name2};
+			String[] seqs = {pdb1.getSequence(), pdb2.getSequence()};
+			Alignment ali = new Alignment(tags, seqs);
+			
 			System.out.println("Calculating difference distance map...");
-			HashMap<Pair<Integer>,Double> diffDistMap = pdb1.getDiffDistMap("Ca", pdb2, "Ca");
+			HashMap<Pair<Integer>,Double> diffDistMap = pdb1.getDiffDistMap("Ca", pdb2, "Ca", ali, name1, name2);
 			assert(diffDistMap != null);
 			assert(diffDistMap.size() == distMap1.size());
 			assert(diffDistMap.size() == distMap2.size());

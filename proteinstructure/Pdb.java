@@ -1007,38 +1007,6 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Calculates and returns the difference of the distance maps of this 
-	 * structure and another pdb object. On error returns null. Note that 
-	 * the distance maps for the single structures have to have the same 
-	 * size.
-	 * @param contactType1  contact type of this structure
-	 * @param pdb2  the second structure
-	 * @param contactType2  contact type of the second structure
-	 * @return the difference distance map
-	 * @see #getDiffDistMap(String, Pdb, String, Alignment, String, String) 
-	 */
-	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2) {
-		double dist1, dist2, diff;
-		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
-		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
-		if(thisDistMatrix.size() != otherDistMatrix.size()) {
-			System.err.println("Cannot calculate difference distance map. Matrix sizes do not match.");
-			return null;
-		}
-		for(Pair<Integer> e:otherDistMatrix.keySet()){
-			dist1 = otherDistMatrix.get(e);
-			if(!thisDistMatrix.containsKey(e)) {
-				System.err.println("Error while calculating difference distance map. Entry " + e + " in matrix1 not not found in matrix2.");
-				return null;
-			}
-			dist2 = thisDistMatrix.get(e);
-			diff = Math.abs(dist1-dist2);
-			otherDistMatrix.put(e, diff);
-		}
-		return otherDistMatrix;
-	}
-
-	/**
 	 * Calculates the difference distance map of this structure and 
 	 * another pdb object given a sequence alignment of the structures. The 
 	 * resulting difference distance map may contains non-defined distances. 
@@ -1052,7 +1020,6 @@ public abstract class Pdb {
 	 * @param name1  sequence tag of the this structure in the alignment
 	 * @param name2  sequence tag og the second structure in the alignment
 	 * @return the difference distance map
-	 * @see #getDiffDistMap(String, Pdb, String)
 	 */
 	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
 
@@ -1064,7 +1031,7 @@ public abstract class Pdb {
 		TreeSet<Integer> unobserved2 = new TreeSet<Integer>();
 
 		// detect all unobserved residues
-		for(int i = 0; i < ali.getAlignmentLength(); ++i) {
+		for(int i = 1; i <= ali.getAlignmentLength(); ++i) {
 			i1 = ali.al2seq(name1, i);
 			i2 = ali.al2seq(name2, i);
 			if( i1 != -1 && !hasCoordinates(i1) ) {
@@ -1083,8 +1050,7 @@ public abstract class Pdb {
 		// cannot obtain a distance in at least one structure as a gap 
 		// indicates "no coordinates available".  
 
-		// TODO beware! this is relying on Alignment counting sequence indices from 0, if we change it this must change too!!!
-		for(int i = 0; i < ali.getAlignmentLength()-1; ++i) {
+		for(int i = 1; i <= ali.getAlignmentLength()-1; ++i) {
 
 			i1 = ali.al2seq(name1, i);
 			i2 = ali.al2seq(name2, i);
@@ -1095,7 +1061,7 @@ public abstract class Pdb {
 				continue;
 			}
 
-			for(int j = i + 1; j < ali.getAlignmentLength(); ++j) {
+			for(int j = i + 1; j <= ali.getAlignmentLength(); ++j) {
 
 				j1 = ali.al2seq(name1, j);
 				j2 = ali.al2seq(name2, j);
@@ -1108,8 +1074,7 @@ public abstract class Pdb {
 				Pair<Integer> e1 = new Pair<Integer>(i1,j1);
 				Pair<Integer> e2 = new Pair<Integer>(i2,j2);
 
-				// TODO the +1 is because we are counting from 0, get rid of it if that changes!!
-				alignedDistMatrix.put(new Pair<Integer>(i+1,j+1),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
+				alignedDistMatrix.put(new Pair<Integer>(i,j),Math.abs(thisDistMatrix.get(e1)-otherDistMatrix.get(e2)));
 			}
 		}
 		return alignedDistMatrix;

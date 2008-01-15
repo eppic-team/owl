@@ -39,9 +39,8 @@ public class Alignment {
 	private TreeMap<String, Integer> tags2indices; 	// sequence tag to index in the sequences array (starting at 0)
 	private TreeMap<Integer, String> indices2tags;	// sequence index to sequence tag
 
-	// we don't use arrays TreeMap<Integer,Integer>[] because generic arrays are not allowed by java 
-	private TreeMap<Integer,TreeMap<Integer,Integer>> mapAlign2Seq; // map of seq index to maps of alignment serials to sequence serials 
-	private TreeMap<Integer,TreeMap<Integer,Integer>> mapSeq2Align; // map of seq index to maps of sequence serials to alignment serials
+	private TreeMap<Integer,int[]> mapAlign2Seq; // map of seq index to arrays mapping alignment serials to sequence serials 
+	private TreeMap<Integer,int[]> mapSeq2Align; // map of seq index to arrays mapping sequence serials to alignment serials
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -63,7 +62,7 @@ public class Alignment {
 		
 		// checking lengths, i.e. checking we read correctly from file
 		checkLengths();
-		// map sequence serials (starting at 1, no gaps) to alignment serials (starting at 0, possibly gaps)
+		// map sequence serials (starting at 1, no gaps) to alignment serials (starting at 1, possibly gaps)
 		doMapping();
 		
 		// if indices2tags/tags2indices length don't match sequences length then there were duplicate tags in the file
@@ -149,35 +148,29 @@ public class Alignment {
 	
 	/**
 	 * Initializes the maps to map from sequence indices to alignment indices and vice versa.
+	 * Both sequence and alignment indices start at 1
 	 */
 	private void doMapping() {
-		this.mapAlign2Seq = new TreeMap<Integer, TreeMap<Integer,Integer>>();
-		this.mapSeq2Align = new TreeMap<Integer, TreeMap<Integer,Integer>>();
-		for (int i=0;i<sequences.length;i++){
-			this.mapAlign2Seq.put(i, new TreeMap<Integer,Integer>());
-			this.mapSeq2Align.put(i, new TreeMap<Integer,Integer>());
-		}
+		this.mapAlign2Seq = new TreeMap<Integer, int[]>();
+		this.mapSeq2Align = new TreeMap<Integer, int[]>();
+				
 		for (int i=0;i<sequences.length;i++){
 			String seq = sequences[i];
+			int[] mapAl2Seq = new int[seq.length()+1];
+			int[] mapSeq2Al = new int[getSequenceNoGaps(indices2tags.get(i)).length()+1];
 			int seqIndex = 1;
-			for (int alignIndex=0;alignIndex<seq.length();alignIndex++){
-				if (seq.charAt(alignIndex)!=GAPCHARACTER) {
-					mapAlign2Seq.get(i).put(alignIndex,seqIndex);
+			for (int alignIndex=1;alignIndex<=seq.length();alignIndex++){
+				if (seq.charAt(alignIndex-1)!=GAPCHARACTER) {
+					mapAl2Seq[alignIndex] = seqIndex;
+					mapSeq2Al[seqIndex] = alignIndex;
 					seqIndex++;
-				} else { // for gaps we assing a -1
-					mapAlign2Seq.get(i).put(alignIndex,-1);
+				} else { // for gaps we assign a -1
+					mapAl2Seq[alignIndex] = -1;
 				}
 			}
+			mapAlign2Seq.put(i, mapAl2Seq);
+			mapSeq2Align.put(i, mapSeq2Al);
 		}
-		for (int i=0;i<sequences.length;i++){
-			for (int alignIndex:mapAlign2Seq.get(i).keySet()){
-				int seqIndex = mapAlign2Seq.get(i).get(alignIndex);
-				if (seqIndex!=-1){
-					mapSeq2Align.get(i).put(seqIndex,alignIndex);
-				}
-			}
-		}
-		
 	}
 	
 	private void checkLengths() {
@@ -375,9 +368,9 @@ public class Alignment {
     
     /**
      * Reset the tags to the given set of tags
+     * @param newTags
      * @throws IllegalArgumentException if length of array of tags is different
      *  from number of sequences in this Alignment
-     * @param newTags
      */
    	public void resetTags(String[] newTags) {
    		if (newTags.length!=this.getNumberOfSequences()) {
@@ -417,33 +410,31 @@ public class Alignment {
     }
     
     /**
-     * Given the alignment index (starting at 0, with gaps),
+     * Given the alignment index (starting at 1, possibly gaps),
      * returns the sequence index (starting at 1, no gaps) of sequence seqTag
-     * Returns -1 if sequence at that position is a gap
      * @param seqTag
      * @param alignIndex
-     * @return
+     * @throws IndexOutOfBoundsException if 0 given as alignIndex or else if 
+     * alignIndex is bigger than maximum stored index 
+     * @return the sequence index, -1 if sequence is a gap at that position
      */
     public int al2seq(String seqTag, int alignIndex){
-    	return mapAlign2Seq.get(tags2indices.get(seqTag)).get(alignIndex);
+    	if (alignIndex==0) throw new IndexOutOfBoundsException("Disallowed alignment index (0) given");
+    	return mapAlign2Seq.get(tags2indices.get(seqTag))[alignIndex];
     }
     
     /**
      * Given sequence index (starting at 1, no gaps) of sequence seqTag,
-     * returns the alignment index (starting at 0, with gaps)
+     * returns the alignment index (starting at 1, possibly gaps)
      * @param seqTag
      * @param seqIndex
-     * @return the alignment index or -1 on error
+     * @throws IndexOutOfBoundsException if 0 given as seqIndex or else if 
+     * seqIndex is bigger than maximum stored index
+     * @return the alignment index
      */
     public int seq2al(String seqTag, int seqIndex) {
-    	int ret = -1;
-    	TreeMap<Integer,Integer> map = mapSeq2Align.get(tags2indices.get(seqTag));
-    	if(map.containsKey(seqIndex)) {
-    		ret = map.get(seqIndex);
-    	} else {
-    		System.err.println("Severe error in seq2al: Index " + seqIndex + " out of bounds for sequence " + seqTag + " (max index=" + map.lastKey() + ")");
-    	}
-    	return ret;
+    	if (seqIndex==0) throw new IndexOutOfBoundsException("Disallowed sequence index (0) given");
+    	return mapSeq2Align.get(tags2indices.get(seqTag))[seqIndex];
     }
     
     /**
@@ -454,7 +445,7 @@ public class Alignment {
     public String getColumn(int alignIndex){
     	String col="";
     	for (String seq:sequences){
-    		col+=seq.charAt(alignIndex);
+    		col+=seq.charAt(alignIndex-1);
     	}
     	return col;
     }
@@ -464,11 +455,11 @@ public class Alignment {
      * useful to import to MySQL
      */
     public void printTabDelimited(){
-    	for (int alignIndex=0;alignIndex<getAlignmentLength();alignIndex++){
+    	for (int alignIndex=1;alignIndex<getAlignmentLength();alignIndex++){
     		for (String seq:sequences){
-    			System.out.print(seq.charAt(alignIndex)+"\t");
+    			System.out.print(seq.charAt(alignIndex-1)+"\t");
     		}
-    		System.out.print((alignIndex+1)+"\t");
+    		System.out.print(alignIndex+"\t");
     		for (int i=0; i<sequences.length;i++){
     			int seqIndex = al2seq(indices2tags.get(i), alignIndex); 
     			if (seqIndex!=-1){ // everything not gaps
@@ -529,7 +520,7 @@ public class Alignment {
 			}
 		}
 	}
-    
+	
     /**
      * Gets list of consecutive non-gapped sub-sequences (by means of an interval set).
      * Example (X denotes any valid aminoacid):
@@ -565,82 +556,12 @@ public class Alignment {
      *  from the whole alignment. Note, that invoking this function with 
      *  {@link #getTags()} set to this parameter, considers the whole alignment 
      *  matrix. 
-     * @param begin 
-     * @param end 
-     * @param degOfConservation
-     * 
-     * @return interval set representing the sequence of non-gapped sequence chunks, 
-     *  where for each edge in the set Edge.i denotes the starting position and 
-     *  Edge.j the ending position of a chunk, i.e., for a separated atomic 
-     *  sequence component (e.g., between two gaps) this notion yields i == j. 
-     *  The indexing respects the sequence indexing for this class, i.e., index 
-     *  1 corresponds to the first position in the sequence.
-     *  
-     * @throws IndexOutOfBoundsException 
-     */
-    public IntervalSet getMatchingBlocks(String tag, Collection<String> projectionTags, int begin, int end, int degOfConservation) 
-    throws IndexOutOfBoundsException {
-
-    	if( end > getAlignmentLength() ) {
-    		throw new IndexOutOfBoundsException("end position exceeds alignment length");
-    	}
-
-    	/*
-    	 * col        - current alignment column
-    	 * start      - start column for the next chunk to be added
-    	 * foundStart - flag set whenever a start position for the next chunk 
-    	 *               to be added has been encountered
-    	 * c          - observed character in sequence 'tag' in column 'col'
-    	 * limit      - maximal number of tolerated gap characters at a certain 
-    	 *               alignment column with respect to the sequences 
-    	 *               referencened in 'projectionTags'
-    	 * chunks     - the list of consecutive chunks to be returned
-    	 */
-    	int col = begin;
-    	int start = 0;
-    	char c = '-';
-    	boolean foundStart = false;
-    	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
-    	IntervalSet chunks = new IntervalSet();
-
-    	while( col<end ) {
-    		c = getAlignedSequence(tag).charAt(col);
-
-    		if( c == getGapCharacter() ) {
-    			if( foundStart ) {
-    				foundStart = false;
-    				chunks.add(new Interval(al2seq(tag,start),al2seq(tag,Math.max(start, col-1))));
-    			}
-    		} else {
-    			if( limit >= count(projectionTags,col,getGapCharacter()) ) {
-    				if( !foundStart ) {
-    					foundStart = true;
-    					start = col;
-    				}
-    			} else {
-    				if( foundStart ) {
-    					foundStart = false;
-    					chunks.add(new Interval(al2seq(tag,start),al2seq(tag,col-1)));
-    				}
-    			}
-    		}
-    		++col;
-    	}
-
-    	if( foundStart ) {
-    		chunks.add(new Interval(al2seq(tag,start),al2seq(tag,Math.max(start,col-1))));
-    	}
-
-    	return chunks;
-    }
-
-    /**
-     * 
      * @param tag
      * @param projectionTags
      * @param positions alignment columns for which we want to get the 2 matching interval sets
      * @param degOfConservation
-     * @return The indexing respects the sequence indexing for this class, i.e., index 1 corresponds to the first position in the sequence.
+     * @return interval set representing the sequence of non-gapped sequence 
+     * chunks. 
      * @throws IndexOutOfBoundsException 
      */
     public IntervalSet getMatchingBlocks(String tag, Collection<String> projectionTags, TreeSet<Integer> positions, int degOfConservation) 
@@ -659,8 +580,8 @@ public class Alignment {
     	 * chunks     - the list of consecutive chunks to be returned
     	 */
     	int col = positions.iterator().next();
-    	int prevCol = 0;
-    	int start = 0;
+    	int prevCol = 1;
+    	int start = 1;
     	boolean foundStart = false;
     	char c = '-';
     	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
@@ -669,7 +590,7 @@ public class Alignment {
     	for(Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
     		prevCol = col;
     		col = it.next();
-    		c = getAlignedSequence(tag).charAt(col);
+    		c = getAlignedSequence(tag).charAt(col-1);
 
     		if( c == getGapCharacter() ) {
     			if( foundStart ) {
@@ -728,14 +649,13 @@ public class Alignment {
     /**
      * Extracts from the set of given alignment position those without gaps.
      * @param projectionTags  tags of the sequences to be considered 
-     * @param positions  alignment positions, i.e., indices of some columns
+     * @param positions  alignment positions, i.e. indices of some columns
      * @param extractInPlace  enable this flag to directly delete all nodes 
      *  pointing to "non-gapless" columns positions, set this parameter to 
      *  false to return a new node set, i.e., 'positions' remains unchanged!
-     * @return a node set corresponding to indices of alignment columns out of 
-     *  the set of considered columns ('positions'). Please note, that 
-     *  parameter 'extractInPlace' has an immense impact on the output 
-     *  generating.     
+     * @return a set of indices of alignment columns out of the set of 
+     * considered columns ('positions'). Please note, that parameter 
+     * 'extractInPlace' has an immense impact on the output generated.     
      */
     public TreeSet<Integer> getGaplessColumns(Collection<String> projectionTags, TreeSet<Integer> positions, boolean extractInPlace) {
 
@@ -747,7 +667,7 @@ public class Alignment {
     	}
 
     	int numProjTags = projectionTags.size();
-    	int col = 0;
+    	int col;
 
     	for( Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
     		col = it.next();
@@ -784,7 +704,7 @@ public class Alignment {
     public int count(Collection<String> tags, int col, char c) throws IndexOutOfBoundsException {
     	int i=0;
     	for( String t : tags ) {
-    		if( getAlignedSequence(t).charAt(col) == c ) {
+    		if( getAlignedSequence(t).charAt(col-1) == c ) {
     			++i;
     		}
     	}
@@ -793,7 +713,7 @@ public class Alignment {
 
     public boolean isBlockOf( String tag, int begin, int end, char c ) throws IndexOutOfBoundsException {
     	for(int i=begin; i<end; ++i) {
-    		if( getAlignedSequence(tag).charAt(i) != c ) {
+    		if( getAlignedSequence(tag).charAt(i-1) != c ) {
     			return false;
     		}
     	}
@@ -817,9 +737,9 @@ public class Alignment {
 
 
     	// print columns
-    	//for (int i=0;i<al.getSequenceLength();i++){
-    	//	System.out.println(al.getColumn(i));
-    	//}
+    	for (int i=1;i<=al.getAlignmentLength();i++){
+    		System.out.println(al.getColumn(i));
+    	}
     	// print all sequences tags and sequences
     	for (String seqTag:al.getTags()){
     		System.out.println(seqTag);
@@ -830,7 +750,7 @@ public class Alignment {
     		System.out.println("index "+index+", tag: "+al.indices2tags.get(index));
     	}
     	// test of al2seq
-    	for (int i=0;i<al.getAlignmentLength();i++) {
+    	for (int i=1;i<=al.getAlignmentLength();i++) {
     		System.out.println("alignment serial: "+i+", seq serial: "+al.al2seq(al.getTagFromIndex(0),i));
     	}
     	// test of seq2al 
