@@ -1,9 +1,6 @@
 package proteinstructure;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -36,10 +33,7 @@ public class AAinfo {
 	private static final String CT_DEFS_FILE = "contactTypes.dat";
 	// file with aminoacid pairs distance bounds definitions (refers to root of aglappe package)
 	private static final String AAPAIRSBOUNDS_FILE = "aapairsBounds.dat";
-	
-	private static final boolean ABBOT_FIX = false; // to use abbot GUI testing, changes the way resources are loaded (fix for getResourceAsStrem bug) This must be false for release!!!
-	private static final String  RESOURCES_TEST_DIR =	"/project/StruPPi/cmview/resources";
-	
+		
 	// lower bound distances used for our ConstraintsMaker class
 	// from our "empirical" calculations
 	public static final double BB_DIAMETER_GYRATION=4.6;
@@ -184,20 +178,7 @@ public class AAinfo {
 	private static Map<String,ContactType> initialiseCTsFromFile() {
 		Map<String,ContactType> cts = new TreeMap<String,ContactType>();
 		
-		InputStream inp = null;
-		if (ABBOT_FIX) {
-			System.out.println("WARNING: DEBUG MODE FOR ABBOT IS TURNED ON");
-			File f = null;
-			try {
-				f = new File(RESOURCES_TEST_DIR,CT_DEFS_FILE);
-				inp = new FileInputStream(f);
-			} catch(FileNotFoundException e) {
-				System.err.println("Unexpected error: could not find resource file "+f.getAbsolutePath());
-				e.printStackTrace();
-			}
-		} else {
-			inp = Runtime.getRuntime().getClass().getResourceAsStream(RESOURCES_DIR+CT_DEFS_FILE);
-		}
+		InputStream inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+CT_DEFS_FILE);
 		BufferedReader br = new BufferedReader(new InputStreamReader(inp));
 		String line;
 		try {
@@ -250,20 +231,7 @@ public class AAinfo {
 	
 	private static Map<String,double[]> initialiseAapairs2BoundsFromFile (){
 		Map<String,double[]> aapairs2bounds = new TreeMap<String,double[]>();
-		InputStream inp = null;
-		if (ABBOT_FIX) {
-			System.out.println("WARNING: DEBUG MODE FOR ABBOT IS TURNED ON");
-			File f = null;
-			try {
-				f = new File(RESOURCES_TEST_DIR,AAPAIRSBOUNDS_FILE);
-				inp = new FileInputStream(f);
-			} catch(FileNotFoundException e) {
-				System.err.println("Unexpected error: could not find resource file "+f.getAbsolutePath());
-				e.printStackTrace();
-			}
-		} else {
-			inp = Runtime.getRuntime().getClass().getResourceAsStream(RESOURCES_DIR+AAPAIRSBOUNDS_FILE);
-		}
+		InputStream inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+AAPAIRSBOUNDS_FILE);
 		BufferedReader br = new BufferedReader(new InputStreamReader(inp));
 		String line;
 		try {
