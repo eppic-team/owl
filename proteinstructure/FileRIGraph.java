@@ -60,10 +60,10 @@ public class FileRIGraph extends RIGraph {
 			Matcher m = p.matcher(line);
 			if (m.find()){
 				if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
-					throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
+					throw new GraphFileFormatError(contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 				}
 			} else if (linecount==1){ // #AGLAPPE not found and in first line
-				throw new GraphFileFormatError("The graph file "+contactsfile+" can't be read, wrong file format");
+				throw new GraphFileFormatError(contactsfile+" is not a valid contact map file");
 			}
 			Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
 			Matcher ms = ps.matcher(line);
