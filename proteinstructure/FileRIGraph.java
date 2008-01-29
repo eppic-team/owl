@@ -2,10 +2,8 @@ package proteinstructure;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.TreeMap;
@@ -34,9 +32,6 @@ public class FileRIGraph extends RIGraph {
 	 */
 	public FileRIGraph (String contactsfile) throws IOException, GraphFileFormatError{
 		super();
-		// we set the sequence to blank when we read from file as we don't have the full sequence
-		// if sequence is present in contactsfile then is read from there
-		this.sequence="";
 		this.contactType=ProtStructGraph.NO_CONTACT_TYPE;
 		this.distCutoff=ProtStructGraph.NO_CUTOFF;
 		// we initialise pdbCode, chainCode and pdbChainCode to corresponding constants (empty strings at the moment) in case the file doesn't specify then
@@ -48,7 +43,14 @@ public class FileRIGraph extends RIGraph {
 		
 	}
 
-	private void read_graph_from_file (String contactsfile) throws FileNotFoundException, IOException, GraphFileFormatError {
+	/**
+	 * Parses the graph file reading identifiers, sequence and edges
+	 * @param contactsfile
+	 * @throws IOException
+	 * @throws GraphFileFormatError if file does not start with #AGLAPPE, 
+	 * if file format not the right version, if sequence is not present
+	 */
+	private void read_graph_from_file (String contactsfile) throws IOException, GraphFileFormatError {
 		HashMap<Pair<Integer>,Double> contacts2weights = new HashMap<Pair<Integer>,Double>();
 		HashSet<Integer> allserials = new HashSet<Integer>();
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
@@ -112,27 +114,20 @@ public class FileRIGraph extends RIGraph {
 
 		}
 		fcont.close();
+		
+		// if we didn't find a sequence we throw format exception
+		if (sequence==null) {
+			throw new GraphFileFormatError("No sequence present in CM file "+contactsfile);
+		}
 
-		// populating this RIGraph with nodes and setting sequence and fullLength
+		// populating this RIGraph with nodes and setting fullLength
 		serials2nodes = new TreeMap<Integer,RIGNode>();
-		if (!sequence.equals("")) {
-			this.fullLength = sequence.length();
-			for (int i=0;i<sequence.length();i++){
-				String letter = String.valueOf(sequence.charAt(i));
-				RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
-				serials2nodes.put(i+1, node);
-				this.addVertex(node);
-			}
-		} else {
-			// if contacts have correct residue numbering then this should get the right full length up to the maximum node that makes a contact,
-			// we will miss: nodes without contacts at the end of sequence and gaps (unobserved residues) at the end of the sequence.
-			// We don't know more without sequence
-			this.fullLength = Collections.max(allserials);
-			for (int resser:allserials) {
-				RIGNode node = new RIGNode(resser);
-				serials2nodes.put(resser,node);
-				this.addVertex(node);
-			}
+		this.fullLength = sequence.length();
+		for (int i=0;i<sequence.length();i++){
+			String letter = String.valueOf(sequence.charAt(i));
+			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
+			serials2nodes.put(i+1, node);
+			this.addVertex(node);
 		}
 
 		//TODO we still use here DIRECTED as default for "/", eventually this should change by taking another parameter "boolean directed", so "/" could have DIRECTED/UNDIRECTED versions

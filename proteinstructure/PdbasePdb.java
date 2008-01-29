@@ -16,11 +16,9 @@ import tools.MySQLConnection;
 
 /**
  * A single chain pdb protein structure loaded from a PDBASE database
- * See http://openmms.sdsc.edu/OpenMMS-1.5.1_Std/openmms/docs/guides/PDBase.html to know what PDBASE is
+ * See http://openmms.sdsc.edu/OpenMMS-1.5.1_Std/openmms/docs/guides/PDBase.html 
+ * to know what PDBASE is
  * 
- * @author		Jose Duarte
- * Class:		PdbasePdb
- * Package:		proteinstructure
  */
 public class PdbasePdb extends Pdb {
 
@@ -333,7 +331,7 @@ public class PdbasePdb extends Pdb {
         	if (AAinfo.isValidAA(res_type)){
         		sequence+=AAinfo.threeletter2oneletter(res_type);
         	} else {
-        		sequence+=NONSTANDARD_AA_LETTER;
+        		sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
         	}
         } 
         if (count==0) {

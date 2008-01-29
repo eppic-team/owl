@@ -37,7 +37,6 @@ import java.sql.Statement;
 public abstract class Pdb {
 
 	protected static final int DEFAULT_MODEL=1;				// default model serial (NMR structures)
-	public static final String NONSTANDARD_AA_LETTER="X";   // letter we assign to nonstandard aas to use in sequence
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code
 	public static final String NO_PDB_CODE = "";			// to specify no pdb code
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
@@ -71,9 +70,11 @@ public abstract class Pdb {
 	protected int model;  			// the model serial for NMR structures
 	protected String sid;			// the scop id if Pdb has been restricted (restrictToScopDomain)
 
-	// in case we read from pdb file, 2 possibilities:
-	// 1) SEQRES field is present: fullLength coincides with sequence length
-	// 2) SEQRES not present: fullLength is maximum observed residue (so if residue numbering is correct that only misses possible non-observed residues at end of chain)
+	// optional fields for structures based on casp predictions
+	protected int targetNum;
+	protected int caspModelNum;
+	protected int groupNum;
+
 	protected int fullLength; // length of full sequence as it appears in SEQRES field 
 	protected int obsLength;  // length without unobserved, non standard aas 
 
@@ -851,6 +852,9 @@ public abstract class Pdb {
 		graph.setPdbChainCode(pdbChainCode);
 		graph.setModel(model);
 		graph.setSid(sid);
+		graph.setTargetNum(targetNum);
+		graph.setGroupNum(groupNum);
+		graph.setCaspModelNum(caspModelNum);
 		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 

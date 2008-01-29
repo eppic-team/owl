@@ -22,9 +22,6 @@ public class CaspRRFileRIGraph extends RIGraph {
 	 */
 	public CaspRRFileRIGraph (String fileName) throws IOException, GraphFileFormatError{
 		super();
-		// we set the sequence to blank when we read from file as we don't have the full sequence
-		// if sequence is present in RR file then is read from there
-		this.sequence="";
 		this.contactType=ProtStructGraph.NO_CONTACT_TYPE;
 		this.distCutoff=ProtStructGraph.NO_CUTOFF;
 		// we initialise pdbCode, chainCode and pdbChainCode to corresponding constants (empty strings at the moment) since file doesn't specify then

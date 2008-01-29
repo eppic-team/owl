@@ -19,4 +19,15 @@ public class Point3d extends Tuple3d {
 	public double distance(Point3d p) {
 		return Math.sqrt((x-p.x)*(x-p.x)+(y-p.y)*(y-p.y)+(z-p.z)*(z-p.z));
 	}
+	
+	public boolean equals(Object o) {
+		try {
+			Tuple3d p = (Tuple3d) o; //TODO should this be Tuple3d or Point3d??
+			return (x==p.x && y==p.y && z==p.z);
+		} catch (NullPointerException e) {
+			return false;
+		} catch (ClassCastException e) {
+			return false;
+		}
+	}
 }

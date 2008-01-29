@@ -12,6 +12,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 /**
  * Class with static methods to get aminoacids and contact type information
  * example usage:
@@ -40,9 +41,18 @@ public class AAinfo {
 	public static final double DIST_MIN_CA=2.8;
 	// "guessed" general min distance from hydrogen the hydrogen bond length (we used it in Cb and Cg)
 	public static final double DIST_MIN=2.6;
+	
 	// if two adjacent CAs are more than this distance apart, we assume a chain break (value taken from Casp assessment)
 	public static final double DIST_CHAIN_BREAK=4.5;
 
+	// 1/3 letter code we assign to nonstandard aas to use in sequence
+	public static final String NONSTANDARD_AA_ONE_LETTER="X";
+	public static final String NONSTANDARD_AA_THREE_LETTER="XXX";
+	
+	// 1/3 letter code for unknown unobserved residues (used when reading from pdb file with no SEQRES and we have to introduce gaps)
+	public static final String UNKNOWN_UNOBSERVED_RES_ONE_LETTER = "?"; 
+	public static final String UNKNOWN_UNOBSERVED_RES_THREE_LETTER = "???";
+	
 	
 	/*----------------------- "member" variables ---------------------------*/
 	private final static Map<String,Double> lowerBoundDistances = initialiseLowerBoundDistances(); 
@@ -91,6 +101,8 @@ public class AAinfo {
 		one2threeletter.put("N", "ASN");
 		one2threeletter.put("Y", "TYR");
 		one2threeletter.put("M", "MET");
+		one2threeletter.put(NONSTANDARD_AA_ONE_LETTER, NONSTANDARD_AA_THREE_LETTER);
+		one2threeletter.put(UNKNOWN_UNOBSERVED_RES_ONE_LETTER, UNKNOWN_UNOBSERVED_RES_THREE_LETTER);
 		return one2threeletter;
 	}
 	
@@ -116,6 +128,8 @@ public class AAinfo {
 		three2oneletter.put("ASN", "N");
 		three2oneletter.put("TYR", "Y");
 		three2oneletter.put("MET", "M");
+		three2oneletter.put(NONSTANDARD_AA_THREE_LETTER, NONSTANDARD_AA_ONE_LETTER);
+		three2oneletter.put(UNKNOWN_UNOBSERVED_RES_THREE_LETTER, UNKNOWN_UNOBSERVED_RES_ONE_LETTER);
 		return three2oneletter;
 	}
 	

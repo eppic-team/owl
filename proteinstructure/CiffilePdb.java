@@ -482,7 +482,7 @@ public class CiffilePdb extends Pdb {
 				if (AAinfo.isValidAA(res_type)){
 					sequence+=AAinfo.threeletter2oneletter(res_type);
 				} else {
-					sequence+=NONSTANDARD_AA_LETTER;
+					sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
 				}
 				// pdbresser2resser
 				pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);

@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.TreeSet;
@@ -14,13 +13,23 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
+/**
+ * A single chain PDB protein structure read from a PDB file or CASP TS file
+ * We are not tolerant to errors in PDB files, we don't accept PDB files if:
+ * - insertion codes are present
+ * - residue numbers<=0 present
+ * - ATOM lines are not in residue ascending order
+ * - SEQRES present and sequence doesn't coincide with ATOM lines sequence
+ * - all residues are non-standard for given chain (0 observed residues)
+ */
 public class PdbfilePdb extends Pdb {
 	
-	private static final String UNKNOWN_STRING ="XXXX";
 	private static final String NULL_chainCode = "A";
 	
 	private String pdbfile;
-
+	private boolean isCaspTS; // whether we are reading a CASP TS file (true) or a normal PDB file (false)
+	private boolean hasSeqRes; // whether we find a non-empty SEQRES field in this pdb file
+	
 	/**
 	 * Constructs an empty Pdb object given a pdbfile name
 	 * Data will be loaded from pdb file upon call of load(pdbChainCode, modelSerial) 
@@ -28,10 +37,10 @@ public class PdbfilePdb extends Pdb {
 	 */
 	public PdbfilePdb (String pdbfile) {
 		this.pdbfile = pdbfile;
-		this.pdbCode=UNKNOWN_STRING; // we initialise to unknown in case we don't find it in pdb file
+		this.pdbCode = NO_PDB_CODE; // we initialise to unknown in case we don't find it in pdb file
 		this.dataLoaded = false;
-		
-		this.sequence=""; // we initialise it to empty string, then is set in read_pdb_data_from_file 
+		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
+		this.hasSeqRes = false; // we assume that there is no SEQRES in this pdb file, if SEQRES is found when reading we set it to true
 		
 		// we initialise the secondary structure to empty, if no sec structure info is found then they remain empty
 		this.secondaryStructure = new SecondaryStructure();		
@@ -46,6 +55,7 @@ public class PdbfilePdb extends Pdb {
 			this.chainCode=pdbChainCode;
 			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 
+			this.sequence = ""; // we initialize to blank so we can append to the string in read_pdb_data_from_file
 			read_pdb_data_from_file();
 			
 			this.obsLength = resser2restype.size();
@@ -55,7 +65,6 @@ public class PdbfilePdb extends Pdb {
 			}
 			
 			// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
-			//TODO eventually we could assign our own internal residue numbers when reading from pdb and thus this map would be used
 			this.resser2pdbresser = new HashMap<Integer, String>();
 			this.pdbresser2resser = new HashMap<String, Integer>();
 			for (int resser:resser2restype.keySet()){
@@ -114,8 +123,13 @@ public class PdbfilePdb extends Pdb {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 			String  line;
 			while ((line=fpdb.readLine())!=null) {
-				if (line.startsWith("MODEL")) {
-					int model = Integer.parseInt(line.substring(6,line.length()));
+				// The model serial numbers should occur in columns 11-14 (official PDB format spec)
+				// Here we are less strict: we allow for the numbers to appear in any column after the MODEL keyword (with any number of spaces in between)
+				// We mainly need this because of CASP TS file which don't follow the PDB format 100% 
+				Pattern p = Pattern.compile("^MODEL\\s+(\\d+)");
+				Matcher m = p.matcher(line);
+				if (m.find()){
+					int model = Integer.parseInt(m.group(1));
 					models.add(model);
 				}
 			}
@@ -134,18 +148,29 @@ public class PdbfilePdb extends Pdb {
 	
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
-	 * chainCode gets set to same as pdbChainCode, except if input chain code NULL then chainCode will be 'A'
-	 * pdbCode gets set to the one parsed in HEADER or to 'Unknown' if not found
-	 * sequence gets set to the sequence read from ATOM lines (i.e. observed residues only)
-	 * No insertion codes are parsed or taken into account at the moment. Thus files with 
-	 * insertion codes will be incorrectly read
-	 * @param pdbfile
-	 * @throws FileNotFoundException
+	 * <code>chainCode</code> gets set to same as <code>pdbChainCode</code>, except if input chain code 
+	 * is "NULL" then chainCode will be <code>NULL_chainCode</code>
+	 * <code>pdbCode</code> gets set to the one parsed in HEADER or to <code>NO_PDB_CODE</code> 
+	 * if not found
+	 * The sequence is either read from SEQRES if present or from the residues read from ATOM 
+	 * lines using <code>Pdb.UNKNOWN_UNOBSERVED_RES_LETTER</code> as gaps.
+	 * We are not tolerant to errors in PDB files: PdbfileFormatErrors will be thrown if:
+	 * - insertion codes are present
+	 * - residue numbers<=0 present
+	 * - ATOM lines are not in residue ascending order
+	 * - SEQRES present and sequence doesn't coincide with ATOM lines sequence
+	 * - all residues are non-standard for given chain (0 observed residues)
+	 * We never renumber the residues: we take them as they are and check all of the above
+	 * @param pdbfile the PDB file name
 	 * @throws IOException
-	 * @throws PdbfileFormatError
-	 * @throws PdbChainCodeNotFoundError  
+	 * @throws PdbfileFormatError if file is empty, if file is a CASP TS file 
+	 * and no TARGET line found, if sequences from ATOM lines and SEQRES do not coincide, 
+	 * if an insertion code is found, if a residue number<=0 found, if ATOM lines are not 
+	 * in residue ascending order, if 0 observed residues are found for given chain
+	 * @throws PdbChainCodeNotFoundError if no ATOM lines are found for given 
+	 * pdbChainCode and model
 	 */
-	private void read_pdb_data_from_file() throws FileNotFoundException, IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
+	private void read_pdb_data_from_file() throws IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
@@ -157,40 +182,50 @@ public class PdbfilePdb extends Pdb {
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		
+		int lastResSerial = 0; // we store the last residue serial read from the ATOM lines to check for correct ascending order
+		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		int linecount=0;
 		String line;
-		// read first line
-		if((line = fpdb.readLine()) != null ) {
-			linecount = 1;
-			// HEADER
-			p = Pattern.compile("^HEADER");
-			m = p.matcher(line);
-			if (m.find()){
-				Pattern ph = Pattern.compile("^HEADER.{56}(\\d\\w{3})");
-				Matcher mh = ph.matcher(line);
-				if (mh.find()) {
-					pdbCode=mh.group(1).toLowerCase();
-				}
-			} else { // header not found
-				// check whether this is a Casp prediction file
-				p = Pattern.compile("^PFRMAT\\s+TS");
+
+		while((line = fpdb.readLine()) != null ) {
+			linecount++;
+			if (linecount==1) {
+				// HEADER
+				p = Pattern.compile("^HEADER");
 				m = p.matcher(line);
-				if(m.find()) {
-					// ok, it is
-					pdbCode = "CASP";
-				} else {
-					// a HEADER is the minimum we ask at the moment for a pdb file to have, if we don't find it in line 1 we throw an exception
-					throw new PdbfileFormatError("The pdb file "+pdbfile+" does not have a HEADER record");
+				if (m.find()){
+					Pattern ph = Pattern.compile("^HEADER.{56}(\\d\\w{3})");
+					Matcher mh = ph.matcher(line);
+					if (mh.find()) {
+						pdbCode=mh.group(1).toLowerCase();
+					}
+				} else { // header not found
+					// check whether this is a Casp prediction file
+					p = Pattern.compile("^PFRMAT\\s+TS");
+					m = p.matcher(line);
+					if(m.find()) {
+						// ok, it is
+						isCaspTS = true; 
+						pdbCode = NO_PDB_CODE;
+						// we try to read the TARGET from the next line, if there's no TARGET line appearing this is not respecting the format: exception
+						if((line = fpdb.readLine()) != null ) {
+							linecount++;
+							p = Pattern.compile("^TARGET\\s+T(\\d+)");
+							m = p.matcher(line);
+							if (m.find()) {
+								this.targetNum = Integer.parseInt(m.group(1));
+							} else {
+								throw new PdbfileFormatError("The CASP TS file "+pdbfile+" does not have a TARGET line");
+							}
+						} else {
+							throw new PdbfileFormatError("The CASP TS file "+pdbfile+" is empty after the PFRMAT line");
+						}
+						//TODO read PARENT record? there's one PARENT record per model in file, see http://predictioncenter.org/casp7/doc/casp7-format.html 
+					}
 				}
 			}
-		} else {
-			throw new PdbfileFormatError("The file "+pdbfile+" is empty.");
-		}
-		// read further lines
-		while ((line = fpdb.readLine() ) != null ) {
-			linecount++;
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
 			p = Pattern.compile("^SEQRES.{5}"+chainCodeStr);
@@ -201,9 +236,12 @@ public class PdbfilePdb extends Pdb {
 						if (AAinfo.isValidAA(line.substring(i, i+3))) { // for non-standard aas
 							sequence+= AAinfo.threeletter2oneletter(line.substring(i, i+3));
 						} else {
-							sequence+= NONSTANDARD_AA_LETTER;
+							sequence+= AAinfo.NONSTANDARD_AA_ONE_LETTER;
 						}
 					}
+				}
+				if (!sequence.equals("")) {// if SEQRES was not empty then we have a sequence
+					hasSeqRes = true;
 				}
 			}
 			// SECONDARY STRUCTURE
@@ -250,6 +288,9 @@ public class PdbfilePdb extends Pdb {
 				secondaryStructure.add(ssElem);
 			}			
 			// MODEL
+			// The model serial numbers should occur in columns 11-14 (official PDB format spec)
+			// Here we are less strict: we allow for the numbers to appear in any column after the MODEL keyword (with any number of spaces in between)
+			// We mainly need this because of CASP TS file which don't follow the PDB format 100% 
 			p = Pattern.compile("^MODEL\\s+(\\d+)");
 			m = p.matcher(line);
 			if (m.find()){
@@ -260,8 +301,8 @@ public class PdbfilePdb extends Pdb {
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type      chain 	   res_ser     x     y     z
-				Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4}).{4}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				//                                 serial    atom   res_type      chain 	   res_ser icode    x     y     z
+				Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
 					empty=false;
@@ -269,10 +310,33 @@ public class PdbfilePdb extends Pdb {
 					String atom = ml.group(2).trim();
 					String res_type = ml.group(3).trim();
 					int res_serial = Integer.parseInt(ml.group(4).trim());
-					double x = Double.parseDouble(ml.group(5).trim());
-					double y = Double.parseDouble(ml.group(6).trim());
-					double z = Double.parseDouble(ml.group(7).trim());
+					if (res_serial<1) {
+						throw new PdbfileFormatError("A residue serial <=0 was found in the ATOM lines");
+					}
+					if (res_serial<lastResSerial) {
+						throw new PdbfileFormatError("Residue serials do not occur in ascending order in ATOM lines of the PDB file "+pdbfile);
+					}
+					lastResSerial = res_serial;
+					String iCode = ml.group(5);
+					if (!iCode.equals(" ")) {
+						throw new PdbfileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
+					}
+					double x = Double.parseDouble(ml.group(6).trim());
+					double y = Double.parseDouble(ml.group(7).trim());
+					double z = Double.parseDouble(ml.group(8).trim());
 					Point3d coords = new Point3d(x,y,z);
+
+					if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
+						// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
+						if (!atomAtOriginSeen) {
+							// first atom at origin we see is valid, we set the flag that we've seen it to true and later it will be read
+							atomAtOriginSeen = true;
+						} else {
+							// more than 1 atom at origin: we don't want to read it: we skip it by continuing to next line
+							continue;
+						}
+					} 
+					
 					if (AAinfo.isValidAA(res_type)) {
 						atomser2coord.put(atomserial, coords);
 						atomser2resser.put(atomserial, res_serial);
@@ -280,33 +344,55 @@ public class PdbfilePdb extends Pdb {
 						if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 						}
-					}					
+					}
+
+
+
 				}
 			}
 		}
 		fpdb.close();
 		if (empty) {
-			//System.err.println("Couldn't find any atom line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 			throw new PdbChainCodeNotFoundError("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
-		if (sequence.equals("")){
-			// if we couldn't read anything from SEQRES then we read it from the resser2restype HashMap
-			// NOTE: we must make sure elsewhere that there are no unobserved residues, we can't check that here!
-			ArrayList<Integer> ressers = new ArrayList<Integer>();
+
+		// we check also that resser2restype is not empty: happens when all residues in chain are non-standard
+		if (resser2restype.isEmpty()) {
+			throw new PdbfileFormatError("No standard aminoacids found for given chain in ATOM lines");
+		}
+		
+		if (!hasSeqRes){ // no SEQRES could be read
+			
+			// 1) check whether first observed residue number is <100, if so we warn because it's likely to be an error
+			int minResSer = Collections.min(resser2restype.keySet()); 
+			if (minResSer>=100) {
+				System.err.println("Warning! PDB file "+pdbfile+" starts with residue number "+minResSer+ ". "+
+						"This is likely to be an error in the residue numbering of this PDB file. " +
+						"A gap of size "+(minResSer-1)+" will be inserted at the beginning of the sequence.");
+			}
+			
+			// 2) we take the sequence from the resser2restype Map, 
+			// we assume the numbering is correct: we introduce non-observed gaps whenever we don't have the resser in resser2restype, 
+			// that only misses non-observed gaps at end of chain which we can't know about
+			sequence = "";
+			for (int resser=1;resser<=Collections.max(resser2restype.keySet());resser++) {
+				if (resser2restype.containsKey(resser)) {
+					sequence += AAinfo.threeletter2oneletter(resser2restype.get(resser));
+				} else {
+					sequence += AAinfo.UNKNOWN_UNOBSERVED_RES_ONE_LETTER;
+				}
+			}
+			// 3) we set fullLength
+			fullLength = sequence.length(); 
+			
+		} else { // we could read the sequence from SEQRES
+			// 1) we check that the sequences from ATOM lines and SEQRES coincide (except for unobserved residues)
 			for (int resser:resser2restype.keySet()) {
-				ressers.add(resser);
+				if (!String.valueOf(sequence.charAt(resser-1)).equals(AAinfo.threeletter2oneletter(resser2restype.get(resser)))) {
+					throw new PdbfileFormatError("Sequences from ATOM lines and SEQRES do not match for position "+resser+". Incorrect residue numbering in PDB file "+pdbfile);
+				}
 			}
-			Collections.sort(ressers);
-			for (int resser:ressers){
-				String oneletter = AAinfo.threeletter2oneletter(resser2restype.get(resser));
-				sequence += oneletter;
-			}
-			// not size but maximum: if residue numbering in pdb file is correct, then this takes care of non-observed except for possible non-observed at end of chain
-			fullLength = Collections.max(resser2restype.keySet()); 
-		} else { // we read the sequence from SEQRES
-			if( sequence.length() < Collections.max(resser2restype.keySet())) {
-				throw new PdbfileFormatError("Last residue serial in ATOM lines is bigger than SEQRES length!");
-			}
+			// 2) we set fullLength
 			fullLength = sequence.length();
 		}
 	}

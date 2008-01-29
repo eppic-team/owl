@@ -30,11 +30,6 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	protected double distCutoff;
 	protected String contactType;				// use AAinfo.isValidContactType() to test for validity
 	
-	// optional fields for graphs based on casp predictions
-	protected int targetNum;
-	protected int caspModelNum;
-	protected int groupNum;
-	
 	public RIGraph() {
 		super();
 		this.distCutoff=0;
@@ -931,48 +926,6 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	public boolean removeVertex(RIGNode vertex) {
 		serials2nodes.remove(vertex.getResidueSerial());
 		return super.removeVertex(vertex);
-	}
-
-	/**
-	 * @return the caspModelNum
-	 */
-	public int getCaspModelNum() {
-		return caspModelNum;
-	}
-
-	/**
-	 * @return the groupNum
-	 */
-	public int getGroupNum() {
-		return groupNum;
-	}
-
-	/**
-	 * @return the targetNum
-	 */
-	public int getTargetNum() {
-		return targetNum;
-	}
-
-	/**
-	 * @param caspModelNum the caspModelNum to set
-	 */
-	public void setCaspModelNum(int caspModelNum) {
-		this.caspModelNum = caspModelNum;
-	}
-
-	/**
-	 * @param groupNum the groupNum to set
-	 */
-	public void setGroupNum(int groupNum) {
-		this.groupNum = groupNum;
-	}
-
-	/**
-	 * @param targetNum the targetNum to set
-	 */
-	public void setTargetNum(int targetNum) {
-		this.targetNum = targetNum;
 	}
 	
 	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)

@@ -40,6 +40,11 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	protected String sid;			// the scop id if this ProtStructGraph comes from a Pdb object restricted to a SCOP domain
 	protected String comment;		// a user-defined comment field
 	
+	// optional fields for graphs based on casp predictions
+	protected int targetNum;
+	protected int caspModelNum;
+	protected int groupNum;
+	
 	protected int fullLength;		// full length of the protein with all aas (same as sequence length)
 
 	protected int minSeqSep;
@@ -150,9 +155,47 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	public void setModel(int model) {
 		this.model = model;
 	}
+	
+	/**
+	 * @return the caspModelNum
+	 */
+	public int getCaspModelNum() {
+		return caspModelNum;
+	}
 
-	public int getFullLength() {
-		return fullLength;
+	/**
+	 * @return the groupNum
+	 */
+	public int getGroupNum() {
+		return groupNum;
+	}
+
+	/**
+	 * @return the targetNum
+	 */
+	public int getTargetNum() {
+		return targetNum;
+	}
+
+	/**
+	 * @param caspModelNum the caspModelNum to set
+	 */
+	public void setCaspModelNum(int caspModelNum) {
+		this.caspModelNum = caspModelNum;
+	}
+
+	/**
+	 * @param groupNum the groupNum to set
+	 */
+	public void setGroupNum(int groupNum) {
+		this.groupNum = groupNum;
+	}
+
+	/**
+	 * @param targetNum the targetNum to set
+	 */
+	public void setTargetNum(int targetNum) {
+		this.targetNum = targetNum;
 	}
 	
 	public String getSid() {
@@ -165,6 +208,10 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	
 	public boolean isRestrictedToScopDomain() {
 		return sid!=null;
+	}
+
+	public int getFullLength() {
+		return fullLength;
 	}
 
 	public String getSequence() {

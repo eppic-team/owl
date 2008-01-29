@@ -57,6 +57,9 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		resGraph.setPdbChainCode(this.pdbChainCode);
 		resGraph.setModel(this.model);
 		resGraph.setSid(this.sid);
+		resGraph.setTargetNum(this.targetNum);
+		resGraph.setGroupNum(this.groupNum);
+		resGraph.setCaspModelNum(this.caspModelNum);
 		resGraph.setSequence(this.sequence);
 		resGraph.setSecondaryStructure(this.secondaryStructure);
 	
