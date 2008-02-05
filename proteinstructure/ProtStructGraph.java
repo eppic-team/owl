@@ -107,13 +107,22 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	}
 	
 	/**
-	 * Returns true iff the graph contains an edge between the nodes with serials i and j.
+	 * Returns true if the graph contains an edge between the nodes with serials i and j.
 	 * @param i
 	 * @param j
 	 * @return True if the graph contains an edge from i to j, false otherwise.
 	 */
 	public boolean containsEdgeIJ(int i, int j) {
 		return (getEdgeFromSerials(i,j) != null);
+	}
+	
+	/**
+	 * Returns true if the graph contains a vertex with serial i
+	 * @param i
+	 * @return
+	 */
+	public boolean containsVertexI(int i) {
+		return this.containsVertex(getNodeFromSerial(i));
 	}
 	
 	/**

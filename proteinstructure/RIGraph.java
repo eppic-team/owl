@@ -14,6 +14,7 @@ import java.util.TreeMap;
 
 import tools.MySQLConnection;
 
+import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
@@ -183,6 +184,19 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 
 	public int getLastResidueSerial() {
 		return serials2nodes.lastKey();
+	}
+	
+	/**
+	 * Adds an edge between residue serials i, j with default weight
+	 * @param i
+	 * @param j
+	 */
+	public void addEdgeIJ(int i, int j) {
+		EdgeType et = EdgeType.UNDIRECTED;
+		if (isDirected()) {
+			et = EdgeType.DIRECTED;
+		}
+		this.addEdge(new RIGEdge(), getNodeFromSerial(i), getNodeFromSerial(j), et);
 	}
 	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
