@@ -836,8 +836,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		} else {
 			for (int resser:this.serials2nodes.keySet()){
 				String this_res = getNodeFromSerial(resser).getResidueType();
-				String other_res = other.getNodeFromSerial(resser).getResidueType();
-				if (!this_res.equals("X") && !other_res.equals("X") && !this_res.equals(other_res)) {
+				RIGNode otherNode = other.getNodeFromSerial(resser);
+				String other_res = AAinfo.NONSTANDARD_AA_THREE_LETTER;
+				if (otherNode!=null) {
+					other_res = otherNode.getResidueType();
+				}
+				if (!this_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !other_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !this_res.equals(other_res)) {
 					//TODO throw specific exception
 					throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
 				}
