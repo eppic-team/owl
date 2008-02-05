@@ -304,6 +304,14 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 	}
 	
 	/**
+	 * Returns the number of neighbors of this neighborhood
+	 * @return
+	 */
+	public int getSize() {
+		return this.getNeighbors().size();
+	}
+	
+	/**
 	 * Returns a copy (deep) of this RIGNbhood 
 	 * @return
 	 */

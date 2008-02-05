@@ -833,20 +833,20 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		if (this.getFullLength()!=other.getFullLength()) {
 			//TODO throw specific exception
 			throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
-		} else {
-			for (int resser:this.serials2nodes.keySet()){
-				String this_res = getNodeFromSerial(resser).getResidueType();
-				RIGNode otherNode = other.getNodeFromSerial(resser);
-				String other_res = AAinfo.NONSTANDARD_AA_THREE_LETTER;
-				if (otherNode!=null) {
-					other_res = otherNode.getResidueType();
-				}
-				if (!this_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !other_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !this_res.equals(other_res)) {
-					//TODO throw specific exception
-					throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
-				}
-			}
-		}
+		} //else {
+//			for (int resser:this.serials2nodes.keySet()){
+//				String this_res = getNodeFromSerial(resser).getResidueType();
+//				RIGNode otherNode = other.getNodeFromSerial(resser);
+//				String other_res = AAinfo.NONSTANDARD_AA_THREE_LETTER;
+//				if (otherNode!=null) {
+//					other_res = otherNode.getResidueType();
+//				}
+//				if (!this_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !other_res.equals(AAinfo.NONSTANDARD_AA_THREE_LETTER) && !this_res.equals(other_res)) {
+//					//TODO throw specific exception
+//					throw new Exception("Sequence of 2 graphs to compare differ, can't compare them.");
+//				}
+//			}
+//		}
 		//NOTE: the common graph will have same node/edge properties as this graph, 
 		//      which doesn't make a lot of sense, but anyway one has to choose between this or other, 
 		//      or otherwise make some kind of merge, e.g. merge the weights by averaging? 
