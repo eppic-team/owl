@@ -177,6 +177,14 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return node.getResidueSerial();
 	}
 	
+	public int getFirstResidueSerial() {
+		return serials2nodes.firstKey();
+	}
+
+	public int getLastResidueSerial() {
+		return serials2nodes.lastKey();
+	}
+	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
 	//     But to be able to put them there we would need to pass here a Transformer that gets atom or residue serials depending if we are in AI or RI Graph 
 	/**
