@@ -188,6 +188,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	
 	/**
 	 * Adds an edge between residue serials i, j with default weight
+	 * If i or j don't map to RIGNodes in this graph nothing will be added
 	 * @param i
 	 * @param j
 	 */
@@ -196,7 +197,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		if (isDirected()) {
 			et = EdgeType.DIRECTED;
 		}
-		this.addEdge(new RIGEdge(), getNodeFromSerial(i), getNodeFromSerial(j), et);
+		if (getNodeFromSerial(i)!=null && getNodeFromSerial(j)!=null) {
+			this.addEdge(new RIGEdge(), getNodeFromSerial(i), getNodeFromSerial(j), et);
+		} 
 	}
 	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
