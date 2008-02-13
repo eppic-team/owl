@@ -83,19 +83,19 @@ public class GraphAverager {
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();		
 		
-		// create trivial alignment
 		TreeMap<String,String> sequences = new TreeMap<String, String>();
 		sequences.put(Long.toString(new Date().getTime()), sequence);	// a unique identifier
 		for(String id:templateGraphs.keySet()) {
 			sequences.put(id, templateGraphs.get(id).getSequence());
 		}
-		Alignment al = null;
+
+		// create trivial alignment
 		try {
-			al = new Alignment(sequences);
+			this.al = new Alignment(sequences);
 		} catch (AlignmentConstructionError e) {
 			System.err.println("Could not create alignment: " + e.getMessage());
 		}
-		this.al = al;
+
 		
 		checkSequences();	
 		countVotes(); // does the averaging by counting the votes and putting them into contactVotes		
@@ -153,17 +153,29 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Counts the votes for each possible alignment edge and puts all the votes in contactVotes TreeMap
+	 * Counts the votes for each possible alignment edge and puts all the votes in contactVotes Map
 	 *
 	 */
 	private void countVotes() {
 		
 		contactVotes = new HashMap<Pair<Integer>, Integer>();
+
+		// we get the first graph in templates to see if they are directed or undirected
+		boolean directed = templateGraphs.get(templateGraphs.firstKey()).isDirected();
 		
 		// we go through all positions in the alignment
 		for (int i=1; i<=al.getAlignmentLength(); i++){
 			for (int j=1; j<=al.getAlignmentLength(); j++) {
  
+				if (directed) {
+					// in directed case we only want to skip loop edges 
+					if (i==j) continue;
+				} else {
+					// in undirected case we want to skip half of the matrix
+					// this way the final contactVotes Map will contain Pair<Integer> always with j>i
+					if (i>=j) continue;
+				}
+				
 				int vote = 0; 
 				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){			
@@ -172,17 +184,15 @@ public class GraphAverager {
 					int jSeqIdx = al.al2seq(tag, j);
 					
 					// if each of the ends map to a gap in this sequence we skip it
-					if ((iSeqIdx!=-1) && (jSeqIdx!=-1) && thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) { 
-						//NOTE that order in which we give the nodes in findEdge doesn't matter (but ONLY if graph is undirected!)
+					if ((iSeqIdx!=-1) && (jSeqIdx!=-1) && thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) {  
 						RIGEdge thisGraphCont = thisGraph.getEdgeFromSerials(iSeqIdx, jSeqIdx);
 						Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
 						if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
 							vote++;
 						}
-
 					}
 				}
-				// putting vote in contactVotes TreeMap
+				// putting vote in contactVotes Map
 				if (vote>0){
 					contactVotes.put(new Pair<Integer>(i,j), vote);
 				}				
@@ -194,6 +204,7 @@ public class GraphAverager {
 	
 	/**
 	 * Returns the number of templates.
+	 * @return
 	 */
 	public int getNumberOfTemplates() {
 		return this.templateGraphs.size();
