@@ -29,8 +29,9 @@ public class dumpseq {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genGraph -i <listfile> [-o <output_dir> | -f <one_output_file>] [-D <pdbase_db>] \n" +
-				"2)  genGraph -p <pdb_code> -c <chain_pdb_code> -o <output_dir> [-D <pdbase_db>] \n" +
+				"1)  genGraph -i <listfile> [-o <output_dir> | -f <one_output_file> | -s] [-D <pdbase_db>] \n" +
+				"2)  genGraph -p <pdb_code> -c <chain_pdb_code> [-o <output_dir> | -f <one_output_file> | -s] [-D <pdbase_db>] \n" +
+				"Output options: -o one file per sequence, -f one file for all sequences, -s standard output"+
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n"; 
 
@@ -40,8 +41,9 @@ public class dumpseq {
 		String pdbaseDb = PDB_DB;
 		String outputDir = "";
 		File oneOutputFile = null;
+		boolean stdout = false;
 		
-		Getopt g = new Getopt("genGraph", args, "i:p:c:o:f:D:h?");
+		Getopt g = new Getopt("genGraph", args, "i:p:c:o:f:D:sh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -63,6 +65,9 @@ public class dumpseq {
 			case 'D':
 				pdbaseDb = g.getOptarg();
 				break;
+			case 's':
+				stdout = true;
+				break;				
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -117,8 +122,9 @@ public class dumpseq {
 		int numPdbs = 0;
 
 		PrintStream Out = null;
-		
-		if (oneOutputFile!=null) {
+		if (stdout) {
+			Out = System.out;
+		} else if (oneOutputFile!=null) {
 			Out = new PrintStream(new FileOutputStream(oneOutputFile));
 		} 
 
@@ -135,19 +141,23 @@ public class dumpseq {
 
 				File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+".fasta");
 				
-				if (oneOutputFile==null) {
+				if (!stdout && oneOutputFile==null) {
 					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
 				}
 				
-				Out.println(">"+pdbCode+"_"+pdbChainCode);
-
+				if (!stdout) { // if output of sequence is stdout, then we don't want to print just the sequence without FASTA headers
+					Out.println(">"+pdbCode+"_"+pdbChainCode);
+				}
+				
 				Out.println(sequence);
 
-				if (oneOutputFile==null) {
+				if (!stdout && oneOutputFile==null) {
 					Out.close();
 				}
 				
-				System.out.println("Wrote "+pdbCode+"_"+pdbChainCode+".fasta");
+				if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
+					System.out.println("Wrote "+pdbCode+"_"+pdbChainCode+".fasta");
+				}
 
 				numPdbs++;
 
@@ -161,12 +171,14 @@ public class dumpseq {
 
 		}
 
-		if (oneOutputFile!=null) {
+		if (!stdout && oneOutputFile!=null) {
 			Out.close();
 		}
 		
 		// output results
-		System.out.println("Number of dumped sequences: " + numPdbs);
+		if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
+			System.out.println("Number of dumped sequences: " + numPdbs);
+		}
 
 
 	} 
