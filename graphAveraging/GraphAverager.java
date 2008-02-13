@@ -1,14 +1,17 @@
 package graphAveraging;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeMap;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
+import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
+import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -31,7 +34,7 @@ public class GraphAverager {
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
-	private TreeMap<Pair<Integer>,Integer> contactVotes;
+	private HashMap<Pair<Integer>,Integer> contactVotes;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -121,11 +124,29 @@ public class GraphAverager {
 		}
 		if(!al.getSequenceNoGaps(targetTag).equals(this.sequence)) {
 			System.err.println("Target sequence in alignment does not match sequence in target graph");
+			System.err.println("Trying to align sequences of alignment vs graph: ");
+			try {
+				PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(this.sequence,al.getSequenceNoGaps(targetTag),"graph","alignment");
+				alCheck.printAlignment();
+			} catch (PairwiseSequenceAlignmentException e) {
+				System.err.println("Error while creating alignment check, can't display an alignment. The 2 sequences are: ");
+				System.err.println("graph:     "+sequence);
+				System.err.println("alignment: "+al.getSequenceNoGaps(targetTag));
+			}
 			// TODO throw exception
 		}
 		for (String tag:templateGraphs.keySet()){
 			if(!al.getSequenceNoGaps(tag).equals(templateGraphs.get(tag).getSequence())) {
 				System.err.println("Sequence of template graph "+tag+" does not match sequence in alignment");
+				System.err.println("Trying to align sequences of alignment vs graph: ");
+				try {
+					PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(templateGraphs.get(tag).getSequence(),al.getSequenceNoGaps(tag),"graph","alignment");
+					alCheck.printAlignment();
+				} catch (PairwiseSequenceAlignmentException e) {
+					System.err.println("Error while creating alignment check, can't display an alignment. The 2 sequences are: ");
+					System.err.println("graph:     "+templateGraphs.get(tag).getSequence());
+					System.err.println("alignment: "+al.getSequenceNoGaps(tag));
+				}
 				// TODO throw exception
 			}			
 		}
@@ -137,7 +158,7 @@ public class GraphAverager {
 	 */
 	private void countVotes() {
 		
-		contactVotes = new TreeMap<Pair<Integer>, Integer>();
+		contactVotes = new HashMap<Pair<Integer>, Integer>();
 		
 		// we go through all positions in the alignment
 		for (int i=1; i<=al.getAlignmentLength(); i++){
@@ -147,11 +168,18 @@ public class GraphAverager {
 				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){			
 					RIGraph thisGraph = templateGraphs.get(tag);
-					//NOTE that order in which we give the nodes in findEdge doesn't matter (but ONLY if graph is undirected!)
-					RIGEdge thisGraphCont = thisGraph.findEdge(thisGraph.getNodeFromSerial(al.al2seq(tag, i)), thisGraph.getNodeFromSerial(al.al2seq(tag, j)));
-					Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
-					if (thisGraph.findEdge(thisGraph.getNodeFromSerial(pair.getFirst().getResidueSerial()),thisGraph.getNodeFromSerial(pair.getSecond().getResidueSerial()))!=null) {
-						vote++;
+					int iSeqIdx = al.al2seq(tag, i);
+					int jSeqIdx = al.al2seq(tag, j);
+					
+					// if each of the ends map to a gap in this sequence we skip it
+					if ((iSeqIdx!=-1) && (jSeqIdx!=-1) && thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) { 
+						//NOTE that order in which we give the nodes in findEdge doesn't matter (but ONLY if graph is undirected!)
+						RIGEdge thisGraphCont = thisGraph.getEdgeFromSerials(iSeqIdx, jSeqIdx);
+						Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
+						if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
+							vote++;
+						}
+
 					}
 				}
 				// putting vote in contactVotes TreeMap
