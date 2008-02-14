@@ -126,20 +126,23 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 		out.println("</LayoutEngineType>");
 		
 		// node properties
-		double radius = 0.2;
+		double radius = 0.15;
 		Map<PPINode, Color> node2col = assignRandomColors();
+		String label = null;
+		Color color = null;
 		
 		// nodes
 		for(PPINode n:this.getVertices()) {
-			Color c = node2col.containsKey(n)?node2col.get(n):Color.black;
-			out.println(getWilmaNodeStr(Integer.toString(n.getIdx()), n.getProteinName(), c, radius));
+			color = node2col.containsKey(n)?node2col.get(n):Color.black;
+			label = n.getProteinName();
+			out.println(getWilmaNodeStr("N" + Integer.toString(n.getIdx()), label, color, radius));
 		}
 		
 		// edges
 		for(PPIEdge e:this.getEdges()) {
 			int start = this.getEndpoints(e).getFirst().getIdx();
 			int end = this.getEndpoints(e).getSecond().getIdx();
-			out.println(getWilmaEdgeStr(Integer.toString(start), Integer.toString(end)));
+			out.println(getWilmaEdgeStr("N" + Integer.toString(start), "N" + Integer.toString(end)));
 		}       
 		
 		// footer
@@ -159,7 +162,7 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 			nodeStr += String.format("<Property Key=\"Colour\" Value=\"%f %f %f\"/>", rgb[0], rgb[1], rgb[2]);
 		}
 		if(radius > 0) {
-			nodeStr += String.format("<Property Key=\"Radius\" Value=\"%s\"/>", "0.2");			
+			nodeStr += String.format("<Property Key=\"Radius\" Value=\"%f\"/>", radius);			
 		}
 		nodeStr += String.format("</ViewType>");		
 		nodeStr += String.format("</Node>");
@@ -167,7 +170,11 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 	}
 	
 	public String getWilmaEdgeStr(String start, String end) {
-		String edgeStr = String.format("\t<Edge StartID=\"%s\" EndID=\"%s\"/>", start, end);
+		String edgeStr = String.format("\t<Edge StartID=\"%s\" EndID=\"%s\">", start, end);
+		//edgeStr += String.format("<ViewType Name=\"Plain Edge\">");
+		edgeStr += String.format("<ViewType Name=\"LineEdge\">");
+		edgeStr += String.format("</ViewType>");		
+		edgeStr += String.format("</Edge>", start, end);
 		return edgeStr;
 	}
 	
@@ -222,7 +229,6 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 	
 	public void info() {
 		System.out.printf("Nodes=%d, Edges=%d\n", this.getVertexCount(), this.getEdgeCount());
-
 	}
 	
 	public void printNodes() {
@@ -239,12 +245,28 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 		}
 	}
 	
+	/**
+	 * Delete all vertices with no adjacent edges.
+	 */
+	public void deleteNonConnectedVertices() {
+		LinkedList<PPINode> deleteSet = new LinkedList<PPINode>();
+		// mark all low connected nodes for deletion
+		for(PPINode a:this.getVertices()) {
+			Collection<PPIEdge> edges = this.getEdges();
+			if(edges.size() == 0) deleteSet.add(a);
+		}
+		// delete
+		for(PPINode n: deleteSet) {
+			this.removeVertex(n);
+		}
+	}	
+	
 	/*--------------------------------- main --------------------------------*/
 	
 	public static void main(String[] args) throws SQLException, FileNotFoundException, IOException {
-		String nodeFileName = "/project/StruPPi/incoming/fyi_key.txt";
-		String edgeFileName = "/project/StruPPi/incoming/fyi.txt";
-		String wilmaFileName = "/project/StruPPi/incoming/fyi.xwg";
+		String nodeFileName = "/project/StruPPi/ppi/fyi_key.txt";
+		String edgeFileName = "/project/StruPPi/ppi/fyi.txt";
+		String wilmaFileName = "/project/StruPPi/ppi/xwg/fyi.xwg";
 		
 		String dbHost = "white";
 		String dbUser = "stehr";
@@ -254,6 +276,7 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 		
 		// load from file
 		PPIGraph ppiGraph = new PPIGraph();
+		System.out.println("Loading graph from datafiles...");
 		ppiGraph.loadNodesFromTabSepFile(new File(nodeFileName));
 		ppiGraph.loadEdgesFromTabSepFile(new File(edgeFileName));
 		ppiGraph.info();

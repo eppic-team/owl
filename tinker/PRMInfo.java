@@ -16,8 +16,9 @@ import proteinstructure.AAinfo;
  */
 public class PRMInfo {
 
+	public enum PRMType {amber};	// currently only amber supported
+	
 	String prmFileName;
-	String type;
 	
 	TreeMap<Integer,Integer> prmid2tinkerid;
 	TreeMap<Integer,String> prmid2prmname;
@@ -27,13 +28,18 @@ public class PRMInfo {
 	
 	TreeMap<Integer,String> prmid2res_atom;
 	
-	public PRMInfo(String prmFileName, String type) throws IOException{
-		this.prmFileName = prmFileName;
-		this.type = type;
+	/**
+	 * Constructs a PRMInfo object, mapping the PRM atom names to PDB atom names
+	 * @param prmFileName
+	 * @param type
+	 * @throws IOException
+	 */
+	public PRMInfo(String prmFileName, PRMType type) throws IOException{
+		this.prmFileName = prmFileName;		
 		
 		readPrmFile();
 		
-		if (type.equals("amber")){
+		if (type==PRMType.amber){
 			mapPdbAtomNamesAmber();
 		} else {
 			System.err.println("prm file type "+type+" not supported");

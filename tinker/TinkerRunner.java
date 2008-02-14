@@ -29,9 +29,9 @@ public class TinkerRunner {
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_PARAMS = "Y N Y Y N N A";
-	private static final double DEFAULT_FORCECONSTANT = 10.0;
+	public static final double DEFAULT_FORCECONSTANT = 10.0;
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
-	private static final String DEFAULT_FF_FILE_TYPE = "amber";
+	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
 	
 	/*--------------------------- member variables --------------------------*/
@@ -70,36 +70,24 @@ public class TinkerRunner {
 	 * Constructs a TinkerRunner object by passing initial parameters
 	 * @param tinkerBinDir The directory where the tinker executables are
 	 * @param forceFieldFileName The force field file
-	 * @param forceConstant the force constant to be used for all our given distance restraints
 	 * @throws FileNotFoundException
 	 */
-	public TinkerRunner(String tinkerBinDir, String forceFieldFileName, double forceConstant) throws FileNotFoundException {
+	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
 		this.tinkerBinDir = tinkerBinDir;
 		File tinkerbindir = new File(tinkerBinDir);
 		if (!(tinkerbindir.isDirectory() && tinkerbindir.canRead())) throw new FileNotFoundException("Can't read tinker bin directory "+tinkerBinDir);
 		this.forceFieldFileName = forceFieldFileName;
-		this.forceConstant = forceConstant;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
 //		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
 		this.xyzpdbProg = new File(this.tinkerBinDir,XYZPDB_PROG).getAbsolutePath();
 		
+		this.forceConstant = -1;
 		this.lastOutputDir = null;
 		this.lastBaseName = null;
 		this.lastNumberOfModels = 0;
 	}
-	
-	/**
-	 * Constructs a TinkerRunner object by passing initial parameters. 
-	 * The force constant used for given restraints will be the default one
-	 * @param tinkerBinDir
-	 * @param forceFieldFileName
-	 * @throws FileNotFoundException
-	 */
-	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
-		this(tinkerBinDir, forceFieldFileName, DEFAULT_FORCECONSTANT);
-	}
-	
+		
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
@@ -441,9 +429,10 @@ public class TinkerRunner {
 	}
 	
 	// reconstruction
-
+	
 	/** 
-	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object
+	 * using the default forceConstant.
 	 * The model is picked based on the number of bound violations reported by Tinker.
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
@@ -454,13 +443,29 @@ public class TinkerRunner {
 	 * @returns A pdb object containg the generated structure
 	 */
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
+		return reconstruct(sequence, graphs, numberOfModels, DEFAULT_FORCECONSTANT);
+	}	
+
+	/** 
+	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * The model is picked based on the number of bound violations reported by Tinker.
+	 * See reconstruct() for more details.
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
+	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @returns A pdb object containg the generated structure
+	 */
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant) throws TinkerError, IOException {
 		Pdb resultPdb = null;
 		
 		String outputDir = System.getProperty("java.io.tmpdir");
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
-		boolean cleanUp = true;						// TODO: Only for debugging, switch on cleaning later
+		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, numberOfModels, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, numberOfModels, forceConstant, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -477,6 +482,7 @@ public class TinkerRunner {
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
 	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param forceConstant the force constant to be used for all our given distance restraints
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
@@ -484,7 +490,9 @@ public class TinkerRunner {
 	 * @throws IOException  thrown if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+		
+		this.forceConstant = forceConstant; 
 		// defining files
 		File prmFile = new File(this.forceFieldFileName);					// don't delete this one
 		File xyzFile = new File(outputDir,baseName+".xyz");
@@ -553,7 +561,7 @@ public class TinkerRunner {
 	
 	/**
 	 * Returns the number of models generated in the last reconstruction run.
-	 * @return the number of models
+	 * @return the number of models or 0 if no run was completed yet
 	 */
 	public int getLastNumberOfModels() {
 		return lastNumberOfModels;
@@ -561,7 +569,7 @@ public class TinkerRunner {
 
 	/**
 	 * Returns the directory where temporary and output files of the last reconstruction run were written to.
-	 * @return the output directory
+	 * @return the output directory or null if no run was completed yet
 	 */
 	public String getLastOutputDir() {
 		return lastOutputDir;
@@ -569,11 +577,19 @@ public class TinkerRunner {
 	
 	/**
 	 * Returns the basename pf the temporary and output files of the last reconstruction run.
-	 * @return the base name
+	 * @return the base name or null if no run was completed yet
 	 */
 	public String getLastBaseName() {
 		return lastBaseName;
 	}
+	
+	/**
+	 * Returns the force constant used in the last reconstruction run.
+	 * @return the force constant or -1 if no run was completed yet
+	 */
+	public double getLastForceConstant() {
+		return forceConstant;
+	}	
 	
 	/**
 	 * Returns one of the structures generated in the last reconstruction run as a pdb object.

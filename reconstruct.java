@@ -198,12 +198,7 @@ public class reconstruct {
 		
 		TinkerRunner tr = null;
 		try {
-			if (forceConstant!=0) {
-				tr = new TinkerRunner(TINKERBINDIR, PRMFILE, forceConstant);
-			} else {
-				// force constant not given in command line: take the default force constant
-				tr = new TinkerRunner(TINKERBINDIR, PRMFILE); 
-			}
+			tr = new TinkerRunner(TINKERBINDIR, PRMFILE); 
 		} catch (FileNotFoundException e3) {
 			System.err.println("Couldn't find tinker bin dir "+TINKERBINDIR+". Exiting");
 			System.exit(1);
@@ -212,7 +207,13 @@ public class reconstruct {
 		// call reconstruction
 		
 		try {
-			tr.reconstruct(sequence, graphs, n, outputDir, baseName, false);
+			if (forceConstant!=0) {
+				tr.reconstruct(sequence, graphs, n, forceConstant, outputDir, baseName, false);
+			} else {
+				// force constant not given in command line: take the default force constant
+				tr.reconstruct(sequence, graphs, n, TinkerRunner.DEFAULT_FORCECONSTANT, outputDir, baseName, false);
+			}
+			
 		} catch (IOException e) {
 			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
 			System.exit(1);

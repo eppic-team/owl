@@ -40,11 +40,23 @@ public class ConstraintsMaker {
 	private TreeMap<Integer,Integer> pdb2xyz;
 	
 	private PRMInfo prminfo;
-	private String type; // amber, charmm, ...
+	private PRMInfo.PRMType type; // amber, charmm, ...
 	
 	private String lastPdbResSerial_Atom;
 	
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, String type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbLoadError {
+	/**
+	 * Creates a new constraints maker.
+	 * @param pdbFile the output file of Tinker's protein program converted to PDB format
+	 * @param xyzFile the output file of Tinker's protein program
+	 * @param prmFile a Tinker compliant force field parameter file
+	 * @param type the type of the force field parameter file (currently only 'amber' is supported)
+	 * @param keyFile output tinker restraints file
+	 * @param forceConstant a global force constant used for all distance restraints
+	 * @throws FileNotFoundException if one of the files was not found
+	 * @throws IOException if something went wrong while reading from or writing to files
+	 * @throws PdbLoadError if the PDB file could not be read
+	 */
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbLoadError {
 		this.defaultForceConstant = forceConstant;
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
