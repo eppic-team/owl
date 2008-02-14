@@ -133,7 +133,7 @@ public class ConstraintsMaker {
 		}
 		lastPdbResSerial_Atom = thisPdbResSerial_Atom;
 		
-		if (type.equals("amber")) {
+		if (type==PRMInfo.PRMType.amber) {
 			// amber uses some special atom names as compared to pdb:
 			//		pdb			amber
 			// ARG:	NH1,NH2		NH  	atoms are indistinguishable
