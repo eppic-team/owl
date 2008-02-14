@@ -38,6 +38,7 @@ public class TinkerRunner {
 	// input parameters
 	private String tinkerBinDir;
 	private String forceFieldFileName;
+	private double forceConstant;
 
 	// derived parameters
 	private String proteinProg;
@@ -69,13 +70,15 @@ public class TinkerRunner {
 	 * Constructs a TinkerRunner object by passing initial parameters
 	 * @param tinkerBinDir The directory where the tinker executables are
 	 * @param forceFieldFileName The force field file
+	 * @param forceConstant the force constant to be used for all our given distance restraints
 	 * @throws FileNotFoundException
 	 */
-	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
+	public TinkerRunner(String tinkerBinDir, String forceFieldFileName, double forceConstant) throws FileNotFoundException {
 		this.tinkerBinDir = tinkerBinDir;
 		File tinkerbindir = new File(tinkerBinDir);
 		if (!(tinkerbindir.isDirectory() && tinkerbindir.canRead())) throw new FileNotFoundException("Can't read tinker bin directory "+tinkerBinDir);
 		this.forceFieldFileName = forceFieldFileName;
+		this.forceConstant = forceConstant;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
 //		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
@@ -84,6 +87,17 @@ public class TinkerRunner {
 		this.lastOutputDir = null;
 		this.lastBaseName = null;
 		this.lastNumberOfModels = 0;
+	}
+	
+	/**
+	 * Constructs a TinkerRunner object by passing initial parameters. 
+	 * The force constant used for given restraints will be the default one
+	 * @param tinkerBinDir
+	 * @param forceFieldFileName
+	 * @throws FileNotFoundException
+	 */
+	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
+		this(tinkerBinDir, forceFieldFileName, DEFAULT_FORCECONSTANT);
 	}
 	
 	/*---------------------------- private methods --------------------------*/
@@ -501,7 +515,7 @@ public class TinkerRunner {
 		// 2. creating constraints into key file
 		ConstraintsMaker cm = null;
 		try {
-			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile,DEFAULT_FORCECONSTANT);
+			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile,forceConstant);
 		} catch(PdbLoadError e) {
 			throw new TinkerError(e);
 		}

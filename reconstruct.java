@@ -30,7 +30,7 @@ public class reconstruct {
 		
 		String programName = reconstruct.class.getName();
 		String help = "Usage:\n" +
-			programName+" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] \n"; 
+			programName+" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] [-f <force constant>]\n"; 
 
 		String pdbCode = "";
 		String pdbChainCode = "";
@@ -42,11 +42,11 @@ public class reconstruct {
 		String baseName = "";
 		boolean cross = false;
 		int n = 1;
-		//double forceConstant = 100.0;
+		double forceConstant = 0;
 		int minRange = 0;
 		int maxRange = 0;
 		
-		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:h?");
+		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:f:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -86,9 +86,9 @@ public class reconstruct {
 			case 'M':
 				maxRange = Integer.parseInt(g.getOptarg());
 				break;				
-			//case 'f':
-			//	forceConstant = Double.valueOf(g.getOptarg());
-			//	break;				
+			case 'f':
+				forceConstant = Double.valueOf(g.getOptarg());
+				break;				
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -198,7 +198,12 @@ public class reconstruct {
 		
 		TinkerRunner tr = null;
 		try {
-			tr = new TinkerRunner(TINKERBINDIR, PRMFILE);
+			if (forceConstant!=0) {
+				tr = new TinkerRunner(TINKERBINDIR, PRMFILE, forceConstant);
+			} else {
+				// force constant not given in command line: take the default force constant
+				tr = new TinkerRunner(TINKERBINDIR, PRMFILE); 
+			}
 		} catch (FileNotFoundException e3) {
 			System.err.println("Couldn't find tinker bin dir "+TINKERBINDIR+". Exiting");
 			System.exit(1);
