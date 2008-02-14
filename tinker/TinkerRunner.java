@@ -28,7 +28,9 @@ public class TinkerRunner {
 //	private static final String PDBXYZ_PROG = "pdbxyz";
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String CYCLISE_PROTEIN_STR = "N";
-	private static final String DGEOM_PARAMS = "Y N Y Y N N A";
+	private static final String DGEOM_DEFAULT_PARAMS = "Y N Y Y N N ";
+	private static final String REFINE_VIA_ANNEALING = "A";
+	private static final String REFINE_VIA_MINIMIZATION = "M";
 	public static final double DEFAULT_FORCECONSTANT = 10.0;
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
@@ -39,7 +41,9 @@ public class TinkerRunner {
 	private String tinkerBinDir;
 	private String forceFieldFileName;
 	private double forceConstant;
-
+	
+	private String dgeomParams;
+	
 	// derived parameters
 	private String proteinProg;
 	private String distgeomProg;
@@ -81,6 +85,7 @@ public class TinkerRunner {
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
 //		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
 		this.xyzpdbProg = new File(this.tinkerBinDir,XYZPDB_PROG).getAbsolutePath();
+		this.dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_ANNEALING; // default: Annealing refinement 
 		
 		this.forceConstant = -1;
 		this.lastOutputDir = null;
@@ -219,7 +224,7 @@ public class TinkerRunner {
 		maxLowerViol = new double[n+1];
 		rmsRestViol = new double[n+1];
 		// running distgeom program
-		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+DGEOM_PARAMS;
+		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams;
 		Process dgeomProc = Runtime.getRuntime().exec(cmdLine);
 		// logging and capturing output
 		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
@@ -465,11 +470,55 @@ public class TinkerRunner {
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, numberOfModels, forceConstant, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
 		return resultPdb;
+	}
+
+	/**
+	 * Reconstruct the given graph(s). Edge types and distance cutoffs are taken from the graph object(s).
+	 * Simulated annealing is used for refinement
+	 * If multiple graphs are specified, tinker simply takes the union of constraints for the reconstruction. 
+	 * Output files starting with baseName will be written to the given outputDir.
+	 * If cleanUp is true, all output files are marked to be deleted on shutdown of the virtual machine.
+	 * The results of the last call to a reconstruct... method can be retrieved by the
+	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods.  
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param forceConstant the force constant to be used for all our given distance restraints 
+	 * @param outputDir the directory where the temporary and result files will be written to
+	 * @param baseName the basename of the temporary and result files
+	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
+	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 */
+	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
+	}
+	
+	/**
+	 * Reconstruct the given graph(s). Edge types and distance cutoffs are taken from the graph object(s).
+	 * Minimization is used for refinement (a lot faster than simulated annealing)
+	 * If multiple graphs are specified, tinker simply takes the union of constraints for the reconstruction. 
+	 * Output files starting with baseName will be written to the given outputDir.
+	 * If cleanUp is true, all output files are marked to be deleted on shutdown of the virtual machine.
+	 * The results of the last call to a reconstruct... method can be retrieved by the
+	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods.  
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param forceConstant the force constant to be used for all our given distance restraints 
+	 * @param outputDir the directory where the temporary and result files will be written to
+	 * @param baseName the basename of the temporary and result files
+	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
+	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 */	
+	public void reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+		reconstruct(sequence, graphs, numberOfModels, forceConstant, false, outputDir, baseName, cleanUp);
 	}
 	
 	/** 
@@ -483,16 +532,18 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @param annealing if true simulated annealing is used for refinement (slow), if false minimization is used for refinement (fast) 
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
 	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
 	 * @throws IOException  thrown if some temporary or result file could not be accessed
-	 * @returns A pdb object containg the generated structure
 	 */
-	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+	private void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, boolean annealing, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
 		
+		if (!annealing) dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_MINIMIZATION;
 		this.forceConstant = forceConstant; 
+		
 		// defining files
 		File prmFile = new File(this.forceFieldFileName);					// don't delete this one
 		File xyzFile = new File(outputDir,baseName+".xyz");

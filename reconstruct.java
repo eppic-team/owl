@@ -30,7 +30,9 @@ public class reconstruct {
 		
 		String programName = reconstruct.class.getName();
 		String help = "Usage:\n" +
-			programName+" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] [-f <force constant>]\n"; 
+			programName+
+			" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] [-f <force constant>] [-F]" +
+			"If -F (fast) specified then no simulated annealing refinement will be performed (much faster, worse quality)\n";
 
 		String pdbCode = "";
 		String pdbChainCode = "";
@@ -42,11 +44,12 @@ public class reconstruct {
 		String baseName = "";
 		boolean cross = false;
 		int n = 1;
-		double forceConstant = 0;
+		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT; // if not given in contact type default will be used
 		int minRange = 0;
 		int maxRange = 0;
+		boolean fast = false;
 		
-		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:f:h?");
+		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:f:Fh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -88,7 +91,10 @@ public class reconstruct {
 				break;				
 			case 'f':
 				forceConstant = Double.valueOf(g.getOptarg());
-				break;				
+				break;
+			case 'F':
+				fast = true;
+				break;								
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -207,11 +213,10 @@ public class reconstruct {
 		// call reconstruction
 		
 		try {
-			if (forceConstant!=0) {
-				tr.reconstruct(sequence, graphs, n, forceConstant, outputDir, baseName, false);
+			if (fast) {
+				tr.reconstructFast(sequence, graphs, n, forceConstant, outputDir, baseName, false);
 			} else {
-				// force constant not given in command line: take the default force constant
-				tr.reconstruct(sequence, graphs, n, TinkerRunner.DEFAULT_FORCECONSTANT, outputDir, baseName, false);
+				tr.reconstruct(sequence, graphs, n, forceConstant, outputDir, baseName, false);
 			}
 			
 		} catch (IOException e) {
