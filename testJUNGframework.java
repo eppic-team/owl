@@ -17,7 +17,7 @@ public class testJUNGframework {
 		pdb.load("A");
 		
 		RIGraph graph = pdb.get_graph("Ca", 8.0);
-		RIGraph graph2 = pdb.get_graph("Ca/Cb", 8.0);
+		RIGraph graph2 = pdb.get_graph("Ca/Cg", 8.0);
 		//RIGraph graph = new FileRIGraph("/scratch/local/temp.graph");
 		//RIGraph graph = new DbRIGraph("casp_decoys",9);
 		//System.out.println(graph);
@@ -117,7 +117,7 @@ public class testJUNGframework {
 
 		// TEST adding and getting directed/undirected edges
 		System.out.println("TEST adding and getting directed/undirected edges: ");
-		RIGraph g = new RIGraph("ABCD");
+		RIGraph g = new RIGraph("AMCD");
 		EdgeType edgeType = EdgeType.UNDIRECTED;
 		RIGNode n1 = g.getNodeFromSerial(1);
 		RIGNode n2 = g.getNodeFromSerial(2);
