@@ -63,8 +63,12 @@ public class CaspRRFileRIGraph extends RIGraph {
 		
 		// add edges
 		for(CaspRRFileData.RRContact cont:rrData.getContacts()) {
-			if(cont.minDist != 0) throw new GraphFileFormatError("Non-zero minimum distance value in " + fileName + ".");		
-			if(this.distCutoff != cont.maxDist) throw new GraphFileFormatError("Distance cutoffs in " + fileName + " are not equal.");
+			if(cont.minDist != 0) 
+				throw new GraphFileFormatError("Non-zero minimum distance value in " + fileName + ".");		
+			if(this.distCutoff != cont.maxDist) 
+				throw new GraphFileFormatError("Distance cutoffs in " + fileName + " are not equal.");
+			if (cont.i>=cont.j) 
+				throw new GraphFileFormatError("Contact "+cont.i+"-"+cont.j+" specified with i>j in " + fileName+". Only j>i contacts are allowed in CASP RR files.");
 			this.addEdge(new RIGEdge(cont.weight), serials2nodes.get(cont.i), serials2nodes.get(cont.j), EdgeType.UNDIRECTED);
 		}
 	}
