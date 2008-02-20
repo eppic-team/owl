@@ -29,6 +29,8 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	protected final static String GRAPHFILEFORMATVERSION = "1.0";
 	public static final String NO_CONTACT_TYPE = "";
 	public static final double NO_CUTOFF = 0.0;
+	public static final int	   NO_SEQ_SEP_VAL =	-1; // default seq sep value indicating that no seq sep has been specified
+
  	
 	protected String sequence;		// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;		// the lower-case pdb code
@@ -63,8 +65,8 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 		this.pdbChainCode=null;
 		this.model=DEFAULT_MODEL;
 		this.fullLength=0;
-		this.minSeqSep = -1;
-		this.maxSeqSep = -1;
+		this.minSeqSep = NO_SEQ_SEP_VAL;
+		this.maxSeqSep = NO_SEQ_SEP_VAL;
 		this.secondaryStructure = null;
 		this.comment = null;
 	}
@@ -278,31 +280,54 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 		if (sequence==null) return false;
 		return !sequence.equals("");
 	}
-		
+
 	/**
-	 * Removes edges strictly above the given range (sequence distance)
+	 * Returns the minimum sequence separation filter last applied to this graph or NO_SEQ_SEP_VAL if none was applied.
+	 * @return the minimum sequence separation or NO_SEQ_SEP_VAL
+	 */
+	public int getMinSeqSep() {
+		return minSeqSep;
+	}
+	
+	/**
+	 * Returns the maximum sequence separation filter last applied to this graph or NO_SEQ_SEP_VAL if none was applied.
+	 * @return the maximum sequence separation or NO_SEQ_SEP_VAL
+	 */
+	public int getMaxSeqSep() {
+		return maxSeqSep;
+	}
+	
+	
+	/**
+	 * Removes edges strictly above the given range (sequence distance).
+	 * Does nothing if range is not positive.
 	 * @param range
 	 */
 	public void restrictContactsToMaxRange(int range){
-		for (E edge:this.getEdges()) {
-			if (this.getContactRange(edge)>range) {
-				this.removeEdge(edge);
+		if(range > 0) {
+			for (E edge:this.getEdges()) {
+				if (this.getContactRange(edge)>range) {
+					this.removeEdge(edge);
+				}
 			}
+			maxSeqSep = range;
 		}
-		maxSeqSep = range;
 	}
 
 	/**
-	 * Removes edges strictly below the given range (sequence distance)
+	 * Removes edges strictly below the given range (sequence distance).
+	 * Does nothing if range is not positive.
 	 * @param range
 	 */
 	public void restrictContactsToMinRange(int range){
-		for (E edge:this.getEdges()) {
-			if (this.getContactRange(edge)<range) {
-				this.removeEdge(edge);
+		if(range > 0) {
+			for (E edge:this.getEdges()) {
+				if (this.getContactRange(edge)<range) {
+					this.removeEdge(edge);
+				}
 			}
+			minSeqSep = range;
 		}
-		minSeqSep = range;
 	}
 	
 	/**
