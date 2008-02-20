@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import graphAveraging.GraphAverager;
+
 import java.io.*;
 import java.util.*;
 
@@ -149,7 +151,7 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 			chains = pdb.getChains();
 			chain = chains[0];
 			for(int mod: models) {
-				pdb = new PdbfilePdb(file.getAbsolutePath());
+				//pdb = new PdbfilePdb(file.getAbsolutePath());
 				pdb.load(chain, mod);
 				graph = pdb.get_graph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
@@ -157,12 +159,12 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 			}
 			break;
 		case(FileTypeGuesser.CIF_FILE):
-			pdb = new PdbfilePdb(file.getAbsolutePath());
+			pdb = new CiffilePdb(file);
 			models = pdb.getModels();
 			chains = pdb.getChains();
 			chain = chains[0];
 			for(int mod: models) {
-				pdb = new CiffilePdb(file.getAbsolutePath());
+				//pdb = new CiffilePdb(file.getAbsolutePath());
 				pdb.load(chain, mod);
 				graph = pdb.get_graph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
@@ -196,6 +198,11 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	public RIGraph getRIG(int i) {
 		return this.get(i);
 	}
+	
+	public RIGraph[] getRIGs() {
+		RIGraph[] graphs = new RIGraph[this.size()];
+		return this.toArray(graphs);
+	}
 		
 	/*--------------------------------- main --------------------------------*/
 	
@@ -204,6 +211,7 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 		
 		boolean loadFromList = false;
 		int filesRead = 0;
+		String outFileName = "ensemble.cm";
 		
 		if(args.length < 2) {
 			System.out.println("Usage: RIGEnsemble -l/-m fileName");
@@ -233,5 +241,11 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 		
 		System.out.println("RIGs read from file:\t" + filesRead);
 		System.out.println("RIGs in ensemble:\t" + rigs.getEnsembleSize());
+		
+		GraphAverager ga = new GraphAverager(rigs);
+		RIGraph weightedGraph = ga.getAverageGraph();
+		System.out.println("Writing average graph to file "+outFileName);
+		weightedGraph.write_graph_to_file(outFileName);
+		
 	}
 }

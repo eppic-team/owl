@@ -1,14 +1,21 @@
 package graphAveraging;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
+import proteinstructure.IntPairComparator;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.RIGEdge;
+import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
@@ -34,19 +41,82 @@ public class GraphAverager {
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
-	private HashMap<Pair<Integer>,Integer> contactVotes;
+	private HashMap<Pair<Integer>,Vote> contactVotes;
+	
+	/*---------------------------- inner classes ----------------------------*/
+	/**
+	 * Inner class to store vote counts together with voters.
+	 * Used in contactVotes Map
+	 */
+	private class Vote {
+		private int voteCount;
+		private TreeSet<String> voters;
+		
+		public Vote(int voteCount, TreeSet<String> voters) {
+			this.voteCount = voteCount;
+			this.voters = voters;
+		}
+		
+		public int getVoteCount() {
+			return voteCount;
+		}
+		
+		public TreeSet<String> getVoters() {
+			return voters;
+		}
+	}
+	
+	/**
+	 * Extension of RIGEdge for an average graph. So that we can add 
+	 * to the RIGEdges the voters information
+	 *
+	 */
+	private class AveragedRIGEdge extends RIGEdge {
+		private TreeSet<String> voters;
+		
+		public AveragedRIGEdge(double weight, TreeSet<String> voters) {
+			this.setWeight(weight);
+			this.voters = voters;
+		}
+		
+		public TreeSet<String> getVoters() {
+			return this.voters;
+		}
+	}
 	
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * TODO: Create a graph averager for an ensemble of RIGs.
+	 * Creates a GraphAverager given a RIGEnsemble
+	 * @param rigs the RIGEnsemble for which graph will be averaged 
 	 */
-	// public GraphAverager(RIGEnsemble rigs) {
-	// - templateGraph = ensembleGraphs
-	// - targetSequence = ensembleSequence
-	// - targetTag = only used internally
-	// - contactType/cutoff /numTemplates: from ensemble
-	// }
+	public GraphAverager(RIGEnsemble rigs) {
+		this.targetTag = Long.toString(new Date().getTime()); // a unique identifier
+		
+		this.templateGraphs = new TreeMap<String,RIGraph>();
+		for (int i=0;i<rigs.getEnsembleSize();i++){
+			this.templateGraphs.put(String.format("%03d", i),rigs.getRIG(i));
+		}
+		this.sequence = rigs.getRIG(0).getSequence();
+		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
+		this.contactType = firstGraph.getContactType();
+		this.distCutoff = firstGraph.getCutoff();		
+		
+		TreeMap<String,String> sequences = new TreeMap<String, String>();
+		sequences.put(targetTag, sequence);	
+		for(String id:templateGraphs.keySet()) {
+			sequences.put(id, templateGraphs.get(id).getSequence());
+		}
+		// create trivial alignment
+		try {
+			this.al = new Alignment(sequences);
+		} catch (AlignmentConstructionError e) {
+			System.err.println("Could not create alignment: " + e.getMessage());
+		}
+		
+		checkSequences();	
+		countVotes(); // does the averaging by counting the votes and putting them into contactVotes		
+	}
 	
 	/**
 	 * Create a graph averager given an alignment of the target sequence to the template graphs.
@@ -73,22 +143,20 @@ public class GraphAverager {
 	 * A trivial alignment will be internally created. Fails if sizes do not match.
 	 * @param sequence the target sequence
 	 * @param templateGraphs a collection of template graphs to be averaged
-	 * @param targetTag the identifier of the target sequence in the alignment
 	 */
-	public GraphAverager(String sequence, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
+	public GraphAverager(String sequence, TreeMap<String,RIGraph> templateGraphs) {
 		this.templateGraphs = templateGraphs;
-		this.targetTag = targetTag;
+		this.targetTag = Long.toString(new Date().getTime()); // a unique identifier
 		this.sequence = sequence;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();		
 		
 		TreeMap<String,String> sequences = new TreeMap<String, String>();
-		sequences.put(Long.toString(new Date().getTime()), sequence);	// a unique identifier
+		sequences.put(targetTag, sequence);	
 		for(String id:templateGraphs.keySet()) {
 			sequences.put(id, templateGraphs.get(id).getSequence());
 		}
-
 		// create trivial alignment
 		try {
 			this.al = new Alignment(sequences);
@@ -158,7 +226,7 @@ public class GraphAverager {
 	 */
 	private void countVotes() {
 		
-		contactVotes = new HashMap<Pair<Integer>, Integer>();
+		contactVotes = new HashMap<Pair<Integer>, Vote>();
 
 		// we get the first graph in templates to see if they are directed or undirected
 		boolean directed = templateGraphs.get(templateGraphs.firstKey()).isDirected();
@@ -176,7 +244,8 @@ public class GraphAverager {
 					if (i>=j) continue;
 				}
 				
-				int vote = 0; 
+				int vote = 0;
+				TreeSet<String> voters = new TreeSet<String>(); 
 				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){			
 					RIGraph thisGraph = templateGraphs.get(tag);
@@ -189,12 +258,13 @@ public class GraphAverager {
 						Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
 						if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
 							vote++;
+							voters.add(tag);
 						}
 					}
 				}
 				// putting vote in contactVotes Map
 				if (vote>0){
-					contactVotes.put(new Pair<Integer>(i,j), vote);
+					contactVotes.put(new Pair<Integer>(i,j), new Vote(vote,voters));
 				}				
 			}
 		}		
@@ -229,7 +299,7 @@ public class GraphAverager {
 		// if vote above threshold we take the contact for our target
 		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
 		for (Pair<Integer> alignCont:contactVotes.keySet()){
-			if (contactVotes.get(alignCont)>=voteThreshold) {
+			if (contactVotes.get(alignCont).getVoteCount()>=voteThreshold) {
 				int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
 				int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
 				if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
@@ -241,8 +311,9 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Returns a RIGraph containing the union of edges of the template graphs weighted by the fraction of occurance in the templates.
-	 * The sequence of the graph is initalized to the sequence of the template.
+	 * Returns a RIGraph containing the union of edges of the template graphs 
+	 * weighted by the fraction of occurrence in the templates.
+	 * The sequence of the graph is initialized to the sequence of the template.
 	 * @return
 	 */
 	public RIGraph getAverageGraph() {
@@ -252,14 +323,61 @@ public class GraphAverager {
 		int numTemplates = templateGraphs.size();
 		
 		for (Pair<Integer> alignCont:contactVotes.keySet()){
-			double weight = 1.0 * contactVotes.get(alignCont) / numTemplates;
+			double weight = 1.0 * contactVotes.get(alignCont).getVoteCount() / numTemplates;
 			int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
 			int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
 			if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
-				graph.addEdge(new RIGEdge(weight), graph.getNodeFromSerial(target_i_res), graph.getNodeFromSerial(target_j_res), EdgeType.UNDIRECTED);				
+				graph.addEdge(new AveragedRIGEdge(weight,contactVotes.get(alignCont).getVoters()), graph.getNodeFromSerial(target_i_res), graph.getNodeFromSerial(target_j_res), EdgeType.UNDIRECTED);				
 			}
 		}		
 		return graph;
+	}
+
+	/**
+	 * Writes the averaged graph (see {@link #getAverageGraph()} to outfile  
+	 * with edge weights and voters: i.e. templates that voted for the edge 
+	 * 
+	 * @param outfile
+	 */
+	public void writeAverageGraphWithVoters(String outfile) throws IOException {
+		//TODO  We might want in the future to allow this format (with list of voters for each edge) as our aglappe format. 
+		// 		At the moment we write it to a file without headers because they are not compatible (although would be 
+		// 		quite simple to make them compatible)
+		
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
+		RIGraph graph = getAverageGraph();
+		
+		// printing column names
+		Out.print("#i\tj\tweight");
+		for (String tag:templateGraphs.keySet()) {
+			Out.print("\t"+tag);
+		}
+		Out.println();
+		
+		// we use temp TreeMaps to be able to order the output
+		TreeMap<Pair<Integer>,Double> pairs2weights = new TreeMap<Pair<Integer>,Double>(new IntPairComparator());
+		TreeMap<Pair<Integer>,TreeSet<String>> pairs2voters = new TreeMap<Pair<Integer>,TreeSet<String>>(new IntPairComparator()); 
+		for (RIGEdge cont:graph.getEdges()){
+			AveragedRIGEdge avgCont = (AveragedRIGEdge) cont; 
+			Pair<RIGNode> pair = graph.getEndpoints(cont);
+			int i_resser=pair.getFirst().getResidueSerial();
+			int j_resser=pair.getSecond().getResidueSerial();
+			double weight=cont.getWeight();
+			pairs2weights.put(new Pair<Integer>(i_resser,j_resser),weight);
+			pairs2voters.put(new Pair<Integer>(i_resser,j_resser), avgCont.getVoters());
+			
+		}
+		for (Pair<Integer> pair:pairs2weights.keySet()) { 
+			Out.printf(Locale.US,pair.getFirst()+"\t"+pair.getSecond()+"\t%6.3f",pairs2weights.get(pair));
+			for (String tag:templateGraphs.keySet()) {
+				if (pairs2voters.get(pair).contains(tag)) {
+					Out.print("\t1");
+				} else {
+					Out.print("\t0");
+				}
+			}
+			Out.println();
+		}
 	}
 	
 	/**
@@ -280,7 +398,7 @@ public class GraphAverager {
 				// TODO: Use index mapping from alignment
 				Pair<RIGNode> n = g.getEndpoints(e);
 				Pair<Integer> i = new Pair<Integer>(n.getFirst().getResidueSerial(), n.getSecond().getResidueSerial());
-				int count = contactVotes.get(i);
+				int count = contactVotes.get(i).getVoteCount();
 				score = score + count;
 			}
 		} else return -1;

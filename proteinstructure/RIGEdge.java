@@ -1,8 +1,9 @@
 package proteinstructure;
 
 /**
- * Class representing a Residue Interaction Graph edge
- *
+ * Class representing a Residue Interaction Graph edge.
+ * The RIGEdge stores properties of the edge (like weights) but not the 
+ * end points. Those can be taken from the RIGraph with getEndPoints(edge)
  */
 public class RIGEdge {
 
@@ -47,6 +48,10 @@ public class RIGEdge {
 
 	public double getWeight() {
 		return weight;
+	}
+	
+	public void setWeight(double weight) {
+		this.weight = weight;
 	}
 	
 	public double getDistance() {
