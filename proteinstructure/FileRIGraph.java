@@ -63,7 +63,7 @@ public class FileRIGraph extends RIGraph {
 	 * Parses the graph file reading identifiers, sequence and edges
 	 * @param contactsfile
 	 * @throws IOException
-	 * @throws GraphFileFormatError if file does not start with #AGLAPPE, 
+	 * @throws GraphFileFormatError if file does not start with #AGLAPPE or #CMVIEW 
 	 * if file format not the right version, if sequence is not present
 	 */
 	private void read_graph_from_file (String contactsfile) throws IOException, GraphFileFormatError {
@@ -75,13 +75,13 @@ public class FileRIGraph extends RIGraph {
 		while ((line = fcont.readLine() ) != null ) {
 			linecount++;
 			if (!simple) {
-				Pattern p = Pattern.compile("^#AGLAPPE.*ver: (\\d\\.\\d)");
+				Pattern p = Pattern.compile("^#(?:AGLAPPE|CMVIEW).*ver: (\\d\\.\\d)");
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
 						throw new GraphFileFormatError(contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 					}
-				} else if (linecount==1){ // #AGLAPPE not found and in first line
+				} else if (linecount==1){ // #AGLAPPE/#CMVIEW not found in first line
 					throw new GraphFileFormatError(contactsfile+" is not a valid contact map file");
 				}
 				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");

@@ -747,7 +747,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO refactor to writeToFile
 	public void write_graph_to_file (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		Out.println("#AGLAPPE GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
+		Out.println("#CMVIEW GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
 		Out.println("#SEQUENCE: "+sequence);
 		Out.println("#PDB: "+(pdbCode==null?"":pdbCode));
 		Out.println("#PDB CHAIN CODE: "+(pdbChainCode==null?"":pdbChainCode));

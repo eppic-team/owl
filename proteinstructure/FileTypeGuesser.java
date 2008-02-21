@@ -40,11 +40,11 @@ public class FileTypeGuesser {
 	
 	// signatures for the files in order as above
 	private static final String[] FILE_SIGNATURES  = {
-		"HEADER\\s+.*",
+		"HEADER.*",
 		"ATOM\\s+.*",
 		"PFRMAT\\s+TS.*",
 		"PFRMAT\\s+RR.*",
-		"#AGLAPPE GRAPH FILE.*",
+		"#(?:AGLAPPE|CMVIEW) GRAPH FILE.*",
 		"data_\\d\\w\\w\\w"
 	};
 	
