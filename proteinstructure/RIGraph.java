@@ -752,6 +752,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.println("#PDB: "+(pdbCode==null?"":pdbCode));
 		Out.println("#PDB CHAIN CODE: "+(pdbChainCode==null?"":pdbChainCode));
 		Out.println("#CHAIN: "+(chainCode==null?"":chainCode));
+		Out.println("#MODEL: "+(model==0?Pdb.DEFAULT_MODEL:model));
 		Out.println("#CT: "+contactType);
 		Out.println("#CUTOFF: "+distCutoff);
 		

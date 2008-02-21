@@ -103,6 +103,11 @@ public class FileRIGraph extends RIGraph {
 				ms = ps.matcher(line);
 				if (ms.find()){
 					chainCode=ms.group(1);
+				}
+				ps = Pattern.compile("^#MODEL:\\s*(\\d+)");
+				ms = ps.matcher(line);
+				if (ms.find()){
+					model=Integer.parseInt(ms.group(1));
 				}				
 				ps = Pattern.compile("^#CT:\\s*([a-zA-Z/]+)");
 				ms = ps.matcher(line);

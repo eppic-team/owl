@@ -511,7 +511,15 @@ public abstract class Pdb {
 	/** Writes atom lines for this structure to the given output stream */
 	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
-		Out.println("HEADER  Dumped from "+db+". pdb code="+pdbCode+", chain='"+chainCode+"'");
+		String source = "";
+		if (this instanceof CiffilePdb) {
+			source = ((CiffilePdb) this).getCifFile().getAbsolutePath();
+		} else if (this instanceof PdbfilePdb) {
+			source = ((PdbfilePdb) this).getPdbFileName();
+		} else if (this instanceof PdbasePdb || this instanceof MsdsdPdb){
+			source = db;
+		}
+		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);
 		String chainCodeStr = chainCode;
 		if (pdbCompatible) {
 			chainCodeStr = chainCode.substring(0,1);

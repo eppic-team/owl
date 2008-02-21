@@ -397,4 +397,12 @@ public class PdbfilePdb extends Pdb {
 		}
 	}
 	
+	/**
+	 * Gets the PDB file name from which this Pdb is read from.
+	 * @return
+	 */
+	public String getPdbFileName() {
+		return pdbfile;
+	}
+	
 }
