@@ -173,7 +173,7 @@ public class Alignment {
 		}
 	}
 	
-	private void checkLengths() {
+	private void checkLengths() throws AlignmentConstructionError {
 		if (sequences.length==0) return;
 		
 		int firstLength = 0;
@@ -182,7 +182,7 @@ public class Alignment {
 				firstLength = sequences[i].length();
 			} else {
 				if (sequences[i].length()!=firstLength) {
-					System.err.println("Warning: Some sequences in alignment have different lengths.");
+					throw new AlignmentConstructionError("Error: Some sequences in alignment have different lengths.");
 				}
 			}
 		}
@@ -195,6 +195,7 @@ public class Alignment {
 		boolean foundFastaHeader = false;
 		int lineNum = 0;
 		int seqIndex = 0;
+		int nonEmptyLine = 0;
 
 		// open file
 
@@ -211,9 +212,13 @@ public class Alignment {
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
-		    	++lineNum;
+		    ++lineNum;
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
+				nonEmptyLine++;
+				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for PIR format
+					throw new PirFileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+				}
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
 					seqsAL.add(currentSeq);
 					indices2tags.put(seqIndex,currentSeqTag);
@@ -252,6 +257,7 @@ public class Alignment {
 		boolean foundFastaHeader = false;
 		long lineNum = 0;
 		int seqIndex = 0;
+		int nonEmptyLine = 0;
 		
 		// open file
 
@@ -266,9 +272,13 @@ public class Alignment {
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
-		    	++lineNum;
+		    ++lineNum;
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
+				nonEmptyLine++;
+				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for FASTA format
+					throw new FastaFileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+				}
 				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 				Matcher m = p.matcher(nextLine);
 				if (m.find()){
