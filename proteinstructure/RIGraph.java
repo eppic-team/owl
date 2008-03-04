@@ -14,6 +14,7 @@ import java.util.TreeMap;
 
 import tools.MySQLConnection;
 
+import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -945,6 +946,34 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		newGraph.setSecondaryStructure(secStruct);		
 		
 		return newGraph;
+	}
+	
+	public RIGraph getComplement() {
+		RIGraph complGraph = this.copy();
+		complGraph.removeAllEdges();
+		
+		if (!isDirected()) {
+			for (int i = 1; i < fullLength; i++) {
+				for (int j = (i+1); j <= fullLength; j++) {
+					if (this.getEdgeFromSerials(i, j) == null) {
+						complGraph.addEdgeIJ(i, j);
+					}
+				}
+			}
+		} else {
+			for (int i = 1; i <= fullLength; i++) {
+				for (int j = 1; j <= fullLength; j++) {
+					if (i == j) {
+						continue;
+					}
+					if (this.getEdgeFromSerials(i, j) == null) {
+						complGraph.addEdgeIJ(i, j);
+					}
+				}
+			}			
+		}
+		
+		return complGraph;
 	}
 	
 	/**

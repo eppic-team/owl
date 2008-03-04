@@ -1855,5 +1855,14 @@ public abstract class Pdb {
 		obsLength = resser2restype.size();		
 		
 	}
+	
+	public void mirror() {
+		for (int atomserial:atomser2coord.keySet()){
+			Point3d coords = atomser2coord.get(atomserial);
+			coords.x *= -1;
+			coords.y *= -1;
+			coords.z *= -1;
+		}
+	}
 }
 
