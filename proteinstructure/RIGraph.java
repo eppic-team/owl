@@ -14,7 +14,6 @@ import java.util.TreeMap;
 
 import tools.MySQLConnection;
 
-import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -775,6 +774,41 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 
 	/**
+	 * Writes the graph to given outfile in "paul" format.
+	 * Possibly this is compatible with all other LiSA programs. Here we
+	 * could only test it with paul and drawCM  
+	 * See https://www.mi.fu-berlin.de/w/LiSA/LiSAlibrary
+	 * @param outfile
+	 * @throws IOException
+	 */
+	public void writeToPaulFile(String outfile) throws IOException {
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
+		
+		// the order of the first 2 lines is:
+		// for drawCM 1st number of contacts, 2nd number of residues
+		// for paul 1st number of residues, 2nd number of contacts
+		Out.println(getFullLength());// number of residues
+		Out.println(getEdgeCount()); // number of contacts		
+		
+		TreeMap<Pair<Integer>,Double> pairs = new TreeMap<Pair<Integer>,Double>(new IntPairComparator());
+		for (RIGEdge cont:getEdges()){
+			Pair<RIGNode> pair = getEndpoints(cont);
+			int i_resser=pair.getFirst().getResidueSerial();
+			int j_resser=pair.getSecond().getResidueSerial();
+			double weight=cont.getWeight();
+			pairs.put(new Pair<Integer>(i_resser,j_resser),weight);			
+		}
+		for (Pair<Integer> pair:pairs.keySet()) { 
+			// The paul format has 4 columns: the first 2 are the end points of the edge,
+			// 3rd column is weights, 4th column is contact class which we set to 1
+			// In paul the numbering of residues starts at 0: that's why we subtract 1 here
+			Out.printf(Locale.US,(pair.getFirst()-1)+" "+(pair.getSecond()-1)+" %6.3f 1\n",pairs.get(pair));
+		}
+
+		Out.close();
+	}
+	
+	/**
 	 * Export graph as a Casp contact prediction file.
 	 * Note: Writes weighted edges to file.
 	 * @param outFile name of the output file
@@ -948,6 +982,10 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return newGraph;
 	}
 	
+	/**
+	 * Gets the complement graph of this RIGraph returning it
+	 * @return the complement graph of this RIGraph
+	 */
 	public RIGraph getComplement() {
 		RIGraph complGraph = this.copy();
 		complGraph.removeAllEdges();
