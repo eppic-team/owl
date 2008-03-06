@@ -15,7 +15,7 @@ import java.util.*;
  * @author stehr
  * @date 2007-12-19
  */
-public class RIGEnsemble extends ArrayList<RIGraph> {
+public class RIGEnsemble {
 	
 	/*------------------------------ constants ------------------------------*/
 	private static final long serialVersionUID = 1L;
@@ -23,15 +23,16 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	public static final double DEFAULT_DIST_CUTOFF = 8.0;
 	
 	/*--------------------------- member variables --------------------------*/
-	String edgeType;
-	double distCutoff;
+	private ArrayList<RIGraph> ensemble; 
+	private String edgeType;
+	private double distCutoff;
 	
 	/*----------------------------- constructors ----------------------------*/
 	/**
 	 * Generate an empty RIGEnsemble with the default edgeType and distCutoff.
 	 */
 	public RIGEnsemble() {
-		super();
+		ensemble = new ArrayList<RIGraph>();
 		edgeType = DEFAULT_EDGE_TYPE;
 		distCutoff = DEFAULT_DIST_CUTOFF;
 	}
@@ -42,7 +43,7 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	 * @param distCutoff
 	 */
 	public RIGEnsemble(String edgeType, double distCutoff) {
-		super();
+		ensemble = new ArrayList<RIGraph>();
 		this.edgeType = edgeType;
 		this.distCutoff = distCutoff;
 	}
@@ -178,7 +179,7 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	/*---------------------------- public methods ---------------------------*/
 	
 	public int getEnsembleSize() {
-		return this.size();
+		return ensemble.size();
 	}
 	
 	public String getEdgeType() {
@@ -192,16 +193,16 @@ public class RIGEnsemble extends ArrayList<RIGraph> {
 	public void addRIG(RIGraph g) {
 		if(!g.getContactType().equals(this.edgeType)) System.err.println("Warning: Contact types do not match.");
 		if(g.getCutoff() != this.distCutoff) System.err.println("Warning: Distance cutoffs do not match.");
-		this.add(g);
+		this.ensemble.add(g);
 	}
 	
 	public RIGraph getRIG(int i) {
-		return this.get(i);
+		return ensemble.get(i);
 	}
 	
 	public RIGraph[] getRIGs() {
-		RIGraph[] graphs = new RIGraph[this.size()];
-		return this.toArray(graphs);
+		RIGraph[] graphs = new RIGraph[this.getEnsembleSize()];
+		return this.ensemble.toArray(graphs);
 	}
 		
 	/*--------------------------------- main --------------------------------*/
