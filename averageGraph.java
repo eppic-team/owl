@@ -13,6 +13,7 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PredEval;
 import proteinstructure.RIGraph;
+import tinker.TinkerRunner;
 //import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
 import graphAveraging.GraphAverager;
@@ -20,12 +21,14 @@ import graphAveraging.GraphAverager;
 
 public class averageGraph {
 	
-	private static final double DEFAULT_THRESHOLD = 0.5;
+	private static final double DEFAULT_THRESHOLD =		0.5;
 	
-	private static final String MUSCLE_BIN = "muscle";
+	private static final String MUSCLE_BIN = 			"muscle";
 	
-	//private static final String forceFieldFileName = "/project/StruPPi/Software/tinker/amber/amber99.prm";
-	//private static final String tinkerBinDir = "/project/StruPPi/Software/tinker/bin";
+	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
+	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
+	
+	private static final int 	NUMBER_TINKER_MODELS = 	40;
 	
 	private static String[] readSeq(String seqFile) {
 		String tag = "";
@@ -85,8 +88,11 @@ public class averageGraph {
 				"  [-a]: input alignment file, if not specified, a multiple sequence alignment of target and templates will be calculated with muscle \n" +				
 				"  [-s]: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 will predict an edge in target when present in half of the templates. If not specified "+DEFAULT_THRESHOLD+" is used\n"+
 				"  [-o]: output dir, where output files will be written. If not specified current dir will be used \n"+
-				"  [-r]: reconstruct the consensus graph\n"+
-				"Performs graph averaging for a given a pdb target (benchmarking)/given sequence (prediction), a set of templates and the multiple alignment of all of them \n";		
+				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus graph, outputting 1 pdb file with the chosen model among "+NUMBER_TINKER_MODELS+" models. If more than 1 CCT were specified, then the first one is taken. This can take very long!\n"+
+				"Performs graph averaging. Two modes of operation: \n" +
+				"a) benchmarking: specify a pdb code/pdb chain code (-p/-c) \n" +
+				"b) prediction:   specify a sequence file (-f) \n" +
+				"A set of templates must always be specified (-P/-C). Also as an input a multiple sequence alignment of target and templates should be specified (-a). If one is not given, then a an alignment is calculated with muscle. \n";
 		
 		String ct = "";
 		double cutoff = 0.0;
@@ -103,10 +109,12 @@ public class averageGraph {
 		String seqFile = "";
 		
 		boolean benchmark = false;
+		boolean reconstruct = false;
 		
 		double[] consensusThresholds = {DEFAULT_THRESHOLD};
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:c:P:C:d:t:a:s:o:b:f:h?");
+		
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:c:P:C:d:t:a:s:o:b:f:rh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -148,6 +156,9 @@ public class averageGraph {
 			case 'f':
 				seqFile = g.getOptarg();
 				benchmark = false;
+				break;
+			case 'r':
+				reconstruct = true;
 				break;				
 			case 'h':
 			case '?':
@@ -282,12 +293,14 @@ public class averageGraph {
 		}
 		
 		// reconstruct
-		
-		//RIGraph[] reconstGraphs = {averagedGraph};
-		//TinkerRunner tr = new TinkerRunner(tinkerBinDir,forceFieldFileName);
-		//Pdb pdb = tr.reconstruct(targetSeq, reconstGraphs, 40);
-		//String outpdbfile = "/project/LitNet/Patrick/Graph_averaging/data/images/2ucz_averaged.pdb";
-		//pdb.dump2pdbfile(outpdbfile);
+		//TODO ideally we would like to be able to reconstruct using several consensus graphs: Ca+Cg+C/Cg, at the moment only implemented reconstruction with one graph
+		if (reconstruct) {
+			RIGraph[] reconstGraphs = {ga.getConsensusGraph(consensusThresholds[0])};
+			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
+			Pdb pdb = tr.reconstruct(targetSeq, reconstGraphs, NUMBER_TINKER_MODELS);
+			String outpdbfile = new File(outDir,basename+".reconstructed.pdb").getAbsolutePath();
+			pdb.dump2pdbfile(outpdbfile);
+		}
 	}
 
 }
