@@ -21,6 +21,7 @@ import graphAveraging.GraphAverager;
 
 public class averageGraph {
 	
+	/*------------------------------ constants ------------------------------*/
 	private static final double DEFAULT_THRESHOLD =		0.5;
 	
 	private static final String MUSCLE_BIN = 			"muscle";
@@ -30,7 +31,14 @@ public class averageGraph {
 	
 	private static final int 	NUMBER_TINKER_MODELS = 	40;
 	
-	private static String[] readSeq(String seqFile) {
+	
+	/*------------------------- private methods ------------------------------*/
+	/**
+	 * Reads a sequence file in FASTA format
+	 * @param seqFile
+	 * @return an array with 2 members: FASTA tag and sequence
+	 */
+	private static String[] readSeq(File seqFile) {
 		String tag = "";
 		String seq = "";
 		try {
@@ -47,14 +55,20 @@ public class averageGraph {
 				}
 			}
 		} catch (IOException e) {
-			System.err.println("Couldn't read sequence file "+seqFile+": "+e.getMessage()+". Exiting");
+			System.err.println("Couldn't read sequence file "+seqFile.getAbsolutePath()+": "+e.getMessage()+". Exiting");
 			System.exit(1);
 		}
 		String[] tagAndseq = {tag,seq};
 		return tagAndseq;
 	}
 	
-	private static void writeSeqs(String seqFile, String[] seqs, String[] tags) {
+	/**
+	 * Writes given sequences and tags to given sequence file in FASTA format
+	 * @param seqFile
+	 * @param seqs
+	 * @param tags
+	 */
+	private static void writeSeqs(File seqFile, String[] seqs, String[] tags) {
 		try {
 			PrintStream Out = new PrintStream(new FileOutputStream(seqFile));
 			int len = 80;
@@ -66,11 +80,12 @@ public class averageGraph {
 			}
 			Out.close();
 		} catch (IOException e) {
-			System.err.println("Couldn't write file "+seqFile+" with sequences for input of muscle. Exiting. ");
+			System.err.println("Couldn't write file "+seqFile.getAbsolutePath()+" with sequences for input of muscle. Exiting. ");
 			System.exit(1);
 		}
 	}
 	
+	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
 		String help = "Usage: \n" +
@@ -97,7 +112,7 @@ public class averageGraph {
 		String ct = "";
 		double cutoff = 0.0;
 		
-		String aliFile = "";
+		File aliFile = null;
 		String outDir = "."; // default we set to current
 		String basename = "";
 		
@@ -106,7 +121,7 @@ public class averageGraph {
 		String[] pdbCodesTemplates = null; 
 		String[] pdbChainCodesTemplates = null;
 		
-		String seqFile = "";
+		File seqFile = null;
 		
 		boolean benchmark = false;
 		boolean reconstruct = false;
@@ -138,7 +153,7 @@ public class averageGraph {
 				ct = g.getOptarg();
 				break;				
 			case 'a':
-				aliFile = g.getOptarg();
+				aliFile = new File(g.getOptarg());
 				break;
 			case 's':
 				String[] tokens  = g.getOptarg().split(",");
@@ -154,7 +169,7 @@ public class averageGraph {
 				basename = g.getOptarg();
 				break;
 			case 'f':
-				seqFile = g.getOptarg();
+				seqFile = new File(g.getOptarg());
 				benchmark = false;
 				break;
 			case 'r':
@@ -174,12 +189,12 @@ public class averageGraph {
 			System.err.println(help);
 			System.exit(1);
 		}
-		if (seqFile.equals("") && (pdbCodeTarget.equals("") && pdbChainCodeTarget.equals(""))) {
+		if (seqFile==null && (pdbCodeTarget.equals("") && pdbChainCodeTarget.equals(""))) {
 			System.err.println("Either a sequence file or a target pdb code and chain code (for benchmarking) must be specified");
 			System.err.println(help);
 			System.exit(1);			
 		}
-		if (!seqFile.equals("") && !pdbCodeTarget.equals("")){
+		if (seqFile!=null && !pdbCodeTarget.equals("")){
 			System.err.println("Options -f (prediction), and -p/-c (benchmark) are exclusive");
 			System.err.println(help);
 			System.exit(1);
@@ -223,15 +238,14 @@ public class averageGraph {
 		}
 		
 		// if an alignment file was not specified, perform alignment
-		if (aliFile.equals("")){  
-			aliFile = new File(outDir,basename+".muscle_ali.fasta").getAbsolutePath();
+		if (aliFile == null){  
+			aliFile = new File(outDir,basename+".muscle_ali.fasta");
 			// do alignment with muscle
 			System.out.println("Performing alignment with muscle");
-			if (seqFile.equals("")) { // if seqFile doesn't exist (not given as input)
+			if (seqFile==null) { // if seqFile doesn't exist (not given as input)
 				// we have to create a temporary seq file for muscle's input
-				File seqF = new File(outDir,basename+".tmp.fasta");
-				seqFile = seqF.getAbsolutePath();
-				seqF.deleteOnExit();
+				seqFile = new File(outDir,basename+".tmp.fasta");
+				seqFile.deleteOnExit();
 				String[] seqs = new String[templateGraphs.size()+1];
 				String[] tags = new String[templateGraphs.size()+1];
 				int i=0;
@@ -244,8 +258,8 @@ public class averageGraph {
 				}	
 				writeSeqs(seqFile, seqs, tags);
 			}
-			System.out.println(MUSCLE_BIN+" -in "+seqFile+" -out "+aliFile);
-			Process muscleProc = Runtime.getRuntime().exec(MUSCLE_BIN+" -in "+seqFile+" -out "+aliFile);
+
+			Process muscleProc = Runtime.getRuntime().exec(MUSCLE_BIN+" -in "+seqFile.getCanonicalPath()+" -out "+aliFile.getCanonicalPath());
 			if (muscleProc.waitFor()!=0) {
 				System.err.println("muscle finished with an error (exit status "+muscleProc.exitValue()+"). Couldn't calculate alignment. Exiting");
 				System.exit(1);
@@ -254,7 +268,7 @@ public class averageGraph {
 		
 		// read the alignment from file
 		System.out.println("Reading alignment from "+aliFile);
-		Alignment ali = new Alignment(aliFile, "FASTA");
+		Alignment ali = new Alignment(aliFile.getCanonicalPath(), "FASTA");
 		
 		
 		// averaging
@@ -265,41 +279,38 @@ public class averageGraph {
 		System.out.println("Calculating average graph of "+targetTag+ " based on "+templatesStr);
 		System.out.println("Contact type for graphs is "+ct+", cutoff "+cutoff);
 		
-		String avrgdGraphFile = new File(outDir,basename+".avrgd.cm").getAbsolutePath();
-		String avrgdVotersGraphFile = new File(outDir,basename+".avrgd.voters.cm").getAbsolutePath();;
+		File avrgdGraphFile = new File(outDir,basename+".avrgd.cm");
+		File avrgdVotersGraphFile = new File(outDir,basename+".avrgd.voters.cm");
 
 		GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
 		RIGraph averagedGraph = ga.getAverageGraph();
 		System.out.println("Writing average graph to file " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
-		averagedGraph.write_graph_to_file(avrgdGraphFile);
-		ga.writeAverageGraphWithVoters(avrgdVotersGraphFile);
+		averagedGraph.write_graph_to_file(avrgdGraphFile.getAbsolutePath());
+		ga.writeAverageGraphWithVoters(avrgdVotersGraphFile.getAbsolutePath());
 		
 		for (double consensusThreshold: consensusThresholds) {
-			String consGraphFile = new File(outDir,basename+".CCT"+(String.format("%2.0f",consensusThreshold*100))+".cm").getAbsolutePath();;
+			File consGraphFile = new File(outDir,basename+".CCT"+(String.format("%2.0f",consensusThreshold*100))+".cm");
 			RIGraph consensusGraph = ga.getConsensusGraph(consensusThreshold);
 			System.out.printf("Writing consensus graph at CCT %2.0f to file %s \n",consensusThreshold*100,consGraphFile);
-			consensusGraph.write_graph_to_file(consGraphFile);
+			consensusGraph.write_graph_to_file(consGraphFile.getAbsolutePath());
 			
 			if (benchmark) {
 				PredEval eval = consensusGraph.evaluatePrediction(originalGraph);
 				System.out.println("## Prediction with CCT: "+consensusThreshold*100+"%");
-				//eval.print();
-				System.out.println("Number of native contacts:    "+eval.original);
-				System.out.println("Number of predicted contacts: "+eval.predicted);
-				System.out.printf("Accuracy: %4.3f\n", eval.accuracy);
-				System.out.printf("Coverage: %4.3f\n", eval.coverage);
+				eval.printSummary();
 			}
 
 		}
 		
 		// reconstruct
-		//TODO ideally we would like to be able to reconstruct using several consensus graphs: Ca+Cg+C/Cg, at the moment only implemented reconstruction with one graph
+		//TODO ideally we would like to be able to reconstruct using several consensus graphs: Ca+Cg+C/Cg, 
+		//     at the moment only implemented reconstruction with one graph
 		if (reconstruct) {
 			RIGraph[] reconstGraphs = {ga.getConsensusGraph(consensusThresholds[0])};
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
 			Pdb pdb = tr.reconstruct(targetSeq, reconstGraphs, NUMBER_TINKER_MODELS);
-			String outpdbfile = new File(outDir,basename+".reconstructed.pdb").getAbsolutePath();
-			pdb.dump2pdbfile(outpdbfile);
+			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
+			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
 		}
 	}
 
