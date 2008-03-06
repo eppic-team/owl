@@ -53,7 +53,7 @@ public class PredEval {
 		System.out.println(String.format("Sensitivity: %4.3f",sensitivity));
 		System.out.println(String.format("Specificity: %4.3f", specificity));
 		System.out.println(String.format("Accuracy(=precision=PPV=TP/TP+FP): %4.3f", accuracy));
-		System.out.println(String.format("Coverage(=TP/native): %4.3f", accuracy));		
+		System.out.println(String.format("Coverage(=TP/native): %4.3f", coverage));		
 	}
 	
 	/**
