@@ -559,14 +559,19 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Dump the full sequence of this Pdb object in fasta file format
+	 * Dump the full sequence of this Pdb object in FASTA file format
+	 * The FASTA tag is written as the concatenation of pdbCode and pdbChainCode
 	 * @param seqfile
-	 * @throws IOException
+	 * @throws IOException if file can't be written
 	 */
 	public void dumpseq(String seqfile) throws IOException {
+		//TODO refactor method name to writeSeqToFasta
 		PrintStream Out = new PrintStream(new FileOutputStream(seqfile));
-		Out.println(">"+pdbCode+"_"+pdbChainCode);
-		Out.println(sequence);
+		int len = 80;
+		Out.println(">"+pdbCode+pdbChainCode);
+		for(int i=0; i<sequence.length(); i+=len) {
+			Out.println(sequence.substring(i, Math.min(i+len,sequence.length())));
+		}		
 		Out.close();
 	}
 
