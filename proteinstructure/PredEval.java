@@ -57,6 +57,16 @@ public class PredEval {
 	}
 	
 	/**
+	 * Print a summary of predicted vs native contacts and accuracy/coverage values
+	 */
+	public void printSummary() {
+		System.out.println("Number of native contacts:    "+original);
+		System.out.println("Number of predicted contacts: "+predicted + " ("+TruePos+" True Positives)");
+		System.out.printf("Accuracy: %4.3f\n", accuracy);
+		System.out.printf("Coverage: %4.3f\n", coverage);
+	}
+	
+	/**
 	 * Print the headers for the rows written by printRow().
 	 */
 	public static void printHeaders() {
