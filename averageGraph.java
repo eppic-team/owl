@@ -297,9 +297,11 @@ public class averageGraph {
 
 		System.out.println("Averaging...");
 		
-		// printing headers for table of statistics
-		System.out.printf("%10s\t","ct_cutoff"); 
-		PredEval.printHeaders();
+		if (benchmark) {
+			// printing headers for table of statistics
+			System.out.printf("%10s\t","ct_cutoff"); 
+			PredEval.printHeaders();
+		}
 		
 		// array to store one graph per contact type for later use them in the reconstruction section
 		RIGraph[] graphsForReconstruction = new RIGraph[cts.length];
