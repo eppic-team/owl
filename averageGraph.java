@@ -29,9 +29,6 @@ public class averageGraph {
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
 	
-	private static final int 	NUMBER_TINKER_MODELS = 	40;
-	
-	
 	/*------------------------- private methods ------------------------------*/
 	/**
 	 * Reads a sequence file in FASTA format
@@ -85,6 +82,46 @@ public class averageGraph {
 		}
 	}
 	
+	/**
+	 * Creates a temporary sequence file with both target and template sequences and runs muscle
+	 * @param aliFile
+	 * @param outDir
+	 * @param basename
+	 * @param targetSeq
+	 * @param targetTag
+	 * @param templateGraphs
+	 */
+	private static void runMuscle(File aliFile, String outDir, String basename, String targetSeq, String targetTag, Pdb[] templatePdbs) {
+		
+		// we have to create a temporary seq file for muscle's input
+		File tmpSeqFile = new File(outDir,basename+".tmp.fasta");
+		tmpSeqFile.deleteOnExit();
+		String[] seqs = new String[templatePdbs.length+1];
+		String[] tags = new String[templatePdbs.length+1];
+		seqs[0]=targetSeq;
+		tags[0]=targetTag;
+		for (int i=0; i<templatePdbs.length;i++) {
+			seqs[i+1] = templatePdbs[i].getSequence();
+			tags[i+1] = templatePdbs[i].getPdbCode()+templatePdbs[i].getPdbChainCode();
+		}	
+		writeSeqs(tmpSeqFile, seqs, tags);		
+
+		try {
+			Process muscleProc = Runtime.getRuntime().exec(MUSCLE_BIN+" -in "+tmpSeqFile.getCanonicalPath()+" -out "+aliFile.getCanonicalPath());
+			if (muscleProc.waitFor()!=0) {
+				System.err.println("muscle finished with an error (exit status "+muscleProc.exitValue()+"). Couldn't calculate alignment. Exiting");
+				System.exit(1);
+			}
+		} catch (IOException e) {
+			System.err.println("Couldn't run muscle. Error: "+e.getMessage()+". Exiting");
+			System.exit(1);
+		} catch (InterruptedException e) {
+			System.err.println("Unexptected error: "+e.getMessage()+". Exiting.");
+			System.exit(1);
+		}
+		
+	}
+	
 	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
@@ -97,20 +134,21 @@ public class averageGraph {
 				"\n"+
 				"  -P: comma separated list of templates' pdb codes \n" +
 				"  -C: comma separated list of templates' pdb chain codes \n" +
-				"  -t: contact type \n" +
-				"  -d: distance cutoff \n" +
+				"  -t: comma separated list of contact types \n" +
+				"  -d: comma separated list of distance cutoffs (one per contact type) \n" +
 				"  -b: basename for output files (averaged graph, averaged graph with voters and consensus graphs) \n"+
 				"  [-a]: input alignment file, if not specified, a multiple sequence alignment of target and templates will be calculated with muscle \n" +				
 				"  [-s]: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 will predict an edge in target when present in half of the templates. If not specified "+DEFAULT_THRESHOLD+" is used\n"+
 				"  [-o]: output dir, where output files will be written. If not specified current dir will be used \n"+
-				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus graph, outputting 1 pdb file with the chosen model among "+NUMBER_TINKER_MODELS+" models. If more than 1 CCT were specified, then the first one is taken. This can take very long!\n"+
+				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus graph creating the specified number of models and finally outputting 1 pdb file with the chosen model. If more than 1 CCT were specified, then the first one is taken. This can take very long!\n"+
 				"Performs graph averaging. Two modes of operation: \n" +
 				"a) benchmarking: specify a pdb code/pdb chain code (-p/-c) \n" +
 				"b) prediction:   specify a sequence file (-f) \n" +
-				"A set of templates must always be specified (-P/-C). Also as an input a multiple sequence alignment of target and templates should be specified (-a). If one is not given, then a an alignment is calculated with muscle. \n";
+				"A set of templates must always be specified (-P/-C). Also as an input a multiple sequence alignment of target and templates should be specified (-a). If one is not given, then a an alignment is calculated with muscle. \n" +
+				"For reconstruction, please not that at least 20 models should be specified to get a reasonable final selected model. \n";
 		
-		String ct = "";
-		double cutoff = 0.0;
+		String[] cts = null;
+		double[] cutoffs = null;
 		
 		File aliFile = null;
 		String outDir = "."; // default we set to current
@@ -124,12 +162,13 @@ public class averageGraph {
 		File seqFile = null;
 		
 		boolean benchmark = false;
-		boolean reconstruct = false;
 		
 		double[] consensusThresholds = {DEFAULT_THRESHOLD};
 		
+		boolean reconstruct = false;
+		int numberTinkerModels = 0;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:c:P:C:d:t:a:s:o:b:f:rh?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:c:P:C:d:t:a:s:o:b:f:r:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -147,16 +186,20 @@ public class averageGraph {
 				pdbChainCodesTemplates = g.getOptarg().split(",");
 				break;
 			case 'd':
-				cutoff = Double.parseDouble(g.getOptarg());
+				String[] tokens  = g.getOptarg().split(",");
+				cutoffs = new double[tokens.length];
+				for (int i=0;i<cutoffs.length;i++) { 
+					cutoffs[i] = Double.parseDouble(tokens[i]);
+				}
 				break;
 			case 't':
-				ct = g.getOptarg();
+				cts = g.getOptarg().split(",");
 				break;				
 			case 'a':
 				aliFile = new File(g.getOptarg());
 				break;
 			case 's':
-				String[] tokens  = g.getOptarg().split(",");
+				tokens  = g.getOptarg().split(",");
 				consensusThresholds = new double[tokens.length];
 				for (int i=0;i<consensusThresholds.length;i++) { 
 					consensusThresholds[i] = Double.parseDouble(tokens[i]);
@@ -173,6 +216,7 @@ public class averageGraph {
 				benchmark = false;
 				break;
 			case 'r':
+				numberTinkerModels = Integer.parseInt(g.getOptarg());
 				reconstruct = true;
 				break;				
 			case 'h':
@@ -184,7 +228,7 @@ public class averageGraph {
 		}
 		
 		// input checks
-		if (pdbCodesTemplates==null || pdbChainCodesTemplates==null || ct.equals("") || cutoff==0.0 || basename.equals("")) {
+		if (pdbCodesTemplates==null || pdbChainCodesTemplates==null || cts==null || cutoffs==null || basename.equals("")) {
 			System.err.println("Some missing option");
 			System.err.println(help);
 			System.exit(1);
@@ -205,10 +249,16 @@ public class averageGraph {
 			System.err.println("Specified list of pdb codes differs in length from list of pdb chain codes. Exiting");
 			System.exit(1);
 		}
+		// check that we specified same number of contact types and cutoffs
+		if (cts.length!=cutoffs.length) {
+			System.err.println("Specified list of contact types differs in length from list of cutoffs. Exiting");
+			System.exit(1);			
+		}
+		
+		
 		
 		String targetSeq = null;
 		String targetTag = null;
-		RIGraph originalGraph = null;
 		Pdb targetPdb = null;
 		
 		if (benchmark) {
@@ -216,10 +266,8 @@ public class averageGraph {
 			targetPdb = new PdbasePdb(pdbCodeTarget);
 			targetPdb.load(pdbChainCodeTarget);
 			targetSeq = targetPdb.getSequence();
-			targetTag = pdbCodeTarget+pdbChainCodeTarget;
-			originalGraph = targetPdb.get_graph(ct, cutoff);
-		}
-		else {
+			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
+		} else {
 			// 2) prediction: from a sequence with unknown structure, we predict the structure based on a msa with known structures
 			String[] tagAndSeq = readSeq(seqFile);
 			targetTag = tagAndSeq[0];
@@ -227,14 +275,12 @@ public class averageGraph {
 			targetSeq = tagAndSeq[1];
 		}
 		
-				
-		TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
-		
+		// getting template structures
+		Pdb[] templatePdbs = new Pdb[pdbCodesTemplates.length];
 		for (int i=0;i<pdbCodesTemplates.length;i++) {
 			Pdb pdb = new PdbasePdb(pdbCodesTemplates[i]);
 			pdb.load(pdbChainCodesTemplates[i]);
-			RIGraph graph = pdb.get_graph(ct, cutoff);
-			templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
+			templatePdbs[i]=pdb;
 		}
 		
 		// if an alignment file was not specified, perform alignment
@@ -242,75 +288,79 @@ public class averageGraph {
 			aliFile = new File(outDir,basename+".muscle_ali.fasta");
 			// do alignment with muscle
 			System.out.println("Performing alignment with muscle");
-			if (seqFile==null) { // if seqFile doesn't exist (not given as input)
-				// we have to create a temporary seq file for muscle's input
-				seqFile = new File(outDir,basename+".tmp.fasta");
-				seqFile.deleteOnExit();
-				String[] seqs = new String[templateGraphs.size()+1];
-				String[] tags = new String[templateGraphs.size()+1];
-				int i=0;
-				seqs[i]=targetSeq;
-				tags[i]=targetTag;
-				for (String tag:templateGraphs.keySet()) {
-					i++;
-					seqs[i] = templateGraphs.get(tag).getSequence();
-					tags[i] = tag;
-				}	
-				writeSeqs(seqFile, seqs, tags);
-			}
-
-			Process muscleProc = Runtime.getRuntime().exec(MUSCLE_BIN+" -in "+seqFile.getCanonicalPath()+" -out "+aliFile.getCanonicalPath());
-			if (muscleProc.waitFor()!=0) {
-				System.err.println("muscle finished with an error (exit status "+muscleProc.exitValue()+"). Couldn't calculate alignment. Exiting");
-				System.exit(1);
-			}
+			runMuscle(aliFile, outDir, basename, targetSeq, targetTag, templatePdbs);
 		}
-		
+
 		// read the alignment from file
 		System.out.println("Reading alignment from "+aliFile);
 		Alignment ali = new Alignment(aliFile.getCanonicalPath(), "FASTA");
-		
-		
-		// averaging
-		String templatesStr="";
-		for (String tag:templateGraphs.keySet()){
-			templatesStr+= tag+" ";
-		}
-		System.out.println("Calculating average graph of "+targetTag+ " based on "+templatesStr);
-		System.out.println("Contact type for graphs is "+ct+", cutoff "+cutoff);
-		
-		File avrgdGraphFile = new File(outDir,basename+".avrgd.cm");
-		File avrgdVotersGraphFile = new File(outDir,basename+".avrgd.voters.cm");
 
-		GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
-		RIGraph averagedGraph = ga.getAverageGraph();
-		System.out.println("Writing average graph to file " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
-		averagedGraph.write_graph_to_file(avrgdGraphFile.getAbsolutePath());
-		ga.writeAverageGraphWithVoters(avrgdVotersGraphFile.getAbsolutePath());
+		System.out.println("Averaging...");
 		
-		for (double consensusThreshold: consensusThresholds) {
-			File consGraphFile = new File(outDir,basename+".CCT"+(String.format("%2.0f",consensusThreshold*100))+".cm");
-			RIGraph consensusGraph = ga.getConsensusGraph(consensusThreshold);
-			System.out.printf("Writing consensus graph at CCT %2.0f to file %s \n",consensusThreshold*100,consGraphFile);
-			consensusGraph.write_graph_to_file(consGraphFile.getAbsolutePath());
-			
+		// printing headers for table of statistics
+		System.out.printf("%10s\t","ct_cutoff"); 
+		PredEval.printHeaders();
+		
+		// array to store one graph per contact type for later use them in the reconstruction section
+		RIGraph[] graphsForReconstruction = new RIGraph[cts.length];
+		
+		for (int ctIdx=0;ctIdx<cts.length;ctIdx++) {
+			// if in benchmark we get the original graph to later calculate accuracy/coverage
+			RIGraph originalGraph = null;
 			if (benchmark) {
-				PredEval eval = consensusGraph.evaluatePrediction(originalGraph);
-				System.out.println("## Prediction with CCT: "+consensusThreshold*100+"%");
-				eval.printSummary();
+				originalGraph = targetPdb.get_graph(cts[ctIdx], cutoffs[ctIdx]);
 			}
 
+			TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
+
+			for (int i=0;i<pdbCodesTemplates.length;i++) {
+				RIGraph graph = templatePdbs[i].get_graph(cts[ctIdx], cutoffs[ctIdx]);
+				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
+			}
+
+			//System.out.println("Contact type: "+cts[ctIdx]+", cutoff: "+cutoffs[ctIdx]);
+
+			String ctStr = cts[ctIdx].replace("/", ":");
+			File avrgdGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.cm");
+			File avrgdVotersGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.voters.cm");
+
+			GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
+			RIGraph averagedGraph = ga.getAverageGraph();
+			//System.out.println("Writing average graph to " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
+			averagedGraph.write_graph_to_file(avrgdGraphFile.getAbsolutePath());
+			ga.writeAverageGraphWithVoters(avrgdVotersGraphFile.getAbsolutePath());
+
+			for (double consensusThreshold: consensusThresholds) {
+				File consGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".CCT"+(String.format("%2.0f",consensusThreshold*100))+".cm");
+				RIGraph consensusGraph = ga.getConsensusGraph(consensusThreshold);
+				//System.out.printf("Writing consensus graph at CCT %2.0f to %s \n",consensusThreshold*100,consGraphFile);
+				consensusGraph.write_graph_to_file(consGraphFile.getAbsolutePath());
+
+				if (benchmark) {
+					PredEval eval = consensusGraph.evaluatePrediction(originalGraph);
+					System.out.printf("%6s_%3.1f\t%3.1f",cts[ctIdx],cutoffs[ctIdx],consensusThreshold);
+					eval.printRow();
+					//eval.printSummary();
+				}
+
+			}
+			
+			// for reconstruction we take the first given consensus threshold value
+			graphsForReconstruction[ctIdx] = ga.getConsensusGraph(consensusThresholds[0]);
 		}
 		
+		
 		// reconstruct
-		//TODO ideally we would like to be able to reconstruct using several consensus graphs: Ca+Cg+C/Cg, 
-		//     at the moment only implemented reconstruction with one graph
 		if (reconstruct) {
-			RIGraph[] reconstGraphs = {ga.getConsensusGraph(consensusThresholds[0])};
+			System.out.println("Reconstructing");
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
-			Pdb pdb = tr.reconstruct(targetSeq, reconstGraphs, NUMBER_TINKER_MODELS);
+			Pdb pdb = tr.reconstruct(targetSeq, graphsForReconstruction, numberTinkerModels);
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
 			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
+			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
+			if (benchmark) {
+				System.out.printf("rmsd to native: %5.2f\n",pdb.rmsd(targetPdb, "Ca"));
+			}
 		}
 	}
 
