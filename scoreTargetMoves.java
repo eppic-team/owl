@@ -12,27 +12,28 @@ public class scoreTargetMoves {
 	 * 
 	 * @author lappe
 	 */
-	static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
+	private static int maxRank = 21; // value to replace for non-existence of central redue in the resultvector (rank=0) 
 	// higher values should penalize non-existence more
-	static int VL=1; // Verbosity Level 
-	static final String dbserver = "white";
-	static final String user = MySQLConnection.getUserName();
-	static final String pwd = "nieve";
-	static MySQLConnection conn;
-	static String prgID = "V04"; 
-	static String backgrndDB = "cullpdb_90";   // change!!
-	static String hashDB = "nbhashing";
-	static String targetDB = "caspm"; 
+	private static int VL=1; // Verbosity Level 
+	
+	private static final String dbserver = "white";
+	private static final String user = MySQLConnection.getUserName();
+	private static final String pwd = "nieve";
+	private static MySQLConnection conn;
+	 
+	private static String backgrndDB = "cullpdb_90";   // change!!
+	private static String hashDB = "nbhashing"; 
+	
 	static int sTotal, sRank; 
 	
 	public static void main(String[] args) throws SQLException{
 		
 		if (args.length<2) {
-			System.err.println("Must passed 2 parameters: <graph_id>, <target moves table>");
+			System.err.println("Must pass 2 parameters: <graph_id>, <target_db.target_moves_table>");
 			System.exit(1);
 		} 
 		int graph_id = Integer.parseInt(args[0]);
-		String targetMovesTable = targetDB+"."+args[1];
+		String targetMovesTable = args[1];
 		
 		int num, i, j, total, rank, deltaRank=0, counter=0, nullrank=maxRank, minus, mcn, plus, pcn;
 		String sql, cid, res, sstype, nn, pred="", mres, mss, pres, pss;  
@@ -53,10 +54,10 @@ public class scoreTargetMoves {
 		//mstmt.executeUpdate(sql); 
 		//mstmt.close(); 
 
-		sql = "select graph_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
-		" from "+targetMovesTable+
+		sql = "SELECT graph_id, cid, num, res, sstype, i, j, minus, mres, mss, mcn, plus, pres, pss, pcn, nn" +
+		" FROM "+targetMovesTable+
 		" WHERE graph_id="+graph_id+
-		" order by graph_id, cid, num, i, j ;";
+		" ORDER BY graph_id, cid, num, i, j ;";
 
 		mstmt = conn.createStatement();
 		mrsst = mstmt.executeQuery(sql); 
