@@ -121,7 +121,7 @@ public class MaxClusterRunner {
 	}
 
 	/**
-	 * Compares all files from a predictionList with experiment file returning an ArrayList of scores
+	 * Performs all against all comparison of files from a predictionList returning a matrix of pairwise scores
 	 * @param predictionList
 	 * @param scoreType 
 	 * @return list of the rankings or null if something goes wrong
