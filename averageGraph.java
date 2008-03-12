@@ -1,9 +1,11 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -122,18 +124,55 @@ public class averageGraph {
 		
 	}
 	
+	/**
+	 * Reads a list file containing 1 column of pdbCodes+pdbChainCodes, e.g. 1bxyA
+	 * @param templatesFile
+	 * @return
+	 */
+	private static String[] readTemplatesFile(File templatesFile) {
+		ArrayList<String> codesAL = new ArrayList<String>(); 
+		try {
+			BufferedReader fileIn = new BufferedReader(new FileReader(templatesFile));
+			String line;
+			int lineCount=0;
+			while((line = fileIn.readLine()) != null) {
+				lineCount++;
+				if (line.length()!=0 && !line.startsWith("#")) {
+					Pattern p = Pattern.compile("^\\d\\w\\w\\w\\w");
+					Matcher m = p.matcher(line);
+					if (m.matches()) {
+						codesAL.add(line);
+					} else {
+						System.err.println("Line "+lineCount+" in templates file doesn't look like a pdb code+pdb chain code");
+					}
+				}
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println("Couldn't find templates file "+templatesFile+" . Exiting.");
+			System.exit(1);
+		} catch (IOException e) {
+			System.err.println("Error while reading templates file "+templatesFile+". Exiting");
+			System.exit(1);
+		}
+		if (codesAL.isEmpty()) {
+			System.err.println("Couldn't find any pdb code+pdb chain code in templates file. Exiting");
+			System.exit(1);
+		}
+		String[] codes = new String[codesAL.size()];
+		codesAL.toArray(codes);
+		return codes;
+	}
+	
 	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
 		String help = "Usage: \n" +
 				averageGraph.class.getName()+"\n" +
-				"  -p: target pdb code (benchmarking) \n" +
-				"  -c: target chain code (benchmarking) \n" +
+				"  -p: target pdb code+target chain code (benchmarking), e.g. 1bxyA \n" +
 				"\n"+
 				"  -f: file with target sequence to be predicted in FASTA format (prediction) \n"+
 				"\n"+
-				"  -P: comma separated list of templates' pdb codes \n" +
-				"  -C: comma separated list of templates' pdb chain codes \n" +
+				"  -P: file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
 				"  -t: comma separated list of contact types \n" +
 				"  -d: comma separated list of distance cutoffs (one per contact type) \n" +
 				"  -b: basename for output files (averaged graph, averaged graph with voters and consensus graphs) \n"+
@@ -156,8 +195,7 @@ public class averageGraph {
 		
 		String pdbCodeTarget =  "";
 		String pdbChainCodeTarget = "";
-		String[] pdbCodesTemplates = null; 
-		String[] pdbChainCodesTemplates = null;
+		File templatesFile = null;
 		
 		File seqFile = null;
 		
@@ -168,22 +206,17 @@ public class averageGraph {
 		boolean reconstruct = false;
 		int numberTinkerModels = 0;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:c:P:C:d:t:a:s:o:b:f:r:h?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
 			case 'p':
-				pdbCodeTarget = g.getOptarg();
+				pdbCodeTarget = g.getOptarg().substring(0, 4);
+				pdbChainCodeTarget = g.getOptarg().substring(4);
 				benchmark = true;
 				break;
-			case 'c':
-				pdbChainCodeTarget = g.getOptarg();
-				break;				
 			case 'P':
-				pdbCodesTemplates = g.getOptarg().split(",");
-				break;
-			case 'C':
-				pdbChainCodesTemplates = g.getOptarg().split(",");
+				templatesFile = new File(g.getOptarg());
 				break;
 			case 'd':
 				String[] tokens  = g.getOptarg().split(",");
@@ -228,7 +261,7 @@ public class averageGraph {
 		}
 		
 		// input checks
-		if (pdbCodesTemplates==null || pdbChainCodesTemplates==null || cts==null || cutoffs==null || basename.equals("")) {
+		if (templatesFile==null || cts==null || cutoffs==null || basename.equals("")) {
 			System.err.println("Some missing option");
 			System.err.println(help);
 			System.exit(1);
@@ -244,11 +277,6 @@ public class averageGraph {
 			System.exit(1);
 		}
 		
-		// check that we specified same number of template pdb codes and template pdb chain codes
-		if (pdbCodesTemplates.length!=pdbChainCodesTemplates.length) {
-			System.err.println("Specified list of pdb codes differs in length from list of pdb chain codes. Exiting");
-			System.exit(1);
-		}
 		// check that we specified same number of contact types and cutoffs
 		if (cts.length!=cutoffs.length) {
 			System.err.println("Specified list of contact types differs in length from list of cutoffs. Exiting");
@@ -276,10 +304,14 @@ public class averageGraph {
 		}
 		
 		// getting template structures
-		Pdb[] templatePdbs = new Pdb[pdbCodesTemplates.length];
-		for (int i=0;i<pdbCodesTemplates.length;i++) {
-			Pdb pdb = new PdbasePdb(pdbCodesTemplates[i]);
-			pdb.load(pdbChainCodesTemplates[i]);
+		//TODO eventually we should read using RIGEnsemble.loadFromListFile adding this case: list file is a list of pdbCodes+pdbChainCodes
+		//     Then RIGEnsemble should also have an alignment to be able to use it for ensembles not sharing same sequence
+		//     By using loadFromListFile we would get the benefit of reading templatesFile that contain a list of pdb files/casp RR files/cm files/cif files
+		String[] codesTemplates = readTemplatesFile(templatesFile); 
+		Pdb[] templatePdbs = new Pdb[codesTemplates.length];
+		for (int i=0;i<codesTemplates.length;i++) {
+			Pdb pdb = new PdbasePdb(codesTemplates[i].substring(0, 4));
+			pdb.load(codesTemplates[i].substring(4));
 			templatePdbs[i]=pdb;
 		}
 		
@@ -315,7 +347,7 @@ public class averageGraph {
 
 			TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
 
-			for (int i=0;i<pdbCodesTemplates.length;i++) {
+			for (int i=0;i<codesTemplates.length;i++) {
 				RIGraph graph = templatePdbs[i].get_graph(cts[ctIdx], cutoffs[ctIdx]);
 				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
 			}
