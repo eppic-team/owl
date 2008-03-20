@@ -114,11 +114,6 @@ public class reconstruct {
 			System.exit(1);
 		}
 		
-		if (!AAinfo.isValidContactType(ct) || ct.contains("ALL")) {
-			System.err.println("Invalid contact type specified. Exiting");
-			System.exit(1);
-		}
-		
 		if (n>999) {
 			System.err.println("Maximum number of models is 999. Specify a lower value. Exiting");
 			System.exit(1);
@@ -133,6 +128,12 @@ public class reconstruct {
 			ct2 = ct.split("_")[1];
 			doublecm = true;
 		}
+		
+		if (!AAinfo.isValidContactType(ct1) || !AAinfo.isValidContactType(ct2) || ct.contains("ALL")) {
+			System.err.println("Invalid contact type specified. Exiting");
+			System.exit(1);
+		}
+		
 		if (cross) {
 			ct3 = ct1+"/"+ct2;
 		}
