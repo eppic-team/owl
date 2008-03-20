@@ -896,18 +896,21 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Returns a RIGraph for given contact type and cutoff
-	 * @param ct
-	 * @param cutoff
+	 * Returns a RIGraph for given contact type, cutoff and directionality
+	 * @param ct  the contact type
+	 * @param cutoff  the distance cutoff
+	 * @param directed  true if we want a directed graph, false for undirected
 	 * @return
 	 */
 	public RIGraph get_graph(String ct, double cutoff, boolean directed) {
-		//NOTE:To generate forbidden graphs, AIGraph should become directed and
-		//-the check for adding parallel atomic edges if crossed should be removed
-		//-atomic edges in both directions should be added if !crossed
-		//-make sure in getRIGraph for undirected graphs not to double-count atomic edges
+		//NOTE: At the moment we don't allow directed graphs for overlapping contact types e.g. directed ALL/BB
+		//      because the code wouldn't be able to cope correctly with them
+		// To lift this restriction, one possibility would be to make AIGraph directed and
+		//- remove the check for adding parallel atomic edges if crossed
+		//- add atomic edges in both directions if !crossed
+		//- make sure in getRIGraph for undirected graphs not to double-count atomic edges
 		if (directed && AAinfo.isOverlapping(ct)) {
-			throw new IllegalArgumentException();
+			throw new IllegalArgumentException("Contact type "+ct+" is overlapping. Generating directed graphs for it is unsupported");
 		}
 		
 		String[] cts = ct.split("\\+");		
@@ -923,8 +926,17 @@ public abstract class Pdb {
 		return graph;
 	}
 	
+	/**
+	 * Returns a RIGraph for given contact type and cutoff
+	 * Crossed contact types (i.e. those containing a "/") will be considered always as 
+	 * directed. If one wants an undirected graph for a crossed contact type then method 
+	 * get_graph(String, double, boolean) should be used instead.
+	 * @param ct  the contact type
+	 * @param cutoff  the distance cutoff
+	 * @return
+	 */
 	public RIGraph get_graph(String ct, double cutoff) {
-		// TODO eventually we should use the ContactType class as parameter
+		// TODO eventually we should use the ContactType class as parameter so we could encapsulate all properties of a contact type in there
 		boolean crossed = false;
 		if (ct.contains("/")) {
 			crossed = true;
@@ -934,7 +946,7 @@ public abstract class Pdb {
 	
 	/**
 	 * Returns an all atom graph in a AIGraph object
-	 * @param cutoff
+	 * @param cutoff  the distance cutoff
 	 * @return
 	 */
 	public AIGraph getAllAtomGraph(double cutoff) {
