@@ -94,7 +94,7 @@ public class computeEnergies {
 		} catch(TinkerError e) {
 			System.err.println("Tinker error while computing energy for "+nativeStruct+". Skipping.");
 		}	
-		System.exit(0);
+		
 		// getting energy of all decoys in list
 		ArrayList<Row> rows = new ArrayList<Row>();
 		for (File pdbFile:pdbFiles){
