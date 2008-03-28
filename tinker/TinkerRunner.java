@@ -25,8 +25,10 @@ public class TinkerRunner {
 
 	private static final String PROTEIN_PROG = "protein";
 	private static final String DISTGEOM_PROG = "distgeom";
-//	private static final String PDBXYZ_PROG = "pdbxyz";
+	private static final String PDBXYZ_PROG = "pdbxyz";
 	private static final String XYZPDB_PROG = "xyzpdb";
+	private static final String MINIMIZE_PROG = "minimize";
+	private static final String ANALYZE_PROG = "analyze";
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_DEFAULT_PARAMS = "Y N Y Y N N ";
 	private static final String REFINE_VIA_ANNEALING = "A";
@@ -35,6 +37,8 @@ public class TinkerRunner {
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
+	
+	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
 	
 	/*--------------------------- member variables --------------------------*/
 	// input parameters
@@ -47,8 +51,10 @@ public class TinkerRunner {
 	// derived parameters
 	private String proteinProg;
 	private String distgeomProg;
-//	private String pdbxyzProg;
+	private String pdbxyzProg;
 	private String xyzpdbProg;
+	private String minimizeProg;
+	private String analyzeProg;
 	
 	// variables for storing distgeom output data
 	private double[] errorFunctionVal; 
@@ -83,8 +89,10 @@ public class TinkerRunner {
 		this.forceFieldFileName = forceFieldFileName;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
 		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
-//		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
+		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
 		this.xyzpdbProg = new File(this.tinkerBinDir,XYZPDB_PROG).getAbsolutePath();
+		this.minimizeProg = new File(this.tinkerBinDir,MINIMIZE_PROG).getAbsolutePath();
+		this.analyzeProg = new File(this.tinkerBinDir,ANALYZE_PROG).getAbsolutePath();
 		this.dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_ANNEALING; // default: Annealing refinement 
 		
 		this.forceConstant = -1;
@@ -96,15 +104,16 @@ public class TinkerRunner {
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
-	 * To get the expected File that a tinker program will output given an input file and an extension for the output files
-	 * The directory where the input file is will be scanned to see if it contains files of the form basename.ext, basename.ext_2, basename.ext_3 etc.
+	 * To get the expected File that a tinker program will output given an input 
+	 * file and an extension for the output files
+	 * The directory where the input file is will be scanned to see if it contains 
+	 * files of the form basename.ext, basename.ext_2, basename.ext_3 etc.
 	 * @param file
 	 * @param ext
 	 * @return
 	 */
 	private File getTinkerOutputFileName(File file, String ext){
-		String basename = file.getName();
-		basename = basename.substring(0, basename.lastIndexOf("."));
+		String basename = getBasename(file);
 		String dirname = file.getParent();
 		
 		String tinkerOutFileName = basename + "." + ext;
@@ -121,7 +130,8 @@ public class TinkerRunner {
 	}
 	
 	/**
-	 * Runs tinker's protein program to generate an elongated protein structure given a sequence
+	 * Runs tinker's protein program to generate an elongated protein structure 
+	 * given a sequence
 	 * @param sequence
 	 * @param outPath The directory where output files will be written
 	 * @param outBasename The base name for the output files
@@ -173,9 +183,11 @@ public class TinkerRunner {
 		tinkerseqout.renameTo(new File(outPath,outBasename+".seq"));
 		
 		if (tinkerError) {
-			log.close();
+			log.flush();
 			throw new TinkerError("Tinker error, revise log file. ");
 		}
+		
+		log.flush();
 	}
 
 	/**
@@ -199,8 +211,7 @@ public class TinkerRunner {
 		if (!xyzFile.exists()){
 			throw new FileNotFoundException("Specified xyz file "+xyzFile.getAbsolutePath()+" does not exist");
 		}
-		String basename = xyzFile.getName();
-		basename = basename.substring(0, basename.lastIndexOf("."));
+		String basename = getBasename(xyzFile);
 		File keyFile = new File(xyzFile.getParent(),basename+".key");
 		if (! keyFile.exists()) {
 			throw new FileNotFoundException("Key file "+keyFile.getAbsolutePath()+" not present in input directory "+xyzFile.getParent());
@@ -230,6 +241,7 @@ public class TinkerRunner {
 		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
 		String line;
 		int i=1;
+		log.println("#cmd: "+cmdLine);
 		while((line = dgeomOutput.readLine()) != null) {
 			log.println(line);
 			if (line.startsWith(TINKER_ERROR_STR)) {
@@ -301,27 +313,28 @@ public class TinkerRunner {
 		}
 		// throwing exception if error string was caught in output
 		if (tinkerError) {
-			log.close();
+			log.flush();
 			throw new TinkerError("Tinker error, revise log file. ");
 		}
 		int exitValue = dgeomProc.waitFor();
 		// throwing exception if exit state is 137: happens in Linux when another instance of distgeom is running in same machine, the OS kills it with exit state 137 
 		if (exitValue==137) {
-			log.close();
+			log.flush();
 			throw new TinkerError("Distgeom was killed by OS. There may be another instance of distgeom running in this computer" +
 					" or Tinker could not allocate enough memory.");
 		}
 		else if (exitValue==139) {
-			log.close();
+			log.flush();
 			throw new TinkerError("Distgeom was killed with exit code 139. Not enough memory.");
 
 		}
 		// this is to catch all other possible errors not caught already by the parse of the error string in output
 		else if (exitValue!=0) { 
-			log.close();
+			log.flush();
 			throw new TinkerError("Distgeom exited with a non 0 exit code: "+exitValue+". Unknown error.");
 		}
 		
+		log.flush();
 	}
 	
 	/**
@@ -342,8 +355,7 @@ public class TinkerRunner {
 			throw new FileNotFoundException("Specified seq file "+seqFile.getAbsolutePath()+" does not exist");
 		}
 		
-		String basename = xyzFile.getName();
-		basename = basename.substring(0, basename.lastIndexOf("."));
+		String basename = getBasename(xyzFile);
 		File tmpSeqFile = new File(seqFile.getParent(),basename+".seq");
 				
 		// if seqFile doesn't follow the naming convention (basename of xyzFile+seq extension) that tinker expects, we copy it to tmpSeqFile (which has right name) 
@@ -360,12 +372,14 @@ public class TinkerRunner {
 		File tinkerpdbout = getTinkerOutputFileName(xyzFile, "pdb");
 		
 		// running tinker's xyzpdb
-		// beware: it takes as a silent input the seq file seqFile (or tmpSeqFile if the input seqFile didn't have the right name) 
-		Process xyzpdbProc = Runtime.getRuntime().exec(xyzpdbProg+" "+xyzFile.getAbsolutePath()+" "+forceFieldFileName);
+		// beware: it takes as a silent input the seq file seqFile (or tmpSeqFile if the input seqFile didn't have the right name)
+		String cmdLine = xyzpdbProg+" "+xyzFile.getAbsolutePath()+" "+forceFieldFileName;
+		Process xyzpdbProc = Runtime.getRuntime().exec(cmdLine);
 
 		// logging output
 		BufferedReader xyzpdbOutput = new BufferedReader(new InputStreamReader(xyzpdbProc.getInputStream()));
 		String line;
+		log.println("#cmd: "+cmdLine);
 		while((line = xyzpdbOutput.readLine()) != null) {
 			log.println(line);
 			if (line.startsWith(TINKER_ERROR_STR)) {
@@ -376,49 +390,183 @@ public class TinkerRunner {
 		tinkerpdbout.renameTo(pdbFile);
 		
 		if (tinkerError) {
-			log.close();
-			throw new TinkerError("Tinker error, revise log file.");
+			log.flush();
+			throw new TinkerError("Tinker error while running xyzpdb, revise log file.");
 		}
+		
+		log.flush();
 	}
 	
-//	/**
-//	 * Runs tinker's pdbxyz program to convert a pdbFile to a xyzFile
-//	 * @param pdbFile
-//	 * @param xyzFile
-//	 * @param log A PrintWriter for logging output	
-//	 * @throws IOException
-//	 * @throws TinkerError If an error seen in tinker's output
-//	 */
-//	private void runPdbxyz(File pdbFile, File xyzFile, PrintWriter log) throws IOException, TinkerError{
-//		boolean tinkerError = false; // to store the exit state of the tinker program
-//		if (!pdbFile.exists()){
-//			throw new FileNotFoundException("Specified pdb file "+pdbFile.getAbsolutePath()+" does not exist");
-//		}
-//		File tinkerxyzout = getTinkerOutputFileName(pdbFile, "xyz");
-//		// running tinker's pdbxyz
-//		Process pdbxyzProc = Runtime.getRuntime().exec(pdbxyzProg+" "+pdbFile.getAbsolutePath()+" "+forceFieldFileName);
-//
-//		// logging output
-//		BufferedReader pdbxyzOutput = new BufferedReader(new InputStreamReader(pdbxyzProc.getInputStream()));
-//		String line;
-//		while((line = pdbxyzOutput.readLine()) != null) {
-//			log.println(line);
-//			if (line.startsWith(TINKER_ERROR_STR)) {
-//				tinkerError = true;
-//			}
-//		}
-//		tinkerxyzout.renameTo(xyzFile);
-//		if (tinkerError) {
-//			log.close();
-//			throw new TinkerError("Tinker error, revise log file "+logFile.getAbsolutePath());
-//		}
-//	}
+	/**
+	 * Runs tinker's pdbxyz program to convert a pdbFile to a xyzFile
+	 * @param pdbFile
+	 * @param xyzFile
+	 * @param log A PrintWriter for logging output	
+	 * @throws IOException
+	 * @throws TinkerError If an error seen in tinker's output
+	 */
+	private void runPdbxyz(File pdbFile, File xyzFile, PrintWriter log) throws IOException, TinkerError{
+		boolean tinkerError = false; // to store the exit state of the tinker program
+		if (!pdbFile.exists()){
+			throw new FileNotFoundException("Specified pdb file "+pdbFile.getAbsolutePath()+" does not exist");
+		}
+		File tinkerxyzout = getTinkerOutputFileName(pdbFile, "xyz");
+		File tinkerseqout = getTinkerOutputFileName(pdbFile, "seq");
+		// running tinker's pdbxyz
+		String cmdLine = pdbxyzProg+" "+pdbFile.getAbsolutePath()+" "+forceFieldFileName;
+		Process pdbxyzProc = Runtime.getRuntime().exec(cmdLine);
+
+		// logging output
+		BufferedReader pdbxyzOutput = new BufferedReader(new InputStreamReader(pdbxyzProc.getInputStream()));
+		String line;
+		log.println("#cmd: "+cmdLine);
+		while((line = pdbxyzOutput.readLine()) != null) {
+			log.println(line);
+			if (line.startsWith(TINKER_ERROR_STR)) {
+				tinkerError = true;
+			}
+			// TODO: we want here to catch cases where there is missing data in input and tinker prompts for something else (e.g. if PDB file has alt locs, tinker asks the alt loc code we want to choose)
+			// PROBLEM: (that's why following code doesn't work) line hasn't been written fully so readLine() didn't read it yet, how to get around it? reading character by character?
+			//if (line.startsWith(" Enter")) { // i.e. tinker program is waiting for a prompt
+			//	log.flush();
+			//	throw new TinkerError("Some missing parameter to pdbxyz. Tinker is waiting for data: \""+line+"\"");
+			//}
+		}
+		tinkerxyzout.renameTo(xyzFile);
+		// for the seq file we rename to a file with seq extension with the same path and basename as xyzFile
+		tinkerseqout.renameTo(new File(xyzFile.getAbsolutePath().substring(0, xyzFile.getAbsolutePath().lastIndexOf("."))+".seq"));
+		if (tinkerError) {
+			// we flush so that we are sure the log file gets written, we don't want to close it though, because the calling program might continue using the PrintWriter
+			log.flush(); 
+			throw new TinkerError("Tinker error while running pdbxyz, revise log file.");
+		}
+		
+		log.flush();
+	}
+	
+	/**
+	 * Gets the basename of given file: no path, chopped off bit after last dot.
+	 * @param file
+	 * @return
+	 */
+	private String getBasename(File file) {
+		String baseName = file.getName();
+		// for files with no extension we don't have to do more, if file has a extension we take everything up to the dot
+		if (baseName.contains(".")) { 
+			baseName = baseName.substring(0, baseName.lastIndexOf("."));
+		}
+		return baseName;
+	}
+	
+	/**
+	 * Run tinker's minimize program for the given xyz file. The final minimized structure is written back to the same file.
+	 * @param xyzFile
+	 * @param rmsGradient  target rms gradient value for which minimization will terminate (in kcal/mole/A)
+	 * @param log
+	 * @return  the final energy of the minimized structure
+	 * @throws IOException  if temporary/result files can't be accessed
+	 * @throws TinkerError  if tinker finishes in error status or prints an error in the output
+	 */
+	private double runMinimize(File xyzFile, double rmsGradient, PrintWriter log) throws IOException, TinkerError {
+		double energy = 0.0;
+		boolean tinkerError = false;
+		// minimize and get final energy
+		File xyzOutFile = getTinkerOutputFileName(xyzFile, "xyz");
+		String cmdLine = minimizeProg + " " + xyzFile.getAbsolutePath() + " " + forceFieldFileName + " " + rmsGradient;
+		Process minimizeProc = Runtime.getRuntime().exec(cmdLine);
+		// logging and capturing output
+		BufferedReader minimizeOutput = new BufferedReader(new InputStreamReader(minimizeProc.getInputStream()));
+		String line;
+		log.println("#cmd: "+cmdLine);
+		while((line = minimizeOutput.readLine()) != null) {
+			log.println(line);
+			if (line.startsWith(TINKER_ERROR_STR)) {
+				tinkerError = true;
+			}
+			Pattern p = Pattern.compile("^ Final Function Value :\\s+(-?\\d+\\.\\d+)");
+			Matcher m = p.matcher(line);
+			if (m.find()) {
+				energy = Double.parseDouble(m.group(1));
+			}			
+		}
+		if (tinkerError) {
+			log.flush();
+			throw new TinkerError("Tinker error while running minimize. Revise log file. ");
+		}
+		try {
+			int exitValue = minimizeProc.waitFor(); 
+			if (exitValue!=0) {
+				log.flush();
+				throw new TinkerError("Tinker exited with "+exitValue+" status. Some error occurred while running minimize. Revise log file.");
+			}
+		} catch (InterruptedException e) {
+			throw new TinkerError(e);
+		}
+		
+		// rename the output file 
+		xyzOutFile.renameTo(xyzFile);
+		
+		log.flush();
+		
+		return energy;
+	}
+	
+	/**
+	 * Run tinker's analyze program to get the potential energy of the given xyz file.
+	 * @param xyzFile
+	 * @param mode
+	 * @param log
+	 * @return
+	 * @throws IOException
+	 * @throws TinkerError
+	 */
+	private double runAnalyze(File xyzFile, PrintWriter log) throws IOException, TinkerError {
+		double energy = 0.0;
+		boolean tinkerError = false;
+		// get energy by running analyze
+
+		String cmdLine = analyzeProg + " " + xyzFile.getAbsolutePath() + " " + forceFieldFileName + " " + ANALYZE_ENERGY_MODE;
+		Process analyzeProc = Runtime.getRuntime().exec(cmdLine);
+		// logging and capturing output
+		BufferedReader analyzeOutput = new BufferedReader(new InputStreamReader(analyzeProc.getInputStream()));
+		String line;
+		log.println("#cmd: "+cmdLine);
+		while((line = analyzeOutput.readLine()) != null) {
+			log.println(line);
+			if (line.startsWith(TINKER_ERROR_STR)) {
+				tinkerError = true;
+			}
+			Pattern p = Pattern.compile("^ Total Potential Energy :\\s+(-?\\d+\\.\\d+)");
+			Matcher m = p.matcher(line);
+			if (m.find()) {
+				energy = Double.parseDouble(m.group(1));
+			}			
+		}
+		if (tinkerError) {
+			log.flush();
+			throw new TinkerError("Tinker error while running analyze. Revise log file. ");
+		}
+		try {
+			int exitValue = analyzeProc.waitFor(); 
+			if (exitValue!=0) {
+				log.flush();
+				throw new TinkerError("Tinker exited with "+exitValue+" status. Some error occurred while running analyze. Revise log file.");
+			}
+		} catch (InterruptedException e) {
+			throw new TinkerError(e);
+		}
+		
+		log.flush();
+		
+		return energy;
+	}
 	
 	/*---------------------------- public methods ---------------------------*/
 	
 	/** 
 	 * Returns the index of the structure with the least bound violations.
 	 * Note: The structure can then be retrieved using getStructure(i);
+	 * @returns
 	 */ 
 	public int pickByLeastBoundViols() {
 		int minIdx = 1;
@@ -443,8 +591,8 @@ public class TinkerRunner {
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
-	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
@@ -459,9 +607,9 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstant the force constant to be used for all our given distance restraints
-	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
-	 * @throws IOException  thrown if some temporary or result file could not be accessed
-	 * @returns A pdb object containg the generated structure
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @returns a Pdb object containg the generated structure
 	 */
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant) throws TinkerError, IOException {
 		Pdb resultPdb = null;
@@ -492,8 +640,8 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
-	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
-	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
 	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
 		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
@@ -514,8 +662,8 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
-	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
-	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
 	 */	
 	public void reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
 		reconstruct(sequence, graphs, numberOfModels, forceConstant, false, outputDir, baseName, cleanUp);
@@ -536,8 +684,8 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
-	 * @throws TinkerError thrown if reconstruction fails because of problems with Tinker
-	 * @throws IOException  thrown if some temporary or result file could not be accessed
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
 	private void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, boolean annealing, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
 		
@@ -746,5 +894,68 @@ public class TinkerRunner {
 		}
 		return gdtScores;
 	}
+	
+	/**
+	 * Given a pdb file computes its energy for the currently set forceField
+	 * Energy minimization of the structure will be performed previously to 
+	 * calculating the energy.
+	 * The minimized pdb file is written to same directory as input pdb file with 
+	 * same base name and extension ".min.pdb"
+	 * Temporary files .xyz and .seq will be removed on exit.
+	 * @param pdbFile
+	 * @param log
+	 * @return
+	 * @throws TinkerError
+	 * @throws IOException 
+	 */
+	public double minimize(File pdbFile, double rmsGradient, PrintWriter log) throws TinkerError, IOException {
+
+		boolean cleanUp = true; // for debugging
+		
+		String baseName = getBasename(pdbFile);
+		String outputDir = pdbFile.getParent();
+		File xyzFile = new File(outputDir,baseName+".xyz");
+		File seqFile = new File(outputDir,baseName+".seq"); // this file is created implicitely by pdbxyz
+		if (cleanUp) {
+			xyzFile.deleteOnExit();
+			seqFile.deleteOnExit();
+		}
+		// convert pdb file to xyz file
+		runPdbxyz(pdbFile, xyzFile, log);
+
+		double energy = runMinimize(xyzFile, rmsGradient, log);
+		
+		// convert final structure to pdb file with extension "min.pdb"
+		runXyzpdb(xyzFile, seqFile, new File(outputDir,baseName+".min.pdb"), log);
+		
+		return energy;
+	}
+	
+	/**
+	 * Given a pdb file computes its energy for the currently set forceField
+	 * Temporary files .xyz and .seq will be removed on exit.
+	 * @param pdbFile
+	 * @param log
+	 * @return
+	 * @throws TinkerError
+	 * @throws IOException
+	 */
+	public double computeEnergy(File pdbFile, PrintWriter log) throws TinkerError, IOException {
+		
+		boolean cleanUp = true; // for debugging
+		
+		String baseName = getBasename(pdbFile);
+		String outputDir = pdbFile.getParent();
+		File xyzFile = new File(outputDir,baseName+".xyz");
+		File seqFile = new File(outputDir,baseName+".seq"); // this file is created implicitely by pdbxyz
+		if (cleanUp) {
+			xyzFile.deleteOnExit();
+			seqFile.deleteOnExit();
+		}
+		// convert pdb file to xyz file
+		runPdbxyz(pdbFile, xyzFile, log);
+
+		return runAnalyze(xyzFile, log);
+	}	
 	
 }
