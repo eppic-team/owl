@@ -34,8 +34,12 @@ public class TinkerRunner {
 	private static final String REFINE_VIA_ANNEALING = "A";
 	private static final String REFINE_VIA_MINIMIZATION = "M";
 	public static final double DEFAULT_FORCECONSTANT = 10.0;
+	
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
+	private static final String CHECKXYZ_WARNING = " CHKXYZ";
+	
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
+	
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
 	
 	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
@@ -482,6 +486,10 @@ public class TinkerRunner {
 			log.println(line);
 			if (line.startsWith(TINKER_ERROR_STR)) {
 				tinkerError = true;
+			}
+			if (line.startsWith(CHECKXYZ_WARNING)) {
+				log.flush();
+				throw new TinkerError("minimize gave a warning about the input xyz file. Revise log file");
 			}
 			Pattern p = Pattern.compile("^ Final Function Value :\\s+(-?\\d+\\.\\d+)");
 			Matcher m = p.matcher(line);
