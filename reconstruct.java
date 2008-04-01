@@ -146,9 +146,13 @@ public class reconstruct {
 		}
 		
 		Pdb pdb = null;
+		Pdb mPdb = null;
 		try {
 			pdb = new PdbasePdb(pdbCode);
 			pdb.load(pdbChainCode);
+			mPdb = new PdbasePdb(pdbCode);
+			mPdb.load(pdbChainCode);
+			mPdb.mirror();
 		} catch (PdbLoadError e) {
 			System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
 			System.exit(1);
@@ -244,6 +248,7 @@ public class reconstruct {
 		// calculate rmsds
 
 		double[] rmsds = new double[n+1];		
+		double[] mRmsds = new double[n+1];		
 		
 		for (int i = 1; i<=n; i++) {
 			String ext = new Formatter().format(".%03d",i).toString();
@@ -251,6 +256,7 @@ public class reconstruct {
 			try {
 				Pdb outputPdb = tr.getStructure(i);
 				rmsds[i] = pdb.rmsd(outputPdb, "Ca");
+				mRmsds[i] = mPdb.rmsd(outputPdb, "Ca");
 			}
 			catch (TinkerError e) {
 				System.err.println("Error while trying to retrieve results from Tinker: "+ e.getMessage());
@@ -266,10 +272,11 @@ public class reconstruct {
 			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3\tnum_res" +
 						"\tresult_id\terror_val" +
 						"\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
-						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig");
+						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig\trmsd_to_mirrored_orig");
 
 			for (int i=1;i<=n;i++){
 				String rmsd = String.format(Locale.US,"%6.3f",rmsds[i]);
+				String mRmsd = String.format(Locale.US,"%6.3f",mRmsds[i]);
 				String errStr = String.format(Locale.US, "%6.3f", err[i]);
 				//                         run_id                cutoff      cutoff2      cutoff3      ct1      ct2      ct3         num_res
 				reportOut.println(pdbCode+"_"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+sequence.length()+"\t"+
@@ -279,8 +286,8 @@ public class reconstruct {
 						nubv[i] + "\t" + nlbv[i] + "\t" + mubv[i] + "\t" + mlbv[i] + "\t" + rbv[i] + "\t" +
 				//      up_viol         low_viol       max_up         max_low         rms_viol
 						nuv[i] + "\t" + nlv[i] + "\t" +	muv[i] + "\t" + mlv[i] + "\t"+ rrv[i] + "\t"+
-				//      rmsd_to_orig
-						rmsd);
+				//      rmsd_to_orig	rmsd_to_mirrored_orig
+						rmsd + "\t" + mRmsd);
 			}
 			reportOut.close();
 		} catch (FileNotFoundException e) {

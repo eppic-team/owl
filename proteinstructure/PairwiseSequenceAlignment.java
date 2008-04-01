@@ -33,9 +33,9 @@ import jaligner.util.*;
 		/*------------------------------ constants ------------------------------*/
 		
 		// default parameters
-		final float		DEFAULT_GAP_OPEN_SCORE =	10f;
-		final float		DEFAULT_GAP_EXTEND_SCORE =	0.5f;
-		final String	DEFAULT_MATRIX_NAME =		"BLOSUM50";
+		static final float		DEFAULT_GAP_OPEN_SCORE =	10f;
+		static final float		DEFAULT_GAP_EXTEND_SCORE =	0.5f;
+		static final String		DEFAULT_MATRIX_NAME =		"BLOSUM50";
 		
 		/*--------------------------- member variables --------------------------*/
 		
@@ -60,6 +60,18 @@ import jaligner.util.*;
 		 * @param seq2 A string containing the second sequence to be aligned
 		 */
 		public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2) throws PairwiseSequenceAlignmentException {
+			this(seq1, seq2, name1, name2, DEFAULT_GAP_OPEN_SCORE, DEFAULT_GAP_EXTEND_SCORE);
+		}
+		
+		/**
+		 * Construct a new pairwise alignment using the Needleman-Wunsch
+		 * alignment algorithm.
+		 * @param seq1 A String containing the first sequence to be aligned
+		 * @param seq2 A string containing the second sequence to be aligned
+		 * @param openScore Gap open score
+		 * @param extendScore Gap extend score
+		 */
+		public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2, float openScore, float extendScore) throws PairwiseSequenceAlignmentException {
 
 			Sequence 	s1			= null;
 			Sequence 	s2			= null;
@@ -81,8 +93,6 @@ import jaligner.util.*;
 			}
 				
 			// create alignment
-			float openScore = DEFAULT_GAP_OPEN_SCORE;
-			float extendScore = DEFAULT_GAP_EXTEND_SCORE;
 			String matrixName = DEFAULT_MATRIX_NAME;
 			try {
 				matrix = MatrixLoader.load(matrixName);

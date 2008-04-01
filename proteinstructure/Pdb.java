@@ -613,6 +613,7 @@ public abstract class Pdb {
 					coords.put(atomser, coord);
 				}
 				else {
+					//NOTE:CHECK FOR MISSING ATOMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					//System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
 				}
 			}
