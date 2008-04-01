@@ -40,6 +40,7 @@ public class DbRIGraph extends RIGraph {
 	private int graphid;
 
 	private boolean directed;
+	private boolean weighted;
 	
 	private String dbname;
 	private MySQLConnection conn;
@@ -56,7 +57,7 @@ public class DbRIGraph extends RIGraph {
 	 * @throws GraphIdNotFoundError 
 	 * @throws SQLException 
 	 */
-	public DbRIGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double distCutoff, String contactType, boolean directed, int model) throws GraphIdNotFoundError, SQLException {
+	public DbRIGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double distCutoff, String contactType, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.distCutoff=distCutoff;
@@ -67,6 +68,7 @@ public class DbRIGraph extends RIGraph {
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		this.sequence=""; 
 		this.directed = directed;
+		this.weighted = weighted;
 
 		getgraphid(pdbCode, pdbChainCode); // initialises graphid, sm_id and chainCode
 		read_graph_from_db(); // gets contacts and nodes and sets fullLength
@@ -83,16 +85,16 @@ public class DbRIGraph extends RIGraph {
 	 * @throws GraphIdNotFoundError
 	 * @throws SQLException
 	 */
-	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, int model) throws GraphIdNotFoundError, SQLException{ 
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,model);
+	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException{ 
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,model);
 	}
 	
-	public DbRIGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
-		this(dbname,conn,pdbCode,pdbChainCode,cutoff,ct,directed,DEFAULT_MODEL);
+	public DbRIGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
+		this(dbname,conn,pdbCode,pdbChainCode,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
-	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,DEFAULT_MODEL);
+	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
 	/**
@@ -107,7 +109,7 @@ public class DbRIGraph extends RIGraph {
 	 * @throws GraphIdNotFoundError 
 	 * @throws SQLException 
 	 */
-	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double distCutoff, String contactType, boolean directed, int model) throws GraphIdNotFoundError, SQLException {
+	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double distCutoff, String contactType, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException {
 		this.dbname=dbname;
 		this.conn=conn;
 		this.sid=sid;
@@ -117,6 +119,7 @@ public class DbRIGraph extends RIGraph {
 		// we set the sequence to empty when we read from graph db. We don't have the full sequence in graph db
 		this.sequence=""; 
 		this.directed = directed;
+		this.weighted = weighted;
 
 		getgraphid(sid); // initialises graphid, sm_id, chainCode, pdbCode and pdbChainCode
 		read_graph_from_db(); // gets contacts and nodes and sets fullLength
@@ -133,16 +136,16 @@ public class DbRIGraph extends RIGraph {
 	 * @throws GraphIdNotFoundError
 	 * @throws SQLException
 	 */
-	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, int model) throws GraphIdNotFoundError, SQLException{ 
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,model);
+	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException{ 
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,weighted, model);
 	}
 	
-	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
-		this(dbname,conn,sid,cutoff,ct,directed,DEFAULT_MODEL);
+	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
+		this(dbname,conn,sid,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
-	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed) throws GraphIdNotFoundError, SQLException {
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,DEFAULT_MODEL);
+	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
+		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
 	/**
@@ -278,7 +281,7 @@ public class DbRIGraph extends RIGraph {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, directed)) {
+		if (AAinfo.isValidMultiAtomContactType(contactType, directed) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
@@ -340,7 +343,7 @@ public class DbRIGraph extends RIGraph {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, directed)) {
+		if (AAinfo.isValidMultiAtomContactType(contactType, directed) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}

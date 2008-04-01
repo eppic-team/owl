@@ -6,7 +6,7 @@ function usage {
 	echo "Usage: $1 -d <db_name> -m <mode>"
 	echo
 	echo "-d <db_name>	the graph database name "
-	echo "-m <mode>		create/index/unindex tables "
+	echo "-m <mode>		create/index/unindex/drop tables "
 	echo
 } 
 
@@ -125,5 +125,18 @@ $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL
 	SET sql_mode = "NO_UNSIGNED_SUBTRACTION,TRADITIONAL";	
 	DROP INDEX NODE_GRAPH_IDX ON single_model_node;
 	DROP INDEX EDGE_GRAPH_IDX ON single_model_edge;	
+ENDSQL
+fi
+
+if [ "$mode" == "DROP" ]
+then
+$mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL
+	SET sql_mode = "NO_UNSIGNED_SUBTRACTION,TRADITIONAL";
+	DROP TABLE chain_graph;	
+	DROP TABLE scop_graph;	
+	DROP TABLE single_model_graph;	
+	DROP TABLE single_model_node;
+	DROP TABLE single_model_edge;
+	DROP TABLE pdb_residue_info;	
 ENDSQL
 fi

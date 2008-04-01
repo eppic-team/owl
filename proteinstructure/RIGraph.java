@@ -25,16 +25,18 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 
 	private static final long serialVersionUID = 1L;
 	
-	private static final String SINGLEMODELS_DB = "ioannis";
+	private static final String DEFAULT_SINGLEMODELS_DB = "ioannis";
 	
 	// fields
 	protected double distCutoff;
 	protected String contactType;				// use AAinfo.isValidContactType() to test for validity
+	protected String singleModelsDb;
 	
 	public RIGraph() {
 		super();
 		this.distCutoff=0;
 		this.contactType=null;
+		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
 	}
 
 	/**
@@ -47,12 +49,29 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		this.fullLength = sequence.length();
 		this.distCutoff=0;
 		this.contactType=null;
+		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
 		serials2nodes = new TreeMap<Integer,RIGNode>();
 		for(int i=0; i < sequence.length(); i++) {
 			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
 			this.addVertex(node);
 			serials2nodes.put(i+1, node);
 		}
+	}
+	
+	/**
+	 * Returns the db with the single model ids
+	 * @return
+	 */
+	public String getSingleModelsDb () {
+		return singleModelsDb;
+	}
+
+	/**
+	 * Sets the db with the single model ids
+	 * @param ct the contact type
+	 */
+	public void setSingleModelsDb(String db) {
+		this.singleModelsDb=db;
 	}
 	
 	/**
@@ -293,7 +312,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 */
 	//TODO we might want to move this to a graph i/o class
 	//TODO refactor to writeToDb. Get rid of this and only keep fast one??
-	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException{
+	public void write_graph_to_db(MySQLConnection conn, String db, boolean weighted) throws SQLException{
 		
 		// values we fix to constant 
 		String CW = "1";
@@ -310,7 +329,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			ctStr = "BB+SC+BB/SC";
 		}
 		
-		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected())) {
+		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
@@ -369,8 +388,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		// now we insert the graph info into single_model_graph
 		// 1st we grab the single_model_id
 		int singlemodelid = 0;
-		sql = "SELECT single_model_id FROM "+SINGLEMODELS_DB+".single_model WHERE "+
-				" dist="+distCutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"';";
+		sql = "SELECT single_model_id FROM "+singleModelsDb+".single_model WHERE "+
+				" dist="+distCutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+ "' "+
+				(singleModelsDb.equals(DEFAULT_SINGLEMODELS_DB)?"":("AND d="+directedStr))+";";
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()){
 			singlemodelid = rsst.getInt(1);
@@ -445,8 +465,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		// inserting edges
 		// get the max weight
 		double maxWeight = 0;
-		for (RIGEdge cont:getEdges()) {
-			maxWeight = (maxWeight<cont.getAtomWeight())?cont.getAtomWeight():maxWeight;
+		if (weighted) {
+			for (RIGEdge cont:getEdges()) {
+				maxWeight = (maxWeight<cont.getAtomWeight())?cont.getAtomWeight():maxWeight;
+			}
+		} else {
+			maxWeight = 1;
 		}
 		for (RIGEdge cont:getEdges()){
 			RIGNode i_node = getEndpoints(cont).getFirst();
@@ -489,7 +513,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 					" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
 					" VALUES ("+graphid+", "+(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
 					(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
-					cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+", "+cont.getDistance()+")";
+					(weighted?cont.getAtomWeight():1)+", "+(weighted?(cont.getAtomWeight()/maxWeight):1)+", "+cont.getDistance()+")";
 			stmt.executeUpdate(sql);
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
 				// so we insert the reverse contact by swapping i, j in insertion
@@ -498,7 +522,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
 				" VALUES ("+graphid+", "+(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
 				(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
-				cont.getAtomWeight()+", "+(cont.getAtomWeight()/maxWeight)+", "+cont.getDistance()+")";
+				(weighted?cont.getAtomWeight():1)+", "+(weighted?(cont.getAtomWeight()/maxWeight):1)+", "+cont.getDistance()+")";
 				stmt.executeUpdate(sql);
 			}
 		}
@@ -506,7 +530,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		stmt.close();
 
 	}
-		
+	
+	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException {
+		write_graph_to_db(conn, db, true);
+	}
+	
 	/**
 	 * Write graph to given db, using our db graph aglappe format, 
 	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
@@ -516,7 +544,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 */
 	//TODO we might want to move this to a graph i/o class
 	//TODO refactor to writeToDbFast
-	public void write_graph_to_db_fast(MySQLConnection conn, String db) throws SQLException, IOException {
+	public void write_graph_to_db_fast(MySQLConnection conn, String db, boolean weighted) throws SQLException, IOException {
 		
 		// values we fix to constant 
 		String CW = "1";
@@ -532,7 +560,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected())) {
+		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
@@ -591,8 +619,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		// now we insert the graph info into single_model_graph
 		// 1st we grab the single_model_id
 		int singlemodelid = 0;
-		sql = "SELECT single_model_id FROM "+SINGLEMODELS_DB+".single_model WHERE "+
-				" dist="+distCutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+"';";
+		sql = "SELECT single_model_id FROM "+singleModelsDb+".single_model WHERE "+
+				" dist="+distCutoff+" AND expBB="+EXPBB+" AND CW='"+CW+"' AND CT='"+ctStr+"' AND CR='"+CR+ "' "+
+				(singleModelsDb.equals(DEFAULT_SINGLEMODELS_DB)?"":("AND d="+directedStr))+";";
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()){
 			singlemodelid = rsst.getInt(1);
@@ -671,8 +700,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		PrintStream edgesOut = new PrintStream(new FileOutputStream(graphid+"_edges.txt"));
 		// get the max weight
 		double maxWeight = 0;
-		for (RIGEdge cont:getEdges()) {
-			maxWeight = (maxWeight<cont.getAtomWeight())?cont.getAtomWeight():maxWeight;
+		if (weighted) {
+			for (RIGEdge cont:getEdges()) {
+				maxWeight = (maxWeight<cont.getAtomWeight())?cont.getAtomWeight():maxWeight;
+			}
+		} else {
+			maxWeight = 1;			
 		}
 		for (RIGEdge cont:getEdges()){
 			RIGNode i_node = getEndpoints(cont).getFirst();
@@ -712,12 +745,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			
 			edgesOut.println(graphid+"\t"+(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
 					(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
-					cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight)+"\t"+cont.getDistance());
+					(weighted?cont.getAtomWeight():1)+"\t"+(weighted?(cont.getAtomWeight()/maxWeight):1)+"\t"+cont.getDistance());
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
 				// so we insert the reverse contact by swapping i, j in insertion
 				edgesOut.println(graphid+"\t"+(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
 						(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
-						cont.getAtomWeight()+"\t"+(cont.getAtomWeight()/maxWeight)+"\t"+cont.getDistance());
+						(weighted?cont.getAtomWeight():1)+"\t"+(weighted?(cont.getAtomWeight()/maxWeight):1)+"\t"+cont.getDistance());
 			}			
 		}
 		edgesOut.close();
@@ -737,7 +770,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	private String quote(String s) {
 		return ("'"+s+"'");
 	}
-
+	
+	public void write_graph_to_db_fast(MySQLConnection conn, String db) throws SQLException, IOException {
+		write_graph_to_db(conn, db, true);
+	}
+	
 	/**
 	 * Write graph to given outfile in aglappe format
 	 * @param outfile
@@ -950,6 +987,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		newGraph.setContactType(contactType);
 		newGraph.setCutoff(distCutoff);
 		newGraph.setSequence(sequence);
+		newGraph.setSingleModelsDb(singleModelsDb);
 		
 		// copying nodes and serials2nodes
 		TreeMap<Integer,RIGNode> newSerials2nodes = new TreeMap<Integer,RIGNode>();

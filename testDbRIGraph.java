@@ -34,8 +34,8 @@ public class testDbRIGraph {
 		
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  testDbRIGraph -s <sid> -d <distance_cutoff> -t <contact_type> -r directed -F <from_db> -T <to_db> \n" +
-				"2)  testDbRIGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -r directed -F <from_db> -T <to_db> \n" +
+				"1)  testDbRIGraph -s <sid> -d <distance_cutoff> -t <contact_type> -r directed -w weighted -F <from_db> -T <to_db> \n" +
+				"2)  testDbRIGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -r directed -w weighted -F <from_db> -T <to_db> \n" +
 				"3)  testDbRIGraph -g <graph_id> -F <from_db> -T <to_db> \n"; 
 
 		String pdbCode = null;
@@ -47,8 +47,9 @@ public class testDbRIGraph {
 		String edgeType = null;
 		double cutoff = 0;
 		boolean directed = false; 
+		boolean weighted = false; 
 		
-		Getopt g = new Getopt("testDbRIGraph", args, "d:t:r:p:c:s:g:F:T:h?");
+		Getopt g = new Getopt("testDbRIGraph", args, "d:t:r:w:p:c:s:g:F:T:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -60,6 +61,9 @@ public class testDbRIGraph {
 				break;
 			case 'r':
 				directed = Boolean.valueOf(g.getOptarg());
+				break;
+			case 'w':
+				weighted = Boolean.valueOf(g.getOptarg());
 				break;
 			case 'p':
 				pdbCode = g.getOptarg();
@@ -108,14 +112,18 @@ public class testDbRIGraph {
 		DbRIGraph graph = null;
 		try {
 			if (pdbCode != null && pdbChainCode != null) {
-				graph = new DbRIGraph(fromDb, conn, pdbCode, pdbChainCode, cutoff, edgeType, directed);
+				graph = new DbRIGraph(fromDb, conn, pdbCode, pdbChainCode, cutoff, edgeType, directed, weighted);
+				graph.setSingleModelsDb(fromDb);
+				graph.write_graph_to_db_fast(conn,toDb, weighted);
 			} else if (sid != null) {
-				graph = new DbRIGraph(fromDb, conn, sid, cutoff, edgeType, directed);
+				graph = new DbRIGraph(fromDb, conn, sid, cutoff, edgeType, directed, weighted);
+				graph.setSingleModelsDb(fromDb);
+				graph.write_graph_to_db_fast(conn,toDb, weighted);
 			} else if (graphId != 0) {
 				graph = new DbRIGraph(fromDb, conn, graphId);
-			}
-			graph.write_graph_to_db_fast(conn,toDb);
-		
+				graph.setSingleModelsDb(fromDb);
+				graph.write_graph_to_db_fast(conn,toDb);
+			}		
 		} catch (GraphIdNotFoundError e) {
 			System.err.println("Couldn't find such graph!");
 		} catch (SQLException e) {
