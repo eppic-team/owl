@@ -47,10 +47,46 @@ public class BlastHitList {
 	}
 	
 	/**
+	 * Prints a course ascii-art overview of the hits in this hist list.
+	 * The length of the query sequence is scaled to the given output length in screen columns.
+	 */
+	public void printWithOverview(int queryLength, int outputLength) {
+		double scaleFactor = 1.0 * outputLength / queryLength;
+		BlastHit.printHeadersWithOverview(queryLength, scaleFactor);
+		for(BlastHit hit:hits) {
+			hit.printWithOverview(scaleFactor);
+		}
+	}
+	
+	/**
 	 * Returns the number of blast hits contained in this list
 	 * @return
 	 */
 	public int size() {
 		return hits.size();
 	}
+
+	/**
+	 * Return an array of hits contained in this hit list
+	 * @return
+	 */
+	public BlastHit[] getHits() {
+		return (BlastHit[]) this.hits.toArray();
+	}
+	
+	/**
+	 * Returns the hit with the best e-value or null if this hit list is empty.
+	 * @return
+	 */
+	public BlastHit getBestHit() {
+		if(this.size() == 0) return null;
+		BlastHit bestHit = this.hits.get(0);
+		for(BlastHit hit:hits) {
+			if(hit.getEValue() < bestHit.getEValue()) {
+				bestHit = hit;
+			}
+		}
+		return bestHit;
+	}
+	
 }

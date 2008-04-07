@@ -15,6 +15,7 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PredEval;
 import proteinstructure.RIGraph;
+import sequence.Sequence;
 import tinker.TinkerRunner;
 //import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
@@ -32,34 +33,6 @@ public class averageGraph {
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
 	
 	/*------------------------- private methods ------------------------------*/
-	/**
-	 * Reads a sequence file in FASTA format
-	 * @param seqFile
-	 * @return an array with 2 members: FASTA tag and sequence
-	 */
-	private static String[] readSeq(File seqFile) {
-		String tag = "";
-		String seq = "";
-		try {
-			BufferedReader fileIn = new BufferedReader(new FileReader(seqFile));
-			String nextLine;
-			// read sequences
-			while((nextLine = fileIn.readLine()) != null) {
-				Pattern p = Pattern.compile("^>(.*)$");
-				Matcher m = p.matcher(nextLine);
-				if (m.find()) {
-					tag = m.group(1).trim();
-				} else {
-					seq += nextLine.trim();
-				}
-			}
-		} catch (IOException e) {
-			System.err.println("Couldn't read sequence file "+seqFile.getAbsolutePath()+": "+e.getMessage()+". Exiting");
-			System.exit(1);
-		}
-		String[] tagAndseq = {tag,seq};
-		return tagAndseq;
-	}
 	
 	/**
 	 * Writes given sequences and tags to given sequence file in FASTA format
@@ -297,10 +270,16 @@ public class averageGraph {
 			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
 		} else {
 			// 2) prediction: from a sequence with unknown structure, we predict the structure based on a msa with known structures
-			String[] tagAndSeq = readSeq(seqFile);
-			targetTag = tagAndSeq[0];
+			Sequence seq = new Sequence();
+			try {
+				seq.readFromFastaFile(seqFile);
+			} catch (IOException e) {
+				System.err.println("Couldn't read sequence file "+seqFile.getAbsolutePath()+": "+e.getMessage()+". Exiting");
+				System.exit(1);
+			}
+			targetTag = seq.getName();
 			// we take the sequence that we will use later to create the predicted graph
-			targetSeq = tagAndSeq[1];
+			targetSeq = seq.getSeq();			
 		}
 		
 		// getting template structures

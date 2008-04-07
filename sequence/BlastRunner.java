@@ -135,27 +135,44 @@ public class BlastRunner {
 		String BLASTBIN_DIR = "/project/StruPPi/bin";
 		String BLASTDB_DIR = "/project/StruPPi/CASP8/blast_dbs";
 		int OUTPUT_TYPE = 9;
+		double eValCutoff = 1e-5;
+		File queryFile = new File("/project/StruPPi/CASP8/example_files/t101.fasta");
+		
+		// read sequence
+		
+		Sequence query = new Sequence();
+		try {
+			query.readFromFastaFile(queryFile);
+		} catch(IOException e) {
+			System.out.println("Error reading Fasta file: " + e.getMessage());
+		}
+		int queryLength = query.getLength();
+
+		// run blast
 		
 		BlastRunner br = new BlastRunner(BLASTBIN_DIR, BLASTDB_DIR);
-		
-		File queryFile = new File("/project/StruPPi/jose/test.fasta");
 		File outFile = new File("out.blast");
 		File outFile2 = new File("out2.blast");
 		File outFile3 = new File("out3.blast");
 		String nrdb = "nr";
-		String pdbdb = "pdb_seqres";
+		String pdbdb = "fasta_file_from_pdbase.fix.reps.fa";
 		int maxIter = 2;
 		File outProfileFile = new File("out.chk");
 		
+		System.out.println("Running blast against PDB...");
 		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE);
-		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE);
-		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE);
+//		System.out.println("Running psi-blast against nr...");
+//		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE);
+//		System.out.println("Running psi-blast against PDB...");
+//		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE);
 		
-		BlastTabularParser blastParser = new BlastTabularParser(outFile3);
+		BlastTabularParser blastParser = new BlastTabularParser(outFile);
 		BlastHitList hits = blastParser.getHits();
 		System.out.println("Number of hits: "+hits.size());
-		hits.applyCutoff(1.0E-05);
-		hits.print();
+		System.out.println("Best E-value: "+hits.getBestHit().getEValue());
+		//hits.applyCutoff(eValCutoff);
 		System.out.println("Number of hits after cutoff: "+hits.size());
+		//hits.print();
+		hits.printWithOverview(queryLength, 80);
 	}
 }

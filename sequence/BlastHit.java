@@ -58,4 +58,45 @@ public class BlastHit {
 	public void print() {
 		System.out.println(queryId+"\t"+subjectId+"\t"+percentIdentity+"\t"+eValue+"\t"+score);
 	}
+	
+	/**
+	 * Prints a few selected fields for this blast hit plus a graphical representation of the match.
+	 * The match is scaled by the given scale factor and rounded to screen columns. 
+	 */
+	public void printWithOverview(double scaleFactor) {
+		System.out.printf("%s\t%s\t%4.1f\t%7.1e\t%4.0f ", queryId, subjectId, percentIdentity, eValue, score);
+		int beg = (int) Math.floor(scaleFactor * this.queryStart);
+		int end = (int) Math.ceil(scaleFactor * this.queryEnd);
+		printOverviewLine(beg, end);
+	}
+	
+	public static void printHeadersWithOverview(int queryLength, double scaleFactor) {
+		System.out.printf("%s\t%s\t\t%s\t%5s\t%4s ", "query", "subject", "id%", "e-val", "sc");
+		int beg = 1;
+		int end = (int) Math.ceil(scaleFactor * queryLength);
+		printOverviewLine(beg, end);		
+	}
+	
+	/**
+	 * Print one line of the match overview.
+	 * @param beg the beginning of the match in screen columns
+	 * @param end the end of the match in screen columns
+	 */
+	private static void printOverviewLine(int beg, int end) {
+		for (int i = 1; i < beg; i++) {
+			System.out.print(" ");
+		}
+		for (int i = beg; i <= end; i++) {
+			System.out.print("-");
+		}
+		System.out.println();
+	}
+	
+	/** 
+	 * Returns the e-value of this hit.
+	 * @return
+	 */
+	public double getEValue() {
+		return this.eValue;
+	}
 }
