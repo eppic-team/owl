@@ -29,8 +29,8 @@ public class GraphIOGDLFile<V,E> {
 		fileOut.println("graph: {");
 		fileOut.println("layoutalgorithm:forcedir");
 		fileOut.println("     attraction:80");
-		fileOut.println("      repulsion:100");
-		fileOut.println("        gravity:0.5");
+		fileOut.println("      repulsion:300");
+		fileOut.println("        gravity:1");
 
 		fileOut.println();
 
@@ -45,8 +45,8 @@ public class GraphIOGDLFile<V,E> {
 
 		// node parameters
 		fileOut.println("node.shape:circle");		// circle, rhomb
-		fileOut.println("node.width:40");
-		fileOut.println("node.height:40");
+		fileOut.println("node.width:60");
+		fileOut.println("node.height:60");
 		fileOut.println("node.color:white");			
 		fileOut.println("node.textcolor:black");
 		fileOut.println();
