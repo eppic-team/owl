@@ -316,7 +316,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO refactor to writeToDb. Get rid of this and only keep fast one??
 	public void write_graph_to_db(MySQLConnection conn, String db, boolean weighted) throws SQLException{
 		
-		HashMap<Integer,Integer> resser2nodeid = null;
+		HashMap<Integer,Integer> resser2nodeid = new HashMap<Integer,Integer>();
 		
 		// values we fix to constant 
 		String CW = "1";
@@ -414,23 +414,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		stmt.close();
 		
 		// inserting nodes
-		// get the max node in db
-		int maxNodeId = 0;
-		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node;";
 		stmt = conn.createStatement();
-		rsst = stmt.executeQuery(sql);
-		if (rsst.next()){
-			maxNodeId = rsst.getInt(1);
-		}
-		rsst.close();
-		stmt.close();
-		
-		stmt = conn.createStatement();
-		int nodeId = maxNodeId;
-		for (int resser:serials2nodes.keySet()) {
-			nodeId++;
-			resser2nodeid.put(resser, nodeId);
-			
+		for (int resser:serials2nodes.keySet()) {			
 			RIGNode node = serials2nodes.get(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			RIGNbhood nbh = this.getNbhood(node);
@@ -468,6 +453,20 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				degree(node)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
 			stmt.executeUpdate(sql);
+		}
+		
+		// get the max node in db
+		int maxNodeId = 0;
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node LIMIT 1;";
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			maxNodeId = rsst.getInt(1);
+		}
+		rsst.close();
+		int nodeId = maxNodeId-this.getVertexCount();
+		for (int resser:serials2nodes.keySet()) {
+			nodeId++;
+			resser2nodeid.put(resser, nodeId);			
 		}
 		
 		// inserting edges
@@ -554,7 +553,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO refactor to writeToDbFast
 	public void write_graph_to_db_fast(MySQLConnection conn, String db, boolean weighted) throws SQLException, IOException {
 		
-		HashMap<Integer,Integer> resser2nodeid = null;
+		HashMap<Integer,Integer> resser2nodeid = new HashMap<Integer,Integer>();
 		
 		// values we fix to constant 
 		String CW = "1";
@@ -652,22 +651,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		
 		// inserting nodes
 		PrintStream nodesOut = new PrintStream(new FileOutputStream(graphid+"_nodes.txt"));
-		// get the max node in db
-		int maxNodeId = 0;
-		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node;";
-		stmt = conn.createStatement();
-		rsst = stmt.executeQuery(sql);
-		if (rsst.next()){
-			maxNodeId = rsst.getInt(1);
-		}
-		rsst.close();
-		stmt.close();
-
-		int nodeId = maxNodeId;
-		for (int resser:serials2nodes.keySet()) {
-			nodeId++;
-			resser2nodeid.put(resser, nodeId);
-			
+		for (int resser:serials2nodes.keySet()) {			
 			RIGNode node = serials2nodes.get(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			RIGNbhood nbh = this.getNbhood(node);			
@@ -704,9 +688,26 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			" sstype, ssid, sheet_serial, turn, "+
 			" k, k_in, k_out, n, nwg, n_num);";
 		stmt.executeUpdate(sql);
+		stmt.close();
 		File fileToDelete = new File(graphid+"_nodes.txt");
 		if (fileToDelete.exists()) {
 			fileToDelete.delete();
+		}
+		
+		// get the first inserted node id
+		int firstNodeId = 0;
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node LIMIT 1;";
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()){
+			firstNodeId = rsst.getInt(1);
+		}
+		rsst.close();
+		stmt.close();
+		int nodeId = firstNodeId;
+		for (int resser:serials2nodes.keySet()) {
+			resser2nodeid.put(resser, nodeId);	
+			nodeId++;
 		}
 		
 		// inserting edges
@@ -770,6 +771,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		sql = "LOAD DATA LOCAL INFILE '"+graphid+"_edges.txt' INTO TABLE "+db+".single_model_edge "+
 			" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
 			" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance);";
+		stmt = conn.createStatement();
 		stmt.executeUpdate(sql);
 		stmt.close();
 		fileToDelete = new File(graphid+"_edges.txt");
@@ -831,7 +833,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	public void write_graph_to_motiffile (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		
-		HashMap<Integer,Integer> resser2nodeser = null;
+		HashMap<Integer,Integer> resser2nodeser = new HashMap<Integer,Integer>();
 		int nodeSer = 0;
 		for (int resser:serials2nodes.keySet()) {
 			nodeSer++;
