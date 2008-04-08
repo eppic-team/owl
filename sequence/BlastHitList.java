@@ -10,9 +10,11 @@ import java.util.Iterator;
 public class BlastHitList {
 	
 	private ArrayList<BlastHit> hits;
+	private int queryLength;				// needed by print() and printSome()
 	
 	public BlastHitList() {
 		this.hits = new ArrayList<BlastHit>();
+		this.queryLength = 0;
 	}
 	
 	/**
@@ -23,6 +25,17 @@ public class BlastHitList {
 		this.hits.add(hit);
 	}
 
+	/**
+	 * Set the query length needed by the print() and printSome() methods.
+	 * TODO: This should be parsed from the output file. However, the tabular output we use at the moment
+	 * does not contain this information. So this function provides a way to set it externally. Moving
+	 * to parsing the XML output would resolve this issue.
+	 * @param l
+	 */
+	public void setQueryLength(int l) {
+		this.queryLength = l;
+	}
+	
 	/**
 	 * Applies an e-value cutoff trimming out of this list all hits with e-value 
 	 * higher than cutoff given
@@ -38,23 +51,36 @@ public class BlastHitList {
 	}
 	
 	/**
-	 * Prints a few selected fields of all blast hits in this list
+	 * Prints a tabular overview of the hits in this list.
+	 * Currently, if the query length is set, (i.e. > 0) a simple ascii-art
+	 * overview of the matches is printed for each hit.
 	 */
 	public void print() {
-		for (BlastHit hit:hits) {
-			hit.print();
-		}
+		printSome(this.size());
 	}
 	
 	/**
-	 * Prints a course ascii-art overview of the hits in this hist list.
-	 * The length of the query sequence is scaled to the given output length in screen columns.
+	 * Prints a tabular overview of the first numHits hits in this list.
+	 * Currently, if the query length is set, (i.e. > 0) a simple ascii-art
+	 * overview of the matches is printed for each hit.
 	 */
-	public void printWithOverview(int queryLength, int outputLength) {
-		double scaleFactor = 1.0 * outputLength / queryLength;
-		BlastHit.printHeadersWithOverview(queryLength, scaleFactor);
-		for(BlastHit hit:hits) {
-			hit.printWithOverview(scaleFactor);
+	public void printSome(int numHits) {
+		
+		int outputLength = 80;		// length of graphical output in screen columns
+		
+		if(queryLength > 0) {
+			double scaleFactor = 1.0 * outputLength / queryLength;
+			BlastHit.printHeadersWithOverview(queryLength, scaleFactor);
+			for (int i = 0; i < Math.min(hits.size(), numHits); i++) {
+				BlastHit hit = hits.get(i);
+				hit.printWithOverview(scaleFactor);
+			}			
+		} else {
+			// print without graphical overview
+			for (int i = 0; i < Math.min(hits.size(), numHits); i++) {
+				BlastHit hit = hits.get(i);
+				hit.print();
+			}			
 		}
 	}
 	

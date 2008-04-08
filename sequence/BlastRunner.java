@@ -168,11 +168,11 @@ public class BlastRunner {
 		
 		BlastTabularParser blastParser = new BlastTabularParser(outFile);
 		BlastHitList hits = blastParser.getHits();
+		//hits.setQueryLength(queryLength);
 		System.out.println("Number of hits: "+hits.size());
 		System.out.println("Best E-value: "+hits.getBestHit().getEValue());
 		//hits.applyCutoff(eValCutoff);
 		System.out.println("Number of hits after cutoff: "+hits.size());
-		//hits.print();
-		hits.printWithOverview(queryLength, 80);
+		hits.print();
 	}
 }
