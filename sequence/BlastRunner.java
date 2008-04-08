@@ -168,11 +168,15 @@ public class BlastRunner {
 		
 		BlastTabularParser blastParser = new BlastTabularParser(outFile);
 		BlastHitList hits = blastParser.getHits();
-		//hits.setQueryLength(queryLength);
+		hits.setQueryLength(queryLength);
 		System.out.println("Number of hits: "+hits.size());
 		System.out.println("Best E-value: "+hits.getBestHit().getEValue());
 		//hits.applyCutoff(eValCutoff);
 		System.out.println("Number of hits after cutoff: "+hits.size());
 		hits.print();
+		System.out.println("Generating cluster graph...");
+		String[] ids = {"1c4zD","1fzyA","1u9aA","2e2cA","1tdrA"};
+		//ids = hits.getTemplateIds();
+		BlastUtils.writeClusterGraph(ids, new File("out.gdl"));
 	}
 }
