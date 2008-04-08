@@ -129,7 +129,7 @@ public class MaxClusterRunner {
 	public HashMap<Pair<Integer>, Double> calculateMatrix (String predictionList, ScoreType scoreType) throws IOException {
 		String scoreTypeStr = "";
 		File outFile = new File(System.getProperty("java.io.tmpdir"),TMP_MATRIX_FILE);
-		outFile.deleteOnExit();
+		//outFile.deleteOnExit();
 		if (scoreType==ScoreType.GDT) scoreTypeStr = "gdt";
 		if (scoreType==ScoreType.RMSD) scoreTypeStr = "rmsd";
 		String cmdLine = String.format("%s -l %s -C 0 -R %s -%s", maxClusterExecutable, predictionList, outFile, scoreTypeStr);
@@ -141,6 +141,31 @@ public class MaxClusterRunner {
 		}
 		return readMaxclusterMatrix(outFile.getAbsolutePath());
 	}
+	
+	/**
+	 * Performs all against all comparison of files from a predictionList returning a matrix of pairwise scores
+	 * using sequence independent mode.
+	 * @param predictionList
+	 * @param scoreType 
+	 * @return list of the rankings or null if something goes wrong
+	 */
+	public HashMap<Pair<Integer>, Double> calculateSequenceIndependentMatrix (String predictionList, ScoreType scoreType) throws IOException {
+		String scoreTypeStr = "";
+		File outFile = new File(System.getProperty("java.io.tmpdir"),TMP_MATRIX_FILE);
+		outFile.deleteOnExit();
+		if (scoreType==ScoreType.GDT) scoreTypeStr = "gdt";
+		if (scoreType==ScoreType.RMSD) scoreTypeStr = "rmsd";
+		String cmdLine = String.format("%s -in -l %s -C 0 -R %s -%s", maxClusterExecutable, predictionList, outFile, scoreTypeStr);
+		Process maxClusterProcess = Runtime.getRuntime().exec(cmdLine);
+		int exitVal = 0;
+		try {
+			exitVal = maxClusterProcess.waitFor();
+		} catch (InterruptedException e) {
+			return null;
+		}
+		if(exitVal != 0) throw new IOException("Maxcluster failed with exit code " + exitVal);
+		return readMaxclusterMatrix(outFile.getAbsolutePath());
+	}	
 	
 	/**
 	 * Reads a maxCluster ranking BufferedReader and returns a list of MaxClusterRows
