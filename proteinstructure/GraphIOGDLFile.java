@@ -30,7 +30,7 @@ public class GraphIOGDLFile<V,E> {
 		fileOut.println("layoutalgorithm:forcedir");
 		fileOut.println("     attraction:80");
 		fileOut.println("      repulsion:300");
-		fileOut.println("        gravity:1");
+		fileOut.println("        gravity:1.0");
 
 		fileOut.println();
 
