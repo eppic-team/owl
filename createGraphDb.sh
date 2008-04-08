@@ -95,6 +95,7 @@ $mysqlbin -pnieve -h $h -B -N $graphDb <<ENDSQL1
 		MODIFY graph_id INT UNSIGNED NOT NULL AUTO_INCREMENT;
 	
 	ALTER TABLE single_model_node
+		MODIFY node_id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 		MODIFY num INT NOT NULL,
 		MODIFY ssid VARCHAR(5),
 		MODIFY sheet_serial CHAR(1);

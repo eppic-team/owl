@@ -7,10 +7,12 @@ import java.io.PrintStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import tools.MySQLConnection;
 
@@ -314,6 +316,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO refactor to writeToDb. Get rid of this and only keep fast one??
 	public void write_graph_to_db(MySQLConnection conn, String db, boolean weighted) throws SQLException{
 		
+		HashMap<Integer,Integer> resser2nodeid = null;
+		
 		// values we fix to constant 
 		String CW = "1";
 		String CR = "(true)";
@@ -412,7 +416,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		// inserting nodes
 		// get the max node in db
 		int maxNodeId = 0;
-		sql = "SELECT MAX(node_id) FROM "+db+".single_model_node;";
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node;";
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()){
@@ -422,7 +426,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		stmt.close();
 		
 		stmt = conn.createStatement();
+		int nodeId = maxNodeId;
 		for (int resser:serials2nodes.keySet()) {
+			nodeId++;
+			resser2nodeid.put(resser, nodeId);
+			
 			RIGNode node = serials2nodes.get(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			RIGNbhood nbh = this.getNbhood(node);
@@ -442,20 +450,20 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			}
 			if (isDirected()){  // we insert k(=k_in+k_out), k_in and k_out
 				sql = "INSERT INTO "+db+".single_model_node "+
-					" (graph_id, node_id, cid, num, res, "+
+					" (graph_id, cid, num, res, "+
 					" sstype, ssid, sheet_serial, turn, "+
 					" k, k_in, k_out, "+
 					" n, nwg, n_num) " +
-					" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
+					" VALUES ("+graphid+", '"+chainCode+"', "+resser+", '"+res+"', "+
 					" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
 					(inDegree(node)+outDegree(node))+", "+inDegree(node)+", "+outDegree(node)+", "+
 					"'"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			} else {		// we insert k (and no k_in or k_out)
 				sql = "INSERT INTO "+db+".single_model_node "+
-				" (graph_id, node_id, cid, num, res, "+
+				" (graph_id, cid, num, res, "+
 				" sstype, ssid, sheet_serial, turn, "+
 				" k, n, nwg, n_num) " +
-				" VALUES ("+graphid+", "+(maxNodeId+resser)+", '"+chainCode+"', "+resser+", '"+res+"', "+
+				" VALUES ("+graphid+", '"+chainCode+"', "+resser+", '"+res+"', "+
 				" "+secStructType+", "+secStructId+", "+sheetSerial+", "+turn+", "+
 				degree(node)+", '"+nbh.getMotifNoGaps()+"', '"+nbh.getMotif()+"', '"+nbh.getCommaSeparatedResSerials()+"')";
 			}
@@ -511,8 +519,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			sql = "INSERT INTO "+db+".single_model_edge "+
 					" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
 					" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
-					" VALUES ("+graphid+", "+(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
-					(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
+					" VALUES ("+graphid+", "+resser2nodeid.get(i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
+					resser2nodeid.get(j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
 					(weighted?cont.getAtomWeight():1)+", "+(weighted?(cont.getAtomWeight()/maxWeight):1)+", "+cont.getDistance()+")";
 			stmt.executeUpdate(sql);
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
@@ -520,8 +528,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				sql = "INSERT INTO "+db+".single_model_edge "+
 				" (graph_id, i_node_id, i_cid, i_num, i_res, i_sstype, i_ssid, i_sheet_serial, i_turn, "+
 				" j_node_id, j_cid, j_num, j_res, j_sstype, j_ssid, j_sheet_serial, j_turn, weight, norm_weight, distance) " +
-				" VALUES ("+graphid+", "+(maxNodeId+j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
-				(maxNodeId+i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
+				" VALUES ("+graphid+", "+resser2nodeid.get(j_node.getResidueSerial())+", '"+chainCode+"', "+j_node.getResidueSerial()+", '"+j_res+"', "+j_secStructType+", "+j_secStructId+", "+j_sheetSerial+", "+j_turn+", "+
+				resser2nodeid.get(i_node.getResidueSerial())+", '"+chainCode+"', "+i_node.getResidueSerial()+", '"+i_res+"', "+i_secStructType+", "+i_secStructId+", "+i_sheetSerial+", "+i_turn+", "+
 				(weighted?cont.getAtomWeight():1)+", "+(weighted?(cont.getAtomWeight()/maxWeight):1)+", "+cont.getDistance()+")";
 				stmt.executeUpdate(sql);
 			}
@@ -545,6 +553,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO we might want to move this to a graph i/o class
 	//TODO refactor to writeToDbFast
 	public void write_graph_to_db_fast(MySQLConnection conn, String db, boolean weighted) throws SQLException, IOException {
+		
+		HashMap<Integer,Integer> resser2nodeid = null;
 		
 		// values we fix to constant 
 		String CW = "1";
@@ -644,7 +654,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		PrintStream nodesOut = new PrintStream(new FileOutputStream(graphid+"_nodes.txt"));
 		// get the max node in db
 		int maxNodeId = 0;
-		sql = "SELECT MAX(node_id) FROM "+db+".single_model_node;";
+		sql = "SELECT LAST_INSERT_ID() FROM "+db+".single_model_node;";
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()){
@@ -652,8 +662,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		rsst.close();
 		stmt.close();
-		
+
+		int nodeId = maxNodeId;
 		for (int resser:serials2nodes.keySet()) {
+			nodeId++;
+			resser2nodeid.put(resser, nodeId);
 			
 			RIGNode node = serials2nodes.get(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
@@ -673,12 +686,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				turn = sselem.isTurn()?"1":"0";
 			}
 			if (isDirected()){  // we insert k(=k_in+k_out), k_in and k_out
-				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
+				nodesOut.println(graphid+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
 					secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
 					(inDegree(node)+outDegree(node))+"\t"+inDegree(node)+"\t"+outDegree(node)+"\t"+
 					nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
 			} else {		// we insert k (and no k_in or k_out)
-				nodesOut.println(graphid+"\t"+(maxNodeId+resser)+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
+				nodesOut.println(graphid+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+
 						secStructType+"\t"+secStructId+"\t"+sheetSerial+"\t"+turn+"\t"+
 						degree(node)+"\t"+"\\N"+"\t"+"\\N"+"\t"+
 						nbh.getMotifNoGaps()+"\t"+nbh.getMotif()+"\t"+nbh.getCommaSeparatedResSerials());
@@ -687,7 +700,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		nodesOut.close();
 		stmt = conn.createStatement();
 		sql = "LOAD DATA LOCAL INFILE '"+graphid+"_nodes.txt' INTO TABLE "+db+".single_model_node "+
-			" (graph_id, node_id, cid, num, res, "+
+			" (graph_id, cid, num, res, "+
 			" sstype, ssid, sheet_serial, turn, "+
 			" k, k_in, k_out, n, nwg, n_num);";
 		stmt.executeUpdate(sql);
@@ -743,13 +756,13 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 				j_turn = j_sselem.isTurn()?"1":"0";
 			}
 			
-			edgesOut.println(graphid+"\t"+(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
-					(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
+			edgesOut.println(graphid+"\t"+resser2nodeid.get(i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
+					resser2nodeid.get(j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
 					(weighted?cont.getAtomWeight():1)+"\t"+(weighted?(cont.getAtomWeight()/maxWeight):1)+"\t"+cont.getDistance());
 			if(!isDirected()) {// we want both side of the matrix in the table to follow Ioannis' convention
 				// so we insert the reverse contact by swapping i, j in insertion
-				edgesOut.println(graphid+"\t"+(maxNodeId+j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
-						(maxNodeId+i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
+				edgesOut.println(graphid+"\t"+resser2nodeid.get(j_node.getResidueSerial())+"\t"+chainCode+"\t"+j_node.getResidueSerial()+"\t"+j_res+"\t"+j_secStructType+"\t"+j_secStructId+"\t"+j_sheetSerial+"\t"+j_turn+"\t"+
+						resser2nodeid.get(i_node.getResidueSerial())+"\t"+chainCode+"\t"+i_node.getResidueSerial()+"\t"+i_res+"\t"+i_secStructType+"\t"+i_secStructId+"\t"+i_sheetSerial+"\t"+i_turn+"\t"+
 						(weighted?cont.getAtomWeight():1)+"\t"+(weighted?(cont.getAtomWeight()/maxWeight):1)+"\t"+cont.getDistance());
 			}			
 		}
@@ -810,6 +823,35 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.close();		
 	}
 
+	/**
+	 * Write graph to given outfile in format appropriate for the mfinder
+	 * @param outfile
+	 * @throws IOException
+	 */
+	public void write_graph_to_motiffile (String outfile) throws IOException {
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
+		
+		HashMap<Integer,Integer> resser2nodeser = null;
+		int nodeSer = 0;
+		for (int resser:serials2nodes.keySet()) {
+			nodeSer++;
+			resser2nodeser.put(resser, nodeSer);
+		}
+		
+		// we use a temp TreeMap to be able to order the output
+		TreeSet<Pair<Integer>> pairs = new TreeSet<Pair<Integer>>(new IntPairComparator());
+		for (RIGEdge cont:getEdges()){
+			Pair<RIGNode> pair = getEndpoints(cont);
+			int i_resser=resser2nodeser.get(pair.getFirst().getResidueSerial());
+			int j_resser=resser2nodeser.get(pair.getSecond().getResidueSerial());	
+			pairs.add(new Pair<Integer>(i_resser,j_resser));
+		}
+		for (Pair<Integer> pair:pairs) { 
+			Out.printf(Locale.US,pair.getFirst()+"\t"+pair.getSecond()+"\n");
+		}
+		Out.close();		
+	}
+	
 	/**
 	 * Writes the graph to given outfile in "paul" format.
 	 * Possibly this is compatible with all other LiSA programs. Here we

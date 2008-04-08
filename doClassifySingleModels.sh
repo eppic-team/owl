@@ -69,7 +69,8 @@ contactType="Ca Cb Ca/Cb Ca+Cb+Ca/Cb BB SC BB/SC BB+SC+BB/SC Ca+SC"
 contactRange="(true) \
 			((i_cid!=j_cid)OR(abs(i_num-j_num)>=2)) \
 			((i_cid!=j_cid)OR(abs(i_num-j_num)>=4)) \
-			((i_cid!=j_cid)OR(abs(i_num-j_num)>=10)) "
+			((i_cid!=j_cid)OR(abs(i_num-j_num)>=10)) \
+			((i_sstype!=j_sstype)OR(i_ssid!=j_ssid))"
 
 echo "Outputing the models..."
 echo -n "" > $file
