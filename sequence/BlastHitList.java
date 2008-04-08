@@ -1,5 +1,8 @@
 package sequence;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -115,4 +118,29 @@ public class BlastHitList {
 		return bestHit;
 	}
 	
+	/**
+	 * Returns a list of template ids (pdb codes+chain codes)
+	 * @return
+	 */
+	public String[] getTemplateIds() {
+		String[] ids = new String[this.size()];
+		for (int i=0;i<this.size();i++) {
+			ids[i]=hits.get(i).getTemplateId();
+		}
+		return ids;
+	}
+	
+	/**
+	 * 
+	 * @param outFile
+	 * @throws IOException
+	 */
+	public void writeTemplateIdsToFile(File outFile) throws IOException {
+		PrintWriter Out = new PrintWriter(outFile);
+		String[] ids = getTemplateIds();
+		for (String id:ids) {
+			Out.println(id);
+		}
+		Out.close();
+	}
 }

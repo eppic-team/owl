@@ -1,10 +1,15 @@
 package sequence;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * A blast output record  
  * 
  */
 public class BlastHit {
+	
+	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	
 	String queryId;
 	String subjectId;
@@ -98,5 +103,18 @@ public class BlastHit {
 	 */
 	public double getEValue() {
 		return this.eValue;
+	}
+	
+	/**
+	 * Returns the template id as concatenated pdb code + chain code e.g. 1abcA
+	 * @return the template id or null if queryId is not in the right format
+	 */
+	public String getTemplateId() {
+		Pattern p = Pattern.compile(ID_REGEX);
+		Matcher m = p.matcher(subjectId);
+		if (m.matches()) {
+			return m.group(1).toLowerCase()+m.group(2).toUpperCase();
+		}
+		return null;
 	}
 }
