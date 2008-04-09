@@ -836,8 +836,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		HashMap<Integer,Integer> resser2nodeser = new HashMap<Integer,Integer>();
 		int nodeSer = 0;
 		for (int resser:serials2nodes.keySet()) {
-			nodeSer++;
-			resser2nodeser.put(resser, nodeSer);
+			RIGNode node = serials2nodes.get(resser);
+			if (outDegree(node) > 0) {
+				nodeSer++;
+				resser2nodeser.put(resser, nodeSer);
+			}
 		}
 		
 		// we use a temp TreeMap to be able to order the output
@@ -849,7 +852,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			pairs.add(new Pair<Integer>(i_resser,j_resser));
 		}
 		for (Pair<Integer> pair:pairs) { 
-			Out.printf(Locale.US,pair.getFirst()+"\t"+pair.getSecond()+"\n");
+			Out.printf(Locale.US,pair.getFirst()+"\t"+pair.getSecond()+"\t1\n");
 		}
 		Out.close();		
 	}
