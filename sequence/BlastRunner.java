@@ -3,6 +3,8 @@ package sequence;
 import java.io.File;
 import java.io.IOException;
 
+import proteinstructure.TemplateList;
+
 /**
  * A class to run blast programs
  *
@@ -135,7 +137,7 @@ public class BlastRunner {
 		String BLASTBIN_DIR = "/project/StruPPi/bin";
 		String BLASTDB_DIR = "/project/StruPPi/CASP8/blast_dbs";
 		int OUTPUT_TYPE = 9;
-		double eValCutoff = 1e-5;
+		//double eValCutoff = 1e-5;
 		File queryFile = new File("/project/StruPPi/CASP8/example_files/t101.fasta");
 		
 		// read sequence
@@ -161,10 +163,10 @@ public class BlastRunner {
 		
 		System.out.println("Running blast against PDB...");
 		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE);
-//		System.out.println("Running psi-blast against nr...");
-//		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE);
-//		System.out.println("Running psi-blast against PDB...");
-//		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE);
+		System.out.println("Running psi-blast against nr...");
+		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE);
+		System.out.println("Running psi-blast against PDB...");
+		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE);
 		
 		BlastTabularParser blastParser = new BlastTabularParser(outFile);
 		BlastHitList hits = blastParser.getHits();
@@ -176,7 +178,8 @@ public class BlastRunner {
 		hits.print();
 		System.out.println("Generating cluster graph...");
 		String[] ids = {"1c4zD","1fzyA","1u9aA","2e2cA","1tdrA"};
+		TemplateList templates = new TemplateList(ids);
 		//ids = hits.getTemplateIds();
-		BlastUtils.writeClusterGraph(ids, new File("out.gdl"));
+		BlastUtils.writeClusterGraph(templates, new File("out.gdl"));
 	}
 }

@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
 
-/** This class encapsulates the scop annotation of a single protein chain. */
+/** 
+ * This class encapsulates the scop annotation of a single protein chain. 
+ */
 public class Scop {
 
 	/*------------------------------ constants ------------------------------*/
@@ -19,7 +21,9 @@ public class Scop {
 	
 	/*----------------------------- constructors ----------------------------*/
 	
-	/** Create an empty scop object */
+	/** 
+	 * Create an empty scop object 
+	 */
 	public Scop() {
 		this.scopRegions = new Vector<ScopRegion>();
 		this.resser2scopregion = new HashMap<Integer,ScopRegion>();
@@ -73,7 +77,9 @@ public class Scop {
 		}
 	}
 	
-	/** Return a deep copy of this scop object */
+	/** 
+	 * Return a deep copy of this scop object 
+	 */
 	public Scop copy() {
 		Scop newS = new Scop();
 		for(ScopRegion e:scopRegions) {
@@ -82,12 +88,16 @@ public class Scop {
 		return newS;
 	}
 		
-	/** Sets the optional version to v */
+	/** 
+	 * Sets the optional version to v 
+	 */
 	public void setVersion(String v) {
 		this.version = v;
 	}
 	
-	/** Returns the version */
+	/** 
+	 * Returns the version 
+	 */
 	public String getVersion() {
 		return this.version;
 	}

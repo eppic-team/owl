@@ -73,7 +73,7 @@ public class BlastHitList {
 		
 		if(queryLength > 0) {
 			double scaleFactor = 1.0 * outputLength / queryLength;
-			BlastHit.printHeadersWithOverview(queryLength, scaleFactor);
+			BlastHit.printHeaderWithOverview(queryLength, scaleFactor);
 			for (int i = 0; i < Math.min(hits.size(), numHits); i++) {
 				BlastHit hit = hits.get(i);
 				hit.printWithOverview(scaleFactor);
@@ -142,5 +142,13 @@ public class BlastHitList {
 			Out.println(id);
 		}
 		Out.close();
+	}
+
+	/**
+	 * Returns and iterator over this blast hits list
+	 * @return
+	 */
+	public Iterator<BlastHit> iterator() {
+		return this.hits.iterator();
 	}
 }

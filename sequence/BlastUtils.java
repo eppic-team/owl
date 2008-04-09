@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
-import java.sql.SQLException;
 
 import org.apache.commons.collections15.Transformer;
 
@@ -45,41 +44,30 @@ public class BlastUtils {
 	/**
 	 * Calculates a distance matrix for a set of blast hits and outputs a graph overview for visual inspection.
 	 */
-	public static void writeClusterGraph(String[] templates, File graphFile) throws IOException {
-
+	public static void writeClusterGraph(TemplateList templates, File graphFile) throws IOException {
+		if (templates.size()==0) return;
+		
 		String listFileName = "listfile";
 		File listFile = new File(tempDir, listFileName);
 		listFile.deleteOnExit();
 		PrintWriter out = new PrintWriter(listFile);
 		
 		// create list file
-		for(String id:templates) {
-			
+		Iterator<Template> it = templates.iterator();
+		while(it.hasNext()) {
+			Template template = it.next();
 			// extract pdb and chain code
 			
-			String pdbCode = id.substring(0, 4);
-			String chain = id.substring(4);
+			String pdbCode = template.getId().substring(0, 4);
+			String chain = template.getId().substring(4);
 			File pdbFile = new File(tempDir, pdbCode + chain + ".pdb");
 			pdbFile.deleteOnExit();
-			
-			try {	
-				// load chain
-				Pdb pdb = new PdbasePdb(pdbCode);
-				pdb.load(chain);
-				
-				// write to file
-				pdb.dump2pdbfile(pdbFile.getAbsolutePath());
-				
-				// add to listfile
-				out.println(pdbFile.getAbsolutePath());				
-				
-			} catch(PdbCodeNotFoundError e) {
-				System.err.println("Pdb code " + pdbCode + " not found: " + e.getMessage());
-			} catch (SQLException e) {
-				System.err.println("Error reading from Pdbase: " + e.getMessage());
-			} catch (PdbLoadError e) {
-				System.err.println("Error loading " + pdbCode + chain + ":" + e.getMessage());
-			}
+
+			// write to file
+			template.getPdb().dump2pdbfile(pdbFile.getAbsolutePath());
+
+			// add to listfile
+			out.println(pdbFile.getAbsolutePath());				
 		}
 		out.close();
 		
@@ -90,14 +78,15 @@ public class BlastUtils {
 		// generate graph from similarity matrix
 		SparseGraph<String, DoubleWrapper> simGraph = new SparseGraph<String, DoubleWrapper>();
 		// write nodes
-		for(String id:templates) {
+		String[] templateIds = templates.getIds();
+		for(String id:templateIds) {
 			simGraph.addVertex(id);
 		}
 		
 		// write edges
 		for(Pair<Integer> edge:matrix.keySet()) {
-			String start = templates[edge.getFirst()-1];
-			String end = templates[edge.getSecond()-1];
+			String start = templateIds[edge.getFirst()-1];
+			String end = templateIds[edge.getSecond()-1];
 			double weight = matrix.get(edge);
 			//System.out.println(weight);
 			if(weight > similarityGraphGdtCutoff) {

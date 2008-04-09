@@ -90,5 +90,4 @@ public class ScopRegion {
 			return DomainType.UNKNOWN;
 	}
 	
-	/*---------------------------- static methods ---------------------------*/
 }	

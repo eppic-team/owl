@@ -356,6 +356,14 @@ public abstract class Pdb {
 
 	}
 
+	/**
+	 * Parses SCOP annotation populating the Scop object member with SCOP 
+	 * annotation for this protein chain
+	 * @param version the SCOP version that we want to parse
+	 * @param online if true SCOP annotation will be taken from web, if false 
+	 * from local file
+	 * @throws IOException
+	 */
 	public void checkScop(String version, boolean online) throws IOException {
 		this.scop = new Scop();	
 		ScopRegion sr = null;
@@ -398,7 +406,7 @@ public abstract class Pdb {
 						}
 					}
 				}
-				//break;
+				//break; // we can't break: pdbCodes are not necessarily ordered in the scop annotation file: we need to parse to the end of the file
 			}
 		in.close();
 

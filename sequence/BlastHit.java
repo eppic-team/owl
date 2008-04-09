@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
  */
 public class BlastHit {
 	
+	public static final int OUTPUT_LENGTH = 80;
 	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	
 	String queryId;
@@ -67,6 +68,7 @@ public class BlastHit {
 	/**
 	 * Prints a few selected fields for this blast hit plus a graphical representation of the match.
 	 * The match is scaled by the given scale factor and rounded to screen columns. 
+	 * @param scaleFactor
 	 */
 	public void printWithOverview(double scaleFactor) {
 		System.out.printf("%s\t%s\t%4.1f\t%7.1e\t%4.0f ", queryId, subjectId, percentIdentity, eValue, score);
@@ -75,7 +77,13 @@ public class BlastHit {
 		printOverviewLine(beg, end);
 	}
 	
-	public static void printHeadersWithOverview(int queryLength, double scaleFactor) {
+	/**
+	 * Print the column headers corresponding to the printWithOverview() method.
+	 * Additionally prints a graphical overview of the query (queryLength scaled by scaleFactor).
+	 * @param queryLength
+	 * @param scaleFactor
+	 */
+	public static void printHeaderWithOverview(int queryLength, double scaleFactor) {
 		System.out.printf("%s\t%s\t\t%s\t%5s\t%4s ", "query", "subject", "id%", "e-val", "sc");
 		int beg = 1;
 		int end = (int) Math.ceil(scaleFactor * queryLength);
