@@ -14,6 +14,7 @@ public class BlastRunner {
 	// constants
 	private static final String BLASTALL_PROG = "blastall";
 	private static final String BLASTPGP_PROG = "blastpgp";
+	private static final String MAKEMAT_PROG  = "makemat_withcd"; // customised makemat script that cds to working dir before running makemat
 	
 	private static final String BLASTP_PROGRAM_NAME = "blastp";
 	
@@ -21,6 +22,7 @@ public class BlastRunner {
 	private String blastDbDir;
 	private String blastallProg;
 	private String blastpgpProg;
+	private String makematProg;
 	
 	/**
 	 * Constructs a BlastRunner object given a blast bin directory and a blast 
@@ -32,6 +34,7 @@ public class BlastRunner {
 		this.blastDbDir = blastDbDir;
 		this.blastallProg = new File(blastBinDir,BLASTALL_PROG).getAbsolutePath();
 		this.blastpgpProg = new File(blastBinDir,BLASTPGP_PROG).getAbsolutePath();
+		this.makematProg = new File(blastBinDir,MAKEMAT_PROG).getAbsolutePath();
 	}
 	
 	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType) { 
@@ -126,6 +129,25 @@ public class BlastRunner {
 	 */
 	public void runBlastp(File queryFile, String db, File outFile, int outputType) throws IOException, BlastError {
 		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType);
+	}
+	
+	/**
+	 * 
+	 * @param workDir
+	 * @param basename
+	 */
+	public void runMakemat(String workDir, String basename) throws IOException, BlastError {
+		String cmdLine = makematProg + " "+workDir+" -P " + basename;
+		Process makematProc = Runtime.getRuntime().exec(cmdLine);
+		
+		try {
+			int exitValue = makematProc.waitFor();
+			if (exitValue>0) {
+				throw new BlastError(MAKEMAT_PROG + " exited with error value " + exitValue);
+			}
+		} catch (InterruptedException e) {
+			System.err.println("Unexpected error while running blast: "+e.getMessage());
+		}
 	}
 	
 	/**

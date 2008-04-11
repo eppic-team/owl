@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import sequence.BlastHit;
+import tools.MySQLConnection;
 
 /**
  * A template protein structure to be used in homology modelling
@@ -16,9 +17,12 @@ public class Template {
 
 	private static final String SCOP_VERSION = "1.73";
 	
+	private static final String PDBASE_DB = "pdbase";
+	
 	private String id;
 	private String scopSccsString;
 	private Pdb pdb;
+	private MySQLConnection conn;
 
 	BlastHit hit;
 	
@@ -34,15 +38,18 @@ public class Template {
 	}
 	
 	/**
-	 * Constructs a Template given a BlastHit
+	 * Constructs a Template given a BlastHit and a MySQLConnection 
+	 * from where pdb data will be taken
 	 * @param hit
+	 * @param conn
 	 */
-	public Template(BlastHit hit) {
+	public Template(BlastHit hit, MySQLConnection conn) {
 		this.hit = hit;
 		this.id = hit.getTemplateId();
+		this.conn = conn;
 		getPdbAndScopString();
 	}
-	
+
 	/**
 	 * Checks that the id complies to our standard pdbCode+chain, e.g. 1abcA
 	 */
@@ -62,7 +69,7 @@ public class Template {
 		String pdbCode = id.substring(0, 4);
 		String chain = id.substring(4);
 		try {
-			pdb = new PdbasePdb(pdbCode);
+			pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
 			pdb.load(chain);
 			pdb.checkScop(SCOP_VERSION, false);
 			Iterator<ScopRegion> it = pdb.getScop().getIterator();
@@ -73,16 +80,16 @@ public class Template {
 			if (scopSccsString.contains(",")) // choping off the last comma if the string is not empty
 				scopSccsString = scopSccsString.substring(0, scopSccsString.length()-2); 
 		} catch (SQLException e) {
-			System.err.println("Couldn't get the template structure because of SQL error: "+e.getMessage());
+			System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
 			pdb = null;
 		} catch (PdbCodeNotFoundError e) {
-			System.err.println("Couldn't get the template structure because pdb code was not found");
+			System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
 			pdb = null;
 		} catch (PdbLoadError e) {
-			System.err.println("Couldn't get the template structure because of pdb load error: "+e.getMessage());
+			System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
 			pdb = null;
 		} catch (IOException e) {
-			System.err.println("Couldn't get SCOP annotation for structure, error: "+e.getMessage());
+			System.err.println("Couldn't get SCOP annotation for structure "+id+", error: "+e.getMessage());
 		}
 	}
 	
@@ -107,5 +114,13 @@ public class Template {
 	 */
 	public Pdb getPdb() {
 		return this.pdb;
+	}
+	
+	/**
+	 * Tells whether ther is structure data available for this template
+	 * @return
+	 */
+	public boolean hasStructure() {
+		return pdb!=null;
 	}
 }

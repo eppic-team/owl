@@ -63,11 +63,13 @@ public class BlastUtils {
 			File pdbFile = new File(tempDir, pdbCode + chain + ".pdb");
 			pdbFile.deleteOnExit();
 
-			// write to file
-			template.getPdb().dump2pdbfile(pdbFile.getAbsolutePath());
+			if (template.hasStructure()) {
+				// write to file
+				template.getPdb().dump2pdbfile(pdbFile.getAbsolutePath());
 
-			// add to listfile
-			out.println(pdbFile.getAbsolutePath());				
+				// add to listfile
+				out.println(pdbFile.getAbsolutePath());
+			}
 		}
 		out.close();
 		

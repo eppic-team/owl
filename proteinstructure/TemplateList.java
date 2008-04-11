@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 
 import sequence.BlastHit;
 import sequence.BlastHitList;
+import tools.MySQLConnection;
 
 /**
  * A set of Templates to be used for homology modelling
@@ -28,17 +29,19 @@ public class TemplateList {
 	}
 	
 	/**
-	 * Constructs a TemplateList given a BlastHitList
+	 * Constructs a TemplateList given a BlastHitList and a 
+	 * MySQLConnection from wher pdb data will be taken
 	 * @param hits
+	 * @param conn
 	 */
-	public TemplateList(BlastHitList hits) {
+	public TemplateList(BlastHitList hits, MySQLConnection conn) {
 		list = new ArrayList<Template>();
 		Iterator<BlastHit> it = hits.iterator();
 		while (it.hasNext()) {
-			this.add(new Template(it.next()));
+			this.add(new Template(it.next(),conn));
 		}
 	}
-	
+
 	/**
 	 * Constructs a TemplateList from a file with ids in the format pdbCode+chain, e.g. 1abcA
 	 * @param idsFile
