@@ -36,7 +36,7 @@ fi
 # compiling
 echo "Compiling..."
 cd $aglappetag
-javac *.java proteinstructure/*.java tools/*.java tinker/*.java sadp/*.java
+javac *.java proteinstructure/*.java tools/*.java tinker/*.java sadp/*.java sequence/*.java actionTools/*.java ppi/*.java
 
 # creating jar file
 echo "Creating jar file: $aglappetag.jar ..."
