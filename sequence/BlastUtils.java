@@ -42,9 +42,55 @@ public class BlastUtils {
 	}
 	
 	/**
-	 * Calculates a distance matrix for a set of blast hits and outputs a graph overview for visual inspection.
+	 * Helper function used by writeClusterGraph writing a similarity matrix to a file.
+	 * @param sparseMatrix
+	 * @param labels
+	 * @param outFile
 	 */
-	public static void writeClusterGraph(TemplateList templates, File graphFile) throws IOException {
+	private static void writeMatrixToFile(HashMap<Pair<Integer>, Double> sparseMatrix, String[] labels, File outFile) throws IOException {
+				
+		// initialize temp matrix
+		int mSize = labels.length;	// assuming matrix size equals number of labels
+		System.out.println(mSize);
+		double[][] tmpMatrix = new double[mSize][mSize];
+		for (int i = 0; i < tmpMatrix.length; i++) {
+			tmpMatrix[i][i] = 100.0;
+		}
+		for(Pair<Integer> pair:sparseMatrix.keySet()) {
+			int i = pair.getFirst() - 1;
+			int j = pair.getSecond() - 1;
+			if(i >= mSize || j >= mSize) {
+				System.err.printf("Error: Entry (%d,%d) in matrix exceeds number of labels (%d).", i+1,j+1,mSize);
+			} else {
+				if(sparseMatrix.containsKey(pair)) {
+					tmpMatrix[i][j] = sparseMatrix.get(pair);
+					tmpMatrix[j][i] = sparseMatrix.get(pair);
+				}
+			}
+		}
+		
+		// write matrix to file
+		PrintWriter out = new PrintWriter(outFile);
+		String sep = "\t";
+		for(String label:labels) {
+			out.print(sep + label);
+		}
+		out.println();
+		for (int i = 0; i < tmpMatrix.length; i++) {
+			out.print(labels[i]);
+			for (int j = 0; j < tmpMatrix.length; j++) {
+				out.print(sep + tmpMatrix[i][j]);
+			}
+			out.println();
+		}
+		out.close();
+	}
+	
+	/**
+	 * Calculates a similarity matrix for a set of blast hits and outputs a graph overview for visual inspection.
+	 * Now also writes the similarity matrix to a file (to be used by R script).
+	 */
+	public static void writeClusterGraph(TemplateList templates, File graphFile, File matrixFile) throws IOException {
 		if (templates.size()==0) return;
 		
 		String listFileName = "listfile";
@@ -62,25 +108,28 @@ public class BlastUtils {
 			String chain = template.getId().substring(4);
 			File pdbFile = new File(tempDir, pdbCode + chain + ".pdb");
 			pdbFile.deleteOnExit();
-
-			if (template.hasStructure()) {
+			
+			if(template.hasStructure()) {
+				
 				// write to file
 				template.getPdb().dump2pdbfile(pdbFile.getAbsolutePath());
-
+				
 				// add to listfile
-				out.println(pdbFile.getAbsolutePath());
-			}
+				out.println(pdbFile.getAbsolutePath());				
 		}
 		out.close();
 		
 		// run maxcluster
 		MaxClusterRunner mcr = new MaxClusterRunner(maxClusterExecutable);
 		HashMap<Pair<Integer>, Double> matrix = mcr.calculateSequenceIndependentMatrix(listFile.getAbsolutePath(), MaxClusterRunner.ScoreType.GDT);
+
+		// write similarity matrix file
+		String[] templateIds = templates.getIds();
+		writeMatrixToFile(matrix, templateIds, matrixFile);
 		
 		// generate graph from similarity matrix
 		SparseGraph<String, DoubleWrapper> simGraph = new SparseGraph<String, DoubleWrapper>();
 		// write nodes
-		String[] templateIds = templates.getIds();
 		for(String id:templateIds) {
 			simGraph.addVertex(id);
 		}
@@ -95,21 +144,19 @@ public class BlastUtils {
 				simGraph.addEdge(new BlastUtils().new DoubleWrapper(weight), new Pair<String>(start, end));
 			}
 		}
-		// create aiSee output
+		
+		// write GDL file for aiSee
 		GraphIOGDLFile<String, DoubleWrapper> gdlfileIO = new GraphIOGDLFile<String, DoubleWrapper>();
 		gdlfileIO.writeGdlFile(simGraph, graphFile.getAbsolutePath(),
-		new Transformer<String, Integer>() {
-				public Integer transform(String s) {return s.hashCode();}
-		}, new Transformer<String, String>(){
-			public String transform(String s) {return s;}
-		}, new Transformer<String, String>(){
-			public String transform(String s) {return "white";}
-		});
-		
+				new Transformer<String, Integer>() {public Integer transform(String s) {return s.hashCode();} },
+				new Transformer<String, String>()  {public String transform(String s) {return s;} }, 
+				new Transformer<String, String>()  {public String transform(String s) {return "white";} }
+				);
+		}
 	}
 	
 	/**
-	 * Testing some of the method in this class.
+	 * Testing some of the methods in this class.
 	 * @param args
 	 */
 	public static void main(String[] args) {

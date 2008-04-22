@@ -159,8 +159,8 @@ public class BlastRunner {
 		String BLASTBIN_DIR = "/project/StruPPi/bin";
 		String BLASTDB_DIR = "/project/StruPPi/CASP8/blast_dbs";
 		int OUTPUT_TYPE = 9;
-		//double eValCutoff = 1e-5;
-		File queryFile = new File("/project/StruPPi/CASP8/example_files/t101.fasta");
+		double eValCutoff = 1e-30;
+		File queryFile = new File("/project/StruPPi/CASP8/example_files/2uczA_ubc7.fasta");
 		
 		// read sequence
 		
@@ -183,25 +183,36 @@ public class BlastRunner {
 		int maxIter = 2;
 		File outProfileFile = new File("out.chk");
 		
+		// BlastP
 		System.out.println("Running blast against PDB...");
 		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE);
-		System.out.println("Running psi-blast against nr...");
+		BlastTabularParser blastParser1 = new BlastTabularParser(outFile);
+		BlastHitList hits1 = blastParser1.getHits();
+		hits1.setQueryLength(queryLength);
+		System.out.println("Number of hits: "+hits1.size());
+		if(hits1.size() > 0) System.out.println("Best E-value: "+hits1.getBestHit().getEValue());
+		hits1.printSome(5);
+		
+		// PsiBlast
+		System.out.println("Create psi-blast profile with " + maxIter + " iterations against " + nrdb + "...");
 		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE);
 		System.out.println("Running psi-blast against PDB...");
 		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE);
 		
-		BlastTabularParser blastParser = new BlastTabularParser(outFile);
-		BlastHitList hits = blastParser.getHits();
-		hits.setQueryLength(queryLength);
-		System.out.println("Number of hits: "+hits.size());
-		System.out.println("Best E-value: "+hits.getBestHit().getEValue());
-		//hits.applyCutoff(eValCutoff);
-		System.out.println("Number of hits after cutoff: "+hits.size());
-		hits.print();
-		System.out.println("Generating cluster graph...");
-		String[] ids = {"1c4zD","1fzyA","1u9aA","2e2cA","1tdrA"};
-		TemplateList templates = new TemplateList(ids);
-		//ids = hits.getTemplateIds();
-		BlastUtils.writeClusterGraph(templates, new File("out.gdl"));
+		BlastTabularParser blastParser2 = new BlastTabularParser(outFile);
+		BlastHitList hits2 = blastParser2.getHits();
+		hits2.setQueryLength(queryLength);
+		System.out.println("Number of hits: "+hits2.size());
+		if(hits2.size() > 0) {
+			System.out.println("Best E-value: "+hits2.getBestHit().getEValue());
+			System.out.println("Filtering with cutoff " + eValCutoff);
+			hits2.applyCutoff(eValCutoff);
+			System.out.println("Number of hits: "+hits2.size());
+			hits2.printSome(5);
+			System.out.println("Generating cluster graph...");
+			String[] ids = hits2.getTemplateIds();
+			TemplateList templates = new TemplateList(ids);
+			BlastUtils.writeClusterGraph(templates, new File("out.gdl"), new File("out.matrix"));
+		}
 	}
 }
