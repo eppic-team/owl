@@ -589,14 +589,17 @@ public class Alignment {
     	 *               referencened in 'projectionTags'
     	 * chunks     - the list of consecutive chunks to be returned
     	 */
-    	int col = positions.iterator().next();
+    	IntervalSet chunks = new IntervalSet();
+    	int col;
     	int prevCol = 1;
     	int start = 1;
     	boolean foundStart = false;
     	char c = '-';
     	int limit =  Math.max(projectionTags.size() - degOfConservation,0);
-    	IntervalSet chunks = new IntervalSet();
 
+    	if(positions.isEmpty()) return chunks;
+    	col = positions.iterator().next();
+    	
     	for(Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
     		prevCol = col;
     		col = it.next();
