@@ -42,7 +42,7 @@ public class utils4lh {
 	LinkedHashSet<Object> ab = new LinkedHashSet<Object>();
 	LinkedHashSet<Object> all = new LinkedHashSet<Object>();
 
-	for (Iterator aItr = a.iterator(); aItr.hasNext();) {
+	for (Iterator<?> aItr = a.iterator(); aItr.hasNext();) {
 	    obj = aItr.next();
 	    if (b.contains(obj)) {
 		b.remove(obj);
