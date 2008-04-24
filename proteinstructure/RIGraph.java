@@ -1018,6 +1018,31 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
+	 * Compares this RIGraph to given RIGraph and returns the number of common edges 
+	 * @param other
+	 * @return
+	 */
+	public int getCommonEdgesCount(RIGraph other) {
+		
+		int commonEdges = 0;
+		
+		if ((this.getEdgeCount() == 0) || (other.getEdgeCount() == 0)) {
+			return commonEdges;
+		}
+		
+		for (RIGEdge cont:this.getEdges()){
+			Pair<RIGNode> pair = this.getEndpoints(cont);
+			int i_resser = pair.getFirst().getResidueSerial();
+			int j_resser = pair.getSecond().getResidueSerial();
+			if (other.findEdge(other.getNodeFromSerial(i_resser), other.getNodeFromSerial(j_resser))!=null) {
+				commonEdges++;				
+			}
+		}
+
+		return commonEdges;
+	}
+	
+	/**
 	 * Returns a new RIGraph copy (deep) of this one
 	 * @return
 	 */
