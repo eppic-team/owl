@@ -12,20 +12,21 @@ import java.util.regex.Pattern;
  */
 public class Sequence {
 	
-	String name;
-	String seq;
+	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-]+)"; // see also the REGEX in Alignment class
+	
+	private String name;
+	private String seq;
 	
 	/** 
 	 * Creates a new empty sequence object
 	 */
 	public Sequence() {
-		name = new String("");
-		seq = new String("");
+		name = "";
+		seq = "";
 	}
 	
 	/**
 	 * Creates a new sequence object with the given name and the given sequence string.
-	 * TODO: Inconsistency: Here we allow null values whereas in the constructor we do not.
 	 * @param name
 	 * @param seq
 	 */
@@ -39,18 +40,18 @@ public class Sequence {
 	 * @param fastaFile
 	 */
 	public void readFromFastaFile(File fastaFile) throws IOException {
-			BufferedReader fileIn = new BufferedReader(new FileReader(fastaFile));
-			String nextLine;
-			// read sequences
-			while((nextLine = fileIn.readLine()) != null) {
-				Pattern p = Pattern.compile("^>(.*)$");
-				Matcher m = p.matcher(nextLine);
-				if (m.find()) {
-					name = m.group(1).trim();
-				} else {
-					seq += nextLine.trim();
-				}
+		BufferedReader fileIn = new BufferedReader(new FileReader(fastaFile));
+		String nextLine;
+		// read sequences
+		while((nextLine = fileIn.readLine()) != null) {
+			Pattern p = Pattern.compile(FASTAHEADER_REGEX);
+			Matcher m = p.matcher(nextLine);
+			if (m.find()) {
+				name = m.group(1).trim();
+			} else {
+				seq += nextLine.trim();
 			}
+		}
 	}
 
 	/**
