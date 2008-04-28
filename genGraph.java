@@ -53,7 +53,7 @@ public class genGraph {
 				"3)  "+progName+" -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> \n" +
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n" +
-				"In all cases option -P can be specified to get the graph in paul format instead of aglappe format"; 
+				"In all cases option -P can be specified to get the graph in paul format instead of aglappe format\n"; 
 
 		String listfile = "";
 		String[] pdbCodes = null;
@@ -160,7 +160,7 @@ public class genGraph {
 
 				try {
 					
-					long start = System.currentTimeMillis();
+					//long start = System.currentTimeMillis();
 					
 					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
 					pdb.load(pdbChainCode);
@@ -177,11 +177,11 @@ public class genGraph {
 						graph.writeToPaulFile(outputFile.getAbsolutePath());
 					}
 
-					long end = System.currentTimeMillis();
-					double time = (double) (end -start)/1000;
+					//long end = System.currentTimeMillis();
+					//double time = (double) (end -start)/1000;
 
 					System.out.println("Wrote "+outputFile.getAbsolutePath());
-					System.out.printf("%5.3f s\n",time);
+					//System.out.printf("%5.3f s\n",time);
 					
 					numPdbs++;
 
