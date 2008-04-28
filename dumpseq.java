@@ -30,9 +30,9 @@ public class dumpseq {
 		String progName = "dumpseq";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  "+progName+" -i <listfile> [-o <output_dir> | -f <one_output_file> | -s] [-D <pdbase_db>] \n" +
-				"2)  "+progName+" -p <pdb_code> -c <chain_pdb_code> [-o <output_dir> | -f <one_output_file> | -s] [-D <pdbase_db>] \n" +
-				"Output options: -o one file per sequence, -f one file for all sequences, -s standard output\n"+
+				"1)  "+progName+" -i <listfile> [-o <output_dir> | -f <one_output_file> | -s] [-N] [-D <pdbase_db>] \n" +
+				"2)  "+progName+" -p <pdb_code> -c <chain_pdb_code> [-o <output_dir> | -f <one_output_file> | -s] [-N] [-D <pdbase_db>] \n" +
+				"Output options: -o one file per sequence, -f one file for all sequences, -s standard output. With -N no FASTA headers will be written\n"+
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n"; 
 
@@ -43,8 +43,9 @@ public class dumpseq {
 		String outputDir = "";
 		File oneOutputFile = null;
 		boolean stdout = false;
+		boolean fastaHeader = true;
 		
-		Getopt g = new Getopt(progName, args, "i:p:c:o:f:D:sh?");
+		Getopt g = new Getopt(progName, args, "i:p:c:o:f:D:sNh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -68,7 +69,10 @@ public class dumpseq {
 				break;
 			case 's':
 				stdout = true;
-				break;				
+				break;
+			case 'N':
+				fastaHeader = false;
+				break;								
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -146,7 +150,7 @@ public class dumpseq {
 					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
 				}
 				
-				if (!stdout) { // if output of sequence is stdout, then we don't want to print just the sequence without FASTA headers
+				if (fastaHeader) { 
 					Out.println(">"+pdbCode+pdbChainCode);
 				}
 				
