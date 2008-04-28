@@ -45,13 +45,15 @@ public class genGraph {
 	
 	public static void main(String[] args) throws IOException {
 		
+		String progName = "genGraph";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  genGraph -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
-				"2)  genGraph -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
-				"3)  genGraph -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> \n" +
+				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
+				"2)  "+progName+" -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
+				"3)  "+progName+" -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> \n" +
 				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
-				"If pdbase_db not specified, the default pdbase will be used\n"; 
+				"If pdbase_db not specified, the default pdbase will be used\n" +
+				"In all cases option -P can be specified to get the graph in paul format instead of aglappe format"; 
 
 		String listfile = "";
 		String[] pdbCodes = null;
@@ -61,8 +63,9 @@ public class genGraph {
 		String edgeType = "";
 		double cutoff = 0.0;
 		String outputDir = "";
+		boolean paul = false;
 		
-		Getopt g = new Getopt("genGraph", args, "i:p:c:f:d:t:o:D:h?");
+		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:Ph?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -90,6 +93,9 @@ public class genGraph {
 			case 'D':
 				pdbaseDb = g.getOptarg();
 				break;
+			case 'P':
+				paul = true;
+				break;				
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -165,7 +171,11 @@ public class genGraph {
 					String edgeTypeStr = edgeType.replaceAll("/", ":");
 					
 					File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".graph");
-					graph.write_graph_to_file(outputFile.getAbsolutePath());
+					if (!paul) {
+						graph.write_graph_to_file(outputFile.getAbsolutePath());
+					} else {
+						graph.writeToPaulFile(outputFile.getAbsolutePath());
+					}
 
 					long end = System.currentTimeMillis();
 					double time = (double) (end -start)/1000;
@@ -202,7 +212,11 @@ public class genGraph {
 				String edgeTypeStr = edgeType.replaceAll("/", ":");
 				
 				File outputFile = new File(outputDir,pdb.getPdbCode()+"_"+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".graph");
-				graph.write_graph_to_file(outputFile.getAbsolutePath());
+				if (!paul) {
+					graph.write_graph_to_file(outputFile.getAbsolutePath());
+				} else {
+					graph.writeToPaulFile(outputFile.getAbsolutePath());
+				}
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
 				
 			} catch (PdbLoadError e) {
