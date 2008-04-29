@@ -413,6 +413,15 @@ public abstract class Pdb {
 		scop.setVersion(version);
 	}	
 
+	/** 
+	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
+	 * Existing secondary structure information will be overwritten.
+	 * The resulting secondary structure information will have 4 states.
+	 * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
+	 * after filling out a license agreement. 
+	 * @param dsspExecutable
+	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
+	 */
 	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
 		runDssp(dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
 	}
@@ -421,8 +430,11 @@ public abstract class Pdb {
 	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
 	 * Existing secondary structure information will be overwritten.
 	 * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
-	 * after filling out a license agreement. For this version, the dsspParamters variable should be
-	 * set to "--" (two hyphens).
+	 * after filling out a license agreement. 
+	 * @param dsspExecutable
+	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
+	 * @param state4Type
+	 * @param state4Id
 	 */
 	public void runDssp(String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
 		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
@@ -516,9 +528,11 @@ public abstract class Pdb {
 		secondaryStructure.setComment("DSSP");
 	}
 
-	/** Writes atom lines for this structure to the given output stream */
-	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
-		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
+	/**
+	 * Writes to given PrintWriter the PDB file format HEADER line
+	 * @param Out
+	 */
+	private void writePDBFileHeader(PrintWriter Out) {
 		String source = "";
 		if (this instanceof CiffilePdb) {
 			source = ((CiffilePdb) this).getCifFile().getAbsolutePath();
@@ -527,7 +541,44 @@ public abstract class Pdb {
 		} else if (this instanceof PdbasePdb || this instanceof MsdsdPdb){
 			source = db;
 		}
-		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);
+		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);		
+	}
+	
+	/**
+	 * Write CASP TS file headers. Note that the CASP target number and CASP model 
+	 * number will be written from the internally set values (targetNum, caspModelNum), 
+	 * so they must be set before trying to write them out
+	 * @param Out
+	 * @param refined whether the model has been refined or not
+	 * @param parents PDB entries in which this homology prediction is based on or
+	 * null if not applicable i.e. if this is an ab-initio prediction
+	 */
+	private void writeCaspTSHeader(PrintWriter Out, boolean refined, String[] parents) {
+		Out.println("PFRMAT TS");
+		Out.printf("TARGET T%04d\n",targetNum);
+		String refineStr = "UNREFINED";
+		if (refined) refineStr = "REFINED";
+		Out.println("MODEL "+caspModelNum+" "+refineStr);
+		String parentStr = "";
+		if (parents==null) {
+			parentStr = "N/A";
+		} else {
+			for (int i=0;i<parents.length;i++) {
+				parentStr += parents[i] + " ";
+			}
+		}
+		Out.println("PARENT "+parentStr);
+	}
+	
+	/** 
+	 * Writes atom lines for this structure to the given output stream
+	 * @param Out
+	 * @param pdbCompatible if true, chain codes will be written with shorten 
+	 * to one character (so that file is complies correctly with PDB format 
+	 * in cases where chain code has more than 1 character)   
+	 */
+	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
+		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		String chainCodeStr = chainCode;
 		if (pdbCompatible) {
 			chainCodeStr = chainCode.substring(0,1);
@@ -545,15 +596,18 @@ public abstract class Pdb {
 		for (int atomserial:lines.keySet()){
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
 			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f  1.00  0.00           %s\n",lines.get(atomserial));
-		}
-		Out.println("END");
-		Out.close();		
+		}		
 	}
 
 	/**
-	 * Dumps coordinate data into a file in pdb format (ATOM lines only)
-	 * The residue serials dumped are the internal ones.
-	 * The chain dumped is the value of the chainCode variable, i.e. our internal chain identifier for Pdb objects
+	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
+	 * The residue serials written are the internal ones.
+	 * The chain dumped is the value of the chainCode variable, i.e. our internal
+	 * chain identifier for Pdb objects
+	 * If chain code has more than 1 character, the PDB file will then have wrong 
+	 * column formatting. For these cases use {@link #dump2pdbfile(String, boolean)} for getting 
+	 * PDB-format-complying files.
+	 * TODO refactor to writeToPDBFile 
 	 * @param outfile
 	 * @throws IOException
 	 */
@@ -561,19 +615,50 @@ public abstract class Pdb {
 		dump2pdbfile(outfile, false);
 	}
 	
-	public void dump2pdbfile(String outfile, boolean pdbCompatible) throws IOException {
+	/**
+	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
+	 * The residue serials written are the internal ones.
+	 * The chain dumped is the value of the chainCode variable, i.e. our internal
+	 * chain identifier for Pdb objects 
+	 * TODO refactor to writeToPDBFile
+	 * @param outfile
+	 * @param pdbCompatible if true, chain codes will be written with shorten 
+	 * to one character (so that file is complies correctly with PDB format 
+	 * in cases where chain code has more than 1 character) 
+	 * @throws FileNotFoundException
+	 */
+	public void dump2pdbfile(String outfile, boolean pdbCompatible) throws FileNotFoundException {
 		PrintWriter Out = new PrintWriter(new FileOutputStream(outfile));
+		writePDBFileHeader(Out);
 		writeAtomLines(Out, pdbCompatible);
+		Out.println("END");
+		Out.close();
 	}
 
+	/**
+	 * Writes coordinates to given File in CASP TS format
+	 * @param outFile
+	 * @param refined whether the model has been refined or not
+	 * @param parents PDB entries in which this homology prediction is based on or
+	 * null if not applicable i.e. if this is an ab-initio prediction
+	 * @throws FileNotFoundException
+	 */
+	public void writeToCaspTSFile(File outFile, boolean refined, String[] parents) throws FileNotFoundException {
+		PrintWriter Out = new PrintWriter(new FileOutputStream(outFile));
+		writeCaspTSHeader(Out, refined, parents);
+		writeAtomLines(Out, true);
+		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
+		Out.println("END");
+		Out.close();
+	}
+	
 	/**
 	 * Dump the full sequence of this Pdb object in FASTA file format
 	 * The FASTA tag is written as the concatenation of pdbCode and pdbChainCode
 	 * @param seqfile
 	 * @throws IOException if file can't be written
 	 */
-	public void dumpseq(String seqfile) throws IOException {
-		//TODO refactor method name to writeSeqToFasta
+	public void writeSeqToFasta(String seqfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(seqfile));
 		int len = 80;
 		Out.println(">"+pdbCode+pdbChainCode);
@@ -586,19 +671,23 @@ public abstract class Pdb {
 	/** 
 	 * Returns the number of observed standard residues.
 	 * TODO: Refactor method name
+	 * @return number of observed standard residues
 	 */
 	public int get_length(){
 		return obsLength;
 	}
 
-	/** Returns the number of residues in the sequence of this protein. */
+	/** 
+	 * Returns the number of residues in the sequence of this protein.
+	 * @return number of residues in the full sequence
+	 */
 	public int getFullLength() {
 		return fullLength;
 	}
 
 	/**
 	 * Returns number of (non-Hydrogen) atoms in the protein
-	 * @return
+	 * @return number of non-Hydrogen atoms
 	 */
 	public int getNumAtoms() {
 		return atomser2atom.size();
@@ -1124,7 +1213,13 @@ public abstract class Pdb {
 	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
 
-	/** Returns the number of neighbours of this grid cell */
+	/** 
+	 * Returns the number of neighbours of this grid cell
+	 * @param boxes
+	 * @param floor
+	 * @param boxSize
+	 * @return 
+	 */
 	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
 		Point3i neighbor;
 		int nbs = 0;
@@ -1318,7 +1413,39 @@ public abstract class Pdb {
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
 	}
+	
+	/**
+	 * Gets the CASP target number
+	 * @return
+	 */
+	public int getTargetNum() {
+		return this.targetNum;
+	}
+	
+	/**
+	 * Sets the CASP target number
+	 * @param targetNum
+	 */
+	public void setTargetNum(int targetNum) {
+		this.targetNum = targetNum;
+	}
+	
+	/**
+	 * Gets the CASP model number
+	 * @return
+	 */
+	public int getCaspModelNum() {
+		return this.caspModelNum;
+	}
 
+	/**
+	 * Sets the CASP model number
+	 * @param caspModelNum
+	 */
+	public void setCaspModelNum(int caspModelNum) {
+		this.caspModelNum = caspModelNum;
+	}
+	
 	/**
 	 * Gets the sequence
 	 * @return
