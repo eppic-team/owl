@@ -2,8 +2,11 @@ package sequence;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,4 +93,22 @@ public class Sequence {
 		return this.seq.length();
 	}
 
+	/**
+	 * Writes given sequences and tags to given sequence file in FASTA format
+	 * @param seqFile
+	 * @param seqs
+	 * @param tags
+	 * @throws FileNotFoundException 
+	 */
+	public static void writeSeqs(File seqFile, String[] seqs, String[] tags) throws FileNotFoundException {
+		PrintStream Out = new PrintStream(new FileOutputStream(seqFile));
+		int len = 80;
+		for (int seqIdx=0;seqIdx<seqs.length;seqIdx++) { 
+			Out.println(">"+tags[seqIdx]);
+			for(int i=0; i<seqs[seqIdx].length(); i+=len) {
+				Out.println(seqs[seqIdx].substring(i, Math.min(i+len,seqs[seqIdx].length())));
+			}		
+		}
+		Out.close();
+	} 
 }

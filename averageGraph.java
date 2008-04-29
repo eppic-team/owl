@@ -1,10 +1,8 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -35,29 +33,6 @@ public class averageGraph {
 	/*------------------------- private methods ------------------------------*/
 	
 	/**
-	 * Writes given sequences and tags to given sequence file in FASTA format
-	 * @param seqFile
-	 * @param seqs
-	 * @param tags
-	 */
-	private static void writeSeqs(File seqFile, String[] seqs, String[] tags) {
-		try {
-			PrintStream Out = new PrintStream(new FileOutputStream(seqFile));
-			int len = 80;
-			for (int seqIdx=0;seqIdx<seqs.length;seqIdx++) { 
-				Out.println(">"+tags[seqIdx]);
-				for(int i=0; i<seqs[seqIdx].length(); i+=len) {
-					Out.println(seqs[seqIdx].substring(i, Math.min(i+len,seqs[seqIdx].length())));
-				}		
-			}
-			Out.close();
-		} catch (IOException e) {
-			System.err.println("Couldn't write file "+seqFile.getAbsolutePath()+" with sequences for input of muscle. Exiting. ");
-			System.exit(1);
-		}
-	}
-	
-	/**
 	 * Creates a temporary sequence file with both target and template sequences and runs muscle
 	 * @param aliFile
 	 * @param outDir
@@ -79,7 +54,12 @@ public class averageGraph {
 			seqs[i+1] = templatePdbs[i].getSequence();
 			tags[i+1] = templatePdbs[i].getPdbCode()+templatePdbs[i].getPdbChainCode();
 		}	
-		writeSeqs(tmpSeqFile, seqs, tags);		
+		try {
+			Sequence.writeSeqs(tmpSeqFile, seqs, tags);
+		} catch (IOException e) {
+			System.err.println("Couldn't write file "+tmpSeqFile.getAbsolutePath()+" with sequences for input of muscle. Exiting. ");
+			System.exit(1);
+		}
 
 		try {
 			Process muscleProc = Runtime.getRuntime().exec(MUSCLE_BIN+" -in "+tmpSeqFile.getCanonicalPath()+" -out "+aliFile.getCanonicalPath());
@@ -139,25 +119,36 @@ public class averageGraph {
 	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
-		String help = "Usage: \n" +
-				averageGraph.class.getName()+"\n" +
-				"  -p: target pdb code+target chain code (benchmarking), e.g. 1bxyA \n" +
-				"\n"+
-				"  -f: file with target sequence to be predicted in FASTA format (prediction) \n"+
-				"\n"+
-				"  -P: file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
-				"  -t: comma separated list of contact types \n" +
-				"  -d: comma separated list of distance cutoffs (one per contact type) \n" +
-				"  -b: basename for output files (averaged graph, averaged graph with voters and consensus graphs) \n"+
-				"  [-a]: input alignment file, if not specified, a multiple sequence alignment of target and templates will be calculated with muscle \n" +				
-				"  [-s]: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 will predict an edge in target when present in half of the templates. If not specified "+DEFAULT_THRESHOLD+" is used\n"+
-				"  [-o]: output dir, where output files will be written. If not specified current dir will be used \n"+
-				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus graph creating the specified number of models and finally outputting 1 pdb file with the chosen model. If more than 1 CCT were specified, then the first one is taken. This can take very long!\n"+
+		String help =
 				"Performs graph averaging. Two modes of operation: \n" +
-				"a) benchmarking: specify a pdb code/pdb chain code (-p/-c) \n" +
-				"b) prediction:   specify a sequence file (-f) \n" +
-				"A set of templates must always be specified (-P/-C). Also as an input a multiple sequence alignment of target and templates should be specified (-a). If one is not given, then a an alignment is calculated with muscle. \n" +
-				"For reconstruction, please not that at least 20 models should be specified to get a reasonable final selected model. \n";
+				"a) benchmarking: specify a pdb code+pdb chain code (-p) \n" +
+				"b) prediction:   specify a sequence file (-f) \n\n" +
+				"Usage: \n" +
+				averageGraph.class.getName()+"\n" +
+				"   -p : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n" +
+				"\n"+
+				"   -f : file with target sequence to be predicted in FASTA format (prediction) \n"+
+				"\n"+
+				"   -P : file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
+				"   -t : comma separated list of contact types \n" +
+				"   -d : comma separated list of distance cutoffs (one per contact type) \n" +
+				"   -b : basename for output files (averaged graph, averaged graph with voters \n" +
+				"        and consensus graphs) \n"+
+				"  [-a]: input alignment file. Default: perform multiple sequence alignment of \n" +
+				"        target and templates with muscle \n" +				
+				"  [-s]: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 \n" +
+				"        will predict an edge in target when present in half of the templates. \n" +
+				"        Default: "+DEFAULT_THRESHOLD+" is used\n"+
+				"  [-o]: output dir, where output files will be written. Default: current dir \n"+
+				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus \n" +
+				"        graph creating the specified number of models and finally outputting one \n" +
+				"        pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
+				"        the first one is taken. This can take very long!\n\n"+
+				"A set of templates must always be specified (-P). Also as an input a multiple \n" +
+				"sequence alignment of target and templates should be specified (-a). If one is \n" +
+				"not given, then an alignment is calculated with muscle. \n\n" +
+				"For reconstruction, please not that at least 20 models should be specified to \n" +
+				"get a reasonable final selected model. \n";
 		
 		String[] cts = null;
 		double[] cutoffs = null;
