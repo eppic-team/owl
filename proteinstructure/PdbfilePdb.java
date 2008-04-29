@@ -212,7 +212,7 @@ public class PdbfilePdb extends Pdb {
 						// we try to read the TARGET from the next line, if there's no TARGET line appearing this is not respecting the format: exception
 						if((line = fpdb.readLine()) != null ) {
 							linecount++;
-							p = Pattern.compile("^TARGET\\s+T(\\d+)");
+							p = Pattern.compile("^TARGET\\s+[Tt](\\d+)");
 							m = p.matcher(line);
 							if (m.find()) {
 								this.targetNum = Integer.parseInt(m.group(1));
