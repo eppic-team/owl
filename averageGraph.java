@@ -143,7 +143,10 @@ public class averageGraph {
 				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus \n" +
 				"        graph creating the specified number of models and finally outputting one \n" +
 				"        pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
-				"        the first one is taken. This can take very long!\n\n"+
+				"        the first one is taken. This can take very long!\n" +
+				"  [-c]: write final reconstructed model also in CASP TS format. In this case the \n" +
+				"        target tag in the target sequence file must comply with the CASP target \n" +
+				"        naming, e.g. T0100 \n\n"+
 				"A set of templates must always be specified (-P). Also as an input a multiple \n" +
 				"sequence alignment of target and templates should be specified (-a). If one is \n" +
 				"not given, then an alignment is calculated with muscle. \n\n" +
@@ -170,7 +173,9 @@ public class averageGraph {
 		boolean reconstruct = false;
 		int numberTinkerModels = 0;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:h?");
+		boolean casp = false;
+		
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:ch?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -215,7 +220,10 @@ public class averageGraph {
 			case 'r':
 				numberTinkerModels = Integer.parseInt(g.getOptarg());
 				reconstruct = true;
-				break;				
+				break;
+			case 'c':
+				casp = true;
+				break;								
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -246,9 +254,7 @@ public class averageGraph {
 			System.err.println("Specified list of contact types differs in length from list of cutoffs. Exiting");
 			System.exit(1);			
 		}
-		
-		
-		
+				
 		String targetSeq = null;
 		String targetTag = null;
 		Pdb targetPdb = null;
@@ -270,7 +276,17 @@ public class averageGraph {
 			}
 			targetTag = seq.getName();
 			// we take the sequence that we will use later to create the predicted graph
-			targetSeq = seq.getSeq();			
+			targetSeq = seq.getSeq();
+			
+			if (casp) {
+				Pattern p = Pattern.compile("T\\d\\d\\d\\d");
+				Matcher m = p.matcher(targetTag);
+				if (!m.matches()) {
+					System.err.println("Target tag '"+targetTag+"' found in sequence file "+seqFile+" does not look like a CASP target name. If this is not a CASP prediction don't use the -c switch. Exiting.");
+					System.exit(1);
+				}
+			}
+
 		}
 		
 		// getting template structures
@@ -362,6 +378,15 @@ public class averageGraph {
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
 			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
+			if (casp) {
+				File outcasptsfile = new File(outDir,basename+".reconstructed.casp");
+				int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
+				pdb.setTargetNum(targetNum);
+				pdb.setCaspModelNum(1);
+				pdb.writeToCaspTSFile(outcasptsfile, false, codesTemplates);
+				System.out.println("Model written also to CASP TS file " + outcasptsfile);
+			}
+
 			if (benchmark) {
 				System.out.printf("rmsd to native: %5.2f\n",pdb.rmsd(targetPdb, "Ca"));
 			}
