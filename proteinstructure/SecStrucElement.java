@@ -17,10 +17,13 @@ public class SecStrucElement {
 	public static final char EXTENTED = 'E';// all extented 
 	public static final char LOOP = 'L';  	// all other states 
 	
+	// eight state (dssp)
+	// H, I, G, E, B, T, S, ' '
+	
 	/*--------------------------- member variables --------------------------*/
 	
-	String secStrucId;		// legacy field for old ss ids (e.g. H1, S1, ...)
-	char secStrucType;		// one of the above constants
+	String secStrucId;		// ss ids, i.e. the type + an element numerical identifier (e.g. H1, S1, ...)
+	char secStrucType;		// ss types: one of the above char constants (3 in 3-state, 4 in 4-state, 8 in 8-state)
 	Interval interval;		// the location of this element in the sequence
 	
 	/*----------------------------- constructors ----------------------------*/
@@ -33,25 +36,46 @@ public class SecStrucElement {
 	
 	/*---------------------------- public methods ---------------------------*/
 	
+	/**
+	 * Deep copies this ss element
+	 * @return
+	 */
 	public SecStrucElement copy() {
 		return new SecStrucElement(secStrucType, interval.beg, interval.end, secStrucId);
 	}
 	
-	/** Returns the legacy ID of this element (e.g. H1, S1, ...) */
+	/** 
+	 * Returns the ID of this element. The ID is the concatenation of the type 
+	 * letter and the numerical element identifier (e.g. H1, S1, ...) 
+	 * @return
+	 */
 	public String getId() {
 		return secStrucId;
 	}
 	
-	/** Returns the dssp type of this element. Valid values are H, S, T, O */ 
+	/** 
+	 * Returns the type of this element. 
+	 * The type depends on whether this secondary structure annotation has been 
+	 * assigned with 3, 4 or 8 states (see constants above)
+	 * @return
+	 */ 
 	public char getType() {
 		return secStrucType;
 	}
 	
-	/** Returns the range of this ss element in the sequence. */ 
+	/** 
+	 * Returns the range of this ss element in the sequence.
+	 * @return 
+	 */ 
 	public Interval getInterval() {
 		return interval;
 	}
 	
+	/**
+	 * Returns the sheet serial of this ss element if it is a strand
+	 * @return the sheet serial if this element is a strand and has a sheet 
+	 * serial assigned, 0 otherwise
+	 */
 	public char getSheetSerial() {
 		if (isStrand()) {
 			return Character.isLetter(secStrucId.charAt(1))?secStrucId.charAt(1):0;
@@ -59,26 +83,43 @@ public class SecStrucElement {
 		return 0;
 	}
 	
-	/** Returns true if this ss element is a helix */
+	/** 
+	 * Returns true if this ss element is a helix 
+	 * @return
+	 */
 	public boolean isHelix() {
 		return secStrucType == HELIX;
 	}
 	
-	/** Returns true if this ss element is a beta strand */
+	/** 
+	 * Returns true if this ss element is a beta strand 
+	 * @return
+	 */
 	public boolean isStrand() {
 		return (secStrucType == STRAND || secStrucType == EXTENTED);
 	}
 	
-	/** Returns true if this ss element is a hydrogen bonded turn */
+	/** 
+	 * Returns true if this ss element is a hydrogen bonded turn 
+	 * @return
+	 */
 	public boolean isTurn() {
 		return secStrucType == TURN;
 	}	
 	
-	/** Returns true if this ss element is other ... */
+	/** 
+	 * Returns true if this ss element is other 
+	 * @return
+	 */
 	public boolean isOther() {
 		return (secStrucType == OTHER || secStrucType == LOOP);
 	}	
 
+	/**
+	 * Returns true if this ss element is in same sheet as given one
+	 * @param s
+	 * @return
+	 */
 	public boolean inSameSheet(SecStrucElement s) {
 		boolean inSameSheet = false;
 		if (s != null && this.isStrand() && s.isStrand() && (s.getSheetSerial() == this.getSheetSerial() && s.getSheetSerial() != 0)) {
