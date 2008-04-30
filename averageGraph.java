@@ -1,9 +1,5 @@
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,6 +9,7 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PredEval;
 import proteinstructure.RIGraph;
+import proteinstructure.TemplateList;
 import sequence.Sequence;
 import tinker.TinkerRunner;
 //import tinker.TinkerRunner;
@@ -75,45 +72,6 @@ public class averageGraph {
 			System.exit(1);
 		}
 		
-	}
-	
-	/**
-	 * Reads a list file containing 1 column of pdbCodes+pdbChainCodes, e.g. 1bxyA
-	 * @param templatesFile
-	 * @return
-	 */
-	private static String[] readTemplatesFile(File templatesFile) {
-		ArrayList<String> codesAL = new ArrayList<String>(); 
-		try {
-			BufferedReader fileIn = new BufferedReader(new FileReader(templatesFile));
-			String line;
-			int lineCount=0;
-			while((line = fileIn.readLine()) != null) {
-				lineCount++;
-				if (line.length()!=0 && !line.startsWith("#")) {
-					Pattern p = Pattern.compile("^\\d\\w\\w\\w\\w");
-					Matcher m = p.matcher(line);
-					if (m.matches()) {
-						codesAL.add(line);
-					} else {
-						System.err.println("Line "+lineCount+" in templates file doesn't look like a pdb code+pdb chain code");
-					}
-				}
-			}
-		} catch (FileNotFoundException e) {
-			System.err.println("Couldn't find templates file "+templatesFile+" . Exiting.");
-			System.exit(1);
-		} catch (IOException e) {
-			System.err.println("Error while reading templates file "+templatesFile+". Exiting");
-			System.exit(1);
-		}
-		if (codesAL.isEmpty()) {
-			System.err.println("Couldn't find any pdb code+pdb chain code in templates file. Exiting");
-			System.exit(1);
-		}
-		String[] codes = new String[codesAL.size()];
-		codesAL.toArray(codes);
-		return codes;
 	}
 	
 	/*----------------------------- main --------------------------------*/
@@ -293,7 +251,18 @@ public class averageGraph {
 		//TODO eventually we should read using RIGEnsemble.loadFromListFile adding this case: list file is a list of pdbCodes+pdbChainCodes
 		//     Then RIGEnsemble should also have an alignment to be able to use it for ensembles not sharing same sequence
 		//     By using loadFromListFile we would get the benefit of reading templatesFile that contain a list of pdb files/casp RR files/cm files/cif files
-		String[] codesTemplates = readTemplatesFile(templatesFile); 
+		String[] codesTemplates = null;
+		try {
+			codesTemplates = TemplateList.readTemplatesFile(templatesFile); 
+		} catch (IOException e) {
+			System.err.println("Error while reading templates file "+templatesFile+". Exiting");
+			System.exit(1);
+		}
+		if (codesTemplates.length==0) {
+			System.err.println("Couldn't find any pdb code+pdb chain code in templates file. Exiting");
+			System.exit(1);
+		}
+		
 		Pdb[] templatePdbs = new Pdb[codesTemplates.length];
 		for (int i=0;i<codesTemplates.length;i++) {
 			Pdb pdb = new PdbasePdb(codesTemplates[i].substring(0, 4));

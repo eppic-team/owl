@@ -15,7 +15,7 @@ import tools.MySQLConnection;
 
 /**
  * A set of Templates to be used for homology modelling
- *
+ * See also RIGEnsemble.
  */
 public class TemplateList {
 
@@ -127,4 +127,35 @@ public class TemplateList {
 		return ids;
 	}
 	
+	
+	/*--------------------------------- static methods ----------------------------------*/
+	
+	/**
+	 * Reads a list file containing 1 column of pdbCodes+pdbChainCodes, e.g. 1bxyA
+	 * @param templatesFile
+	 * @return
+	 * @throws IOException
+	 */
+	public static String[] readTemplatesFile(File templatesFile) throws IOException {
+		ArrayList<String> codesAL = new ArrayList<String>(); 
+
+		BufferedReader fileIn = new BufferedReader(new FileReader(templatesFile));
+		String line;
+		int lineCount=0;
+		while((line = fileIn.readLine()) != null) {
+			lineCount++;
+			if (line.length()!=0 && !line.startsWith("#")) {
+				Pattern p = Pattern.compile("^\\d\\w\\w\\w\\w");
+				Matcher m = p.matcher(line);
+				if (m.matches()) {
+					codesAL.add(line);
+				} else {
+					System.err.println("Line "+lineCount+" in templates file doesn't look like a pdb code+pdb chain code");
+				}
+			}
+		}
+		String[] codes = new String[codesAL.size()];
+		codesAL.toArray(codes);
+		return codes;
+	}
 }
