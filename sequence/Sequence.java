@@ -10,6 +10,8 @@ import java.io.PrintStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import proteinstructure.FastaFileFormatError;
+
 /**
  * Presenting our sequence object(!).
  */
@@ -41,8 +43,10 @@ public class Sequence {
 	/**
 	 * Creates a new sequence object by parsing the given Fasta file.
 	 * @param fastaFile
+	 * @throws IOException
+	 * @throws FastaFileFormatError
 	 */
-	public void readFromFastaFile(File fastaFile) throws IOException {
+	public void readFromFastaFile(File fastaFile) throws IOException, FastaFileFormatError {
 		BufferedReader fileIn = new BufferedReader(new FileReader(fastaFile));
 		String nextLine;
 		// read sequences
@@ -54,6 +58,9 @@ public class Sequence {
 			} else {
 				seq += nextLine.trim();
 			}
+		}
+		if (seq.contains(" ")) {
+			throw new FastaFileFormatError("The sequence in FASTA file "+fastaFile+" contains spaces.");
 		}
 	}
 
