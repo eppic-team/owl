@@ -365,9 +365,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			pgraphid = rsst.getInt(1);
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
-			String pdbChainCodeStr = pdbChainCode;
-			if (!pdbChainCode.equals("NULL")) {
-				pdbChainCodeStr="'"+pdbChainCode+"'";
+			String pdbChainCodeStr = "'"+pdbChainCode+"'";
+			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) {
+				pdbChainCodeStr="NULL";
 			}
 			if (sid==null) {
 				sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +
@@ -601,9 +601,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			pgraphid = rsst.getInt(1);
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
-			String pdbChainCodeStr = pdbChainCode;
-			if (!pdbChainCode.equals("NULL")) {
-				pdbChainCodeStr="'"+pdbChainCode+"'";
+			String pdbChainCodeStr = "'"+pdbChainCode+"'";
+			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) {
+				pdbChainCodeStr="NULL";
 			}
 			if (sid==null) {
 				sql = "INSERT INTO "+db+".chain_graph (accession_code,chain_pdb_code,pchain_code,model_serial,dist,expBB,method,num_res,num_obs_res,num_nodes,sses,date) " +

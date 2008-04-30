@@ -253,13 +253,13 @@ public class averageGraph {
 		//     By using loadFromListFile we would get the benefit of reading templatesFile that contain a list of pdb files/casp RR files/cm files/cif files
 		String[] codesTemplates = null;
 		try {
-			codesTemplates = TemplateList.readTemplatesFile(templatesFile); 
+			codesTemplates = TemplateList.readIdsListFile(templatesFile); 
 		} catch (IOException e) {
-			System.err.println("Error while reading templates file "+templatesFile+". Exiting");
+			System.err.println("Error while reading templates file "+templatesFile+": "+ e.getMessage()+"\nExiting");
 			System.exit(1);
 		}
 		if (codesTemplates.length==0) {
-			System.err.println("Couldn't find any pdb code+pdb chain code in templates file. Exiting");
+			System.err.println("Couldn't find any pdb code+pdb chain code in templates file\nExiting");
 			System.exit(1);
 		}
 		

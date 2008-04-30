@@ -51,7 +51,7 @@ public class PdbfilePdb extends Pdb {
 		try {
 			this.model=modelSerial;
 			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
-			// we set chainCode to pdbChainCode except for case NULL where we use "A"
+			// we set chainCode to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use "A"
 			this.chainCode=pdbChainCode;
 			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 
@@ -101,7 +101,7 @@ public class PdbfilePdb extends Pdb {
 			while ((line=fpdb.readLine())!=null) {
 				if (line.startsWith("ATOM")) {
 					String chain = line.substring(21, 22);
-					if (chain.equals(" ")) chain="NULL";
+					if (chain.equals(" ")) chain=Pdb.NULL_CHAIN_CODE;
 					chains.add(chain);
 				}
 			}
@@ -149,7 +149,7 @@ public class PdbfilePdb extends Pdb {
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
 	 * <code>chainCode</code> gets set to same as <code>pdbChainCode</code>, except if input chain code 
-	 * is "NULL" then chainCode will be <code>NULL_chainCode</code>
+	 * is Pdb.NULL_CHAIN_CODE then chainCode will be <code>NULL_chainCode</code>
 	 * <code>pdbCode</code> gets set to the one parsed in HEADER or to <code>NO_PDB_CODE</code> 
 	 * if not found
 	 * The sequence is either read from SEQRES if present or from the residues read from ATOM 
@@ -178,7 +178,7 @@ public class PdbfilePdb extends Pdb {
 		Pattern p;
 		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
-		// we set chainCodeStr (for regex) to pdbChainCode except for case NULL where we use " " (NULL is a blank chain code in pdb files)
+		// we set chainCodeStr (for regex) to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use " " (Pdb.NULL_CHAIN_CODE is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		

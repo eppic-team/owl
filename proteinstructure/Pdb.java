@@ -37,7 +37,9 @@ import java.sql.Statement;
 public abstract class Pdb {
 
 	protected static final int DEFAULT_MODEL=1;				// default model serial (NMR structures)
-	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code
+	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code. 
+															// Should be safe now to change the value of this constant from "NULL" to something else,
+															// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
 	public static final String NO_PDB_CODE = "";			// to specify no pdb code
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
 	public static final String NO_CHAIN_CODE = "";			// to specify no internal chain code
@@ -61,11 +63,11 @@ public abstract class Pdb {
 
 	protected String sequence; 		// full sequence as it appears in SEQRES field
 	protected String pdbCode;
-	// given "external" pdb chain code, i.e. the classic (author's) pdb code ("NULL" if it is blank in original pdb file)	
+	// given "external" pdb chain code, i.e. the classic (author's) pdb code (Pdb.NULL_CHAIN_CODE if it is blank in original pdb file)	
 	protected String pdbChainCode;
 	// Our internal chain identifier:
 	// - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-	// - in reading from pdb file it coincides with pdbChainCode except for "NULL" where we use "A"
+	// - in reading from pdb file it coincides with pdbChainCode except for Pdb.NULL_CHAIN_CODE where we use "A"
 	protected String chainCode;
 	protected int model;  			// the model serial for NMR structures
 	protected String sid;			// the scop id if Pdb has been restricted (restrictToScopDomain)
@@ -160,7 +162,7 @@ public abstract class Pdb {
 		while ((inputLine = in.readLine()) != null) { 
 			String[] fields = inputLine.split(",");
 			curPdbCode = fields[0]; 
-			curPdbChainCode = (fields[3].equals(""))?"NULL":fields[3];
+			curPdbChainCode = (fields[3].equals(""))?NULL_CHAIN_CODE:fields[3];
 			if (curPdbCode.equals(pdbCode)) {
 				if (curPdbChainCode.equals(pdbChainCode)) {
 					curPdbResSerial = fields[4];
@@ -179,7 +181,7 @@ public abstract class Pdb {
 							// create a new site
 							if ((curSiteId != prevSiteId) | (prevSiteId == -1)) {
 								String littEntryPdbCode = fields[7].substring(0,4);
-								String littEntryPdbChainCode = fields[7].substring(4).equals("")?"NULL":fields[7].substring(4);
+								String littEntryPdbChainCode = fields[7].substring(4).equals("")?NULL_CHAIN_CODE:fields[7].substring(4);
 								cs = new CatalyticSite(curSiteId, fields[6], littEntryPdbCode, littEntryPdbChainCode); 
 							}
 							// add the res to the site
@@ -234,7 +236,7 @@ public abstract class Pdb {
 			Matcher m = p.matcher(inputLine);
 			if (m.find()) {
 				String curPdbCode = inputLine.substring(0,9).trim();
-				String curPdbChainCode = (inputLine.charAt(11) == ' ')?"NULL":String.valueOf(inputLine.charAt(11));
+				String curPdbChainCode = (inputLine.charAt(11) == ' ')?NULL_CHAIN_CODE:String.valueOf(inputLine.charAt(11));
 				if (curPdbCode.equals(pdbCode) && curPdbChainCode.equals(pdbChainCode)) {
 					startPdbResSer = inputLine.substring(20,26).trim();
 					endPdbResSer = inputLine.substring(27,33).trim();
@@ -255,11 +257,11 @@ public abstract class Pdb {
 		BufferedReader in;
 		if (online) {
 			// TODO: Check if url exists and if not do the same as for the offline case
-			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
+			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 			URLConnection ch = consurfhssp.openConnection();
 			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
 		} else {
-			File consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+(pdbChainCode.equals("NULL")?"_":pdbChainCode)+".grades");
+			File consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
 			if (!consurfhssp.exists() && pdbChainCode.equals("A")) {
 				System.out.println("consurf");
 				consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+"_.grades");
@@ -388,7 +390,7 @@ public abstract class Pdb {
 					Pattern p = Pattern.compile("^(-)|([a-zA-Z\\d]):(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|([a-zA-Z\\d]):");
 					Matcher m = p.matcher(regions[j]);
 					if (m.find()) {
-						if (((pdbChainCode.equals("NULL") && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
+						if (((pdbChainCode.equals(NULL_CHAIN_CODE) && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
 								(m.group(2) != null && m.group(2).equals(pdbChainCode)) || 
 								(m.group(7) != null && m.group(7).equals(pdbChainCode))) {
 							if (m.group(3) != null) {
@@ -1776,7 +1778,7 @@ public abstract class Pdb {
 			}
 
 			sql = "INSERT IGNORE INTO "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid) " +
-			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals("NULL")?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
+			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals(NULL_CHAIN_CODE)?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
 			//System.out.println(sql);
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
@@ -1855,7 +1857,7 @@ public abstract class Pdb {
 				}
 			}
 			
-			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals("NULL")?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
+			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals(NULL_CHAIN_CODE)?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
 			
 		}
 		resOut.close();

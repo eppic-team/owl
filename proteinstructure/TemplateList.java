@@ -19,6 +19,10 @@ import tools.MySQLConnection;
  */
 public class TemplateList {
 
+	public static final String IDS_REGEX1 = "^(\\d\\w\\w\\w)(\\w)";
+	public static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
+	public static final String IDS_REGEX3 = "^(\\d\\w\\w\\w)\\s+(\\w)";
+	
 	ArrayList<Template> list = new ArrayList<Template>();
 
 	/**
@@ -131,31 +135,51 @@ public class TemplateList {
 	/*--------------------------------- static methods ----------------------------------*/
 	
 	/**
-	 * Reads a list file containing 1 column of pdbCodes+pdbChainCodes, e.g. 1bxyA
-	 * @param templatesFile
-	 * @return
+	 * Reads a list file containing a list of pdb codes and chain codes in 3 possible formats:
+	 * - 1 column pdbCodes+chainCodes, e.g. 1bxyA
+	 * - 1 column underscore-separated pdbCodes and chainCodes, e.g. 1bxy_A
+	 * - 2 colums tab/spaces-separated pdbCodes and chainCodes, e.g. 1bxy A or 1bxy   A
+	 * See the IDS_REGEX constants of this class for the regex that we are using.
+	 * A mix of the formats is also tolerated.
+	 * Chain codes can only be a 1 letter code (so we must use an "A" for NULL codes)
+	 * @param listFile
+	 * @return an array of pdbCodes(lower case)+chainCodes(conserving case) in the format 1bxyA
 	 * @throws IOException
 	 */
-	public static String[] readTemplatesFile(File templatesFile) throws IOException {
+	public static String[] readIdsListFile(File listFile) throws IOException {
 		ArrayList<String> codesAL = new ArrayList<String>(); 
 
-		BufferedReader fileIn = new BufferedReader(new FileReader(templatesFile));
+		BufferedReader fileIn = new BufferedReader(new FileReader(listFile));
 		String line;
 		int lineCount=0;
 		while((line = fileIn.readLine()) != null) {
 			lineCount++;
 			if (line.length()!=0 && !line.startsWith("#")) {
-				Pattern p = Pattern.compile("^\\d\\w\\w\\w\\w");
-				Matcher m = p.matcher(line);
-				if (m.matches()) {
-					codesAL.add(line);
-				} else {
-					System.err.println("Line "+lineCount+" in templates file doesn't look like a pdb code+pdb chain code");
+				Pattern p1 = Pattern.compile(IDS_REGEX1);
+				Matcher m1 = p1.matcher(line);
+				Pattern p2 = Pattern.compile(IDS_REGEX2);
+				Matcher m2 = p2.matcher(line);
+				Pattern p3 = Pattern.compile(IDS_REGEX3);
+				Matcher m3 = p3.matcher(line);				
+
+				if (m1.matches()) {
+					codesAL.add(m1.group(1).toLowerCase()+m1.group(2));
+				} 
+				else if (m2.matches()) {
+					codesAL.add(m2.group(1).toLowerCase()+m2.group(2));
+				} 
+				else if (m3.matches()){
+					codesAL.add(m3.group(1).toLowerCase()+m3.group(2));
 				}
+				else {
+					System.err.println("Line "+lineCount+" in list file "+listFile+" is not in any of the recognised pdbCode+chainCode formats");
+				}
+			
 			}
 		}
 		String[] codes = new String[codesAL.size()];
 		codesAL.toArray(codes);
 		return codes;
 	}
+	
 }

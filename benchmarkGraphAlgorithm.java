@@ -66,7 +66,7 @@ public class benchmarkGraphAlgorithm {
 				chainCode = rs.getString(2);
 				
 				if(chainCode == null) {
-					chainCode = "NULL";
+					chainCode = Pdb.NULL_CHAIN_CODE;
 				}
 				
 				numPdbs++;

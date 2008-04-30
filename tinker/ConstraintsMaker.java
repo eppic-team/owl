@@ -62,7 +62,7 @@ public class ConstraintsMaker {
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 
 		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-		this.pdb.load("NULL");
+		this.pdb.load(Pdb.NULL_CHAIN_CODE);
 		this.type = type;
 		
 		this.lastPdbResSerial_Atom = "";

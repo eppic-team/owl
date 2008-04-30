@@ -129,7 +129,7 @@ public class MsdsdPdb extends Pdb {
 			ResultSet rsst = stmt.executeQuery(sql);
 			while (rsst.next()) {
 				String chain = rsst.getString(1);
-				if (chain==null) chain="NULL";
+				if (chain==null) chain=Pdb.NULL_CHAIN_CODE;
 				chains.add(chain);
 			}
 			rsst.close();

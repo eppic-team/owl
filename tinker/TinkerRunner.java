@@ -40,7 +40,7 @@ public class TinkerRunner {
 	
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
 	
-	public static final String DEFAULT_RECONSTR_CHAIN_CODE = "NULL";
+	public static final String DEFAULT_RECONSTR_CHAIN_CODE = Pdb.NULL_CHAIN_CODE;
 	
 	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
 	

@@ -1,8 +1,6 @@
 import gnu.getopt.Getopt;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
@@ -12,6 +10,7 @@ import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.RIGraph;
+import proteinstructure.TemplateList;
 import tools.MySQLConnection;
 
 
@@ -22,13 +21,6 @@ public class genGraph {
 	public static final String			DB_HOST = "white";								
 	public static final String			DB_USER = getUserName();
 	public static final String			DB_PWD = "nieve";
-	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
-	public static final String			DSSP_PARAMS = "--";
-	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
-	public static final String			NACCESS_PARAMS = "";
-
-	//public static double			cutoff = 4.2;
-	//public static String			edgeType = "ALL";
 	
 	/*---------------------------- private methods --------------------------*/
 	/** 
@@ -48,21 +40,23 @@ public class genGraph {
 		String progName = "genGraph";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
-				"2)  "+progName+" -p <pdb_code> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> [-D <pdbase_db>] \n" +
-				"3)  "+progName+" -f <pdbfile> -c <chain_pdb_code> -d <distance_cutoff> -t <contact_type> -o <output_dir> \n" +
-				"In case 2) also a list of comma separated pdb codes and chain codes can be specified, e.g. -p 1bxy,1jos -c A,A\n" +
+				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-P] \n" +
+				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-P] \n" +
+				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-P] \n\n" +
+				"In case 2) also a list of comma separated pdb codes+chain codes can be specified, e.g. -p 1bxyA,1josA \n" +
+				"In case 3) if -c not specified then the first chain code in the pdb file will be taken\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n" +
+				"If output dir not specified default is current\n" +
 				"In all cases option -P can be specified to get the graph in paul format instead of aglappe format\n"; 
 
 		String listfile = "";
-		String[] pdbCodes = null;
-		String[] pdbChainCodes = null;
+		String[] pdbIds = null;
+		String pdbChainCode4file = null;
 		String pdbfile = "";
 		String pdbaseDb = PDB_DB;
 		String edgeType = "";
 		double cutoff = 0.0;
-		String outputDir = "";
+		String outputDir = "."; // we set default to current directory
 		boolean paul = false;
 		
 		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:Ph?");
@@ -73,10 +67,10 @@ public class genGraph {
 				listfile = g.getOptarg();
 				break;
 			case 'p':
-				pdbCodes = g.getOptarg().split(",");
+				pdbIds = g.getOptarg().split(",");
 				break;
 			case 'c':
-				pdbChainCodes = g.getOptarg().split(",");
+				pdbChainCode4file = g.getOptarg();
 				break;
 			case 'f':
 				pdbfile = g.getOptarg();
@@ -104,18 +98,18 @@ public class genGraph {
 			}
 		}
 
-		if (outputDir.equals("") || edgeType.equals("") || cutoff==0.0) {
+		if (edgeType.equals("") || cutoff==0.0) {
 			System.err.println("Some missing option");
 			System.err.println(help);
 			System.exit(1);
 		}
-		if (listfile.equals("") && pdbCodes==null && pdbfile.equals("")){
+		if (listfile.equals("") && pdbIds==null && pdbfile.equals("")){
 			System.err.println("Either a listfile, some pdb codes/chain codes or a pdbfile must be given");
 			System.err.println(help);
 			System.exit(1);
 		}
-		if ((!listfile.equals("") && pdbCodes!=null) || (!listfile.equals("") && !pdbfile.equals("")) || (pdbCodes!=null && !pdbfile.equals(""))) {
-			System.err.println("Options -p/-c, -i and -f/-c are exclusive. Use only one of them");
+		if ((!listfile.equals("") && pdbIds!=null) || (!listfile.equals("") && !pdbfile.equals("")) || (pdbIds!=null && !pdbfile.equals(""))) {
+			System.err.println("Options -p, -i and -f/-c are exclusive. Use only one of them");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -133,30 +127,15 @@ public class genGraph {
 		
 		if (pdbfile.equals("")){
 			
-			if (!listfile.equals("")) {			
-				BufferedReader fpdb = new BufferedReader(new FileReader(listfile));
-				String line = "";
-				int numLines = 0;
-				fpdb.mark(100000);
-				while ((line = fpdb.readLine() ) != null ) {
-					if (line.length()>0) numLines++;
-				}
-				fpdb.reset();
-				pdbCodes = new String[numLines];
-				pdbChainCodes = new String[numLines];
-				numLines = 0;
-				while ((line = fpdb.readLine() ) != null ) {
-					pdbCodes[numLines] = line.split("\\s+")[0].toLowerCase();
-					pdbChainCodes[numLines] = line.split("\\s+")[1];
-					numLines++;
-				}
+			if (!listfile.equals("")) {		
+				pdbIds = TemplateList.readIdsListFile(new File(listfile));
 			}
 
 			int numPdbs = 0;
 
-			for (int i=0;i<pdbCodes.length;i++) {
-				String pdbCode = pdbCodes[i];
-				String pdbChainCode = pdbChainCodes[i];
+			for (int i=0;i<pdbIds.length;i++) {
+				String pdbCode = pdbIds[i].substring(0,4);
+				String pdbChainCode = pdbIds[i].substring(4);
 
 				try {
 					
@@ -170,7 +149,7 @@ public class genGraph {
 					
 					String edgeTypeStr = edgeType.replaceAll("/", ":");
 					
-					File outputFile = new File(outputDir,pdbCode+"_"+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".graph");
+					File outputFile = new File(outputDir,pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".cm");
 					if (!paul) {
 						graph.write_graph_to_file(outputFile.getAbsolutePath());
 					} else {
@@ -190,7 +169,7 @@ public class genGraph {
 				} catch (PdbCodeNotFoundError e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
 				} catch (SQLException e) {
-					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
+					System.err.println("SQL error for structure "+pdbCode+pdbChainCode+", error: "+e.getMessage());
 				}
 
 			}
@@ -200,27 +179,29 @@ public class genGraph {
 
 
 		} else {
-			String pdbChainCode = pdbChainCodes[0];
+			File pdbFile = new File(pdbfile);
 			try {
 				Pdb pdb = new PdbfilePdb(pdbfile);
-				pdb.load(pdbChainCode);
-				if (!pdb.hasSecondaryStructure()) {
-					pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+				if (pdbChainCode4file==null) {
+					pdbChainCode4file = pdb.getChains()[0];
 				}
+
+				pdb.load(pdbChainCode4file);
 				RIGraph graph = pdb.get_graph(edgeType, cutoff);
 
 				String edgeTypeStr = edgeType.replaceAll("/", ":");
 				
-				File outputFile = new File(outputDir,pdb.getPdbCode()+"_"+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".graph");
+				String filename = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf("."));
+				File outputFile = new File(outputDir,filename+"_"+edgeTypeStr+"_"+cutoff+".cm");
 				if (!paul) {
 					graph.write_graph_to_file(outputFile.getAbsolutePath());
 				} else {
 					graph.writeToPaulFile(outputFile.getAbsolutePath());
 				}
-				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbfile);
+				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbFile);
 				
 			} catch (PdbLoadError e) {
-				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
+				System.err.println("Error loading from pdb file "+pdbFile+", specific error: "+e.getMessage());
 			}
 		}
 	}
