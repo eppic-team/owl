@@ -12,6 +12,7 @@ import proteinstructure.RIGraph;
 import proteinstructure.TemplateList;
 import sequence.Sequence;
 import tinker.TinkerRunner;
+import tools.MySQLConnection;
 //import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
 import graphAveraging.GraphAverager;
@@ -26,6 +27,11 @@ public class averageGraph {
 	
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
+	
+	private static final String	PDB_DB = 				"pdbase";
+	private static final String	DB_HOST = 				"white";								
+	private static final String	DB_USER = 				MySQLConnection.getUserName();
+	private static final String	DB_PWD = 				"nieve";
 	
 	/*------------------------- private methods ------------------------------*/
 	
@@ -213,6 +219,8 @@ public class averageGraph {
 			System.exit(1);			
 		}
 				
+		MySQLConnection conn = new MySQLConnection(DB_HOST,DB_USER,DB_PWD);
+		
 		String targetSeq = null;
 		String targetTag = null;
 		Pdb targetPdb = null;
@@ -265,7 +273,7 @@ public class averageGraph {
 		
 		Pdb[] templatePdbs = new Pdb[codesTemplates.length];
 		for (int i=0;i<codesTemplates.length;i++) {
-			Pdb pdb = new PdbasePdb(codesTemplates[i].substring(0, 4));
+			Pdb pdb = new PdbasePdb(codesTemplates[i].substring(0, 4), PDB_DB, conn);
 			pdb.load(codesTemplates[i].substring(4));
 			templatePdbs[i]=pdb;
 		}
@@ -360,6 +368,8 @@ public class averageGraph {
 				System.out.printf("rmsd to native: %5.2f\n",pdb.rmsd(targetPdb, "Ca"));
 			}
 		}
+		
+		conn.close();
 	}
 
 }
