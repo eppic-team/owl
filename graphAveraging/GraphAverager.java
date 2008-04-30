@@ -197,7 +197,7 @@ public class GraphAverager {
 				PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(this.sequence,al.getSequenceNoGaps(targetTag),"graph","alignment");
 				alCheck.printAlignment();
 			} catch (PairwiseSequenceAlignmentException e) {
-				System.err.println("Error while creating alignment check, can't display an alignment. The 2 sequences are: ");
+				System.err.println("Error while creating alignment check, can't display an alignment, error: "+e.getMessage()+". The 2 sequences are: ");
 				System.err.println("graph:     "+sequence);
 				System.err.println("alignment: "+al.getSequenceNoGaps(targetTag));
 			}
