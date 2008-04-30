@@ -29,6 +29,8 @@ public class PdbasePdb extends Pdb {
 
 	private MySQLConnection conn;
 	
+	public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
+	
 	private int entrykey;
 	private String asymid;
 	private int entitykey;
@@ -68,10 +70,31 @@ public class PdbasePdb extends Pdb {
 	}
 
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
+		load(pdbChainCode, modelSerial, ChainCodeType.PDB_CHAIN_CODE);
+	}
+	
+	/**
+	 * Loads PDB data from pdbase given a chain code of type ccType.
+	 * Two possible ccTypes: 
+	 *  - PDB_CHAIN_CODE the classic, author-assigned pdb code (pdb_strand_id in pdbase): the pdbChainCode member of Pdb class
+	 *  - CIF_CHAIN_CODE the cif chain code (asym_id in pdabase): the chainCode member of Pdb class
+	 * @param chainCode
+	 * @param modelSerial
+	 * @param ccType
+	 * @throws PdbLoadError
+	 */
+	public void load(String chainCode, int modelSerial, ChainCodeType ccType) throws PdbLoadError {
 		try {
 			this.model = modelSerial;
-			this.pdbChainCode=pdbChainCode;					// NOTE! pdb chain code are case sensitive!
-			this.asymid=get_asym_id();		// sets asymid and chainCode
+			if (ccType==ChainCodeType.PDB_CHAIN_CODE) {
+				this.pdbChainCode=chainCode;	// NOTE! pdb chain code are case sensitive!
+				this.asymid=get_asym_id();		
+				this.chainCode = asymid;
+			} else if (ccType==ChainCodeType.CIF_CHAIN_CODE) {
+				this.chainCode = chainCode;
+				this.asymid = chainCode;
+				this.pdbChainCode = get_pdb_strand_id();
+			}
 			this.entitykey=get_entity_key();
 			this.alt_locs_sql_str=get_atom_alt_locs();
 			
@@ -179,13 +202,21 @@ public class PdbasePdb extends Pdb {
 		return entrykey;
 	}
 	
+	/**
+	 * Gets the asym_id given a pdb_strand_id (from field pdbChainCode) and entry_key (from field entrykey)
+	 * @return
+	 * @throws PdbChainCodeNotFoundError
+	 * @throws SQLException
+	 */
 	private String get_asym_id() throws PdbChainCodeNotFoundError, SQLException {
+		String asymid = null;
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
-		// NOTE: 'limit 1' not really needed since there can be only one asym_id
-		// per entry_key,pdb_strand_id combination (pdb_strand_id case sensitive!)
+		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
+		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
+		// NOTE2: pdb_strand_id case sensitive!
 		String sql="SELECT asym_id " +
 				" FROM "+db+".pdbx_poly_seq_scheme " +
 				" WHERE entry_key=" + entrykey +
@@ -202,9 +233,37 @@ public class PdbasePdb extends Pdb {
 		}
 		rsst.close();
 		stmt.close();
-		// we set the internal chain identifier chainCode from asymid
-		chainCode = asymid;
+
 		return asymid;	
+	}
+
+	/**
+	 * Gets the pdb_strand_id given an asym_id (from field asymid) and entry_key (from field entrykey)
+	 * @return
+	 * @throws PdbChainCodeNotFoundError
+	 * @throws SQLException
+	 */
+	private String get_pdb_strand_id() throws PdbChainCodeNotFoundError, SQLException {
+		String pdbstrandid = null;
+		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
+		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
+		String sql="SELECT pdb_strand_id " +
+				" FROM "+db+".pdbx_poly_seq_scheme " +
+				" WHERE entry_key=" + entrykey +
+				" AND asym_id='"+asymid+"' " +
+				" LIMIT 1";
+
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			pdbstrandid = rsst.getString(1);
+		} else {
+			throw new PdbChainCodeNotFoundError("No pdb_strand_id match for entry_key="+entrykey+", asym_id="+asymid);
+		}
+		rsst.close();
+		stmt.close();
+
+		return pdbstrandid;	
 	}
 	
 	// NOTE: Entity key not really needed since there can be only one entity_key
@@ -220,11 +279,9 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			entitykey = rsst.getInt(1);
 			if (! rsst.isLast()) {
-				//System.err.println("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 				throw new PdbaseInconsistencyError("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
 			}
 		} else {
-			//System.err.println("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 			throw new PdbaseInconsistencyError("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 		}
 		rsst.close();
@@ -248,7 +305,6 @@ public class PdbasePdb extends Pdb {
 		}
 		if (count!=0){
 			if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
-				//System.err.println("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 				throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 			}
 			alt_ids.remove(".");
@@ -335,7 +391,6 @@ public class PdbasePdb extends Pdb {
         	}
         } 
         if (count==0) {
-        	//System.err.println("No sequence data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
         	throw new PdbaseInconsistencyError("No sequence data match for entry_key="+entrykey+", asym_id="+asymid);
         }
         rsst.close();
@@ -368,7 +423,6 @@ public class PdbasePdb extends Pdb {
 			map.put(pdbresser, resser);
 		} 
 		if (count==0) {
-			//System.err.println("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 			throw new PdbaseInconsistencyError("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 		}
 		rsst.close();
