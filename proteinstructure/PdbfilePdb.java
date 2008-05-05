@@ -301,54 +301,57 @@ public class PdbfilePdb extends Pdb {
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
 			if (m.find()){
-				//                                 serial    atom   res_type      chain 	   res_ser icode    x     y     z
-				Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
-				Matcher ml = pl.matcher(line);
-				if (ml.find()) {
-					empty=false;
-					int atomserial=Integer.parseInt(ml.group(1).trim());
-					String atom = ml.group(2).trim();
-					String res_type = ml.group(3).trim();
-					int res_serial = Integer.parseInt(ml.group(4).trim());
-					if (res_serial<1) {
-						throw new PdbfileFormatError("A residue serial <=0 was found in the ATOM lines");
-					}
-					if (res_serial<lastResSerial) {
-						throw new PdbfileFormatError("Residue serials do not occur in ascending order in ATOM lines of the PDB file "+pdbfile);
-					}
-					lastResSerial = res_serial;
-					String iCode = ml.group(5);
-					if (!iCode.equals(" ")) {
-						throw new PdbfileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
-					}
-					double x = Double.parseDouble(ml.group(6).trim());
-					double y = Double.parseDouble(ml.group(7).trim());
-					double z = Double.parseDouble(ml.group(8).trim());
-					Point3d coords = new Point3d(x,y,z);
-
-					if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
-						// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
-						if (!atomAtOriginSeen) {
-							// first atom at origin we see is valid, we set the flag that we've seen it to true and later it will be read
-							atomAtOriginSeen = true;
-						} else {
-							// more than 1 atom at origin: we don't want to read it: we skip it by continuing to next line
-							continue;
+				try {
+					//                                 serial    atom   res_type      chain 	   res_ser icode    x     y     z
+					Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+					Matcher ml = pl.matcher(line);
+					if (ml.find()) {
+						empty=false;
+						int atomserial=Integer.parseInt(ml.group(1).trim());
+						String atom = ml.group(2).trim();
+						String res_type = ml.group(3).trim();
+						int res_serial = Integer.parseInt(ml.group(4).trim());
+						if (res_serial<1) {
+							throw new PdbfileFormatError("A residue serial <=0 was found in the ATOM lines");
 						}
-					} 
-					
-					if (AAinfo.isValidAA(res_type)) {
-						atomser2coord.put(atomserial, coords);
-						atomser2resser.put(atomserial, res_serial);
-						resser2restype.put(res_serial, res_type);
-						if (AAinfo.isValidAtomWithOXT(res_type,atom)){
-							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+						if (res_serial<lastResSerial) {
+							throw new PdbfileFormatError("Residue serials do not occur in ascending order in ATOM lines of the PDB file "+pdbfile);
 						}
+						lastResSerial = res_serial;
+						String iCode = ml.group(5);
+						if (!iCode.equals(" ")) {
+							throw new PdbfileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
+						}
+						double x = Double.parseDouble(ml.group(6).trim());
+						double y = Double.parseDouble(ml.group(7).trim());
+						double z = Double.parseDouble(ml.group(8).trim());
+						Point3d coords = new Point3d(x,y,z);
+	
+						if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
+							// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
+							if (!atomAtOriginSeen) {
+								// first atom at origin we see is valid, we set the flag that we've seen it to true and later it will be read
+								atomAtOriginSeen = true;
+							} else {
+								// more than 1 atom at origin: we don't want to read it: we skip it by continuing to next line
+								continue;
+							}
+						} 
+						
+						if (AAinfo.isValidAA(res_type)) {
+							atomser2coord.put(atomserial, coords);
+							atomser2resser.put(atomserial, res_serial);
+							resser2restype.put(res_serial, res_type);
+							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
+								resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+							}
+						}
+	
 					}
-
-
-
+				} catch(NumberFormatException e) {
+					throw new PdbfileFormatError("Wrong number format: " + e.getMessage());
 				}
+				
 			}
 		}
 		fpdb.close();
@@ -395,6 +398,24 @@ public class PdbfilePdb extends Pdb {
 			// 2) we set fullLength
 			fullLength = sequence.length();
 		}
+	}
+	
+	/**
+	 * Sets the sequence for this pdb object, overriding any current sequence information.
+	 * If the observed residues (those having 3d coordinates) do not match the new sequence,
+	 * an exception will be thrown.
+	 * @param seq the new sequence
+	 * @throws PdbLoadError if the given sequence does not match observed sequence from ATOM lines
+	 */
+	public void setSequence(String seq) throws PdbLoadError {
+		// we check that the sequences from ATOM lines and the new sequence coincide (except for unobserved residues)
+		for (int resser:resser2restype.keySet()) {
+			if (!String.valueOf(seq.charAt(resser-1)).equals(AAinfo.threeletter2oneletter(resser2restype.get(resser)))) {
+				throw new PdbLoadError("Given sequence does not match observed sequence from ATOM lines for position "+resser+".");
+			}
+		}
+		this.sequence = seq;
+		fullLength = sequence.length();
 	}
 	
 	/**
