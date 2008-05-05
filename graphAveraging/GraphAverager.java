@@ -34,7 +34,7 @@ public class GraphAverager {
 
 	/*--------------------------- member variables --------------------------*/
 	
-	private Alignment al;
+	private Alignment al;			// alignment containing the graphs below
 	private TreeMap<String,RIGraph> templateGraphs;	// identified by tag-string
 	private String targetTag;		// id of target sequence in alignment
 	private String sequence;		// sequence of the final consensus graph
@@ -49,16 +49,22 @@ public class GraphAverager {
 	 * Used in contactVotes Map
 	 */
 	private class Vote {
-		private int voteCount;
+		private int voteCount;			// how many graphs actually contain this contact
+		private int potentialVoteCount; // how many graphs could make this contact (because the positions map to non-gaps)
 		private TreeSet<String> voters;
 		
-		public Vote(int voteCount, TreeSet<String> voters) {
+		public Vote(int voteCount, int potentialVoteCount, TreeSet<String> voters) {
 			this.voteCount = voteCount;
+			this.potentialVoteCount = potentialVoteCount;
 			this.voters = voters;
 		}
 		
 		public int getVoteCount() {
 			return voteCount;
+		}
+		
+		public int getPotentialVoteCount() {
+			return this.potentialVoteCount;
 		}
 		
 		public TreeSet<String> getVoters() {
@@ -244,7 +250,8 @@ public class GraphAverager {
 					if (i>=j) continue;
 				}
 				
-				int vote = 0;
+				int votes = 0;
+				int potentialVotes = 0;
 				TreeSet<String> voters = new TreeSet<String>(); 
 				// scanning all templates to see if they have this contact
 				for (String tag:templateGraphs.keySet()){			
@@ -252,19 +259,23 @@ public class GraphAverager {
 					int iSeqIdx = al.al2seq(tag, i);
 					int jSeqIdx = al.al2seq(tag, j);
 					
-					// if each of the ends map to a gap in this sequence we skip it
-					if ((iSeqIdx!=-1) && (jSeqIdx!=-1) && thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) {  
-						RIGEdge thisGraphCont = thisGraph.getEdgeFromSerials(iSeqIdx, jSeqIdx);
-						Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
-						if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
-							vote++;
-							voters.add(tag);
+					// if either of the ends maps to a gap in this sequence we skip it
+					if ((iSeqIdx!=-1) && (jSeqIdx!=-1)) {
+						potentialVotes++;
+						if(thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) {
+							RIGEdge thisGraphCont = thisGraph.getEdgeFromSerials(iSeqIdx, jSeqIdx);
+							Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
+							// TODO: Why is this check necessary? Isn't this always true?
+							if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
+								votes++;
+								voters.add(tag);
+							}
 						}
 					}
 				}
 				// putting vote in contactVotes Map
-				if (vote>0){
-					contactVotes.put(new Pair<Integer>(i,j), new Vote(vote,voters));
+				if (votes>0){
+					contactVotes.put(new Pair<Integer>(i,j), new Vote(votes, potentialVotes, voters));
 				}				
 			}
 		}		
@@ -291,15 +302,20 @@ public class GraphAverager {
 	 */
 	public RIGraph getConsensusGraph(double threshold) {
 		
+		boolean legacyMode = false;	// take threshold as fraction of total number of templates
 		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
 		int numTemplates = templateGraphs.size();
 		
 		// if vote above threshold we take the contact for our target
-		int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
+		// old: int voteThreshold = (int) Math.ceil((double)numTemplates*threshold); // i.e. round up of 50%, 40% or 30% (depends on threshold given)
 		for (Pair<Integer> alignCont:contactVotes.keySet()){
-			if (contactVotes.get(alignCont).getVoteCount()>=voteThreshold) {
+			int potentialContacts = contactVotes.get(alignCont).getPotentialVoteCount();
+			int actualContacts = contactVotes.get(alignCont).getVoteCount();
+			if(legacyMode) potentialContacts = numTemplates;
+			double weight = 1.0 * actualContacts / potentialContacts;
+			if (weight > threshold) {
 				int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
 				int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
 				if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
@@ -317,13 +333,18 @@ public class GraphAverager {
 	 * @return
 	 */
 	public RIGraph getAverageGraph() {
+
+		boolean legacyMode = false;	// take threshold as fraction of total number of templates		
 		RIGraph graph = new RIGraph(this.sequence);
 		graph.setContactType(this.contactType);
 		graph.setCutoff(this.distCutoff);
 		int numTemplates = templateGraphs.size();
 		
 		for (Pair<Integer> alignCont:contactVotes.keySet()){
-			double weight = 1.0 * contactVotes.get(alignCont).getVoteCount() / numTemplates;
+			int potentialContacts = contactVotes.get(alignCont).getPotentialVoteCount();
+			int actualContacts = contactVotes.get(alignCont).getVoteCount();
+			if(legacyMode) potentialContacts = numTemplates;
+			double weight = 1.0 * actualContacts / potentialContacts;
 			int target_i_res = al.al2seq(targetTag,alignCont.getFirst());
 			int target_j_res = al.al2seq(targetTag,alignCont.getSecond());
 			if (target_i_res!=-1 && target_j_res!=-1) { // we can't add contacts that map to gaps!!
@@ -398,7 +419,12 @@ public class GraphAverager {
 				// TODO: Use index mapping from alignment
 				Pair<RIGNode> n = g.getEndpoints(e);
 				Pair<Integer> i = new Pair<Integer>(n.getFirst().getResidueSerial(), n.getSecond().getResidueSerial());
-				int count = contactVotes.get(i).getVoteCount();
+				int count = 0;
+				if(contactVotes.containsKey(i)) {
+					count = contactVotes.get(i).getVoteCount();
+				} else {
+					System.err.println("Severe error in GraphAverager.getConsensusScore(): contactVotes does not contain key " + i + "(this may be a serious bug!)");
+				}
 				score = score + count;
 			}
 		} else return -1;
