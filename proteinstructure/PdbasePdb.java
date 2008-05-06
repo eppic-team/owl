@@ -190,12 +190,10 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			entrykey = rsst.getInt(1);
 			if (! rsst.isLast()) {
-				//System.err.println("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-				throw new PdbCodeNotFoundError("More than 1 entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);					
+				throw new PdbCodeNotFoundError("More than 1 entry_key match for accession_code="+pdbCode);					
 			}
 		} else {
-			//System.err.println("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
-			throw new PdbCodeNotFoundError("No entry_key match for accession_code="+pdbCode+", chain_pdb_code="+pdbChainCode);
+			throw new PdbCodeNotFoundError("No entry_key match for accession_code="+pdbCode);
 		}
 		rsst.close();
 		stmt.close();
