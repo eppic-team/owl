@@ -1457,6 +1457,24 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Gets the observed sequence, i.e. the sequence as it appears in the ATOM 
+	 * lines of the PDB file (non-standard aas are not in this sequence even if 
+	 * they have coordinates)
+	 * @return
+	 */
+	public String getObservedSequence() {
+		String obsSequence = "";
+		TreeSet<Integer> ressers = new TreeSet<Integer>();
+		for (int resser:resser2restype.keySet()) {
+			ressers.add(resser);
+		}
+		for (int resser:ressers) {
+			obsSequence += AAinfo.threeletter2oneletter(resser2restype.get(resser));
+		}
+		return obsSequence;
+	}
+	
+	/**
 	 * True if this Pdb has the sequence field set to not blank 
 	 * @return
 	 */
