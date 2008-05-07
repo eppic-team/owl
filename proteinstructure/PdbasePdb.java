@@ -6,6 +6,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -488,5 +489,35 @@ public class PdbasePdb extends Pdb {
 		rsst.close();
 		stmt.close();
 
+	}
+	
+	/**
+	 * Gets a mapping of observed residue serials (numbered from 1 to last 
+	 * observed residue, with no gaps) to internal residue serials (cif)
+	 * Can be called only after PDB data have been loaded (with {@link #load(String)})
+	 * This method is designed specifically to be used with GTGParser 
+	 * NOTE: the mapping might not be 100% perfect: we are not sure whether unobserved residues 
+	 * 		 always have auth_seq_num!='?'. So far it looks fine (tested with a few hundred PDB entries) 
+	 * @return
+	 * @throws SQLException
+	 */
+	public TreeMap<Integer,Integer> getObservedResMapping() throws SQLException{
+		TreeMap<Integer,Integer> map = new TreeMap<Integer, Integer>();
+		String sql = "SELECT seq_id " +
+					" FROM "+db+".pdbx_poly_seq_scheme"+
+					" WHERE entry_key=" + entrykey +
+					" AND asym_id='"+asymid+"' " +
+					" AND auth_seq_num!='?' " + // this gives only observed residues
+					" ORDER BY seq_id+0";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		int serial = 0;
+		while (rsst.next()) {
+			serial++;
+			map.put(serial, Integer.parseInt(rsst.getString(1)));
+		}
+		rsst.close();
+		stmt.close();
+		return map;
 	}
 }

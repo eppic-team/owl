@@ -10,7 +10,7 @@ import java.util.Iterator;
  * A list of blast hits
  *
  */
-public class BlastHitList {
+public class BlastHitList implements Iterable<BlastHit> {
 	
 	private ArrayList<BlastHit> hits;
 	private int queryLength;				// needed by print() and printSome()
