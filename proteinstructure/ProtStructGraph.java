@@ -46,6 +46,8 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	protected int targetNum;
 	protected int caspModelNum;
 	protected int groupNum;
+	protected String authorStr;
+	protected String methodStr;
 	
 	protected int fullLength;		// full length of the protein with all aas (same as sequence length)
 
@@ -187,6 +189,14 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	public int getTargetNum() {
 		return targetNum;
 	}
+	
+	public String getAuthorStr() {
+		return authorStr;
+	}
+	
+	public String getMethodStr() {
+		return methodStr;
+	}
 
 	/**
 	 * @param caspModelNum the caspModelNum to set
@@ -207,6 +217,20 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	 */
 	public void setTargetNum(int targetNum) {
 		this.targetNum = targetNum;
+	}
+	
+	/**
+	 * @param authorStr the author string to set
+	 */
+	public void setAuthorStr(String authorStr) {
+		this.authorStr = authorStr;
+	}
+	
+	/**
+	 * @param methodStr the method string to set
+	 */
+	public void setMethodStr(String methodStr) {
+		this.methodStr = methodStr;
 	}
 	
 	public String getSid() {

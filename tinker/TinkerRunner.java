@@ -606,6 +606,22 @@ public class TinkerRunner {
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
 		return reconstruct(sequence, graphs, numberOfModels, DEFAULT_FORCECONSTANT);
 	}	
+	
+	/** 
+	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object
+	 * using the default forceConstant.
+	 * The model is picked based on the number of bound violations reported by Tinker.
+	 * See reconstruct() for more details.
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @returns A pdb object containg the generated structure
+	 */
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
+		return reconstructFast(sequence, graphs, numberOfModels, DEFAULT_FORCECONSTANT);
+	}
 
 	/** 
 	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
@@ -627,6 +643,32 @@ public class TinkerRunner {
 		boolean cleanUp = true;						
 		
 		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
+		int pickedIdx = pickByLeastBoundViols();
+		resultPdb = getStructure(pickedIdx);
+		
+		return resultPdb;
+	}
+	
+	/** 
+	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * The model is picked based on the number of bound violations reported by Tinker.
+	 * See reconstruct() for more details.
+	 * @param sequence sequence of the structure to be generated
+	 * @param graphs array of graph objects containing constraints
+	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
+	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @returns a Pdb object containg the generated structure
+	 */
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant) throws TinkerError, IOException {
+		Pdb resultPdb = null;
+		
+		String outputDir = System.getProperty("java.io.tmpdir");
+		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
+		boolean cleanUp = true;						
+		
+		reconstruct(sequence, graphs, numberOfModels, forceConstant, false, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		

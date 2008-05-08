@@ -75,6 +75,8 @@ public abstract class Pdb {
 	// optional fields for structures based on casp predictions
 	protected int targetNum;
 	protected int caspModelNum;
+	protected String caspAuthorStr;
+	protected String caspMethodStr;
 	protected int groupNum;
 
 	protected int fullLength; // length of full sequence as it appears in SEQRES field 
@@ -558,6 +560,8 @@ public abstract class Pdb {
 	private void writeCaspTSHeader(PrintWriter Out, boolean refined, String[] parents) {
 		Out.println("PFRMAT TS");
 		Out.printf("TARGET T%04d\n",targetNum);
+		if(caspAuthorStr != null) Out.printf("AUTHOR %s\n", caspAuthorStr);
+		if(caspMethodStr != null) Out.printf("METHOD %s\n", caspMethodStr);
 		String refineStr = "UNREFINED";
 		if (refined) refineStr = "REFINED";
 		Out.println("MODEL "+caspModelNum+" "+refineStr);
@@ -968,6 +972,8 @@ public abstract class Pdb {
 		graph.setTargetNum(targetNum);
 		graph.setGroupNum(groupNum);
 		graph.setCaspModelNum(caspModelNum);
+		graph.setMethodStr(caspMethodStr);
+		graph.setAuthorStr(caspAuthorStr);
 		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 
@@ -1446,6 +1452,22 @@ public abstract class Pdb {
 	 */
 	public void setCaspModelNum(int caspModelNum) {
 		this.caspModelNum = caspModelNum;
+	}
+	
+	/**
+	 * Sets the author string required for casp submissions, set to null to supress output.
+	 * @param authorStr the author string to be set
+	 */
+	public void setCaspAuthorStr(String authorStr) {
+		this.caspAuthorStr = authorStr;
+	}
+
+	/**
+	 * Sets the method string required for casp submissions, set to null to supress output.
+	 * @param methodStr the method string to be set
+	 */
+	public void setCaspMethodStr(String methodStr) {
+		this.caspMethodStr = methodStr;
 	}
 	
 	/**

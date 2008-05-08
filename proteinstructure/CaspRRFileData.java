@@ -25,6 +25,8 @@ public class CaspRRFileData {
 	public static final String OUT_HEADER = "PFRMAT RR\n";
 	public static final String OUT_TARGET = "TARGET T%04d\n";
 	public static final String OUT_MODEL = "MODEL %d\n";
+	public static final String OUT_AUTHOR = "AUTHOR %s\n";
+	public static final String OUT_METHOD = "METHOD %s\n";
 	public static final String OUT_SEQ = "%s\n";
 	public static final String OUT_CONTACT = "%3d %3d %2.0f %2.0f %f";
 	public static final String OUT_END = "END\n";
@@ -89,6 +91,8 @@ public class CaspRRFileData {
 	int groupNum;
 	int modelNum;
 	String sequence;
+	String author;
+	String method;
 	ArrayList<RRContact> contacts;
 	String contactType;
 	
@@ -98,6 +102,8 @@ public class CaspRRFileData {
 		groupNum = 0;
 		modelNum = 1;
 		sequence = "";
+		author = null;
+		method = null;
 		contacts = new ArrayList<RRContact>();
 		this.contactType = DEFAULT_CONT_TYPE;
 	}
@@ -167,6 +173,22 @@ public class CaspRRFileData {
 	
 	public void setSequence(String seq) {
 		this.sequence = seq;
+	}
+	
+	/**
+	 * Sets the author field needed for Casp submissions, set to null to supress output.
+	 * @param author the author string
+	 */
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+	
+	/**
+	 * Sets the method field needed for Casp submissions, set to null to supress output.
+	 * @param method the method string
+	 */
+	public void setMethod(String method) {
+		this.method = method;
 	}
 	
 	public void addContact(RRContact contact) {
@@ -247,6 +269,8 @@ public class CaspRRFileData {
 		StringBuffer seq = new StringBuffer(this.sequence);
 		bout.format(OUT_HEADER);
 		bout.format(OUT_TARGET, targetNum);
+		if(author != null) bout.format(OUT_AUTHOR, author);
+		if(method != null) bout.format(OUT_METHOD, method);
 		bout.format(OUT_MODEL, modelNum);
 		while(seq.length() > MAX_CHARS_PER_SEQ_LINE) {
 			bout.format(OUT_SEQ, seq.substring(0,MAX_CHARS_PER_SEQ_LINE));

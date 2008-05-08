@@ -901,6 +901,10 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		PrintStream out = new PrintStream(new FileOutputStream(outFile));
 		CaspRRFileData rrData = new CaspRRFileData();
 		rrData.setSequence(this.sequence);
+		rrData.setTargetNum(this.targetNum);
+		rrData.setModelNum(this.caspModelNum);
+		rrData.setAuthor(this.authorStr);
+		rrData.setMethod(this.methodStr);
 		for(RIGEdge cont:getEdges()) {
 			Pair<RIGNode> nodePair = getEndpoints(cont);
 			int i = nodePair.getFirst().getResidueSerial();
