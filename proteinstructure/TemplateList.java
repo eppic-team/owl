@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.regex.Matcher;
@@ -11,13 +12,15 @@ import java.util.regex.Pattern;
 
 import sequence.BlastHit;
 import sequence.BlastHitList;
+import sequence.GTGHit;
+import sequence.GTGHitList;
 import tools.MySQLConnection;
 
 /**
  * A set of Templates to be used for homology modelling
  * See also RIGEnsemble.
  */
-public class TemplateList {
+public class TemplateList implements Iterable<Template> {
 
 	public static final String IDS_REGEX1 = "^(\\d\\w\\w\\w)(\\w)";
 	public static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
@@ -33,8 +36,8 @@ public class TemplateList {
 	}
 	
 	/**
-	 * Constructs a TemplateList given a BlastHitList and a 
-	 * MySQLConnection from wher pdb data will be taken
+	 * Constructs a new TemplateList given a BlastHitList and a 
+	 * MySQLConnection from where PDB data will be taken
 	 * @param hits
 	 * @param conn
 	 */
@@ -46,6 +49,20 @@ public class TemplateList {
 		}
 	}
 
+	/**
+	 * Constructs a new TemplateList given a GTGHitList and a 
+	 * MySQLConnection from where PDB data will be taken
+	 * @param hits
+	 * @param conn
+	 */
+	public TemplateList(GTGHitList hits, MySQLConnection conn) {
+		list = new ArrayList<Template>();
+		Iterator<GTGHit> it = hits.iterator();
+		while (it.hasNext()) {
+			this.add(new Template(it.next(),conn));
+		}
+	}
+	
 	/**
 	 * Constructs a TemplateList from a file with ids in the format pdbCode+chain, e.g. 1abcA
 	 * @param idsFile
@@ -131,6 +148,60 @@ public class TemplateList {
 		return ids;
 	}
 	
+	/**
+	 * Tells whether this TemplateList contains the Template represented by the given templateId
+	 * @param templateId
+	 * @return
+	 */
+	public boolean contains(String templateId) {
+		for (Template template:this) {
+			if (template.getId().equals(templateId)) return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Compare this TemplatesList agains the given one, printing out the ids of the common templates.
+	 * Note: also the templates unique to each list are found, but we don't output them yet 
+	 * @param otherTemplateList
+	 */
+	public void compare(TemplateList otherTemplateList) {
+		ArrayList<String> common = new ArrayList<String>();
+		ArrayList<String> uniqueToThis = new ArrayList<String>();
+		//ArrayList<String> uniqueToOther = new ArrayList<String>();
+		for (Template template: this) {
+			if (otherTemplateList.contains(template.getId())) {
+				common.add(template.getId());
+			} else {
+				uniqueToThis.add(template.getId());
+			}
+		}
+		//for (Template template: otherTemplateList) {
+		//	if (!this.contains(template.getId())) {
+		//		uniqueToOther.add(template.getId());
+		//	}
+		//}
+		System.out.println(common.size()+" common templates: ");
+		for (String id:common) {
+			System.out.print(id+ " ");
+		}
+		System.out.println();
+		//System.out.println(common.size()+" unique to templates: ");
+		//System.out.println(common.size()+" unique to templates: ");
+	}
+	
+	/**
+	 * Writes the ids of all Templates in this list to given File
+	 * @param outFile
+	 * @throws IOException
+	 */
+	public void writeIdsToFile(File outFile) throws IOException {
+		PrintWriter Out = new PrintWriter(outFile);
+		for (Template template:this) {
+			Out.println(template.getId());
+		}
+		Out.close();
+	}
 	
 	/*--------------------------------- static methods ----------------------------------*/
 	

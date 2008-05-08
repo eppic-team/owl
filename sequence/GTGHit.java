@@ -2,6 +2,8 @@ package sequence;
 
 import java.sql.SQLException;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
@@ -14,7 +16,9 @@ import tools.MySQLConnection;
  */
 public class GTGHit {
 	
-	private static String NULL_PDBCHAINCODE = "A";
+	private static final String NULL_PDBCHAINCODE = "A";
+	
+	private static final String ID_REGEX = "(\\d\\w\\w\\w)(\\w)";
 
 	String queryId;
 	String subjectId;
@@ -53,6 +57,10 @@ public class GTGHit {
 		
 	}
 
+	public int getTotalScore() {
+		return this.totalScore;
+	}
+	
 	public void setQueryStart(int queryStart) {
 		this.queryStart = queryStart;
 	}
@@ -171,4 +179,58 @@ public class GTGHit {
 		subjectStart = mapObsSerials2resser.get(subjectStart);
 		subjectEnd = mapObsSerials2resser.get(subjectEnd);
 	}
+	
+	/**
+	 * Prints a few selected fields for this GTG hit plus a graphical representation of the match.
+	 * The match is scaled by the given scale factor and rounded to screen columns. 
+	 * @param scaleFactor
+	 */
+	public void printWithOverview(double scaleFactor) {
+		System.out.printf("%5s\t%5s\t%5.1f\t%7d ", queryId, subjectId, getPercentIdentity(), totalScore);
+		int beg = (int) Math.floor(scaleFactor * this.queryStart);
+		int end = (int) Math.ceil(scaleFactor * this.queryEnd);
+		printOverviewLine(beg, end);
+	}
+	
+	/**
+	 * Print the column headers corresponding to the printWithOverview() method.
+	 * Additionally prints a graphical overview of the query (queryLength scaled by scaleFactor).
+	 * @param queryLength
+	 * @param scaleFactor
+	 */
+	public static void printHeaderWithOverview(int queryLength, double scaleFactor) {
+		System.out.printf("%5s\t%5s\t%5s\t%7s ", "query", "sbjct", "id%", "sc");
+		int beg = 1;
+		int end = (int) Math.ceil(scaleFactor * queryLength);
+		printOverviewLine(beg, end);		
+	}
+	
+	/**
+	 * Print one line of the match overview.
+	 * @param beg the beginning of the match in screen columns
+	 * @param end the end of the match in screen columns
+	 */
+	private static void printOverviewLine(int beg, int end) {
+		for (int i = 1; i < beg; i++) {
+			System.out.print(" ");
+		}
+		for (int i = beg; i <= end; i++) {
+			System.out.print("-");
+		}
+		System.out.println();
+	}
+	
+	/**
+	 * Returns the template id as concatenated pdb code + chain code e.g. 1abcA
+	 * @return the template id or null if queryId is not in the right format
+	 */
+	public String getTemplateId() {
+		Pattern p = Pattern.compile(ID_REGEX);
+		Matcher m = p.matcher(subjectId);
+		if (m.matches()) {
+			return m.group(1).toLowerCase()+m.group(2).toUpperCase();
+		}
+		return null;
+	}
+
 }

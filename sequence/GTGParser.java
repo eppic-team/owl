@@ -132,7 +132,7 @@ public class GTGParser {
 		GTGHitList hits = gtgparser.getHits();
 		
 		System.out.println("Number of hits: "+hits.size());
-		hits.print();
+		hits.printTabular();
 		
 		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
 		String pdbaseDb ="pdbase";

@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import sequence.BlastHit;
+import sequence.GTGHit;
 import tools.MySQLConnection;
 
 /**
@@ -24,7 +25,6 @@ public class Template {
 	private Pdb pdb;
 	private MySQLConnection conn;
 
-	BlastHit hit;
 	
 	/**
 	 * Constructs a Template given an id in format pdbCode+chain, e.g. 1abcA
@@ -38,18 +38,29 @@ public class Template {
 	}
 	
 	/**
-	 * Constructs a Template given a BlastHit and a MySQLConnection 
-	 * from where pdb data will be taken
+	 * Constructs a new Template given a BlastHit and a MySQLConnection 
+	 * from where PDB data will be taken
 	 * @param hit
 	 * @param conn
 	 */
 	public Template(BlastHit hit, MySQLConnection conn) {
-		this.hit = hit;
 		this.id = hit.getTemplateId();
 		this.conn = conn;
 		getPdbAndScopString();
 	}
 
+	/**
+	 * Constructs a new Template given a GTGHit and a MySQLConnection 
+	 * from where PDB data will be taken
+	 * @param hit
+	 * @param conn
+	 */
+	public Template(GTGHit hit, MySQLConnection conn) {
+		this.id = hit.getTemplateId();
+		this.conn = conn;
+		getPdbAndScopString();
+	}
+	
 	/**
 	 * Checks that the id complies to our standard pdbCode+chain, e.g. 1abcA
 	 */
