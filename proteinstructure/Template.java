@@ -28,13 +28,12 @@ public class Template {
 	
 	/**
 	 * Constructs a Template given an id in format pdbCode+chain, e.g. 1abcA
-	 * The blast hit data for this template will be missing
 	 * @param id
 	 */
 	public Template(String id) {
 		this.id = id;
 		checkId();
-		getPdbAndScopString(); 
+		//getPdbAndScopString(); 
 	}
 	
 	/**
@@ -46,7 +45,7 @@ public class Template {
 	public Template(BlastHit hit, MySQLConnection conn) {
 		this.id = hit.getTemplateId();
 		this.conn = conn;
-		getPdbAndScopString();
+		//getPdbAndScopString();
 	}
 
 	/**
@@ -58,7 +57,7 @@ public class Template {
 	public Template(GTGHit hit, MySQLConnection conn) {
 		this.id = hit.getTemplateId();
 		this.conn = conn;
-		getPdbAndScopString();
+		//getPdbAndScopString();
 	}
 	
 	/**
@@ -73,23 +72,14 @@ public class Template {
 	}
 	
 	/**
-	 * Gets the pdb structure coordinates into the pdb object and all SCOP 
-	 * sccs ids in a comma separated string 
+	 * Gets the pdb structure coordinates into the pdb object 
 	 */
-	private void getPdbAndScopString() {
+	private void getPdbInfo() {
 		String pdbCode = id.substring(0, 4);
 		String chain = id.substring(4);
 		try {
 			pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
 			pdb.load(chain);
-			pdb.checkScop(SCOP_VERSION, false);
-			Iterator<ScopRegion> it = pdb.getScop().getIterator();
-			scopSccsString = "";
-			while (it.hasNext()) {
-				scopSccsString += it.next().sccs +", ";
-			}
-			if (scopSccsString.contains(",")) // choping off the last comma if the string is not empty
-				scopSccsString = scopSccsString.substring(0, scopSccsString.length()-2); 
 		} catch (SQLException e) {
 			System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
 			pdb = null;
@@ -99,6 +89,23 @@ public class Template {
 		} catch (PdbLoadError e) {
 			System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
 			pdb = null;
+		} 
+	}
+	
+	/**
+	 * Get all SCOP sccs ids in a comma separated string
+	 * pdb must be loaded already. If pdb==null a NullPointerException will be thrown
+	 */
+	private void getScopInfo() {
+		try {
+			pdb.checkScop(SCOP_VERSION, false);
+			Iterator<ScopRegion> it = pdb.getScop().getIterator();
+			scopSccsString = "";
+			while (it.hasNext()) {
+				scopSccsString += it.next().sccs +", ";
+			}
+			if (scopSccsString.contains(",")) // choping off the last comma if the string is not empty
+				scopSccsString = scopSccsString.substring(0, scopSccsString.length()-2); 
 		} catch (IOException e) {
 			System.err.println("Couldn't get SCOP annotation for structure "+id+", error: "+e.getMessage());
 		}
@@ -119,11 +126,16 @@ public class Template {
 		return this.id;
 	}
 	
-	/**
+	/**  
 	 * Returns the pdb object with the actual structure
+	 * The first time the method is called the PDB data is loaded from db. 
+	 * Subsequent calls take the PDB data from the  cached variable.
 	 * @return
 	 */
 	public Pdb getPdb() {
+		if (pdb==null) {
+			getPdbInfo();
+		}
 		return this.pdb;
 	}
 	
@@ -133,5 +145,22 @@ public class Template {
 	 */
 	public boolean hasStructure() {
 		return pdb!=null;
+	}
+	
+	/**
+	 * Returns the scop sccs string for this Template
+	 * The first time this method is called the SCOP data is parsed from file.
+	 * Subsequente calls take the SCOP data from the cached variable.
+	 * If PDB data is not loaded yet it will be loaded from database.
+	 * @return
+	 */
+	public String getScopSccsString() {
+		if (scopSccsString==null) {
+			if (pdb==null) {
+				getPdbInfo();
+			}
+			getScopInfo();
+		}
+		return this.scopSccsString;
 	}
 }

@@ -161,6 +161,31 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
+	 * Gets a Template given its templateId or null if Template not present in this list
+	 * @param id
+	 * @return
+	 */
+	public Template getTemplate(String templateId) {
+		for (Template template:this) {
+			if (template.getId().equals(templateId)) return template;
+		}
+		return null;
+	}
+	
+	/**
+	 * Gets the rank (from 1 to max) of the given templateId in this TemplateList
+	 * or 0 if templateId is not present in list.
+	 * @param templateId
+	 * @return
+	 */
+	public int getRank(String templateId) {
+		for (int i=0;i<this.size();i++) {
+			if (list.get(i).getId().equals(templateId)) return i+1;
+		}
+		return Integer.MAX_VALUE; // for sorting we want a null rank to be the MAX integer so it sorts at the end
+	}
+	
+	/**
 	 * Compare this TemplatesList agains the given one, printing out the ids of the common templates.
 	 * Note: also the templates unique to each list are found, but we don't output them yet 
 	 * @param otherTemplateList
