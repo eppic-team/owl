@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import proteinstructure.FileFormatError;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
 
@@ -29,12 +30,12 @@ public class GTGParser {
 	 * @param gtgOutputFile
 	 * @throws IOException
 	 */
-	public GTGParser(File gtgOutputFile) throws IOException {
+	public GTGParser(File gtgOutputFile) throws IOException, FileFormatError {
 		this.gtgOutputFile = gtgOutputFile;
 		this.parse();
 	}
 	
-	private void parse() throws IOException {
+	private void parse() throws IOException, FileFormatError {
 		BufferedReader br = new BufferedReader(new FileReader(gtgOutputFile));
 		String line;
 		int hitCounter = 0;
@@ -45,7 +46,9 @@ public class GTGParser {
 		int identities = 0;
 		int alnLength = 0;
 		boolean onAlnRegion = false; // flag to indicate whether we are within the aligned region or out of it
+		int lineCount=0;
 		while ((line=br.readLine())!=null) {
+			lineCount++;
 			if (line.equals("")) continue;
 			if (line.startsWith("#")) {
 				if (hit!=null) { //i.e. we are not in first hit
@@ -76,6 +79,9 @@ public class GTGParser {
 					hits.add(hit);
 				}
 			} else {
+				if (!line.startsWith(hits.getByRank(hits.size()).queryId)) {
+					throw new FileFormatError("Line "+lineCount+" doesn't start with a query id");
+				}
 				String[] fields = line.split("\\t");
 				int querySerial = Integer.parseInt(fields[2]);
 				int subjectSerial = Integer.parseInt(fields[3]);

@@ -177,6 +177,19 @@ public class GTGHitList implements Iterable<GTGHit> {
 	}
 	
 	/**
+	 * Gets the GTGHit corresponding to given rank
+	 * @param rank
+	 * @return the hit at given rank
+	 * @throws IndexOutOfBoundsException if given rank out of bounds
+	 */
+	public GTGHit getByRank(int rank) {
+		if (rank>this.hits.size() || rank<1) {
+			throw new IndexOutOfBoundsException("Given rank "+rank+" is not whithin the ranks range: 1 to "+this.hits.size());
+		}
+		return this.hits.get(rank-1);
+	}
+	
+	/**
 	 * Returns a list of template ids (subject ids) as concatenated 
 	 * pdbCodes+pdbChainCodes e.g. 1abcA 
 	 * @return
