@@ -87,6 +87,9 @@ public class GTGParser {
 					throw new FileFormatError("Line "+lineCount+" doesn't start with a query id");
 				}
 				String[] fields = line.split("\\t");
+				if (fields.length!=5) {
+					throw new FileFormatError("Line "+lineCount+" of GTG file "+gtgOutputFile+" seems to be incorrectly formatted");
+				}
 				int querySerial = Integer.parseInt(fields[2]);
 				int subjectSerial = Integer.parseInt(fields[3]);
 
