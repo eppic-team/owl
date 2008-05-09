@@ -176,6 +176,10 @@ public class GTGHit {
 		pdb.load(pdbChainCode);
 		TreeMap<Integer, Integer> mapObsSerials2resser = pdb.getObservedResMapping();
 		
+		if (!mapObsSerials2resser.containsKey(subjectStart) || !mapObsSerials2resser.containsKey(subjectEnd)) {
+			System.err.println("Cannot map observed residue sequence serials to internal residue serials for "+subjectId+": either subject start or end serial are out of range");
+			return; // can't map: return 
+		}
 		subjectStart = mapObsSerials2resser.get(subjectStart);
 		subjectEnd = mapObsSerials2resser.get(subjectEnd);
 	}
