@@ -74,22 +74,13 @@ public class Template {
 	/**
 	 * Gets the pdb structure coordinates into the pdb object 
 	 */
-	private void getPdbInfo() {
+	private void getPdbInfo() throws SQLException, PdbCodeNotFoundError, PdbLoadError {
 		String pdbCode = id.substring(0, 4);
 		String chain = id.substring(4);
-		try {
-			pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
-			pdb.load(chain);
-		} catch (SQLException e) {
-			System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
-			pdb = null;
-		} catch (PdbCodeNotFoundError e) {
-			System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
-			pdb = null;
-		} catch (PdbLoadError e) {
-			System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
-			pdb = null;
-		} 
+
+		pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
+		pdb.load(chain);
+
 	}
 	
 	/**
@@ -130,11 +121,22 @@ public class Template {
 	 * Returns the pdb object with the actual structure
 	 * The first time the method is called the PDB data is loaded from db. 
 	 * Subsequent calls take the PDB data from the  cached variable.
-	 * @return
+	 * @return the Pdb object or null if something goes wrong while retrieving the PDB data
 	 */
 	public Pdb getPdb() {
 		if (pdb==null) {
-			getPdbInfo();
+			try {
+				getPdbInfo();
+			}  catch (SQLException e) {
+				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
+				pdb = null;
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
+				pdb = null;
+			} catch (PdbLoadError e) {
+				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
+				pdb = null;
+			} 
 		}
 		return this.pdb;
 	}
@@ -156,10 +158,26 @@ public class Template {
 	 */
 	public String getScopSccsString() {
 		if (scopSccsString==null) {
-			if (pdb==null) {
-				getPdbInfo();
-			}
-			getScopInfo();
+			try {
+				if (pdb==null) {
+					getPdbInfo();
+				}
+				getScopInfo();
+				
+			}  catch (SQLException e) {
+				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
+				pdb = null;
+				scopSccsString = "";
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
+				pdb = null;
+				scopSccsString = "";
+			} catch (PdbLoadError e) {
+				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
+				pdb = null;
+				scopSccsString = "";
+			} 
+
 		}
 		return this.scopSccsString;
 	}
