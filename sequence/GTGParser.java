@@ -79,6 +79,10 @@ public class GTGParser {
 					hits.add(hit);
 				}
 			} else {
+				if (hits.size()==0) {
+					// at this point hits should have at least one member from the 1st header read, if not first line is not a header: wrong format
+					throw new FileFormatError("GTG file seems to have wrong format: first line wasn't a header.");
+				}
 				if (!line.startsWith(hits.getByRank(hits.size()).queryId)) {
 					throw new FileFormatError("Line "+lineCount+" doesn't start with a query id");
 				}
