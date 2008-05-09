@@ -221,7 +221,7 @@ public class GTGHit {
 	}
 	
 	/**
-	 * Returns the template id as concatenated pdb code + chain code e.g. 1abcA
+	 * Returns the template id as concatenated pdbCode+pdbChainCode e.g. 1abcA
 	 * @return the template id or null if queryId is not in the right format
 	 */
 	public String getTemplateId() {

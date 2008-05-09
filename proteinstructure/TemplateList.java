@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.regex.Matcher;
@@ -278,4 +281,45 @@ public class TemplateList implements Iterable<Template> {
 		return codes;
 	}
 	
+	/**
+	 * Filters out from a given list of PDB ids (in format pdbCode+pdbChainCode, e.g. 1abcA)
+	 * the ones that were released after the given date (in format yyyymmdd, e.g. 20060425) 
+	 * @param conn
+	 * @param pdbaseDb
+	 * @param ids
+	 * @param date date in format yyyymmdd
+	 * @return a new array containing the filtered out list of PDB ids
+	 * @throws SQLException
+	 */
+	public static String[] filterIdsByMaxReleaseDate(MySQLConnection conn, String pdbaseDb, String[] ids, String date) throws SQLException {
+		Statement stmt = conn.createStatement();
+		String tempTable = pdbaseDb +".temp" + System.currentTimeMillis(); // hopefully a unique name (although with temporary tables not really needed)
+		String sql = "CREATE TEMPORARY TABLE "+tempTable+" (id char(5))";
+		stmt.executeUpdate(sql);
+		for (String id:ids) {
+			sql = "INSERT INTO "+tempTable+" (id) VALUES ('"+id+"')";
+			stmt.executeUpdate(sql);
+		}
+		sql = "SELECT DISTINCT a.id " +
+				" FROM "+tempTable+" AS a " +
+				 " JOIN "+pdbaseDb+".struct AS b " +
+				 " JOIN "+pdbaseDb+".database_pdb_rev AS c" +
+				 " ON (upper(substring(id,1,4))=b.entry_id AND b.entry_key=c.entry_key)" +
+				" WHERE CAST(replace(c.date2,'-','') AS UNSIGNED) >= "+date;
+		ResultSet rsst = stmt.executeQuery(sql);
+		ArrayList<String> filteredIdsAL = new ArrayList<String>();
+		while (rsst.next()) {
+			filteredIdsAL.add(rsst.getString(1));
+		}
+		
+		rsst.close();
+		
+		stmt.executeUpdate("DROP TABLE "+tempTable);
+		stmt.close();
+		
+		String[] filteredIds = new String[filteredIdsAL.size()];
+		filteredIdsAL.toArray(filteredIds);
+		return filteredIds;
+	}
+
 }

@@ -54,6 +54,20 @@ public class BlastHitList implements Iterable<BlastHit> {
 	}
 	
 	/**
+	 * Filters out hits that rank below given rank.
+	 * @param rank
+	 */
+	public void filterByMaxRank(int rank) {
+		Iterator<BlastHit> it = this.iterator();
+		int i=1;
+		while (it.hasNext()) {
+			it.next();
+			if (i>rank) it.remove();
+			i++;
+		}
+	}
+	
+	/**
 	 * Prints a tabular overview of the hits in this list.
 	 * Currently, if the query length is set, (i.e. > 0) a simple ascii-art
 	 * overview of the matches is printed for each hit.

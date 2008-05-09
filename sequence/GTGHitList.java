@@ -6,6 +6,7 @@ import java.util.Iterator;
 
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
+import proteinstructure.TemplateList;
 
 import tools.MySQLConnection;
 
@@ -120,6 +121,35 @@ public class GTGHitList implements Iterable<GTGHit> {
 	}
 	
 	/**
+	 * Filters out from this GTGHitList PDB hits released after the given date
+	 * (in format yyyymmdd, e.g. 20060425)  
+	 * @param conn
+	 * @param pdbaseDb
+	 * @param date date in format yyyymmdd
+	 * @throws SQLException
+	 */
+	public void filterByMaxReleaseDate(MySQLConnection conn, String pdbaseDb, String date) throws SQLException {
+		String[] filteredIds = TemplateList.filterIdsByMaxReleaseDate(conn, pdbaseDb, this.getTemplateIds(), date);
+		for (String filteredId:filteredIds) {
+			this.hits.remove(this.getHit(filteredId));
+		}
+	}
+	
+	/**
+	 * Filters out hits that rank below given rank.
+	 * @param rank
+	 */
+	public void filterByMaxRank(int rank) {
+		Iterator<GTGHit> it = this.iterator();
+		int i=1;
+		while (it.hasNext()) {
+			it.next();
+			if (i>rank) it.remove();
+			i++;
+		}
+	}
+
+	/**
 	 * Returns the hit with the best totalScore or null if this hit list is empty.
 	 * @return
 	 */
@@ -133,4 +163,30 @@ public class GTGHitList implements Iterable<GTGHit> {
 		}
 		return bestHit;
 	}
+	
+	/**
+	 * Gets a GTGHit given its subjectId or null if GTGHit not present in this list 
+	 * @param templateId
+	 * @return
+	 */
+	public GTGHit getHit(String templateId) {
+		for (GTGHit hit:this) {
+			if (hit.getTemplateId().equals(templateId)) return hit;
+		}
+		return null;
+	}
+	
+	/**
+	 * Returns a list of template ids (subject ids) as concatenated 
+	 * pdbCodes+pdbChainCodes e.g. 1abcA 
+	 * @return
+	 */
+	public String[] getTemplateIds() {
+		String[] ids = new String[this.size()];
+		for (int i=0;i<this.size();i++) {
+			ids[i] = this.hits.get(i).getTemplateId();
+		}
+		return ids;
+	}
+	
 }
