@@ -549,9 +549,10 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Write CASP TS file headers. Note that the CASP target number and CASP model 
-	 * number will be written from the internally set values (targetNum, caspModelNum), 
-	 * so they must be set before trying to write them out
+	 * Write CASP TS file headers. Note that the CASP target number, CASP model 
+	 * number, CASP author, and CASP method will be written from the internally 
+	 * set values (targetNum, caspModelNum, caspAuthorStr, caspMethodStr) 
+	 * so they must be set before trying to write them out.
 	 * @param Out
 	 * @param refined whether the model has been refined or not
 	 * @param parents PDB entries in which this homology prediction is based on or
@@ -642,7 +643,11 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Writes coordinates to given File in CASP TS format
+	 * Writes coordinates to given File in CASP TS format.
+     * Note that the CASP target number, CASP model number, CASP author, and 
+     * CASP method will be written from the internally set values (targetNum, 
+     * caspModelNum, caspAuthorStr, caspMethodStr) so they must be set before 
+     * trying to write them out. 
 	 * @param outFile
 	 * @param refined whether the model has been refined or not
 	 * @param parents PDB entries in which this homology prediction is based on or
