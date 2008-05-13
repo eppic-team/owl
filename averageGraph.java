@@ -89,33 +89,31 @@ public class averageGraph {
 				"b) prediction:   specify a sequence file (-f) \n\n" +
 				"Usage: \n" +
 				averageGraph.class.getName()+"\n" +
-				"   -p : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n" +
-				"\n"+
-				"   -f : file with target sequence to be predicted in FASTA format (prediction) \n"+
-				"\n"+
-				"   -P : file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
-				"   -t : comma separated list of contact types \n" +
-				"   -d : comma separated list of distance cutoffs (one per contact type) \n" +
-				"   -b : basename for output files (averaged graph, averaged graph with voters \n" +
-				"        and consensus graphs) \n"+
-				"  [-a]: input alignment file. Default: perform multiple sequence alignment of \n" +
-				"        target and templates with muscle \n" +				
-				"  [-s]: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 \n" +
-				"        will predict an edge in target when present in half of the templates. \n" +
-				"        Default: "+DEFAULT_THRESHOLD+" is used\n"+
-				"  [-o]: output dir, where output files will be written. Default: current dir \n"+
-				"  [-r]: if specified tinker's distgeom will be run to reconstruct the consensus \n" +
-				"        graph creating the specified number of models and finally outputting one \n" +
-				"        pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
-				"        the first one is taken. This can take very long!\n" +
-				"  [-c]: write final reconstructed model also in CASP TS format. In this case the \n" +
-				"        target tag in the target sequence file must comply with the CASP target \n" +
-				"        naming, e.g. T0100 \n\n"+
-				"A set of templates must always be specified (-P). Also as an input a multiple \n" +
-				"sequence alignment of target and templates should be specified (-a). If one is \n" +
-				"not given, then an alignment is calculated with muscle. \n\n" +
-				"For reconstruction, please not that at least 20 models should be specified to \n" +
-				"get a reasonable final selected model. \n";
+				"   -p <string> : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n\n" +
+				"   -f <file>   : file with target sequence to be predicted in FASTA format (prediction) \n\n"+
+				"   -P <file>   : file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
+				"   -t <string> : comma separated list of contact types \n" +
+				"   -d <floats> : comma separated list of distance cutoffs (one per contact type) \n" +
+				"   -b <string> : basename for output files (averaged graph, averaged graph with voters \n" +
+				"                 and consensus graphs) \n"+
+				"  [-a] <file>  : input alignment file. Default: perform multiple sequence alignment of \n" +
+				"                 target and templates with muscle \n" +				
+				"  [-s] <floats>: comma separated list of contact conservation thresholds (CCT) e.g. 0.5 \n" +
+				"                 will predict an edge in target when present in half of the templates. \n" +
+				"                 Default: "+DEFAULT_THRESHOLD+" is used\n"+
+				"  [-o] <dir>   : output dir, where output files will be written. Default: current dir \n"+
+				"  [-r] <int>   : if specified tinker's distgeom will be run to reconstruct the consensus \n" +
+				"                 graph creating the specified number of models and finally outputting one \n" +
+				"                 pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
+				"                 the first one is taken. This can take very long!\n" +
+				"  [-c] <string>: write final reconstructed model also in CASP TS format using as AUTHOR the \n" +
+				"                 specified string. The target tag in the target sequence file must comply \n" +
+				"                 with the CASP target naming convention, e.g. T0100 \n\n"+
+				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
+				"target and templates should be specified as well (-a). If one is not given, then an \n" +
+				"alignment is calculated with muscle. \n\n" +
+				"For reconstruction, please note that at least 20 models should be specified to \n" +
+				"get a reasonable final selected model. \n\n";
 		
 		String[] cts = null;
 		double[] cutoffs = null;
@@ -138,6 +136,7 @@ public class averageGraph {
 		int numberTinkerModels = 0;
 		
 		boolean casp = false;
+		String caspAuthorStr = null;
 		
 		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:ch?");
 		int c;
@@ -186,6 +185,7 @@ public class averageGraph {
 				reconstruct = true;
 				break;
 			case 'c':
+				caspAuthorStr = g.getOptarg();
 				casp = true;
 				break;								
 			case 'h':
@@ -360,6 +360,7 @@ public class averageGraph {
 				int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
 				pdb.setTargetNum(targetNum);
 				pdb.setCaspModelNum(1);
+				pdb.setCaspAuthorStr(caspAuthorStr);
 				pdb.writeToCaspTSFile(outcasptsfile, false, codesTemplates);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
 			}
