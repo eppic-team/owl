@@ -571,7 +571,15 @@ public abstract class Pdb {
 			parentStr = "N/A";
 		} else {
 			for (int i=0;i<parents.length;i++) {
-				parentStr += parents[i] + " ";
+				Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
+				Matcher m = p.matcher(parents[i]);
+				if (m.matches()) {
+					parentStr += m.group(1)+"_"+m.group(2) + " ";
+				} else {
+					System.err.println("Parent string "+parents[i]+" to be written to file CASP TS file not in the expected format 1abcA ");
+					parentStr += parents[i] + " ";
+				}
+				
 			}
 		}
 		Out.println("PARENT "+parentStr);
