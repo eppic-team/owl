@@ -87,8 +87,13 @@ public class BlastUtils {
 	}
 	
 	/**
-	 * Calculates a similarity matrix for a set of blast hits and outputs a graph overview for visual inspection.
+	 * Calculates a similarity matrix (measured by rmsd) for a set of PDB 
+	 * templates and outputs a graph overview for visual inspection.
 	 * Now also writes the similarity matrix to a file (to be used by R script).
+	 * @param templates
+	 * @param graphFile
+	 * @param matrixFile
+	 * @throws IOException
 	 */
 	public static void writeClusterGraph(TemplateList templates, File graphFile, File matrixFile) throws IOException {
 		if (templates.size()==0) return;
@@ -121,7 +126,7 @@ public class BlastUtils {
 		
 		// run maxcluster
 		MaxClusterRunner mcr = new MaxClusterRunner(maxClusterExecutable);
-		HashMap<Pair<Integer>, Double> matrix = mcr.calculateSequenceIndependentMatrix(listFile.getAbsolutePath(), MaxClusterRunner.ScoreType.GDT);
+		HashMap<Pair<Integer>, Double> matrix = mcr.calculateSequenceIndependentMatrix(listFile.getAbsolutePath(), MaxClusterRunner.ScoreType.RMSD);
 
 		// write similarity matrix file
 		String[] templateIds = templates.getIds();
