@@ -3,6 +3,7 @@ package sequence;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.*;
 
 import org.apache.commons.collections15.Transformer;
@@ -11,6 +12,7 @@ import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import proteinstructure.*;
+import tools.MySQLConnection;
 
 /**
  * A collection of little tools related to Blast and Processing Blast output.
@@ -21,7 +23,8 @@ public class BlastUtils {
 
 	private static final File tempDir = new File("/tmp/");
 	private static final String maxClusterExecutable = "/project/StruPPi/bin/maxcluster";
-	private static final double similarityGraphGdtCutoff = 50.0;
+	//private static final double similarityGraphRmsdCutoff = 2.0;
+	//private static final double similarityGraphGdtCutoff = 50.0;
 	
 	class DoubleWrapper {
 		public double val;	
@@ -91,11 +94,13 @@ public class BlastUtils {
 	 * templates and outputs a graph overview for visual inspection.
 	 * Now also writes the similarity matrix to a file (to be used by R script).
 	 * @param templates
+	 * @param conn db connection from where the PDB data will be taken
 	 * @param graphFile
 	 * @param matrixFile
+	 * @param similarityGraphRmsdCutoff
 	 * @throws IOException
 	 */
-	public static void writeClusterGraph(TemplateList templates, File graphFile, File matrixFile) throws IOException {
+	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException {
 		if (templates.size()==0) return;
 		
 		String listFileName = "listfile";
@@ -114,13 +119,15 @@ public class BlastUtils {
 			File pdbFile = new File(tempDir, pdbCode + chain + ".pdb");
 			pdbFile.deleteOnExit();
 			
-			if(template.hasStructure()) {
+			Pdb pdb = null;
+			if((pdb=template.getPdb(conn))!=null) {
 				
 				// write to file
-				template.getPdb().dump2pdbfile(pdbFile.getAbsolutePath());
+				pdb.dump2pdbfile(pdbFile.getAbsolutePath());
 				
 				// add to listfile
-				out.println(pdbFile.getAbsolutePath());				
+				out.println(pdbFile.getAbsolutePath());
+			}
 		}
 		out.close();
 		
@@ -145,7 +152,7 @@ public class BlastUtils {
 			String end = templateIds[edge.getSecond()-1];
 			double weight = matrix.get(edge);
 			//System.out.println(weight);
-			if(weight > similarityGraphGdtCutoff) {
+			if(weight < similarityGraphRmsdCutoff) {
 				simGraph.addEdge(new BlastUtils().new DoubleWrapper(weight), new Pair<String>(start, end));
 			}
 		}
@@ -156,15 +163,15 @@ public class BlastUtils {
 				new Transformer<String, Integer>() {public Integer transform(String s) {return s.hashCode();} },
 				new Transformer<String, String>()  {public String transform(String s) {return s;} }, 
 				new Transformer<String, String>()  {public String transform(String s) {return "white";} }
-				);
-		}
+		);
 	}
+	
 	
 	/**
 	 * Testing some of the methods in this class.
 	 * @param args
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, SQLException {
 //		File blastOutput = new File("");
 //		File imgFile = new File("");
 //		try {
@@ -179,7 +186,7 @@ public class BlastUtils {
 		File matrixFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.matrix");
 		TemplateList templateList = new TemplateList(templateFile);
 		
-		writeClusterGraph(templateList, graphFile, matrixFile);
+		writeClusterGraph(templateList, new MySQLConnection("white","duarte","nieve"),graphFile, matrixFile, 6.0);
 		
 		
 	}

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import proteinstructure.TemplateList;
+import tools.MySQLConnection;
 
 /**
  * A class to run blast programs
@@ -212,7 +213,7 @@ public class BlastRunner {
 			System.out.println("Generating cluster graph...");
 			String[] ids = hits2.getTemplateIds();
 			TemplateList templates = new TemplateList(ids);
-			BlastUtils.writeClusterGraph(templates, new File("out.gdl"), new File("out.matrix"));
+			BlastUtils.writeClusterGraph(templates, new MySQLConnection("white","duarte", "nieve"), new File("out.gdl"), new File("out.matrix"), 6.0);
 		}
 	}
 }

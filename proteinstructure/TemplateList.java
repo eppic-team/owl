@@ -39,30 +39,27 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
-	 * Constructs a new TemplateList given a BlastHitList and a 
-	 * MySQLConnection from where PDB data will be taken
+	 * Constructs a new TemplateList given a BlastHitList
 	 * @param hits
 	 * @param conn
 	 */
-	public TemplateList(BlastHitList hits, MySQLConnection conn) {
+	public TemplateList(BlastHitList hits) {
 		list = new ArrayList<Template>();
 		Iterator<BlastHit> it = hits.iterator();
 		while (it.hasNext()) {
-			this.add(new Template(it.next(),conn));
+			this.add(new Template(it.next()));
 		}
 	}
 
 	/**
-	 * Constructs a new TemplateList given a GTGHitList and a 
-	 * MySQLConnection from where PDB data will be taken
+	 * Constructs a new TemplateList given a GTGHitList 
 	 * @param hits
-	 * @param conn
 	 */
-	public TemplateList(GTGHitList hits, MySQLConnection conn) {
+	public TemplateList(GTGHitList hits) {
 		list = new ArrayList<Template>();
 		Iterator<GTGHit> it = hits.iterator();
 		while (it.hasNext()) {
-			this.add(new Template(it.next(),conn));
+			this.add(new Template(it.next()));
 		}
 	}
 	

@@ -23,8 +23,10 @@ public class Template {
 	private String id;
 	private String scopSccsString;
 	private Pdb pdb;
-	private MySQLConnection conn;
+	//private MySQLConnection conn;
 
+	private BlastHit blastHit;
+	private GTGHit gtgHit;
 	
 	/**
 	 * Constructs a Template given an id in format pdbCode+chain, e.g. 1abcA
@@ -37,26 +39,22 @@ public class Template {
 	}
 	
 	/**
-	 * Constructs a new Template given a BlastHit and a MySQLConnection 
-	 * from where PDB data will be taken
+	 * Constructs a new Template given a BlastHit 
 	 * @param hit
-	 * @param conn
 	 */
-	public Template(BlastHit hit, MySQLConnection conn) {
+	public Template(BlastHit hit) {
 		this.id = hit.getTemplateId();
-		this.conn = conn;
+		this.blastHit = hit;
 		//getPdbAndScopString();
 	}
 
 	/**
-	 * Constructs a new Template given a GTGHit and a MySQLConnection 
-	 * from where PDB data will be taken
+	 * Constructs a new Template given a GTGHit 
 	 * @param hit
-	 * @param conn
 	 */
-	public Template(GTGHit hit, MySQLConnection conn) {
+	public Template(GTGHit hit) {
 		this.id = hit.getTemplateId();
-		this.conn = conn;
+		this.gtgHit = hit;
 		//getPdbAndScopString();
 	}
 	
@@ -73,8 +71,9 @@ public class Template {
 	
 	/**
 	 * Gets the pdb structure coordinates into the pdb object 
+	 * @param conn
 	 */
-	private void getPdbInfo() throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	private void getPdbInfo(MySQLConnection conn) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
 		String pdbCode = id.substring(0, 4);
 		String chain = id.substring(4);
 
@@ -121,12 +120,13 @@ public class Template {
 	 * Returns the pdb object with the actual structure
 	 * The first time the method is called the PDB data is loaded from db. 
 	 * Subsequent calls take the PDB data from the  cached variable.
+	 * @param conn
 	 * @return the Pdb object or null if something goes wrong while retrieving the PDB data
 	 */
-	public Pdb getPdb() {
+	public Pdb getPdb(MySQLConnection conn) {
 		if (pdb==null) {
 			try {
-				getPdbInfo();
+				getPdbInfo(conn);
 			}  catch (SQLException e) {
 				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
 				pdb = null;
@@ -154,13 +154,14 @@ public class Template {
 	 * The first time this method is called the SCOP data is parsed from file.
 	 * Subsequente calls take the SCOP data from the cached variable.
 	 * If PDB data is not loaded yet it will be loaded from database.
+	 * @param conn
 	 * @return
 	 */
-	public String getScopSccsString() {
+	public String getScopSccsString(MySQLConnection conn) {
 		if (scopSccsString==null) {
 			try {
 				if (pdb==null) {
-					getPdbInfo();
+					getPdbInfo(conn);
 				}
 				getScopInfo();
 				
@@ -180,5 +181,23 @@ public class Template {
 
 		}
 		return this.scopSccsString;
+	}
+	
+	/**
+	 * Returns the BlastHit corresponding to this Template or null if this 
+	 * Template didn't originate from a BlastHit
+	 * @return
+	 */
+	public BlastHit getBlastHit() {
+		return this.blastHit;
+	}
+	
+	/**
+	 * Returns the GTGHit corresponding to this Template or null if this 
+	 * Template didn't originate from a GTGHit 
+	 * @return
+	 */
+	public GTGHit getGTGHit() {
+		return this.gtgHit;
 	}
 }
