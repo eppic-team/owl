@@ -361,7 +361,7 @@ public class averageGraph {
 				pdb.setTargetNum(targetNum);
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
-				pdb.writeToCaspTSFile(outcasptsfile, false, codesTemplates);
+				pdb.writeToCaspTSFile(outcasptsfile, codesTemplates);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
 			}
 

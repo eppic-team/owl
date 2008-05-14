@@ -549,23 +549,21 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Write CASP TS file headers. Note that the CASP target number, CASP model 
-	 * number, CASP author, and CASP method will be written from the internally 
+	 * Write CASP TS file headers complying with the CASP 8 specification.
+	 * Note that the CASP target number, CASP model number, CASP author
+	 * and CASP method will be written from the internally 
 	 * set values (targetNum, caspModelNum, caspAuthorStr, caspMethodStr) 
 	 * so they must be set before trying to write them out.
 	 * @param Out
-	 * @param refined whether the model has been refined or not
 	 * @param parents PDB entries in which this homology prediction is based on or
 	 * null if not applicable i.e. if this is an ab-initio prediction
 	 */
-	private void writeCaspTSHeader(PrintWriter Out, boolean refined, String[] parents) {
+	private void writeCaspTSHeader(PrintWriter Out, String[] parents) {
 		Out.println("PFRMAT TS");
 		Out.printf("TARGET T%04d\n",targetNum);
 		if(caspAuthorStr != null) Out.printf("AUTHOR %s\n", caspAuthorStr);
 		if(caspMethodStr != null) Out.printf("METHOD %s\n", caspMethodStr);
-		String refineStr = "UNREFINED";
-		if (refined) refineStr = "REFINED";
-		Out.println("MODEL "+caspModelNum+" "+refineStr);
+		Out.println("MODEL "+caspModelNum);
 		String parentStr = "";
 		if (parents==null) {
 			parentStr = "N/A";
@@ -657,14 +655,13 @@ public abstract class Pdb {
      * caspModelNum, caspAuthorStr, caspMethodStr) so they must be set before 
      * trying to write them out. 
 	 * @param outFile
-	 * @param refined whether the model has been refined or not
 	 * @param parents PDB entries in which this homology prediction is based on or
 	 * null if not applicable i.e. if this is an ab-initio prediction
 	 * @throws FileNotFoundException
 	 */
-	public void writeToCaspTSFile(File outFile, boolean refined, String[] parents) throws FileNotFoundException {
+	public void writeToCaspTSFile(File outFile, String[] parents) throws FileNotFoundException {
 		PrintWriter Out = new PrintWriter(new FileOutputStream(outFile));
-		writeCaspTSHeader(Out, refined, parents);
+		writeCaspTSHeader(Out, parents);
 		writeAtomLines(Out, true);
 		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
 		Out.println("END");
