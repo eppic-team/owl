@@ -164,14 +164,24 @@ public class BlastUtils {
 	 * Testing some of the methods in this class.
 	 * @param args
 	 */
-	public static void main(String[] args) {
-		File blastOutput = new File("");
-		File imgFile = new File("");
-		try {
-			renderBlast(blastOutput, imgFile);
-		} catch(IOException e) {
-			System.out.println("RenderBlast failed: " + e.getMessage());
-		}
+	public static void main(String[] args) throws IOException {
+//		File blastOutput = new File("");
+//		File imgFile = new File("");
+//		try {
+//			renderBlast(blastOutput, imgFile);
+//		} catch(IOException e) {
+//			System.out.println("RenderBlast failed: " + e.getMessage());
+//		}
+		
+		// testing writeClusterGraph
+		File templateFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates");
+		File graphFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.gdl");
+		File matrixFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.matrix");
+		TemplateList templateList = new TemplateList(templateFile);
+		
+		writeClusterGraph(templateList, graphFile, matrixFile);
+		
+		
 	}
 	
 }
