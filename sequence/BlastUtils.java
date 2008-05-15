@@ -23,6 +23,9 @@ public class BlastUtils {
 
 	private static final File tempDir = new File("/tmp/");
 	private static final String maxClusterExecutable = "/project/StruPPi/bin/maxcluster";
+	
+	private static final double IDENTITY_SCORE_RMSD = 0.0;
+	
 	//private static final double similarityGraphRmsdCutoff = 2.0;
 	//private static final double similarityGraphGdtCutoff = 50.0;
 	
@@ -57,7 +60,7 @@ public class BlastUtils {
 		System.out.println(mSize);
 		double[][] tmpMatrix = new double[mSize][mSize];
 		for (int i = 0; i < tmpMatrix.length; i++) {
-			tmpMatrix[i][i] = 100.0;
+			tmpMatrix[i][i] = IDENTITY_SCORE_RMSD;
 		}
 		for(Pair<Integer> pair:sparseMatrix.keySet()) {
 			int i = pair.getFirst() - 1;
