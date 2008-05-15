@@ -50,6 +50,7 @@ public class GTGParser {
 		while ((line=br.readLine())!=null) {
 			lineCount++;
 			if (line.equals("")) continue;
+			if (line.startsWith("<PRE>")) continue;
 			if (line.startsWith("#")) {
 				if (hit!=null) { //i.e. we are not in first hit
 					// we assign the last seen non-zero query/subject serial as the end query/subject serials for the last hit
