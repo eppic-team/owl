@@ -22,6 +22,7 @@ public class Template {
 	
 	private String id;
 	private String scopSccsString;
+	private String titleString;
 	private Pdb pdb;
 	//private MySQLConnection conn;
 
@@ -181,6 +182,38 @@ public class Template {
 
 		}
 		return this.scopSccsString;
+	}
+	
+	/**
+	 * Returns the pdb title string for this Template
+	 * The first time this method is called the title is taken from the pdb object.
+	 * If PDB data is not loaded yet it will be loaded from database. 
+	 * @param conn
+	 * @return the title string
+	 */
+	public String getTitle(MySQLConnection conn) {
+		if (titleString==null) {
+			try {
+				if (pdb==null) {
+					getPdbInfo(conn);
+				}
+				this.titleString = pdb.getTitle();
+				
+			}  catch (SQLException e) {
+				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
+				pdb = null;
+				scopSccsString = "";
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
+				pdb = null;
+				scopSccsString = "";
+			} catch (PdbLoadError e) {
+				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
+				pdb = null;
+				scopSccsString = "";
+			} 			
+		}
+		return this.titleString;
 	}
 	
 	/**

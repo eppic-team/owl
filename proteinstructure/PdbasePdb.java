@@ -68,6 +68,7 @@ public class PdbasePdb extends Pdb {
 		
 		// this makes sure that we find the pdb code in the database
 		this.entrykey = get_entry_key();
+		this.title = getTitle(); // this is available once we have the entry key
 	}
 
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
@@ -184,18 +185,28 @@ public class PdbasePdb extends Pdb {
 		return modelsArray;
 	}
 	
+	/**
+	 * Finds the entry key for this structure in the database. If found, also sets the title variable for this entry.
+	 * If not found, throws an exception.
+	 * @return the entry key.
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 */
 	private int get_entry_key() throws PdbCodeNotFoundError, SQLException {
-		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		String sql="SELECT entry_key, title FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
+		String title = "";
 		if (rsst.next()) {
 			entrykey = rsst.getInt(1);
+			title = rsst.getString(2);
 			if (! rsst.isLast()) {
 				throw new PdbCodeNotFoundError("More than 1 entry_key match for accession_code="+pdbCode);					
 			}
 		} else {
 			throw new PdbCodeNotFoundError("No entry_key match for accession_code="+pdbCode);
 		}
+		this.title = title;
 		rsst.close();
 		stmt.close();
 		return entrykey;

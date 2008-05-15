@@ -71,7 +71,8 @@ public abstract class Pdb {
 	protected String chainCode;
 	protected int model;  			// the model serial for NMR structures
 	protected String sid;			// the scop id if Pdb has been restricted (restrictToScopDomain)
-
+	protected String title;			// the title of the structure (e.g. from the PDB)
+	
 	// optional fields for structures based on casp predictions
 	protected int targetNum;
 	protected int caspModelNum;
@@ -1389,6 +1390,21 @@ public abstract class Pdb {
 	 */
 	public String getSid() {
 		return sid;
+	}
+	
+	/**
+	 * @return the title of this pdb object (may be null).
+	 */
+	public String getTitle() {
+		return this.title;
+	}
+	
+	/**
+	 * Sets the title for this pdb object (may be null).
+	 * @param title the new title
+	 */
+	public void setTitle(String title) {
+		this.title = title;
 	}
 	
 	/**
