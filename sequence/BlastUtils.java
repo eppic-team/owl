@@ -26,6 +26,8 @@ public class BlastUtils {
 	
 	private static final double IDENTITY_SCORE_RMSD = 0.0;
 	
+	private static String MATRIX_VIS_SCRIPT = "/project/StruPPi/CASP8/scripts/plot_simmatrix.sh";
+	
 	//private static final double similarityGraphRmsdCutoff = 2.0;
 	//private static final double similarityGraphGdtCutoff = 50.0;
 	
@@ -141,6 +143,11 @@ public class BlastUtils {
 		// write similarity matrix file
 		String[] templateIds = templates.getIds();
 		writeMatrixToFile(matrix, templateIds, matrixFile);
+		
+		// use shell script to create visualization of matrix file
+		String cmdLine = MATRIX_VIS_SCRIPT + " " + matrixFile.getAbsolutePath() + " " + matrixFile.getAbsolutePath() + ".ps";
+		System.out.println(cmdLine);
+		Runtime.getRuntime().exec(cmdLine);
 		
 		// generate graph from similarity matrix
 		SparseGraph<String, DoubleWrapper> simGraph = new SparseGraph<String, DoubleWrapper>();
