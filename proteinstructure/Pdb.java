@@ -498,7 +498,7 @@ public abstract class Pdb {
 		}
 
 		// assign secondary structure
-		this.secondaryStructure = new SecondaryStructure();		// forget the old annotation
+		this.secondaryStructure = new SecondaryStructure(this.sequence);	// forget the old annotation
 		char lastType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()), state4Id);
 		int lastResSer = ssTypes.firstKey();
 		char lastSheet = sheetLabels.get(lastResSer);

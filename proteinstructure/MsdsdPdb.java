@@ -91,7 +91,7 @@ public class MsdsdPdb extends Pdb {
 				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 			}
 			
-			secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+			secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
 			readSecStructure();
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("MSDSD");
@@ -332,7 +332,7 @@ public class MsdsdPdb extends Pdb {
 	}
 	
 	private void readSecStructure() throws SQLException{
-		this.secondaryStructure = new SecondaryStructure();
+		this.secondaryStructure = new SecondaryStructure(this.sequence);
 		
 		//HELIX -- helix table
 		String sql = "SELECT helix_serial, beg_residue_serial, end_residue_serial " +

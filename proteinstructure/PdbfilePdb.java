@@ -42,8 +42,8 @@ public class PdbfilePdb extends Pdb {
 		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
 		this.hasSeqRes = false; // we assume that there is no SEQRES in this pdb file, if SEQRES is found when reading we set it to true
 		
-		// we initialise the secondary structure to empty, if no sec structure info is found then they remain empty
-		this.secondaryStructure = new SecondaryStructure();		
+		// we initialise the secondary structure to empty, if no sec structure info is found then it remains empty
+		this.secondaryStructure = new SecondaryStructure("");		
 		
 	}
 
@@ -60,6 +60,7 @@ public class PdbfilePdb extends Pdb {
 			
 			this.obsLength = resser2restype.size();
 			
+			secondaryStructure.setSequence(this.sequence);
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("Author");
 			}

@@ -115,7 +115,7 @@ public class PdbasePdb extends Pdb {
 				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 			}
 			
-			secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null
+			secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null
 			readSecStructure();
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("Pdbase");
@@ -442,7 +442,7 @@ public class PdbasePdb extends Pdb {
 	}
 
 	private void readSecStructure() throws SQLException {
-		this.secondaryStructure = new SecondaryStructure();
+		this.secondaryStructure = new SecondaryStructure(this.sequence);
 		
 		// HELIX AND TURN -- struct_conf table
 		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +

@@ -1,16 +1,22 @@
 package proteinstructure;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import tools.MySQLConnection;
 
 /**
  * Package:		proteinstructure
@@ -724,6 +730,15 @@ public class Alignment {
     	return i;
     }
 
+    /**
+     * 
+     * @param tag
+     * @param begin
+     * @param end
+     * @param c
+     * @return
+     * @throws IndexOutOfBoundsException
+     */
     public boolean isBlockOf( String tag, int begin, int end, char c ) throws IndexOutOfBoundsException {
     	for(int i=begin; i<end; ++i) {
     		if( getAlignedSequence(tag).charAt(i-1) != c ) {
@@ -732,6 +747,128 @@ public class Alignment {
     	}
     	return true;
     }
+    
+    
+    /**
+     * Writes to given PrintStream a "graphical" overview of the secondary structures 
+     * from the given psipredFile and from the sequences in this alignment for which 
+     * a PDB structure can be found (based on tags of the form pdbCode+pdbChainCode, 
+     * e.g. 1abcA).
+     * This Alignment must contain the 
+     * @param Out
+     * @param targetTag a tag of a sequence in this Alignment that corresponds to the 
+     * sequence in the given psipredFile
+     * @param psipredFile a file with a PsiPred sec. structure prediction for sequence 
+     * of targetTag
+     * @param conn a db connection for getting the PDB data
+     * @param pdbaseDb a pdbase database name
+     * @param dsspExecutable
+     * @throws IOException if sequence of target in alignment file and psipred file don't match 
+     * or if targetTag not present in this alignment or if we can't read psipredFile 
+     */
+    public void writeSecStructMatching(PrintStream Out, String targetTag, File psipredFile, MySQLConnection conn, String pdbaseDb, String dsspExecutable) 
+    throws IOException {
+    	if (!this.hasTag(targetTag)) 
+    		//TODO abusing here of IOException, we should use a more appropriate obe
+    		throw new IOException("The alignment doesn't contain the tag "+targetTag);
+		SecondaryStructure targetSecStruct = new SecondaryStructure(psipredFile);
+		if (!this.getSequenceNoGaps(targetTag).equals(targetSecStruct.getSequence())) {
+    		//TODO abusing here of IOException, we should use a more appropriate obe
+			throw new IOException("Sequence in alignment file with tag "+targetTag+" doesn't match sequence in psipred file "+psipredFile);
+		}
+
+		HashMap<String,SecondaryStructure> allSecStructs = new HashMap<String, SecondaryStructure>();
+		allSecStructs.put(targetTag, targetSecStruct);
+		
+		for (String tag:this.getTags()) {
+			Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
+			Matcher m = p.matcher(tag);
+			if (m.matches()) {
+				
+				SecondaryStructure secStruct;
+				try {
+					PdbasePdb pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
+					pdb.load(m.group(2));
+					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+					secStruct = pdb.getSecondaryStructure();
+				} catch (PdbLoadError e) {
+					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
+					secStruct = new SecondaryStructure("");
+				} catch (SQLException e) {
+					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
+					secStruct = new SecondaryStructure("");
+				} catch (PdbCodeNotFoundError e) {
+					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
+					secStruct = new SecondaryStructure("");					
+				} catch (IOException e) {
+					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
+					secStruct = new SecondaryStructure("");
+				}
+				allSecStructs.put(tag, secStruct);
+			}
+		}
+		
+		// we get a new tags list reordered with targetTag as the first
+		String[] tags = new String[this.getTags().size()];
+		tags[0] = targetTag;
+		int tagIdx = 1;
+		for (String tag:getTags()) {
+			if (!tag.equals(targetTag)) {
+				tags[tagIdx] = tag;
+				tagIdx++;
+			}
+		}
+
+		//int len = 80;
+		for( String tag : tags ) {
+			SecondaryStructure secStruct = allSecStructs.get(tag);
+			String seq = getAlignedSequence(tag);
+			
+			// printing sequence
+			Out.printf("%7s",tag+": ");
+			for(int i=0; i<this.getAlignmentLength(); i++) {
+				Out.print(seq.charAt(i));
+			}
+			Out.println();
+			
+			// printing psipred confidence values (only for target)
+			if (tag.equals(targetTag)) {
+				Out.printf("%7s",tag+": ");
+				for(int i=0; i<this.getAlignmentLength(); i++) {
+					if(this.al2seq(tag, i+1)==-1) {
+						Out.print(" ");
+					} else {
+						SecStrucElement sselem = secStruct.getSecStrucElement(this.al2seq(tag, i+1));
+						if (sselem!=null) {
+							if (sselem.getType()==SecStrucElement.LOOP) Out.print(" ");
+							else Out.printf("%1.0f",secStruct.getConfidence(this.al2seq(tag, i+1))*10);
+						} else {
+							Out.print(" ");
+						}
+					}
+				}
+				Out.println();
+			}
+			
+			// printing sec. structure elements (as 'H' or 'E')
+			Out.printf("%7s",tag+": ");
+			for(int i=0; i<this.getAlignmentLength(); i++) {
+				if(this.al2seq(tag, i+1)==-1) {
+					Out.print(GAPCHARACTER);
+				} else {
+					SecStrucElement sselem = secStruct.getSecStrucElement(this.al2seq(tag, i+1));
+					if (sselem!=null) {
+						Out.print(sselem.getType()==SecStrucElement.LOOP?" ":sselem.getType());
+					} else {
+						Out.print(" ");
+					}
+				}
+			}
+			Out.println();
+		}
+		
+    }
+    
 
     /** to test the class 
      * @throws IOException

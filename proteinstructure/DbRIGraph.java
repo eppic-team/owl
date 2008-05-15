@@ -20,9 +20,6 @@ import tools.MySQLConnection;
  * 		then the constructor with the graph id should be used.
  * 		Another way is to load the whole graph if exists with any of the constructors
  * 		and then apply the corresponding methods to the graph object to get the desired contact range. 
- * @author 		Jose Duarte
- * Class:		DbGraph
- * Package:		proteinstructure
  */
 public class DbRIGraph extends RIGraph {
 
@@ -186,7 +183,6 @@ public class DbRIGraph extends RIGraph {
 	 * We don't care here about the origin of the data (msdsd, pdbase, predictions) for 
 	 * the generation of the graph as long as it follows our data format.
 	 * The sequence is set to blank, as we can't get the full sequence from graph db.
-	 * @param conn
 	 * @throws SQLException 
 	 */
 	private void read_graph_from_db() throws SQLException{
@@ -194,7 +190,7 @@ public class DbRIGraph extends RIGraph {
 		serials2nodes = new TreeMap<Integer,RIGNode>();
 
 		// reading secondary structure
-		secondaryStructure = new SecondaryStructure();
+		secondaryStructure = new SecondaryStructure(this.sequence);
 		String sql = "SELECT sstype, ssid, min(num), max(num) FROM "+dbname+".single_model_node " +
 				" WHERE graph_id="+graphid+" AND sstype IS NOT NULL "+
 				" GROUP BY ssid";
@@ -425,7 +421,7 @@ public class DbRIGraph extends RIGraph {
 			stmt.close();
 			if (check!=1){
 				//System.err.println("No pgraph_id match or more than 1 match for graph_id="+graphid);
-				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db"+conn.getDbname());
+				throw new GraphIdNotFoundError("No pgraph_id match or more than 1 match for graph_id="+graphid+" in db "+conn.getDbname());
 			}
 			
 			sql="SELECT accession_code, chain_pdb_code, pchain_code, model_serial,"+(graphType.equals("scop")?"scop_id":"NULL")+" FROM "+dbname+"."+graphType+"_graph WHERE graph_id="+pgraphid;

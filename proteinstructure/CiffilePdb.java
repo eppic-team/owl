@@ -262,7 +262,7 @@ public class CiffilePdb extends Pdb {
 		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
 		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
 		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
-		secondaryStructure = new SecondaryStructure();	// create empty secondary structure first to make sure object is not null		
+		secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
 		readSecStructure(); // populates secondaryStructure	
 
 	}
@@ -492,7 +492,7 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	private void readSecStructure() throws IOException, CiffileFormatError {
-		secondaryStructure = new SecondaryStructure();
+		secondaryStructure = new SecondaryStructure(this.sequence);
 		
 		// struct_conf element is optional
 		Long[] intStructConf = null;

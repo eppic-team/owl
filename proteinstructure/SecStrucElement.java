@@ -14,7 +14,7 @@ public class SecStrucElement {
 	public static final char OTHER = 'O';   // all other states
 	
 	// three state secondary structure types, add also HELIX from above
-	public static final char EXTENTED = 'E';// all extented 
+	public static final char EXTENDED = 'E';// all extended 
 	public static final char LOOP = 'L';  	// all other states 
 	
 	// eight state (dssp)
@@ -24,7 +24,7 @@ public class SecStrucElement {
 	
 	String secStrucId;		// ss ids, i.e. the type + an element numerical identifier (e.g. H1, S1, ...)
 	char secStrucType;		// ss types: one of the above char constants (3 in 3-state, 4 in 4-state, 8 in 8-state)
-	Interval interval;		// the location of this element in the sequence
+	Interval interval;		// the location of this element in the sequence 
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -96,7 +96,7 @@ public class SecStrucElement {
 	 * @return
 	 */
 	public boolean isStrand() {
-		return (secStrucType == STRAND || secStrucType == EXTENTED);
+		return (secStrucType == STRAND || secStrucType == EXTENDED);
 	}
 	
 	/** 
@@ -164,7 +164,7 @@ public class SecStrucElement {
 			break;
 		case 'E':
 		case 'B':
-			type = EXTENTED;
+			type = EXTENDED;
 			break;
 		case 'T':
 		case 'S':
@@ -186,6 +186,18 @@ public class SecStrucElement {
 		default:
 			return dsspType;
 		}
+	}
+	
+	public static char getThreeStateTypeFromPsiPredType(char psipredType) {
+		switch (psipredType) {
+		case 'C':
+			return SecStrucElement.LOOP;
+		case 'E':
+			return SecStrucElement.EXTENDED;
+		case 'H':
+			return SecStrucElement.HELIX;
+		}
+		return 0; // if all fails we rather return nonsense
 	}
 	
 }
