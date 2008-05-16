@@ -106,7 +106,7 @@ public class BlastUtils {
 	 * @throws IOException
 	 */
 	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException {
-		if (templates.size()==0) return;
+		if (templates.size()<=1) return; // if templates empty or only 1 template there's nothing to compare
 		
 		String listFileName = "listfile";
 		File listFile = new File(tempDir, listFileName);
