@@ -84,9 +84,10 @@ public class averageGraph {
 	public static void main(String[] args) throws Exception {
 				
 		String help =
-				"Performs graph averaging. Two modes of operation: \n" +
+				"Performs graph averaging. Three modes of operation: \n" +
 				"a) benchmarking: specify a pdb code+pdb chain code (-p) \n" +
-				"b) prediction:   specify a sequence file (-f) \n\n" +
+				"b) prediction:   specify a sequence file (-f) \n" +
+				"c) inspection:   specify only a list of templates (-P) \n\n" + 
 				"Usage: \n" +
 				averageGraph.class.getName()+"\n" +
 				"   -p <string> : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n\n" +
@@ -112,7 +113,8 @@ public class averageGraph {
 				"                 e.g. T0100 \n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
-				"alignment is calculated with muscle. \n\n" +
+				"alignment is calculated with muscle. If no target sequence is given, a dummy sequence\n" + 
+				"with the length of alignment is created. In this case reconstruction is not possible.\n" +
 				"For reconstruction, please note that at least 20 models should be specified to \n" +
 				"get a reasonable final selected model. \n\n";
 		
@@ -203,8 +205,13 @@ public class averageGraph {
 			System.err.println(help);
 			System.exit(1);
 		}
-		if (seqFile==null && (pdbCodeTarget.equals("") && pdbChainCodeTarget.equals(""))) {
-			System.err.println("Either a sequence file or a target pdb code and chain code (for benchmarking) must be specified");
+		if (seqFile==null && !benchmark && reconstruct) {
+			System.err.println("Cannot reconstruct in inspect mode. Either provide a target sequence (-f) or pdb- and chain code (-p/-c) for benchmarking");
+			System.err.println(help);
+			System.exit(1);			
+		}
+		if (seqFile==null && !benchmark && reconstruct && aliFile == null) {
+			System.err.println("Alignment has to be provided (-a) in inspect mode.");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -234,16 +241,20 @@ public class averageGraph {
 			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
 		} else {
 			// 2) prediction: from a sequence with unknown structure, we predict the structure based on a msa with known structures
+			// or
+			// 3) inspection (seqFile=null): just create average and consensus graph for the set of templates using a dummy sequence
+			if(seqFile != null) {
 			Sequence seq = new Sequence();
-			try {
-				seq.readFromFastaFile(seqFile);
-			} catch (IOException e) {
-				System.err.println("Couldn't read sequence file "+seqFile.getAbsolutePath()+": "+e.getMessage()+". Exiting");
-				System.exit(1);
+				try {
+					seq.readFromFastaFile(seqFile);
+				} catch (IOException e) {
+					System.err.println("Couldn't read sequence file "+seqFile.getAbsolutePath()+": "+e.getMessage()+". Exiting");
+					System.exit(1);
+				}
+				targetTag = seq.getName();
+				// we take the sequence that we will use later to create the predicted graph
+				targetSeq = seq.getSeq();
 			}
-			targetTag = seq.getName();
-			// we take the sequence that we will use later to create the predicted graph
-			targetSeq = seq.getSeq();
 			
 			if (casp) {
 				Pattern p = Pattern.compile("T\\d\\d\\d\\d");
@@ -290,7 +301,12 @@ public class averageGraph {
 		// read the alignment from file
 		System.out.println("Reading alignment from "+aliFile);
 		Alignment ali = new Alignment(aliFile.getCanonicalPath(), "FASTA");
-
+		if(seqFile == null) {
+			targetSeq = GraphAverager.makeDummySequence(ali.getAlignmentLength());
+			targetTag = GraphAverager.makeDummyTag();
+			ali.addSequence(targetTag, targetSeq);
+		}
+		
 		System.out.println("Averaging...");
 		
 		if (benchmark) {
@@ -323,6 +339,12 @@ public class averageGraph {
 			File avrgdVotersGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.voters.cm");
 
 			GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
+			ga.printPairwiseOverlaps();
+			int overlap = ga.getSumOfPairsOverlap();
+			System.out.println("Sum of pairs contact overlap: " + overlap);
+//			double consensus = ga.getEnsembleConsensusScore();
+//			System.out.println("Ensemble consensus score:" + consensus);
+			
 			RIGraph averagedGraph = ga.getAverageGraph();
 			//System.out.println("Writing average graph to " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
 			averagedGraph.write_graph_to_file(avrgdGraphFile.getAbsolutePath());

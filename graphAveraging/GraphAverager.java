@@ -35,9 +35,9 @@ public class GraphAverager {
 	/*--------------------------- member variables --------------------------*/
 	
 	private Alignment al;			// alignment containing the graphs below
-	private TreeMap<String,RIGraph> templateGraphs;	// identified by tag-string
-	private String targetTag;		// id of target sequence in alignment
-	private String sequence;		// sequence of the final consensus graph
+	private TreeMap<String,RIGraph> templateGraphs;	// template graphs identified by tag-string
+	private String targetTag;		// id of target sequence in alignment, or null if no target specified
+	private String sequence;		// sequence of the final consensus graph, dummy sequence if targetTag=null
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
@@ -50,7 +50,7 @@ public class GraphAverager {
 	 */
 	private class Vote {
 		private int voteCount;			// how many graphs actually contain this contact
-		private int potentialVoteCount; // how many graphs could make this contact (because the positions map to non-gaps)
+		private int potentialVoteCount; // how many graphs could make this contact (because both ends map to non-gaps)
 		private TreeSet<String> voters;
 		
 		public Vote(int voteCount, int potentialVoteCount, TreeSet<String> voters) {
@@ -93,7 +93,8 @@ public class GraphAverager {
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Creates a GraphAverager given a RIGEnsemble
+	 * Creates a GraphAverager given a RIGEnsemble. In this case the alignment is
+	 * trivial and the target sequence is the same as all the input sequences.
 	 * @param rigs the RIGEnsemble for which graph will be averaged 
 	 */
 	public GraphAverager(RIGEnsemble rigs) {
@@ -125,17 +126,38 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Create a graph averager given an alignment of the target sequence to the template graphs.
+	 * Create a graph averager given a multiple alignment of the target sequence to the template graphs.
 	 * @param sequence the target sequence
 	 * @param al a multiple alignment of the target sequence and the template graphs
 	 * @param templateGraphs a collection of template graphs to be averaged
 	 * @param targetTag the identifier of the target sequence in the alignment
+	 * TODO: Parameter sequence is redundant, since it can be extracted from al and targetTag.
 	 */
 	public GraphAverager(String sequence, Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
 		this.al = al;
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
 		this.sequence = sequence;
+		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
+		this.contactType = firstGraph.getContactType();
+		this.distCutoff = firstGraph.getCutoff();
+		
+		checkSequences();	
+		countVotes(); // does the averaging by counting the votes and putting them into contactVotes
+	}
+	
+	/**
+	 * Create a graph averager for a set of templates with the given alignment. A dummy target sequence will
+	 * be created internally which has the length of the alignment. The resulting average or consensus graphs
+	 * will then have coordinates corresponding to the columns in the alignment.
+	 * @param al
+	 * @param templateGraphs
+	 */
+	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs) throws AlignmentConstructionError {
+		this.sequence = makeDummySequence(al.getAlignmentLength());
+		this.targetTag = makeDummyTag();	
+		this.al = al.copyAndAdd(this.targetTag, this.sequence);
+		this.templateGraphs = templateGraphs;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
@@ -177,6 +199,25 @@ public class GraphAverager {
 	
 	/*---------------------------- private methods --------------------------*/
 	
+	/**
+	 * @return a dummy sequence of the given length.
+	 */
+	public static String makeDummySequence(int length) {
+		char dummyChar = 'X';
+		StringBuilder buf = new StringBuilder(length);
+		for (int i = 0; i < length; i++) {
+			buf.append(dummyChar);
+		}
+		return buf.toString();
+	}
+	
+	/**
+	 * @return a randomly generated sequence tag
+	 */
+	public static String makeDummyTag() {
+		return "dummyTag";
+	}
+		
 	/**
 	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs and between this.al  and this.graph/this.targetTag 
 	 *
@@ -289,6 +330,66 @@ public class GraphAverager {
 	 */
 	public int getNumberOfTemplates() {
 		return this.templateGraphs.size();
+	}
+	
+	/**
+	 * @return the overlap (=number of shared contacts) between two templates under the given alignment
+	 */
+	public int getPairwiseOverlap(String tag1, String tag2) {
+		RIGraph rig1 = templateGraphs.get(tag1);
+		RIGraph rig2 = templateGraphs.get(tag2);
+		int sharedEdges = 0;
+		for(RIGEdge e:rig1.getEdges()) {
+			Pair<RIGNode> eps = rig1.getEndpoints(e);
+			int i = eps.getFirst().getResidueSerial();
+			int j = eps.getSecond().getResidueSerial();
+			// map i,j to alignment
+			int ali = this.al.seq2al(tag1, i);
+			int alj = this.al.seq2al(tag1, j);
+			// map to second sequence
+			int i2 = al.al2seq(tag2, ali);
+			int j2 = al.al2seq(tag2, alj);
+			// check whether rig2 contains this edge
+			if(rig2.containsEdgeIJ(i2, j2)) sharedEdges++;
+		}		
+		return sharedEdges;
+	}
+	
+	/**
+	 * @return the sum of pairwise overlaps between all templates as a measure of alignment quality
+	 */
+	public int getSumOfPairsOverlap() {
+		int sum = 0;
+		for(String tag1:templateGraphs.keySet()) {
+			for(String tag2:templateGraphs.keySet()) {
+				if(tag1.compareTo(tag2) < 0) {
+					int ol1 = getPairwiseOverlap(tag1, tag2);
+					sum += ol1;
+					// for debugging only:
+					int ol2 = getPairwiseOverlap(tag2, tag1);
+					if(ol1 != ol2) {
+						System.err.printf("Error in GraphAverager.getSumOfPairsOverlap(): overlap(%s,%s) = %d != %d = overlap(%s,%s)",
+								tag1, tag2, ol1, ol2, tag2, tag1);
+					}
+				}
+			}
+		}
+		return sum;
+	}
+	
+	/**
+	 * Prints the overlap values for all pairs of templates to stdout.
+	 */
+	public void printPairwiseOverlaps() {
+		System.out.println("Pairwise contact overlaps:");
+		for(String tag1:templateGraphs.keySet()) {
+			for(String tag2:templateGraphs.keySet()) {
+				if(tag1.compareTo(tag2) <= 0) {
+					int ol1 = getPairwiseOverlap(tag1, tag2);
+					System.out.printf("%s\t%s\t%d\n", tag1, tag2, ol1);
+				}
+			}
+		}
 	}
 	
 	/**
@@ -440,6 +541,7 @@ public class GraphAverager {
 	/**
 	 * Return the consensus score for the whole ensemble (summed over all members).
 	 * This is a rough estimate of target difficulty.
+	 * TODO: How does this compare to SumOfPairsOverlap?
 	 * @return
 	 */
 	public double getEnsembleConsensusScore() {

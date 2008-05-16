@@ -323,6 +323,64 @@ public class Alignment {
 	/*---------------------------- public methods ---------------------------*/
 	
 	/**
+	 * @return a deep copy of this alignment
+	 */
+	public Alignment copy() throws AlignmentConstructionError {
+		String[] newSeqs = sequences.clone();
+		String[] newTags = new String[newSeqs.length];
+		for (int i = 0; i < newTags.length; i++) {
+			newTags[i] = indices2tags.get(i);
+		}
+		return new Alignment(newTags, newSeqs);
+	}
+	
+	/**
+	 * Adds a sequence to the alignment. The sequence has to have the same length as the alignment
+	 * (possibly containing gap characters) otherwise an AlignmentConstructionError is thrown.
+	 * The internal mappings are regenearted for the new alignment.
+	 * @param seq the new sequence
+	 * @throws AlignmentConstructionError
+	 */
+	public void addSequence(String newTag, String newSeq) throws AlignmentConstructionError {
+		int l = this.getAlignmentLength();
+		// check length of new sequence
+		if(newSeq.length() != l) {
+			throw new AlignmentConstructionError("Cannot add sequence of length " + newSeq.length() + " to alignment of length " + l);
+		}
+		// make sure that tag does not exist yet
+		if(tags2indices.containsKey(newTag)) {
+			throw new AlignmentConstructionError("Cannot add sequence. Tag " + newTag + " exists in alignment.");
+		}
+		
+		int oldNumSeqs = sequences.length;
+		String[] newSequences = new String[oldNumSeqs+1];
+		for (int i = 0; i < oldNumSeqs; i++) {
+			newSequences[i] = this.sequences[i];
+		}
+		newSequences[oldNumSeqs] = newSeq;				// add to sequence array
+		this.sequences = newSequences;
+		
+		this.indices2tags.put(oldNumSeqs, newTag);
+		this.tags2indices.put(newTag, oldNumSeqs);
+		
+		// regenerate position mapppings
+		doMapping();
+		
+	}
+	
+	/**
+	 * Returns a deep copy of this alignment where the given sequence has been added.
+	 * @param newTag
+	 * @param newSeq
+	 * @return a deep copy of this alignment where the given sequence has been added.
+	 */
+	public Alignment copyAndAdd(String newTag, String newSeq) throws AlignmentConstructionError {
+		Alignment newAl = this.copy();
+		newAl.addSequence(newTag, newSeq);
+		return newAl;
+	}
+	
+	/**
 	 * Returns the gap character
 	 * @return The gap character
 	 */
