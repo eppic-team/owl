@@ -141,7 +141,7 @@ public class averageGraph {
 		boolean casp = false;
 		String caspAuthorStr = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:ch?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
