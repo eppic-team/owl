@@ -107,8 +107,9 @@ public class averageGraph {
 				"                 pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
 				"                 the first one is taken. This can take very long!\n" +
 				"  [-c] <string>: write final reconstructed model also in CASP TS format using as AUTHOR the \n" +
-				"                 specified string. The target tag in the target sequence file must comply \n" +
-				"                 with the CASP target naming convention, e.g. T0100 \n\n"+
+				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
+				"                 target sequence file must comply with the CASP target naming convention, \n" +
+				"                 e.g. T0100 \n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
 				"alignment is calculated with muscle. \n\n" +
@@ -185,7 +186,7 @@ public class averageGraph {
 				reconstruct = true;
 				break;
 			case 'c':
-				caspAuthorStr = g.getOptarg();
+				caspAuthorStr = g.getOptarg().replace('_', '-');
 				casp = true;
 				break;								
 			case 'h':
