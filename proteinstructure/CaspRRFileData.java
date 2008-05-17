@@ -28,7 +28,7 @@ public class CaspRRFileData {
 	public static final String OUT_AUTHOR = "AUTHOR %s\n";
 	public static final String OUT_METHOD = "METHOD %s\n";
 	public static final String OUT_SEQ = "%s\n";
-	public static final String OUT_CONTACT = "%3d %3d %2.0f %2.0f %f";
+	public static final String OUT_CONTACT = "%3d %3d %2.0f %2.0f %3.2f";
 	public static final String OUT_END = "END\n";
 	private static final String OUT_FILENAME = "T%04dRR%03d_%d";
 	

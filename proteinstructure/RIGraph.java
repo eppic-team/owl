@@ -905,7 +905,10 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		rrData.setModelNum(this.caspModelNum);
 		rrData.setAuthor(this.authorStr);
 		rrData.setMethod(this.methodStr);
-		for(RIGEdge cont:getEdges()) {
+		
+		// we use a temp TreeMap to be able to order the output
+		TreeMap<Pair<Integer>,CaspRRFileData.RRContact> pairs = new TreeMap<Pair<Integer>,CaspRRFileData.RRContact>(new IntPairComparator());
+		for (RIGEdge cont:getEdges()){
 			Pair<RIGNode> nodePair = getEndpoints(cont);
 			int i = nodePair.getFirst().getResidueSerial();
 			int j = nodePair.getSecond().getResidueSerial();
@@ -913,6 +916,10 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			double maxDist = this.getCutoff();
 			double weight = cont.getWeight();
 			CaspRRFileData.RRContact rrCont = rrData.new RRContact(i,j, minDist, maxDist, weight);
+			pairs.put(new Pair<Integer>(i, j),rrCont);
+		}
+		
+		for (CaspRRFileData.RRContact rrCont:pairs.values()) {
 			rrData.addContact(rrCont);
 		}
 		rrData.writeToStream(out);

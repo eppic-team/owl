@@ -33,6 +33,9 @@ public class averageGraph {
 	private static final String	DB_USER = 				MySQLConnection.getUserName();
 	private static final String	DB_PWD = 				"nieve";
 	
+	private static final String CASP_CONTACT_TYPE =		"Cb";
+	private static final double CASP_CUTOFF = 			8.0;
+	
 	/*------------------------- private methods ------------------------------*/
 	
 	/**
@@ -367,6 +370,26 @@ public class averageGraph {
 			
 			// for reconstruction we take the first given consensus threshold value
 			graphsForReconstruction[ctIdx] = ga.getConsensusGraph(consensusThresholds[0]);
+		}
+		
+		// writing Cb 8 graph in CASP RR format if casp output was specified
+		if (casp) {
+			TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
+
+			for (int i=0;i<codesTemplates.length;i++) {
+				RIGraph graph = templatePdbs[i].get_graph(CASP_CONTACT_TYPE, CASP_CUTOFF);
+				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
+			}
+			
+			GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
+			RIGraph averagedGraph = ga.getAverageGraph();
+			File caspRRFile = new File(outDir,basename+".CASP.RR");
+			int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
+			averagedGraph.setTargetNum(targetNum);
+			averagedGraph.setCaspModelNum(1);
+			averagedGraph.setAuthorStr(caspAuthorStr);
+			averagedGraph.writeToCaspRRFile(caspRRFile.getAbsolutePath());
+			System.out.println("CASP RR file with Cb 8 contact prediction written to " + caspRRFile);
 		}
 		
 		
