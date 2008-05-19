@@ -26,7 +26,7 @@ public class dumppdb {
 	
 	public static void main(String[] args) throws IOException {
 		
-		String progName = "dumpseq";
+		String progName = "dumppdb";
 		
 		String help = "Usage, 2 options:\n" +
 				"1)  "+progName+" -i <listfile> [ -m <model_serial> ] [-o <output_dir> | -s] [-D <pdbase_db>] \n" +
