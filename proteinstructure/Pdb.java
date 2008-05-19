@@ -453,7 +453,7 @@ public abstract class Pdb {
 		File test = new File(dsspExecutable);
 		if(!test.canRead()) throw new IOException("DSSP Executable is not readable");
 		Process myDssp = Runtime.getRuntime().exec(dsspExecutable + " " + dsspParameters);
-		PrintWriter dsspInput = new PrintWriter(myDssp.getOutputStream());
+		PrintStream dsspInput = new PrintStream(myDssp.getOutputStream());
 		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
 		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
 		writeAtomLines(dsspInput, true);	// pipe atom lines to dssp
@@ -537,7 +537,7 @@ public abstract class Pdb {
 	 * Writes to given PrintWriter the PDB file format HEADER line
 	 * @param Out
 	 */
-	private void writePDBFileHeader(PrintWriter Out) {
+	public void writePDBFileHeader(PrintStream Out) {
 		String source = "";
 		if (this instanceof CiffilePdb) {
 			source = ((CiffilePdb) this).getCifFile().getAbsolutePath();
@@ -559,7 +559,7 @@ public abstract class Pdb {
 	 * @param parents PDB entries in which this homology prediction is based on or
 	 * null if not applicable i.e. if this is an ab-initio prediction
 	 */
-	private void writeCaspTSHeader(PrintWriter Out, String[] parents) {
+	private void writeCaspTSHeader(PrintStream Out, String[] parents) {
 		Out.println("PFRMAT TS");
 		Out.printf("TARGET T%04d\n",targetNum);
 		if(caspAuthorStr != null) Out.printf("AUTHOR %s\n", caspAuthorStr);
@@ -591,7 +591,7 @@ public abstract class Pdb {
 	 * to one character (so that file is complies correctly with PDB format 
 	 * in cases where chain code has more than 1 character)   
 	 */
-	private void writeAtomLines(PrintWriter Out, boolean pdbCompatible) {
+	public void writeAtomLines(PrintStream Out, boolean pdbCompatible) {
 		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		String chainCodeStr = chainCode;
 		if (pdbCompatible) {
@@ -642,7 +642,7 @@ public abstract class Pdb {
 	 * @throws FileNotFoundException
 	 */
 	public void dump2pdbfile(String outfile, boolean pdbCompatible) throws FileNotFoundException {
-		PrintWriter Out = new PrintWriter(new FileOutputStream(outfile));
+		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		writePDBFileHeader(Out);
 		writeAtomLines(Out, pdbCompatible);
 		Out.println("END");
@@ -661,7 +661,7 @@ public abstract class Pdb {
 	 * @throws FileNotFoundException
 	 */
 	public void writeToCaspTSFile(File outFile, String[] parents) throws FileNotFoundException {
-		PrintWriter Out = new PrintWriter(new FileOutputStream(outFile));
+		PrintStream Out = new PrintStream(new FileOutputStream(outFile));
 		writeCaspTSHeader(Out, parents);
 		writeAtomLines(Out, true);
 		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
