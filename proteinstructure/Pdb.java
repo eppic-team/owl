@@ -1377,6 +1377,16 @@ public abstract class Pdb {
 	}
 
 	/**
+	 * Checks wheter the given atom type for the given residue serial has any associated coordinates
+	 * @param resser the residue serial
+	 * @param atom true if there is coordinates for given resser-atom, else false
+	 * @return
+	 */
+	public boolean hasCoordinates(int resser, String atom) {
+		return resser_atom2atomserial.containsKey(resser+"_"+atom);
+	}
+	
+	/**
 	 * Returns true if this Pdb has been restricted to a specific SCOP domain 
 	 * @return
 	 */
@@ -1417,6 +1427,16 @@ public abstract class Pdb {
 	}
 
 	/**
+	 * Gets the atom coordinates (a Point3d) given the residue serial and atom type 
+	 * @param resser
+	 * @param atom
+	 * @return
+	 */
+	public Point3d getAtomCoord(int resser, String atom) {
+		return getAtomCoord(getAtomSerFromResSerAndAtom(resser, atom));
+	}
+	
+	/**
 	 * Gets all atom serials in a Set
 	 * @return
 	 */
@@ -1424,6 +1444,16 @@ public abstract class Pdb {
 		return this.atomser2resser.keySet();
 	}
 
+	/**
+	 * Returns all residue serials (of observed residues) sorted
+	 * @return
+	 */
+	public Set<Integer> getAllSortedResSerials() {
+		TreeSet<Integer> ressers = new TreeSet<Integer> ();
+		ressers.addAll(resser2restype.keySet());
+		return ressers;
+	}
+	
 	/**
 	 * Gets the 4 letter pdb code identifying this structure
 	 * @return
@@ -2077,12 +2107,81 @@ public abstract class Pdb {
 		
 	}
 	
+	/**
+	 * Mirror this Pdb structure by inverting through the origin.
+	 */
 	public void mirror() {
 		for (int atomserial:atomser2coord.keySet()){
 			Point3d coords = atomser2coord.get(atomserial);
 			coords.x *= -1;
 			coords.y *= -1;
 			coords.z *= -1;
+		}
+	}
+
+	/**
+	 * Gets the phi angle for given residue serial
+	 * @param i
+	 * @return the phi angle or NaN if there are no coordinates for given i or i-1
+	 */
+	public double getPhiAngle(int i) { 
+		if (!hasCoordinates(i) || !hasCoordinates(i-1)) {
+			return Double.NaN;
+		}
+		Point3d Ciminus1 = getAtomCoord(i-1, "C");
+		Point3d Ni = getAtomCoord(i, "N");
+		Point3d Cai = getAtomCoord(i, "CA");
+		Point3d Ci = getAtomCoord(i, "C");
+		Vector3d b1 = new Vector3d();
+		Vector3d b2 = new Vector3d();
+		Vector3d b3 = new Vector3d();
+		Vector3d b1xb2 = new Vector3d();
+		Vector3d b2xb3 = new Vector3d();
+		Vector3d b1scalelengthb2 = new Vector3d();
+		b1.sub(Ni, Ciminus1);
+		b2.sub(Cai, Ni);
+		b3.sub(Ci, Cai);
+		b1xb2.cross(b1, b2);
+		b2xb3.cross(b2, b3);
+		b1scalelengthb2.scale(b2.length(), b1);
+		return Math.toDegrees(Math.atan2(b1scalelengthb2.dot(b2xb3), b1xb2.dot(b2xb3)));	
+	}
+	
+	/**
+	 * Gets the psi angle for the given residue serial
+	 * @param i
+	 * @return the psi angle or NaN if there are no coordinates for given i or i+1
+	 */
+	public double getPsiAngle(int i) {
+		if (!hasCoordinates(i) || !hasCoordinates(i+1)) {
+			return Double.NaN;
+		}
+		Point3d Ni = getAtomCoord(i, "N");
+		Point3d Cai = getAtomCoord(i, "CA");
+		Point3d Ci = getAtomCoord(i, "C");
+		Point3d Niplus1 = getAtomCoord(i+1, "N");
+		Vector3d b1 = new Vector3d();
+		Vector3d b2 = new Vector3d();
+		Vector3d b3 = new Vector3d();
+		Vector3d b1xb2 = new Vector3d();
+		Vector3d b2xb3 = new Vector3d();
+		Vector3d b1scalelengthb2 = new Vector3d();
+		b1.sub(Cai, Ni);
+		b2.sub(Ci, Cai);
+		b3.sub(Niplus1, Ci);
+		b1xb2.cross(b1, b2);
+		b2xb3.cross(b2, b3);
+		b1scalelengthb2.scale(b2.length(), b1);
+		return Math.toDegrees(Math.atan2(b1scalelengthb2.dot(b2xb3), b1xb2.dot(b2xb3)));
+	}
+	
+	/**
+	 * Prints in 2 columns all phi, psi angles for this protein structure.
+	 * Use to generate a Ramachandran plot.
+	 */
+	public void printAllPhiPsi() {
+		for (int resser:getAllSortedResSerials()) {
+			System.out.printf("%7.2f %7.2f\n",getPhiAngle(resser),getPsiAngle(resser));
 		}
 	}
 }
