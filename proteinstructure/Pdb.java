@@ -2120,7 +2120,7 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Gets the phi angle for given residue serial
+	 * Gets the phi angle in degrees for given residue serial
 	 * @param i
 	 * @return the phi angle or NaN if there are no coordinates for given i or i-1
 	 */
@@ -2130,25 +2130,13 @@ public abstract class Pdb {
 		}
 		Point3d Ciminus1 = getAtomCoord(i-1, "C");
 		Point3d Ni = getAtomCoord(i, "N");
-		Point3d Cai = getAtomCoord(i, "CA");
+		Point3d CAi = getAtomCoord(i, "CA");
 		Point3d Ci = getAtomCoord(i, "C");
-		Vector3d b1 = new Vector3d();
-		Vector3d b2 = new Vector3d();
-		Vector3d b3 = new Vector3d();
-		Vector3d b1xb2 = new Vector3d();
-		Vector3d b2xb3 = new Vector3d();
-		Vector3d b1scalelengthb2 = new Vector3d();
-		b1.sub(Ni, Ciminus1);
-		b2.sub(Cai, Ni);
-		b3.sub(Ci, Cai);
-		b1xb2.cross(b1, b2);
-		b2xb3.cross(b2, b3);
-		b1scalelengthb2.scale(b2.length(), b1);
-		return Math.toDegrees(Math.atan2(b1scalelengthb2.dot(b2xb3), b1xb2.dot(b2xb3)));	
+		return getTorsionAngle(Ciminus1, Ni, CAi, Ci);	
 	}
 	
 	/**
-	 * Gets the psi angle for the given residue serial
+	 * Gets the psi angle in degrees for the given residue serial
 	 * @param i
 	 * @return the psi angle or NaN if there are no coordinates for given i or i+1
 	 */
@@ -2157,22 +2145,48 @@ public abstract class Pdb {
 			return Double.NaN;
 		}
 		Point3d Ni = getAtomCoord(i, "N");
-		Point3d Cai = getAtomCoord(i, "CA");
+		Point3d CAi = getAtomCoord(i, "CA");
 		Point3d Ci = getAtomCoord(i, "C");
 		Point3d Niplus1 = getAtomCoord(i+1, "N");
+		return getTorsionAngle(Ni, CAi, Ci, Niplus1);
+	}
+	
+	/**
+	 * Gets the torsion angle in degrees for the 4 given atoms 
+	 * See http://en.wikipedia.org/wiki/Dihedral_angle for how to calculate it.
+	 * @param atom1
+	 * @param atom2
+	 * @param atom3
+	 * @param atom4
+	 * @return
+	 */
+	private double getTorsionAngle(Point3d atom1, Point3d atom2, Point3d atom3, Point3d atom4) {
 		Vector3d b1 = new Vector3d();
 		Vector3d b2 = new Vector3d();
 		Vector3d b3 = new Vector3d();
 		Vector3d b1xb2 = new Vector3d();
 		Vector3d b2xb3 = new Vector3d();
 		Vector3d b1scalelengthb2 = new Vector3d();
-		b1.sub(Cai, Ni);
-		b2.sub(Ci, Cai);
-		b3.sub(Niplus1, Ci);
+		b1.sub(atom2, atom1);
+		b2.sub(atom3, atom2);
+		b3.sub(atom4, atom3);
 		b1xb2.cross(b1, b2);
 		b2xb3.cross(b2, b3);
 		b1scalelengthb2.scale(b2.length(), b1);
-		return Math.toDegrees(Math.atan2(b1scalelengthb2.dot(b2xb3), b1xb2.dot(b2xb3)));
+		return Math.toDegrees(Math.atan2(b1scalelengthb2.dot(b2xb3), b1xb2.dot(b2xb3)));		
+	}
+	
+	/**
+	 * Gets all phi/psi angles in degrees for this Pdb structure 
+	 * @return residue serials as keys, values arrays of 2 doubles: first phi angle, second psi angle 
+	 */
+	public TreeMap<Integer, double[]> getAllPhiPsi() {
+		TreeMap<Integer, double[]> phipsi = new TreeMap<Integer, double[]>();
+		for (int resser: this.resser2restype.keySet()) {
+			double[] angles = {getPhiAngle(resser), getPsiAngle(resser)};
+			phipsi.put(resser, angles);
+		}
+		return phipsi;
 	}
 	
 	/**
@@ -2180,8 +2194,9 @@ public abstract class Pdb {
 	 * Use to generate a Ramachandran plot.
 	 */
 	public void printAllPhiPsi() {
-		for (int resser:getAllSortedResSerials()) {
-			System.out.printf("%7.2f %7.2f\n",getPhiAngle(resser),getPsiAngle(resser));
+		TreeMap<Integer, double[]> phipsi = getAllPhiPsi();
+		for (int resser:phipsi.keySet()) {
+			System.out.printf("%7.2f %7.2f\n",phipsi.get(resser)[0],phipsi.get(resser)[1]);
 		}
 	}
 }
