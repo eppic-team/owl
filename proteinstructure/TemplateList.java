@@ -29,13 +29,15 @@ public class TemplateList implements Iterable<Template> {
 	public static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
 	public static final String IDS_REGEX3 = "^(\\d\\w\\w\\w)\\s+(\\w)";
 	
-	ArrayList<Template> list = new ArrayList<Template>();
+	private ArrayList<Template> list;
+	private boolean pdbDataLoaded;
 
 	/**
 	 * Constructs a new empty TemplateList
 	 */
 	public TemplateList() {
 		list = new ArrayList<Template>();
+		pdbDataLoaded = false;
 	}
 	
 	/**
@@ -49,6 +51,7 @@ public class TemplateList implements Iterable<Template> {
 		while (it.hasNext()) {
 			this.add(new Template(it.next()));
 		}
+		pdbDataLoaded = false;
 	}
 
 	/**
@@ -61,6 +64,7 @@ public class TemplateList implements Iterable<Template> {
 		while (it.hasNext()) {
 			this.add(new Template(it.next()));
 		}
+		pdbDataLoaded = false;
 	}
 	
 	/**
@@ -71,6 +75,7 @@ public class TemplateList implements Iterable<Template> {
 	public TemplateList(File idsFile) throws IOException {
 		list = new ArrayList<Template>();
 		readIdsFromFile(idsFile);
+		pdbDataLoaded = false;
 	}
 	
 	/**
@@ -82,10 +87,12 @@ public class TemplateList implements Iterable<Template> {
 		for (String id:ids) {
 			this.add(new Template(id));
 		}
+		pdbDataLoaded = false;
 	}
 	
 	/**
 	 * Reads a file with a list of ids, creating Templates for them and adding them to this list
+	 * Lines starting with # will be considered as comments
 	 * @param idsFile
 	 * @throws IOException
 	 */
@@ -94,6 +101,7 @@ public class TemplateList implements Iterable<Template> {
 		String line;
 		while ((line=br.readLine())!=null) {
 			if (line.length()==0) continue;
+			if (line.startsWith("#")) continue;
 			Pattern p = Pattern.compile("\\d\\w\\w\\w\\w");
 			Matcher m = p.matcher(line);
 			if (m.matches()) {
@@ -226,6 +234,36 @@ public class TemplateList implements Iterable<Template> {
 			Out.println(template.getId());
 		}
 		Out.close();
+	}
+	
+	/**
+	 * Loads the PDB data (structures) for this TemplateList
+	 * Tries to load all data and throws exception if something goes wrong. 
+	 * If there's no PDB code for a certain Template, then we simply print a warning 
+	 * and skip it. We consider subsequently that data were loaded.
+	 * @param conn
+	 * @param pdbaseDb
+	 * @throws PdbLoadError
+	 * @throws SQLException
+	 */
+	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws PdbLoadError, SQLException {
+		for (Template template:this) {
+			try {
+				template.loadPdbData(conn, pdbaseDb);
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Warning: no PDB data for template "+template.getId()+". Error: "+e.getMessage());
+			}
+		}
+		pdbDataLoaded = true;
+	}
+	
+	/**
+	 * Tells whether there is PDB data loaded for Templates in this TemplateList, 
+	 * i.e. if loadPdbData has been called. 
+	 * @return
+	 */
+	public boolean isPdbDataLoaded() {
+		return pdbDataLoaded;
 	}
 	
 	/*--------------------------------- static methods ----------------------------------*/

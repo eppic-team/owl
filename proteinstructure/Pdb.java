@@ -2129,7 +2129,7 @@ public abstract class Pdb {
 	 * @return the phi angle or NaN if there are no coordinates for given i or i-1
 	 */
 	public double getPhiAngle(int i) { 
-		if (!hasCoordinates(i) || !hasCoordinates(i-1)) {
+		if (!hasCoordinates(i-1, "C") || !hasCoordinates(i, "N") || !hasCoordinates(i, "CA") || !hasCoordinates(i, "C")) {
 			return Double.NaN;
 		}
 		Point3d Ciminus1 = getAtomCoord(i-1, "C");
@@ -2145,7 +2145,7 @@ public abstract class Pdb {
 	 * @return the psi angle or NaN if there are no coordinates for given i or i+1
 	 */
 	public double getPsiAngle(int i) {
-		if (!hasCoordinates(i) || !hasCoordinates(i+1)) {
+		if (!hasCoordinates(i, "N") || !hasCoordinates(i, "CA") || !hasCoordinates(i, "C") || !hasCoordinates(i+1,"N")) {
 			return Double.NaN;
 		}
 		Point3d Ni = getAtomCoord(i, "N");

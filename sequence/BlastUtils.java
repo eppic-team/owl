@@ -59,7 +59,7 @@ public class BlastUtils {
 				
 		// initialize temp matrix
 		int mSize = labels.length;	// assuming matrix size equals number of labels
-		System.out.println(mSize);
+		//System.out.println(mSize);
 		double[][] tmpMatrix = new double[mSize][mSize];
 		for (int i = 0; i < tmpMatrix.length; i++) {
 			tmpMatrix[i][i] = IDENTITY_SCORE_RMSD;
@@ -100,13 +100,20 @@ public class BlastUtils {
 	 * Now also writes the similarity matrix to a file (to be used by R script).
 	 * @param templates
 	 * @param conn db connection from where the PDB data will be taken
+	 * @param pdbaseDb pdbase database from where the PDB data will be taken
 	 * @param graphFile
 	 * @param matrixFile
 	 * @param similarityGraphRmsdCutoff
-	 * @throws IOException
+	 * @throws IOException if problems writing files or running maxcluster
+	 * @throws SQLException if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
+	 * @throws PdbLoadError if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
 	 */
-	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException {
+	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, String pdbaseDb, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException, SQLException, PdbLoadError {
 		if (templates.size()<=1) return; // if templates empty or only 1 template there's nothing to compare
+		
+		if (!templates.isPdbDataLoaded()) {
+			templates.loadPdbData(conn, pdbaseDb);
+		}
 		
 		String listFileName = "listfile";
 		File listFile = new File(tempDir, listFileName);
@@ -124,9 +131,9 @@ public class BlastUtils {
 			File pdbFile = new File(tempDir, pdbCode + chain + ".pdb");
 			pdbFile.deleteOnExit();
 			
-			Pdb pdb = null;
-			if((pdb=template.getPdb(conn))!=null) {
+			if(template.hasPdbData()) {
 				
+				Pdb pdb = template.getPdb();
 				// write to file
 				pdb.dump2pdbfile(pdbFile.getAbsolutePath());
 				
@@ -181,7 +188,7 @@ public class BlastUtils {
 	 * Testing some of the methods in this class.
 	 * @param args
 	 */
-	public static void main(String[] args) throws IOException, SQLException {
+	public static void main(String[] args) throws IOException, SQLException, PdbLoadError {
 //		File blastOutput = new File("");
 //		File imgFile = new File("");
 //		try {
@@ -196,7 +203,7 @@ public class BlastUtils {
 		File matrixFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.matrix");
 		TemplateList templateList = new TemplateList(templateFile);
 		
-		writeClusterGraph(templateList, new MySQLConnection("white","duarte","nieve"),graphFile, matrixFile, 6.0);
+		writeClusterGraph(templateList, new MySQLConnection("white","duarte","nieve"),"pdbase",graphFile, matrixFile, 6.0);
 		
 		
 	}

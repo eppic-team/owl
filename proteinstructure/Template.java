@@ -18,8 +18,6 @@ public class Template {
 
 	private static final String SCOP_VERSION = "1.73";
 	
-	private static final String PDBASE_DB = "pdbase";
-	
 	private String id;
 	private String scopSccsString;
 	private String titleString;
@@ -73,12 +71,13 @@ public class Template {
 	/**
 	 * Gets the pdb structure coordinates into the pdb object 
 	 * @param conn
+	 * @param pdbaseDb
 	 */
-	private void getPdbInfo(MySQLConnection conn) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
 		String pdbCode = id.substring(0, 4);
 		String chain = id.substring(4);
 
-		pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
+		pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
 		pdb.load(chain);
 
 	}
@@ -118,36 +117,28 @@ public class Template {
 	}
 	
 	/**  
-	 * Returns the pdb object with the actual structure
-	 * The first time the method is called the PDB data is loaded from db. 
-	 * Subsequent calls take the PDB data from the  cached variable.
-	 * @param conn
-	 * @return the Pdb object or null if something goes wrong while retrieving the PDB data
+	 * Returns the Pdb object with the actual structure
+	 * Use hasPdbData() to check if this method can be called.
+	 * @return the Pdb object or null if PDB data are not loaded/present
 	 */
-	public Pdb getPdb(MySQLConnection conn) {
-		if (pdb==null) {
-			try {
-				getPdbInfo(conn);
-			}  catch (SQLException e) {
-				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
-				pdb = null;
-			} catch (PdbCodeNotFoundError e) {
-				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
-				pdb = null;
-			} catch (PdbLoadError e) {
-				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
-				pdb = null;
-			} 
-		}
+	public Pdb getPdb() {
 		return this.pdb;
 	}
 	
 	/**
-	 * Tells whether ther is structure data available for this template
+	 * Sets the Pdb object of this template.
+	 * @param pdb
+	 */
+	public void setPdb(Pdb pdb) {
+		this.pdb=pdb;
+	}
+	
+	/**
+	 * Tells whether there is structure data available for this template
 	 * @return
 	 */
-	public boolean hasStructure() {
-		return pdb!=null;
+	public boolean hasPdbData() {
+		return (pdb!=null && pdb.isDataLoaded());
 	}
 	
 	/**
@@ -156,13 +147,14 @@ public class Template {
 	 * Subsequente calls take the SCOP data from the cached variable.
 	 * If PDB data is not loaded yet it will be loaded from database.
 	 * @param conn
+	 * @param pdbaseDb
 	 * @return
 	 */
-	public String getScopSccsString(MySQLConnection conn) {
+	public String getScopSccsString(MySQLConnection conn, String pdbaseDb) {
 		if (scopSccsString==null) {
 			try {
 				if (pdb==null) {
-					getPdbInfo(conn);
+					loadPdbData(conn, pdbaseDb);
 				}
 				getScopInfo();
 				
@@ -189,13 +181,14 @@ public class Template {
 	 * The first time this method is called the title is taken from the pdb object.
 	 * If PDB data is not loaded yet it will be loaded from database. 
 	 * @param conn
+	 * @param pdbaseDb
 	 * @return the title string
 	 */
-	public String getTitle(MySQLConnection conn) {
+	public String getTitle(MySQLConnection conn, String pdbaseDb) {
 		if (titleString==null) {
 			try {
 				if (pdb==null) {
-					getPdbInfo(conn);
+					loadPdbData(conn, pdbaseDb);
 				}
 				this.titleString = pdb.getTitle();
 				
