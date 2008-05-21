@@ -43,7 +43,8 @@ public abstract class Pdb {
 	public static final String NO_PDB_CODE = "";			// to specify no pdb code
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
 	public static final String NO_CHAIN_CODE = "";			// to specify no internal chain code
-
+	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
+	
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
 	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type 
 	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
@@ -663,7 +664,10 @@ public abstract class Pdb {
 	public void writeToCaspTSFile(File outFile, String[] parents) throws FileNotFoundException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outFile));
 		writeCaspTSHeader(Out, parents);
+		String oldChainCode = this.chainCode;
+		this.chainCode = DEFAULT_CASP_TS_CHAINCODE;
 		writeAtomLines(Out, true);
+		this.chainCode = oldChainCode;
 		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
 		Out.println("END");
 		Out.close();
