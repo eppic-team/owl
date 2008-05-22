@@ -17,7 +17,7 @@ public class Goodies {
 	 * @param ascending if true, map will be sorted in ascending order of values, otherwise in descending order
 	 * @return the sorted map
 	 */
-	public static <K,V extends Comparable<V>> Map<K,V> sortMapByValue(Map<K,V> map, boolean ascending) {
+	public static <K,V extends Comparable<V>> LinkedHashMap<K,V> sortMapByValue(Map<K,V> map, boolean ascending) {
 		List<Map.Entry<K,V>> list = new LinkedList<Map.Entry<K,V>>(map.entrySet());
 		if(ascending) {
 		Collections.sort(list, new Comparator<Map.Entry<K,V>>() {
@@ -33,7 +33,7 @@ public class Goodies {
 			});			
 		}
 
-		Map<K,V> result = new LinkedHashMap<K,V>();
+		LinkedHashMap<K,V> result = new LinkedHashMap<K,V>();
 		for (Iterator<Map.Entry<K,V>> it = list.iterator(); it.hasNext();) {
 			Map.Entry<K,V> entry = it.next();
 			result.put(entry.getKey(), entry.getValue());
