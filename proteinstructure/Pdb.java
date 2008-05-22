@@ -988,6 +988,7 @@ public abstract class Pdb {
 		graph.setCaspModelNum(caspModelNum);
 		graph.setMethodStr(caspMethodStr);
 		graph.setAuthorStr(caspAuthorStr);
+		graph.setParents(caspParents);
 		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 

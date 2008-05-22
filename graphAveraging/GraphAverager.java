@@ -14,6 +14,7 @@ import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import tools.Goodies;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -386,7 +387,30 @@ public class GraphAverager {
 		return numContacts[getNumberOfTemplates()-1];
 	}
 
-	
+	/**
+	 * Returns a map containing all parents used in the templates for this graph averager mapped
+	 * to their frequencies.
+	 * @return a map from parent strings to frequencies.
+	 */
+	public Map<String, Integer> getParentFrequencies() {
+		HashMap<String, Integer> parents = new HashMap<String, Integer>();
+		for(String tag:templateGraphs.keySet()) {
+			RIGraph g = templateGraphs.get(tag);
+			String[] ps = g.getParents();
+			if(ps != null) {
+				for(String p:ps) {
+					if(parents.containsKey(p)) {
+						int count = parents.get(p);
+						parents.put(p,count+1);
+					} else {
+						parents.put(p,1);
+					}
+				}
+			}
+		}
+		Map<String, Integer> orderedParents = Goodies.sortMapByValue(parents, Goodies.DESCENDING);
+		return orderedParents;	
+	}
 		
 	/**
 	 * @return the overlap (=number of shared contacts) between two templates under the given alignment

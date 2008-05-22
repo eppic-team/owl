@@ -48,6 +48,7 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	protected int groupNum;
 	protected String authorStr;
 	protected String methodStr;
+	protected String[] caspParents;	// list of parents used for modelling if this graph is derived from a Casp prediction, may be null
 	
 	protected int fullLength;		// full length of the protein with all aas (same as sequence length)
 
@@ -196,6 +197,14 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	
 	public String getMethodStr() {
 		return methodStr;
+	}
+	
+	public void setParents(String[] parents) {
+		this.caspParents = parents;
+	}
+	
+	public String[] getParents() {
+		return this.caspParents;
 	}
 
 	/**
