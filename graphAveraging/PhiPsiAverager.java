@@ -3,8 +3,9 @@ package graphAveraging;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import proteinstructure.Alignment;
 import proteinstructure.Interval;
@@ -40,10 +41,10 @@ public class PhiPsiAverager {
 	 * @return
 	 * @throws IllegalArgumentException if targetTag is not present in this.al
 	 */
-	public TreeMap<Integer, IntervalCandidate[]> getConsensusPhiPsiOnTarget(double threshold, int angleInterval, String targetTag) {
+	public TreeMap<Integer, Interval[]> getConsensusPhiPsiOnTarget(double threshold, int angleInterval, String targetTag) {
 		if (!al.hasTag(targetTag)) throw new IllegalArgumentException("Given targetTag is not present in alignment");
-		TreeMap<Integer, IntervalCandidate[]> phiPsiConsensus = this.getConsensusPhiPsi(threshold, angleInterval);
-		TreeMap<Integer, IntervalCandidate[]> phiPsiConsOnTarget = new TreeMap<Integer, IntervalCandidate[]>();
+		TreeMap<Integer, Interval[]> phiPsiConsensus = this.getConsensusPhiPsi(threshold, angleInterval);
+		TreeMap<Integer, Interval[]> phiPsiConsOnTarget = new TreeMap<Integer, Interval[]>();
 		for (int i:phiPsiConsensus.keySet()) {
 			int resser = al.al2seq(targetTag, i);
 			if (resser!=-1) {
@@ -62,7 +63,7 @@ public class PhiPsiAverager {
 	 * @return
 	 * @throws IllegalArgumentException if threshold < 0.5
 	 */
-	public TreeMap<Integer, IntervalCandidate[]> getConsensusPhiPsi(double threshold, int angleInterval) {
+	public TreeMap<Integer, Interval[]> getConsensusPhiPsi(double threshold, int angleInterval) {
 
 		if (threshold < 0.5) {
 			throw new IllegalArgumentException("Threshold for consensus ph/psi must be above or equals to 0.5");
@@ -73,7 +74,7 @@ public class PhiPsiAverager {
 		// - even case : 4 templates => voteThreshold=2, then we applu cutoff (see getInterval) with a '>' so that 2 doesn't fall within threshold 
 		int voteThreshold = (int) (templates.size()*threshold); // the int casting rounds down
 		
-		TreeMap<Integer, IntervalCandidate[]> bounds = new TreeMap<Integer, IntervalCandidate[]>();
+		TreeMap<Integer, Interval[]> bounds = new TreeMap<Integer, Interval[]>();
 
 		// we go through each column i in the alignment and find the consensus per column
 		for (int i=1; i<=al.getAlignmentLength(); i++) {
@@ -151,12 +152,10 @@ public class PhiPsiAverager {
 	 * @return
 	 */
 	private IntervalCandidate getInterval(double[] anglesInColumn, int voteThreshold, int angleInterval) {
-		// We use a TreeSet to store all interval candidates, so that duplicates are eliminated.
+		// We use a HashSet to store all interval candidates, so that duplicates are eliminated.
 		// Duplicates are defined according to IntervalCandidate.equals(): 2 Intervals are the same if they have the 
 		// same size (voteCount) and same members (voters) 
-		// Second: with the TreeSet the IntervalCandidates will be sorted according to IntervalCandidate.compareTo(): the 
-		// comparison is based purely on the voteCount. Thus it's easy to get out of the set the one with the maximum count.
-		TreeSet<IntervalCandidate> intervalCandidates = new TreeSet<IntervalCandidate>();
+		HashSet<IntervalCandidate> intervalCandidates = new HashSet<IntervalCandidate>();
 		int step = 1;
 		for (int begin=-180;begin<=180-angleInterval;begin+=step) {
 			int end = begin + angleInterval;
@@ -174,9 +173,11 @@ public class PhiPsiAverager {
 		if (intervalCandidates.size()>0) {
 			// As we are allowing thresholds only above 50% the max voters candidate will 
 			// be unique (i.e. same number of voters, same voters, as defined by IntervalCandidate.equals()), there's no possible duplication.
-			
-			// Because intervalCandidates is a TreeSet sorted according to IntervalCandidate.compareTo, the last element is the one with the max votes
-			IntervalCandidate maxVotersCandidate = intervalCandidates.last();
+			IntervalCandidate maxVotersCandidate = Collections.max(intervalCandidates, new Comparator<IntervalCandidate>() {
+				public int compare(IntervalCandidate o1, IntervalCandidate o2) {
+					return new Integer(o1.getVoteCount()).compareTo(o2.getVoteCount());
+				}
+			});
 			// now we change the interval to be centered around the center of min/max values
 			maxVotersCandidate.reCenterInterval(angleInterval);
 			
@@ -194,23 +195,22 @@ public class PhiPsiAverager {
 	/**
 	 * A class to represent a consensus phi/psi angle interval.
 	 * Keeps information of the interval, the voteCount, voters and angle values.
-	 * Its comparator is on voteCount and its equal is on voteCount, voters and values 
+	 * Equality is defined (equals method) by equal voteCounts, voters and values 
 	 */
-	public class IntervalCandidate implements Comparable<IntervalCandidate> {
-		private Interval interval;
+	private class IntervalCandidate extends Interval {
 		private int voteCount;
 		private ArrayList<String> voters;
 		private ArrayList<Integer> votersIndices;
 		private ArrayList<Double> values; // the angle values within this interval
 		public IntervalCandidate (int beg, int end) {
-			this.interval = new Interval(beg,end);
+			super(beg,end);
 			voters = new ArrayList<String>();
 			values = new ArrayList<Double>();
 			votersIndices = new ArrayList<Integer>();
 			voteCount = 0;
 		}
 		public IntervalCandidate (int beg, int end, ArrayList<String> voters, ArrayList<Double> values, ArrayList<Integer> votersIndices, int voteCount) {
-			this.interval = new Interval(beg,end);
+			super(beg, end);
 			this.voters = voters;
 			this.values = values;
 			this.votersIndices = votersIndices;
@@ -226,9 +226,6 @@ public class PhiPsiAverager {
 		public int getVoteCount() {
 			return voteCount;
 		}
-		public Interval getInterval() {
-			return interval;
-		}
 		public ArrayList<String> getVoters() {
 			return voters;
 		}
@@ -237,12 +234,6 @@ public class PhiPsiAverager {
 		}
 		public ArrayList<Integer> getVotersIndices() {
 			return votersIndices;
-		}
-		/**
-		 * Tells whether this IntervalCandidate has > < == voteCount than other
-		 */
-		public int compareTo(IntervalCandidate o) {
-			return new Integer(voteCount).compareTo(o.getVoteCount());
 		}
 		/**
 		 * Returns true if this IntervalCandidate has same voteCount, same voters and same values than other
@@ -278,7 +269,8 @@ public class PhiPsiAverager {
 			// so we want to get B, E for our final interval. Being d=interWidth and w=angleInterval then: B=b+d/2-w/2, E=e-d/2+w/2
 			int B = (int) (min+intervWidth/2-angleInterval/2);
 			int E = (int) (max-intervWidth/2+angleInterval/2);
-			this.interval = new Interval(B,E);
+			this.beg = B;
+			this.end = E;
 		}
 	}
 	
@@ -351,27 +343,6 @@ public class PhiPsiAverager {
 		}
 	}
 	
-	public void printAngles(String type, IntervalCandidate intCandidate) {		
-		System.out.print(type+": ");
-		
-		ArrayList<Double> values = intCandidate.getValues();
-		ArrayList<Integer> valsIntegers = new ArrayList<Integer>();
-		for (double value:values) valsIntegers.add((int) value);
-		for (int i=-360;i<=360;i++) { 
-			if (i==1 || i==360) {
-				System.out.print("#");
-			}else if (valsIntegers.contains(i)) {
-				System.out.print("'");
-			} else if ((int)intCandidate.getInterval().beg==i || (int)intCandidate.getInterval().end==i) {
-				System.out.print("|");
-			} else {
-				System.out.print(" ");
-			}
-		}
-		System.out.println();
-	}
-	 
-	
 	/**
 	 * To test the class
 	 * @param args
@@ -402,7 +373,7 @@ public class PhiPsiAverager {
 		System.out.println("phi/psi angles of each sequence in alignment. Legend: line1 aln positions, line2 sequence positions, line3 phi, line4 psi");
 		PhiPsiAverager ppAvrg = new PhiPsiAverager(templates,aln);
 		
-		TreeMap<Integer, IntervalCandidate[]> phipsibounds = ppAvrg.getConsensusPhiPsi(0.5, 20);
+		TreeMap<Integer, Interval[]> phipsibounds = ppAvrg.getConsensusPhiPsi(0.5, 20);
 		
 		// printing phi/psi angles in each of the templates		
 		for (TemplateWithPhiPsi template:ppAvrg.templates) {
@@ -446,15 +417,15 @@ public class PhiPsiAverager {
 		for (int alnPos: phipsibounds.keySet()) {
 			System.out.printf("%3d %4d %4d ",
 					alnPos,
-					phipsibounds.get(alnPos)[0].getInterval().beg,
-					phipsibounds.get(alnPos)[0].getInterval().end);
-			for (double val:phipsibounds.get(alnPos)[0].getValues()) {
+					phipsibounds.get(alnPos)[0].beg,
+					phipsibounds.get(alnPos)[0].end);
+			for (double val:((IntervalCandidate)phipsibounds.get(alnPos)[0]).getValues()) {
 				System.out.printf("%4.0f ",val);	
 			}
 			System.out.printf("# %4d %4d ",
-					phipsibounds.get(alnPos)[1].getInterval().beg, 
-					phipsibounds.get(alnPos)[1].getInterval().end);
-			for (double val:phipsibounds.get(alnPos)[1].getValues()) {
+					phipsibounds.get(alnPos)[1].beg, 
+					phipsibounds.get(alnPos)[1].end);
+			for (double val:((IntervalCandidate)phipsibounds.get(alnPos)[1]).getValues()) {
 				System.out.printf("%4.0f ",val);	
 			}
 			System.out.println();
