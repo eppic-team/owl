@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -189,6 +190,7 @@ public class PdbfilePdb extends Pdb {
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		int linecount=0;
 		String line;
+		LinkedList<String> parentList = null;
 
 		while((line = fpdb.readLine()) != null ) {
 			linecount++;
@@ -298,6 +300,22 @@ public class PdbfilePdb extends Pdb {
 				thismodel=Integer.parseInt(m.group(1));
 			}
 			if (thismodel!=model) continue; // we skip reading of atom lines if we are not in the desired model
+			// PARENT (optional for Casp TS files)
+			p = Pattern.compile("^PARENT\\s+.+");
+			m = p.matcher(line);
+			if(m.find()) {
+				parentList = new LinkedList<String>();
+				Pattern p2 = Pattern.compile("(\\d\\w\\w\\w_?\\w?)");
+				m = p2.matcher(line);
+				//System.out.printf("| ");
+				while(m.find()) {
+					parentList.add(parseParent(m.group()));
+					//System.out.printf("%s ", parentList.getLast());
+				}
+				//System.out.printf("(%d) ", parentList.size());
+				this.caspParents = new String[0];
+				this.caspParents = parentList.toArray(this.caspParents);
+			}
 			// ATOM
 			p = Pattern.compile("^ATOM");
 			m = p.matcher(line);
@@ -399,6 +417,21 @@ public class PdbfilePdb extends Pdb {
 			// 2) we set fullLength
 			fullLength = sequence.length();
 		}
+	}
+	
+	/**
+	 * Reformats a parent record in one of the verious styles found in Casp files to our standard form
+	 * @param s the input parent string
+	 * @return a parent string in our convention
+	 */
+	private String parseParent(String s) {
+		String chain = "";
+		String pdb = s.substring(0,4).toLowerCase();
+		if(s.length() > 4 && s.substring(s.length()-1) != "_") {
+			chain = s.substring(s.length()-1).toUpperCase();
+		}
+		return pdb+chain;
+		
 	}
 	
 	/**

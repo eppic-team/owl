@@ -80,6 +80,7 @@ public abstract class Pdb {
 	protected String caspAuthorStr;
 	protected String caspMethodStr;
 	protected int groupNum;
+	protected String[] caspParents;	// optional list of parents used for modelling, may be null
 
 	protected int fullLength; // length of full sequence as it appears in SEQRES field 
 	protected int obsLength;  // length without unobserved, non standard aas 
@@ -652,18 +653,16 @@ public abstract class Pdb {
 
 	/**
 	 * Writes coordinates to given File in CASP TS format.
-     * Note that the CASP target number, CASP model number, CASP author, and 
-     * CASP method will be written from the internally set values (targetNum, 
-     * caspModelNum, caspAuthorStr, caspMethodStr) so they must be set before 
-     * trying to write them out. 
+     * Note that the CASP target number, CASP model number, CASP author, 
+     * CASP method and CASP parents will be written from the internally set values
+     * (targetNum, caspModelNum, caspAuthorStr, caspMethodStr, caspParents) so they
+     * must be set before trying to write them out. 
 	 * @param outFile
-	 * @param parents PDB entries in which this homology prediction is based on or
-	 * null if not applicable i.e. if this is an ab-initio prediction
 	 * @throws FileNotFoundException
 	 */
-	public void writeToCaspTSFile(File outFile, String[] parents) throws FileNotFoundException {
+	public void writeToCaspTSFile(File outFile) throws FileNotFoundException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outFile));
-		writeCaspTSHeader(Out, parents);
+		writeCaspTSHeader(Out, this.caspParents);
 		String oldChainCode = this.chainCode;
 		this.chainCode = DEFAULT_CASP_TS_CHAINCODE;
 		writeAtomLines(Out, true);
@@ -1528,6 +1527,24 @@ public abstract class Pdb {
 	 */
 	public void setCaspMethodStr(String methodStr) {
 		this.caspMethodStr = methodStr;
+	}
+	
+	/**
+	 * Sets the parents record which Casp models may optionally have to specify parents used in modelling the strucure.
+	 * The value is used when writing to Casp TS files or by the getParents() method.
+	 * @param parents an array of parent strings used in modelling this structure.
+	 */
+	public void setParents(String[] parents) {
+		this.caspParents = parents;
+	}	
+	
+	/**
+	 * Returns the list of parents which Casp models may optionally have.
+	 * The value will be set when reading from Casp TS files or by the setParents method.
+	 * @return an array of parent strings or null if no parents have been specified.
+	 */
+	public String[] getParents() {
+		return this.caspParents;
 	}
 	
 	/**
