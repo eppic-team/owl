@@ -656,7 +656,7 @@ public abstract class Pdb {
      * Note that the CASP target number, CASP model number, CASP author, 
      * CASP method and CASP parents will be written from the internally set values
      * (targetNum, caspModelNum, caspAuthorStr, caspMethodStr, caspParents) so they
-     * must be set before trying to write them out. 
+     * must be set before trying to write them out.
 	 * @param outFile
 	 * @throws FileNotFoundException
 	 */
