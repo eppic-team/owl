@@ -32,9 +32,31 @@ public class PhiPsiAverager {
 	}
 	
 	/**
+	 * Gets the consensus phi/psi angles mapped onto the sequence of the given targetTag
+	 * If the targetTag is not in the Alignment an IllegalArgumentException is thrown
+	 * @param threshold
+	 * @param angleInterval
+	 * @param targetTag
+	 * @return
+	 * @throws IllegalArgumentException if targetTag is not present in this.al
+	 */
+	public TreeMap<Integer, IntervalCandidate[]> getConsensusPhiPsiOnTarget(double threshold, int angleInterval, String targetTag) {
+		if (!al.hasTag(targetTag)) throw new IllegalArgumentException("Given targetTag is not present in alignment");
+		TreeMap<Integer, IntervalCandidate[]> phiPsiConsensus = this.getConsensusPhiPsi(threshold, angleInterval);
+		TreeMap<Integer, IntervalCandidate[]> phiPsiConsOnTarget = new TreeMap<Integer, IntervalCandidate[]>();
+		for (int i:phiPsiConsensus.keySet()) {
+			int resser = al.al2seq(targetTag, i);
+			if (resser!=-1) {
+				phiPsiConsOnTarget.put(resser, phiPsiConsensus.get(i));
+			}
+		}
+		return phiPsiConsOnTarget;
+	}
+	
+	/**
 	 * Gets the consensus phi/psi angles for each alignment column with phi/psi consensus.
-	 * The return is a TreeMap with keys alignment positions, values the IntervalCandidates, 
-	 * columns without phi/psi consensus are not present in the TreeMap
+	 * The return is a TreeMap with keys alignment positions, values an array of size 2 with the phi/psi IntervalCandidates. 
+	 * Columns without phi/psi consensus are not present in the TreeMap
 	 * @param threshold a value >= 0.5
 	 * @param angleInterval
 	 * @return
@@ -174,7 +196,7 @@ public class PhiPsiAverager {
 	 * Keeps information of the interval, the voteCount, voters and angle values.
 	 * Its comparator is on voteCount and its equal is on voteCount, voters and values 
 	 */
-	private class IntervalCandidate implements Comparable<IntervalCandidate> {
+	public class IntervalCandidate implements Comparable<IntervalCandidate> {
 		private Interval interval;
 		private int voteCount;
 		private ArrayList<String> voters;
@@ -245,15 +267,17 @@ public class PhiPsiAverager {
 		 * @param angleInterval
 		 */
 		public void reCenterInterval(int angleInterval) {
-			double intervWidth = Collections.max(values) - Collections.min(values);
-			// A 'graphical' view of this (x is center, '' the min/max values and || the limits of our interval): 
+			double max = Collections.max(values);
+			double min = Collections.min(values);
+			double intervWidth = max - min;
+			// A 'graphical' view of this (x is center, '' the min/max(b/e) values and || the limits of our interval (B/E)): 
 			// |   '  x  '   |
 			// B   b     e   E
 			// <------w------>
 			//     <--d-->
 			// so we want to get B, E for our final interval. Being d=interWidth and w=angleInterval then: B=b+d/2-w/2, E=e-d/2+w/2
-			int B = (int) (values.get(0)+intervWidth/2-angleInterval/2);
-			int E = (int) (values.get(values.size() -1)-intervWidth/2+angleInterval/2);
+			int B = (int) (min+intervWidth/2-angleInterval/2);
+			int E = (int) (max-intervWidth/2+angleInterval/2);
 			this.interval = new Interval(B,E);
 		}
 	}
