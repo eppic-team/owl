@@ -185,6 +185,7 @@ public class PdbfilePdb extends Pdb {
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		
 		int lastResSerial = 0; // we store the last residue serial read from the ATOM lines to check for correct ascending order
+		int lastAtomSerial = -1; // same for atoms
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -225,7 +226,6 @@ public class PdbfilePdb extends Pdb {
 						} else {
 							throw new PdbfileFormatError("The CASP TS file "+pdbfile+" is empty after the PFRMAT line");
 						}
-						//TODO read PARENT record? there's one PARENT record per model in file, see http://predictioncenter.org/casp7/doc/casp7-format.html 
 					}
 				}
 			}
@@ -300,6 +300,7 @@ public class PdbfilePdb extends Pdb {
 				thismodel=Integer.parseInt(m.group(1));
 			}
 			if (thismodel!=model) continue; // we skip reading of atom lines if we are not in the desired model
+			
 			// PARENT (optional for Casp TS files)
 			p = Pattern.compile("^PARENT\\s+.+");
 			m = p.matcher(line);
@@ -336,7 +337,11 @@ public class PdbfilePdb extends Pdb {
 						if (res_serial<lastResSerial) {
 							throw new PdbfileFormatError("Residue serials do not occur in ascending order in ATOM lines of the PDB file "+pdbfile);
 						}
+						if(atomserial <= lastAtomSerial) {
+							throw new PdbfileFormatError("Atom serials do not occur in ascending order in PDB file " + pdbfile + "(atom=" + atomserial + ")");
+						}
 						lastResSerial = res_serial;
+						lastAtomSerial = atomserial;
 						String iCode = ml.group(5);
 						if (!iCode.equals(" ")) {
 							throw new PdbfileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
@@ -427,7 +432,7 @@ public class PdbfilePdb extends Pdb {
 	private String parseParent(String s) {
 		String chain = "";
 		String pdb = s.substring(0,4).toLowerCase();
-		if(s.length() > 4 && s.substring(s.length()-1) != "_") {
+		if(s.length() > 4 && !s.substring(s.length()-1).equals("_")) {
 			chain = s.substring(s.length()-1).toUpperCase();
 		}
 		return pdb+chain;
