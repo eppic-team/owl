@@ -132,6 +132,14 @@ public class testJUNGframework {
 		System.out.println("vertex count: "+g.getVertexCount());
 		System.out.println("edge count: "+g.getEdgeCount());
 		System.out.println("edge w "+ g.findEdge(n3, n1).getAtomWeight());
+	
+		if (g.containsEdgeIJ(3, 1)){
+			System.out.println("Edge 3,1 found");
+		}
+		if (g.containsEdgeIJ(1, 3)){
+			System.out.println("Edge 1,3 found");
+		}
+		
 		
 		// TEST copying of RIGraph objects and restrictRange methods
 		System.out.println("TEST copying of RIGraph objects");
