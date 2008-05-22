@@ -3,12 +3,7 @@ package graphAveraging;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
@@ -41,7 +36,8 @@ public class GraphAverager {
 	private String contactType;		// contact type of the final consensus graph
 	private double distCutoff;		// cutoff of the final consensus graph
 	
-	private HashMap<Pair<Integer>,Vote> contactVotes;
+	private int[] numContacts;		// sorted array with number of contacts for each template graph (see countVotes)
+	private HashMap<Pair<Integer>,Vote> contactVotes; // number of votes for each contact (see countVotes)
 	
 	/*---------------------------- inner classes ----------------------------*/
 	/**
@@ -268,11 +264,23 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Counts the votes for each possible alignment edge and puts all the votes in contactVotes Map
+	 * Counts the votes for each possible alignment edge and puts all the votes in contactVotes Map.
+	 * Also initializes the numContacts array with the number of contacts for each template.
 	 *
 	 */
 	private void countVotes() {
 		
+		// count num contacts for each template
+		numContacts = new int[this.getNumberOfTemplates()];
+		int c = 0;
+		for(String tag:templateGraphs.keySet()) {
+			RIGraph g = templateGraphs.get(tag);
+			numContacts[c] = g.getEdgeCount();
+			c++;
+		}
+		Arrays.sort(numContacts);
+		
+		// count number of votes for each contact
 		contactVotes = new HashMap<Pair<Integer>, Vote>();
 
 		// we get the first graph in templates to see if they are directed or undirected
@@ -332,6 +340,54 @@ public class GraphAverager {
 		return this.templateGraphs.size();
 	}
 	
+	/** 
+	 * @return The average number of contacts over all templates.
+	 */
+	public double getAvgNumContacts() {
+		double sum = 0.0;
+		for (int i = 0; i < numContacts.length; i++) {
+			sum += numContacts[i];
+		}
+		return sum / getNumberOfTemplates();
+	}
+	
+	/**
+	 * @return The median number of contacts over all templates
+	 */
+	public int getMedNumContacts() {
+		int medIdx = getNumberOfTemplates() / 2;
+		return numContacts[medIdx];
+	}
+	
+	/**
+	 * Returns the number of contacts such that a fraction t of templates has less contacts.
+	 * and 1-t has less. The index is rounded to the nearest integer and t is forced into [0;1].
+	 * @param t the quantile at which the number of contacts is returned
+	 * @return the number of contacts at the t quantile (rounded).
+	 */
+	public int getQuantNumContacts(double t) {
+		if(t > 1) t = 1;
+		if(t < 0) t = 0;
+		int qntIdx = (int) Math.round(t * getNumberOfTemplates()); 
+		return numContacts[qntIdx];
+	}
+	
+	/**
+	 * @return the minimum number of contacts over all templates
+	 */
+	public int getMinNumContacts() {
+		return numContacts[0];
+	}
+	
+	/**
+	 * @return the maximum number of contacts over all templates
+	 */
+	public int getMaxNumContacts() {
+		return numContacts[getNumberOfTemplates()-1];
+	}
+
+	
+		
 	/**
 	 * @return the overlap (=number of shared contacts) between two templates under the given alignment
 	 */
@@ -430,8 +486,8 @@ public class GraphAverager {
 	/**
 	 * Returns a RIGraph containing the union of edges of the template graphs 
 	 * weighted by the fraction of occurrence in the templates.
-	 * The sequence of the graph is initialized to the sequence of the template.
-	 * @return
+	 * The sequence of the graph is the target sequence.
+	 * @return the average graph
 	 */
 	public RIGraph getAverageGraph() {
 
@@ -455,6 +511,40 @@ public class GraphAverager {
 		return graph;
 	}
 
+	/**
+	 * Returns a RIGraph with numContacts contacts where the contacts are picked from
+	 * the union of all templates in order of consensus score (i.e. fraction of templates
+	 * confirming the contact). 
+	 * @param numContacts the number of contacts picked
+	 * @return the graph with top contacts
+	 */
+	public RIGraph getGraphWithTopContacts(int numContacts) {
+		
+		// order edges by weight
+		RIGraph av = getAverageGraph();
+		Collection<RIGEdge> edges = av.getEdges();
+		ArrayList<RIGEdge> edgeList = new ArrayList<RIGEdge>(edges);
+		Collections.sort(edgeList, new Comparator<RIGEdge>() {
+			public int compare(RIGEdge e1, RIGEdge e2) {
+			return -1 * Double.compare(e1.getWeight(), e2.getWeight());
+		}
+		});
+		
+		// create new graph
+		RIGraph graph = new RIGraph(this.sequence);
+		graph.setContactType(this.contactType);
+		graph.setCutoff(this.distCutoff);
+		
+		// add top edges to graph
+		for (int i = 0; i < Math.min(edgeList.size(), numContacts); i++) {
+			RIGEdge e = edgeList.get(i);
+			e.setWeight(1.0);
+			graph.addEdge(e, av.getEndpoints(e));
+		}
+		
+		return graph;
+	}
+	
 	/**
 	 * Writes the averaged graph (see {@link #getAverageGraph()} to outfile  
 	 * with edge weights and voters: i.e. templates that voted for the edge 
