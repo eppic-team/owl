@@ -117,6 +117,7 @@ public class PhiPsiAverager {
 	 * @return the ConsensusSquare with the phi/psi consensus intervals or null if no consensus for this column
 	 */
 	private ConsensusSquare findConsSquare(HashMap<Integer,Double> values1stDim, HashMap<Integer,Double> values2ndDim, int voteThreshold, int angleInterval) {
+		
 		ArrayList<ConsensusSquare> allConsIntervals = findAllConsSquares(values1stDim, values2ndDim, voteThreshold, angleInterval);
 		if (allConsIntervals.isEmpty()) {
 			return null;
@@ -185,12 +186,13 @@ public class PhiPsiAverager {
 		LinkedHashMap<Integer, Double> anglesSorted = Goodies.sortMapByValue(anglesInColumn, Goodies.ASCENDING);
 		ArrayList<Double> values = new ArrayList<Double>(anglesSorted.values());
 		ArrayList<Integer> jIndices = new ArrayList<Integer>(anglesSorted.keySet());
+		extendLists(values, jIndices, angleInterval);
 		for (int startIndex=0;startIndex<values.size()-1;startIndex++) {
 			ConsensusInterval consInterv = new ConsensusInterval();
-			consInterv.addVoter(jIndices.get(startIndex), templates.get(jIndices.get(startIndex)).getId(), values.get(startIndex));
+			consInterv.addVoter(jIndices.get(startIndex), templates.get(jIndices.get(startIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(startIndex)));
 			for (int endIndex=startIndex+1;endIndex<values.size();endIndex++) {
 				if ((values.get(endIndex) - values.get(startIndex))<=angleInterval) {
-					consInterv.addVoter(jIndices.get(endIndex), templates.get(jIndices.get(endIndex)).getId(), values.get(endIndex));
+					consInterv.addVoter(jIndices.get(endIndex), templates.get(jIndices.get(endIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(endIndex)));
 				}
 			}
 			if (consInterv.getVoteCount()>voteThreshold) {  // note we use strictly bigger, see comment in getConsensusPhiPsi
@@ -220,9 +222,26 @@ public class PhiPsiAverager {
 		for (int voterIndex:consInterv1stDim.getVotersIndices()) {
 			values2ndDim.add(anglesInColumn.get(voterIndex));
 		}
-		// now values2ndDim contains one value for each of the 1st dimension voters. We want to see if they fall within the angleInterval cutoff 
-		double intervWidth = Collections.max(values2ndDim) - Collections.min(values2ndDim);
-		if (intervWidth<=angleInterval) {
+		// now values2ndDim contains one value for each of the 1st dimension voters. We want to see if they fall within the angleInterval cutoff
+		
+		// to find whether all the angles fall within the given angleInterval we have to remember
+		// that the angles are in a circle and thus is not as easy as take max-min. We use a brute force
+		// approach: take our angleDistance function and then measure all pairwise distances and take the maximum
+		double maxDistance = -1;
+		if (values2ndDim.contains(Double.NaN)) {
+			maxDistance = Double.NaN;
+		} else {
+			for (int i=0; i<values2ndDim.size();i++) {
+				for (int j=i+1;j<values2ndDim.size();j++) {
+					double dist = ConsensusInterval.angleDistance(values2ndDim.get(i),values2ndDim.get(j));
+					if (dist>maxDistance) {
+						maxDistance = ConsensusInterval.angleDistance(values2ndDim.get(i), values2ndDim.get(j));
+					}
+				}
+			}
+		}
+		// maxDistance==-1 shouldn't happen at all but just in case!
+		if (maxDistance!=-1 && maxDistance<=angleInterval) {
 			// first we initialise with a dummy 0,0 interval, then we use the recenter method to get the interval
 			// ATTENTION! we pass references of voters and voterIndices from consInterv1stDim: that means that the 2 members of 
 			// the final ConsensusSquare object will be referencing the same objects
@@ -260,6 +279,28 @@ public class PhiPsiAverager {
 		}
 	}
 	
+	private void extendLists (ArrayList<Double> values, ArrayList<Integer> jIndices, int angleInterval) {
+		
+		// graphically what we are doing is extending the list in this way: (w= angleInterval)
+		//   |-------'-----------------------------------|-------|
+		// -180                                         180
+		//   <---w--->                                   <---w--->
+		//      \                                            ^
+		//       \                                          /
+		//        ------------------------------------------
+		
+		ArrayList<Double> valuesToAdd = new ArrayList<Double>();
+		for (int i=0; i< values.size();i++) { // values is sorted, thus when we add to valuesToAdd new values are sorted too
+			if (values.get(i)< -180+angleInterval ) { 
+				valuesToAdd.add(ConsensusInterval.wrapAngle(values.get(i)));
+				jIndices.add(jIndices.get(i));
+			}
+		}
+		for (double value:valuesToAdd) {
+			values.add(value);
+		}
+			
+	}
 	
 	/**
 	 * Gets the phi/psi angles for all templates putting them into this.templates.
@@ -320,6 +361,11 @@ public class PhiPsiAverager {
 		File templatesFile = new File("/scratch/local/phipsi/T0332.templates");
 		File alnFile = new File("/scratch/local/phipsi/T0332.target2templ.fasta");
 		File psipredFile = new File("/scratch/local/phipsi/T0332.horiz");
+		//File templatesFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.templates");
+		//File alnFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.target2templ.fasta");
+		//File psipredFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.horiz");
+		String targetTag = "T0332";
+
 		
 		String pdbaseDb = "pdbase";
 		TemplateList templates = new TemplateList(templatesFile);
@@ -335,7 +381,7 @@ public class PhiPsiAverager {
 		
 		Alignment aln = new Alignment(alnFile.getAbsolutePath(),"FASTA");
 		System.out.println("Secondary structure matching: ");
-		aln.writeSecStructMatching(System.out, "T0332", psipredFile , conn, pdbaseDb, "/project/StruPPi/bin/dssp");
+		aln.writeSecStructMatching(System.out, targetTag, psipredFile , conn, pdbaseDb, "/project/StruPPi/bin/dssp");
 		System.out.println();
 		System.out.println("phi/psi angles of each sequence in alignment. Legend: line1 aln positions, line2 sequence positions, line3 phi, line4 psi");
 		PhiPsiAverager ppAvrg = new PhiPsiAverager(templates,aln);
@@ -394,6 +440,12 @@ public class PhiPsiAverager {
 					phipsibounds.get(alnPos).getConsInterval2ndDim().end);
 			for (double val:phipsibounds.get(alnPos).getConsInterval2ndDim().getValues()) {
 				System.out.printf("%4.0f ",val);	
+			}
+			if (phipsibounds.get(alnPos).getConsInterval1stDim().beg>phipsibounds.get(alnPos).getConsInterval1stDim().end) {
+				System.out.print("Wrapping on phi");
+			}
+			if (phipsibounds.get(alnPos).getConsInterval2ndDim().beg>phipsibounds.get(alnPos).getConsInterval2ndDim().end) {
+				System.out.print("Wrapping on psi");
 			}
 			System.out.println();
 		}
