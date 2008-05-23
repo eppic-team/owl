@@ -1,5 +1,7 @@
 package tinker;
 
+import graphAveraging.ConsensusSquare;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -10,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.util.Formatter;
+import java.util.TreeMap;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,11 +32,14 @@ public class TinkerRunner {
 	private static final String XYZPDB_PROG = "xyzpdb";
 	private static final String MINIMIZE_PROG = "minimize";
 	private static final String ANALYZE_PROG = "analyze";
+	
 	private static final String CYCLISE_PROTEIN_STR = "N";
 	private static final String DGEOM_DEFAULT_PARAMS = "Y N Y Y N N ";
 	private static final String REFINE_VIA_ANNEALING = "A";
 	private static final String REFINE_VIA_MINIMIZATION = "M";
-	public static final double DEFAULT_FORCECONSTANT = 10.0;
+	
+	public static final double DEFAULT_FORCECONSTANT_DISTANCE_CONST = 10.0;
+	public static final double DEFAULT_FORCECONSTANT_TORSION_CONST = 1.0;
 	
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final String CHECKXYZ_WARNING = " CHKXYZ";
@@ -598,13 +604,18 @@ public class TinkerRunner {
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
-		return reconstruct(sequence, graphs, numberOfModels, DEFAULT_FORCECONSTANT);
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, int numberOfModels) 
+	throws TinkerError, IOException {
+		
+		return reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, 
+				DEFAULT_FORCECONSTANT_DISTANCE_CONST, DEFAULT_FORCECONSTANT_TORSION_CONST);
 	}	
 	
 	/** 
@@ -614,13 +625,18 @@ public class TinkerRunner {
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels) throws TinkerError, IOException {
-		return reconstructFast(sequence, graphs, numberOfModels, DEFAULT_FORCECONSTANT);
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, int numberOfModels) 
+	throws TinkerError, IOException {
+		
+		return reconstructFast(sequence, graphs, phiPsiConsensus, 
+				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE_CONST, DEFAULT_FORCECONSTANT_TORSION_CONST);
 	}
 
 	/** 
@@ -629,20 +645,27 @@ public class TinkerRunner {
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @param forceConstantDist the force constant to be used for all our given distance restraints
+	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant) throws TinkerError, IOException {
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus,
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
+	throws TinkerError, IOException {
+		
 		Pdb resultPdb = null;
 		
 		String outputDir = System.getProperty("java.io.tmpdir");
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, 
+				forceConstantDist, forceConstantTorsion, true, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -655,20 +678,26 @@ public class TinkerRunner {
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @param forceConstantDist the force constant to be used for all our given distance restraints
+	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant) throws TinkerError, IOException {
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
+	throws TinkerError, IOException {
+		
 		Pdb resultPdb = null;
 		
 		String outputDir = System.getProperty("java.io.tmpdir");
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, numberOfModels, forceConstant, false, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, forceConstantDist, forceConstantTorsion, false, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -685,16 +714,23 @@ public class TinkerRunner {
 	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods.  
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @param forceConstant the force constant to be used for all our given distance restraints 
+	 * @param forceConstantDist the force constant to be used for all our given distance restraints
+	 * @param forceConsantTorsion the force constant to be used for all our given torsion restraints
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
-	public void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
-		reconstruct(sequence, graphs, numberOfModels, forceConstant, true, outputDir, baseName, cleanUp);
+	public void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+			int numberOfModels, double forceConstantDist, double forceConsantTorsion, 
+			String outputDir, String baseName, boolean cleanUp) 
+	throws TinkerError, IOException {
+		
+		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp);
 	}
 	
 	/**
@@ -707,16 +743,26 @@ public class TinkerRunner {
 	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods.  
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @param forceConstant the force constant to be used for all our given distance restraints 
+	 * @param forceConstantDist the force constant to be used for all our given distance restraints
+	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */	
-	public void reconstructFast(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
-		reconstruct(sequence, graphs, numberOfModels, forceConstant, false, outputDir, baseName, cleanUp);
+	public void reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
+			String outputDir, String baseName, boolean cleanUp) 
+	throws TinkerError, IOException {
+		
+		reconstruct(sequence, graphs, phiPsiConsensus, 
+				numberOfModels, 
+				forceConstantDist, forceConstantTorsion, 
+				false, outputDir, baseName, cleanUp);
 	}
 	
 	/** 
@@ -728,8 +774,11 @@ public class TinkerRunner {
 	 * getMax..., getNum..., getRms... and getErrorFunctionVal() methods. 
 	 * @param sequence sequence of the structure to be generated
 	 * @param graphs array of graph objects containing constraints
+	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
+	 * if null no phi/psi restraints will be applied
 	 * @param numberOfModels number of reconstructions to be done by tinker
-	 * @param forceConstant the force constant to be used for all our given distance restraints
+	 * @param forceConstantDist the force constant to be used for all our given distance restraints
+	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
 	 * @param annealing if true simulated annealing is used for refinement (slow), if false minimization is used for refinement (fast) 
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
@@ -737,10 +786,13 @@ public class TinkerRunner {
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
-	private void reconstruct(String sequence, RIGraph[] graphs, int numberOfModels, double forceConstant, boolean annealing, String outputDir, String baseName, boolean cleanUp) throws TinkerError, IOException {
+	private void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
+			boolean annealing, String outputDir, String baseName, boolean cleanUp) 
+	throws TinkerError, IOException {
 		
 		if (!annealing) dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_MINIMIZATION;
-		this.forceConstant = forceConstant; 
+		this.forceConstant = forceConstantDist; 
 		
 		// defining files
 		File prmFile = new File(this.forceFieldFileName);					// don't delete this one
@@ -772,13 +824,18 @@ public class TinkerRunner {
 		// 2. creating constraints into key file
 		ConstraintsMaker cm = null;
 		try {
-			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile,forceConstant);
+			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile);
 		} catch(PdbLoadError e) {
 			throw new TinkerError(e);
 		}
 		for(RIGraph graph:graphs) {
-			cm.createConstraints(graph);
+			cm.createDistanceConstraints(graph,forceConstantDist);
 		}
+		
+		if (phiPsiConsensus!=null) {
+			cm.createPhiPsiConstraints(phiPsiConsensus, forceConstantTorsion);
+		}
+		
 		cm.closeKeyFile();
 
 		// 3. run tinker's distgeom

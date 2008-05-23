@@ -13,6 +13,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import edu.uci.ics.jung.graph.util.Pair;
+import graphAveraging.ConsensusSquare;
 
 import proteinstructure.AAinfo;
 import proteinstructure.Pdb;
@@ -35,7 +36,6 @@ public class ConstraintsMaker {
 	private File xyzFile;
 	private Pdb pdb;
 	private PrintWriter fkey;
-	private double defaultForceConstant;
 	
 	private TreeMap<Integer,Integer> pdb2xyz;
 	
@@ -51,13 +51,11 @@ public class ConstraintsMaker {
 	 * @param prmFile a Tinker compliant force field parameter file
 	 * @param type the type of the force field parameter file (currently only 'amber' is supported)
 	 * @param keyFile output tinker restraints file
-	 * @param forceConstant a global force constant used for all distance restraints
 	 * @throws FileNotFoundException if one of the files was not found
 	 * @throws IOException if something went wrong while reading from or writing to files
 	 * @throws PdbLoadError if the PDB file could not be read
 	 */
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile, double forceConstant) throws FileNotFoundException, IOException, PdbLoadError {
-		this.defaultForceConstant = forceConstant;
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile) throws FileNotFoundException, IOException, PdbLoadError {
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 
@@ -182,8 +180,9 @@ public class ConstraintsMaker {
 	 * That means: 'ALL' CANNOT be used. No exception will be thrown for that, input must be correct
 	 * 
 	 * @param graph
+	 * @param defaultForceConstant a global force constant used for all distance restraints
 	 */
-	public void createConstraints(RIGraph graph) {
+	public void createDistanceConstraints(RIGraph graph, double defaultForceConstant) {
 
 		double cutoff = graph.getCutoff();
 		String ct = graph.getContactType();
@@ -229,5 +228,26 @@ public class ConstraintsMaker {
 	
 	public void closeKeyFile() {
 		fkey.close();
+	}
+	
+	public void createPhiPsiConstraints(TreeMap<Integer,ConsensusSquare> phiPsiConsensus, double defaultForceConstantPhiPsi) {
+		for (int resser:phiPsiConsensus.keySet()) {
+			// get all atoms necessary for the phi/psi angles 
+			
+			int Ciminus1 = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser-1, "C"));
+			int Ni       = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "N"));
+			int CAi      = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "CA"));
+			int Ci       = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "C"));
+			int Niplus1  = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser+1, "N"));
+			
+			// phi restraint
+			fkey.printf("RESTRAIN-TORSION %d %d %d %d %5.1f %d %d\n",
+					Ciminus1, Ni, CAi, Ci, defaultForceConstantPhiPsi, 
+					phiPsiConsensus.get(resser).getConsInterval1stDim().beg, phiPsiConsensus.get(resser).getConsInterval1stDim().end);
+			// psi restraint
+			fkey.printf("RESTRAIN-TORSION %d %d %d %d %5.1f %d %d\n", 
+					Ni, CAi, Ci, Niplus1, defaultForceConstantPhiPsi, 
+					phiPsiConsensus.get(resser).getConsInterval2ndDim().beg, phiPsiConsensus.get(resser).getConsInterval2ndDim().end);
+		}
 	}
 }

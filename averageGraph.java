@@ -15,7 +15,9 @@ import tinker.TinkerRunner;
 import tools.MySQLConnection;
 //import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
+import graphAveraging.ConsensusSquare;
 import graphAveraging.GraphAverager;
+import graphAveraging.PhiPsiAverager;
 
 
 public class averageGraph {
@@ -27,6 +29,8 @@ public class averageGraph {
 	
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
+	private static final double PHIPSI_CONSENSUS_THRESHOLD = 0.5;
+	private static final int    PHIPSI_CONSENSUS_INTERVAL = 10;
 	
 	private static final String	PDB_DB = 				"pdbase";
 	private static final String	DB_HOST = 				"white";								
@@ -113,7 +117,8 @@ public class averageGraph {
 				"  [-c] <string>: write final reconstructed model also in CASP TS format using as AUTHOR the \n" +
 				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
 				"                 target sequence file must comply with the CASP target naming convention, \n" +
-				"                 e.g. T0100 \n\n"+
+				"                 e.g. T0100 \n" +
+				"  [-F]         : use phi/psi consensus values as torsion angle constraints for the reconstruction\n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
 				"alignment is calculated with muscle. If no target sequence is given, a dummy sequence\n" + 
@@ -141,10 +146,12 @@ public class averageGraph {
 		boolean reconstruct = false;
 		int numberTinkerModels = 0;
 		
+		boolean usePhiPsiConstraints = false;
+		
 		boolean casp = false;
 		String caspAuthorStr = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:h?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:Fh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -193,7 +200,10 @@ public class averageGraph {
 			case 'c':
 				caspAuthorStr = g.getOptarg().replace('_', '-');
 				casp = true;
-				break;								
+				break;
+			case 'F':
+				usePhiPsiConstraints = true;
+				break;												
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -237,13 +247,13 @@ public class averageGraph {
 		Pdb targetPdb = null;
 		
 		if (benchmark) {
-			// 1) benchmark: from a known structure sequence we repredict it based on a msa with known structures
+			// 1) benchmark: from a known structure sequence we repredict it based on template structures
 			targetPdb = new PdbasePdb(pdbCodeTarget);
 			targetPdb.load(pdbChainCodeTarget);
 			targetSeq = targetPdb.getSequence();
 			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
 		} else {
-			// 2) prediction: from a sequence with unknown structure, we predict the structure based on a msa with known structures
+			// 2) prediction: from a sequence with unknown structure, we predict the structure based on template structures
 			// or
 			// 3) inspection (seqFile=null): just create average and consensus graph for the set of templates using a dummy sequence
 			if(seqFile != null) {
@@ -395,9 +405,21 @@ public class averageGraph {
 		
 		// reconstruct
 		if (reconstruct) {
+			System.out.println("Getting phi/psi consensus from templates for reconstruction");
+			TreeMap<Integer, ConsensusSquare> phiPsiConsensus = null;
+			if (usePhiPsiConstraints) {
+				// we are re-reading from db the PDB data, this is really inefficient (we already have them in templatePdbs)
+				// TODO make templatePdbs a TemplateList 
+				TemplateList templates = new TemplateList(codesTemplates);
+				templates.loadPdbData(conn, PDB_DB);
+				PhiPsiAverager phiPsiAvrger = new PhiPsiAverager(templates,ali);
+				phiPsiConsensus = phiPsiAvrger.getConsensusPhiPsiOnTarget(PHIPSI_CONSENSUS_THRESHOLD, PHIPSI_CONSENSUS_INTERVAL, targetTag);
+			}
+			
 			System.out.println("Reconstructing");
+			
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
-			Pdb pdb = tr.reconstruct(targetSeq, graphsForReconstruction, numberTinkerModels);
+			Pdb pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels);
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
 			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);

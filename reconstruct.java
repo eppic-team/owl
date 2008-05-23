@@ -44,7 +44,7 @@ public class reconstruct {
 		String baseName = "";
 		boolean cross = false;
 		int n = 1;
-		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT; // if not given in contact type default will be used
+		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE_CONST; // if not given in contact type default will be used
 		int minRange = 0;
 		int maxRange = 0;
 		boolean fast = false;
@@ -219,9 +219,11 @@ public class reconstruct {
 		
 		try {
 			if (fast) {
-				tr.reconstructFast(sequence, graphs, n, forceConstant, outputDir, baseName, false);
+				// as this is at the moment just a reconstruction benchmarking script it doesn't make sense 
+				// at all to use a phi/psi consensus (which would come from templates): we use null and 0 for the 2 phi/psi parameters
+				tr.reconstructFast(sequence, graphs, null, n, forceConstant, 0, outputDir, baseName, false);
 			} else {
-				tr.reconstruct(sequence, graphs, n, forceConstant, outputDir, baseName, false);
+				tr.reconstruct(sequence, graphs, null, n, forceConstant, 0, outputDir, baseName, false);
 			}
 			
 		} catch (IOException e) {
