@@ -416,9 +416,9 @@ public class averageGraph {
 		
 		// reconstruct
 		if (reconstruct) {
-			System.out.println("Getting phi/psi consensus from templates for reconstruction");
 			TreeMap<Integer, ConsensusSquare> phiPsiConsensus = null;
 			if (usePhiPsiConstraints) {
+				System.out.println("Getting phi/psi consensus from templates for reconstruction");
 				// we are re-reading from db the PDB data, this is really inefficient (we already have them in templatePdbs)
 				// TODO make templatePdbs a TemplateList 
 				TemplateList templates = new TemplateList(codesTemplates);
