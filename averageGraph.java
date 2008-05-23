@@ -118,9 +118,11 @@ public class averageGraph {
 				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
 				"                 target sequence file must comply with the CASP target naming convention, \n" +
 				"                 e.g. T0100 \n" +
-				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction." +
+				"  [-m] <string>: use given string as the CASP TS METHOD text. If string contains new lines it \n" +
+				"                 will be splitted over several METHOD lines \n" +
+				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction.\n" +
 				"                 The default consensus threshold is fixed at 50%.\n" +
-				"                 The specified number will be taken as the angle interval for defining the consensus." +
+				"                 The specified number will be taken as the angle interval for defining the consensus.\n" +
 				"                 Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
@@ -154,8 +156,9 @@ public class averageGraph {
 		
 		boolean casp = false;
 		String caspAuthorStr = null;
+		String caspMethodStr = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:F:h?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:m:F:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -205,6 +208,9 @@ public class averageGraph {
 				caspAuthorStr = g.getOptarg().replace('_', '-');
 				casp = true;
 				break;
+			case 'm':
+				caspMethodStr = g.getOptarg();
+				break;				
 			case 'F':
 				usePhiPsiConstraints = true;
 				phiPsiConsensusInterval = Integer.parseInt(g.getOptarg());
@@ -434,6 +440,7 @@ public class averageGraph {
 				pdb.setTargetNum(targetNum);
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
+				pdb.setCaspMethodStr(caspMethodStr);
 				pdb.setParents(codesTemplates);
 				pdb.writeToCaspTSFile(outcasptsfile);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
