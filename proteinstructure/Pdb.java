@@ -557,6 +557,8 @@ public abstract class Pdb {
 	 * and CASP method will be written from the internally 
 	 * set values (targetNum, caspModelNum, caspAuthorStr, caspMethodStr) 
 	 * so they must be set before trying to write them out.
+	 * If the method string has new line characters it will be splitted into
+	 * several METHOD lines
 	 * @param Out
 	 * @param parents PDB entries in which this homology prediction is based on or
 	 * null if not applicable i.e. if this is an ab-initio prediction
@@ -565,7 +567,12 @@ public abstract class Pdb {
 		Out.println("PFRMAT TS");
 		Out.printf("TARGET T%04d\n",targetNum);
 		if(caspAuthorStr != null) Out.printf("AUTHOR %s\n", caspAuthorStr);
-		if(caspMethodStr != null) Out.printf("METHOD %s\n", caspMethodStr);
+		if(caspMethodStr != null) {
+			String[] caspMethodLines = caspMethodStr.split("\n");
+			for (String caspMethodLine: caspMethodLines) {
+				Out.printf("METHOD %s\n", caspMethodLine);
+			}
+		}
 		Out.println("MODEL "+caspModelNum);
 		String parentStr = "";
 		if (parents==null) {
