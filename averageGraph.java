@@ -30,7 +30,7 @@ public class averageGraph {
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
 	private static final double PHIPSI_CONSENSUS_THRESHOLD = 0.5;
-	private static final int    PHIPSI_CONSENSUS_INTERVAL = 10;
+	private static final int    PHIPSI_CONSENSUS_INTERVAL = 20;
 	
 	private static final String	PDB_DB = 				"pdbase";
 	private static final String	DB_HOST = 				"white";								
@@ -118,7 +118,10 @@ public class averageGraph {
 				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
 				"                 target sequence file must comply with the CASP target naming convention, \n" +
 				"                 e.g. T0100 \n" +
-				"  [-F]         : use phi/psi consensus values as torsion angle constraints for the reconstruction\n\n"+
+				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction." +
+				"                 The default consensus threshold is fixed at 50%.\n" +
+				"                 The specified number will be taken as the angle interval for defining the consensus." +
+				"                 Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
 				"alignment is calculated with muscle. If no target sequence is given, a dummy sequence\n" + 
@@ -147,11 +150,12 @@ public class averageGraph {
 		int numberTinkerModels = 0;
 		
 		boolean usePhiPsiConstraints = false;
+		int phiPsiConsensusInterval = PHIPSI_CONSENSUS_INTERVAL;
 		
 		boolean casp = false;
 		String caspAuthorStr = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:Fh?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:F:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -203,6 +207,7 @@ public class averageGraph {
 				break;
 			case 'F':
 				usePhiPsiConstraints = true;
+				phiPsiConsensusInterval = Integer.parseInt(g.getOptarg());
 				break;												
 			case 'h':
 			case '?':
@@ -413,7 +418,7 @@ public class averageGraph {
 				TemplateList templates = new TemplateList(codesTemplates);
 				templates.loadPdbData(conn, PDB_DB);
 				PhiPsiAverager phiPsiAvrger = new PhiPsiAverager(templates,ali);
-				phiPsiConsensus = phiPsiAvrger.getConsensusPhiPsiOnTarget(PHIPSI_CONSENSUS_THRESHOLD, PHIPSI_CONSENSUS_INTERVAL, targetTag);
+				phiPsiConsensus = phiPsiAvrger.getConsensusPhiPsiOnTarget(PHIPSI_CONSENSUS_THRESHOLD, phiPsiConsensusInterval, targetTag);
 			}
 			
 			System.out.println("Reconstructing");
