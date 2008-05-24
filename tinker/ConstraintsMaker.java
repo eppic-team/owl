@@ -232,8 +232,12 @@ public class ConstraintsMaker {
 	
 	public void createPhiPsiConstraints(TreeMap<Integer,ConsensusSquare> phiPsiConsensus, double defaultForceConstantPhiPsi) {
 		for (int resser:phiPsiConsensus.keySet()) {
-			// get all atoms necessary for the phi/psi angles 
+			// we can't assign a phi angle for residue 1 or a psi for the last residue so we have to skip those
+			// (here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and thus with coordinates for all residues)
+			if (resser==1) continue;
+			if (resser==pdb.getFullLength()) continue;
 			
+			// get all atoms necessary for the phi/psi angles 
 			int Ciminus1 = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser-1, "C"));
 			int Ni       = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "N"));
 			int CAi      = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "CA"));
