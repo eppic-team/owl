@@ -12,6 +12,8 @@ import proteinstructure.Interval;
  */
 public class ConsensusInterval extends Interval {
 	
+	private static final int MARGIN = 0; // margin for the restraints interval taken, if 0 then the interval taken for the restraint is min,max
+	
 	private int voteCount;
 	private ArrayList<String> voters;
 	private ArrayList<Integer> votersIndices;
@@ -88,7 +90,7 @@ public class ConsensusInterval extends Interval {
 	}
 	
 	/**
-	 * Re-centers the interval of this IntervalCandidate to (maxValue-minValue)/2
+	 * Sets the interval to be between min angle value and max angle value
 	 * @param angleInterval
 	 */
 	public void reCenterInterval(int angleInterval) {
@@ -99,25 +101,13 @@ public class ConsensusInterval extends Interval {
 		// then max-min is bigger than the interval (because it's the complementary angle) 
 		double max = Collections.max(values);
 		double min = Collections.min(values);
-		double intervWidth = angleDistance(max, min);
 
 		if ((max-min)<=angleInterval) { // normal non-wrapping case
-			// A 'graphical' view of this (x is center, '' the min/max(b/e) values and || the limits of our interval (B/E)): 
-			//   |   '  x  '   |
-			//   B   b     e   E
-			//   <------w------>
-			//       <--d-->
-			// so we want to get B, E for our final interval. Being d=interWidth and w=angleInterval then: B=b+d/2-w/2, E=e-d/2+w/2
-			int B = (int) (min+intervWidth/2-angleInterval/2);
-			int E = (int) (max-intervWidth/2+angleInterval/2);
-			this.beg = B;
-			this.end = E;
+			this.beg = (int) Math.ceil(min - MARGIN);
+			this.end = (int) Math.ceil(max + MARGIN);
 		} else { 					// wrapping interval
-			// we have to swap max/min because beginning and end are swapped
-			int B = (int) (max+intervWidth/2-angleInterval/2);
-			int E = (int) (min-intervWidth/2+angleInterval/2);
-			this.beg = B;
-			this.end = E;			
+			this.beg = (int) Math.ceil(max - MARGIN);
+			this.end = (int) Math.ceil(min + MARGIN);
 		}
 	}
 	
