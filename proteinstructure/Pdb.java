@@ -362,14 +362,14 @@ public abstract class Pdb {
 		}
 
 	}
-
+	
 	/**
 	 * Parses SCOP annotation populating the Scop object member with SCOP 
 	 * annotation for this protein chain
 	 * @param version the SCOP version that we want to parse
 	 * @param online if true SCOP annotation will be taken from web, if false 
 	 * from local file
-	 * @throws IOException
+	 * @throws IOException	 * 
 	 */
 	public void checkScop(String version, boolean online) throws IOException {
 		this.scop = new Scop();	
@@ -377,7 +377,7 @@ public abstract class Pdb {
 		String startPdbResSer = "", endPdbResSer = "";
 		BufferedReader in;
 		String inputLine;
-
+	
 		if (online) {
 			URL scop_cla = new URL("http://scop.mrc-lmb.cam.ac.uk/scop/parse/dir.cla.scop.txt_"+version);
 			URLConnection sc = scop_cla.openConnection();
@@ -397,7 +397,9 @@ public abstract class Pdb {
 					if (m.find()) {
 						if (((pdbChainCode.equals(NULL_CHAIN_CODE) && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
 								(m.group(2) != null && m.group(2).equals(pdbChainCode)) || 
-								(m.group(7) != null && m.group(7).equals(pdbChainCode))) {
+								(m.group(7) != null && m.group(7).equals(pdbChainCode)) ||
+								(m.group(2) != null && m.group(2).equals("A") && pdbChainCode.equals(NULL_CHAIN_CODE)) ||
+								(m.group(7) != null && m.group(7).equals("A") && pdbChainCode.equals(NULL_CHAIN_CODE))) {
 							if (m.group(3) != null) {
 								startPdbResSer = m.group(3);
 								endPdbResSer = m.group(4);
