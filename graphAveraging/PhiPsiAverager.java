@@ -11,6 +11,8 @@ import java.util.TreeMap;
 import proteinstructure.Alignment;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.Pdb;
+import proteinstructure.PdbfilePdb;
+import proteinstructure.SecondaryStructure;
 import proteinstructure.Template;
 import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
@@ -358,25 +360,24 @@ public class PhiPsiAverager {
 	public static void main(String[] args) throws Exception {
 		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
 		
-		File templatesFile = new File("/scratch/local/phipsi/T0332.templates");
-		File alnFile = new File("/scratch/local/phipsi/T0332.target2templ.fasta");
-		File psipredFile = new File("/scratch/local/phipsi/T0332.horiz");
+		//File templatesFile = new File("/scratch/local/phipsi/T0332.templates");
+		//File alnFile = new File("/scratch/local/phipsi/T0332.target2templ.fasta");
+		//File psipredFile = new File("/scratch/local/phipsi/T0332.horiz");
 		//File templatesFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.templates");
 		//File alnFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.target2templ.fasta");
 		//File psipredFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.horiz");
-		String targetTag = "T0332";
+		//String targetTag = "T0332";
+		File templatesFile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.man.templates");
+		File alnFile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.target2templ.fasta");
+		File psipredFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.horiz");
+		String targetTag = "T0387";
 
+		// set this to null if you don't have the pdb file of the target. 
+		File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.reconstructed.pdb");
+		
 		
 		String pdbaseDb = "pdbase";
 		TemplateList templates = new TemplateList(templatesFile);
-		//Template temp1 = new Template("2f8aA");
-		//Template temp2 = new Template("1gp1A");
-		//Template temp3 = new Template("2gs3A");
-		
-		//TemplateList templates = new TemplateList();
-		//templates.add(temp1);
-		//templates.add(temp2);
-		//templates.add(temp3);
 		templates.loadPdbData(conn, pdbaseDb);
 		
 		Alignment aln = new Alignment(alnFile.getAbsolutePath(),"FASTA");
@@ -384,6 +385,60 @@ public class PhiPsiAverager {
 		aln.writeSecStructMatching(System.out, targetTag, psipredFile , conn, pdbaseDb, "/project/StruPPi/bin/dssp");
 		System.out.println();
 		System.out.println("phi/psi angles of each sequence in alignment. Legend: line1 aln positions, line2 sequence positions, line3 phi, line4 psi");
+		
+		// printing phi/psi for target
+		if (targetPdbfile!=null) {
+			System.out.println("TARGET from pdb file "+targetPdbfile);
+			Pdb pdb = new PdbfilePdb(targetPdbfile.getAbsolutePath());
+			pdb.load("A");
+			pdb.runDssp("/project/StruPPi/bin/dssp", "--");
+			SecondaryStructure secStruct = pdb.getSecondaryStructure();
+			TreeMap<Integer,double[]> phipsiTarget = pdb.getAllPhiPsi();
+			// printing alignment positions 
+			for (int i=1; i<=aln.getAlignmentLength(); i++) {
+				System.out.printf("%5d",i);
+			}
+			System.out.println();
+			// residue serials for target
+			for (int i=1; i<=aln.getAlignmentLength(); i++) {
+				int resser = aln.al2seq(targetTag, i);
+				if (resser!=-1) System.out.printf("%5d",resser);
+				else System.out.printf("%5s","");
+			}
+			System.out.println();
+			// phis for target
+			for (int i=1; i<=aln.getAlignmentLength(); i++) {
+				int resser = aln.al2seq(targetTag, i);
+				if (resser!=-1 && phipsiTarget.containsKey(resser)) {
+					System.out.printf("%5.0f", phipsiTarget.get(resser)[0]);
+				} else {
+					System.out.printf("%5s","");
+				}
+			}
+			System.out.println();
+			// psis for target
+			for (int i=1; i<=aln.getAlignmentLength(); i++) {
+				int resser = aln.al2seq(targetTag, i);
+				if (resser!=-1 && phipsiTarget.containsKey(resser)) {
+					System.out.printf("%5.0f", phipsiTarget.get(resser)[1]);
+				} else {
+					System.out.printf("%5s","");
+				}
+			}
+			System.out.println();
+			// sec structure assignment by dssp
+			for (int i=1; i<=aln.getAlignmentLength(); i++) {
+				int resser = aln.al2seq(targetTag, i);
+				if (resser!=-1 && phipsiTarget.containsKey(resser)) {
+					System.out.printf("%5s", secStruct.getSecStrucElement(resser).getType());
+				} else {
+					System.out.printf("%5s","");
+				}
+			}
+			System.out.println();
+
+		}
+
 		PhiPsiAverager ppAvrg = new PhiPsiAverager(templates,aln);
 		
 		TreeMap<Integer, ConsensusSquare> phipsibounds = ppAvrg.getConsensusPhiPsi(0.5, 20);
