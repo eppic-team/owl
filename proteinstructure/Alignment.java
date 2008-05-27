@@ -827,11 +827,11 @@ public class Alignment {
     public void writeSecStructMatching(PrintStream Out, String targetTag, File psipredFile, MySQLConnection conn, String pdbaseDb, String dsspExecutable) 
     throws IOException {
     	if (!this.hasTag(targetTag)) 
-    		//TODO abusing here of IOException, we should use a more appropriate obe
+    		//TODO abusing here of IOException, we should use a more appropriate one
     		throw new IOException("The alignment doesn't contain the tag "+targetTag);
 		SecondaryStructure targetSecStruct = new SecondaryStructure(psipredFile);
 		if (!this.getSequenceNoGaps(targetTag).equals(targetSecStruct.getSequence())) {
-    		//TODO abusing here of IOException, we should use a more appropriate obe
+    		//TODO abusing here of IOException, we should use a more appropriate one
 			throw new IOException("Sequence in alignment file with tag "+targetTag+" doesn't match sequence in psipred file "+psipredFile);
 		}
 
@@ -877,6 +877,13 @@ public class Alignment {
 			}
 		}
 
+		// printing alignment positions
+		Out.printf("%7s","");
+		for(int i=10; i<=this.getAlignmentLength(); i+=10) {				
+			Out.printf("%10d", i);
+		}
+		Out.println();
+		
 		//int len = 80;
 		for( String tag : tags ) {
 			SecondaryStructure secStruct = allSecStructs.get(tag);
