@@ -1,4 +1,6 @@
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -29,6 +31,9 @@ public class averageGraph {
 	
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
+	private static final double FORCE_CONSTANT_DIST =   10.0;
+	private static final double FORCE_CONSTANT_TORSION = 1.0;
+	
 	private static final double PHIPSI_CONSENSUS_THRESHOLD = 0.5;
 	private static final int    PHIPSI_CONSENSUS_INTERVAL = 20;
 	
@@ -92,6 +97,17 @@ public class averageGraph {
 		
 	}
 	
+	@SuppressWarnings("unused")
+	private static String readCaspMethodFromFile(File caspMethodFile) throws IOException {
+		String methodStr = "";
+		BufferedReader br = new BufferedReader(new FileReader(caspMethodFile));
+		String line;
+		while ((line=br.readLine())!=null){
+			methodStr += line+"\n";
+		}
+		return methodStr;
+	}
+	
 	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
@@ -119,12 +135,14 @@ public class averageGraph {
 				"                 graph creating the specified number of models and finally outputting one \n" +
 				"                 pdb file with the chosen model. If more than 1 CCT were specified, then \n" +
 				"                 the first one is taken. This can take very long!\n" +
+				"  [-R]         : used with -r above will run the reconstruction with given number of models \n" +
+				"                 keeping the whole tinker output in the output dir\n" +
 				"  [-c] <string>: write final reconstructed model also in CASP TS format using as AUTHOR the \n" +
 				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
 				"                 target sequence file must comply with the CASP target naming convention, \n" +
 				"                 e.g. T0100 \n" +
-				"  [-m] <string>: CURRENTLY DISABLED. use given string as the CASP TS METHOD text. If string contains new lines it \n" +
-				"                 will be splitted over several METHOD lines \n" +
+				"  [-m] <file>  : CURRENTLY DISABLED: take METHOD text from given file as the CASP TS METHOD text. If text in file \n" +
+				"                 contains new lines it will be splitted over several METHOD lines \n" +
 				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction.\n" +
 				"                 The default consensus threshold is fixed at 50%.\n" +
 				"                 The specified number will be taken as the angle interval for defining the consensus.\n" +
@@ -155,15 +173,16 @@ public class averageGraph {
 		
 		boolean reconstruct = false;
 		int numberTinkerModels = 0;
+		boolean keepModels = false;
 		
 		boolean usePhiPsiConstraints = false;
 		int phiPsiConsensusInterval = PHIPSI_CONSENSUS_INTERVAL;
 		
 		boolean casp = false;
 		String caspAuthorStr = null;
-		//String caspMethodStr = null;
+		//File caspMethodFile = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:c:m:F:h?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:F:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -209,12 +228,15 @@ public class averageGraph {
 				numberTinkerModels = Integer.parseInt(g.getOptarg());
 				reconstruct = true;
 				break;
+			case 'R':
+				keepModels = true;
+				break;				
 			case 'c':
 				caspAuthorStr = g.getOptarg().replace('_', '-');
 				casp = true;
 				break;
 			case 'm':
-				//caspMethodStr = g.getOptarg();
+				//caspMethodFile = new File(g.getOptarg());
 				break;				
 			case 'F':
 				usePhiPsiConstraints = true;
@@ -435,7 +457,15 @@ public class averageGraph {
 			System.out.println("Reconstructing");
 			
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
-			Pdb pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels);
+			
+			Pdb pdb = null;
+			if (keepModels) {
+				tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
+				pdb = tr.getStructure(tr.pickByLeastBoundViols());
+			} else {
+				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels);
+			}
+			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
 			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
@@ -446,6 +476,7 @@ public class averageGraph {
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
 				pdb.setCaspMethodStr(CASP_METHOD_STR);
+				//pdb.setCaspMethodStr(readCaspMethodFromFile(caspMethodFile));
 				pdb.setParents(codesTemplates);
 				pdb.writeToCaspTSFile(outcasptsfile);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
