@@ -818,13 +818,14 @@ public class Alignment {
      * sequence in the given psipredFile
      * @param psipredFile a file with a PsiPred sec. structure prediction for sequence 
      * of targetTag
+     * @param showSequence whether the sequences will be printed in addition to the secondary structure assignments
      * @param conn a db connection for getting the PDB data
      * @param pdbaseDb a pdbase database name
      * @param dsspExecutable
      * @throws IOException if sequence of target in alignment file and psipred file don't match 
      * or if targetTag not present in this alignment or if we can't read psipredFile 
      */
-    public void writeSecStructMatching(PrintStream Out, String targetTag, File psipredFile, MySQLConnection conn, String pdbaseDb, String dsspExecutable) 
+    public void writeSecStructMatching(PrintStream Out, String targetTag, File psipredFile, boolean showSequence, MySQLConnection conn, String pdbaseDb, String dsspExecutable) 
     throws IOException {
     	if (!this.hasTag(targetTag)) 
     		//TODO abusing here of IOException, we should use a more appropriate one
@@ -890,11 +891,13 @@ public class Alignment {
 			String seq = getAlignedSequence(tag);
 			
 			// printing sequence
-			Out.printf("%7s",tag+": ");
-			for(int i=0; i<this.getAlignmentLength(); i++) {
-				Out.print(seq.charAt(i));
+			if(showSequence) {
+				Out.printf("%7s",tag+": ");
+				for(int i=0; i<this.getAlignmentLength(); i++) {
+					Out.print(seq.charAt(i));
+				}
+				Out.println();
 			}
-			Out.println();
 			
 			// printing psipred confidence values (only for target)
 			if (tag.equals(targetTag)) {

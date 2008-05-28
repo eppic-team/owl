@@ -382,7 +382,7 @@ public class PhiPsiAverager {
 		
 		Alignment aln = new Alignment(alnFile.getAbsolutePath(),"FASTA");
 		System.out.println("Secondary structure matching: ");
-		aln.writeSecStructMatching(System.out, targetTag, psipredFile , conn, pdbaseDb, "/project/StruPPi/bin/dssp");
+		aln.writeSecStructMatching(System.out, targetTag, psipredFile , true, conn, pdbaseDb, "/project/StruPPi/bin/dssp");
 		System.out.println();
 		System.out.println("phi/psi angles of each sequence in alignment. Legend: line1 aln positions, line2 sequence positions, line3 phi, line4 psi");
 		
