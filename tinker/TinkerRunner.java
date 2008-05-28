@@ -38,8 +38,8 @@ public class TinkerRunner {
 	private static final String REFINE_VIA_ANNEALING = "A";
 	private static final String REFINE_VIA_MINIMIZATION = "M";
 	
-	public static final double DEFAULT_FORCECONSTANT_DISTANCE_CONST = 10.0;
-	public static final double DEFAULT_FORCECONSTANT_TORSION_CONST = 1.0;
+	public static final double DEFAULT_FORCECONSTANT_DISTANCE = 100.0;
+	public static final double DEFAULT_FORCECONSTANT_TORSION = 1.0;
 	
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final String CHECKXYZ_WARNING = " CHKXYZ";
@@ -615,7 +615,7 @@ public class TinkerRunner {
 	throws TinkerError, IOException {
 		
 		return reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, 
-				DEFAULT_FORCECONSTANT_DISTANCE_CONST, DEFAULT_FORCECONSTANT_TORSION_CONST);
+				DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
 	}	
 	
 	/** 
@@ -636,7 +636,7 @@ public class TinkerRunner {
 	throws TinkerError, IOException {
 		
 		return reconstructFast(sequence, graphs, phiPsiConsensus, 
-				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE_CONST, DEFAULT_FORCECONSTANT_TORSION_CONST);
+				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
 	}
 
 	/** 

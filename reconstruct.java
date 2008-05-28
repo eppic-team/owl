@@ -44,7 +44,7 @@ public class reconstruct {
 		String baseName = "";
 		boolean cross = false;
 		int n = 1;
-		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE_CONST; // if not given in contact type default will be used
+		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE; // if not given in contact type default will be used
 		int minRange = 0;
 		int maxRange = 0;
 		boolean fast = false;

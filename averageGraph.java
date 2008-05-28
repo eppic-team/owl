@@ -31,7 +31,7 @@ public class averageGraph {
 	
 	private static final String FORCEFIELD_FILE = 		"/project/StruPPi/Software/tinker/amber/amber99.prm";
 	private static final String TINKER_BIN_DIR = 		"/project/StruPPi/Software/tinker/bin";
-	private static final double FORCE_CONSTANT_DIST =   10.0;
+	private static final double FORCE_CONSTANT_DIST =   100.0;
 	private static final double FORCE_CONSTANT_TORSION = 1.0;
 	
 	private static final double PHIPSI_CONSENSUS_THRESHOLD = 0.5;
@@ -463,7 +463,7 @@ public class averageGraph {
 				tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
 				pdb = tr.getStructure(tr.pickByLeastBoundViols());
 			} else {
-				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels);
+				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION);
 			}
 			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
