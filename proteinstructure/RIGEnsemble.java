@@ -30,6 +30,7 @@ public class RIGEnsemble {
 	// TODO: Should this information be stored in the RIG?
 	private String edgeType;
 	private double distCutoff;
+	private boolean loadOnlyFirstModels;	// if true, all models != 1 will be ignored
 	
 	/*----------------------------- constructors ----------------------------*/
 	/**
@@ -40,6 +41,7 @@ public class RIGEnsemble {
 		fileNames = new ArrayList<String>();
 		edgeType = DEFAULT_EDGE_TYPE;
 		distCutoff = DEFAULT_DIST_CUTOFF;
+		loadOnlyFirstModels = false;
 	}
 	
 	/**
@@ -52,6 +54,7 @@ public class RIGEnsemble {
 		fileNames = new ArrayList<String>();
 		this.edgeType = edgeType;
 		this.distCutoff = distCutoff;
+		loadOnlyFirstModels = false;
 	}
 	
 	/**
@@ -133,6 +136,7 @@ public class RIGEnsemble {
 							pdb = new PdbfilePdb(file.getAbsolutePath());
 							String[] chains = pdb.getChains();
 							Integer[] models = pdb.getModels();
+							if(loadOnlyFirstModels && models[0] != 1) continue;
 							//System.out.println(filename + ":" + chains[0]);
 							pdb.load(chains[0], models[0]);	// load first chain and first model
 							if(commonSequence != null) ((PdbfilePdb) pdb).setSequence(commonSequence.getSeq());
@@ -236,6 +240,31 @@ public class RIGEnsemble {
 		return mr;
 	}
 
+	/**
+	 * Creates a new rig ensemble from a map of filenames to rigs.
+	 * @param rigs
+	 * @return the number of graph loaded
+	 */
+	public int loadFromGraphMap(Map<String, RIGraph> rigs) {
+		int gr = 0;
+		for(String name:rigs.keySet()) {
+			RIGraph rig = rigs.get(name);
+			if(loadOnlyFirstModels && rig.model != 1) continue;	// skip non-first model graphs
+			if(!rig.contactType.equals(this.edgeType)) {
+				System.err.printf("Warning. Contact type of graph %s (%s) and ensemble (%s) do not match.\n",
+						name, rig.contactType, this.edgeType);
+			}
+			if(rig.distCutoff != this.distCutoff) {
+				System.err.printf("Warning. Distance cutoff of graph %s (%3.1f) and ensemble (%3.1f) do not match.\n",
+						name, rig.distCutoff, this.distCutoff);				
+			}
+			this.addRIG(rig);
+			this.addFileName(name);
+			gr++;
+		}
+		return gr;
+	}
+	
 	/*---------------------------- public methods ---------------------------*/
 	
 	public int getEnsembleSize() {
@@ -288,7 +317,14 @@ public class RIGEnsemble {
 		String[] filenames = new String[this.fileNames.size()];
 		return this.fileNames.toArray(filenames);
 	}
-		
+	
+	/**
+	 * After this function is being called, only first models will be loaded.
+	 */
+	public void loadOnlyFirstModels() {
+		this.loadOnlyFirstModels = true;
+	}
+	
 	/*--------------------------------- main --------------------------------*/
 	
 	// for testing
