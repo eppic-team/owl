@@ -31,12 +31,30 @@ public class PredEval {
 		this.FalseNeg=FalseNeg;
 		this.given=given;
 		this.predicted=predicted;
-		this.original=original;
-		this.cmtotal=cmtotal;
-		this.sensitivity = (double) TruePos / (TruePos + FalseNeg);
-		this.specificity = (double) TrueNeg / (TrueNeg + FalsePos);
-		this.accuracy = (double) TruePos / (TruePos + FalsePos);
-		this.coverage = (double) TruePos / original;
+		this.original=original;			// native contacts
+		this.cmtotal=cmtotal;			// possible contacts (all residue pairs)
+		this.sensitivity = (double) 1.0 * TruePos / (TruePos + FalseNeg);
+		this.specificity = (double) 1.0 * TrueNeg / (TrueNeg + FalsePos);
+		this.accuracy = (double) 1.0 * TruePos / (TruePos + FalsePos);
+		this.coverage = (double) 1.0 * TruePos / original;
+
+		// special cases
+		if(TruePos + FalsePos == 0) {
+			// nothing predicted -> accurate but no coverage
+			this.accuracy = 1;
+			this.coverage = 0;
+		} else
+		if(original == 0) {
+			// nothing to predict but did predict -> no accuracy but full coverage
+			this.accuracy = 0;
+			this.coverage = 1;
+		}
+		if(TruePos + FalsePos == 0 && original == 0) {
+			// nothing to predict, nothing predicted -> fine
+			this.accuracy = 1;
+			this.coverage = 1;
+		}
+		
 	}
 	
 	public void print(){
