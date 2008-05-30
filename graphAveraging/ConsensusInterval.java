@@ -12,7 +12,7 @@ import proteinstructure.Interval;
  */
 public class ConsensusInterval extends Interval {
 	
-	private static final int MARGIN = 0; // margin for the restraints interval taken, if 0 then the interval taken for the restraint is min,max
+	private static final int MARGIN = 2; // margin for the restraints interval taken, if 0 then the interval taken for the restraint is min,max
 	
 	private int voteCount;
 	private ArrayList<String> voters;

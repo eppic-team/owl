@@ -181,25 +181,39 @@ public class PhiPsiAverager {
 	private ArrayList<ConsensusInterval> findAllConsInterval1stDim(HashMap<Integer,Double> anglesInColumn, int voteThreshold, int angleInterval) {
 		
 		ArrayList<ConsensusInterval> allConsInterv1stDim = new ArrayList<ConsensusInterval>();
-		
-		// anglesInColumn: keys index j corresponding to templates order, values angles unsorted
-		// we want the angles sorted so that we can then find intervals easily, but at the same time we 
-		// want to keep the j indices. This is exactly what Goodies.sortMapByValue does
-		LinkedHashMap<Integer, Double> anglesSorted = Goodies.sortMapByValue(anglesInColumn, Goodies.ASCENDING);
-		ArrayList<Double> values = new ArrayList<Double>(anglesSorted.values());
-		ArrayList<Integer> jIndices = new ArrayList<Integer>(anglesSorted.keySet());
-		extendLists(values, jIndices, angleInterval);
-		for (int startIndex=0;startIndex<values.size()-1;startIndex++) {
-			ConsensusInterval consInterv = new ConsensusInterval();
-			consInterv.addVoter(jIndices.get(startIndex), templates.get(jIndices.get(startIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(startIndex)));
-			for (int endIndex=startIndex+1;endIndex<values.size();endIndex++) {
-				if ((values.get(endIndex) - values.get(startIndex))<=angleInterval) {
-					consInterv.addVoter(jIndices.get(endIndex), templates.get(jIndices.get(endIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(endIndex)));
-				}
+
+		if (anglesInColumn.size()==1) {  // case of 1 template has to be handled specially
+			// there's only 1 index in this case in anglesInColumn, we simply one to grab it by iterating over the 1 member keySet
+			int theJindex = 0;
+			for (int index:anglesInColumn.keySet()) { // this loop is only 1 iteration (we are in size==1)
+				theJindex = index;
 			}
-			if (consInterv.getVoteCount()>voteThreshold) {  // note we use strictly bigger, see comment in getConsensusPhiPsi
+			if (!Double.isNaN(anglesInColumn.get(theJindex))) {
+				ConsensusInterval consInterv = new ConsensusInterval();
+				consInterv.addVoter(theJindex, templates.get(theJindex).getId(), anglesInColumn.get(theJindex));
 				consInterv.reCenterInterval(angleInterval);
 				allConsInterv1stDim.add(consInterv);
+			}
+		} else { 	// all other cases
+			// anglesInColumn: keys index j corresponding to templates order, values angles unsorted
+			// we want the angles sorted so that we can then find intervals easily, but at the same time we 
+			// want to keep the j indices. This is exactly what Goodies.sortMapByValue does
+			LinkedHashMap<Integer, Double> anglesSorted = Goodies.sortMapByValue(anglesInColumn, Goodies.ASCENDING);
+			ArrayList<Double> values = new ArrayList<Double>(anglesSorted.values());
+			ArrayList<Integer> jIndices = new ArrayList<Integer>(anglesSorted.keySet());
+			extendLists(values, jIndices, angleInterval);
+			for (int startIndex=0;startIndex<values.size()-1;startIndex++) {
+				ConsensusInterval consInterv = new ConsensusInterval();
+				consInterv.addVoter(jIndices.get(startIndex), templates.get(jIndices.get(startIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(startIndex)));
+				for (int endIndex=startIndex+1;endIndex<values.size();endIndex++) {
+					if ((values.get(endIndex) - values.get(startIndex))<=angleInterval) {
+						consInterv.addVoter(jIndices.get(endIndex), templates.get(jIndices.get(endIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(endIndex)));
+					}
+				}
+				if (consInterv.getVoteCount()>voteThreshold) {  // note we use strictly bigger, see comment in getConsensusPhiPsi
+					consInterv.reCenterInterval(angleInterval);
+					allConsInterv1stDim.add(consInterv);
+				}
 			}
 		}
 		return allConsInterv1stDim;
@@ -234,7 +248,9 @@ public class PhiPsiAverager {
 			maxDistance = Double.NaN;
 		} else {
 			for (int i=0; i<values2ndDim.size();i++) {
-				for (int j=i+1;j<values2ndDim.size();j++) {
+				// we loop in j from i and not from i+1 because we want this to work also when there's a single value in values2ndDim: 
+				// then we measure distance of angle agains itself which is 0 and that's taken as the maxDistance
+				for (int j=i;j<values2ndDim.size();j++) { 
 					double dist = ConsensusInterval.angleDistance(values2ndDim.get(i),values2ndDim.get(j));
 					if (dist>maxDistance) {
 						maxDistance = ConsensusInterval.angleDistance(values2ndDim.get(i), values2ndDim.get(j));
@@ -242,8 +258,8 @@ public class PhiPsiAverager {
 				}
 			}
 		}
-		// maxDistance==-1 shouldn't happen at all but just in case!
-		if (maxDistance!=-1 && maxDistance<=angleInterval) {
+		// ATTENTION: maxDistance==-1 shouldn't happen at all but if it does because of some bug then it will still be passed by this condition 
+		if (maxDistance<=angleInterval) {
 			// first we initialise with a dummy 0,0 interval, then we use the recenter method to get the interval
 			// ATTENTION! we pass references of voters and voterIndices from consInterv1stDim: that means that the 2 members of 
 			// the final ConsensusSquare object will be referencing the same objects
@@ -367,13 +383,13 @@ public class PhiPsiAverager {
 		//File alnFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.target2templ.fasta");
 		//File psipredFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.horiz");
 		//String targetTag = "T0332";
-		File templatesFile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.man.templates");
-		File alnFile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.target2templ.fasta");
-		File psipredFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.horiz");
-		String targetTag = "T0387";
+		File templatesFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.templates");
+		File alnFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.target2templ.fasta");
+		File psipredFile = new File("/project/StruPPi/CASP8/results/T0396/T0396.horiz");
+		String targetTag = "T0396";
 
 		// set this to null if you don't have the pdb file of the target. 
-		File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0387/4xraytemplates/T0387.reconstructed.pdb");
+		File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.reconstructed.pdb");
 		
 		
 		String pdbaseDb = "pdbase";
