@@ -1,4 +1,5 @@
 import gnu.getopt.Getopt;
+import graphAveraging.ConsensusSquare;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -8,6 +9,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.Formatter;
 import java.util.Locale;
+import java.util.TreeMap;
 
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
@@ -25,6 +27,9 @@ public class reconstruct {
 
 	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
 	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
+	
+	private static final TreeMap<Integer, ConsensusSquare> NO_PHIPSI_CONSTRAINTS = null;
+	private static final boolean NO_OMEGA_CONSTRAINTS = false;
 	
 	public static void main(String[] args) {
 		
@@ -221,9 +226,9 @@ public class reconstruct {
 			if (fast) {
 				// as this is at the moment just a reconstruction benchmarking script it doesn't make sense 
 				// at all to use a phi/psi consensus (which would come from templates): we use null and 0 for the 2 phi/psi parameters
-				tr.reconstructFast(sequence, graphs, null, n, forceConstant, 0, outputDir, baseName, false);
+				tr.reconstructFast(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false);
 			} else {
-				tr.reconstruct(sequence, graphs, null, n, forceConstant, 0, outputDir, baseName, false);
+				tr.reconstruct(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false);
 			}
 			
 		} catch (IOException e) {

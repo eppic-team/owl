@@ -146,7 +146,8 @@ public class averageGraph {
 				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction.\n" +
 				"                 The default consensus threshold is fixed at 50%.\n" +
 				"                 The specified number will be taken as the angle interval for defining the consensus.\n" +
-				"                 Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n\n"+
+				"                 Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n" +
+				"  [-O]         : enforce trans conformation for the omega torsion angle. Default: not enforcing\n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
 				"alignment is calculated with muscle. If no target sequence is given, a dummy sequence\n" + 
@@ -178,11 +179,13 @@ public class averageGraph {
 		boolean usePhiPsiConstraints = false;
 		int phiPsiConsensusInterval = PHIPSI_CONSENSUS_INTERVAL;
 		
+		boolean forceTransOmega = false;
+		
 		boolean casp = false;
 		String caspAuthorStr = null;
 		//File caspMethodFile = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:F:h?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:F:Oh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -241,7 +244,10 @@ public class averageGraph {
 			case 'F':
 				usePhiPsiConstraints = true;
 				phiPsiConsensusInterval = Integer.parseInt(g.getOptarg());
-				break;												
+				break;
+			case 'O':
+				forceTransOmega = true;
+				break;																
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -460,10 +466,10 @@ public class averageGraph {
 			
 			Pdb pdb = null;
 			if (keepModels) {
-				tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
+				tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
 				pdb = tr.getStructure(tr.pickByLeastBoundViols());
 			} else {
-				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION);
+				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION);
 			}
 			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");

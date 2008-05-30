@@ -2183,6 +2183,22 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Gets the omega angle in degrees for the given residue serial
+	 * @param i
+	 * @return the omega angle or NaN if there are no coordinates for given i or i+1
+	 */
+	public double getOmegaAngle(int i) {
+		if (!hasCoordinates(i, "CA") || !hasCoordinates(i, "C") || !hasCoordinates(i+1, "N") || !hasCoordinates(i+1,"CA")) {
+			return Double.NaN;
+		}
+		Point3d CAi = getAtomCoord(i, "CA");
+		Point3d Ci = getAtomCoord(i, "C");
+		Point3d Niplus1 = getAtomCoord(i+1, "N");
+		Point3d CAiplus1 = getAtomCoord(i+1, "CA");
+		return getTorsionAngle(CAi, Ci, Niplus1, CAiplus1);
+	}
+	
+	/**
 	 * Gets the torsion angle in degrees for the 4 given atoms 
 	 * See http://en.wikipedia.org/wiki/Dihedral_angle for how to calculate it.
 	 * @param atom1
@@ -2228,6 +2244,16 @@ public abstract class Pdb {
 		TreeMap<Integer, double[]> phipsi = getAllPhiPsi();
 		for (int resser:phipsi.keySet()) {
 			System.out.printf("%7.2f %7.2f\n",phipsi.get(resser)[0],phipsi.get(resser)[1]);
+		}
+	}
+	
+	// to test the class
+	public static void main(String[] args) throws Exception {
+		// tester for omega angles
+		Pdb pdb = new PdbfilePdb(args[0]);
+		pdb.load(pdb.getChains()[0]);
+		for (int resser:pdb.getAllSortedResSerials()) {
+			System.out.println(resser+" "+pdb.getOmegaAngle(resser));
 		}
 	}
 }

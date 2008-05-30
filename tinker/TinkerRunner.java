@@ -606,15 +606,16 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, int numberOfModels) 
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels) 
 	throws TinkerError, IOException {
 		
-		return reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, 
+		return reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
 				DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
 	}	
 	
@@ -627,15 +628,16 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, int numberOfModels) 
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels) 
 	throws TinkerError, IOException {
 		
-		return reconstructFast(sequence, graphs, phiPsiConsensus, 
+		return reconstructFast(sequence, graphs, phiPsiConsensus, forceTransOmega,
 				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
 	}
 
@@ -647,6 +649,7 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
@@ -654,7 +657,7 @@ public class TinkerRunner {
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus,
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
 	throws TinkerError, IOException {
 		
@@ -664,7 +667,7 @@ public class TinkerRunner {
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, 
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
 				forceConstantDist, forceConstantTorsion, true, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
@@ -680,6 +683,7 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
@@ -687,7 +691,7 @@ public class TinkerRunner {
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
 	throws TinkerError, IOException {
 		
@@ -697,7 +701,7 @@ public class TinkerRunner {
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, forceConstantDist, forceConstantTorsion, false, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConstantTorsion, false, outputDir, baseName, cleanUp);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -716,6 +720,7 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConsantTorsion the force constant to be used for all our given torsion restraints
@@ -725,12 +730,12 @@ public class TinkerRunner {
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
-	public void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+	public void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
 			int numberOfModels, double forceConstantDist, double forceConsantTorsion, 
 			String outputDir, String baseName, boolean cleanUp) 
 	throws TinkerError, IOException {
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp);
 	}
 	
 	/**
@@ -745,6 +750,7 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
@@ -754,12 +760,12 @@ public class TinkerRunner {
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */	
-	public void reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+	public void reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,  
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
 			String outputDir, String baseName, boolean cleanUp) 
 	throws TinkerError, IOException {
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, 
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, 
 				numberOfModels, 
 				forceConstantDist, forceConstantTorsion, 
 				false, outputDir, baseName, cleanUp);
@@ -776,6 +782,7 @@ public class TinkerRunner {
 	 * @param graphs array of graph objects containing constraints
 	 * @param phiPsiConsensus Map containing consensus phi/psi angle for each position of the sequence, 
 	 * if null no phi/psi restraints will be applied
+	 * @param forceTransOmega to force omega angles into the trans conformation (180)
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
@@ -786,7 +793,7 @@ public class TinkerRunner {
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
-	private void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, 
+	private void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
 			boolean annealing, String outputDir, String baseName, boolean cleanUp) 
 	throws TinkerError, IOException {
@@ -834,6 +841,10 @@ public class TinkerRunner {
 		
 		if (phiPsiConsensus!=null) {
 			cm.createPhiPsiConstraints(phiPsiConsensus, forceConstantTorsion);
+		}
+		
+		if (forceTransOmega) {
+			cm.createOmegaConstraints(forceConstantTorsion);
 		}
 		
 		cm.closeKeyFile();
