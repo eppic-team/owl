@@ -2051,6 +2051,90 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Restricts thisPdb object to residues that belong to the given sids
+	 * Can only be used after calling checkScop() 
+	 * @param sid
+	 */
+	public void restrictToScopDomains (String[] sids) {
+		
+		TreeSet<String> keepSids = new TreeSet<String>();
+		
+		Vector<ScopRegion> scopRegions = new Vector<ScopRegion>();
+		for (String sid: sids) {
+			if (!keepSids.contains(sid)) {
+				Vector<ScopRegion> curScopRegions = this.scop.getScopRegions(sid);
+				if (curScopRegions.size() != 0) {
+					scopRegions.addAll(curScopRegions);
+					keepSids.add(sid);
+				}
+			}
+		}
+		
+		if (scopRegions.size()!=0) {
+			Iterator<String> it = keepSids.iterator();
+			this.sid = it.next();
+			while (it.hasNext()) {
+				this.sid += ","+it.next(); 
+			}
+			
+			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
+				restrictToScopRegions(scopRegions);
+				
+				Iterator<ScopRegion> allScopRegions = this.scop.getIterator();
+				while (allScopRegions.hasNext()) {
+					ScopRegion scopRegion = allScopRegions.next();
+					if (!keepSids.contains(scopRegion.getSId())) {
+						allScopRegions.remove();
+					}					
+				}
+			}
+		}
+	}
+	
+	/**
+	 * Restricts thisPdb object to residues that belong to the given sunids
+	 * Can only be used after calling checkScop() 
+	 * @param sid
+	 */
+	public void restrictToScopDomains (int[] sunids) {
+		
+		TreeSet<String> keepSids = new TreeSet<String>();
+		TreeSet<Integer> keepSunids = new TreeSet<Integer>();
+		
+		Vector<ScopRegion> scopRegions = new Vector<ScopRegion>();
+		for (int sunid: sunids) {
+			if (!keepSunids.contains(sunid)) {
+				Vector<ScopRegion> curScopRegions = this.scop.getScopRegions(sunid);
+				if (curScopRegions.size() != 0) {
+					scopRegions.addAll(curScopRegions);
+					keepSunids.add(sunid);
+					keepSids.add(curScopRegions.get(0).getSId());
+				}
+			}
+		}
+		
+		if (scopRegions.size()!=0) {
+			Iterator<String> it = keepSids.iterator();
+			this.sid = it.next();
+			while (it.hasNext()) {
+				this.sid += ","+it.next(); 
+			}
+			
+			if (scopRegions.get(0).getDomainType() != ScopRegion.DomainType.WHOLECHAIN) {
+				restrictToScopRegions(scopRegions);
+				
+				Iterator<ScopRegion> allScopRegions = this.scop.getIterator();
+				while (allScopRegions.hasNext()) {
+					ScopRegion scopRegion = allScopRegions.next();
+					if (!keepSids.contains(scopRegion.getSId())) {
+						allScopRegions.remove();
+					}					
+				}
+			}
+		}
+	}
+	
+	/**
 	 * Restricts this Pdb object to residues within the given ScopRegions 
 	 * @param scopRegions
 	 */
@@ -2068,7 +2152,7 @@ public abstract class Pdb {
 	 * Restricts this Pdb object to residues within the given IntervalSet
 	 * @param intervSet a set of internal residue serials
 	 */
-	private void restrictToIntervalSet(IntervalSet intervSet) {
+	public void restrictToIntervalSet(IntervalSet intervSet) {
 		
 		// getting list of the residue serials to keep
 		TreeSet<Integer> resSersToKeep = intervSet.getIntegerSet();
