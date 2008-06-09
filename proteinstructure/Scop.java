@@ -58,6 +58,13 @@ public class Scop {
 		return this.scopRegions.isEmpty();
 	}
 	
+	/**
+	 * Returns the number of residues with scop assignment.
+	 */
+	public int getNumScopRes() {
+		return this.resser2scopregion.keySet().size();
+	}
+	
 	/** 
 	 * Returns an iterator over all assigned scop regions in this object.
 	 */
