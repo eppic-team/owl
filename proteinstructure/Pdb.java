@@ -485,7 +485,7 @@ public abstract class Pdb {
 					ssTypes.put(resNum, ssType);
 					sheetLabels.put(resNum, sheetLabel);
 				} catch (NumberFormatException e) {
-					System.err.println("Error while parsing DSSP output. Expected residue number, found '" + resNumStr + "' in line " + lineCount);
+					System.err.println("Error while parsing DSSP output for "+pdbCode+"_"+chainCode+". Expected residue number, found '" + resNumStr + "' in line " + lineCount);
 				}
 			}
 		}
@@ -498,7 +498,7 @@ public abstract class Pdb {
 		}
 
 		if(ssTypes.size() != get_length()) {	// compare with number of observed residues
-			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") does not match number of observed residues in structure (" + get_length() + ").");
+			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + get_length() + ").");
 		}
 
 		// assign secondary structure
