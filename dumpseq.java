@@ -29,18 +29,21 @@ public class dumpseq {
 		String progName = "dumpseq";
 		
 		String help = "Usage, 2 options:\n" +
-				"1)  "+progName+" -i <listfile> [-o <output_dir> | -f <one_output_file> | -s] [-N] [-D <pdbase_db>] \n" +
-				"2)  "+progName+" -p <pdb_code+chain_code> [-o <output_dir> | -f <one_output_file> | -s] [-N] [-D <pdbase_db>] \n\n" +
-				"Output options: -o one file per sequence, -f one file for all sequences, \n" +
-				"-s standard output. With -N no FASTA headers will be written\n\n"+
-				"In case 2) also a list of comma separated pdb code+chain codes can be \n" +
-				"specified, e.g. -p 1bxyA,1josA \n\n" +
-				"If pdbase_db not specified, the default pdbase will be used\n"; 
+				"1)  "+progName+" -i <listfile> \n" +
+				"2)  "+progName+" -p <pdbCode+chainCode> \n\n" +
+				" -i <file>       : file with list of pdbCodes+chainCodes\n"+
+				" -p <string>     : comma separated list of pdbCodes+chainCodes, e.g. -p 1bxyA,1josA\n" +
+				"                   If only pdbCode (no chainCode) specified, e.g. 1bxy then first chain will be taken\n"+
+				" [-o] <dir>      : outputs one file per sequence in given directory. Default: current dir\n" +
+				" [-f] <file>     : one output file for all sequences\n"+
+				" [-s]            : outputs to stdout instead of file(s)\n" +
+				" [-N]            : don't print FASTA header, just raw sequence\n"+
+				" [-D] <database> : pdbase database name. Default: "+PDB_DB+"\n\n";				
 
 		String listfile = "";
 		String[] pdbIds = null;
 		String pdbaseDb = PDB_DB;
-		String outputDir = "";
+		String outputDir = ".";
 		File oneOutputFile = null;
 		boolean stdout = false;
 		boolean fastaHeader = true;
@@ -88,11 +91,6 @@ public class dumpseq {
 			System.err.println(help);
 			System.exit(1);			
 		}
-		if (outputDir.equals("") && stdout==false && oneOutputFile==null) {
-			System.err.println("An output option was missing: choose one of -o, -f or -s");
-			System.err.println(help);
-			System.exit(1);
-		}
 		
 		MySQLConnection conn = null;		
 
@@ -118,12 +116,23 @@ public class dumpseq {
 		} 
 
 		for (int i=0;i<pdbIds.length;i++) {
-			String pdbCode = pdbIds[i].substring(0, 4);
-			String pdbChainCode = pdbIds[i].substring(4);
-
+			String pdbCode = null;
+			String pdbChainCode = null;
+			if (pdbIds[i].length()==4) {
+				pdbCode = pdbIds[i];
+			} else if (pdbIds[i].length()==5){
+				pdbCode = pdbIds[i].substring(0, 4);
+				pdbChainCode = pdbIds[i].substring(4);
+			} else {
+				System.err.println("The string "+pdbIds[i]+" doesn't look like a PDB id. Skipping");
+				continue;
+			}
 			try {
 
 				Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+				if (pdbChainCode==null) {
+					pdbChainCode = pdb.getChains()[0];
+				} 
 				pdb.load(pdbChainCode);
 				
 				String sequence = pdb.getSequence();

@@ -24,24 +24,27 @@ public class dumppdb {
 
 	public static final String			GAP_CHARACTER = "-";
 	
+	public static final int				DEFAULT_MODEL = 1;
 	public static void main(String[] args) throws IOException {
 		
 		String progName = "dumppdb";
 		
 		String help = "Usage, 2 options:\n" +
-				"1)  "+progName+" -i <listfile> [ -m <model_serial> ] [-o <output_dir> | -s] [-D <pdbase_db>] \n" +
-				"2)  "+progName+" -p <pdb_code+chain_code> [ -m <model_serial> ] [-o <output_dir> | -s] [-D <pdbase_db>] \n\n" +
-				"Output options: -o output directory, -s standard output\n\n"+
-				"In case 2) also a list of comma separated pdb code+chain codes can be \n" +
-				"specified, e.g. -p 1bxyA,1josA \n\n" +
-				"If pdbase_db not specified, the default pdbase will be used\n" +
-				"If model_serial not specified, the first model will be selected\n"; 
+				"1)  "+progName+" -i <listfile> \n" +
+				"2)  "+progName+" -p <pdbCode+chainCode> \n\n" +
+				" -i <file>       : file with list of pdbCodes+chainCodes\n"+
+				" -p <string>     : comma separated list of pdbCodes+chainCodes, e.g. -p 1bxyA,1josA\n" +
+				"                   If only pdbCode (no chainCode) specified, e.g. 1bxy then first chain will be taken\n"+
+				" [-m] <integer>  : model serial. Default: "+DEFAULT_MODEL+"\n"+
+				" [-o] <dir>      : outputs to file(s) in given directory. Default: current dir\n"+
+				" [-s]            : outputs to stdout instead of file(s)\n"+
+				" [-D] <database> : pdbase database name. Default: "+PDB_DB+"\n\n";
 
 		String listfile = "";
 		String[] pdbIds = null;
-		int modelSerial = 1;
+		int modelSerial = DEFAULT_MODEL;
 		String pdbaseDb = PDB_DB;
-		String outputDir = "";
+		String outputDir = ".";
 		boolean stdout = false;
 		
 		Getopt g = new Getopt(progName, args, "i:p:m:o:D:sh?");
@@ -83,11 +86,6 @@ public class dumppdb {
 			System.err.println(help);
 			System.exit(1);			
 		}
-		if (outputDir.equals("") && stdout==false ) {
-			System.err.println("An output option was missing: choose one of -o, -s");
-			System.err.println(help);
-			System.exit(1);
-		}
 		
 		MySQLConnection conn = null;		
 
@@ -111,19 +109,32 @@ public class dumppdb {
 		}
 
 		for (int i=0;i<pdbIds.length;i++) {
-			String pdbCode = pdbIds[i].substring(0, 4);
-			String pdbChainCode = pdbIds[i].substring(4);
+			String pdbCode = null;
+			String pdbChainCode = null;
+			if (pdbIds[i].length()==4) {
+				pdbCode = pdbIds[i];
+			} else if (pdbIds[i].length()==5){
+				pdbCode = pdbIds[i].substring(0, 4);
+				pdbChainCode = pdbIds[i].substring(4);
+			} else {
+				System.err.println("The string "+pdbIds[i]+" doesn't look like a PDB id. Skipping");
+				continue;
+			}
 
 			try {
+			
 
 				Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+				if (pdbChainCode==null) {
+					pdbChainCode = pdb.getChains()[0];
+				} 
 				pdb.load(pdbChainCode, modelSerial);
 				
 				File outputFile = new File(outputDir,pdbCode+pdbChainCode+".pdb");				
 				if (!stdout) {
 					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
 				}
-				
+
 				pdb.writePDBFileHeader(Out);
 				pdb.writeAtomLines(Out, true);
 				Out.println("END");
@@ -139,18 +150,15 @@ public class dumppdb {
 				numPdbs++;
 
 			} catch (PdbLoadError e) {
-				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
+				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+": "+e.getMessage());
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
 			} catch (SQLException e) {
-				System.err.println("SQL error for structure "+pdbCode+pdbChainCode+", error: "+e.getMessage());
+				System.err.println("SQL error for structure "+pdbCode+pdbChainCode+": "+e.getMessage());
 			}
 
 		}
 
-		if (!stdout) {
-			Out.close();
-		}
 		
 		// output results
 		if (!stdout) { // if output of structure is stdout, then we don't want to print anything else to stdout
