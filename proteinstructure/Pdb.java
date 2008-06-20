@@ -61,7 +61,8 @@ public abstract class Pdb {
 	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to SC rsa
 	protected EC ec;												// the ec annotation for this pdb object
 	protected CatalSiteSet catalSiteSet;							// the catalytic site annotation for this pdb object
-
+	protected OligomericState oligomeric;							// the oligomeric state for this pdb object
+	
 	protected String sequence; 		// full sequence as it appears in SEQRES field
 	protected String pdbCode;
 	// given "external" pdb chain code, i.e. the classic (author's) pdb code (Pdb.NULL_CHAIN_CODE if it is blank in original pdb file)	
@@ -131,6 +132,43 @@ public abstract class Pdb {
 	 */
 	public boolean isDataLoaded() {
 		return dataLoaded;
+	}
+	
+	public int checkOligomeric() throws IOException {
+		BufferedReader in;
+		String inputLine;
+
+		this.oligomeric = new OligomericState();
+		
+		// parse PQS
+		File pqsFile = new File("/project/StruPPi/Databases/PQS/pqs.txt");
+		in = new BufferedReader(new FileReader(pqsFile));
+
+		while ((inputLine = in.readLine()) != null) {
+			if (inputLine.startsWith(pdbCode)) {
+				String[] fields = inputLine.split("\\t");
+				oligomeric.setPqs(fields[1].equals("\\N")?null:fields[1], fields[2].equals("\\N")?null:fields[2]);
+				break;
+			}
+		}
+
+		in.close();		
+
+		// parse PISA
+		File pisaFile = new File("/project/StruPPi/Databases/PISA/pisa.txt");
+		in = new BufferedReader(new FileReader(pisaFile));
+
+		while ((inputLine = in.readLine()) != null) {
+			if (inputLine.startsWith(pdbCode)) {
+				String[] fields = inputLine.split("\\t");
+				oligomeric.setPisa(Integer.valueOf(fields[1]));
+				break;
+			}
+		}
+
+		in.close();
+		
+		return oligomeric.getState();		
 	}
 	
 	public int checkCSA(String version, boolean online) throws IOException {
@@ -311,8 +349,73 @@ public abstract class Pdb {
 
 		return consurfHsspMistakes;
 
-	}	
+	}
+	
+	/*
+	 * NR Voss, MB Gerstein. Calculation of standard atomic volumes for RNA and comparison with proteins: RNA is packed more tightly. J Mol. Biol. v346(2): 2005, pp 477-492.
+	 * doi:10.1016/j.jmb.2004.11.072 
+	 * Software downloaded from http://geometry.molmovdb.org/
+	 */	
+	/** 
+	 * Runs an external calc-surface executable and returns the total ASA 
+	 * @param calcExecutable
+	 * @param calcParameters
+	 */
+	public double calcSurface(String calcExecutable, String calcParameters) throws IOException {
+		String line;
+		double surface = 0;
+		
+		File test = new File(calcExecutable);
+		if(!test.canRead()) throw new IOException("calc-surface Executable is not readable");
+		Process myCalc = Runtime.getRuntime().exec(calcExecutable + " -i - " + calcParameters);
+		PrintStream calcInput = new PrintStream(myCalc.getOutputStream());
+		BufferedReader calcOutput = new BufferedReader(new InputStreamReader(myCalc.getInputStream()));
+		BufferedReader calcError = new BufferedReader(new InputStreamReader(myCalc.getErrorStream()));
+		writeAtomLines(calcInput, true);	// pipe atom lines to calc-surface
+		calcInput.close();
+		while((line = calcOutput.readLine()) != null) {
+			surface += Double.valueOf(line.substring(66,73).trim());
+		}
+		calcOutput.close();
+		calcError.close();
+		
+		return surface;
+	}
 
+	/** 
+	 * Runs an external calc-volume executable and returns the volume 
+	 * @param calcExecutable
+	 * @param calcParameters
+	 */
+	public double calcVolume(String calcExecutable, String calcParameters) throws IOException {
+		String line;
+		double vol = 0;
+		String pdbFileName = "/tmp/"+pdbCode+chainCode+"_"+System.currentTimeMillis()+".pdb";
+		dump2pdbfile(pdbFileName, true);
+		
+		File test = new File(calcExecutable);
+		if(!test.canRead()) throw new IOException("calc-volume Executable is not readable");
+		Process myCalc = Runtime.getRuntime().exec(calcExecutable + " -i "+pdbFileName+" "+ calcParameters);
+		BufferedReader calcOutput = new BufferedReader(new InputStreamReader(myCalc.getInputStream()));
+		BufferedReader calcError = new BufferedReader(new InputStreamReader(myCalc.getErrorStream()));
+		while((line = calcOutput.readLine()) != null) {
+			if (line.substring(80,82).trim().equals("0")) {
+				vol += Double.valueOf(line.substring(66,79).trim());
+			}
+		}
+		calcOutput.close();
+		calcError.close();
+		new File(pdbFileName).delete();
+		
+		return vol;
+	}
+	
+	// Micheal H. Zehfus and George D. Rose (1986) Compact Units in Proteins. Biochemistry 25: 5759-5765.
+	// DOI: 10.1021/bi00367a062
+	public double calcCompactnessCoefficient(double surface, double volume) {
+		return (surface/Math.pow(36*Math.PI*Math.pow(volume,2), 1.0/3.0));
+	}
+	
 	public void runNaccess(String naccessExecutable, String naccessParameters) throws Exception {
 		String pdbFileName = pdbCode+chainCode+".pdb";
 		dump2pdbfile(pdbFileName, true);
@@ -739,8 +842,8 @@ public abstract class Pdb {
 					coords.put(atomser, coord);
 				}
 				else {
-					//NOTE:CHECK FOR MISSING ATOMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					//System.err.println("Couldn't find "+atom+" atom for resser="+resser+". Continuing without that atom for this resser.");
+					//NOTE:CHECK FOR MISSING ATOMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!					
+					System.err.println("Couldn't find "+atom+" atom for resser="+resser+" in protein "+pdbCode+" and chain "+chainCode+". Continuing without that atom for this resser.");
 				}
 			}
 			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
@@ -1606,7 +1709,14 @@ public abstract class Pdb {
 			return true;
 		}
 	}
-
+	
+	/**
+	 * Returns the oligomeric state object of this graph.
+	 */
+	public OligomericState getOligomericState() {
+		return oligomeric;
+	}
+	
 	/**
 	 * Returns the csa annotation object of this graph.
 	 */
