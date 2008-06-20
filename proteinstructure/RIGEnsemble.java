@@ -328,7 +328,7 @@ public class RIGEnsemble {
 	/*--------------------------------- main --------------------------------*/
 	
 	// for testing
-	public static void main(String[] args) throws IOException, PdbLoadError {
+	public static void main(String[] args) throws Exception {
 		
 		boolean loadFromList = false;
 		int filesRead = 0;

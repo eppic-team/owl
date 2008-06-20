@@ -93,8 +93,9 @@ public class GraphAverager {
 	 * Creates a GraphAverager given a RIGEnsemble. In this case the alignment is
 	 * trivial and the target sequence is the same as all the input sequences.
 	 * @param rigs the RIGEnsemble for which graph will be averaged 
+	 * @throws GraphAveragerError
 	 */
-	public GraphAverager(RIGEnsemble rigs) {
+	public GraphAverager(RIGEnsemble rigs) throws GraphAveragerError {
 		this.targetTag = Long.toString(new Date().getTime()); // a unique identifier
 		
 		this.templateGraphs = new TreeMap<String,RIGraph>();
@@ -124,17 +125,16 @@ public class GraphAverager {
 	
 	/**
 	 * Create a graph averager given a multiple alignment of the target sequence to the template graphs.
-	 * @param sequence the target sequence
 	 * @param al a multiple alignment of the target sequence and the template graphs
 	 * @param templateGraphs a collection of template graphs to be averaged
 	 * @param targetTag the identifier of the target sequence in the alignment
-	 * TODO: Parameter sequence is redundant, since it can be extracted from al and targetTag.
+	 * @throws GraphAveragerError
 	 */
-	public GraphAverager(String sequence, Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) {
+	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) throws GraphAveragerError {
 		this.al = al;
 		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
-		this.sequence = sequence;
+		this.sequence = al.getSequenceNoGaps(targetTag);
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
@@ -149,11 +149,16 @@ public class GraphAverager {
 	 * will then have coordinates corresponding to the columns in the alignment.
 	 * @param al
 	 * @param templateGraphs
+	 * @throws GraphAveragerError
 	 */
-	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs) throws AlignmentConstructionError {
+	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs) throws GraphAveragerError {
 		this.sequence = makeDummySequence(al.getAlignmentLength());
-		this.targetTag = makeDummyTag();	
-		this.al = al.copyAndAdd(this.targetTag, this.sequence);
+		this.targetTag = makeDummyTag();
+		try {
+			this.al = al.copyAndAdd(this.targetTag, this.sequence);
+		} catch (AlignmentConstructionError e) {
+			throw new GraphAveragerError(e);
+		}
 		this.templateGraphs = templateGraphs;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
@@ -162,44 +167,14 @@ public class GraphAverager {
 		checkSequences();	
 		countVotes(); // does the averaging by counting the votes and putting them into contactVotes
 	}
-	
-	/**
-	 * Create a graph averager assuming that the target and template structures all have the same size.
-	 * A trivial alignment will be internally created. Fails if sizes do not match.
-	 * @param sequence the target sequence
-	 * @param templateGraphs a collection of template graphs to be averaged
-	 */
-	public GraphAverager(String sequence, TreeMap<String,RIGraph> templateGraphs) {
-		this.templateGraphs = templateGraphs;
-		this.targetTag = Long.toString(new Date().getTime()); // a unique identifier
-		this.sequence = sequence;
-		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
-		this.contactType = firstGraph.getContactType();
-		this.distCutoff = firstGraph.getCutoff();		
-		
-		TreeMap<String,String> sequences = new TreeMap<String, String>();
-		sequences.put(targetTag, sequence);	
-		for(String id:templateGraphs.keySet()) {
-			sequences.put(id, templateGraphs.get(id).getSequence());
-		}
-		// create trivial alignment
-		try {
-			this.al = new Alignment(sequences);
-		} catch (AlignmentConstructionError e) {
-			System.err.println("Could not create alignment: " + e.getMessage());
-		}
 
-		
-		checkSequences();	
-		countVotes(); // does the averaging by counting the votes and putting them into contactVotes		
-	}
 	
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
 	 * @return a dummy sequence of the given length.
 	 */
-	public static String makeDummySequence(int length) {
+	private String makeDummySequence(int length) {
 		char dummyChar = 'X';
 		StringBuilder buf = new StringBuilder(length);
 		for (int i = 0; i < length; i++) {
@@ -211,42 +186,29 @@ public class GraphAverager {
 	/**
 	 * @return a randomly generated sequence tag
 	 */
-	public static String makeDummyTag() {
+	private String makeDummyTag() {
 		return "dummyTag";
 	}
-		
+	
 	/**
 	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs and between this.al  and this.graph/this.targetTag 
-	 *
+	 * @throws GraphAveragerError
 	 */
-	private void checkSequences(){
+	private void checkSequences() throws GraphAveragerError {
 		if (!al.hasTag(targetTag)){
-			System.err.println("Alignment doesn't seem to contain the target sequence, check the FASTA tags");
-			//TODO throw exception
+			throw new GraphAveragerError("Alignment doesn't seem to contain the target sequence, check the FASTA tags");
 		}
 		for (String tag:templateGraphs.keySet()){
 			if (!al.hasTag(tag)){
-				System.err.println("Alignment is missing template sequence "+tag+", check the FASTA tags");
-				// TODO throw exception
+				throw new GraphAveragerError("Alignment is missing template sequence "+tag+", check the FASTA tags");
 			}
 		}
-		if (templateGraphs.size()!=al.getNumberOfSequences()-1){
-			System.err.println("Number of sequences in alignment is different from number of templates +1 ");
-			// TODO throw exception
+		// we check that at the number of graphs is not bigger than sequences in alignment -1 
+		// that means we do allow alignments that contain more sequences 
+		if (templateGraphs.size()>al.getNumberOfSequences()-1){
+			throw new GraphAveragerError("Number of sequences in alignment is different from number of templates +1 ");
 		}
-		if(!al.getSequenceNoGaps(targetTag).equals(this.sequence)) {
-			System.err.println("Target sequence in alignment does not match sequence in target graph");
-			System.err.println("Trying to align sequences of alignment vs graph: ");
-			try {
-				PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(this.sequence,al.getSequenceNoGaps(targetTag),"graph","alignment");
-				alCheck.printAlignment();
-			} catch (PairwiseSequenceAlignmentException e) {
-				System.err.println("Error while creating alignment check, can't display an alignment, error: "+e.getMessage()+". The 2 sequences are: ");
-				System.err.println("graph:     "+sequence);
-				System.err.println("alignment: "+al.getSequenceNoGaps(targetTag));
-			}
-			// TODO throw exception
-		}
+		// now we check if every id from the graphs is really present in the alignment
 		for (String tag:templateGraphs.keySet()){
 			if(!al.getSequenceNoGaps(tag).equals(templateGraphs.get(tag).getSequence())) {
 				System.err.println("Sequence of template graph "+tag+" does not match sequence in alignment");
@@ -259,7 +221,7 @@ public class GraphAverager {
 					System.err.println("graph:     "+templateGraphs.get(tag).getSequence());
 					System.err.println("alignment: "+al.getSequenceNoGaps(tag));
 				}
-				// TODO throw exception
+				throw new GraphAveragerError("Sequence of template graph "+tag+" does not match sequence in alignment");
 			}			
 		}
 	}

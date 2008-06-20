@@ -7,11 +7,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import proteinstructure.Alignment;
+import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PredEval;
 import proteinstructure.RIGraph;
 import proteinstructure.TemplateList;
+import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import sequence.Sequence;
 import tinker.TinkerRunner;
 import tools.MySQLConnection;
@@ -44,6 +46,8 @@ public class averageGraph {
 	
 	private static final String CASP_CONTACT_TYPE =		"Cb";
 	private static final double CASP_CUTOFF = 			8.0;
+	
+	private static enum Modes {	BENCHMARK, PREDICT, ALIGN	};
 	
 	private static final String CASP_METHOD_STR = "1. Template detection by Blast, Psiblast and Global Trace Graph (Heger et al. 2007) " +
 			"\n2. Graph based sequence to multiple structure alignment " +
@@ -107,15 +111,38 @@ public class averageGraph {
 		}
 		return methodStr;
 	}
+
+	private static void checkSequences(Alignment ali, String targetTag, String targetSeq, Modes mode, File seqFile, String pdbCodeTarget, String pdbChainCodeTarget) {
+		if(!ali.getSequenceNoGaps(targetTag).equals(targetSeq)) {
+			if (mode==Modes.PREDICT) {
+				System.err.println("Target sequence in alignment does not match target sequence from file "+seqFile);
+			} else if (mode==Modes.BENCHMARK) {
+				System.err.println("Target sequence in alignment does not match target sequence taken from db with pdb id "+pdbCodeTarget+pdbChainCodeTarget);
+			} else if (mode==Modes.ALIGN) {
+				// in ALIGN mode the 2 sequences shouldn't disagree
+				System.err.println("Unexpected error, target dummy sequence and alignment dummy sequence disagree. This shouldn't be happening. Please report the bug!");
+			}
+			System.err.println("Trying to align sequences: ");
+			try {
+				PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(targetSeq,ali.getSequenceNoGaps(targetTag),"graph","alignment");
+				alCheck.printAlignment();
+			} catch (PairwiseSequenceAlignmentException e) {
+				System.err.println("Error while creating alignment check, can't display an alignment, error: "+e.getMessage()+". The 2 sequences are: ");
+				System.err.println("file:     "+targetSeq);
+				System.err.println("alignment: "+ali.getSequenceNoGaps(targetTag));
+			}
+			System.exit(1);
+		}
+	}
 	
 	/*----------------------------- main --------------------------------*/
 	public static void main(String[] args) throws Exception {
 				
 		String help =
 				"Performs graph averaging. Three modes of operation: \n" +
-				"a) benchmarking: specify a pdb code+pdb chain code (-p) \n" +
-				"b) prediction:   specify a sequence file (-f) \n" +
-				"c) inspection:   specify only a list of templates (-P) \n\n" + 
+				"a) alignment only:   specify only a list of templates (-P) \n" +
+				"b) prediction:       specify a sequence file (-f) \n" +
+				"c) benchmarking:     specify a pdb code+pdb chain code (-p) \n\n" + 
 				"Usage: \n" +
 				averageGraph.class.getName()+"\n" +
 				"   -p <string> : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n\n" +
@@ -168,7 +195,7 @@ public class averageGraph {
 		
 		File seqFile = null;
 		
-		boolean benchmark = false;
+		Modes mode = Modes.ALIGN;
 		
 		double[] consensusThresholds = {DEFAULT_THRESHOLD};
 		
@@ -192,7 +219,7 @@ public class averageGraph {
 			case 'p':
 				pdbCodeTarget = g.getOptarg().substring(0, 4);
 				pdbChainCodeTarget = g.getOptarg().substring(4);
-				benchmark = true;
+				mode = Modes.BENCHMARK;
 				break;
 			case 'P':
 				templatesFile = new File(g.getOptarg());
@@ -225,7 +252,7 @@ public class averageGraph {
 				break;
 			case 'f':
 				seqFile = new File(g.getOptarg());
-				benchmark = false;
+				mode = Modes.PREDICT;
 				break;
 			case 'r':
 				numberTinkerModels = Integer.parseInt(g.getOptarg());
@@ -262,22 +289,32 @@ public class averageGraph {
 			System.err.println(help);
 			System.exit(1);
 		}
-		if (seqFile==null && !benchmark && reconstruct) {
-			System.err.println("Cannot reconstruct in inspect mode. Either provide a target sequence (-f) or pdb- and chain code (-p/-c) for benchmarking");
+		if (mode==Modes.ALIGN && reconstruct) {
+			System.err.println("Cannot reconstruct in align mode. Either provide a target sequence (-f) or pdb and chain code (-p) for benchmarking");
 			System.err.println(help);
 			System.exit(1);			
 		}
-		if (seqFile==null && !benchmark && reconstruct && aliFile == null) {
-			System.err.println("Alignment has to be provided (-a) in inspect mode.");
+		if (mode==Modes.ALIGN && casp) {
+			System.err.println("The casp option (-c) is incompatible with align mode.");
+			System.err.println(help);
+			System.exit(1);						
+		}
+		if (mode==Modes.ALIGN && aliFile==null) {
+			System.err.println("Alignment must be provided (-a) in align mode.");
 			System.err.println(help);
 			System.exit(1);			
 		}
 		if (seqFile!=null && !pdbCodeTarget.equals("")){
-			System.err.println("Options -f (prediction), and -p/-c (benchmark) are exclusive");
+			// in this case mode has been assigned first to BENCHMARK ant then to PREDICT. It's better to check directly the variables seqFile and pdbCodeTarget
+			System.err.println("Options -f (prediction), and -p (benchmark) are exclusive");
 			System.err.println(help);
 			System.exit(1);
 		}
-		
+		if (mode==Modes.BENCHMARK && casp) {
+			System.err.println("Options -p (benchmark) and -c (casp output) are incompatible");
+			System.err.println(help);
+			System.exit(1);			
+		}
 		// check that we specified same number of contact types and cutoffs
 		if (cts.length!=cutoffs.length) {
 			System.err.println("Specified list of contact types differs in length from list of cutoffs. Exiting");
@@ -290,7 +327,7 @@ public class averageGraph {
 		String targetTag = null;
 		Pdb targetPdb = null;
 		
-		if (benchmark) {
+		if (mode==Modes.BENCHMARK) {
 			// 1) benchmark: from a known structure sequence we repredict it based on template structures
 			targetPdb = new PdbasePdb(pdbCodeTarget);
 			targetPdb.load(pdbChainCodeTarget);
@@ -299,9 +336,9 @@ public class averageGraph {
 		} else {
 			// 2) prediction: from a sequence with unknown structure, we predict the structure based on template structures
 			// or
-			// 3) inspection (seqFile=null): just create average and consensus graph for the set of templates using a dummy sequence
-			if(seqFile != null) {
-			Sequence seq = new Sequence();
+			// 3) inspection: just create average and consensus graph for the set of templates using a dummy sequence (so nothing to do at this point)
+			if (mode==Modes.PREDICT) {
+				Sequence seq = new Sequence();
 				try {
 					seq.readFromFastaFile(seqFile);
 				} catch (IOException e) {
@@ -313,7 +350,7 @@ public class averageGraph {
 				targetSeq = seq.getSeq();
 			}
 			
-			if (casp) {
+			if (casp) { // in ALIGN mode targetTag is not defined, but we already checked that both options casp && ALIGN mode were not specified together
 				Pattern p = Pattern.compile("T\\d\\d\\d\\d");
 				Matcher m = p.matcher(targetTag);
 				if (!m.matches()) {
@@ -358,15 +395,16 @@ public class averageGraph {
 		// read the alignment from file
 		System.out.println("Reading alignment from "+aliFile);
 		Alignment ali = new Alignment(aliFile.getCanonicalPath(), "FASTA");
-		if(seqFile == null) {
-			targetSeq = GraphAverager.makeDummySequence(ali.getAlignmentLength());
-			targetTag = GraphAverager.makeDummyTag();
-			ali.addSequence(targetTag, targetSeq);
+		
+		// checking that targetSeq and sequence from alignment match, we exit if not 
+		if (mode==Modes.BENCHMARK || mode==Modes.PREDICT) { // in ALIGN mode targetTag and targetSeq are not defined, so we can't check
+			checkSequences(ali, targetTag, targetSeq, mode, seqFile, pdbCodeTarget, pdbChainCodeTarget);
 		}
+
 		
 		System.out.println("Averaging...");
 		
-		if (benchmark) {
+		if (mode==Modes.BENCHMARK) {
 			// printing headers for table of statistics
 			System.out.printf("%10s\t","ct_cutoff"); 
 			PredEval.printHeaders();
@@ -378,7 +416,7 @@ public class averageGraph {
 		for (int ctIdx=0;ctIdx<cts.length;ctIdx++) {
 			// if in benchmark we get the original graph to later calculate accuracy/coverage
 			RIGraph originalGraph = null;
-			if (benchmark) {
+			if (mode==Modes.BENCHMARK) {
 				originalGraph = targetPdb.get_graph(cts[ctIdx], cutoffs[ctIdx]);
 			}
 
@@ -389,18 +427,16 @@ public class averageGraph {
 				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
 			}
 
-			//System.out.println("Contact type: "+cts[ctIdx]+", cutoff: "+cutoffs[ctIdx]);
-
 			String ctStr = cts[ctIdx].replace("/", ":");
 			File avrgdGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.cm");
 			File avrgdVotersGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.voters.cm");
 
-			GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
-			ga.printPairwiseOverlaps();
-			int overlap = ga.getSumOfPairsOverlap();
-			System.out.println("Sum of pairs contact overlap: " + overlap);
-//			double consensus = ga.getEnsembleConsensusScore();
-//			System.out.println("Ensemble consensus score:" + consensus);
+			GraphAverager ga = null;
+			if (mode==Modes.ALIGN) {
+				ga = new GraphAverager(ali, templateGraphs);
+			} else {
+				ga = new GraphAverager(ali, templateGraphs, targetTag);
+			}
 			
 			RIGraph averagedGraph = ga.getAverageGraph();
 			//System.out.println("Writing average graph to " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
@@ -413,13 +449,23 @@ public class averageGraph {
 				//System.out.printf("Writing consensus graph at CCT %2.0f to %s \n",consensusThreshold*100,consGraphFile);
 				consensusGraph.write_graph_to_file(consGraphFile.getAbsolutePath());
 
-				if (benchmark) {
+				if (mode==Modes.BENCHMARK) {
 					PredEval eval = consensusGraph.evaluatePrediction(originalGraph);
 					System.out.printf("%6s_%3.1f\t%3.1f",cts[ctIdx],cutoffs[ctIdx],consensusThreshold);
 					eval.printRow();
 					//eval.printSummary();
 				}
 
+			}
+
+			// printing pairwise overlap statistics (only if not in benchmark mode, otherwise it overlaps from the output of the benchmarking)
+			if (mode!=Modes.BENCHMARK) {
+				System.out.println("Contact type: "+cts[ctIdx]+", cutoff: "+cutoffs[ctIdx]);
+				ga.printPairwiseOverlaps();
+				int overlap = ga.getSumOfPairsOverlap();
+				System.out.println("Sum of pairs contact overlap: " + overlap);
+				// double consensus = ga.getEnsembleConsensusScore();
+				// System.out.println("Ensemble consensus score:" + consensus);
 			}
 			
 			// for reconstruction we take the first given consensus threshold value
@@ -435,7 +481,7 @@ public class averageGraph {
 				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
 			}
 			
-			GraphAverager ga = new GraphAverager(targetSeq, ali, templateGraphs, targetTag);
+			GraphAverager ga = new GraphAverager(ali, templateGraphs, targetTag);
 			RIGraph averagedGraph = ga.getAverageGraph();
 			File caspRRFile = new File(outDir,basename+".CASP.RR");
 			int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
@@ -488,7 +534,7 @@ public class averageGraph {
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
 			}
 
-			if (benchmark) {
+			if (mode==Modes.BENCHMARK) {
 				System.out.printf("rmsd to native: %5.2f\n",pdb.rmsd(targetPdb, "Ca"));
 			}
 		}
