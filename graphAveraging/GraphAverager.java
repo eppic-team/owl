@@ -13,6 +13,7 @@ import proteinstructure.RIGEdge;
 import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
+import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import tools.Goodies;
 
@@ -126,13 +127,13 @@ public class GraphAverager {
 	/**
 	 * Create a graph averager given a multiple alignment of the target sequence to the template graphs.
 	 * @param al a multiple alignment of the target sequence and the template graphs
-	 * @param templateGraphs a collection of template graphs to be averaged
+	 * @param templates a collection of templates to be averaged
 	 * @param targetTag the identifier of the target sequence in the alignment
-	 * @throws GraphAveragerError
+	 * @throws GraphAveragerError if sequences in alignment and templates don't match
 	 */
-	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag) throws GraphAveragerError {
+	public GraphAverager(Alignment al, TemplateList templates, String targetTag) throws GraphAveragerError {
 		this.al = al;
-		this.templateGraphs = templateGraphs;
+		this.templateGraphs = templates.getRIGraphs();
 		this.targetTag = targetTag;
 		this.sequence = al.getSequenceNoGaps(targetTag);
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
@@ -148,10 +149,11 @@ public class GraphAverager {
 	 * be created internally which has the length of the alignment. The resulting average or consensus graphs
 	 * will then have coordinates corresponding to the columns in the alignment.
 	 * @param al
-	 * @param templateGraphs
-	 * @throws GraphAveragerError
+	 * @param templates
+	 * @throws GraphAveragerError if sequences in alignment and templates don't match or if 
+	 * problems occur while adding dummy sequence to given alignment
 	 */
-	public GraphAverager(Alignment al, TreeMap<String,RIGraph> templateGraphs) throws GraphAveragerError {
+	public GraphAverager(Alignment al, TemplateList templates) throws GraphAveragerError {
 		this.sequence = makeDummySequence(al.getAlignmentLength());
 		this.targetTag = makeDummyTag();
 		try {
@@ -159,7 +161,7 @@ public class GraphAverager {
 		} catch (AlignmentConstructionError e) {
 			throw new GraphAveragerError(e);
 		}
-		this.templateGraphs = templateGraphs;
+		this.templateGraphs = templates.getRIGraphs();
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();

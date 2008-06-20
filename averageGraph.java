@@ -12,6 +12,7 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PredEval;
 import proteinstructure.RIGraph;
+import proteinstructure.Template;
 import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import sequence.Sequence;
@@ -63,20 +64,22 @@ public class averageGraph {
 	 * @param basename
 	 * @param targetSeq
 	 * @param targetTag
-	 * @param templateGraphs
+	 * @param templates
 	 */
-	private static void runMuscle(File aliFile, String outDir, String basename, String targetSeq, String targetTag, Pdb[] templatePdbs) {
+	private static void runMuscle(File aliFile, String outDir, String basename, String targetSeq, String targetTag, TemplateList templates) {
 		
 		// we have to create a temporary seq file for muscle's input
 		File tmpSeqFile = new File(outDir,basename+".tmp.fasta");
 		tmpSeqFile.deleteOnExit();
-		String[] seqs = new String[templatePdbs.length+1];
-		String[] tags = new String[templatePdbs.length+1];
+		String[] seqs = new String[templates.size()+1];
+		String[] tags = new String[templates.size()+1];
 		seqs[0]=targetSeq;
 		tags[0]=targetTag;
-		for (int i=0; i<templatePdbs.length;i++) {
-			seqs[i+1] = templatePdbs[i].getSequence();
-			tags[i+1] = templatePdbs[i].getPdbCode()+templatePdbs[i].getPdbChainCode();
+		int i = 1;
+		for (Template template:templates) {
+			seqs[i] = template.getPdb().getSequence();
+			tags[i] = template.getId();;
+			i++;
 		}	
 		try {
 			Sequence.writeSeqs(tmpSeqFile, seqs, tags);
@@ -365,31 +368,26 @@ public class averageGraph {
 		//TODO eventually we should read using RIGEnsemble.loadFromListFile adding this case: list file is a list of pdbCodes+pdbChainCodes
 		//     Then RIGEnsemble should also have an alignment to be able to use it for ensembles not sharing same sequence
 		//     By using loadFromListFile we would get the benefit of reading templatesFile that contain a list of pdb files/casp RR files/cm files/cif files
-		String[] codesTemplates = null;
+
+		TemplateList templates = null;
 		try {
-			codesTemplates = TemplateList.readIdsListFile(templatesFile); 
+			templates = new TemplateList(templatesFile);
+			templates.loadPdbData(conn, PDB_DB);
 		} catch (IOException e) {
 			System.err.println("Error while reading templates file "+templatesFile+": "+ e.getMessage()+"\nExiting");
 			System.exit(1);
 		}
-		if (codesTemplates.length==0) {
+		if (templates.size()==0) {
 			System.err.println("Couldn't find any pdb code+pdb chain code in templates file\nExiting");
 			System.exit(1);
 		}
-		
-		Pdb[] templatePdbs = new Pdb[codesTemplates.length];
-		for (int i=0;i<codesTemplates.length;i++) {
-			Pdb pdb = new PdbasePdb(codesTemplates[i].substring(0, 4), PDB_DB, conn);
-			pdb.load(codesTemplates[i].substring(4));
-			templatePdbs[i]=pdb;
-		}
-		
+				
 		// if an alignment file was not specified, perform alignment
 		if (aliFile == null){  
 			aliFile = new File(outDir,basename+".muscle_ali.fasta");
 			// do alignment with muscle
 			System.out.println("Performing alignment with muscle");
-			runMuscle(aliFile, outDir, basename, targetSeq, targetTag, templatePdbs);
+			runMuscle(aliFile, outDir, basename, targetSeq, targetTag, templates);
 		}
 
 		// read the alignment from file
@@ -410,8 +408,8 @@ public class averageGraph {
 			PredEval.printHeaders();
 		}
 		
-		// array to store one graph per contact type for later use them in the reconstruction section
-		RIGraph[] graphsForReconstruction = new RIGraph[cts.length];
+		// array to store the consensus graphs (one per contact type/cutoff) for later use them in the reconstruction section
+		RIGraph[] consensusGraphs = new RIGraph[cts.length];
 		
 		for (int ctIdx=0;ctIdx<cts.length;ctIdx++) {
 			// if in benchmark we get the original graph to later calculate accuracy/coverage
@@ -419,23 +417,19 @@ public class averageGraph {
 			if (mode==Modes.BENCHMARK) {
 				originalGraph = targetPdb.get_graph(cts[ctIdx], cutoffs[ctIdx]);
 			}
-
-			TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
-
-			for (int i=0;i<codesTemplates.length;i++) {
-				RIGraph graph = templatePdbs[i].get_graph(cts[ctIdx], cutoffs[ctIdx]);
-				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
-			}
-
+			
+			// we get graphs for our templates
+			templates.loadRIGraphs(cts[ctIdx], cutoffs[ctIdx]);
+		
 			String ctStr = cts[ctIdx].replace("/", ":");
 			File avrgdGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.cm");
 			File avrgdVotersGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".avrgd.voters.cm");
 
 			GraphAverager ga = null;
 			if (mode==Modes.ALIGN) {
-				ga = new GraphAverager(ali, templateGraphs);
+				ga = new GraphAverager(ali, templates);
 			} else {
-				ga = new GraphAverager(ali, templateGraphs, targetTag);
+				ga = new GraphAverager(ali, templates, targetTag);
 			}
 			
 			RIGraph averagedGraph = ga.getAverageGraph();
@@ -469,19 +463,15 @@ public class averageGraph {
 			}
 			
 			// for reconstruction we take the first given consensus threshold value
-			graphsForReconstruction[ctIdx] = ga.getConsensusGraph(consensusThresholds[0]);
+			consensusGraphs[ctIdx] = ga.getConsensusGraph(consensusThresholds[0]);
 		}
 		
 		// writing Cb 8 graph in CASP RR format if casp output was specified
 		if (casp) {
-			TreeMap<String, RIGraph> templateGraphs = new TreeMap<String, RIGraph>();
-
-			for (int i=0;i<codesTemplates.length;i++) {
-				RIGraph graph = templatePdbs[i].get_graph(CASP_CONTACT_TYPE, CASP_CUTOFF);
-				templateGraphs.put(graph.getPdbCode()+graph.getPdbChainCode(),graph);
-			}
+			// we get the Cb graphs
+			templates.loadRIGraphs(CASP_CONTACT_TYPE, CASP_CUTOFF);
 			
-			GraphAverager ga = new GraphAverager(ali, templateGraphs, targetTag);
+			GraphAverager ga = new GraphAverager(ali, templates, targetTag);
 			RIGraph averagedGraph = ga.getAverageGraph();
 			File caspRRFile = new File(outDir,basename+".CASP.RR");
 			int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
@@ -498,11 +488,7 @@ public class averageGraph {
 			TreeMap<Integer, ConsensusSquare> phiPsiConsensus = null;
 			if (usePhiPsiConstraints) {
 				System.out.println("Getting phi/psi consensus from templates for reconstruction");
-				// we are re-reading from db the PDB data, this is really inefficient (we already have them in templatePdbs)
-				// TODO make templatePdbs a TemplateList 
-				TemplateList templates = new TemplateList(codesTemplates);
-				templates.loadPdbData(conn, PDB_DB);
-				PhiPsiAverager phiPsiAvrger = new PhiPsiAverager(templates,ali);
+				PhiPsiAverager phiPsiAvrger = new PhiPsiAverager(templates,ali); // here we get only PDB data out of templates, so doesn't matter which graphs templates contains by now
 				phiPsiConsensus = phiPsiAvrger.getConsensusPhiPsiOnTarget(PHIPSI_CONSENSUS_THRESHOLD, phiPsiConsensusInterval, targetTag);
 			}
 			
@@ -512,10 +498,10 @@ public class averageGraph {
 			
 			Pdb pdb = null;
 			if (keepModels) {
-				tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
+				tr.reconstruct(targetSeq, consensusGraphs, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false);
 				pdb = tr.getStructure(tr.pickByLeastBoundViols());
 			} else {
-				pdb = tr.reconstruct(targetSeq, graphsForReconstruction, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION);
+				pdb = tr.reconstruct(targetSeq, consensusGraphs, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION);
 			}
 			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
@@ -529,7 +515,7 @@ public class averageGraph {
 				pdb.setCaspAuthorStr(caspAuthorStr);
 				pdb.setCaspMethodStr(CASP_METHOD_STR);
 				//pdb.setCaspMethodStr(readCaspMethodFromFile(caspMethodFile));
-				pdb.setParents(codesTemplates);
+				pdb.setParents(templates.getIds());
 				pdb.writeToCaspTSFile(outcasptsfile);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
 			}

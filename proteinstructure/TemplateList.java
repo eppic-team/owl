@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -255,6 +256,31 @@ public class TemplateList implements Iterable<Template> {
 			}
 		}
 		pdbDataLoaded = true;
+	}
+	
+	/**
+	 * Gets graphs for each template of this list for the given contact type and cutoff
+	 * @param ct
+	 * @param cutoff
+	 */
+	public void loadRIGraphs(String ct, double cutoff) {
+		for (Template template:this) {
+			template.loadRIGraph(ct, cutoff);
+		}
+	}
+	
+	/**
+	 * Returns all graphs of this TemplateList in a TreeMap with keys the 
+	 * template id and values the graph. 
+	 * Note that the graphs are not copied but just passed as references.
+	 * @return
+	 */
+	public TreeMap<String, RIGraph> getRIGraphs() {
+		TreeMap<String, RIGraph> graphs = new TreeMap<String, RIGraph>();
+		for (Template template:this) {
+			graphs.put(template.getId(), template.getRIGraph());
+		}
+		return graphs;
 	}
 	
 	/**

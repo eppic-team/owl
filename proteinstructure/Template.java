@@ -22,6 +22,7 @@ public class Template {
 	private String scopSccsString;
 	private String titleString;
 	private Pdb pdb;
+	private RIGraph graph;
 	//private MySQLConnection conn;
 
 	private BlastHit blastHit;
@@ -83,6 +84,21 @@ public class Template {
 	}
 	
 	/**
+	 * Gets the graph from the pdb object for given contact type and cutoff
+	 * If there's no PDB data for this template then no graph will be calculated
+	 * and graph will remain null, thus calling hasGraphData() would return false.
+	 * If there was a graph already loaded for this Template then it will be 
+	 * simply overwritten.
+	 * @param ct
+	 * @param cutoff
+	 */
+	public void loadRIGraph(String ct, double cutoff) {
+		if (this.hasPdbData()) {
+			graph = pdb.get_graph(ct, cutoff);
+		}
+	}
+	
+	/**
 	 * Get all SCOP sccs ids in a comma separated string
 	 * pdb must be loaded already. If pdb==null a NullPointerException will be thrown
 	 */
@@ -118,11 +134,20 @@ public class Template {
 	
 	/**  
 	 * Returns the Pdb object with the actual structure
-	 * Use hasPdbData() to check if this method can be called.
+	 * Use {@link #hasPdbData()} to check if this method can be called.
 	 * @return the Pdb object or null if PDB data are not loaded/present
 	 */
 	public Pdb getPdb() {
 		return this.pdb;
+	}
+	
+	/**
+	 * Returns the RIGraph object 
+	 * Use {@link #hasGraphData()} to check if this method can be called.
+	 * @return
+	 */
+	public RIGraph getRIGraph(){
+		return this.graph;
 	}
 	
 	/**
@@ -139,6 +164,14 @@ public class Template {
 	 */
 	public boolean hasPdbData() {
 		return (pdb!=null && pdb.isDataLoaded());
+	}
+	
+	/**
+	 * Tells wheter this template contains a graph
+	 * @return
+	 */
+	public boolean hasGraphData() {
+		return (graph!=null);
 	}
 	
 	/**
