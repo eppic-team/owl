@@ -18,7 +18,6 @@ import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentExcep
 import sequence.Sequence;
 import tinker.TinkerRunner;
 import tools.MySQLConnection;
-//import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
 import graphAveraging.ConsensusSquare;
 import graphAveraging.GraphAverager;
@@ -377,7 +376,7 @@ public class averageGraph {
 			System.exit(1);
 		}
 		if (templates.size()==0) {
-			System.err.println("Couldn't find any pdb code+pdb chain code in templates file\nExiting");
+			System.err.println("Couldn't find any PDB ids/PDB files in templates file\nExiting");
 			System.exit(1);
 		}
 				
