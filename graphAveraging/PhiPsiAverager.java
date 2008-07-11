@@ -21,8 +21,12 @@ import tools.MySQLConnection;
 
 public class PhiPsiAverager {
 
-	private Alignment al;								// alignment
+	private Alignment al;
 	private ArrayList<TemplateWithPhiPsi> templates;
+	
+	// these 2 are set when either getConsensusPhiPsiOnTarget or getConsensusPhiPsi are called.
+	private int voteThreshold;
+	private int angleInterval;
 
 	public PhiPsiAverager(TemplateList templates, Alignment aln) {
 
@@ -38,7 +42,7 @@ public class PhiPsiAverager {
 	/**
 	 * Gets the consensus phi/psi angles mapped onto the sequence of the given targetTag
 	 * If the targetTag is not in the Alignment an IllegalArgumentException is thrown
-	 * @param threshold
+	 * @param threshold a value >= 0.5
 	 * @param angleInterval
 	 * @param targetTag
 	 * @return
@@ -67,15 +71,18 @@ public class PhiPsiAverager {
 	 * @throws IllegalArgumentException if threshold < 0.5
 	 */
 	public TreeMap<Integer, ConsensusSquare> getConsensusPhiPsi(double threshold, int angleInterval) {
-
+		
+		this.angleInterval = angleInterval;
+		
 		if (threshold < 0.5) {
-			throw new IllegalArgumentException("Threshold for consensus ph/psi must be above or equals to 0.5");
+			throw new IllegalArgumentException("Threshold for consensus ph/psi must be above or equal to 0.5");
 		}
 
-		// we round DOWN given threshold. So for the 2 cases even/odd and limit case threshold=0.5: 
-		// - odd case  : 3 templates => voteThreshold=1, then we apply cutoff (see getInterval) with a '>' so that 2 falls within threshold
-		// - even case : 4 templates => voteThreshold=2, then we applu cutoff (see getInterval) with a '>' so that 2 doesn't fall within threshold 
-		int voteThreshold = (int) (templates.size()*threshold); // the int casting rounds down
+		// we round DOWN given threshold. Then in findAllConsInterval1stDim() we apply the cutoff with a '>'.
+		// To make it clear here is an example for the 2 cases even/odd and limit case threshold=0.5: 
+		// - odd case  : 3 templates => voteThreshold=1 : 2 falls within threshold (we use '>')
+		// - even case : 4 templates => voteThreshold=2 : 2 doesn't fall within threshold (we use '>') 
+		this.voteThreshold = (int) (templates.size()*threshold); // the int casting rounds down
 		
 		TreeMap<Integer, ConsensusSquare> bounds = new TreeMap<Integer, ConsensusSquare>();
 
@@ -83,10 +90,13 @@ public class PhiPsiAverager {
 		for (int i=1; i<=al.getAlignmentLength(); i++) {
 			HashMap<Integer,Double> phiAnglesColumnI = new HashMap<Integer, Double>();
 			HashMap<Integer,Double> psiAnglesColumnI = new HashMap<Integer, Double>();
+			// we go through each template j (from 0 to templates.size()-1)
 			for (int j=0;j<templates.size();j++) {
 				TemplateWithPhiPsi template = templates.get(j);
 				int resser = al.al2seq(template.getId(), i);
 
+				// we put NaN values by default in case value j is not filled, 
+				// this will happen in 2 cases: template j at col i is a gap, template j at col i is not a gap but has no phi/psi data   
 				phiAnglesColumnI.put(j, Double.NaN);
 				psiAnglesColumnI.put(j, Double.NaN);
 				if (resser!=-1) { // to skip gaps
@@ -97,7 +107,7 @@ public class PhiPsiAverager {
 				} 
 			}
 			
-			ConsensusSquare consIntervalPhPsi = findConsSquare(phiAnglesColumnI, psiAnglesColumnI, voteThreshold, angleInterval);
+			ConsensusSquare consIntervalPhPsi = findConsSquare(phiAnglesColumnI, psiAnglesColumnI);
 			
 			if (consIntervalPhPsi!=null) {
 				bounds.put(i, consIntervalPhPsi);
@@ -114,13 +124,11 @@ public class PhiPsiAverager {
 	 * space where the consensus phi/psi angles are.
 	 * @param values1stDim
 	 * @param values2ndDim
-	 * @param voteThreshold
-	 * @param angleInterval
 	 * @return the ConsensusSquare with the phi/psi consensus intervals or null if no consensus for this column
 	 */
-	private ConsensusSquare findConsSquare(HashMap<Integer,Double> values1stDim, HashMap<Integer,Double> values2ndDim, int voteThreshold, int angleInterval) {
+	private ConsensusSquare findConsSquare(HashMap<Integer,Double> values1stDim, HashMap<Integer,Double> values2ndDim) {
 		
-		ArrayList<ConsensusSquare> allConsIntervals = findAllConsSquares(values1stDim, values2ndDim, voteThreshold, angleInterval);
+		ArrayList<ConsensusSquare> allConsIntervals = findAllConsSquares(values1stDim, values2ndDim);
 		if (allConsIntervals.isEmpty()) {
 			return null;
 		}
@@ -148,16 +156,14 @@ public class PhiPsiAverager {
 	 * 
 	 * @param values1stDim
 	 * @param values2ndDim
-	 * @param voteThreshold
-	 * @param angleInterval
 	 * @return
 	 */
-	private ArrayList<ConsensusSquare> findAllConsSquares(HashMap<Integer,Double> values1stDim, HashMap<Integer,Double> values2ndDim, int voteThreshold, int angleInterval) {
+	private ArrayList<ConsensusSquare> findAllConsSquares(HashMap<Integer,Double> values1stDim, HashMap<Integer,Double> values2ndDim) {
 		ArrayList<ConsensusSquare> consInterval2DCandidates = new ArrayList<ConsensusSquare>();
 		
-		ArrayList<ConsensusInterval> consIntervals1stDim = findAllConsInterval1stDim(values1stDim, voteThreshold, angleInterval);
+		ArrayList<ConsensusInterval> consIntervals1stDim = findAllConsInterval1stDim(values1stDim);
 		for (ConsensusInterval consInterv1stDim: consIntervals1stDim) {
-			ConsensusInterval consInterv2ndDim = findConsInterval2ndDim(values2ndDim, consInterv1stDim, angleInterval);
+			ConsensusInterval consInterv2ndDim = findConsInterval2ndDim(values2ndDim, consInterv1stDim);
 			if (consInterv2ndDim!=null) {
 				// ok this is a 2D interval candidate, we put it in the ArrayList. There simply shouldn't be duplicates
 				consInterval2DCandidates.add(new ConsensusSquare(consInterv1stDim, consInterv2ndDim));
@@ -167,23 +173,21 @@ public class PhiPsiAverager {
 	}
 
 	/**
-	 * Finds all candidates of consensus in the 1st dimension (in phi/psi angle 
+	 * Finds all candidates for consensus in the 1st dimension (in phi/psi angle 
 	 * space, i.e. the phi angles)
 	 * This is the core of the algorithm. We sort phi angle values and then put 
 	 * them together one by one and see if they fit within the angleInterval window 
 	 * and if the consensus is above the voteThreshold. If both this conditions are 
 	 * fullfilled then it is considered a candidate and added to the final output ArrayList
 	 * @param anglesInColumn
-	 * @param voteThreshold
-	 * @param angleInterval
 	 * @return
 	 */
-	private ArrayList<ConsensusInterval> findAllConsInterval1stDim(HashMap<Integer,Double> anglesInColumn, int voteThreshold, int angleInterval) {
+	private ArrayList<ConsensusInterval> findAllConsInterval1stDim(HashMap<Integer,Double> anglesInColumn) {
 		
 		ArrayList<ConsensusInterval> allConsInterv1stDim = new ArrayList<ConsensusInterval>();
 
 		if (anglesInColumn.size()==1) {  // case of 1 template has to be handled specially
-			// there's only 1 index in this case in anglesInColumn, we simply one to grab it by iterating over the 1 member keySet
+			// there's only 1 index in this case in anglesInColumn, we simply want to grab it by iterating over the 1 member keySet
 			int theJindex = 0;
 			for (int index:anglesInColumn.keySet()) { // this loop is only 1 iteration (we are in size==1)
 				theJindex = index;
@@ -201,7 +205,7 @@ public class PhiPsiAverager {
 			LinkedHashMap<Integer, Double> anglesSorted = Goodies.sortMapByValue(anglesInColumn, Goodies.ASCENDING);
 			ArrayList<Double> values = new ArrayList<Double>(anglesSorted.values());
 			ArrayList<Integer> jIndices = new ArrayList<Integer>(anglesSorted.keySet());
-			extendLists(values, jIndices, angleInterval);
+			extendLists(values, jIndices);
 			for (int startIndex=0;startIndex<values.size()-1;startIndex++) {
 				ConsensusInterval consInterv = new ConsensusInterval();
 				consInterv.addVoter(jIndices.get(startIndex), templates.get(jIndices.get(startIndex)).getId(), ConsensusInterval.unwrapAngle(values.get(startIndex)));
@@ -227,11 +231,10 @@ public class PhiPsiAverager {
 	 * ConsensusInterval (recentering first the interval at max-min/2)
 	 * 
 	 * @param anglesInColumn
-	 * @param consInterv1stDim
-	 * @param angleInterval 
+	 * @param consInterv1stDim 
 	 * @return the ConsensusInterval or null if the psi values don't fit within an angleInterval window
 	 */
-	private ConsensusInterval findConsInterval2ndDim(HashMap<Integer,Double> anglesInColumn, ConsensusInterval consInterv1stDim, int angleInterval) {
+	private ConsensusInterval findConsInterval2ndDim(HashMap<Integer,Double> anglesInColumn, ConsensusInterval consInterv1stDim) {
 		
 		// we use a values2ndDim ArrayList to put the 2nd dimension (psi) values corresponding to the given 1st dimension (phi) voters 
 		ArrayList<Double> values2ndDim = new ArrayList<Double>();
@@ -297,7 +300,7 @@ public class PhiPsiAverager {
 		}
 	}
 	
-	private void extendLists (ArrayList<Double> values, ArrayList<Integer> jIndices, int angleInterval) {
+	private void extendLists (ArrayList<Double> values, ArrayList<Integer> jIndices) {
 		
 		// graphically what we are doing is extending the list in this way: (w= angleInterval)
 		//   |-------'-----------------------------------|-------|
