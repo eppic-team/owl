@@ -31,11 +31,12 @@ import tools.MySQLConnection;
 public class Alignment {
 	
 	/*------------------------------ constants ------------------------------*/	
-	
+
+	public static final String PIRFORMAT = "PIR";
+	public static final String FASTAFORMAT = "FASTA";
+
 	private static final char GAPCHARACTER = '-';
-	private static final String PIRFORMAT = "PIR";
-	private static final String FASTAFORMAT = "FASTA";
-	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-]+)";
+	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
 	private static final String FASTAHEADER_CHAR = ">";
 	
 	/*--------------------------- member variables --------------------------*/		
