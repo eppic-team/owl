@@ -1,10 +1,9 @@
 package proteinstructure;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import sequence.BlastHit;
 import sequence.GTGHit;
@@ -18,12 +17,25 @@ public class Template {
 
 	private static final String SCOP_VERSION = "1.73";
 	
+	// 2 types of Template: 
+	// - DB gets PDB data from pdbase db (provided the PDB id) 
+	// - FILE gets PDB data from file (provided the file name) 
+	private static enum Type {DB, FILE};
+	
+	// 2 cases for the id: 
+	// type==Type.DB -> id is pdbCode+pdbChainCode
+	// type==Type.FILE -> id is the file name (without path) 
 	private String id;
+	
+	private File pdbFile; // null if type==Type.DB (i.e. only id provided)
+	
 	private String scopSccsString;
 	private String titleString;
+	
 	private Pdb pdb;
 	private RIGraph graph;
-	//private MySQLConnection conn;
+
+	private Type type;
 
 	private BlastHit blastHit;
 	private GTGHit gtgHit;
@@ -34,8 +46,17 @@ public class Template {
 	 */
 	public Template(String id) {
 		this.id = id;
-		checkId();
-		//getPdbAndScopString(); 
+		this.type = Type.DB; 
+	}
+	
+	/**
+	 * Constructs a Template given a PDB/CASP TS file
+	 * @param pdbFile
+	 */
+	public Template(File pdbFile) {
+		this.pdbFile = pdbFile;
+		this.id = pdbFile.getName(); // i.e. the file name without the path
+		this.type = Type.FILE;
 	}
 	
 	/**
@@ -45,7 +66,6 @@ public class Template {
 	public Template(BlastHit hit) {
 		this.id = hit.getTemplateId();
 		this.blastHit = hit;
-		//getPdbAndScopString();
 	}
 
 	/**
@@ -55,31 +75,30 @@ public class Template {
 	public Template(GTGHit hit) {
 		this.id = hit.getTemplateId();
 		this.gtgHit = hit;
-		//getPdbAndScopString();
-	}
-	
-	/**
-	 * Checks that the id complies to our standard pdbCode+chain, e.g. 1abcA
-	 */
-	private void checkId() {
-		Pattern p = Pattern.compile("\\d\\w\\w\\w\\w");
-		Matcher m = p.matcher(id);
-		if (!m.matches()) {
-			throw new IllegalArgumentException("The given template id: "+id+" is not valid. It must be of the form pdbCode+chain, e.g. 1abcA");
-		}
 	}
 	
 	/**
 	 * Gets the pdb structure coordinates into the pdb object 
+	 * reading the data either from DB or from FILE depending on the type of this Template
+	 * If reading from file only the first chain encountered in the file will be read.
+	 * If type is not DB then simply pass nulls for conn and pdbaseDb
 	 * @param conn
 	 * @param pdbaseDb
 	 */
-	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		String pdbCode = id.substring(0, 4);
-		String chain = id.substring(4);
+	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+		
+		if (type==Type.DB) {
+			String pdbCode = id.substring(0, 4);
+			String chain = id.substring(4);
 
-		pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-		pdb.load(chain);
+			pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+			pdb.load(chain);
+		} 
+		else if (type==Type.FILE) {
+			pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
+			String[] chains = pdb.getChains();
+			pdb.load(chains[0]);
+		}
 
 	}
 	
@@ -92,7 +111,7 @@ public class Template {
 	 * @param ct
 	 * @param cutoff
 	 */
-	public void loadRIGraph(String ct, double cutoff) {
+	protected void loadRIGraph(String ct, double cutoff) {
 		if (this.hasPdbData()) {
 			graph = pdb.get_graph(ct, cutoff);
 		}
@@ -120,7 +139,7 @@ public class Template {
 	/**
 	 * Prints info about this template: id and scop sccs string
 	 */
-	public void print() {
+	protected void print() {
 		System.out.println(id+"\t"+scopSccsString);
 	}
 	

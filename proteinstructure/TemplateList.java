@@ -69,13 +69,14 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
-	 * Constructs a TemplateList from a file with ids in the format pdbCode+chain, e.g. 1abcA
-	 * @param idsFile
+	 * Constructs a TemplateList from a file with a list of PDB ids (in format 
+	 * pdbCode+chain, e.g. 1abcA) or a list of PDB files or a mix of both.
+	 * @param listFile
 	 * @throws IOException
 	 */
-	public TemplateList(File idsFile) throws IOException {
+	public TemplateList(File listFile) throws IOException {
 		list = new ArrayList<Template>();
-		readIdsFromFile(idsFile);
+		readListFile(listFile);
 		pdbDataLoaded = false;
 	}
 	
@@ -92,24 +93,72 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
-	 * Reads a file with a list of ids, creating Templates for them and adding them to this list
-	 * Lines starting with # will be considered as comments
-	 * @param idsFile
+	 * Reads a file with a list of PDB ids, a list of PDB files or a mix of both, 
+	 * creating Templates for them and adding them to this list.
+	 * In the case the line is a PDB id, formats allowed are:
+	 * - 1 column pdbCodes+chainCodes, e.g. 1bxyA
+	 * - 1 column underscore-separated pdbCodes and chainCodes, e.g. 1bxy_A
+	 * - 2 colums tab/spaces-separated pdbCodes and chainCodes, e.g. 1bxy A or 1bxy   A
+	 * See the IDS_REGEX constants of this class for the regexes in use here. A mix
+	 * of the formats is also tolerated. Chain codes can only be a 1 letter code 
+	 * (so we must use an "A" for NULL codes).
+	 * If the line doesn't comply with any of the allowed PDB id formats then it
+	 * is considered a file name (with or without leading path). The only limitation 
+	 * of this is that file names can't be without paths and in the format 1bxyA or 
+	 * 1bxy_A, which anyway would be very confusing. 
+	 * See also {@link #readIdsListFile(File)}
+	 * @param listFile
 	 * @throws IOException
 	 */
-	private void readIdsFromFile(File idsFile) throws IOException {
-		BufferedReader br = new BufferedReader(new FileReader(idsFile));
+	private void readListFile(File listFile) throws IOException {
+		ArrayList<String> idsList = new ArrayList<String>(); 
+		ArrayList<File> filesList = new ArrayList<File>();
+
+		BufferedReader fileIn = new BufferedReader(new FileReader(listFile));
 		String line;
-		while ((line=br.readLine())!=null) {
-			if (line.length()==0) continue;
-			if (line.startsWith("#")) continue;
-			Pattern p = Pattern.compile("\\d\\w\\w\\w\\w");
-			Matcher m = p.matcher(line);
-			if (m.matches()) {
-				this.add(new Template(line));
+		int lineCount=0;
+		while((line = fileIn.readLine()) != null) {
+			lineCount++;
+			if (line.length()!=0 && !line.startsWith("#")) {
+				line = line.trim();
+				Pattern p1 = Pattern.compile(IDS_REGEX1);
+				Matcher m1 = p1.matcher(line);
+				Pattern p2 = Pattern.compile(IDS_REGEX2);
+				Matcher m2 = p2.matcher(line);
+				Pattern p3 = Pattern.compile(IDS_REGEX3);
+				Matcher m3 = p3.matcher(line);				
+
+				if (m1.matches()) {
+					idsList.add(m1.group(1).toLowerCase()+m1.group(2));
+				} 
+				else if (m2.matches()) {
+					idsList.add(m2.group(1).toLowerCase()+m2.group(2));
+				} 
+				else if (m3.matches()){
+					idsList.add(m3.group(1).toLowerCase()+m3.group(2));
+				}
+				else if (line.contains(" ") || line.contains("\t")) {
+					System.err.println("Line "+lineCount+" of list file "+listFile+" doesn't seem to be a PDB id in any of the allowed formats or a file name");
+				}
+				else {
+					// all regexes failed and this line doesn't contain spaces, we consider it is a file name
+					File file = new File(line);
+					if (file.exists()) {
+						filesList.add(file);
+					} else {
+						System.err.println("Line "+lineCount+" of list file "+listFile+" points to a non existing file (or if it was intended to be a PDB id it doesn't comply with any of the allowed formats)");
+					}
+				}
+			
 			}
 		}
-		br.close();
+
+		for (String id:idsList) {
+			this.add(new Template(id));
+		}
+		for (File file:filesList) {
+			this.add(new Template(file));
+		}
 	}
 	
 	/**
@@ -242,8 +291,10 @@ public class TemplateList implements Iterable<Template> {
 	 * Tries to load all data and throws exception if something goes wrong. 
 	 * If there's no PDB code for a certain Template, then we simply print a warning 
 	 * and skip it. We consider subsequently that data were loaded.
-	 * @param conn
-	 * @param pdbaseDb
+	 * If all templates in this list are of type==Template.Type.FILE then simply use 
+	 * nulls for conn and pdbaseDb
+	 * @param conn a db connection or null if all Templates are to be read from file
+	 * @param pdbaseDb a pdbase db name or null if all Templates are to be read from file
 	 * @throws PdbLoadError
 	 * @throws SQLException
 	 */
@@ -341,7 +392,7 @@ public class TemplateList implements Iterable<Template> {
 		codesAL.toArray(codes);
 		return codes;
 	}
-	
+
 	/**
 	 * Filters out from a given list of PDB ids (in format pdbCode+pdbChainCode, e.g. 1abcA)
 	 * the ones that were released after the given date (in format yyyymmdd, e.g. 20060425) 

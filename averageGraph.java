@@ -150,7 +150,9 @@ public class averageGraph {
 				averageGraph.class.getName()+"\n" +
 				"   -p <string> : target pdb code+target chain code (benchmarking), e.g. 1bxyA \n\n" +
 				"   -f <file>   : file with target sequence to be predicted in FASTA format (prediction) \n\n"+
-				"   -P <file>   : file with list of templates' pdb codes+pdb chain codes in 1 column\n" +
+				"   -P <file>   : file with list of PDB ids (pdb codes+pdb chain codes in 1 column)\n" +
+				"                 or a list of PDB files to be used as templates (or a mix of ids \n" +
+				"                 and files)\n" +
 				"   -t <string> : comma separated list of contact types \n" +
 				"   -d <floats> : comma separated list of distance cutoffs (one per contact type) \n" +
 				"   -b <string> : basename for output files (averaged graph, averaged graph with voters \n" +
@@ -365,9 +367,6 @@ public class averageGraph {
 		}
 		
 		// getting template structures
-		//TODO eventually we should read using RIGEnsemble.loadFromListFile adding this case: list file is a list of pdbCodes+pdbChainCodes
-		//     Then RIGEnsemble should also have an alignment to be able to use it for ensembles not sharing same sequence
-		//     By using loadFromListFile we would get the benefit of reading templatesFile that contain a list of pdb files/casp RR files/cm files/cif files
 
 		TemplateList templates = null;
 		try {
