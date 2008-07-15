@@ -25,7 +25,7 @@ public class PhiPsiAverager {
 	private ArrayList<TemplateWithPhiPsi> templates;
 	
 	// these 2 are set when either getConsensusPhiPsiOnTarget or getConsensusPhiPsi are called.
-	private int voteThreshold;
+	private double threshold;
 	private int angleInterval;
 
 	public PhiPsiAverager(TemplateList templates, Alignment aln) {
@@ -73,16 +73,11 @@ public class PhiPsiAverager {
 	public TreeMap<Integer, ConsensusSquare> getConsensusPhiPsi(double threshold, int angleInterval) {
 		
 		this.angleInterval = angleInterval;
+		this.threshold = threshold;
 		
-		if (threshold < 0.5) {
+		if (this.threshold < 0.5) {
 			throw new IllegalArgumentException("Threshold for consensus ph/psi must be above or equal to 0.5");
 		}
-
-		// we round DOWN given threshold. Then in findAllConsInterval1stDim() we apply the cutoff with a '>'.
-		// To make it clear here is an example for the 2 cases even/odd and limit case threshold=0.5: 
-		// - odd case  : 3 templates => voteThreshold=1 : 2 falls within threshold (we use '>')
-		// - even case : 4 templates => voteThreshold=2 : 2 doesn't fall within threshold (we use '>') 
-		this.voteThreshold = (int) (templates.size()*threshold); // the int casting rounds down
 		
 		TreeMap<Integer, ConsensusSquare> bounds = new TreeMap<Integer, ConsensusSquare>();
 
@@ -95,16 +90,17 @@ public class PhiPsiAverager {
 				TemplateWithPhiPsi template = templates.get(j);
 				int resser = al.al2seq(template.getId(), i);
 
-				// we put NaN values by default in case value j is not filled, 
-				// this will happen in 2 cases: template j at col i is a gap, template j at col i is not a gap but has no phi/psi data   
-				phiAnglesColumnI.put(j, Double.NaN);
-				psiAnglesColumnI.put(j, Double.NaN);
 				if (resser!=-1) { // to skip gaps
 					if (template.hasPhiPsiAngles(resser)) { // some columns won't have angle data because of unobserved i, i-1 or i+1 residue. Or for N and C-terminals
 						phiAnglesColumnI.put(j, template.getPhiAngle(resser));
 						psiAnglesColumnI.put(j, template.getPsiAngle(resser));
+					} else {
+						// we put NaN values when template j at col i is not a gap but has no phi/psi data    
+						phiAnglesColumnI.put(j, Double.NaN);
+						psiAnglesColumnI.put(j, Double.NaN);						
 					}
-				} 
+				}
+				// thus phiAnglesColumnI and psiAnglesColumnI won't contain values for any j template that has a gap at column i of the alignment
 			}
 			
 			ConsensusSquare consIntervalPhPsi = findConsSquare(phiAnglesColumnI, psiAnglesColumnI);
@@ -186,6 +182,13 @@ public class PhiPsiAverager {
 		
 		ArrayList<ConsensusInterval> allConsInterv1stDim = new ArrayList<ConsensusInterval>();
 
+		// we round DOWN given threshold. Then we apply the cutoff with a '>'.
+		// To make it clear here is an example for the limit case threshold=0.5 and the 2 cases even/odd number of templates: 
+		// - odd case  : 3 templates => voteThreshold=1 : 2 falls within threshold (we use '>')
+		// - even case : 4 templates => voteThreshold=2 : 2 doesn't fall within threshold (we use '>') 
+		int voteThreshold = (int) (anglesInColumn.size()*threshold); // the int casting rounds down
+		
+		
 		if (anglesInColumn.size()==1) {  // case of 1 template has to be handled specially
 			// there's only 1 index in this case in anglesInColumn, we simply want to grab it by iterating over the 1 member keySet
 			int theJindex = 0;
@@ -378,24 +381,24 @@ public class PhiPsiAverager {
 	 */
 	public static void main(String[] args) throws Exception {
 		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
+		String pdbaseDb = "pdbase";
 		
 		//File templatesFile = new File("/scratch/local/phipsi/T0332.templates");
 		//File alnFile = new File("/scratch/local/phipsi/T0332.target2templ.fasta");
 		//File psipredFile = new File("/scratch/local/phipsi/T0332.horiz");
-		//File templatesFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.templates");
-		//File alnFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.target2templ.fasta");
-		//File psipredFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.horiz");
-		//String targetTag = "T0332";
-		File templatesFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.templates");
-		File alnFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.target2templ.fasta");
-		File psipredFile = new File("/project/StruPPi/CASP8/results/T0396/T0396.horiz");
-		String targetTag = "T0396";
+		File templatesFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.templates");
+		File alnFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.target2templ.fasta");
+		File psipredFile = new File("/project/StruPPi/jose/casp/test_phipsi/T0290.horiz");
+		String targetTag = "T0290";
+		//File templatesFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.templates");
+		//File alnFile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.target2templ.fasta");
+		//File psipredFile = new File("/project/StruPPi/CASP8/results/T0396/T0396.horiz");
+		//String targetTag = "T0396";
 
 		// set this to null if you don't have the pdb file of the target. 
-		File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.reconstructed.pdb");
-		
-		
-		String pdbaseDb = "pdbase";
+		//File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.reconstructed.pdb");
+		File targetPdbfile = null;
+
 		TemplateList templates = new TemplateList(templatesFile);
 		templates.loadPdbData(conn, pdbaseDb);
 		
