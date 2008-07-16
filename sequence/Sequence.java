@@ -16,8 +16,8 @@ import proteinstructure.FastaFileFormatError;
  * Presenting our sequence object(!).
  */
 public class Sequence {
-	
-	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-]+)"; // see also the REGEX in Alignment class
+
+	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)"; // see also the REGEX in Alignment class
 	
 	private String name;
 	private String seq;
