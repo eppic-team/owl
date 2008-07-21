@@ -471,8 +471,11 @@ public class averageGraph {
 			GraphAverager ga = new GraphAverager(ali, templates, targetTag);
 			RIGraph averagedGraph = ga.getAverageGraph();
 			File caspRRFile = new File(outDir,basename+".CASP.RR");
-			int targetNum = Integer.parseInt(targetTag.substring(1)); // note: target tag must be like T0100, otherwise this fails!
-			averagedGraph.setTargetNum(targetNum);
+			Pattern p = Pattern.compile("T(\\d\\d\\d\\d)$");
+			Matcher m = p.matcher(targetTag);
+			if (m.matches()) { // if target tag is not like T0100, targetNum will be not set  
+				averagedGraph.setTargetNum(Integer.parseInt(m.group(1)));
+			}
 			averagedGraph.setCaspModelNum(1);
 			averagedGraph.setAuthorStr(caspAuthorStr);
 			averagedGraph.writeToCaspRRFile(caspRRFile.getAbsolutePath());
@@ -506,13 +509,11 @@ public class averageGraph {
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
 			if (casp) {
 				File outcasptsfile = new File(outDir,basename+".reconstructed.casp");
-				Pattern p = Pattern.compile("T(\\d\\d\\d\\d)");
+				Pattern p = Pattern.compile("T(\\d\\d\\d\\d)$");
 				Matcher m = p.matcher(targetTag);
-				if (m.matches()) { // if target tag is not like T0100, targetNum will be not set 
-					int targetNum = Integer.parseInt(m.group(1)); 
-					pdb.setTargetNum(targetNum);
+				if (m.matches()) { // if target tag is not like T0100, targetNum will be not set  
+					pdb.setTargetNum(Integer.parseInt(m.group(1)));
 				}
-
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
 				pdb.setCaspMethodStr(CASP_METHOD_STR);
