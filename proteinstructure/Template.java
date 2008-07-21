@@ -66,6 +66,7 @@ public class Template {
 	public Template(BlastHit hit) {
 		this.id = hit.getTemplateId();
 		this.blastHit = hit;
+		this.type = Type.DB;
 	}
 
 	/**
@@ -75,6 +76,7 @@ public class Template {
 	public Template(GTGHit hit) {
 		this.id = hit.getTemplateId();
 		this.gtgHit = hit;
+		this.type = Type.DB;
 	}
 	
 	/**
