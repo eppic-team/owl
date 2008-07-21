@@ -358,8 +358,7 @@ public class averageGraph {
 				Pattern p = Pattern.compile("T\\d\\d\\d\\d");
 				Matcher m = p.matcher(targetTag);
 				if (!m.matches()) {
-					System.err.println("Target tag '"+targetTag+"' found in sequence file "+seqFile+" does not look like a CASP target name. If this is not a CASP prediction don't use the -c switch. Exiting.");
-					System.exit(1);
+					System.err.println("WARNING: target tag '"+targetTag+"' found in sequence file "+seqFile+" does not look like a CASP target name. If this is not a CASP prediction don't use the -c switch.");
 				}
 			}
 
