@@ -1134,6 +1134,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return complGraph;
 	}
 	
+	
 	/**
 	 * Removes a vertex from this graph.
 	 * This overridden function also updates the serials2nodes map.
@@ -1148,4 +1149,16 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)
 	// 		At the moment addVertex doesn't update serials2nodes! We work around it by adding the vertices explicitly 
 	//		every time we create a new graph and add vertices to it: e.g. AIGraph.getRIGraph, DBRIGraph, FileRIGraph constructor etc...
+	
+	/**
+	 * Sets the serials2nodes Map from the RIGNodes objects present in this RIGraph
+	 * TODO this is a dirty workaround: we should implement addVertex correctly (see comment above)
+	 */
+	protected void setSerials2NodesMap() {
+		this.serials2nodes = new TreeMap<Integer, RIGNode>();
+		for (RIGNode node:this.getVertices()) {
+			serials2nodes.put(node.getResidueSerial(),node);
+		}
+	}
+
 }
