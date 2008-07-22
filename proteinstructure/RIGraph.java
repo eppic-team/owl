@@ -414,8 +414,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		
 		// inserting nodes
 		stmt = conn.createStatement();
-		for (int resser:serials2nodes.keySet()) {			
-			RIGNode node = serials2nodes.get(resser);
+		for (int resser:this.getSerials()) {			
+			RIGNode node = this.getNodeFromSerial(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			RIGNbhood nbh = this.getNbhood(node);
 			String secStructType = null;
@@ -650,8 +650,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		
 		// inserting nodes
 		PrintStream nodesOut = new PrintStream(new FileOutputStream(graphid+"_nodes.txt"));
-		for (int resser:serials2nodes.keySet()) {			
-			RIGNode node = serials2nodes.get(resser);
+		for (int resser:this.getSerials()) {			
+			RIGNode node = this.getNodeFromSerial(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			RIGNbhood nbh = this.getNbhood(node);			
 			String secStructType = "\\N";
@@ -834,8 +834,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		
 		HashMap<Integer,Integer> resser2nodeser = new HashMap<Integer,Integer>();
 		int nodeSer = 0;
-		for (int resser:serials2nodes.keySet()) {
-			RIGNode node = serials2nodes.get(resser);
+		for (int resser:this.getSerials()) {
+			RIGNode node = this.getNodeFromSerial(resser);
 			if (outDegree(node) > 0) {
 				nodeSer++;
 				resser2nodeser.put(resser, nodeSer);
@@ -967,7 +967,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		Out.close();
 		Out = new PrintStream(new FileOutputStream(filePrefix+"nodes.txt"));
-		for (int resser:this.serials2nodes.keySet()) {
+		for (int resser:this.getSerials()) {
 			RIGNode node = this.getNodeFromSerial(resser);
 			String res = AAinfo.threeletter2oneletter(node.getResidueType());
 			Out.printf(Locale.US,resser+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+degree(node)+"\t"+degree(node)+"\n");
