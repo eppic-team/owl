@@ -22,6 +22,9 @@ public class genGraph {
 	public static final String			DB_USER = getUserName();
 	public static final String			DB_PWD = "nieve";
 	
+	/*--------------------------- type definitions --------------------------*/
+	public enum OutputFormat {CMVIEW, PAUL, SADP};
+	
 	/*---------------------------- private methods --------------------------*/
 	/** 
 	 * Get user name from operating system (for use as database username). 
@@ -40,15 +43,18 @@ public class genGraph {
 		String progName = "genGraph";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-P] \n" +
-				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-P] \n" +
-				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-P] \n\n" +
+				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
+				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
+				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] \n\n" +
 				"In case 2) also a list of comma separated pdb codes+chain codes can be specified, e.g. -p 1bxyA,1josA \n" +
 				"In case 3) if -c not specified then the first chain code in the pdb file will be taken\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n" +
 				"If output dir not specified default is current\n" +
-				"In all cases option -P can be specified to get the graph in paul format instead of aglappe format\n"; 
-
+				"In all cases, the output format can be specified with one of the following options:\n" +
+				"-C CMView graph file format (default)\n" +
+				"-P PAUL format\n" + 
+				"-S SADP format\n"; 
+				
 		String listfile = "";
 		String[] pdbIds = null;
 		String pdbChainCode4file = null;
@@ -57,9 +63,9 @@ public class genGraph {
 		String edgeType = "";
 		double cutoff = 0.0;
 		String outputDir = "."; // we set default to current directory
-		boolean paul = false;
+		OutputFormat outFormat = OutputFormat.CMVIEW;	// output to cmview graph format by default
 		
-		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:Ph?");
+		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:CPSh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -87,9 +93,15 @@ public class genGraph {
 			case 'D':
 				pdbaseDb = g.getOptarg();
 				break;
+			case 'C':
+				outFormat = OutputFormat.CMVIEW;
+				break;	
 			case 'P':
-				paul = true;
-				break;				
+				outFormat = OutputFormat.PAUL;				
+				break;
+			case 'S':
+				outFormat = OutputFormat.SADP;
+				break;	
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -150,10 +162,10 @@ public class genGraph {
 					String edgeTypeStr = edgeType.replaceAll("/", ":");
 					
 					File outputFile = new File(outputDir,pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".cm");
-					if (!paul) {
-						graph.write_graph_to_file(outputFile.getAbsolutePath());
-					} else {
-						graph.writeToPaulFile(outputFile.getAbsolutePath());
+					switch(outFormat) {
+					case CMVIEW: graph.write_graph_to_file(outputFile.getAbsolutePath()); break;
+					case PAUL: graph.writeToPaulFile(outputFile.getAbsolutePath()); break;
+					case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 					}
 
 					//long end = System.currentTimeMillis();
@@ -193,10 +205,10 @@ public class genGraph {
 				
 				String filename = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf("."));
 				File outputFile = new File(outputDir,filename+"_"+edgeTypeStr+"_"+cutoff+".cm");
-				if (!paul) {
-					graph.write_graph_to_file(outputFile.getAbsolutePath());
-				} else {
-					graph.writeToPaulFile(outputFile.getAbsolutePath());
+				switch(outFormat) {
+				case CMVIEW: graph.write_graph_to_file(outputFile.getAbsolutePath()); break;
+				case PAUL: graph.writeToPaulFile(outputFile.getAbsolutePath()); break;
+				case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 				}
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbFile);
 				
