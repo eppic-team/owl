@@ -926,6 +926,12 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		out.close();
 	}
 	
+	/**
+	 * Write the graph to a file comptabile with the SADP program by Johannes Jain.
+	 * See: Brijnesh J. Jain, Michael Lappe: Joining Softassign and Dynamic Programming for the Contact Map Overlap Problem. BIRD 2007: 410-423
+	 * @param outfile
+	 * @throws IOException
+	 */
 	public void writeToSADPFile (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println(this.getFullLength());
