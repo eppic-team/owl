@@ -120,7 +120,7 @@ public class GraphAverager {
 			System.err.println("Could not create alignment: " + e.getMessage());
 		}
 		
-		checkSequences();	
+		checkSequences(); // may throw GraphAveragerError	
 		countVotes(); // does the averaging by counting the votes and putting them into contactVotes		
 	}
 	
