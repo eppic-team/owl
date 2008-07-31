@@ -50,10 +50,11 @@ public class genGraph {
 				"In case 3) if -c not specified then the first chain code in the pdb file will be taken\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n" +
 				"If output dir not specified default is current\n" +
+				"\n" +
 				"In all cases, the output format can be specified with one of the following options:\n" +
-				"-C CMView graph file format (default)\n" +
-				"-P PAUL format\n" + 
-				"-S SADP format\n"; 
+				" -C CMView graph file format (default)\n" +
+				" -P PAUL format\n" + 
+				" -S SADP format\n"; 
 				
 		String listfile = "";
 		String[] pdbIds = null;
