@@ -118,4 +118,23 @@ public class Sequence {
 		}
 		Out.close();
 	} 
+	
+	/**
+	 * Prints a ruler with column numbers in steps of 10 up to the given length.
+	 * @param length
+	 */
+	public static void printSeqRuler(int length) {
+		StringBuilder st = new StringBuilder(length);
+		for (int i = 10; i <= length; i+=10) {
+			st.append(String.format("%10d", i));
+		}
+		System.out.println(st);
+		
+		st = new StringBuilder(length);
+		for (int i = 10; i <= length; i+=10) {
+			st.append(String.format("%10s", "|"));
+		}
+		System.out.println(st);
+
+	}
 }
