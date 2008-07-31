@@ -185,6 +185,26 @@ import jaligner.util.*;
 	        System.out.println ( new Pair().format(alignment) );		
 		}
 		
+		/**
+		 * Return the mapping of indices from sequence 1 to indices in sequence 2 based on the calculated alignment.
+		 * Indices are counted from 0 to sequence length - 1.
+		 * @return An array containing for each position in sequence 1 the corresponding position in sequence 2 or -1
+		 * if the position maps to a gap. 
+		 */
+		public int[] getMapping1To2() {
+			return getMapping(true);
+		}
+		
+		/**
+		 * Return the mapping of indices from sequence 2 to indices in sequence 1 based on the calculated alignment.
+		 * Indices are counted from 0 to sequence length - 1.
+		 * @return An array containing for each position in sequence 2 the corresponding position in sequence 1 or -1
+		 * if the position maps to a gap. 
+		 */
+		public int[] getMapping2To1() {
+			return getMapping(false);
+		}		
+		
 		/*---------------------------- private methods --------------------------*/
 		
 	    /**
@@ -202,6 +222,37 @@ import jaligner.util.*;
 	    	return bufi.toString();
 	    }
 		
-		
+	    /**
+	     * @param one2two specifies which mapping is to be returned
+	     * @return Returns the mapping from sequence 1 sequence 2 (if one2two = true) or
+	     * from sequence 2 to sequence 1 (if one2two = false).
+	     */
+		private int[] getMapping(boolean one2two) {
+			int[] m1 = new int[origSeq1.length()];
+			int[] m2 = new int[origSeq2.length()];
+			int idx1 = 0;
+			int idx2 = 0;
+			for (int i = 0; i < alignedSeq1.length(); i++) {
+				// process seq1
+				if(alignedSeq1.charAt(i) != Alignment.GAP) {
+					if(alignedSeq2.charAt(i) != Alignment.GAP) {
+						m1[idx1] = idx2;
+					} else {
+						m1[idx1] = -1;
+					}
+				}
+				// process seq2
+				if(alignedSeq2.charAt(i) != Alignment.GAP) {
+					if(alignedSeq1.charAt(i) != Alignment.GAP) {
+						m2[idx2] = idx1;
+					} else {
+						m2[idx2] = -1;
+					}					
+				}
+				if(alignedSeq1.charAt(i) != Alignment.GAP) idx1++;
+				if(alignedSeq2.charAt(i) != Alignment.GAP) idx2++;
+			}
+			if(one2two) return m1; else return m2;
+		}
 	}
 
