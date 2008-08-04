@@ -51,11 +51,9 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		this.distCutoff=0;
 		this.contactType=null;
 		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
-		serials2nodes = new TreeMap<Integer,RIGNode>();
 		for(int i=0; i < sequence.length(); i++) {
 			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
-			this.addVertex(node);
-			serials2nodes.put(i+1, node);
+			this.addVertex(node); // this also updates the serials2nodes map
 		}
 	}
 	
@@ -463,7 +461,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		rsst.close();
 		int nodeId = maxNodeId-this.getVertexCount();
-		for (int resser:serials2nodes.keySet()) {
+		for (int resser:this.getSerials()) {
 			nodeId++;
 			resser2nodeid.put(resser, nodeId);			
 		}
@@ -704,7 +702,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		rsst.close();
 		stmt.close();
 		int nodeId = firstNodeId;
-		for (int resser:serials2nodes.keySet()) {
+		for (int resser:this.getSerials()) {
 			resser2nodeid.put(resser, nodeId);	
 			nodeId++;
 		}
@@ -1077,14 +1075,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		newGraph.setSequence(sequence);
 		newGraph.setSingleModelsDb(singleModelsDb);
 		
-		// copying nodes and serials2nodes
-		TreeMap<Integer,RIGNode> newSerials2nodes = new TreeMap<Integer,RIGNode>();
+		// copying nodes
 		for (RIGNode node:this.getVertices()) {
 			RIGNode newNode = node.copy();
 			newGraph.addVertex(newNode);
-			newSerials2nodes.put(newNode.getResidueSerial(),newNode);
 		}
-		newGraph.setSerials2NodesMap(newSerials2nodes);
 		
 		// copying edges
 		for (RIGEdge edge:this.getEdges()) {
@@ -1148,17 +1143,35 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 */
 	@Override
 	public boolean removeVertex(RIGNode vertex) {
-		serials2nodes.remove(vertex.getResidueSerial());
-		return super.removeVertex(vertex);
+		if (serials2nodes.containsKey(vertex.getResidueSerial())) {
+			serials2nodes.remove(vertex.getResidueSerial());
+			return super.removeVertex(vertex);
+		} else {
+			return false;
+		}
 	}
 	
-	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)
-	// 		At the moment addVertex doesn't update serials2nodes! We work around it by adding the vertices explicitly 
-	//		every time we create a new graph and add vertices to it: e.g. AIGraph.getRIGraph, DBRIGraph, FileRIGraph constructor etc...
+	/**
+	 * Adds a vertex to this graph.
+	 * This overridden function also updates the serials2nodes map.
+	 * @return true if add is successful (node not present in graph so can be added), false otherwise (node already in graph so not added)
+	 */
+	@Override
+	public boolean addVertex(RIGNode vertex) {
+		if (!serials2nodes.containsKey(vertex.getResidueSerial())) {
+			serials2nodes.put(vertex.getResidueSerial(),vertex);
+			return super.addVertex(vertex);
+		} else {
+			return false;
+		}
+	}
 	
 	/**
 	 * Sets the serials2nodes Map from the RIGNodes objects present in this RIGraph
-	 * TODO this is a dirty workaround: we should implement addVertex correctly (see comment above)
+	 * This should be used in cases where a RIGraph has been created using some external 
+	 * classes (e.g. JUNG algorithms). In those cases a generic addVertex is called instead of our
+	 * overridden addVertex to create the nodes, thus serials2nodes will not have been set correctly.
+	 * So this method needs to be called to set the mapping of serials to nodes.  
 	 */
 	protected void setSerials2NodesMap() {
 		this.serials2nodes = new TreeMap<Integer, RIGNode>();
@@ -1166,5 +1179,4 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			serials2nodes.put(node.getResidueSerial(),node);
 		}
 	}
-
 }

@@ -4,7 +4,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
-import java.util.TreeMap;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -187,8 +186,6 @@ public class DbRIGraph extends RIGraph {
 	 */
 	private void read_graph_from_db() throws SQLException{
 
-		serials2nodes = new TreeMap<Integer,RIGNode>();
-
 		// reading secondary structure
 		secondaryStructure = new SecondaryStructure(this.sequence);
 		String sql = "SELECT sstype, ssid, min(num), max(num) FROM "+dbname+".single_model_node " +
@@ -211,8 +208,7 @@ public class DbRIGraph extends RIGraph {
 			int num=rsst.getInt(1);
 			String res=rsst.getString(2);
 			RIGNode node = new RIGNode(num,AAinfo.oneletter2threeletter(res),secondaryStructure.getSecStrucElement(num));
-			serials2nodes.put(num,node);
-			this.addVertex(node);
+			this.addVertex(node); // this takes care of updating the serials2nodes map
 		}
 				
 		if (checkCount==0) { // no nodes: empty graph, we return
@@ -237,7 +233,7 @@ public class DbRIGraph extends RIGraph {
 			int atomWeight=rsst.getInt(3);
 			double distance=rsst.getDouble(4);
 			RIGEdge e = new RIGEdge(atomWeight);
-			this.addEdge(e, serials2nodes.get(i),serials2nodes.get(j),et);
+			this.addEdge(e, getNodeFromSerial(i), getNodeFromSerial(j),et);
 			e.setDistance(distance);
 		}
 		rsst.close();
@@ -246,9 +242,9 @@ public class DbRIGraph extends RIGraph {
 		// if db has correct residue numbering then this should get the right full length,
 		// we will only miss: gaps (unobserved residues) at the end of the sequence. Those we can't know unless full sequence is given
 		if (sid == null) {
-			this.fullLength=Collections.max(serials2nodes.keySet());
+			this.fullLength=Collections.max(getSerials());
 		} else {
-			this.fullLength=serials2nodes.size();
+			this.fullLength=getVertexCount();
 		}
 
 	}

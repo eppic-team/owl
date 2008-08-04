@@ -1064,7 +1064,6 @@ public abstract class Pdb {
 
 		// creating the AIGraph
 		AIGraph graph = new AIGraph();
-		TreeMap<Integer,AIGNode> aignodemap = new TreeMap<Integer,AIGNode>();
 		TreeMap<Integer,RIGNode> rignodemap = new TreeMap<Integer,RIGNode>();
 		TreeSet<Integer> atomSerials = new TreeSet<Integer>();
 		atomSerials.addAll(i_coords.keySet());
@@ -1082,12 +1081,10 @@ public abstract class Pdb {
 				rignodemap.put(resser,resNode);
 			}
 			AIGNode atomNode = new AIGNode(atomSer,atomser2atom.get(atomSer),rignodemap.get(resser));
-			aignodemap.put(atomSer,atomNode);
-			graph.addVertex(atomNode);
+			graph.addVertex(atomNode); // this also adds the atomNode to the serials2nodes map
 		}
 		
 		graph.setSecondaryStructure(secondaryStructureCopy);
-		graph.setSerials2NodesMap(aignodemap);
 		graph.setCutoff(cutoff);
 		graph.setSequence(sequence);
 		graph.setPdbCode(pdbCode);
@@ -1112,13 +1109,13 @@ public abstract class Pdb {
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
 					if (!crossed) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(i_atomserials[i]), graph.getNodeFromSerial(j_atomserials[j]), EdgeType.UNDIRECTED);
 					}
 					// This condition is to take care of crossed contact types that have overlapping sets of atoms: 
 					//   the matrix would contain both i,j and j,i but that's only 1 edge in the AIGraph
 					//TODO if our AIGraph didn't allow parallel edges, this extra check woudn't be necessary
-					else if (graph.findEdge(aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]))==null) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), aignodemap.get(i_atomserials[i]), aignodemap.get(j_atomserials[j]), EdgeType.UNDIRECTED);
+					else if (!graph.containsEdgeIJ(i_atomserials[i], j_atomserials[j])) {
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(i_atomserials[i]), graph.getNodeFromSerial(j_atomserials[j]), EdgeType.UNDIRECTED);
 					}
 				}
 

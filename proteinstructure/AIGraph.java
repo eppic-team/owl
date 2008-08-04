@@ -65,20 +65,12 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		resGraph.setParents(this.caspParents);
 		resGraph.setSequence(this.sequence);
 		resGraph.setSecondaryStructure(this.secondaryStructure);
-	
-		TreeMap<Integer,RIGNode> rignodes = new TreeMap<Integer,RIGNode>();
+
+		// putting the RIGnodes into the RIGraph
 		for (AIGNode atomNode:this.getVertices()) {
 			RIGNode resNode = atomNode.getParent();
-			int resser = resNode.getResidueSerial();
-			rignodes.put(resser, resNode); // we put in the map each RIGNode several times, that should be fine
+			resGraph.addVertex(resNode); // this takes care of updating the serial2nodes map, it will also take care of not adding duplicate nodes
 		}
-		
-		// putting the RIGnodes into the RIGraph 
-		for (int resser:rignodes.keySet()){
-			resGraph.addVertex(rignodes.get(resser));
-		}
-		
-		resGraph.setSerials2NodesMap(rignodes);
 		
 		// collapsing atomPairs into resPairs and counting atom contacts to assign atom weights
 		HashMap<Pair<RIGNode>,Integer> pairs2weights = new HashMap<Pair<RIGNode>, Integer>();
@@ -128,7 +120,12 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 		return node.getParent().getResidueSerial();
 	}
 	
-	public boolean addGraph(AIGraph graph) {
+	/**
+	 * Adds given AIGraph to this AIGraph.
+	 * @param graph
+	 * @return true if any new nodes or edges are added to this graph, false otherwise 
+	 */
+	protected boolean addGraph(AIGraph graph) {
 		//NOTE:The checks below would make sense only for adding RIGraphs
 		//In AIGraphs we have as nodes only the selected atoms and not all atoms
 		/*
@@ -156,15 +153,14 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 			if (!rignodes.containsKey(atomNode.getParent().getResidueSerial())) {
 				v = atomNode.getParent();
 				rignodes.put(v.getResidueSerial(), v);
-				change = true;
+				change = true; // TODO is this correct? here we are not altering this AIGraph yet
 			} else {
 				v = rignodes.get(atomNode.getParent().getResidueSerial()); 
 			}
-			if (!this.serials2nodes.containsKey(atomNode.getAtomSerial())) {
+			if (!this.containsVertexI(atomNode.getAtomSerial())) {
 				change = true;
 				AIGNode v1 = new AIGNode (atomNode.getAtomSerial(), atomNode.getAtomName(), v);
 				this.addVertex(v1);
-				this.serials2nodes.put(atomNode.getAtomSerial(), v1);
 			}
 		}
 		
@@ -189,12 +185,27 @@ public class AIGraph extends ProtStructGraph<AIGNode,AIGEdge> {
 	 */
 	@Override
 	public boolean removeVertex(AIGNode vertex) {
-		serials2nodes.remove(vertex.getAtomSerial());
-		return super.removeVertex(vertex);
+		if (serials2nodes.containsKey(vertex.getAtomSerial())) {
+			serials2nodes.remove(vertex.getAtomSerial());
+			return super.removeVertex(vertex);
+		} else {
+			return false;
+		}
 	}
 	
-	//TODO must also implement addVertex in the same way as removeVertex (so that we update the serials2nodes map)
-	// 		At the moment addVertex doesn't update serials2nodes! We work around it by adding the vertices explicitly 
-	//		every time we create a new graph and add vertices to it: e.g. in Pdb.getAIGraph
-
+	/**
+	 * Adds a vertex to this graph.
+	 * This overridden function also updates the serials2nodes map.
+	 * @return true if add is successful (node not present in graph so can be added), false otherwise (node already in graph so not added)
+	 */
+	@Override
+	public boolean addVertex(AIGNode vertex) {
+		if (!serials2nodes.containsKey(vertex.getAtomSerial())) {
+			serials2nodes.put(vertex.getAtomSerial(),vertex);
+			return super.addVertex(vertex);
+		} else {
+			return false;
+		}
+	}
+	
 }

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -151,12 +150,10 @@ public class FileRIGraph extends RIGraph {
 		}
 
 		// populating this RIGraph with nodes and setting fullLength
-		serials2nodes = new TreeMap<Integer,RIGNode>();
 		this.fullLength = sequence.length();
 		for (int i=0;i<sequence.length();i++){
 			String letter = String.valueOf(sequence.charAt(i));
 			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
-			serials2nodes.put(i+1, node);
 			this.addVertex(node);
 		}
 
@@ -168,7 +165,7 @@ public class FileRIGraph extends RIGraph {
 		// populating this RIGraph with  RIGEdges
 		for (Pair<Integer> resPair:contacts2weights.keySet()){
 			//TODO we are reading the 3rd column as weights (not as atom weights), we might need to change this or read a 4th column or something else
-			this.addEdge(new RIGEdge(contacts2weights.get(resPair)), serials2nodes.get(resPair.getFirst()), serials2nodes.get(resPair.getSecond()), et);
+			this.addEdge(new RIGEdge(contacts2weights.get(resPair)), getNodeFromSerial(resPair.getFirst()), getNodeFromSerial(resPair.getSecond()), et);
 		}
 		
 		

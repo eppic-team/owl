@@ -4,7 +4,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import edu.uci.ics.jung.graph.SparseGraph;
-import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
@@ -58,7 +57,11 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	
 	protected SecondaryStructure secondaryStructure;
 	
-	protected TreeMap<Integer,V> serials2nodes;
+	protected TreeMap<Integer,V> serials2nodes; // Keeps the nodes mapped to their corresponding serials (can be 
+												// residue serials in RIGraph case or atom serials in AIGraph case)
+												// We override addVertex and removeVertex in both RIGraph and AIGraph
+												// to take care of updating this Map
+												// Don't use this Map directly, use instead methods like getNodeFromSerial()
 	
 	public ProtStructGraph() {
 		super();
@@ -72,6 +75,7 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 		this.maxSeqSep = NO_SEQ_SEP_VAL;
 		this.secondaryStructure = null;
 		this.comment = null;
+		this.serials2nodes = new TreeMap<Integer, V>();
 	}
 
 	/**
@@ -88,10 +92,6 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 	 */
 	public abstract int getResidueSerial(V node);
 
-	protected void setSerials2NodesMap(TreeMap<Integer,V> serials2nodes) {
-		this.serials2nodes = serials2nodes;
-	}
-	
 	/**
 	 * Returns the RIG/AIG Node object given a residue/atom serial
 	 * @param serial
@@ -388,38 +388,5 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 			this.removeEdge(edge);
 		}
 	}
-	
-	/**
-	 * Removes the given edge from this graph
-	 * Overrides removeEdge from SparseGraph just to fix a bug (filed in bug tracker with request ID: 1844767)
-	 * TODO: when bug is fixed in the next JUNG2 release get rid of this
-	 * @return true if the edge is present and thus can be removed, false if the edge is not present
-	 */
-	@Override
-    public boolean removeEdge(E edge)
-    {
-        if (!containsEdge(edge)) 
-            return false;
-        
-        Pair<V> endpoints = getEndpoints(edge);
-        V v1 = endpoints.getFirst();
-        V v2 = endpoints.getSecond();
-        
-        // remove edge from incident vertices' adjacency maps
-        if (getEdgeType(edge) == EdgeType.DIRECTED)
-        {
-            vertex_maps.get(v1)[OUTGOING].remove(v2);
-            vertex_maps.get(v2)[INCOMING].remove(v1);
-            directed_edges.remove(edge);
-        }
-        else
-        {
-            vertex_maps.get(v1)[INCIDENT].remove(v2);
-            vertex_maps.get(v2)[INCIDENT].remove(v1);
-            undirected_edges.remove(edge);
-        }
-
-        return true;
-    }
 		
 }

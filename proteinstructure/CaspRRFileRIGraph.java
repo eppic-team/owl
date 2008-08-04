@@ -1,7 +1,6 @@
 package proteinstructure;
 
 import java.io.*;
-import java.util.*;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 
@@ -47,14 +46,12 @@ public class CaspRRFileRIGraph extends RIGraph {
 		this.caspModelNum = rrData.modelNum;
 		
 		// add vertices
-		serials2nodes = new TreeMap<Integer,RIGNode>();
 		if (sequence == null || sequence.equals("")) throw new GraphFileFormatError("No sequence found in " + fileName);
 		this.fullLength = sequence.length();
 		for (int i=0;i<sequence.length();i++){
 			String letter = String.valueOf(sequence.charAt(i));
 			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
-			serials2nodes.put(i+1, node);
-			this.addVertex(node);
+			this.addVertex(node); // this takes care of updating the serials2nodes map
 		}
 
 		// set distCutoff
@@ -69,7 +66,7 @@ public class CaspRRFileRIGraph extends RIGraph {
 				throw new GraphFileFormatError("Distance cutoffs in " + fileName + " are not equal.");
 			if (cont.i>=cont.j) 
 				throw new GraphFileFormatError("Contact "+cont.i+"-"+cont.j+" specified with i>j in " + fileName+". Only j>i contacts are allowed in CASP RR files.");
-			this.addEdge(new RIGEdge(cont.weight), serials2nodes.get(cont.i), serials2nodes.get(cont.j), EdgeType.UNDIRECTED);
+			this.addEdge(new RIGEdge(cont.weight), getNodeFromSerial(cont.i), getNodeFromSerial(cont.j), EdgeType.UNDIRECTED);
 		}
 	}
 	
