@@ -105,7 +105,7 @@ public class MaxClusterRunner {
 	
 	/**
 	 * Compares all files from a predictionList with experiment file returning an ArrayList of scores
-	 * @param predictionList
+	 * @param predictionList the name of a text file containing file names of models to be evaluated
 	 * @param experiment
 	 * @param scoreType 
 	 * @return list of the rankings
@@ -172,7 +172,7 @@ public class MaxClusterRunner {
 	 * @param in
 	 * @return list of the rankings or null if something goes wrong
 	 */
-	public ArrayList<MaxClusterRow> readMaxClusterRanking(BufferedReader in, ScoreType scoreType) throws IOException{
+	private ArrayList<MaxClusterRow> readMaxClusterRanking(BufferedReader in, ScoreType scoreType) throws IOException{
 		ArrayList<MaxClusterRow> table = new ArrayList<MaxClusterRow>();
 
 		String line;
@@ -228,7 +228,7 @@ public class MaxClusterRunner {
 	 * Read a distance matrix output file of the Maxcluster program
 	 * @param fileName
 	 */
-	public HashMap<Pair<Integer>,Double> readMaxclusterMatrix(String fileName) throws IOException{
+	private HashMap<Pair<Integer>,Double> readMaxclusterMatrix(String fileName) throws IOException{
 		HashMap<Pair<Integer>,Double> matrix = new HashMap<Pair<Integer>, Double>();
 		BufferedReader in = new BufferedReader(new FileReader(fileName));
 		String line;
