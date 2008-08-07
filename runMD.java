@@ -2,6 +2,7 @@ import gnu.getopt.Getopt;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Locale;
 
 import tinker.GromacsError;
 import tinker.GromacsMDP;
@@ -17,9 +18,12 @@ public class runMD {
 	private static final File GMX_BIN_DIR_32 = new File(GMX_ROOT,"i686/bin");
 	private static final File GMX_BIN_DIR_64 = new File(GMX_ROOT,"x86_64/bin");
 	
-	private static final int DEFAULT_REFINE_TIME = 300;
-	private static final int DEFAULT_EQ_TIME = 200;
+	private static final int DEFAULT_MD_TIME = 300;
+	private static final int DEFAULT_PR_TIME = 200;
 	private static final String FORCE_FIELD = GromacsRunner.GROMOS96_43a1;;
+	
+	private static final String GROUP_FOR_GRO2PDB = "Protein";  // this is the group from the gro file that will be converted to pdb
+																// other possible values: "System" (also water goes to pdb), "Protein-H" (only non-H atoms of protein) 
 	
 	public static void main(String[] args) {
 
@@ -30,19 +34,24 @@ public class runMD {
 			"   -i <file>   : input PDB file \n" +
 			"  [-o <dir>]   : output directory, default: current dir \n"+
 			"  [-p <int>]   : number of processes (uses parallel gromacs through MPI)\n" +
-			"  [-t <int>]   : md simulation time in picoseconds, default: "+DEFAULT_REFINE_TIME+"\n" +
-			"  [-q <int>]   : equilibration time in picoseconds, default: "+DEFAULT_EQ_TIME+"\n" +
-			"  [-a]         : the md will be done using a simulated annealing protocol, default: no annealing\n\n"; 
+			"  [-t <int>]   : md simulation time in picoseconds, default: "+DEFAULT_MD_TIME+"\n" +
+			"  [-q <int>]   : equilibration time in picoseconds, default: "+DEFAULT_PR_TIME+"\n" +
+			"  [-a]         : the md will be done using a simulated annealing protocol, \n" +
+			"                 default: no annealing\n" +
+			"  [-s <int>]   : output of md run will be splitted to new files every given number \n" +
+			"                 of picoseconds, default: md outputs to only one file for whole \n" +
+			"                 simulation time\n\n"; 
 	
 
 		File inputPdb = null;
 		File outDir = new File(".");
 		int numProc = 1;
-		int simulationTime = DEFAULT_REFINE_TIME;
-		int equilibrationTime = DEFAULT_EQ_TIME;
+		int simulationTime = DEFAULT_MD_TIME;
+		int equilibrationTime = DEFAULT_PR_TIME;
 		boolean annealing = false;
+		int splitTime = 0;
 
-		Getopt g = new Getopt(PROG_NAME, args, "i:o:p:t:q:ah?");
+		Getopt g = new Getopt(PROG_NAME, args, "i:o:p:t:q:as:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -63,7 +72,10 @@ public class runMD {
 				break;
 			case 'a':
 				annealing = true;
-				break;								
+				break;
+			case 's':
+				splitTime = Integer.parseInt(g.getOptarg());
+				break;												
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -83,7 +95,16 @@ public class runMD {
 			System.err.println("Input PDB file must have pdb extension");
 			System.exit(1);
 		}
-
+		
+		if (splitTime>=simulationTime) {
+			System.err.println("Split time must not be bigger than md simulation time");
+			System.exit(1);
+		}
+		
+		if (splitTime>0 && annealing) {
+			System.err.println("Split md output is incompatible with annealing");
+			System.exit(1);
+		}
 		
 		// gromacs bin dir
 		File gmxBinDir = GMX_BIN_DIR_32;
@@ -107,10 +128,14 @@ public class runMD {
 			gmdp.writeToFile(emMdp);
 			gmdp.setPRValues(equilibrationTime);
 			gmdp.writeToFile(prMdp);
+			int simTime = simulationTime;
+			if (splitTime!=0) {
+				simTime = splitTime;
+			}
 			if (annealing) {
-				gmdp.setAnnealValues(simulationTime);
+				gmdp.setAnnealValues(simTime);
 			} else {
-				gmdp.setMDValues(simulationTime);
+				gmdp.setMDValues(simTime);
 			}
 			gmdp.writeToFile(mdMdp);
 		} catch (FileNotFoundException e) {
@@ -141,7 +166,8 @@ public class runMD {
 		File mdTpr  = new File(outDir,basename+".md.tpr");
 		File mdTrr  = new File(outDir,basename+".md.trr");
 		File mdEdr  = new File(outDir,basename+".md.edr");
-		File mdXtc  = new File(outDir,basename+".md.xtc");
+		File mdXtc  = new File(outDir,basename+".md.xtc");		
+		File endPdb = new File(outDir,basename+".md.pdb");
 		
 		// running gromacs
 		try {
@@ -162,9 +188,33 @@ public class runMD {
 			// 5. pr
 			System.out.println("Running Position Restrained equilibration");
 			gr.doSimulation(emGro, iniTop, prMdp, prTpr, prGro, prTrr, prEdr, prXtc, prLog);
-			// 6. md (with annealing)
+			// 6. md
 			System.out.println("Running Molecular Dynamics simulation");
-			gr.doSimulation(prGro, iniTop, mdMdp, mdTpr, mdGro, mdTrr, mdEdr, mdXtc, mdLog);
+			File lastGro = prGro;
+			if (splitTime==0) {
+				gr.doSimulation(prGro, iniTop, mdMdp, mdTpr, mdGro, mdTrr, mdEdr, mdXtc, mdLog);
+				lastGro = new File(mdGro.getParent(),mdGro.getName()); // will be used as the final gro to be converted to pdb
+			} else {
+				for (int t=splitTime;t<=simulationTime;t+=splitTime) {
+					String suffix = getSuffix(t);
+					System.out.println("Running simulation up to "+suffix);
+					mdGro  = new File(outDir,basename+"."+suffix+".md.gro");
+					mdLog  = new File(outDir,basename+"."+suffix+".md.log");
+					mdTpr  = new File(outDir,basename+"."+suffix+".md.tpr");
+					mdTrr  = new File(outDir,basename+"."+suffix+".md.trr");
+					mdEdr  = new File(outDir,basename+"."+suffix+".md.edr");
+					mdXtc  = new File(outDir,basename+"."+suffix+".md.xtc");
+					gr.doSimulation(lastGro, iniTop, mdMdp, mdTpr, mdGro, mdTrr, mdEdr, mdXtc, mdLog);
+					lastGro = new File(mdGro.getParent(),mdGro.getName());
+					endPdb = new File(outDir,basename+"."+suffix+".md.pdb"); // this is actually only used in final iteration (for conversion to pdb)
+				}
+			}
+			// 7. convert gro 2 pdb
+			System.out.println("Converting final gro file "+lastGro+" to pdb "+endPdb);
+			gr.convertGro2Pdb(lastGro, endPdb, GROUP_FOR_GRO2PDB);
+			
+			// FLUSH log
+			gr.closeLog();
 		}
 		catch (FileNotFoundException e) {
 			System.err.println("Couldn't write to log file "+logFile+", error: "+e.getMessage()+"\nExiting");
@@ -174,6 +224,16 @@ public class runMD {
 			System.err.println("Gromacs error: "+e.getMessage()+"\nExiting");
 			System.exit(1);
 		}
+	}
+	
+	private static String getSuffix(int t) {
+		String units = "ps";
+		if (t>=1000) {
+			units = "ns";
+			t = t/1000;
+		}
+		String suffix = String.format(Locale.US,"%04d"+units,t);
+		return suffix;
 	}
 
 }

@@ -35,7 +35,7 @@ public class GromacsRunner {
 	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	private static final long currentTimeMS = System.currentTimeMillis(); // for a unique name of temp files
 	
-	private static final boolean debug = true;
+	private static final boolean debug = false;
 	
 	// force fields
 	public static final String GROMOS96_43a1 = "G43a1"; //GROMOS96 43a1 (option 0)
@@ -202,11 +202,13 @@ public class GromacsRunner {
 	
 	private void runGrompp(File inMdp, File inGro, File inTop, File outTpr, int numProc) throws GromacsError {
 		// by default grompp writes a mdout.mdp which is just a confirmation of what it read from inMdp, pretty useless except for debugging
-		File mdoutMdp = new File(TMP_DIR,"mdout_"+currentTimeMS+".mdp");
-		if (!debug) mdoutMdp.deleteOnExit();  
+		File mdoutMdp = new File(TMP_DIR,"mdout_"+currentTimeMS+".mdp");  
 		
 		String cmdLine = gromppProg+" -f "+inMdp+" -c "+inGro+" -p "+inTop+" -o "+outTpr + " -po " + mdoutMdp + " -np "+numProc;
 		runProg(cmdLine, GROMPP_PROG, null);
+		
+		// deleteOnExit is not enough, because if runnining several mdruns within one java program then mdoutMdp won't be deleted from one run to the next
+		if (!debug) mdoutMdp.delete();
 	}
 	
 	private void runMdrun(File inTpr, File outTrr, File outGro, File outEdr, File outXtc, File log) throws GromacsError {
@@ -346,6 +348,7 @@ public class GromacsRunner {
 	 */
 	public void addIons(File inGro, File ioTop, File outGro, File mdp, File log, int charge) throws GromacsError{
 		File ionTpr = new File(TMP_DIR,"ions_"+currentTimeMS+".tpr");
+		if (!debug) ionTpr.deleteOnExit();
 		runGrompp(mdp, inGro, ioTop, ionTpr, 1);
 		int negCharge = 1;
 		int posCharge = 1;
