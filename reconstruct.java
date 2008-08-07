@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
@@ -27,42 +29,66 @@ public class reconstruct {
 
 	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
 	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
+
+	private static final double DEFAULT_FORCECONSTANT_DISTANCE = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE;
+	private static final String DEFAULT_CONTACT_TYPE = "Cb";
+	private static final double DEFAULT_CUTOFF = 8.0;
 	
 	private static final TreeMap<Integer, ConsensusSquare> NO_PHIPSI_CONSTRAINTS = null;
 	private static final boolean NO_OMEGA_CONSTRAINTS = false;
 	
+	private static final String PROG_NAME = "reconstruct";
+	
 	public static void main(String[] args) {
 		
-		String programName = reconstruct.class.getName();
-		String help = "Usage:\n" +
-			programName+
-			" -p <pdb code> -c <pdb chain code> -t <contact_type> [-r] -d <distance cutoff 1> -D <distance cutoff 2> -i <distance cutoff 3> -b <base name> -o <output dir> [-n <number of models>] [-m <min range>] [-M <max range>] [-f <force constant>] [-F]" +
-			"If -F (fast) specified then no simulated annealing refinement will be performed (much faster, worse quality)\n";
 
-		String pdbCode = "";
-		String pdbChainCode = "";
-		String ct = "";
-		double cutoff1 = 0.0;
+		String help = "Reconstructs a protein structure from a contact map using tinker's distgeom.\n" +
+			" Two modes of operation:\n" +
+			"  a) normal      : NOT IMPLEMENTED YET. specify a sequence and one or more contact map files\n" +
+			"  b) benchmarking: specify a pdb code + pdb chain code (-p)\n" +
+			"Usage:\n" +
+			PROG_NAME+"\n"+
+			"  -p <string>   : pdb code + pdb chain code, e.g. 1abcA (benchmarking)\n" +
+			"  -b <string>   : base name of output files \n" +
+			" [-t <string>]  : contact type. Either 1 contact type: Cb or 2 separated by \n" +
+			"                  underscore: Ca_Cg, default: "+DEFAULT_CONTACT_TYPE+" \n" +
+			" [-r]           : cross. Use also the cross contact type of the 2 contact types \n" +
+			"                  specified. e.g. if Ca_Cg given in -t and -r specified then Ca/Cg \n" +
+			"                  contact map will also be used to reconstruct\n" +
+			" [-d <floats>]  : distance cutoff(s) comma separated, specify up to 3 distance cutoffs:\n" +
+			"                  1st for 1st contact type, 2nd for 2nd contact type 3rd for crossed contact type\n" +
+			"                  If 1 specified then it will used for all contact types. Default: "+DEFAULT_CUTOFF+" \n" +
+			" [-o <dir>]     : output dir, default: current \n" +
+			" [-n <int>]     : number of models to generate, default: 1 \n" +
+			" [-m <int>]     : min range, default: 0 \n" +
+			" [-M <int>]     : max range, default: 0 \n" +
+			" [-f <float>]   : force constant, default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
+			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
+			"                  worse quality model). Default: slow (refinement via simulated annealing) \n\n";
+
+		String pdbId = null;
+		String pdbCode = null;
+		String pdbChainCode = null;
+		String ct = DEFAULT_CONTACT_TYPE;
+		String[] cutoffs = null;
+		double cutoff1 = DEFAULT_CUTOFF;
 		double cutoff2 = 0.0;
 		double cutoff3 = 0.0;
-		String outputDir = "";
-		String baseName = "";
+		String outputDir = "."; //default current
+		String baseName = null;
 		boolean cross = false;
 		int n = 1;
-		double forceConstant = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE; // if not given in contact type default will be used
+		double forceConstant = DEFAULT_FORCECONSTANT_DISTANCE; 
 		int minRange = 0;
 		int maxRange = 0;
 		boolean fast = false;
 		
-		Getopt g = new Getopt(programName, args, "p:c:d:t:rb:o:d:D:i:n:m:M:f:Fh?");
+		Getopt g = new Getopt(PROG_NAME, args, "p:t:rd:b:o:n:m:M:f:Fh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
 			case 'p':
-				pdbCode = g.getOptarg();
-				break;
-			case 'c':
-				pdbChainCode = g.getOptarg();
+				pdbId = g.getOptarg();
 				break;
 			case 't':
 				ct = g.getOptarg();
@@ -71,13 +97,7 @@ public class reconstruct {
 				cross = true;
 				break;
 			case 'd':
-				cutoff1 = Double.valueOf(g.getOptarg());
-				break;
-			case 'D':
-				cutoff2 = Double.valueOf(g.getOptarg());
-				break;
-			case 'i':
-				cutoff3 = Double.valueOf(g.getOptarg());
+				cutoffs = g.getOptarg().split(",");
 				break;
 			case 'b':
 				baseName = g.getOptarg();
@@ -108,8 +128,8 @@ public class reconstruct {
 			}
 		}
 
-		if (pdbCode.equals("") || pdbChainCode.equals("") || ct.equals("") || cutoff1==0.0 || outputDir.equals("") || baseName.equals("")){
-			System.err.println("Must specify at least -p, -c, -t, -d, -o and -b");
+		if (pdbId==null || baseName==null){
+			System.err.println("Must specify at least -p and -b");
 			System.err.println(help);
 			System.exit(1);
 		}
@@ -124,6 +144,31 @@ public class reconstruct {
 			System.exit(1);
 		}
 		
+		// pdb code and chain code
+		Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
+		Matcher m = p.matcher(pdbId);
+		if (m.matches()) {
+			pdbCode = m.group(1);
+			pdbChainCode = m.group(2);
+		} else {
+			System.err.println("PDB id given not in the correct format, must be in the form 1abcA");
+			System.exit(1);
+		}
+		
+		// cutoffs assignment
+		if (cutoffs!=null) {
+			cutoff1 = Double.parseDouble(cutoffs[0]);
+			cutoff2 = cutoff1;
+			cutoff3 = cutoff1;
+			if (cutoffs.length>1) {
+				cutoff2 = Double.parseDouble(cutoffs[1]);
+				if (cutoffs.length>2) {
+					cutoff3 = Double.parseDouble(cutoffs[2]);
+				}
+			}
+		}
+
+		// contact type assignment
 		boolean doublecm = false;
 		String ct1 = ct;
 		String ct2 = ct;
@@ -143,12 +188,6 @@ public class reconstruct {
 			ct3 = ct1+"/"+ct2;
 		}
 		
-		if (cutoff2==0.0) {
-			cutoff2 = cutoff1;
-		}
-		if (cutoff3==0.0) {
-			cutoff3 = cutoff1;
-		}
 		
 		Pdb pdb = null;
 		Pdb mPdb = null;
@@ -276,7 +315,7 @@ public class reconstruct {
 		
 		try {
 			PrintWriter reportOut = new PrintWriter(new FileOutputStream(reportFile));
-			reportOut.println("run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3\tnum_res" +
+			reportOut.println("#run_id\tcutoff\tcutoff2\tcutoff3\tct\tct2\tct3\tnum_res" +
 						"\tresult_id\terror_val" +
 						"\tup_bound_viol\tlow_bound_viol\tmax_bound_up\tmax_bound_low\trms_bound" +
 						"\tup_viol\tlow_viol\tmax_up\tmax_low\trms_viol\trmsd_to_orig\trmsd_to_mirrored_orig");
@@ -285,8 +324,8 @@ public class reconstruct {
 				String rmsd = String.format(Locale.US,"%6.3f",rmsds[i]);
 				String mRmsd = String.format(Locale.US,"%6.3f",mRmsds[i]);
 				String errStr = String.format(Locale.US, "%6.3f", err[i]);
-				//                         run_id                cutoff      cutoff2      cutoff3      ct1      ct2      ct3         num_res
-				reportOut.println(pdbCode+"_"+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+sequence.length()+"\t"+
+				//                     run_id                cutoff      cutoff2      cutoff3      ct1      ct2      ct3         num_res
+				reportOut.println(pdbCode+pdbChainCode+"\t"+cutoff1+"\t"+cutoff2+"\t"+cutoff3+"\t"+ct1+"\t"+ct2+"\t"+ct3+"\t"+sequence.length()+"\t"+
 				//  result_id     error_val         
 						i + "\t" + errStr + "\t" +
 				//   up_bound_viol    low_bound_viol   max_bound_up    max_bound_low      rms_bound
