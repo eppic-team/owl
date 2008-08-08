@@ -2,6 +2,7 @@ package proteinstructure;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +29,7 @@ public class PolyposeRunner {
 	private static final String POLYPOSE_LOG_FILE_NAME = "polypose.log";
 	private static final String TMP_SCRIPT_FILE_NAME   = "polypose.sh";
 	private static final String TMP_PARAM_FILE_NAME    = "polypose.params";
+	private static final String TMP_PDB_FILE_NAME      = "polypose.pdb";
 	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
 	/*--------------------------- member variables --------------------------*/
@@ -55,15 +57,15 @@ public class PolyposeRunner {
 		this.ccp4SetupScript = new File(this.ccp4Dir, CCP4_SETUP_SCRIPT_NAME);
 		this.polyposeExecutable = new File(this.ccp4Dir, POLYPOSE_EXECUTABLE);
 		
-		if(!shell.canExecute()) {
+		if(!shell.canRead()) {	// better: canExecute() but incompatible with Java 5
 			throw new IOException("Could not find shell interpreter " + shell.getAbsolutePath());
 		}
 		
-		if(!polyposeExecutable.canExecute()) {
+		if(!polyposeExecutable.canRead()) {
 			throw new IOException("Could not find polypose executable " + polyposeExecutable.getAbsolutePath());
 		}
 		
-		if(!ccp4SetupScript.canRead()) {
+		if(!ccp4SetupScript.canRead()) { // better: canExecute() but incompatible with Java 5
 			throw new IOException("Could not find ccp4 setup script " + ccp4SetupScript.getAbsolutePath());
 		}
 		
@@ -90,10 +92,10 @@ public class PolyposeRunner {
 	
 	/**
 	 * Writes the parameter file which is passed to polypose.
-	 * @param positions
+	 * @param positions the positions to be aligned or null (=all positions)
 	 * @throws IOException
 	 */
-	private void writeParamFile(int[] positions) throws IOException {
+	private void writeParamFile(int[][] positions) throws IOException {
 		PrintWriter out = new PrintWriter(this.tmpParamFile);
 		out.println("maxcycle " + POLYPOSE_MAXCYCLE);
 		out.println("input ca");		// use only C-alpha positions
@@ -141,8 +143,94 @@ public class PolyposeRunner {
 
 	}
 	
+	/**
+	 * Rewrites the given temporary pdb files such that all residues except for the ones given are deleted.
+	 * The remaining residues are renumbered from 1 to n. The resulting files can then be superimposed with
+	 * polypose.
+	 * @param filenames
+	 * @param positions
+	 * @throws IOException 
+	 */
+	private void extractPositions(ArrayList<String> filenames, int[][] positions) throws IOException {
+		if(positions == null || positions.length == 0) {
+			return;
+		}
+		
+		File tmpPdbFile = new File(TMP_DIR, TMP_PDB_FILE_NAME);
+		
+		int l = filenames.size();
+		if(positions.length != l) {
+			throw new IOException("Size of position vector does not match number of files");
+		}
+		// make sure that number of residues is the same for all files
+		for (int i = 0; i < l; i++) {
+			if(positions[i].length != positions[0].length) {
+				throw new IOException("Number of positions in positions vector are not the same.");
+			}
+		}
+		
+		// rewrite files
+		for (int i = 0; i < l; i++) {
+			String filename = filenames.get(i);
+			int[] posArr = positions[i];
+			
+			// make set of positions
+			HashSet<Integer> posSet = new HashSet<Integer>();
+			for (int j = 0; j < posArr.length; j++) {
+				posSet.add(posArr[j]);
+			}
+			
+			// read atom lines
+			File inFile = new File(filename);
+			BufferedReader in = new BufferedReader(new FileReader(inFile));
+			PrintWriter out = new PrintWriter(tmpPdbFile);
+			String line;
+			int lastNum = -9999;
+			int newNum = 0;
+			while((line = in.readLine()) != null) {
+				if(line.startsWith("ATOM")) {
+					int resNum = Integer.parseInt(line.substring(22, 26).trim());
+					if(posSet.contains(resNum)) {
+						if(resNum != lastNum) {
+							newNum++;
+							lastNum = resNum;
+						}
+						// replace residue number
+						String newLine = line.substring(0,22) + String.format("%4d", newNum) + line.substring(26,line.length());
+						// write line to temp file
+						out.println(newLine);
+					}
+				}
+			}
+			in.close();
+			out.close();
+			
+			// copy temp file to original file 
+			in = new BufferedReader(new FileReader(tmpPdbFile));
+			out = new PrintWriter(inFile);
+			while((line = in.readLine()) != null) {
+				out.println(line);
+			}
+			in.close();
+			out.close();	
+		}
+		
+	}
+	
 	/*---------------------------- public methods ---------------------------*/
-	public double superimpose(Pdb[] pdbs, int[] positions) throws IOException {
+	
+	/**
+	 * Calculates a minimum RMSD fit of the given structures and returns the RMSD.
+	 * If positions is not null and not an empty array, the given positions will be
+	 * used for the fit. positions[i] contains the positions in structure i. The
+	 * positions for all structures have to have the same length. If positions is
+	 * null or an empty array, all positions will be taken. In this case the
+	 * structures must have exactly the same residue numbers. 
+	 * @param pdbs the structures to be superimposed
+	 * @param positions an array of arrays of positions to be aligned
+	 * @return the rmsd of the calculated superimposition
+	 */
+	public double superimpose(Pdb[] pdbs, int[][] positions) throws IOException {
 		double rmsd = -2;
 		File file;
 		ArrayList<String> filenames = new ArrayList<String>();
@@ -160,6 +248,7 @@ public class PolyposeRunner {
 			filenames.add(file.getAbsolutePath());
 			filenum++;
 		}
+		extractPositions(filenames, positions);
 		rmsd = executePolypose(filenames.toArray(dummy), this.tmpParamFile.getAbsolutePath());
 		return rmsd;
 	}
@@ -176,7 +265,7 @@ public class PolyposeRunner {
 		String[] filenames = {"/project/StruPPi/CASP8/results/T0464/T0464.reconstructed.pdb",
 							  "/project/StruPPi/CASP8/results/T0464/1temp/T0464.reconstructed.pdb",
 							  "/project/StruPPi/CASP8/results/T0464/2temps/T0464.reconstructed.pdb"};
-		int[] positions = {};
+		int[][] positions = {{4,5,6},{7,8,9},{1,2,3}};
 		double rmsd = -1;
 		
 		for(String filename:filenames) {
