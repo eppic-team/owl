@@ -20,6 +20,7 @@ import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.GraphFileFormatError;
 import proteinstructure.PdbLoadError;
+import proteinstructure.PdbfilePdb;
 import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
@@ -53,18 +54,20 @@ public class reconstruct {
 	public static void main(String[] args) {
 		
 
-		String help = "Reconstructs a protein structure from a contact map using tinker's distgeom.\n" +
+		String help = "\nReconstructs a protein structure from a contact map using tinker's distgeom.\n" +
 			" Two modes of operation:\n" +
 			"  a) normal      : specify one or more contact map files. The sequence, contact \n" +
 			"                   type and cutoff will be taken from the file\n" +
-			"  b) benchmarking: specify a pdb code + pdb chain code (-p) and optionally \n" +
-			"                   contact type (-t) and cutoff (-d)\n" +
+			"  b) benchmarking: specify a pdb code + pdb chain code or a pdb file(-p) and \n" +
+			"                   optionally contact type (-t) and cutoff (-d)\n" +
 			"Usage:\n" +
 			PROG_NAME+" [options] [contact_map_file_1 [contact_map_file_2] [...]] \n"+
-			"  -p <string>   : pdb code + pdb chain code, e.g. 1abcA (benchmarking)\n" +
+			"  -p <string>   : pdb code + pdb chain code, e.g. 1abcA or a pdb file (benchmarking)\n" +
+			"                  If in a) i.e. reconstructing from contact map files then the \n" +
+			"                  given pdb id/pdb file will be used for rmsd reporting \n" +
 			" [-t <string>]  : one or more contact types comma separated (benchmarking). Default: "+DEFAULT_CONTACT_TYPE+" \n" +
 			" [-d <floats>]  : one or more distance cutoffs comma separated (benchmarking), \n" +
-			"                  matching given contact types. If only one specified then it will \n" +
+			"                  matching given contact types. If only one specified then it will be\n" +
 			"                  used for all contact types. Default: "+DEFAULT_CUTOFF+" \n" +
 			"\n" +
 			" [-b <string>]  : base name of output files. Default: "+DEFAULT_BASENAME+" or pdbId given in -p\n" +
@@ -72,7 +75,7 @@ public class reconstruct {
 			" [-n <int>]     : number of models to generate. Default: 1 \n" +
 			" [-m <int>]     : filter contacts to min range. Default: no filtering \n" +
 			" [-M <int>]     : filter contacts to max range. Default: no filtering \n" +
-			" [-f <float>]   : force constant, default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
+			" [-f <float>]   : force constant. Default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
 			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
 			"                  worse quality model). Default: slow (refinement via simulate\n" +
 			"                  annealing) \n\n";
@@ -91,6 +94,7 @@ public class reconstruct {
 		int minRange = 0;
 		int maxRange = 0;
 		boolean fast = false;
+		boolean refPdbFromFile = false;
 		
 		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:Fh?");
 		int c;
@@ -147,7 +151,7 @@ public class reconstruct {
 		
 		// input checks
 		if (pdbId==null && cmFiles == null) {
-			System.err.println("Either a pdb id (-p) or at least one contact map file must be given");
+			System.err.println("Either a pdb id/file (-p) or at least one contact map file must be given");
 			System.err.println(help);
 			System.exit(1);
 		}
@@ -178,28 +182,40 @@ public class reconstruct {
 			if (m.matches()) {
 				pdbCode = m.group(1);
 				pdbChainCode = m.group(2);
-			} else {
-				System.err.println("PDB id given not in the correct format, must be in the form 1abcA");
+				refPdbFromFile = false;
+			} 
+			else if (new File(pdbId).exists()) {
+				refPdbFromFile = true;
+			}
+			else {				
+				System.err.println("Either PDB id given not in correct format or it is not an existing PDB file: "+pdbId);
 				System.exit(1);
 			}		
 		}		
 		
 		// setting a default for baseName if it wasn't specified and checking basename
 		if (baseName==null) {
-			if (benchmark) baseName=pdbCode+pdbChainCode;
+			if (benchmark) {
+				if (refPdbFromFile) {
+					String name = new File(pdbId).getName(); 
+					baseName= name.substring(0, name.lastIndexOf("."));
+				}
+				else baseName=pdbCode+pdbChainCode;
+			}
 			else baseName = DEFAULT_BASENAME;
 		}		
 		if (baseName.contains(".")) { 
-			System.err.println("Basename can't contain a dot (not allowed by tinker). Exiting");
+			System.err.println("Basename ("+baseName+") can't contain a dot (not allowed by tinker). Use a different base name (-b). Exiting");
 			System.exit(1);
 		}	
 		// checking a baseName.pdb file doesn't exist in outdir 
 		if (new File(outputDir,baseName+".pdb").exists()) {
 			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-			System.out.print("A file baseName.pdb ("+baseName+".pdb) exists in the output directory. File will be overwritten. Continue (y/n)? ");
+			System.err.print("A file baseName.pdb ("+baseName+".pdb) exists in the output directory. File will be overwritten. Continue (y/n)? ");
 			try {
 				String answer = br.readLine();
 				if (!answer.equals("y")) {
+					System.err.println("Use a different basename (-b)");
 					System.exit(1);
 				}
 			} catch (IOException e) {
@@ -215,12 +231,31 @@ public class reconstruct {
 		File origPdbFile = null;
 		if (pdbId!=null) {
 			try {
-				MySQLConnection conn = new MySQLConnection(MYSQLSERVER, MYSQLUSER, MYSQLPWD);
-				pdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
-				pdb.load(pdbChainCode);
-				mPdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
-				mPdb.load(pdbChainCode);
-				mPdb.mirror();
+				if (refPdbFromFile) {
+					origPdbFile = new File(pdbId);
+					pdb = new PdbfilePdb(origPdbFile.getAbsolutePath());
+					pdb.load(pdb.getChains()[0]);
+					mPdb = new PdbfilePdb(origPdbFile.getAbsolutePath());
+					mPdb.load(pdb.getChains()[0]);
+					mPdb.mirror();
+				} else {
+
+					MySQLConnection conn = new MySQLConnection(MYSQLSERVER, MYSQLUSER, MYSQLPWD);
+					pdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
+					pdb.load(pdbChainCode);
+					mPdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
+					mPdb.load(pdbChainCode);
+					mPdb.mirror();
+					// we also write the file to the out dir so it can be used later for clustering rmsds etc.
+					origPdbFile = new File (outputDir,baseName+".native.pdb");
+					try {
+						pdb.dump2pdbfile(origPdbFile.getAbsolutePath());
+					} catch (IOException e4) {
+						System.err.println("Couldn't write original pdb file "+origPdbFile.getAbsolutePath());
+						System.err.println("Continuing without it, this is not needed for the rest of the reconstruction process but only for post processing (e.g. comparing rmsds to original)");
+					}
+				}
+
 			} catch (PdbLoadError e) {
 				System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
 				System.exit(1);
@@ -231,15 +266,7 @@ public class reconstruct {
 				System.err.println("Problems connecting to database for getting pdb data for "+pdbCode+". Exiting");
 				System.exit(1);
 			}
-			// we also write the file to the out dir so it can be used later for clustering rmsds etc.
-			origPdbFile = new File (outputDir,baseName+".native.pdb");
-			try {
-				pdb.dump2pdbfile(origPdbFile.getAbsolutePath());
-			} catch (IOException e4) {
-				System.err.println("Couldn't write original pdb file "+origPdbFile.getAbsolutePath());
-				System.err.println("Continuing without it, this is not needed for the rest of the reconstruction process but only for post processing (e.g. comparing rmsds to original)");
-			}
-			
+
 			sequence = pdb.getSequence();
 		} 
 
@@ -364,7 +391,7 @@ public class reconstruct {
 				catch (TinkerError e) {
 					System.err.println("Error while trying to retrieve results from Tinker: "+ e.getMessage());
 				} catch (ConformationsNotSameSizeError e) {
-					System.err.println(origPdbFile.getAbsolutePath()+" and "+outputPdbFile.getAbsolutePath()+" don't have the same conformation size, can't calculate rmsd for them.");
+					System.err.println(origPdbFile+" and "+outputPdbFile+" don't have the same conformation size, can't calculate rmsd for them.");
 				}				
 			}					
 		}
@@ -382,7 +409,12 @@ public class reconstruct {
 				String mRmsd = String.format(Locale.US,"%6.3f",mRmsds[i]);
 				String errStr = String.format(Locale.US, "%6.3f", err[i]);
 				String runId = "-";
-				if (benchmark) runId = pdbCode+pdbChainCode;
+				if (benchmark) {
+					if (refPdbFromFile)
+						runId = origPdbFile.getName(); 
+					else
+						runId = pdbCode+pdbChainCode;
+				}
 				double cutoff1 = cutoffs[0], cutoff2 = 0, cutoff3 = 0;
 				String ct1 = cts[0], ct2 = "-", ct3 = "-";
 				if (cts.length>1) {
