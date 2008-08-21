@@ -744,12 +744,11 @@ public class Alignment {
     		output = new TreeSet<Integer>();
     	}
 
-    	int numProjTags = projectionTags.size();
     	int col;
 
     	for( Iterator<Integer> it = positions.iterator(); it.hasNext(); ) {
     		col = it.next();
-    		if( numProjTags != count(projectionTags, col, getGapCharacter()) ) {
+    		if(count(projectionTags, col, getGapCharacter()) > 0 ) {
     			// this column contains at least one gap
     			if( extractInPlace ) {
     				// remove corresponding item in 'positions'
@@ -768,6 +767,64 @@ public class Alignment {
     	} else {
     		return output;
     	}
+    }
+    
+    /**
+     * Returns the set of gapless columns.
+     * @return the set of gapless columns
+     */
+    public TreeSet<Integer> getGaplessColumns() {
+    	TreeSet<Integer> cols = new TreeSet<Integer>();
+    	Collection<String> tags = this.getTags();
+    	for (int i = 1; i < this.getAlignmentLength(); i++) {
+    		if(count(tags, i, getGapCharacter()) == 0) {
+    			cols.add(i);
+    		}
+		}
+    	return cols;
+    }
+    
+    /**
+     * Returns the longest non-gapped region of columns in the alignments.
+     * @return the interval with the longest non-gapped region
+     */
+    public TreeSet<Integer> getLongestNonGappedRegion() {
+    	TreeSet<Integer> longestRegion = new TreeSet<Integer>();
+    	int beg = 0; 
+    	int bestBeg = 0;
+    	int bestEnd = 0;
+    	int l = getAlignmentLength();
+    	Collection<String> tags = this.getTags(); 
+    	
+    	// find first matching column
+    	int col = 1;
+    	while(col <= l) {
+    		if(count(tags, col, getGapCharacter()) == 0) {
+    			beg = col;
+    			bestBeg = col;
+    			bestEnd = col;
+    			break;
+    		}
+    		col++;
+		}
+    	if(col > l) return longestRegion; // no column without gaps found
+    	
+    	while(col < l) {
+    		col++;
+    		if(count(tags, col, getGapCharacter()) > 0) {
+    			// end previous interval
+    			if((col-1)-beg > bestEnd-bestBeg) {
+    				bestBeg = beg;
+    				bestEnd = col-1;
+    			}
+    			beg = col + 1;
+    		}
+    	}
+
+    	for (int i = bestBeg; i <= bestEnd; i++) {
+			longestRegion.add(i);
+		}
+    	return longestRegion;
     }
 
     /**
