@@ -1,5 +1,6 @@
 package tinker;
 
+import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.ConsensusSquare;
 
 import java.io.BufferedReader;
@@ -16,10 +17,14 @@ import java.util.TreeMap;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.MaxClusterRunner;
+import proteinstructure.RIGEdge;
+import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 
 public class TinkerRunner {
@@ -1076,4 +1081,22 @@ public class TinkerRunner {
 		return runAnalyze(xyzFile, log);
 	}	
 	
+	/*---------------------------- static methods ---------------------------*/
+	
+	public static IntPairSet getViolatedEdges(RIGraph graph, Pdb reconstructedPdb) {
+		if (!graph.getSequence().equals(reconstructedPdb.getSequence())) {
+			throw new IllegalArgumentException("Given graph and reconstructedPdb don't have identical sequence.");
+		}
+		IntPairSet edgeSet = new IntPairSet();
+		RIGraph reconstructedGraph = reconstructedPdb.get_graph(graph.getContactType(), graph.getCutoff());
+		for (RIGEdge edge:graph.getEdges()) {
+			Pair<RIGNode> nodePair = graph.getEndpoints(edge);
+			int i = nodePair.getFirst().getResidueSerial();
+			int j = nodePair.getSecond().getResidueSerial();
+			if (!reconstructedGraph.containsEdgeIJ(i, j)) {
+				edgeSet.add(new Pair<Integer>(i,j));
+			}
+		}
+		return edgeSet;
+	}
 }
