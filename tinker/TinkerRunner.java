@@ -13,11 +13,15 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.util.Formatter;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Point3d;
+
+import proteinstructure.AAinfo;
 import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
@@ -1083,20 +1087,41 @@ public class TinkerRunner {
 	
 	/*---------------------------- static methods ---------------------------*/
 	
+	/**
+	 * Returns a list of violated edges given an input graph to a reconstruction 
+	 * and the output reconstructed structure.
+	 * @return
+	 */
 	public static IntPairSet getViolatedEdges(RIGraph graph, Pdb reconstructedPdb) {
+		double cutoff = graph.getCutoff();
+		String ct = graph.getContactType();
+		
 		if (!graph.getSequence().equals(reconstructedPdb.getSequence())) {
 			throw new IllegalArgumentException("Given graph and reconstructedPdb don't have identical sequence.");
 		}
+		if (!AAinfo.isValidSingleAtomContactType(ct)) {
+			throw new IllegalArgumentException("Given contact type "+ct+" is invalid for getting violations. Only single atom contact types are supported.");
+		}
 		IntPairSet edgeSet = new IntPairSet();
-		RIGraph reconstructedGraph = reconstructedPdb.get_graph(graph.getContactType(), graph.getCutoff());
+
 		for (RIGEdge edge:graph.getEdges()) {
 			Pair<RIGNode> nodePair = graph.getEndpoints(edge);
 			int i = nodePair.getFirst().getResidueSerial();
 			int j = nodePair.getSecond().getResidueSerial();
-			if (!reconstructedGraph.containsEdgeIJ(i, j)) {
-				edgeSet.add(new Pair<Integer>(i,j));
+			Set<String> iatoms = AAinfo.getAtomsForCTAndRes(ct, nodePair.getFirst().getResidueType());
+			Set<String> jatoms = AAinfo.getAtomsForCTAndRes(ct, nodePair.getSecond().getResidueType());
+			// iatoms and jatoms have only 1 member (we are forcing ct to be single atom) so this is not an iteration
+			for (String iatom:iatoms) {  
+				for (String jatom:jatoms) {
+					Point3d iCoord = reconstructedPdb.getAtomCoord(i, iatom);
+					Point3d jCoord = reconstructedPdb.getAtomCoord(j, jatom);
+					if (iCoord.distance(jCoord)>cutoff) {
+						edgeSet.add(new Pair<Integer>(i,j));
+					}
+				}
 			}
 		}
 		return edgeSet;
 	}
 }
+
