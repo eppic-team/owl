@@ -23,6 +23,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 
+	private static final long serialVersionUID = 1L;
 	
 	protected static final int DEFAULT_MODEL = 1;
 	protected final static String GRAPHFILEFORMATVERSION = "1.0";
