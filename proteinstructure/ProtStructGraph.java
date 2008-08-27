@@ -388,38 +388,5 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 			this.removeEdge(edge);
 		}
 	}
-	
-	/**
-	 * Removes the given edge from this graph
-	 * Overrides removeEdge from SparseGraph just to fix a bug (filed in bug tracker with request ID: 1844767)
-	 * TODO: when bug is fixed in the next JUNG2 release get rid of this
-	 * @return true if the edge is present and thus can be removed, false if the edge is not present
-	 */
-	@Override
-    public boolean removeEdge(E edge)
-    {
-        if (!containsEdge(edge)) 
-            return false;
-        
-        Pair<V> endpoints = getEndpoints(edge);
-        V v1 = endpoints.getFirst();
-        V v2 = endpoints.getSecond();
-        
-        // remove edge from incident vertices' adjacency maps
-        if (getEdgeType(edge) == EdgeType.DIRECTED)
-        {
-            vertex_maps.get(v1)[OUTGOING].remove(v2);
-            vertex_maps.get(v2)[INCOMING].remove(v1);
-            directed_edges.remove(edge);
-        }
-        else
-        {
-            vertex_maps.get(v1)[INCIDENT].remove(v2);
-            vertex_maps.get(v2)[INCIDENT].remove(v1);
-            undirected_edges.remove(edge);
-        }
-
-        return true;
-    }
-		
+			
 }
