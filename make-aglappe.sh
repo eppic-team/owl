@@ -10,7 +10,20 @@ fi
 tempdir=$1
 aglappetag=$2
 
-CLASSPATH=.:/project/StruPPi/jars/mysql-connector-java.jar:/project/StruPPi/jars/JRclient-RE817.jar:/project/StruPPi/jars/java-getopt-1.0.13.jar:/project/StruPPi/jars/junit-3.8.1.jar:/project/StruPPi/jars/commons-codec-1.3.jar:/project/StruPPi/jars/xmlrpc-client-3.0.jar:/project/StruPPi/jars/xmlrpc-common-3.0.jar:/project/StruPPi/jars/ws-commons-util-1.0.1.jar:/project/StruPPi/jars/vecmath.jar:/project/StruPPi/jars/Jama-1.0.2.jar:/project/StruPPi/jars/jaligner.jar:/project/StruPPi/jars/jung/collections-generic-4.01.jar:/project/StruPPi/jars/jung/jung-api-2.0-alpha2.jar:/project/StruPPi/jars/jung/jung-graph-impl-2.0-alpha2.jar
+CLASSPATH=.:/project/StruPPi/jars/mysql-connector-java.jar:\
+/project/StruPPi/jars/JRclient-RE817.jar:\
+/project/StruPPi/jars/java-getopt-1.0.13.jar:\
+/project/StruPPi/jars/junit-3.8.1.jar:\
+/project/StruPPi/jars/commons-codec-1.3.jar:\
+/project/StruPPi/jars/xmlrpc-client-3.0.jar:\
+/project/StruPPi/jars/xmlrpc-common-3.0.jar:\
+/project/StruPPi/jars/ws-commons-util-1.0.1.jar:\
+/project/StruPPi/jars/vecmath.jar:\
+/project/StruPPi/jars/Jama-1.0.2.jar:\
+/project/StruPPi/jars/jaligner.jar:\
+/project/StruPPi/jars/jung/collections-generic-4.01.jar:\
+/project/StruPPi/jars/jung/jung-api-2.0-beta1.jar:\
+/project/StruPPi/jars/jung/jung-graph-impl-2.0-beta1.jar
 
 cd $tempdir
 
