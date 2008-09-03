@@ -49,11 +49,6 @@ public class averageGraph {
 	
 	private static enum Modes {	BENCHMARK, PREDICT, ALIGN	};
 	
-	private static final String CASP_METHOD_STR = "1. Template detection by Blast, Psiblast and Global Trace Graph (Heger et al. 2007) " +
-			"\n2. Graph based sequence to multiple structure alignment " +
-			"\n3. Model building by distance geometry using Tinker (Ponder et al. 1987) " +
-			"\n4. Physics-based simulated annealing refinement with explicit solvent using Gromacs (Berendsen et al. 1995)";
-	
 	/*------------------------- private methods ------------------------------*/
 	
 	/**
@@ -103,7 +98,6 @@ public class averageGraph {
 		
 	}
 	
-	@SuppressWarnings("unused")
 	private static String readCaspMethodFromFile(File caspMethodFile) throws IOException {
 		String methodStr = "";
 		BufferedReader br = new BufferedReader(new FileReader(caspMethodFile));
@@ -172,7 +166,7 @@ public class averageGraph {
 				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
 				"                 target sequence file must comply with the CASP target naming convention, \n" +
 				"                 e.g. T0100 \n" +
-				"  [-m] <file>  : CURRENTLY DISABLED: take METHOD text from given file as the CASP TS METHOD text. If text in file \n" +
+				"  [-m] <file>  : take METHOD text from given file as the CASP TS METHOD text. If text in file \n" +
 				"                 contains new lines it will be splitted over several METHOD lines \n" +
 				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction.\n" +
 				"                 The default consensus threshold is fixed at 50%.\n" +
@@ -214,7 +208,7 @@ public class averageGraph {
 		
 		boolean casp = false;
 		String caspAuthorStr = null;
-		//File caspMethodFile = null;
+		File caspMethodFile = null;
 		
 		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:F:Oh?");
 		int c;
@@ -270,7 +264,7 @@ public class averageGraph {
 				casp = true;
 				break;
 			case 'm':
-				//caspMethodFile = new File(g.getOptarg());
+				caspMethodFile = new File(g.getOptarg());
 				break;				
 			case 'F':
 				usePhiPsiConstraints = true;
@@ -516,8 +510,7 @@ public class averageGraph {
 				}
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
-				pdb.setCaspMethodStr(CASP_METHOD_STR);
-				//pdb.setCaspMethodStr(readCaspMethodFromFile(caspMethodFile));
+				pdb.setCaspMethodStr(readCaspMethodFromFile(caspMethodFile));
 				pdb.setParents(templates.getIds());
 				pdb.writeToCaspTSFile(outcasptsfile);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
