@@ -163,16 +163,17 @@ public class averageGraph {
 				"  [-R]         : used with -r above will run the reconstruction with given number of models \n" +
 				"                 keeping the whole tinker output in the output dir\n" +
 				"  [-c] <string>: write final reconstructed model also in CASP TS format using as AUTHOR the \n" +
-				"                 specified string (with underscores instead of hyphens!). The target tag in the \n" +
-				"                 target sequence file must comply with the CASP target naming convention, \n" +
-				"                 e.g. T0100 \n" +
+				"                 specified string (with underscores instead of hyphens!). The target tag \n" +
+				"                 in the target sequence file must comply with the CASP target naming \n" +
+				"                 convention, e.g. T0100 \n" +
 				"  [-m] <file>  : take METHOD text from given file as the CASP TS METHOD text. If text in file \n" +
 				"                 contains new lines it will be splitted over several METHOD lines \n" +
-				"  [-F] <number>: use phi/psi consensus values as torsion angle constraints for the reconstruction.\n" +
-				"                 The default consensus threshold is fixed at 50%.\n" +
-				"                 The specified number will be taken as the angle interval for defining the consensus.\n" +
-				"                 Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n" +
-				"  [-O]         : enforce trans conformation for the omega torsion angle. Default: not enforcing\n\n"+
+				"  [-I] <number>: value for angle interval defining phi/psi consensus. Default: "+PHIPSI_CONSENSUS_INTERVAL+"\n" +
+				"  [-F]         : don't use phi/psi consensus values as torsion angle constraints for the \n" +
+				"                 reconstruction. Default: phi/psi constraints used. \n" +
+				"                 The default consensus threshold is fixed at 50%.\n"+
+				"  [-O]         : don't enforce trans conformation for the omega torsion angle. \n" +
+				"                 Default: enforcing\n\n"+
 				"A set of templates must always be specified (-P). A multiple sequence alignment of \n" +
 				"target and templates should be specified as well (-a). If one is not given, then an \n" +
 				"alignment is calculated with muscle. If no target sequence is given, a dummy sequence\n" + 
@@ -201,16 +202,16 @@ public class averageGraph {
 		int numberTinkerModels = 0;
 		boolean keepModels = false;
 		
-		boolean usePhiPsiConstraints = false;
+		boolean usePhiPsiConstraints = true;
 		int phiPsiConsensusInterval = PHIPSI_CONSENSUS_INTERVAL;
 		
-		boolean forceTransOmega = false;
+		boolean forceTransOmega = true;
 		
 		boolean casp = false;
 		String caspAuthorStr = null;
 		File caspMethodFile = null;
 		
-		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:F:Oh?");
+		Getopt g = new Getopt(averageGraph.class.getName(), args, "p:P:d:t:a:s:o:b:f:r:Rc:m:I:FOh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -265,13 +266,15 @@ public class averageGraph {
 				break;
 			case 'm':
 				caspMethodFile = new File(g.getOptarg());
+				break;
+			case 'I':
+				phiPsiConsensusInterval = Integer.parseInt(g.getOptarg());
 				break;				
 			case 'F':
-				usePhiPsiConstraints = true;
-				phiPsiConsensusInterval = Integer.parseInt(g.getOptarg());
+				usePhiPsiConstraints = false;
 				break;
 			case 'O':
-				forceTransOmega = true;
+				forceTransOmega = false;
 				break;																
 			case 'h':
 			case '?':
