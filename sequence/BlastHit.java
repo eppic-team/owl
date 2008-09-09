@@ -12,18 +12,18 @@ public class BlastHit {
 	public static final int OUTPUT_LENGTH = 80;
 	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	
-	String queryId;
-	String subjectId;
-	double percentIdentity;
-	int aliLength;
-	int missmatches;
-	int gapOpenings;
-	int queryStart;
-	int queryEnd;
-	int subjectStart;
-	int subjectEnd;
-	double eValue;
-	double score;
+	private String queryId;
+	private String subjectId;
+	private double percentIdentity;
+	private int aliLength;
+	private int missmatches;
+	private int gapOpenings;
+	private int queryStart;
+	private int queryEnd;
+	private int subjectStart;
+	private int subjectEnd;
+	private double eValue;
+	private double score;
 
 	public BlastHit(String queryId, String subjectId, double percentIdentity, int aliLength, int missmatches, int gapOpenings, 
 			int queryStart, int queryEnd, int subjectStart, int subjectEnd, double eValue, double score) {
@@ -113,6 +113,70 @@ public class BlastHit {
 		return this.eValue;
 	}
 	
+	/**
+	 * Returns the percent identity value of this hit.
+	 * @return
+	 */
+	public double getPercentIdentity() {
+		return this.percentIdentity;
+	}
+	
+	/**
+	 * Returns the alignment length of this hit.
+	 * @return
+	 */
+	public int getAliLength() {
+		return aliLength;
+	}
+
+	/**
+	 * Returns the number of missmatches for this hit.
+	 * @return
+	 */
+	public int getMissmatches() {
+		return missmatches;
+	}
+
+	/**
+	 * Returns the number of gap openings for this hit.
+	 * @return
+	 */
+	public int getGapOpenings() {
+		return gapOpenings;
+	}
+
+	/**
+	 * Returns the subject start position of this hit.
+	 * @return
+	 */
+	public int getSubjectStart() {
+		return subjectStart;
+	}
+
+	/**
+	 * Returns the subject's end position of this hit.
+	 * @return
+	 */
+	public int getSubjectEnd() {
+		return subjectEnd;
+	}
+
+	/**
+	 * Returns the query's start position of this hit.
+	 * @return
+	 */
+	public int getQueryStart() {
+		return queryStart;
+	}
+
+	/**
+	 * Returns the query's end position of this hit.
+	 * @return
+	 */
+	public int getQueryEnd() {
+		return queryEnd;
+	}
+
 	/**
 	 * Returns the template id as concatenated pdb code + chain code e.g. 1abcA
 	 * @return the template id or null if queryId is not in the right format

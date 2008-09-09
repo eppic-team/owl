@@ -47,7 +47,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 	public void applyCutoff(double eValueCutoff) {
 		Iterator<BlastHit> it = hits.iterator();
 		while (it.hasNext()) {
-			if (it.next().eValue>=eValueCutoff) {
+			if (it.next().getEValue()>=eValueCutoff) {
 				it.remove();
 			}
 		}

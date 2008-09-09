@@ -219,6 +219,17 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
+	 * Removes all templates from this TemplateList leaving it empty
+	 */
+	public void removeAll() {
+		Iterator<Template> it = this.list.iterator();
+		while (it.hasNext()) {
+			it.next();
+			it.remove();
+		}
+	}
+	
+	/**
 	 * Gets a Template given its templateId or null if Template not present in this list
 	 * @param id
 	 * @return
