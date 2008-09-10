@@ -3,8 +3,14 @@ package sequence;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import proteinstructure.Alignment;
+import proteinstructure.AlignmentConstructionError;
+
 /**
- * A blast output record  
+ * A blast output record.
+ * If a subject matches multiple times in different regions we consider that separate blast records, 
+ * i.e. a BlastHit correspond to a <Hsp> record in Blast XML output.   
+ * 
  * 
  */
 public class BlastHit {
@@ -12,52 +18,40 @@ public class BlastHit {
 	public static final int OUTPUT_LENGTH = 80;
 	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	
-	private String queryId;
+	private String queryId; // this is redundant here (it really belongs in BlastHitList) but anyway useful to have a copy here
 	private String subjectId;
 	private double percentIdentity;
 	private int aliLength;
-	private int missmatches;
-	private int gapOpenings;
 	private int queryStart;
 	private int queryEnd;
 	private int subjectStart;
 	private int subjectEnd;
+	private int subjectLength; 	// queryLength is only in BlastHitList
 	private double eValue;
 	private double score;
+	private Alignment al; 		// if BlastHit create from tabular file parsing, this will be null 
 
-	public BlastHit(String queryId, String subjectId, double percentIdentity, int aliLength, int missmatches, int gapOpenings, 
-			int queryStart, int queryEnd, int subjectStart, int subjectEnd, double eValue, double score) {
-		this.queryId = queryId;
-		this.subjectId = subjectId;
-		this.percentIdentity = percentIdentity;
-		this.aliLength = aliLength;
-		this.missmatches = missmatches;
-		this.gapOpenings = gapOpenings;
-		this.queryStart = queryStart;
-		this.queryEnd = queryEnd;
-		this.subjectStart = subjectStart;
-		this.subjectEnd = subjectEnd;
-		this.eValue = eValue;
-		this.score = score;
-		
-	}
-	
 	public BlastHit(String field0, String field1, String field2, String field3, String field4, String field5, 
 			String field6, String field7, String field8, String field9, String field10, String field11) {
 		this.queryId = field0.trim();
 		this.subjectId = field1.trim();
 		this.percentIdentity = Double.parseDouble(field2.trim());
 		this.aliLength = Integer.parseInt(field3.trim());
-		this.missmatches = Integer.parseInt(field4.trim());
-		this.gapOpenings = Integer.parseInt(field5.trim());
+		//this.missmatches = Integer.parseInt(field4.trim());
+		//this.gapOpenings = Integer.parseInt(field5.trim());
 		this.queryStart = Integer.parseInt(field6.trim());
 		this.queryEnd = Integer.parseInt(field7.trim());
 		this.subjectStart = Integer.parseInt(field8.trim());
 		this.subjectEnd = Integer.parseInt(field9.trim());
 		this.eValue = Double.parseDouble(field10.trim());
 		this.score = Double.parseDouble(field11.trim());
+		this.al = null;
 	}
 
+	public BlastHit() {
+		
+	}
+	
 	/**
 	 * Prints a few selected fields for this blast hit 
 	 */
@@ -130,22 +124,6 @@ public class BlastHit {
 	}
 
 	/**
-	 * Returns the number of missmatches for this hit.
-	 * @return
-	 */
-	public int getMissmatches() {
-		return missmatches;
-	}
-
-	/**
-	 * Returns the number of gap openings for this hit.
-	 * @return
-	 */
-	public int getGapOpenings() {
-		return gapOpenings;
-	}
-
-	/**
 	 * Returns the subject start position of this hit.
 	 * @return
 	 */
@@ -177,6 +155,85 @@ public class BlastHit {
 		return queryEnd;
 	}
 
+	public String getQueryId() {
+		return queryId;
+	}
+
+	public void setQueryId(String queryId) {
+		this.queryId = queryId;
+	}
+
+	public String getSubjectId() {
+		return subjectId;
+	}
+
+	public void setSubjectId(String subjectId) {
+		this.subjectId = subjectId;
+	}
+
+	public double getScore() {
+		return score;
+	}
+
+	public void setScore(double score) {
+		this.score = score;
+	}
+
+	public void setPercentIdentity(double percentIdentity) {
+		this.percentIdentity = percentIdentity;
+	}
+
+	public void setAliLength(int aliLength) {
+		this.aliLength = aliLength;
+	}
+
+	public void setQueryStart(int queryStart) {
+		this.queryStart = queryStart;
+	}
+
+	public void setQueryEnd(int queryEnd) {
+		this.queryEnd = queryEnd;
+	}
+
+	public void setSubjectStart(int subjectStart) {
+		this.subjectStart = subjectStart;
+	}
+
+	public void setSubjectEnd(int subjectEnd) {
+		this.subjectEnd = subjectEnd;
+	}
+
+	public void setEValue(double value) {
+		eValue = value;
+	}
+
+	public void setSubjectLength(int subjectLength) {
+		this.subjectLength = subjectLength;
+	}
+
+	public int getSubjectLength() {
+		return subjectLength;
+	}
+	
+	/**
+	 * Sets the alignment of this hit given the 2 aligned sequences of query and subject
+	 * @param querySeq
+	 * @param subjectSeq
+	 */
+	public void setAlignment(String querySeq, String subjectSeq) {
+		String[] tags = {queryId, subjectId};
+		String[] seqs = {querySeq, subjectSeq};
+		try {
+			this.al = new Alignment(tags, seqs);
+		} catch (AlignmentConstructionError e) {
+			System.err.println("Error while constructing alignment from parsed blast output: "+e.getMessage());
+		}
+	}
+
+	public Alignment getAlignment() {
+		return this.al;	
+	}
+	
 	/**
 	 * Returns the template id as concatenated pdb code + chain code e.g. 1abcA
 	 * @return the template id or null if queryId is not in the right format

@@ -14,10 +14,12 @@ public class BlastHitList implements Iterable<BlastHit> {
 	
 	private ArrayList<BlastHit> hits;
 	private int queryLength;				// needed by print() and printSome()
+	private String queryId;
 	
 	public BlastHitList() {
 		this.hits = new ArrayList<BlastHit>();
 		this.queryLength = 0;
+		this.queryId = null;
 	}
 	
 	/**
@@ -30,14 +32,28 @@ public class BlastHitList implements Iterable<BlastHit> {
 
 	/**
 	 * Set the query length needed by the print() and printSome() methods.
-	 * TODO: This should be parsed from the output file. However, the tabular output we use at the moment
-	 * does not contain this information. So this function provides a way to set it externally. Moving
-	 * to parsing the XML output would resolve this issue.
 	 * @param l
 	 */
 	public void setQueryLength(int l) {
 		this.queryLength = l;
 	}
+	
+	public void setQueryId(String queryId) {
+		this.queryId = queryId;
+	}
+	
+	public String getQueryId() {
+		return this.queryId;
+	}
+	
+	/**
+	 * Returns the query length for this blast hit list.
+	 * @return
+	 */
+	public int getQueryLength() {
+		return this.queryLength;
+	}
+	
 	
 	/**
 	 * Applies an e-value cutoff trimming out of this list all hits with e-value 
