@@ -490,6 +490,9 @@ public class averageGraph {
 			}
 			
 			System.out.println("Reconstructing");
+			if (forceTransOmega) {
+				System.out.println("Omega torsion angles will be restrained to trans conformation");
+			}
 			
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
 			
