@@ -1,4 +1,4 @@
-package sequence;
+package tests.sequence;
 
 
 import java.io.File;
@@ -10,6 +10,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import sequence.BlastHit;
+import sequence.BlastHitList;
+import sequence.BlastRunner;
+import sequence.BlastTabularParser;
+import sequence.BlastXMLParser;
 
 
 /**

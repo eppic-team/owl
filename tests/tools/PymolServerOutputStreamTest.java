@@ -1,7 +1,9 @@
-package tools;
+package tests.tools;
 
 import java.io.PrintWriter;
 import java.io.OutputStream;
+
+import tools.PymolServerOutputStream;
 
 import junit.framework.TestCase;
 

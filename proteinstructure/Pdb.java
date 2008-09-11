@@ -1550,6 +1550,15 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Gets the atom name given the atom serial
+	 * @param atomser
+	 * @return
+	 */
+	public String getAtomNameFromAtomSer(int atomser) {
+		return this.atomser2atom.get(atomser);
+	}
+	
+	/**
 	 * Gets all atom serials in a Set
 	 * @return
 	 */
@@ -1589,6 +1598,14 @@ public abstract class Pdb {
 	 */
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
+	}
+	
+	/**
+	 * Gets the model number of this Pdb 
+	 * @return
+	 */
+	public int getModel() {
+		return this.model;
 	}
 	
 	/**

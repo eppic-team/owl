@@ -199,5 +199,18 @@ public class SecStrucElement {
 		}
 		return 0; // if all fails we rather return nonsense
 	}
-	
+
+	public boolean equals(Object o) {
+
+		if (o==null) return false;
+		if (!(o instanceof SecStrucElement)) return false;
+		SecStrucElement other = (SecStrucElement) o;
+		if (!this.interval.equals(other.interval)) 
+			return false;
+		if (!this.secStrucId.equals(other.secStrucId))
+			return false;
+		if (this.secStrucType!=other.secStrucType)
+			return false;
+		return true;
+	}
 }

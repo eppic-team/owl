@@ -1,5 +1,10 @@
-package tools;
+package tests.tools;
 
+import tools.ColoredStrings;
+//import tools.ColoredStrings.AnsiBackground;
+//import tools.ColoredStrings.AnsiDecoration;
+//import tools.ColoredStrings.AnsiForeground;
+//import tools.ColoredStrings.AnsiIntensity;
 import junit.framework.TestCase;
 
 public class ColoredStringsTest extends TestCase {

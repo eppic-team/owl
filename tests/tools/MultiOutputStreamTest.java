@@ -1,4 +1,4 @@
-package tools;
+package tests.tools;
 
 import junit.framework.TestCase;
 
@@ -6,6 +6,9 @@ import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+
+import tools.MultiOutputStream;
+import tools.PymolServerOutputStream;
 
 public class MultiOutputStreamTest extends TestCase {
 
