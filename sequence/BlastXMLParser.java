@@ -157,6 +157,7 @@ public class BlastXMLParser implements ContentHandler {
 				inHsp = true;
 				this.currentHit = new BlastHit();
 				this.currentHit.setQueryId(queryId);
+				this.currentHit.setQueryLength(hitList.getQueryLength());
 				this.currentHit.setSubjectId(currentSubjectId);
 				this.currentHit.setSubjectLength(currentSubjectLength);
 			}

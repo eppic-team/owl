@@ -18,7 +18,8 @@ public class BlastHit {
 	public static final int OUTPUT_LENGTH = 80;
 	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	
-	private String queryId; // this is redundant here (it really belongs in BlastHitList) but anyway useful to have a copy here
+	private String queryId; // queryId and queryLength are redundant here (they belong in BlastHitList) but anyway useful to have copies here
+	private int queryLength;
 	private String subjectId;
 	private double percentIdentity;
 	private int aliLength;
@@ -26,7 +27,7 @@ public class BlastHit {
 	private int queryEnd;
 	private int subjectStart;
 	private int subjectEnd;
-	private int subjectLength; 	// queryLength is only in BlastHitList
+	private int subjectLength;
 	private double eValue;
 	private double score;
 	private Alignment al; 		// if BlastHit create from tabular file parsing, this will be null 
@@ -163,6 +164,14 @@ public class BlastHit {
 		this.queryId = queryId;
 	}
 
+	public int getQueryLength() {
+		return this.queryLength;
+	}
+	
+	public void setQueryLength(int queryLength) {
+		this.queryLength = queryLength;
+	}
+	
 	public String getSubjectId() {
 		return subjectId;
 	}
@@ -232,6 +241,15 @@ public class BlastHit {
 
 	public Alignment getAlignment() {
 		return this.al;	
+	}
+	
+	/**
+	 * Returns the query coverage for this hit's alignment, i.e. 
+	 * the ratio of aligned residues of the query compared to its length
+	 * @return
+	 */
+	public double getQueryCoverage() {
+		return  ((double)(this.getQueryEnd()-this.getQueryStart())/this.getQueryLength());
 	}
 	
 	/**
