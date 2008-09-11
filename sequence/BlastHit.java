@@ -66,7 +66,7 @@ public class BlastHit {
 	 * @param scaleFactor
 	 */
 	public void printWithOverview(double scaleFactor) {
-		System.out.printf("%5s\t%10s\t%5.1f\t%8.1e\t%4.0f ", queryId, subjectId, percentIdentity, eValue, score);
+		System.out.printf("%"+queryId.length()+"s\t%10s\t%5.1f\t%8.1e\t%4.0f ", queryId, subjectId, percentIdentity, eValue, score);
 		int beg = (int) Math.floor(scaleFactor * this.queryStart);
 		int end = (int) Math.ceil(scaleFactor * this.queryEnd);
 		printOverviewLine(beg, end);
@@ -78,8 +78,8 @@ public class BlastHit {
 	 * @param queryLength
 	 * @param scaleFactor
 	 */
-	public static void printHeaderWithOverview(int queryLength, double scaleFactor) {
-		System.out.printf("%5s\t%10s\t%5s\t%8s\t%4s ", "query", "subject", "id%", "e-val", "sc");
+	public static void printHeaderWithOverview(int queryLength, double scaleFactor, int queryIDlength) {
+		System.out.printf("%"+queryIDlength+"s\t%10s\t%5s\t%8s\t%4s ", "query", "subject", "id%", "e-val", "sc");
 		int beg = 1;
 		int end = (int) Math.ceil(scaleFactor * queryLength);
 		printOverviewLine(beg, end);		

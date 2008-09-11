@@ -103,7 +103,8 @@ public class BlastHitList implements Iterable<BlastHit> {
 		
 		if(queryLength > 0) {
 			double scaleFactor = 1.0 * outputLength / queryLength;
-			BlastHit.printHeaderWithOverview(queryLength, scaleFactor);
+			int queryIDlength = this.getQueryId().length();
+			BlastHit.printHeaderWithOverview(queryLength, scaleFactor, queryIDlength);
 			for (int i = 0; i < Math.min(hits.size(), numHits); i++) {
 				BlastHit hit = hits.get(i);
 				hit.printWithOverview(scaleFactor);
