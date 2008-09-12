@@ -34,6 +34,7 @@ public class Alignment {
 
 	public static final String PIRFORMAT = "PIR";
 	public static final String FASTAFORMAT = "FASTA";
+	public static final String CLUSTALFORMAT = "CLUSTAL";
 
 	private static final char GAPCHARACTER = '-';
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
@@ -54,18 +55,22 @@ public class Alignment {
 	/**
 	 * Creates an Alignment from a file in either FASTA or PIR format
 	 * @param fileName
-	 * @param format either PIR or FASTA
+	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT} or {@link #CLUSTALFORMAT}
 	 * @throws IOException
 	 * @throws PirFileFormatError
 	 * @throws FastaFileFormatError
 	 * @throws AlignmentConstructionError 
 	 */
-	public Alignment(String fileName, String format) throws IOException, PirFileFormatError, FastaFileFormatError, AlignmentConstructionError {
+	public Alignment(String fileName, String format) throws IOException, FileFormatError, AlignmentConstructionError {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
 		} else if (format.equals(FASTAFORMAT)){
 			readFileFastaFormat(fileName);
-		} 
+		} else if (format.equals(CLUSTALFORMAT)) {
+			readFileClustalFormat(fileName);
+		} else {
+			throw new IllegalArgumentException("Format "+format+" not supported by Alignment class");
+		}
 		
 		// checking lengths, i.e. checking we read correctly from file
 		checkLengths();
@@ -319,7 +324,56 @@ public class Alignment {
 		}
 		
 	}
+	
+	private void readFileClustalFormat(String fileName) throws IOException, FileFormatError {
+		// open file
+		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
 
+		// initialize TreeMap of sequences 
+		TreeMap<String,StringBuffer> tags2seqs = new TreeMap<String, StringBuffer>();
+		tags2indices = new TreeMap<String, Integer>();
+		indices2tags = new TreeMap<Integer, String>();
+
+		// read sequences
+		String line;
+		int lineNum=0;
+		int seqIdx = 0;
+		Pattern p = Pattern.compile("^(\\S+)\\s+([a-zA-Z\\-]+).*"); // regex for the sequence lines
+		while((line = fileIn.readLine()) != null) {
+		    ++lineNum;
+			if (lineNum == 1) {
+				if (!line.startsWith("CLUSTAL"))
+					throw new FileFormatError("File "+fileName+" does not conform with CLUSTAL format (first line does not start with CLUSTAL)");
+				continue;
+			}
+			line = line.trim();
+			if(line.length()==0) {
+				continue;
+			}
+			
+			Matcher m = p.matcher(line);
+			if (m.matches()) {
+				if (!tags2seqs.containsKey(m.group(1))) {
+					tags2seqs.put(m.group(1),new StringBuffer(m.group(2)));
+					tags2indices.put(m.group(1), seqIdx);
+					indices2tags.put(seqIdx, m.group(1));
+					seqIdx++;
+				} else {
+					tags2seqs.get(m.group(1)).append(m.group(2));
+				}
+			}
+		} 
+
+		
+		sequences = new String[tags2seqs.size()];
+
+		for (seqIdx=0;seqIdx<sequences.length;seqIdx++) {
+			sequences[seqIdx]=tags2seqs.get(indices2tags.get(seqIdx)).toString().toUpperCase();
+		}
+		
+		fileIn.close();
+				
+	}
 	
 	/*---------------------------- public methods ---------------------------*/
 	
@@ -459,6 +513,23 @@ public class Alignment {
    		}
     }
     
+   	/**
+   	 * Resets given existingTag to newTag
+   	 * @param existingTag
+   	 * @param newTag
+   	 * @throws IllegalArgumentException if existingTag not present in this Alignment
+   	 */
+   	public void resetTag(String existingTag, String newTag) {
+   		if (!tags2indices.containsKey(existingTag)) {
+   			throw new IllegalArgumentException("Given tag "+existingTag+" doesn't exist in this Alignment");
+   		} 
+   		int i = tags2indices.get(existingTag);
+   		indices2tags.put(i, newTag);
+   		tags2indices.remove(existingTag);
+   		tags2indices.put(newTag, i);
+   		
+   	}
+   	
     /**
      * Returns all sequence tags in a Collection<String>
      * Conserves the order of the sequences as they were added to the Alignment
@@ -1001,7 +1072,7 @@ public class Alignment {
      * @throws FastaFileFormatError 
      * @throws PirFileFormatError 
      * @throws AlignmentConstructionError */
-    public static void main(String[] args) throws IOException, PirFileFormatError, FastaFileFormatError, AlignmentConstructionError {
+    public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionError {
     	if (args.length<1){
     		System.err.println("Must provide FASTA file name as argument");
     		System.exit(1);
@@ -1009,7 +1080,7 @@ public class Alignment {
     	String fileName=args[0];
 
 
-    	Alignment al = new Alignment(fileName,"FASTA");
+    	Alignment al = new Alignment(fileName,Alignment.FASTAFORMAT);
 
 
     	// print columns

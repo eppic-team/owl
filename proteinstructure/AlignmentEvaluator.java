@@ -247,13 +247,10 @@ public class AlignmentEvaluator {
 		Alignment al = null;
 		try {
 			al = new Alignment(alignmentFileName, Alignment.FASTAFORMAT);
-		} catch (FastaFileFormatError e) {
+		} catch (FileFormatError e) {
 			System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			System.exit(1);
 		} catch (AlignmentConstructionError e) {
-			System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
-			System.exit(1);
-		} catch (PirFileFormatError e) {
 			System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			System.exit(1);
 		} catch (IOException e) {

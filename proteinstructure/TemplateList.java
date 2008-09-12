@@ -32,6 +32,7 @@ public class TemplateList implements Iterable<Template> {
 	
 	private ArrayList<Template> list;
 	private boolean pdbDataLoaded;
+	private boolean graphDataLoaded;
 
 	/**
 	 * Constructs a new empty TemplateList
@@ -39,6 +40,7 @@ public class TemplateList implements Iterable<Template> {
 	public TemplateList() {
 		list = new ArrayList<Template>();
 		pdbDataLoaded = false;
+		graphDataLoaded = false;
 	}
 	
 	/**
@@ -53,6 +55,7 @@ public class TemplateList implements Iterable<Template> {
 			this.add(new Template(it.next()));
 		}
 		pdbDataLoaded = false;
+		graphDataLoaded = false;
 	}
 
 	/**
@@ -66,6 +69,7 @@ public class TemplateList implements Iterable<Template> {
 			this.add(new Template(it.next()));
 		}
 		pdbDataLoaded = false;
+		graphDataLoaded = false;
 	}
 	
 	/**
@@ -78,6 +82,7 @@ public class TemplateList implements Iterable<Template> {
 		list = new ArrayList<Template>();
 		readListFile(listFile);
 		pdbDataLoaded = false;
+		graphDataLoaded = false;
 	}
 	
 	/**
@@ -90,6 +95,7 @@ public class TemplateList implements Iterable<Template> {
 			this.add(new Template(id));
 		}
 		pdbDataLoaded = false;
+		graphDataLoaded = false;
 	}
 	
 	/**
@@ -329,6 +335,7 @@ public class TemplateList implements Iterable<Template> {
 		for (Template template:this) {
 			template.loadRIGraph(ct, cutoff);
 		}
+		graphDataLoaded = true;
 	}
 	
 	/**
@@ -353,6 +360,16 @@ public class TemplateList implements Iterable<Template> {
 	public boolean isPdbDataLoaded() {
 		return pdbDataLoaded;
 	}
+	
+	/**
+	 * Tells whether there is graph data loaded for Templates in this TemplateList, 
+	 * i.e. if loadRIGraphs has been called. 
+	 * @return
+	 */
+	public boolean isGraphDataLoaded() {
+		return graphDataLoaded;
+	}
+
 	
 	/*--------------------------------- static methods ----------------------------------*/
 	
