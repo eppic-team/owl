@@ -38,11 +38,12 @@ public class BlastRunner {
 		this.makematProg = new File(blastBinDir,MAKEMAT_PROG).getAbsolutePath();
 	}
 	
-	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering) { 
+	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) { 
 		String dbFullPath = new File(blastDbDir,db).getAbsolutePath();
 		String filter = "";
 		if (noFiltering) filter = " -F F ";
 		String options = filter +
+						 " -a "+numThreads+
 						 " -m "+outputType+
 						 " -i "+queryFile.getAbsolutePath()+
 						 " -d "+dbFullPath+
@@ -75,7 +76,7 @@ public class BlastRunner {
 	 * @throws IOException
 	 * @throws BlastError if exit status of the program is not 0
 	 */
-	public void runPsiBlast(File queryFile, String db, File outFile, int maxIter, File outProfileFile, File inProfileFile, int outputType, boolean noFiltering) 
+	public void runPsiBlast(File queryFile, String db, File outFile, int maxIter, File outProfileFile, File inProfileFile, int outputType, boolean noFiltering, int numThreads) 
 	throws IOException, BlastError {
 		
 		checkIO(queryFile, db);
@@ -84,7 +85,7 @@ public class BlastRunner {
 		String inProfileOpt = "";
 		if (outProfileFile!=null) outProfileOpt = " -C "+outProfileFile.getAbsolutePath();
 		if (inProfileFile!=null) inProfileOpt = " -R "+inProfileFile.getAbsolutePath();
-		String cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering) +
+		String cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads) +
 						" -j " + maxIter+
 						outProfileOpt + inProfileOpt;
 		Process blastpgpProc = Runtime.getRuntime().exec(cmdLine);
@@ -113,11 +114,11 @@ public class BlastRunner {
 	 * @throws IOException
 	 * @throws BlastError if exit statis of the program is not 0
 	 */
-	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering) throws IOException, BlastError {
+	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads) throws IOException, BlastError {
 		
 		checkIO(queryFile, db);
 		
-		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering);
+		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads);
 		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
 		
 		try {
@@ -143,8 +144,8 @@ public class BlastRunner {
 	 * @throws IOException
 	 * @throws BlastError
 	 */
-	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering) throws IOException, BlastError {
-		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering);
+	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) throws IOException, BlastError {
+		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads);
 	}
 	
 	/**
@@ -177,6 +178,7 @@ public class BlastRunner {
 		int OUTPUT_TYPE = 9;
 		double eValCutoff = 1e-30;
 		boolean noFiltering = true;
+		int numThreads = 1;
 		File queryFile = new File("/project/StruPPi/CASP8/example_files/2uczA_ubc7.fasta");
 		
 		// read sequence
@@ -202,7 +204,7 @@ public class BlastRunner {
 		
 		// BlastP
 		System.out.println("Running blast against PDB...");
-		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering);
+		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering, numThreads);
 		BlastTabularParser blastParser1 = new BlastTabularParser(outFile);
 		BlastHitList hits1 = blastParser1.getHits();
 		hits1.setQueryLength(queryLength);
@@ -212,9 +214,9 @@ public class BlastRunner {
 		
 		// PsiBlast
 		System.out.println("Create psi-blast profile with " + maxIter + " iterations against " + nrdb + "...");
-		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE, noFiltering);
+		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE, noFiltering, numThreads);
 		System.out.println("Running psi-blast against PDB...");
-		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE, noFiltering);
+		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE, noFiltering, numThreads);
 		
 		BlastTabularParser blastParser2 = new BlastTabularParser(outFile);
 		BlastHitList hits2 = blastParser2.getHits();

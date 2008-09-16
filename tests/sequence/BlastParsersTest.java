@@ -26,6 +26,7 @@ import sequence.BlastXMLParser;
  */
 public class BlastParsersTest {
 
+	int numThreads = Runtime.getRuntime().availableProcessors(); // we run blast with as many CPUs we have available in executing host
 	
 	String[] testSetCasp7 = {"T0346", "T0290", "T0340", "T0345", "T0315", "T0305", "T0366", "T0295", "T0317", "T0288"};
 	String targetDir = "/project/StruPPi/CASP7/targets";
@@ -56,8 +57,8 @@ public class BlastParsersTest {
 			tabFiles[i] = outFileTAB;
 			xmlFiles[i] = outFileXML;
 			BlastRunner br = new BlastRunner("/project/StruPPi/bin","/project/StruPPi/CASP8/blast_dbs");
-			br.runBlastp(queryFile, db, outFileXML, 7, true);
-			br.runBlastp(queryFile, db, outFileTAB, 8, true);
+			br.runBlastp(queryFile, db, outFileXML, 7, true, numThreads);
+			br.runBlastp(queryFile, db, outFileTAB, 8, true, numThreads);
 			i++;
 		}
 	}
