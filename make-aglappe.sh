@@ -10,6 +10,9 @@ fi
 tempdir=$1
 aglappetag=$2
 
+# compile with Java5 to keep it backward compatible
+JAVAVERSION=1.5.0 
+
 CLASSPATH=.:/project/StruPPi/jars/mysql-connector-java.jar:\
 /project/StruPPi/jars/JRclient-RE817.jar:\
 /project/StruPPi/jars/java-getopt-1.0.13.jar:\
