@@ -11,13 +11,18 @@ import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
 import proteinstructure.FileFormatError;
 
+/**
+ * A class to run tcoffee.
+ * @author duarte
+ *
+ */
 public class TcoffeeRunner {
 
 	// t-coffee seems to have a bug in outputting directly to fasta_aln format: it will add 
 	// one extra character to all sequences except for the target. This is why we use clustalw
 	private static final String DEFAULT_SEQ2PROF_OUTFORMAT = "clustalw";
 	
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	private File tcofProg;
 	private File logFile;
 
@@ -27,6 +32,16 @@ public class TcoffeeRunner {
 		this.logFile = logFile;
 	}
 
+	/**
+	 * Aligns a sequence to a profile (in the form of a multiple sequence alignment)
+	 * by using tcoffee's profile comparison
+	 * @param sequence the sequence
+	 * @param tag the tag to be used for the sequence in the output Alignment
+	 * @param profile the multiple sequence alignment representing the profile to align to 
+	 * @return
+	 * @throws TcoffeeError if tcoffee fails to run
+	 * @throws IOException if problem while reading/writing temp files needed to run tcoffee
+	 */
 	public Alignment alignSequence2Profile(String sequence, String tag, Alignment profile) throws TcoffeeError, IOException {
 		File inFile = File.createTempFile("tcof.", ".in");
 		if (!DEBUG) inFile.deleteOnExit();
@@ -99,9 +114,12 @@ public class TcoffeeRunner {
 				System.exit(1);
 			}
 
+			tcofLog.close();
+			
 		} catch (IOException e) {
 			throw new TcoffeeError("IO error while trying to run "+tcofProg+": "+e.getMessage());
 		}
+		
 		
 	}
 	

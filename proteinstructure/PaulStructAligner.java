@@ -185,10 +185,12 @@ public class PaulStructAligner implements StructAligner {
 	private void cleanUp(String base) {
 		if (!DEBUG) {
 			new File(base+".prog.aln").delete();
+			new File(base+".prog.dnd").delete();
 			new File(base+".prog.lib").delete();
 			new File(base+".prog.mistral").delete();
 			new File(base+".prog.results").delete();
 			new File(base+".pw.aln").delete();
+			new File(base+".pw.dnd").delete();
 			new File(base+".pw.lib").delete();
 			new File(base+".pw.mistral").delete();
 			new File(base+".pw.results").delete();
