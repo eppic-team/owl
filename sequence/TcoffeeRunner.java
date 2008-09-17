@@ -35,19 +35,16 @@ public class TcoffeeRunner {
 	/**
 	 * Aligns a sequence to a profile (in the form of a multiple sequence alignment)
 	 * by using tcoffee's profile comparison
-	 * @param sequence the sequence
-	 * @param tag the tag to be used for the sequence in the output Alignment
+	 * @param seq the sequence object (its tag will be the one used in the output Alignment)
 	 * @param profile the multiple sequence alignment representing the profile to align to 
 	 * @return
 	 * @throws TcoffeeError if tcoffee fails to run
 	 * @throws IOException if problem while reading/writing temp files needed to run tcoffee
 	 */
-	public Alignment alignSequence2Profile(String sequence, String tag, Alignment profile) throws TcoffeeError, IOException {
+	public Alignment alignSequence2Profile(Sequence seq, Alignment profile) throws TcoffeeError, IOException {
 		File inFile = File.createTempFile("tcof.", ".in");
 		if (!DEBUG) inFile.deleteOnExit();
-		String[] seqs = {sequence};
-		String[] tags = {tag};
-		Sequence.writeSeqs(inFile, seqs, tags);
+		seq.writeToFastaFile(inFile);
 		File outFile = File.createTempFile("tcof.", ".out");
 		if (!DEBUG) outFile.deleteOnExit();
 		File profileFile = File.createTempFile("tcof", "profile");
@@ -132,7 +129,7 @@ public class TcoffeeRunner {
 		Sequence seq = new Sequence();
 		seq.readFromFastaFile(seqFile);
 		Alignment al = new Alignment(alFile.getAbsolutePath(),Alignment.FASTAFORMAT);
-		Alignment outAl = tcr.alignSequence2Profile(seq.getSeq(), "T0290", al);
+		Alignment outAl = tcr.alignSequence2Profile(seq, al);
 		outAl.writeFasta(System.out, 60, true);
 		
 	}

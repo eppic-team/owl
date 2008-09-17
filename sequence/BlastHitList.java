@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 
 /**
@@ -15,9 +16,11 @@ public class BlastHitList implements Iterable<BlastHit> {
 	private ArrayList<BlastHit> hits;
 	private int queryLength;				// needed by print() and printSome()
 	private String queryId;
+	private HashMap<String,BlastHit> lookup; // a lookup table to be able to have an efficient getHit(subjectId)
 	
 	public BlastHitList() {
 		this.hits = new ArrayList<BlastHit>();
+		this.lookup = new HashMap<String, BlastHit>();
 		this.queryLength = 0;
 		this.queryId = null;
 	}
@@ -28,6 +31,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 	 */
 	public void add(BlastHit hit) {
 		this.hits.add(hit);
+		this.lookup.put(hit.getSubjectId(), hit);
 	}
 
 	/**
@@ -63,8 +67,10 @@ public class BlastHitList implements Iterable<BlastHit> {
 	public void applyCutoff(double eValueCutoff) {
 		Iterator<BlastHit> it = hits.iterator();
 		while (it.hasNext()) {
-			if (it.next().getEValue()>=eValueCutoff) {
+			BlastHit hit = it.next();
+			if (hit.getEValue()>=eValueCutoff) {
 				it.remove();
+				lookup.remove(hit.getSubjectId());
 			}
 		}
 	}
@@ -77,8 +83,11 @@ public class BlastHitList implements Iterable<BlastHit> {
 		Iterator<BlastHit> it = this.iterator();
 		int i=1;
 		while (it.hasNext()) {
-			it.next();
-			if (i>rank) it.remove();
+			BlastHit hit = it.next();
+			if (i>rank) {
+				it.remove();
+				lookup.remove(hit.getSubjectId());
+			}
 			i++;
 		}
 	}
@@ -132,6 +141,20 @@ public class BlastHitList implements Iterable<BlastHit> {
 	 */
 	public BlastHit[] getHits() {
 		return (BlastHit[]) this.hits.toArray();
+	}
+	
+	/**
+	 * Returns a blast hit given its subjectId
+	 * @param subjectId 
+	 * @return
+	 * @throws IllegalArgumentException if given subjectId not present in this BlastHitList
+	 */
+	public BlastHit getHit(String subjectId) {
+		if (this.lookup.containsKey(subjectId))	{
+			return this.lookup.get(subjectId);
+		} else {
+			throw new IllegalArgumentException("Given subjectId "+subjectId+"doesn't exist in this blast hit list");
+		}
 	}
 	
 	/**

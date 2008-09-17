@@ -63,6 +63,18 @@ public class Sequence {
 			throw new FastaFileFormatError("The sequence in FASTA file "+fastaFile+" contains spaces.");
 		}
 	}
+	
+	/**
+	 * Writes this sequence to fasta file
+	 * Output line length is fixed at 80
+	 * @param fastaFile
+	 * @throws IOException
+	 */
+	public void writeToFastaFile(File fastaFile) throws IOException {
+		String[] seqs = {this.getSeq()};
+		String[] tags = {this.getName()};
+		writeSeqs(fastaFile, seqs, tags);
+	}
 
 	/**
 	 * @return the name
@@ -102,6 +114,7 @@ public class Sequence {
 
 	/**
 	 * Writes given sequences and tags to given sequence file in FASTA format
+	 * Output line length is fixed at 80
 	 * @param seqFile
 	 * @param seqs
 	 * @param tags

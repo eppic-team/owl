@@ -248,6 +248,15 @@ public class TemplateList implements Iterable<Template> {
 	}
 	
 	/**
+	 * Gets a Template given its index
+	 * @param i
+	 * @return
+	 */
+	public Template getTemplate(int i) {
+		return this.list.get(i);
+	}
+	
+	/**
 	 * Gets the rank (from 1 to max) of the given templateId in this TemplateList
 	 * or 0 if templateId is not present in list.
 	 * @param templateId
