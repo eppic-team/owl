@@ -341,6 +341,9 @@ public class TemplateList implements Iterable<Template> {
 	 * @param cutoff
 	 */
 	public void loadRIGraphs(String ct, double cutoff) {
+		if (!this.isPdbDataLoaded()) {
+			throw new IllegalArgumentException("PDB data is not loaded for this TemplateList, can't load graph data.");
+		}
 		for (Template template:this) {
 			template.loadRIGraph(ct, cutoff);
 		}

@@ -199,66 +199,32 @@ public class Template {
 	 * Returns the scop sccs string for this Template
 	 * The first time this method is called the SCOP data is parsed from file.
 	 * Subsequente calls take the SCOP data from the cached variable.
-	 * If PDB data is not loaded yet it will be loaded from database.
-	 * @param conn
-	 * @param pdbaseDb
 	 * @return
+	 * @throws IllegalArgumentException if PDB data is not loaded yet
 	 */
-	public String getScopSccsString(MySQLConnection conn, String pdbaseDb) {
+	public String getScopSccsString() {
 		if (scopSccsString==null) {
-			try {
-				if (pdb==null) {
-					loadPdbData(conn, pdbaseDb);
-				}
-				getScopInfo();
-				
-			}  catch (SQLException e) {
-				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
-				pdb = null;
-				scopSccsString = "";
-			} catch (PdbCodeNotFoundError e) {
-				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
-				pdb = null;
-				scopSccsString = "";
-			} catch (PdbLoadError e) {
-				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
-				pdb = null;
-				scopSccsString = "";
-			} 
-
+			if (!this.hasPdbData()) {
+				throw new IllegalArgumentException("PDB data not loaded for this Template. Can't get SCOP data.");
+			}
+			getScopInfo();				
 		}
 		return this.scopSccsString;
 	}
 	
 	/**
 	 * Returns the pdb title string for this Template
-	 * The first time this method is called the title is taken from the pdb object.
-	 * If PDB data is not loaded yet it will be loaded from database. 
-	 * @param conn
-	 * @param pdbaseDb
+	 * The first time this method is called the title is taken from the pdb object, 
+	 * subsequent calls take the title from the cached variable.  
 	 * @return the title string
+	 * @throws IllegalArgumentException if PDB data is not loaded yet
 	 */
-	public String getTitle(MySQLConnection conn, String pdbaseDb) {
+	public String getTitle() {
 		if (titleString==null) {
-			try {
-				if (pdb==null) {
-					loadPdbData(conn, pdbaseDb);
-				}
-				this.titleString = pdb.getTitle();
-				
-			}  catch (SQLException e) {
-				System.err.println("Couldn't get the template structure "+id+" because of SQL error: "+e.getMessage());
-				pdb = null;
-				scopSccsString = "";
-			} catch (PdbCodeNotFoundError e) {
-				System.err.println("Couldn't get the template structure "+id+" because pdb code was not found");
-				pdb = null;
-				scopSccsString = "";
-			} catch (PdbLoadError e) {
-				System.err.println("Couldn't get the template structure "+id+" because of pdb load error: "+e.getMessage());
-				pdb = null;
-				scopSccsString = "";
-			} 			
+			if (!this.hasPdbData()) {
+				throw new IllegalArgumentException("PDB data not loaded for this Template. Can't get PDB title.");
+			}
+			this.titleString = pdb.getTitle();
 		}
 		return this.titleString;
 	}
