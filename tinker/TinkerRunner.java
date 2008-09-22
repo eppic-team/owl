@@ -2,6 +2,8 @@ package tinker;
 
 import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.ConsensusSquare;
+import graphAveraging.GraphAverager;
+import graphAveraging.GraphAveragerError;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +30,7 @@ import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.MaxClusterRunner;
 import proteinstructure.RIGEdge;
+import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 
@@ -881,6 +884,61 @@ public class TinkerRunner {
 		this.lastOutputDir = outputDir;
 		this.lastBaseName = baseName;
 		this.lastNumberOfModels = numberOfModels;
+	}
+	
+	/**
+	 * Reconstructs the given contact map with the given number of models returning
+	 * an average graph containing a union of edges of all reconstructed models. The edges are weighted 
+	 * by the fraction of occurrence in the graphs derived from the reconstructed models.
+	 * The idea is that this method geometrizes a given graph which is not necessarily embeddable. From the
+	 * ensemble output one would see which edges were physically possible compare to the input contact map.
+	 * We are not sure if this works it's just an idea, but if it does would be great!   
+	 * @param graph
+	 * @param numberOfModels
+	 * @param fastReconstruct
+	 * @param outputDir the output directory, if left null then a temp directory is used and all output removed
+	 * @param baseName the base name of the output files, if left null then a random name is used and all output removed
+	 * @return
+	 * @throws IOException 
+	 * @throws TinkerError 
+	 */
+	public RIGraph geometrizeContactMap(RIGraph graph, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName) 
+	throws TinkerError, IOException {
+		boolean cleanUp = false;
+		if (outputDir == null || baseName == null) {
+			cleanUp = true;
+		}
+		RIGraph[] graphs = {graph};
+		if (fastReconstruct) {
+			reconstructFast(graph.getSequence(), graphs, null, false, 
+					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, 
+					outputDir, baseName, cleanUp);
+		} else {
+			reconstruct(graph.getSequence(), graphs, null, false, 
+					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION,
+					outputDir, baseName, cleanUp);
+		}
+		
+		RIGEnsemble ensemble = new RIGEnsemble(graph.getContactType(), graph.getCutoff());
+		for (File file:getLastModelFiles()) {
+			PdbfilePdb pdb = new PdbfilePdb(file.getAbsolutePath());
+			try {
+				pdb.load(Pdb.NULL_CHAIN_CODE);
+			} catch (PdbLoadError e) {
+				throw new TinkerError(e);
+			} 
+			ensemble.addRIG(pdb.get_graph(graph.getContactType(), graph.getCutoff()));
+
+		}
+		
+		GraphAverager ga = null;
+		try {
+			ga = new GraphAverager(ensemble);
+		} catch (GraphAveragerError e) {
+			throw new TinkerError(e);
+		}
+		return ga.getAverageGraph();
+
 	}
 	
 	// retrieving results
