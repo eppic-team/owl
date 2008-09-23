@@ -291,4 +291,24 @@ public class BlastHit {
 		}
 		return null;
 	}
+	
+	// statics
+	
+	/**
+	 * From a template id in the form pdbCode+pdbChainCode (e.g. 1abcA) returns a subjectId
+	 * as it is in the blastable pdb sequences file: pdb|1ABC|A
+	 * This is exactly the reverse of {@link #getTemplateId()}
+	 * See also {@link #ID_REGEX} 
+	 * @param templateId
+	 * @return 
+	 */
+	public static String templateIdToSubjectId(String templateId) {
+		Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
+		Matcher m = p.matcher(templateId);
+		if (m.matches()) {
+			return "pdb|"+m.group(1).toUpperCase()+"|"+m.group(2);
+		} else {
+			throw new IllegalArgumentException("Given templateId must be of the form pdbCode+pdbChainCode, e.g. 1abcA");
+		}
+	}
 }

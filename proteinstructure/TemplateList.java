@@ -30,9 +30,15 @@ public class TemplateList implements Iterable<Template> {
 	public static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
 	public static final String IDS_REGEX3 = "^(\\d\\w\\w\\w)\\s+(\\w)";
 	
+	public static final String SRC_BLAST = "blast";
+	public static final String SRC_PSIBLAST = "psiblast";
+	public static final String SRC_GTG = "gtg";
+	public static final String SRC_OTHER = "other"; // if data was read from a listfile or a list of pdb ids 
+	
 	private ArrayList<Template> list;
 	private boolean pdbDataLoaded;
 	private boolean graphDataLoaded;
+	private String source;
 
 	/**
 	 * Constructs a new empty TemplateList
@@ -70,6 +76,7 @@ public class TemplateList implements Iterable<Template> {
 		}
 		pdbDataLoaded = false;
 		graphDataLoaded = false;
+		setSource(SRC_GTG);
 	}
 	
 	/**
@@ -83,6 +90,7 @@ public class TemplateList implements Iterable<Template> {
 		readListFile(listFile);
 		pdbDataLoaded = false;
 		graphDataLoaded = false;
+		setSource(SRC_OTHER);
 	}
 	
 	/**
@@ -96,6 +104,7 @@ public class TemplateList implements Iterable<Template> {
 		}
 		pdbDataLoaded = false;
 		graphDataLoaded = false;
+		setSource(SRC_OTHER);
 	}
 	
 	/**
@@ -382,6 +391,23 @@ public class TemplateList implements Iterable<Template> {
 		return graphDataLoaded;
 	}
 
+	/**
+	 * Sets the source of this TemplateList, one of {@link #SRC_BLAST}, {@link #SRC_PSIBLAST} 
+	 * or {@value #SRC_GTG} 
+	 * @param src
+	 */
+	public void setSource(String src) {
+		this.source = src;
+	}
+	
+	/**
+	 * Gets the source of this TemplateList, can be one of {@link #SRC_BLAST}, {@link #SRC_PSIBLAST} 
+	 * or {@value #SRC_GTG}
+	 * @return
+	 */
+	public String getSource() {
+		return this.source;
+	}
 	
 	/*--------------------------------- static methods ----------------------------------*/
 	
