@@ -239,8 +239,35 @@ public class BlastHit {
 		}
 	}
 
+	/**
+	 * Return the hsp alignment of this BlastHit with tags queryId and subjectId
+	 * @return
+	 */
 	public Alignment getAlignment() {
 		return this.al;	
+	}
+	
+	/**
+	 * Return the hsp alignment of this BlastHit with tags queryId and templateId (pdbCode+pdbChaincode) 
+	 * replacing subjectId. If subjectId doesn't match regex {@value #ID_REGEX} then alignment with normal tags 
+	 * is returned.
+	 * @see {@link #getTemplateId()}
+	 * @return
+	 */
+	public Alignment getAlignmentWithTemplateIDTag() {
+		if (this.getTemplateId()!=null) {
+			Alignment aln;
+			try {
+				aln = this.al.copy();
+				aln.resetTag(this.subjectId, this.getTemplateId());
+			} catch (AlignmentConstructionError e){
+				aln = null;
+				System.err.println("Unexpected error while copying alignment. Error: "+e.getMessage());
+			}
+			return aln;
+		} else {
+			return this.al;
+		}
 	}
 	
 	/**
