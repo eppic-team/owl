@@ -4,12 +4,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -49,6 +47,8 @@ public class Alignment {
 
 	private TreeMap<Integer,int[]> mapAlign2Seq; // map of seq index to arrays mapping alignment serials to sequence serials 
 	private TreeMap<Integer,int[]> mapSeq2Align; // map of seq index to arrays mapping sequence serials to alignment serials
+	
+	private TreeMap<String, SecondaryStructure> secStructAnnotation;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -668,23 +668,19 @@ public class Alignment {
      * Prints the alignment in fasta format to stdout
      */
     public void printFasta() {
-    	for(String seqTag:getTags()) {
-    		System.out.println(FASTAHEADER_CHAR + seqTag);
-    		System.out.println(getAlignedSequence(seqTag));
-    	}
+   		writeFasta(System.out,80,true);
     }
 
 	/**
 	 * Writes alignment to the given output stream. The output format 
 	 * conforms to the FASTA format.
-	 * @param out  the output stream to be printed to
+	 * @param out  the PrintStream to print to
 	 * @param lineLength  the maximal line length, setting this to null 
 	 *  always results in 80 characters per line
 	 * @param alignedSeqs  toggles the output of the aligned or ungapped 
 	 *  sequences 
-	 * @throws IOException
 	 */
-	public void writeFasta(OutputStream out, Integer lineLength, boolean alignedSeqs) throws IOException {
+	public void writeFasta(PrintStream out, Integer lineLength, boolean alignedSeqs) {
 		int len = 80;
 		String seq = "";
 
@@ -694,12 +690,9 @@ public class Alignment {
 
 		for( String name : getTags() ) {
 			seq = alignedSeqs ? getAlignedSequence(name) : getSequenceNoGaps(name);
-			out.write('>');
-			out.write(name.getBytes());
-			out.write(System.getProperty("line.separator").getBytes());
+			out.println(FASTAHEADER_CHAR + name);
 			for(int i=0; i<seq.length(); i+=len) {
-				out.write(seq.substring(i, Math.min(i+len,seq.length())).getBytes());
-				out.write(System.getProperty("line.separator").getBytes());
+				out.println(seq.substring(i, Math.min(i+len,seq.length())));
 			}
 		}
 	}
@@ -972,45 +965,20 @@ public class Alignment {
     	return true;
     }
     
-    
     /**
-     * Writes to given PrintStream a "graphical" overview of the secondary structures 
-     * from the given psipredFile and from the sequences in this alignment for which 
-     * a PDB structure can be found (based on tags of the form pdbCode+pdbChainCode, 
-     * e.g. 1abcA).
-     * This Alignment must contain the 
-     * @param Out
-     * @param targetTag a tag of a sequence in this Alignment that corresponds to the 
-     * sequence in the given psipredFile
-     * @param psipredFile a file with a PsiPred sec. structure prediction for sequence 
-     * of targetTag
-     * @param showSequence whether the sequences will be printed in addition to the secondary structure assignments
+     * Associates a secondary structure annotation to each sequence of this Alignment 
+     * whose tag is in the form pdbCode+pdbChainCode e.g. 1abcA
      * @param conn a db connection for getting the PDB data
      * @param pdbaseDb a pdbase database name
      * @param dsspExecutable
-     * @throws IOException if sequence of target in alignment file and psipred file don't match 
-     * or if targetTag not present in this alignment or if we can't read psipredFile 
      */
-    public void writeSecStructMatching(PrintStream Out, String targetTag, File psipredFile, boolean showSequence, MySQLConnection conn, String pdbaseDb, String dsspExecutable) 
-    throws IOException {
-    	if (!this.hasTag(targetTag)) 
-    		//TODO abusing here of IOException, we should use a more appropriate one
-    		throw new IOException("The alignment doesn't contain the tag "+targetTag);
-		SecondaryStructure targetSecStruct = new SecondaryStructure(psipredFile);
-		if (!this.getSequenceNoGaps(targetTag).equals(targetSecStruct.getSequence())) {
-    		//TODO abusing here of IOException, we should use a more appropriate one
-			throw new IOException("Sequence in alignment file with tag "+targetTag+" doesn't match sequence in psipred file "+psipredFile);
-		}
-
-		HashMap<String,SecondaryStructure> allSecStructs = new HashMap<String, SecondaryStructure>();
-		allSecStructs.put(targetTag, targetSecStruct);
-		
+    public void addSecStructAnnotation(MySQLConnection conn, String pdbaseDb, String dsspExecutable) {
+    	this.secStructAnnotation = new TreeMap<String, SecondaryStructure>();
 		for (String tag:this.getTags()) {
+			SecondaryStructure secStruct = new SecondaryStructure("");
 			Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
 			Matcher m = p.matcher(tag);
 			if (m.matches()) {
-				
-				SecondaryStructure secStruct;
 				try {
 					PdbasePdb pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
 					pdb.load(m.group(2));
@@ -1018,20 +986,88 @@ public class Alignment {
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadError e) {
 					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
-					secStruct = new SecondaryStructure("");
 				} catch (SQLException e) {
 					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
-					secStruct = new SecondaryStructure("");
 				} catch (PdbCodeNotFoundError e) {
-					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
-					secStruct = new SecondaryStructure("");					
+					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());					
 				} catch (IOException e) {
 					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
-					secStruct = new SecondaryStructure("");
 				}
-				allSecStructs.put(tag, secStruct);
 			}
+			secStructAnnotation.put(tag, secStruct);
 		}
+    }
+
+    /**
+     * Associates a secondary structure annotation to each sequence of this Alignment 
+     * taking the PDB data from the given templates
+     * @param templates a TemplateList containing templates with matching ids to tags in this Alignment
+     * @param dsspExecutable
+     */
+    public void addSecStructAnnotation(TemplateList templates, String dsspExecutable) {
+    	this.secStructAnnotation = new TreeMap<String, SecondaryStructure>();
+    	for (String tag:this.getTags()) {
+    		SecondaryStructure secStructure = new SecondaryStructure("");
+    		if (templates.contains(tag)) {
+    			if (templates.getTemplate(tag).hasPdbData()) {
+    				Pdb pdb =templates.getTemplate(tag).getPdb();
+    				try {
+    					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+    				} catch (IOException e) {
+    					System.err.println("dssp couldn't be run for  ");
+    				}
+    				secStructure = pdb.getSecondaryStructure();
+    			} 
+    		} else {
+    			System.err.println("Couldn't find template while getting secondary structure annotation for sequence "+tag);
+    		}
+    		secStructAnnotation.put(tag,secStructure);
+    	}
+    }
+    
+    /**
+     * Tells whether this Alignment has been assigned secondary structure annotations 
+     * for its sequences
+     * @return
+     */
+    public boolean hasSecStructAnnotation() {
+    	return secStructAnnotation!=null;
+    }
+    
+    /**
+     * Writes to given PrintStream a "graphical" overview of the secondary structures 
+     * from the given psipredFile and from the sequences in this alignment for which 
+     * a secondary annotation exists. The secondary structure annotation must be assigned before
+     * calling this method by using {@link #addSecStructAnnotation(TemplateList, String)} or
+     * {@link #addSecStructAnnotation(MySQLConnection, String, String)}
+     * This Alignment must contain the targetTag
+     * @param Out
+     * @param targetTag a tag of a sequence in this Alignment that corresponds to the 
+     * sequence in the given psipredFile
+     * @param psipredFile a file with a PsiPred sec. structure prediction for sequence 
+     * of targetTag (horizontal format)
+     * @param showSequence whether the sequences will be printed in addition to the secondary structure assignments
+     * @throws IOException if sequence of target in alignment file and psipred file don't match 
+     * or if targetTag not present in this alignment or if we can't read psipredFile 
+     */
+    public void writeWithSecStruct(PrintStream Out, String targetTag, File psipredFile, boolean showSequence) 
+    throws IOException {
+    	if (!this.hasSecStructAnnotation()) {
+    		//TODO abusing here of IOException, we should use a more appropriate one
+    		throw new IllegalArgumentException("This Alignment has no secondary structure annotation");
+    	}
+    	if (!this.hasTag(targetTag)) { 
+    		//TODO abusing here of IOException, we should use a more appropriate one
+    		throw new IOException("The alignment doesn't contain the tag "+targetTag);
+    	}
+    	
+    	SecondaryStructure targetSecStruct = new SecondaryStructure(psipredFile);		
+		if (!this.getSequenceNoGaps(targetTag).equals(targetSecStruct.getSequence())) {
+    		//TODO abusing here of IOException, we should use a more appropriate one
+			throw new IOException("Sequence in alignment file with tag "+targetTag+" doesn't match sequence in psipred file "+psipredFile);
+		}
+
+		this.secStructAnnotation.put(targetTag, targetSecStruct);
 		
 		// we get a new tags list reordered with targetTag as the first
 		String[] tags = new String[this.getTags().size()];
@@ -1053,7 +1089,7 @@ public class Alignment {
 		
 		//int len = 80;
 		for( String tag : tags ) {
-			SecondaryStructure secStruct = allSecStructs.get(tag);
+			SecondaryStructure secStruct = this.secStructAnnotation.get(tag);
 			String seq = getAlignedSequence(tag);
 			
 			// printing sequence
@@ -1104,7 +1140,8 @@ public class Alignment {
     }
     
 
-    /** to test the class 
+    /** 
+     * to test the class 
      * @throws IOException
      * @throws FastaFileFormatError 
      * @throws PirFileFormatError 

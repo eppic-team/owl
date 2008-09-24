@@ -2,9 +2,9 @@ package sequence;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 
 import proteinstructure.Alignment;
@@ -49,7 +49,7 @@ public class TcoffeeRunner {
 		if (!DEBUG) outFile.deleteOnExit();
 		File profileFile = File.createTempFile("tcof", "profile");
 		if (!DEBUG) profileFile.deleteOnExit();
-		FileOutputStream out = new FileOutputStream(profileFile);
+		PrintStream out = new PrintStream(profileFile);
 		profile.writeFasta(out, 80, true);
 		out.close();
 		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, profileFile);
