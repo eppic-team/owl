@@ -185,6 +185,17 @@ public class AlignmentEvaluator {
 		System.out.println();
 	}
 	
+	/** 
+	 * Returns a string represenation of the given set 
+	 */
+	public String getColSetString(TreeSet<Integer> cols) {
+		String s = "";
+		for(int col:cols) {
+			s += String.format("%d,", col);
+		}
+		return s.substring(0,  s.length()-1);
+	}
+	
 	/*--------------------------------- main --------------------------------*/
 	/**
 	 * @param args
@@ -196,13 +207,12 @@ public class AlignmentEvaluator {
 			System.exit(1);
 		}
 		
-		String alignmentFileName = "/project/StruPPi/Software/multalign/results/globins/mustang.aln.fa";
-		String listFileName = "/project/StruPPi/Software/multalign/data/malecon/globins/pdbs.list";
-		String logFileName = "/project/StruPPi/Software/multalign/results/globins/mustang.log";
+		String alignmentFileName; // = "/project/StruPPi/Software/multalign/results/globins/mustang.aln.fa";
+		String listFileName; // = "/project/StruPPi/Software/multalign/data/malecon/globins/pdbs.list";
+		String logFileName; // = "/project/StruPPi/Software/multalign/results/globins/mustang.log";
 		
 		alignmentFileName = args[0];
 		listFileName = args[1];
-		
 		
 		TreeMap<String,Pdb> tag2pdb = new TreeMap<String,Pdb>();
 		
@@ -225,10 +235,11 @@ public class AlignmentEvaluator {
 		String line;
 		while((line = in.readLine()) != null) {
 			String tag = line.substring(line.length()-9, line.length()-4);
+			String chain = tag.substring(4,5);
 			//System.out.println(tag);
 			try {
 			Pdb pdb = new PdbfilePdb(line);
-			pdb.load(DEFAULT_CHAIN_CODE);
+			pdb.load(chain);
 			tag2pdb.put(tag,pdb);
 			} catch (PdbLoadError e) {
 				System.err.println("Error reading from file " + line + ": " + e.getMessage());
@@ -267,10 +278,11 @@ public class AlignmentEvaluator {
 			System.exit(1);
 		}
 		// print results
-		String alName = alignmentFileName.substring(alignmentFileName.lastIndexOf('/')+1, alignmentFileName.length()-7);
+		String alName = alignmentFileName.substring(alignmentFileName.lastIndexOf('/')+1, alignmentFileName.length()-3);
 		log.println("#aln_file=" + alignmentFileName);
 		log.println("#pdb_file=" + listFileName);
-		log.println("#alignment_name\tncore\tremoved\trmsd\tmSAS");
+		log.println("#gapless_cols=" + alEv.getColSetString(al.getGaplessColumns()));
+		log.println("#name\tncore\tremoved\trmsd\tmSAS");
 		alEv.evaluate(log, alName);
 		log.close();
 
