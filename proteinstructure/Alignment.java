@@ -392,9 +392,11 @@ public class Alignment {
 	/**
 	 * Adds a sequence to the alignment. The sequence has to have the same length as the alignment
 	 * (possibly containing gap characters) otherwise an AlignmentConstructionError is thrown.
-	 * The internal mappings are regenearted for the new alignment.
-	 * @param seq the new sequence
-	 * @throws AlignmentConstructionError
+	 * The internal mappings are regenerated for the new alignment.
+	 * @param newTag the sequence name
+	 * @param newSeq the new sequence
+	 * @throws AlignmentConstructionError if given newSeq differs in length from this alignment or if 
+	 * given newTag already exists in this alignment
 	 */
 	public void addSequence(String newTag, String newSeq) throws AlignmentConstructionError {
 		int l = this.getAlignmentLength();
@@ -425,9 +427,11 @@ public class Alignment {
 	
 	/**
 	 * Returns a deep copy of this alignment where the given sequence has been added.
-	 * @param newTag
-	 * @param newSeq
+	 * @param newTag the sequence name
+	 * @param newSeq the new sequence (possibly containing gaps)
 	 * @return a deep copy of this alignment where the given sequence has been added.
+	 * @throws AlignmentConstructionError if given newSeq differs in length from this alignment or if 
+	 * given newTag already exists in this alignment 
 	 */
 	public Alignment copyAndAdd(String newTag, String newSeq) throws AlignmentConstructionError {
 		Alignment newAl = this.copy();
@@ -528,6 +532,39 @@ public class Alignment {
    		tags2indices.remove(existingTag);
    		tags2indices.put(newTag, i);
    		
+   	}
+   	
+   	/**
+   	 * Removes the sequence corresponding to the given tag.
+   	 * @param tag
+   	 */
+   	public void removeSequence(String tag) {
+   		if (!tags2indices.containsKey(tag)) {
+   			throw new IllegalArgumentException("Given tag "+tag+" doesn't exist in this Alignment");
+   		} 
+ 
+   		int idxToRemove = tags2indices.get(tag);
+
+   		String[] newSequences = new String[this.sequences.length-1];
+		TreeMap<Integer,String> newIndices2tags = new TreeMap<Integer, String>();
+		TreeMap<String,Integer> newTags2indices = new TreeMap<String, Integer>();
+		
+		int j = 0; // new indexing
+		for (int i=0;i<this.sequences.length;i++) {
+			if (i!=idxToRemove) {
+				newSequences[j] = this.sequences[i];
+				newIndices2tags.put(j,this.indices2tags.get(i));
+				newTags2indices.put(this.indices2tags.get(i), j);
+				j++;
+			}
+		}
+		
+		this.sequences = newSequences;
+		this.indices2tags = newIndices2tags;
+		this.tags2indices = newTags2indices;
+		
+		doMapping();
+
    	}
    	
     /**

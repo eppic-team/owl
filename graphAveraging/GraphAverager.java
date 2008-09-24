@@ -129,13 +129,15 @@ public class GraphAverager {
 	 * @param al a multiple alignment of the target sequence and the template graphs
 	 * @param templates a collection of templates to be averaged
 	 * @param targetTag the identifier of the target sequence in the alignment
+	 * @param targetSeq the target sequence (we must provide it here because the alignment can be local 
+	 * and thus contain only a partial target sequence)
 	 * @throws GraphAveragerError if sequences in alignment and templates don't match
 	 */
-	public GraphAverager(Alignment al, TemplateList templates, String targetTag) throws GraphAveragerError {
+	public GraphAverager(Alignment al, TemplateList templates, String targetTag, String targetSeq) throws GraphAveragerError {
 		this.al = al;
 		this.templateGraphs = templates.getRIGraphs();
 		this.targetTag = targetTag;
-		this.sequence = al.getSequenceNoGaps(targetTag);
+		this.sequence = targetSeq;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
@@ -193,13 +195,16 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs and between this.al  and this.graph/this.targetTag 
-	 * @throws GraphAveragerError
+	 * Checks that tags and sequences are consistent between this.al and this.templateGraphs 
+	 * and between this.al  and this.graph/this.targetTag
+	 * @throws GraphAveragerError if checks not passed
 	 */
 	private void checkSequences() throws GraphAveragerError {
+		// check if targetTag is present in alignment
 		if (!al.hasTag(targetTag)){
 			throw new GraphAveragerError("Alignment doesn't seem to contain the target sequence, check the FASTA tags");
 		}
+		// check if all template tags are present in alignment
 		for (String tag:templateGraphs.keySet()){
 			if (!al.hasTag(tag)){
 				throw new GraphAveragerError("Alignment is missing template sequence "+tag+", check the FASTA tags");
@@ -210,9 +215,13 @@ public class GraphAverager {
 		if (templateGraphs.size()>al.getNumberOfSequences()-1){
 			throw new GraphAveragerError("Number of sequences in alignment is different from number of templates +1 ");
 		}
-		// now we check if every id from the graphs is really present in the alignment
+		// checking the target sequence
+		if (!this.sequence.equals(al.getSequenceNoGaps(targetTag))) {
+			throw new GraphAveragerError("Sequence of target provided does not match sequence of target in alignment");
+		} 
+		// checking the sequences
 		for (String tag:templateGraphs.keySet()){
-			if(!al.getSequenceNoGaps(tag).equals(templateGraphs.get(tag).getSequence())) {
+			if (!templateGraphs.get(tag).getSequence().equals(al.getSequenceNoGaps(tag))) {
 				System.err.println("Sequence of template graph "+tag+" does not match sequence in alignment");
 				System.err.println("Trying to align sequences of alignment vs graph: ");
 				try {
@@ -224,7 +233,7 @@ public class GraphAverager {
 					System.err.println("alignment: "+al.getSequenceNoGaps(tag));
 				}
 				throw new GraphAveragerError("Sequence of template graph "+tag+" does not match sequence in alignment");
-			}			
+			} 
 		}
 	}
 	
@@ -277,13 +286,8 @@ public class GraphAverager {
 					if ((iSeqIdx!=-1) && (jSeqIdx!=-1)) {
 						potentialVotes++;
 						if(thisGraph.containsEdgeIJ(iSeqIdx, jSeqIdx)) {
-							RIGEdge thisGraphCont = thisGraph.getEdgeFromSerials(iSeqIdx, jSeqIdx);
-							Pair<RIGNode> pair = thisGraph.getEndpoints(thisGraphCont);
-							// TODO: Why is this check necessary? Isn't this always true?
-							if (thisGraph.containsEdgeIJ(pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial())) {
-								votes++;
-								voters.add(tag);
-							}
+							votes++;
+							voters.add(tag);
 						}
 					}
 				}

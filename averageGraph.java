@@ -423,7 +423,7 @@ public class averageGraph {
 			if (mode==Modes.ALIGN) {
 				ga = new GraphAverager(ali, templates);
 			} else {
-				ga = new GraphAverager(ali, templates, targetTag);
+				ga = new GraphAverager(ali, templates, targetTag, targetSeq);
 			}
 			
 			RIGraph averagedGraph = ga.getAverageGraph();
@@ -465,7 +465,7 @@ public class averageGraph {
 			// we get the Cb graphs
 			templates.loadRIGraphs(CASP_CONTACT_TYPE, CASP_CUTOFF);
 			
-			GraphAverager ga = new GraphAverager(ali, templates, targetTag);
+			GraphAverager ga = new GraphAverager(ali, templates, targetTag, targetSeq);
 			RIGraph averagedGraph = ga.getAverageGraph();
 			File caspRRFile = new File(outDir,basename+".CASP.RR");
 			Pattern p = Pattern.compile("T(\\d\\d\\d\\d)$");
