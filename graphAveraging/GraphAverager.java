@@ -217,6 +217,16 @@ public class GraphAverager {
 		}
 		// checking the target sequence
 		if (!this.sequence.equals(al.getSequenceNoGaps(targetTag))) {
+			System.err.println("Sequence of target provided does not match sequence of target in alignment");
+			System.err.println("Trying to align sequences of target provided vs sequence in alignment: ");
+			try {
+				PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(this.sequence,al.getSequenceNoGaps(targetTag),"provided","alignment");
+				alCheck.printAlignment();
+			} catch (PairwiseSequenceAlignmentException e) {
+				System.err.println("Error while creating alignment check, can't display an alignment. The 2 sequences are: ");
+				System.err.println("provided:  "+this.sequence);
+				System.err.println("alignment: "+al.getSequenceNoGaps(targetTag));
+			}
 			throw new GraphAveragerError("Sequence of target provided does not match sequence of target in alignment");
 		} 
 		// checking the sequences
