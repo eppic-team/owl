@@ -114,7 +114,16 @@ public class BlastParsersTest {
 					Assert.assertNotNull(hitXML.getAlignment().getAlignedSequence(tag));
 					n++;
 				}
-				
+			
+				// sanity checks
+				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryEnd());
+				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryStart());
+				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectEnd());
+				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectStart());
+				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryEnd()-hitXML.getQueryStart());
+				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectEnd()-hitXML.getSubjectStart());
+				Assert.assertTrue(hitXML.getAliLength()<hitXML.getQueryLength()+hitXML.getSubjectLength());
+				Assert.assertEquals(hitXML.getAlignment().getAlignmentLength(), hitXML.getAliLength());
 			}
 		}
 	}
