@@ -979,18 +979,20 @@ public class Alignment {
 			Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
 			Matcher m = p.matcher(tag);
 			if (m.matches()) {
+				PdbasePdb pdb = null;
 				try {
-					PdbasePdb pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
+					pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
 					pdb.load(m.group(2));
 					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadError e) {
-					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
+					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
 				} catch (SQLException e) {
-					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());
+					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
 				} catch (PdbCodeNotFoundError e) {
-					System.err.println("Couldn't load PDB data for sequence "+tag+". Error: "+e.getMessage());					
+					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());					
 				} catch (IOException e) {
+					secStruct = pdb.getSecondaryStructure(); // we take author's assignment
 					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
 				}
 			}
@@ -1006,6 +1008,8 @@ public class Alignment {
      */
     public void addSecStructAnnotation(TemplateList templates, String dsspExecutable) {
     	this.secStructAnnotation = new TreeMap<String, SecondaryStructure>();
+    	int countTagsNotFound=0;
+    	String tagsNotFound = "";
     	for (String tag:this.getTags()) {
     		SecondaryStructure secStructure = new SecondaryStructure("");
     		if (templates.contains(tag)) {
@@ -1014,15 +1018,23 @@ public class Alignment {
     				try {
     					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
     				} catch (IOException e) {
-    					System.err.println("dssp couldn't be run for  ");
+    					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
     				}
     				secStructure = pdb.getSecondaryStructure();
     			} 
     		} else {
-    			System.err.println("Couldn't find template while getting secondary structure annotation for sequence "+tag);
+    			countTagsNotFound++;
+    			tagsNotFound+=tag+" ";
     		}
     		secStructAnnotation.put(tag,secStructure);
     	}
+    	// we print a warning if more than 1 tag is not found in templates, the case of 1 tag (the target) 
+    	// is not found is the usual 1, that's why we only warn for >1. If templates didn't contain a single one of the tags
+    	// a call to writeWithSecStruct would print simply blank sec. struct. strings
+		if (countTagsNotFound>1) {
+			System.err.println("Warning: more than 1 tag was not found in given templates for secondary structure annotation: "+tagsNotFound);
+		}
+
     }
     
     /**
