@@ -34,7 +34,7 @@ public class Alignment {
 	public static final String FASTAFORMAT = "FASTA";
 	public static final String CLUSTALFORMAT = "CLUSTAL";
 
-	private static final char GAPCHARACTER = '-';
+	public static final char GAPCHARACTER = '-';
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
 	private static final String FASTAHEADER_CHAR = ">";
 	

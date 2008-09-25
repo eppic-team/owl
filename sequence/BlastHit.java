@@ -248,25 +248,99 @@ public class BlastHit {
 	}
 	
 	/**
-	 * Return the hsp alignment of this BlastHit with tags queryId and templateId (pdbCode+pdbChaincode) 
-	 * replacing subjectId. If subjectId doesn't match regex {@value #ID_REGEX} then alignment with normal tags 
-	 * is returned.
-	 * @see {@link #getTemplateId()}
+	 * Returns an alignment result of transforming the hsp local alignment of this BlastHit 
+	 * into one that contains the full sequences of query and subject given (padded 
+	 * with gaps on the opposite sides). 
+	 * e.g. If blast alignment is:
+	 *  q:   ABC--DE--  (full q: bbABCDEeee) 
+	 *  s:   -ABCD--EF  (full s: bbbABCDEFee)
+	 * the new alignment will be:
+	 *  q:  ---bbABC--DE--eee--
+	 *  s:  bbb---ABCD--EF---ee
+	 *      ^^^^^         ^^^^^
+	 * The alignment of this BlastHit is unaffected. The returned alignment is a new object.
+	 * @param fullQuerySeq
+	 * @param fullSubjectSeq
 	 * @return
 	 */
-	public Alignment getAlignmentWithTemplateIDTag() {
-		if (this.getTemplateId()!=null) {
-			Alignment aln;
-			try {
-				aln = this.al.copy();
-				aln.resetTag(this.subjectId, this.getTemplateId());
-			} catch (AlignmentConstructionError e){
-				aln = null;
-				System.err.println("Unexpected error while copying alignment. Error: "+e.getMessage());
+	public Alignment getAlignmentFullSeqs(String fullQuerySeq, String fullSubjectSeq) {
+		
+		String querySeqNoGaps = this.al.getAlignedSequence(queryId);
+		String subjectSeqNoGaps = this.al.getAlignedSequence(subjectId);
+
+		if (!fullQuerySeq.contains(querySeqNoGaps)){
+			throw new IllegalArgumentException("Given full query sequence is not a superstring of this BlastHit's alignment query sequence");
+		}
+		if (!fullSubjectSeq.contains(subjectSeqNoGaps)){
+			throw new IllegalArgumentException("Given full subject sequence is not a superstring of this BlastHit's alignment subject sequence");
+		}
+		
+		if (fullQuerySeq.length()==querySeqNoGaps.length() && fullSubjectSeq.length()==subjectSeqNoGaps.length()) {
+			// the condition is equivalent to following, as a sanity check we also try it
+			if (this.queryLength==fullQuerySeq.length() && this.subjectLength==fullSubjectSeq.length()) {
+				// nothing to do, blast alignment is already spanning both full sequences of query and subject
+				return this.al;				
+			} else {
+				System.err.println("Unexpected error: inconsistency between queryStart/End, subjectStart/End and sequences in stored alignment. Please report bug!");
+				System.exit(1);
 			}
+		}
+		
+		String querySeq = this.al.getAlignedSequence(queryId);
+		String subjectSeq = this.al.getAlignedSequence(subjectId);
+		
+		String newQuerySeq = getNGaps(this.subjectStart)+
+							fullQuerySeq.substring(0, this.queryStart-1)+
+							querySeq+
+							fullQuerySeq.substring(this.queryEnd)+
+							getNGaps(this.subjectLength-this.subjectEnd);
+		String newSubjectSeq = fullSubjectSeq.substring(0, this.subjectStart-1)+
+							getNGaps(this.queryStart)+
+							subjectSeq+
+							getNGaps(this.queryLength-this.queryEnd)+
+							fullSubjectSeq.substring(this.subjectEnd);
+		
+		String[] tags = {this.queryId, this.subjectId};
+		String[] seqs = {newQuerySeq, newSubjectSeq};
+		Alignment newAln = null;
+		try {
+			newAln = new Alignment(tags, seqs);
+		} catch (AlignmentConstructionError e) {
+			System.err.println("Unexpected error: new alignment with full sequences from blast alignment couldn't be created. Please report the bug! Error: "+e.getMessage());
+			System.exit(1);
+		}
+		return newAln;
+	}
+	
+	/**
+	 * Produces a string of n gap characters
+	 * @param n
+	 * @return
+	 */
+	private String getNGaps(int n) {
+		StringBuffer buf = new StringBuffer();
+		for (int i=0; i<n; i++)
+		      buf.append (Alignment.GAPCHARACTER);
+		return buf.toString();	
+	}
+	
+	/**
+	 * Return the hsp alignment of this BlastHit with the subjectId tag replaced by templateId 
+	 * (pdbCode+pdbChaincode). If subjectId doesn't match regex {@value #ID_REGEX} then 
+	 * alignment with normal tags is returned. 
+	 * is returned.
+	 * @see {@link #getTemplateId()}
+	 * @param fullQuerySeq
+	 * @param fullSubjectSeq
+	 * @return
+	 */
+	public Alignment getAlignmentFullSeqsWithPDBTag(String fullQuerySeq, String fullSubjectSeq) {
+		if (this.getTemplateId()!=null) {
+			Alignment aln = this.getAlignmentFullSeqs(fullQuerySeq, fullSubjectSeq);
+			aln.resetTag(this.subjectId, this.getTemplateId());
 			return aln;
 		} else {
-			return this.al;
+			return getAlignmentFullSeqs(fullQuerySeq, fullSubjectSeq);
 		}
 	}
 	
