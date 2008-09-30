@@ -11,14 +11,14 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Evaluates a multiple structural in terms of conserved core size and RMSD.
+ * Evaluates a multiple structure alignment in terms of conserved core size and RMSD.
  * @author stehr
  *
  */
 public class AlignmentEvaluator {
 
 	/*------------------------------ constants ------------------------------*/
-	public static final String DEFAULT_CHAIN_CODE = "A";
+	//public static final String DEFAULT_CHAIN_CODE = "A";
 	public static final String CCP4_PATH = "/project/StruPPi/Software/CCP4/ccp4-6.0.1";
 	public static final String SHELL_PATH = "/bin/sh";
 	
@@ -105,6 +105,7 @@ public class AlignmentEvaluator {
 		//conservedCore = al.getLongestNonGappedRegion();
 		double baseRMSD = getRMSD(conservedCore);
 		double bestRMSD = baseRMSD;
+		double newRMSD = baseRMSD;
 		int bestCol = 999999;
 		int coreSize = conservedCore.size();
 		double mSAS = baseRMSD * 100 / coreSize;
@@ -113,7 +114,7 @@ public class AlignmentEvaluator {
 		
 		// greedy optimization
 		while(bestCol > 0 && coreSize > 1) {
-			baseRMSD = bestRMSD;
+			baseRMSD = bestRMSD;	// baseRMSD=after last step
 			//printColSet(conservedCore);
 			//out.println("Core size: " + conservedCore.size());
 			//out.println("Core RMSD: " + baseRMSD);
@@ -123,20 +124,21 @@ public class AlignmentEvaluator {
 			}
 			bestCol = -1;
 
+			bestRMSD = 1000; // some very high value
 			for(int col:conservedCore) {
 				// try without this column
 				TreeSet<Integer> colsCopy = new TreeSet<Integer>();
 				colsCopy.addAll(conservedCore);
 				colsCopy.remove(col);
-				double newRMSD = getRMSD(colsCopy);
+				newRMSD = getRMSD(colsCopy);
 				//System.out.println("Removing column " + col + ". New RMSD: " + newRMSD);
 				//if(newRMSD > baseRMSD) System.out.println("Unexpected increase in RMSD when removing col " + col);
 				if(newRMSD < bestRMSD) {
 					bestRMSD = newRMSD;
-					bestCol = col;
+					bestCol = col;	// always remove a column, even if RMSD increased
 				}
 			}
-			// now remove the column which improved RMSD the most
+			// now remove the column which improved RMSD the most (new: or harmed it the least)
 			if(bestCol > 0) {
 				conservedCore.remove(bestCol);
 				//out.println("Removal of column " + bestCol + " improved RMSD the most.");
