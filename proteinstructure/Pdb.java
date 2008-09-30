@@ -2351,8 +2351,8 @@ public abstract class Pdb {
 	 * Mirror this Pdb structure by inverting through the origin.
 	 */
 	public void mirror() {
-		for (int atomserial:atomser2coord.keySet()){
-			Point3d coords = atomser2coord.get(atomserial);
+		for (int atomserial:getAllAtomSerials()){
+			Point3d coords = getAtomCoord(atomserial);
 			coords.x *= -1;
 			coords.y *= -1;
 			coords.z *= -1;
