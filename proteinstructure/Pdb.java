@@ -16,6 +16,7 @@ import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 import java.util.Arrays;
 
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
@@ -2358,6 +2359,16 @@ public abstract class Pdb {
 		}
 	}
 
+	/**
+	 * Transform (rotate, translate, scale) this structure.
+	 */
+	public void transform(Matrix4d m) {
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			m.transform(coords);
+		}
+	}
+	
 	/**
 	 * Gets the phi angle in degrees for given residue serial
 	 * @param i
