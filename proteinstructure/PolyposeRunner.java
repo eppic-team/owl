@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Matrix3d;
+
 /**
  * Wrapper class to call the external tool Polypose from the CCP4 package.
  * Polypose does a minimum RMSD fit of multiple structures.
@@ -26,6 +28,7 @@ public class PolyposeRunner {
 	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose";       // appended to ccp4_dir
 	private static final int    POLYPOSE_MAXCYCLE      = 10;
 	
+	// TODO: This is very dangerous! If multiple instances of this are running on the same machine the temp files will conflict!
 	private static final String POLYPOSE_LOG_FILE_NAME = "polypose.log";
 	private static final String TMP_SCRIPT_FILE_NAME   = "polypose.sh";
 	private static final String TMP_PARAM_FILE_NAME    = "polypose.params";
@@ -33,6 +36,8 @@ public class PolyposeRunner {
 	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
 	/*--------------------------- member variables --------------------------*/
+	
+	// setup
 	private File ccp4Dir;
 	private File tmpScriptFile;
 	private File tmpParamFile;
@@ -40,6 +45,9 @@ public class PolyposeRunner {
 	private File polyposeExecutable;
 	private File polyposeLog;
 	private File shell;
+	
+	// results
+	private Matrix3d[] rotationMatrices = null;	// stores the rotation matrices after a PolyposeRunner run
 	
 	/*----------------------------- constructors ----------------------------*/
 	public PolyposeRunner(String ccp4Path, String shellPath) throws IOException {
@@ -105,6 +113,14 @@ public class PolyposeRunner {
 		out.close();
 	}
 	
+	
+	/**
+	 * Executes polypose, parses the output file and initializes the member variable rotationMatrices
+	 * @param filenames
+	 * @param paramFileName
+	 * @return the rmsd of the superposition or a negative value on error
+	 * @throws IOException
+	 */
 	private double executePolypose(String[] filenames, String paramFileName) throws IOException {
 		double rmsd = -3;
 		String cmdLine, line;
@@ -120,16 +136,54 @@ public class PolyposeRunner {
 		
 		// run polypose
 		Process p = Runtime.getRuntime().exec(cmdLine);
+		Matrix3d[] matrices = new Matrix3d[filenames.length];	// rotation matrices
+		Matrix3d matrix = new Matrix3d();
+		int rotNum = 0;
 		try {
 			p.waitFor();
 			BufferedReader in = new BufferedReader(new FileReader(this.polyposeLog));
 			Pattern r = Pattern.compile("Rms distance between structures .R1, EQN 42. =(.*),");
+			Pattern rotNumPat = Pattern.compile("rotation vector:\\s+(\\d+)");
+			Pattern rotMatPat = Pattern.compile("Rotation matrix");
+			int readMatrix = 0;
 			while((line = in.readLine()) != null) {
 				//System.out.println(line);
+				if(readMatrix > 0) {
+					// we are in matrix read mode
+					if(readMatrix <= 3) {
+						// read
+						String[] vals = line.trim().split("\\s+");
+						double val;
+						val = Double.parseDouble(vals[0]);
+						matrix.setElement(readMatrix-1, 0, val);
+						val = Double.parseDouble(vals[1]);
+						matrix.setElement(readMatrix-1, 1, val);
+						val = Double.parseDouble(vals[2]);
+						matrix.setElement(readMatrix-1, 2, val);
+						readMatrix++;
+					} else {
+						// all three lines of current matrix have been read
+						//System.out.println(rotNum);
+						//System.out.println(matrix);
+						matrices[rotNum-1] = new Matrix3d(matrix); // keep current matrix
+						readMatrix = 0; // switch off matrix read mode
+						matrix = new Matrix3d(); // reset current matrix
+					}
+				}				
 				Matcher m = r.matcher(line);
 				if(m.find()) {
 					//System.out.println(line);
 					rmsd = Double.parseDouble(m.group(1).trim());
+				}
+				
+				m = rotNumPat.matcher(line);
+				if(m.find()) {
+					rotNum = Integer.parseInt(m.group(1).trim());
+				}
+				
+				m = rotMatPat.matcher(line);
+				if(m.find()) {
+					readMatrix = 1;	// switch on matrix reading
 				}
 			}
 			in.close();
@@ -139,6 +193,7 @@ public class PolyposeRunner {
 		if(rmsd < 0) {
 			throw new IOException("Could not find RMSD value in Polypose output file.");
 		}
+		this.rotationMatrices = matrices;
 		return rmsd;
 
 	}
@@ -220,6 +275,13 @@ public class PolyposeRunner {
 	/*---------------------------- public methods ---------------------------*/
 	
 	/**
+	 * Returns the rotation matrices of the last Polypose run or null if polypose hasn't been run yet.
+	 */
+	public Matrix3d[] getRotationMatrices() {
+		return this.rotationMatrices;
+	}
+	
+	/**
 	 * Calculates a minimum RMSD fit of the given structures and returns the RMSD.
 	 * If positions is not null and not an empty array, the given positions will be
 	 * used for the fit. positions[i] contains the positions in structure i. The
@@ -240,7 +302,7 @@ public class PolyposeRunner {
 		writeParamFile(positions);
 		
 		for(Pdb pdb:pdbs) {
-			file = new File(TMP_DIR, "polypose.temp" + filenum + ".pdb");
+			file = new File(TMP_DIR, "polypose.temp" + filenum + ".pdb");	// TODO: AAARGH!
 			//file.deleteOnExit();
 			PrintStream out = new PrintStream(new FileOutputStream(file));
 			pdb.writeAtomLines(out, true);

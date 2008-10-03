@@ -10,6 +10,10 @@ import java.io.PrintStream;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import javax.vecmath.Matrix3d;
+import javax.vecmath.Matrix4d;
+import javax.vecmath.Vector3d;
+
 /**
  * Evaluates a multiple structure alignment in terms of conserved core size and RMSD.
  * @author stehr
@@ -70,8 +74,40 @@ public class AlignmentEvaluator {
 	}
 	
 	/**
+	 * Evaluates the RMSD for the given column set.
+	 * @returns the rmsd or null on error
+	 */
+	private Matrix3d[] getRotationMatrices(TreeSet<Integer> cols) {
+		Matrix3d[] matrices = null;
+		//double rmsd = -1.0;
+		int[][] positions = new int[pdbs.size()][cols.size()];
+		Pdb[] pdbArr = new Pdb[pdbs.size()];
+		int idx = 0;
+		for(String tag:pdbs.keySet()) {
+			// add pdb
+			Pdb pdb = pdbs.get(tag);
+			pdbArr[idx] = pdb;
+			// add positions
+			TreeSet<Integer> newCols = alSet2SeqSet(cols, tag);
+			int idx2 = 0;
+			for(int col:newCols) {
+				positions[idx][idx2] = col;
+				idx2++;
+			}
+			idx++;
+		}
+		try {
+			pr.superimpose(pdbArr, positions);
+			matrices = pr.getRotationMatrices();
+		} catch (IOException e) {
+			return null;
+		} 		
+		return matrices;
+	}
+	
+	/**
 	 * Converts a set of positions in the alignment to a set of positions in the original sequence.
-	 * TODO: Move this to alignment?
+	 * TODO: Move this to alignment!
 	 * @param cols
 	 * @return
 	 */
@@ -84,6 +120,42 @@ public class AlignmentEvaluator {
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * Transforms the given pdbs according to the minimum rmsd superposition on all conserved columns between start and end.
+	 * @return the rmsd of the superposition
+	 */
+	public double superimposeAndTransform(int start, int end) {
+		double rmsd = 0;
+		Matrix3d[] matrices;
+		conservedCore = al.getGaplessColumns(start, end);
+		if(conservedCore.size() == 0) {
+			System.err.println("Error calling superimposeAndTransform on empty column set.");
+		}
+		rmsd = getRMSD(conservedCore);	// executes the whole evaluation twice, could be skipped
+		matrices = getRotationMatrices(conservedCore);
+		if(matrices == null) {
+			System.err.println("Error reading rotation matrix from Polypose output.");
+		}
+		
+		// transform pdbs
+		int c = 0;
+		Vector3d zeros = new Vector3d();
+		for (String tag:this.pdbs.keySet()) {	// this has to be the same oder as used in getRotationMatrices
+			Pdb pdb = this.pdbs.get(tag);
+			// get set of positions in sequence
+			TreeSet<Integer> seqPositions = alSet2SeqSet(conservedCore, tag);			
+			pdb.moveToOrigin(seqPositions);
+			Matrix4d tm = new Matrix4d(matrices[c++], zeros, 1);
+			pdb.transform(tm);
+		}
+		return rmsd;
+	}
+	
+	/**
+	 * Evaluates the optimal rmsd superposition for all core sizes down from the maximum number of conserved columns.
+	 * Writes a log with the rmsd value for each core size.
+	 */
 	public void evaluate(PrintStream out, String alName) {
 		// evaluate
 		//al.printSimple();
@@ -205,7 +277,7 @@ public class AlignmentEvaluator {
 	public static void main(String[] args) {
 		
 		if(args.length < 2) {
-			System.out.println("Usage: AlignmentEvaluater <alignment_file> <pdb_list_file> [<log_file>]");
+			System.out.println("Usage: AlignmentEvaluator <alignment_file> <pdb_list_file> [<log_file>]");
 			System.exit(1);
 		}
 		
