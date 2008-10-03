@@ -886,6 +886,23 @@ public class Alignment {
     }
     
     /**
+     * Returns the set of gapless columns between start and end.
+     * @return the set of gapless columns between start and end
+     */
+    public TreeSet<Integer> getGaplessColumns(int start, int end) {
+    	TreeSet<Integer> cols = new TreeSet<Integer>();
+    	Collection<String> tags = this.getTags();
+    	for (int i = 1; i < this.getAlignmentLength(); i++) {
+    		if(count(tags, i, getGapCharacter()) == 0) {
+    			if(i >= start && i <= end ) {
+    				cols.add(i);
+    			}
+    		}
+		}
+    	return cols;
+    }
+    
+    /**
      * Returns the longest non-gapped region of columns in the alignments.
      * @return the interval with the longest non-gapped region
      */
