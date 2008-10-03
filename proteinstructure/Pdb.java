@@ -121,7 +121,8 @@ public abstract class Pdb {
 	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
 	 * for given pdbChainCode and default model serial (1)
 	 * @param pdbChainCode
-	 * @throws PdbLoadError	 */
+	 * @throws PdbLoadError	 
+	 */
 
 	public void load(String pdbChainCode) throws PdbLoadError {
 		load(pdbChainCode, DEFAULT_MODEL);
@@ -2360,13 +2361,62 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Transform (rotate, translate, scale) this structure.
+	 * Rotates or translates this structure.
 	 */
 	public void transform(Matrix4d m) {
 		for(int atomserial:getAllAtomSerials()) {
 			Point3d coords = getAtomCoord(atomserial);
 			m.transform(coords);
 		}
+	}
+	
+	/**
+	 * Moves this structure such that the center of mass is at the origin.
+	 */
+	public void moveToOrigin() {
+		Vector3d sumVector = new Vector3d();
+		int numVectors = 0;
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			sumVector.add(coords);
+			numVectors++;
+		}
+		sumVector.scale(1.0/numVectors);
+		System.out.println(sumVector);
+		
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			coords.sub(sumVector);
+		}		
+	}
+	
+	/**
+	 * Moves this structure such that the center of mass of the given subset of residues is at the origin.
+	 */
+	public void moveToOrigin(TreeSet<Integer> residues) {
+		Vector3d sumVector = new Vector3d();
+		int numVectors = 0;
+		for(int resser:residues) {
+			Point3d coords = getAtomCoord(resser, "CA");
+			sumVector.add(coords);
+			numVectors++;			
+		}
+		
+//		for(int atomserial:getAllAtomSerials()) {
+//			int resser = get_resser_from_atomser(atomserial);
+//			if(residues.contains(resser)) {
+//				Point3d coords = getAtomCoord(atomserial);
+//				sumVector.add(coords);
+//				numVectors++;
+//			}
+//		}
+		sumVector.scale(1.0/numVectors);
+		System.out.println(sumVector);
+		
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			coords.sub(sumVector);
+		}		
 	}
 	
 	/**
