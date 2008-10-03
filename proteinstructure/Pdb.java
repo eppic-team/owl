@@ -2371,7 +2371,7 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Moves this structure such that the center of mass is at the origin.
+	 * Moves this structure such that the center of mass is at the origin using all atoms
 	 */
 	public void moveToOrigin() {
 		Vector3d sumVector = new Vector3d();
@@ -2382,7 +2382,7 @@ public abstract class Pdb {
 			numVectors++;
 		}
 		sumVector.scale(1.0/numVectors);
-		System.out.println(sumVector);
+		//System.out.println(sumVector);
 		
 		for(int atomserial:getAllAtomSerials()) {
 			Point3d coords = getAtomCoord(atomserial);
@@ -2391,7 +2391,7 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Moves this structure such that the center of mass of the given subset of residues is at the origin.
+	 * Moves this structure such that the center of mass of the given subset of residues is at the origin using only CA atoms
 	 */
 	public void moveToOrigin(TreeSet<Integer> residues) {
 		Vector3d sumVector = new Vector3d();
@@ -2401,17 +2401,9 @@ public abstract class Pdb {
 			sumVector.add(coords);
 			numVectors++;			
 		}
-		
-//		for(int atomserial:getAllAtomSerials()) {
-//			int resser = get_resser_from_atomser(atomserial);
-//			if(residues.contains(resser)) {
-//				Point3d coords = getAtomCoord(atomserial);
-//				sumVector.add(coords);
-//				numVectors++;
-//			}
-//		}
+
 		sumVector.scale(1.0/numVectors);
-		System.out.println(sumVector);
+		//System.out.println(sumVector);
 		
 		for(int atomserial:getAllAtomSerials()) {
 			Point3d coords = getAtomCoord(atomserial);
