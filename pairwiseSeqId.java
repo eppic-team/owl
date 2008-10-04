@@ -112,18 +112,29 @@ public class pairwiseSeqId {
 		}
 		
 		System.out.println("Pairwise percent identities:");
-		if(seqs.size() <= 20) {
+		if(seqs.size() <= 55) {
+		System.out.print("  seq\t num\t");
+		for(x = 0; x < n; x++) {
+			System.out.printf("%3d", x);
+		}
+		System.out.println("\tavg\n");
 		x = 0;
 		for(String t1:seqs.keySet()) {
-			System.out.print(t1 + "\t");
+			System.out.printf("%5s\t%4d\t", t1, x);
+			float rowAvg = 0;
 			for(y = 0; y < n; y++) {
-				System.out.printf("%.1f\t",ids[x][y]);
+				if(y!=x) {
+					System.out.printf("%3.0f",ids[x][y]);
+					rowAvg+=ids[x][y];
+				} else {
+					System.out.printf("   ");
+				}
 			}
-			System.out.println();
+			System.out.printf("\t%3.0f\n", rowAvg / (y-1));
 			x++;
 		}
 		} else {
-			System.out.println("Output supressed for more than 20 sequences");
+			System.out.println("Output supressed for more than 55 sequences");
 		}
 		System.out.println();
 		System.out.println("Number of sequences: " + seqs.size());
