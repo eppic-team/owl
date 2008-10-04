@@ -449,7 +449,7 @@ public class averageGraph {
 			// printing pairwise overlap statistics (only if not in benchmark mode, otherwise it overlaps from the output of the benchmarking)
 			if (mode!=Modes.BENCHMARK) {
 				System.out.println("Contact type: "+cts[ctIdx]+", cutoff: "+cutoffs[ctIdx]);
-				ga.printPairwiseOverlaps();
+				//ga.printPairwiseOverlaps();
 				int overlap = ga.getSumOfPairsOverlap();
 				System.out.println("Sum of pairs contact overlap: " + overlap);
 				// double consensus = ga.getEnsembleConsensusScore();
