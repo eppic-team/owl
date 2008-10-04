@@ -68,6 +68,9 @@ public class AlignmentEvaluator {
 		try {
 			rmsd = pr.superimpose(pdbArr, positions);
 		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.err.println("Exiting.");
+			System.exit(1);
 			return -1.0;
 		} 		
 		return rmsd;
@@ -100,6 +103,9 @@ public class AlignmentEvaluator {
 			pr.superimpose(pdbArr, positions);
 			matrices = pr.getRotationMatrices();
 		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.err.println("Exiting.");
+			System.exit(1);
 			return null;
 		} 		
 		return matrices;

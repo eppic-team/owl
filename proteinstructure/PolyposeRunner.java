@@ -25,7 +25,7 @@ public class PolyposeRunner {
 
 	/*------------------------------ constants ------------------------------*/
 	private static final String CCP4_SETUP_SCRIPT_NAME = "/include/ccp4.setup";	// appended to ccp4_dir
-	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose";       // appended to ccp4_dir
+	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose15";       // appended to ccp4_dir
 	private static final int    POLYPOSE_MAXCYCLE      = 10;
 	
 	// TODO: This is very dangerous! If multiple instances of this are running on the same machine the temp files will conflict!
@@ -108,8 +108,8 @@ public class PolyposeRunner {
 		out.println("maxcycle " + POLYPOSE_MAXCYCLE);
 		out.println("input ca");		// use only C-alpha positions
 		//out.println("indep");			// calculate R0 (currently not used)
-		out.println("output matrix"); 	// matrix only, no further output
-		out.println("fix 1");			// fit others to structure 1
+		out.println("output matrix"); 	// matrix=matrix only, no further output, coords=write pdb
+		//out.println("fix 1");			// fit others to structure 1
 		out.close();
 	}
 	
@@ -132,7 +132,7 @@ public class PolyposeRunner {
 			cmdLine += " XYZIN" + filenum + " " + filename;
 			filenum++;
 		}
-		//System.out.println(cmdLine);
+		System.out.println(cmdLine);
 		
 		// run polypose
 		Process p = Runtime.getRuntime().exec(cmdLine);
@@ -192,6 +192,9 @@ public class PolyposeRunner {
 		}
 		if(rmsd < 0) {
 			throw new IOException("Could not find RMSD value in Polypose output file.");
+		}
+		if(rotNum != matrices.length) {
+			throw new IOException("Expected " + matrices.length + " rotation matrices but found " + rotNum + " in " + this.polyposeLog.getAbsolutePath());
 		}
 		this.rotationMatrices = matrices;
 		return rmsd;
