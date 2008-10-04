@@ -29,29 +29,26 @@ public class superimposeMult {
 		 // transform objects
 		 // write objects to file
 
-		 if(args.length < 0) { // TODO: Change back!
-			 System.out.println("Usage: superimposeMult <alignment_file> <pdb_list_file> <out_dir> <start> <end>");
+		 if(args.length < 3) { // TODO: Change back!
+			 System.out.println("Usage: superimposeMult <alignment_file> <pdb_list_file> <out_dir> [<start> <end>]");
 			 System.out.println("Superimposes the structure in list on all ungapped columns between start and end");
 			 System.out.println("Note: pdb files need to be named pdbcode+chain, e.g. 1tdrB.pdb");
 			 System.exit(1);
 		 }
 
-		 String alignmentFileName = "/project/StruPPi/Software/multalign/results/globins15/save/mcma_4.fa";
-		 String listFileName = "/project/StruPPi/Software/multalign/data/globins15/globins15.pdbs.list";
-		 String outDirName = "/project/StruPPi/Software/multalign/results/globins15/save/super/";
-//		 String alignmentFileName = "/project/StruPPi/Software/multalign/results/sk_cl5_2/mcma_1.fa";
-//		 String listFileName = "/project/StruPPi/Software/multalign/data/sk_cl5_2/sk_cl5_2.pdbs.list";
-//		 String outDirName = "/project/StruPPi/Software/multalign/results/sk_cl5_2/super/";
-		 int start = 1;
-		 int end = 1000;
+		 // Debug: 
+//		 String alignmentFileName = "/project/StruPPi/Software/multalign/results/globins15/paul.fa";
+//		 String listFileName = "/project/StruPPi/Software/multalign/data/globins15/globins15.pdbs.list";
+//		 String outDirName = "/project/StruPPi/Software/multalign/results/globins15/super/paul/";
 
-		 //alignmentFileName = args[0];
-		 //listFileName = args[1];
-		 //outDirName = args[2];
+		 String alignmentFileName = args[0];
+		 String listFileName = args[1];
+		 String outDirName = args[2];
 		 
 		 File outDir = new File(outDirName);
 		 if(!outDir.isDirectory() || !outDir.canWrite()) {
 			 System.err.println("Error. Can not write to " + outDirName);
+			 System.err.println("Exiting.");
 			 System.exit(1);
 		 }
 
@@ -97,6 +94,23 @@ public class superimposeMult {
 			 System.exit(1);
 		 }
 
+		 // parse start/end
+		 int start = 1;
+		 int end = al.getAlignmentLength();
+		 if(args.length > 4) {
+			 int newStart = Integer.parseInt(args[3]);
+			 int newEnd = Integer.parseInt(args[4]);
+			 if(newStart >= 1 && newEnd > newStart) {
+				 start = newStart;
+				 end = newEnd;
+			 } else {
+				 System.err.println("Alignment on start=" + newStart + " end=" + newEnd + " not possible. Exiting.");
+				 System.exit(1);
+			 }
+		 }
+		 System.out.println("start = " + start);
+		 System.out.println("end = " + end);
+		 
 		 // create Evaluator
 		 AlignmentEvaluator alEv = null;
 		 try {
@@ -105,6 +119,8 @@ public class superimposeMult {
 			 System.err.println("Error creating PolyposeRunner: " + e.getMessage());
 			 System.exit(1);
 		 }
+		 
+		 System.out.println("Superimposing...");
 		 // run transformation
 		 double rmsd = alEv.superimposeAndTransform(start, end);
 		 
