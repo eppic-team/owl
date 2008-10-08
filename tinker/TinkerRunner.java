@@ -10,11 +10,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.util.Formatter;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
@@ -22,6 +25,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
+
+import org.ggf.drmaa.DrmaaException;
+import org.ggf.drmaa.JobInfo;
+import org.ggf.drmaa.JobTemplate;
+import org.ggf.drmaa.Session;
+import org.ggf.drmaa.SessionFactory;
 
 import proteinstructure.AAinfo;
 import proteinstructure.IntPairSet;
@@ -62,6 +71,15 @@ public class TinkerRunner {
 	
 	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
 	
+	private static final int MAXSEED = 2000000000; // max seed that tinker supports
+	
+	private static final boolean DEBUG = false;              // if true temp files for parallel distgeom run are kept
+	private static final long PARALLEL_JOBS_TIMEOUT = 36000; // (36000s = 10h) timeout for SGE jobs to finish (in seconds)
+	private static final String SGE_JOBS_PREFIX = "RC_";     // prefix for SGE jobs
+	private static final String SGE_QUEUE = "-q all.q";      // queue were SGE jobs will run
+	private static final int MAX_RETRIES_FIND_OUTPUT = 10;   // max number of retries for checking output files of a parallel distgeom run
+	private static final long RETRY_TIME_FIND_OUTPUT = 2000; // time between retries for checking output files of a parallel disgeom run
+	
 	/*--------------------------- member variables --------------------------*/
 	// input parameters
 	private String tinkerBinDir;
@@ -95,6 +113,9 @@ public class TinkerRunner {
 	String lastOutputDir;       // output directory of last reconstruction run
 	String lastBaseName;		// basename of last reconstruction run
 	int lastNumberOfModels;		// number of models in last reconstruction run
+	
+	// for parallel runs
+	Session session;			// the DRMAA session to communicate with the sge system
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -218,15 +239,114 @@ public class TinkerRunner {
 	 * Two files are needed as input for distgeom: an xyz file and a key file, the latter is not passed but instead implicitely 
 	 * defined by xyzFile: must be in same directory and must have same basename with extension .key 
 	 * @param xyzFile
-	 * @param outPath Directory where output files will be written
-	 * @param outBasename Base name of the output files
-	 * @param n Number of models that we want distgeom to produce
-	 * @param log A PrintWriter for logging output
-	 * @throws TinkerError If an error seen in tinker's output
+	 * @param outPath directory where output files will be written
+	 * @param outBasename base name of the output files
+	 * @param n number of models that we want distgeom to produce
+	 * @param log a PrintWriter for logging output
+	 * @throws TinkerError if an error seen in tinker's output
 	 * @throws IOException
 	 */
-	private void runDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException, InterruptedException {
+	private void runDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException {
+
+		checkDistgeomInput(xyzFile, outPath);
+		// running distgeom program
 		boolean tinkerError = false; // to store the exit state of the tinker program
+		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams;
+		Process dgeomProc = Runtime.getRuntime().exec(cmdLine);
+		// logging and capturing output
+		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
+		log.println("#cmd: "+cmdLine);
+		tinkerError = parseDistgeomOutput(dgeomOutput, n, log);
+
+		// getting names of tinker output files
+		File[] tinkerout = new File[n+1];
+		for (int i=1;i<=n;i++) {
+			tinkerout[i] = getTinkerOutputFileName(xyzFile, String.format("%03d", i));
+		}
+		//renaming files to our chosen outBasename+ext
+		for (int i=1;i<=n;i++) {
+			tinkerout[i].renameTo(new File(outPath,outBasename+"."+String.format("%03d", i)));
+		}
+		// throwing exception if error string was caught in output
+		if (tinkerError) {
+			log.flush();
+			throw new TinkerError("Tinker error, revise log file. ");
+		}
+		int exitValue = 1;
+		try {
+			exitValue = dgeomProc.waitFor();
+		} catch (InterruptedException e) {
+			throw new TinkerError("Unexpected error when waiting for distgeom to finish. Error: "+e.getMessage());
+		}
+		if (exitValue==137 || exitValue==139) {
+			log.flush();
+			throw new TinkerError("Distgeom was killed with exit code "+exitValue+". Not enough memory.");
+
+		}
+		// this is to catch all other possible errors not caught already by the parse of the error string in output
+		else if (exitValue!=0) { 
+			log.flush();
+			throw new TinkerError("Distgeom exited with a non 0 exit code: "+exitValue+". Unknown error.");
+		}
+		
+		log.flush();
+	}
+	
+	/**
+	 * Creates a shell script with a distgeom command to submit to the SGE system through qsub
+	 * Requires java6 to be able to set the execute permission
+	 * @param submitScript the script file
+	 * @param xyzFile distgeom input xyz file
+	 * @param n number of models for distgeom
+	 * @throws FileNotFoundException
+	 */
+	private void createDistgeomSubmitScript (File submitScript, File xyzFile, int n) throws FileNotFoundException {
+		PrintStream out = new PrintStream(submitScript);
+		out.println("#!/bin/sh");
+		out.println(distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams);
+		out.close();
+		submitScript.setExecutable(true, true); // if script not executable sge can't submit it 
+	}
+	
+	/**
+	 * Runs distgeom by submitting it to a DRMAA system. Only SGE (qsub) supported at the moment
+	 * @param xyzFile
+	 * @param outPath
+	 * @param outBasename
+	 * @param n
+	 * @return
+	 * @throws TinkerError
+	 * @throws IOException
+	 * @throws DrmaaException
+	 */
+	private String runDistgeomDRMAA(File xyzFile, String outPath, String outBasename, int n) throws TinkerError, IOException, DrmaaException {
+		checkDistgeomInput(xyzFile, outPath);		
+		// running distgeom program
+		File submitScript = new File(outPath,outBasename+".sh");
+		if (!DEBUG) submitScript.deleteOnExit();
+		createDistgeomSubmitScript(submitScript, xyzFile, n);
+		
+		JobTemplate jt = this.session.createJobTemplate(); 
+		jt.setRemoteCommand(submitScript.getAbsolutePath());
+		jt.setJobName(SGE_JOBS_PREFIX+outBasename);
+		jt.setOutputPath(":"+outPath); // for some reason out/error paths require a ":" to start with
+		jt.setErrorPath(":"+outPath); 
+		jt.setNativeSpecification(SGE_QUEUE);
+		
+		String jobId = this.session.runJob(jt);
+		
+		this.session.deleteJobTemplate(jt);
+
+		return jobId;
+	}
+	
+	/**
+	 * Checks that distgeom input paths and files are there
+	 * @param xyzFile
+	 * @param outPath
+	 * @throws FileNotFoundException
+	 */
+	private void checkDistgeomInput(File xyzFile, String outPath) throws FileNotFoundException {
 		if (!new File(outPath).exists()) {
 			throw new FileNotFoundException("Specified directory "+outPath+" does not exist");
 		}
@@ -238,12 +358,29 @@ public class TinkerRunner {
 		if (! keyFile.exists()) {
 			throw new FileNotFoundException("Key file "+keyFile.getAbsolutePath()+" not present in input directory "+xyzFile.getParent());
 		}
-		// getting names of tinker output files
-		File[] tinkerout = new File[n+1];
-		for (int i=1;i<=n;i++) {
-			String ext = new Formatter().format("%03d", i).toString();
-			tinkerout[i] = getTinkerOutputFileName(xyzFile, ext);
-		}
+	}
+	
+	/**
+	 * Initialises the drmaa session to communicate with the SGE queuing system
+	 * @throws DrmaaException
+	 */
+	private void initDRMAASession() throws DrmaaException {
+		SessionFactory factory = SessionFactory.getFactory();
+		session = factory.getSession();
+
+		session.init("");
+	}
+	
+	/**
+	 * Parses distgeom output of restrain violation statistics storing it into member variable arrays
+	 * that can be retrieved using the getters: getMaxLowerBoundViol, getMaxUpperBoundViol, getMaxLowerViol etc...   
+	 * @param dgeomOutput
+	 * @param n
+	 * @param log if not null the dgeomOutput is also written to log
+	 * @return
+	 * @throws IOException
+	 */
+	private boolean parseDistgeomOutput (BufferedReader dgeomOutput, int n, PrintWriter log) throws IOException {
 		// initialising arrays were we store captured output data
 		errorFunctionVal = new double[n+1];
 		numUpperBoundViol = new int[n+1];
@@ -256,16 +393,12 @@ public class TinkerRunner {
 		maxUpperViol = new double[n+1];
 		maxLowerViol = new double[n+1];
 		rmsRestViol = new double[n+1];
-		// running distgeom program
-		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams;
-		Process dgeomProc = Runtime.getRuntime().exec(cmdLine);
-		// logging and capturing output
-		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
+
+		boolean tinkerError = false;
 		String line;
 		int i=1;
-		log.println("#cmd: "+cmdLine);
 		while((line = dgeomOutput.readLine()) != null) {
-			log.println(line);
+			if (log!=null) log.println(line);
 			if (line.startsWith(TINKER_ERROR_STR)) {
 				tinkerError = true;
 			}
@@ -328,35 +461,205 @@ public class TinkerRunner {
 				
 			}
 		}
-		//renaming files to our chosen outBasename+ext
-		for (i=1;i<=n;i++) {
-			String ext = new Formatter().format("%03d", i).toString();
-			tinkerout[i].renameTo(new File(outPath,outBasename+"."+ext));
+		return tinkerError;
+	}
+	
+	/**
+	 * Copies inFile to outFile
+	 * @param inFile
+	 * @param outFile
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 */
+	private void copyFile(File inFile, File outFile) throws FileNotFoundException, IOException {
+		FileInputStream in = new FileInputStream(inFile);
+		FileOutputStream out = new FileOutputStream(outFile);
+		int b;
+		while ((b=in.read())!=-1) {
+			out.write(b);
 		}
-		// throwing exception if error string was caught in output
-		if (tinkerError) {
-			log.flush();
-			throw new TinkerError("Tinker error, revise log file. ");
+		in.close();
+		out.close();
+	}
+	
+	/**
+	 * Copies inKeyFile to outKeyFile adding a RANDOMSEED tinker directive 
+	 * @param inKeyFile
+	 * @param outKeyFile
+	 * @param seed the random seed to be written, must be below {@value #MAXSEED}
+	 * @throws IOException
+	 */
+	private void addSeedToKeyFile(File inKeyFile, File outKeyFile, int seed) throws IOException {
+		FileInputStream in = new FileInputStream(inKeyFile);
+		PrintStream out = new PrintStream(outKeyFile);
+		out.println("RANDOMSEED "+seed);
+		int b;
+		while ((b=in.read())!=-1) {
+			out.write(b);
 		}
-		int exitValue = dgeomProc.waitFor();
-		// throwing exception if exit state is 137: happens in Linux when another instance of distgeom is running in same machine, the OS kills it with exit state 137 
-		if (exitValue==137) {
-			log.flush();
-			throw new TinkerError("Distgeom was killed by OS. There may be another instance of distgeom running in this computer" +
-					" or Tinker could not allocate enough memory.");
-		}
-		else if (exitValue==139) {
-			log.flush();
-			throw new TinkerError("Distgeom was killed with exit code 139. Not enough memory.");
-
-		}
-		// this is to catch all other possible errors not caught already by the parse of the error string in output
-		else if (exitValue!=0) { 
-			log.flush();
-			throw new TinkerError("Distgeom exited with a non 0 exit code: "+exitValue+". Unknown error.");
+		in.close();
+		out.close();		
+	}
+	
+	/**
+	 * Runs distgeom in parallel using one instance of distgeom per model.
+	 * Each of the distgeom instances are run through a DRMAA system (only SGE supported at the moment)
+	 * @param xyzFile
+	 * @param outPath
+	 * @param outBasename
+	 * @param n
+	 * @param log
+	 * @throws TinkerError
+	 * @throws IOException
+	 */
+	private void runParallelDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException {
+		Random ran = new Random();
+		File[] nXyzOutFiles = new File[n+1]; 
+		File[] nOLogFiles = new File[n+1];
+		File[] nELogFiles = new File[n+1];
+		try {
+			initDRMAASession();
+		} catch (DrmaaException e) {
+			throw new TinkerError("Couldn't contact the SunGridEngine system. Error "+e.getMessage());
 		}
 		
-		log.flush();
+		String[] jobIds = new String[n+1]; 
+		for (int i=1;i<=n;i++) {
+			String nBaseName = getBasename(xyzFile)+"_"+i;
+			File keyFile = new File(xyzFile.getParent(),getBasename(xyzFile)+".key"); // input key file matching input xyz file
+			File nXyzFile = new File(xyzFile.getParent(),nBaseName+".xyz");
+			if (!DEBUG) nXyzFile.deleteOnExit();
+			File nKeyFile = new File(xyzFile.getParent(),nBaseName+".key");
+			if (!DEBUG) nKeyFile.deleteOnExit();
+			copyFile(xyzFile,nXyzFile);
+			addSeedToKeyFile(keyFile, nKeyFile, ran.nextInt(MAXSEED));
+			
+			// we predict what's going to be the xyz output file name (tinker will add a _2, _3, ... if file already exists with .001)
+			nXyzOutFiles[i] = getTinkerOutputFileName(nXyzFile, "001");
+			
+			// submit jobs
+			try {
+				jobIds[i] = runDistgeomDRMAA(nXyzFile, outPath, nBaseName, 1);
+			} catch (DrmaaException e) {
+				// we are going for the moment for a conservative error handling. We don't allow any submission to fail
+				// if only one of them fails we abort by throwing exception
+				// we have to clean up the ones that did already start, 
+				// I thought we could do it with following code, but of course that also throws a DrmaaException, so for now commented out
+				//for (int j=1;j<i;j++) {
+				//	this.session.control(jobIds[j], Session.TERMINATE);
+				//}
+				throw new TinkerError("SGE job "+nBaseName+" failed to run. "+e.getMessage());
+			}
+			
+			// we now have to define the log file names from the name that sge gives the out/err files
+			// we use SGE_JOBS_PREFIX+nBaseName because is the value to which we set the name of the job with jt.setName() in runDistgeomDRMAA
+			nOLogFiles[i] = new File(outPath,SGE_JOBS_PREFIX+nBaseName+".o"+jobIds[i]);
+			if (!DEBUG) nOLogFiles[i].deleteOnExit();
+			nELogFiles[i] = new File(outPath,SGE_JOBS_PREFIX+nBaseName+".e"+jobIds[i]);
+			if (!DEBUG) nELogFiles[i].deleteOnExit();
+						
+		}		
+		
+		// 1 first check jobs are finished and successful
+		try {
+			// synchronize (waits for all jobs) seems to be broken, it crashes the JVM! don't use it!
+			//List<String> jobIdsList = Arrays.asList(jobIds);
+			//this.session.synchronize(jobIdsList, PARALLEL_JOBS_TIMEOUT, true);
+			//int status = this.session.getJobProgramStatus(jobIds[i]);
+			
+			// we wait for one job at a time, so one not finishing will block all the others
+			// TODO implement some better approach, ideas: 
+			// a) variable timeout: estimate it from the size of the protein or the runtime of the fastest job + 20% margin
+			// b) multithreaded waiting and then allow for some failure rate (like 10%)
+			for (int i=1;i<=n;i++) {
+				JobInfo info = this.session.wait(jobIds[i],PARALLEL_JOBS_TIMEOUT);
+				int status = info.getExitStatus();
+				switch (status) {
+				case Session.QUEUED_ACTIVE:
+					// if this happens it must mean that wait exceeded the TIMEOUT
+					throw new TinkerError("Job "+jobIds[i]+" still queued after exceeding timeout");
+				case Session.RUNNING:
+					// if this happens it must mean that wait exceeded the TIMEOUT
+					throw new TinkerError("Job "+jobIds[i]+" still running after exceeding timeout");
+				case Session.FAILED:
+					throw new TinkerError("Job "+jobIds[i]+" failed, see log files "+nOLogFiles[i]+" and "+nELogFiles[i]);
+				case Session.DONE:
+					// it worked nothing to do!
+				}
+			}
+		} catch (DrmaaException e) {
+			throw new TinkerError(e);
+		}
+		
+		// 2 if jobs successful check output files are there
+		// we've got to retry a few times with waiting of 2s in between
+		// to leave a bit of time between jobs finish and check of output, 
+		// file system seems to have problems to detect the files inmediately after jobs finished
+		boolean allFilesFound = false;
+		int retries = 0;
+		while (!allFilesFound && retries<MAX_RETRIES_FIND_OUTPUT) {
+			retries++;
+			try {
+				Thread.sleep(RETRY_TIME_FIND_OUTPUT);
+			} catch (InterruptedException e) {
+				System.err.println("Unexpected error: couldn't sleep to wait for output files");
+				System.exit(1);
+			}
+			for (int i=1;i<=n;i++) {
+				if (!nXyzOutFiles[i].exists()) {
+					//throw new TinkerError("All jobs finished but output file "+nXyzOutFiles[i]+" not present");
+					break;
+				}
+				allFilesFound = true;
+			}
+		}
+		if (!allFilesFound) 
+			throw new TinkerError("All jobs finished but some output files were not found");
+		
+		// now we need to convert the split output into a normal (non-parallel output)
+		double[] errorFunctionVal = new double[n+1];
+		int[] numUpperBoundViol = new int[n+1];
+		int[] numLowerBoundViol = new int[n+1];
+		double[] maxUpperBoundViol = new double[n+1];
+		double[] maxLowerBoundViol = new double[n+1];
+		double[] rmsBoundViol = new double[n+1];
+		int[] numUpperViol = new int[n+1];
+		int[] numLowerViol = new int[n+1];
+		double[] maxUpperViol = new double[n+1];
+		double[] maxLowerViol = new double[n+1];
+		double[] rmsRestViol = new double[n+1];
+		
+		for (int i=1;i<=n;i++) {
+			// 1 rename all bn_i.001 files to bn.iii
+			nXyzOutFiles[i].renameTo(new File(outPath,outBasename+String.format(".%03d",i)));
+			// 2 parse log to get distgeom statistics and write individual logs to main log file
+			BufferedReader l = new BufferedReader(new FileReader(nOLogFiles[i]));
+			parseDistgeomOutput(l, 1, log);
+			// 3 get the individual violation statistics and put them into a new array 
+			errorFunctionVal[i] = this.getErrorFunctionVal()[1];
+			numUpperBoundViol[i] = this.getNumUpperBoundViol()[1];
+			numLowerBoundViol[i] = this.getNumLowerBoundViol()[1];
+			maxUpperBoundViol[i] = this.getMaxUpperBoundViol()[1];
+			maxLowerBoundViol[i] = this.getMaxLowerBoundViol()[1];
+			rmsBoundViol[i] = this.getRmsBoundViol()[1];
+			numUpperViol[i] = this.getNumUpperViol()[1];
+			numLowerViol[i] = this.getNumLowerViol()[1];
+			maxUpperViol[i] = this.getMaxUpperViol()[1];
+			maxLowerViol[i] = this.getMaxLowerViol()[1];
+			rmsRestViol[i] = this.getRmsRestViol()[1];
+		}
+		this.errorFunctionVal = errorFunctionVal;
+		this.numUpperBoundViol = numUpperBoundViol;
+		this.numLowerBoundViol = numLowerBoundViol;
+		this.maxUpperBoundViol = maxUpperBoundViol;
+		this.maxLowerBoundViol = maxLowerBoundViol;
+		this.rmsBoundViol = rmsBoundViol;
+		this.numUpperViol = numUpperViol;
+		this.numLowerViol = numLowerViol;
+		this.maxUpperViol = maxUpperViol;
+		this.maxLowerViol = maxLowerViol;
+		this.rmsRestViol = rmsRestViol;
+		
 	}
 	
 	/**
@@ -620,15 +923,16 @@ public class TinkerRunner {
 	 * if null no phi/psi restraints will be applied
 	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels) 
+	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
 	throws TinkerError, IOException {
 		
 		return reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
-				DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
+				DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, parallel);
 	}	
 	
 	/** 
@@ -642,15 +946,16 @@ public class TinkerRunner {
 	 * if null no phi/psi restraints will be applied
 	 * @param forceTransOmega to force omega angles into the trans conformation (180) 
 	 * @param numberOfModels number of reconstructions to be done by tinker
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels) 
+	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
 	throws TinkerError, IOException {
 		
 		return reconstructFast(sequence, graphs, phiPsiConsensus, forceTransOmega,
-				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION);
+				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, parallel);
 	}
 
 	/** 
@@ -665,12 +970,13 @@ public class TinkerRunner {
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
-			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion, boolean parallel) 
 	throws TinkerError, IOException {
 		
 		Pdb resultPdb = null;
@@ -680,7 +986,7 @@ public class TinkerRunner {
 		boolean cleanUp = true;						
 		
 		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
-				forceConstantDist, forceConstantTorsion, true, outputDir, baseName, cleanUp);
+				forceConstantDist, forceConstantTorsion, true, outputDir, baseName, cleanUp, parallel);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -699,12 +1005,13 @@ public class TinkerRunner {
 	 * @param numberOfModels number of reconstructions to be done by tinker
 	 * @param forceConstantDist the force constant to be used for all our given distance restraints
 	 * @param forceConstantTorsion the force constant to be used for all our given torsion restraints
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 * @returns a Pdb object containg the generated structure
 	 */
 	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
-			int numberOfModels, double forceConstantDist, double forceConstantTorsion) 
+			int numberOfModels, double forceConstantDist, double forceConstantTorsion, boolean parallel) 
 	throws TinkerError, IOException {
 		
 		Pdb resultPdb = null;
@@ -713,7 +1020,7 @@ public class TinkerRunner {
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConstantTorsion, false, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConstantTorsion, false, outputDir, baseName, cleanUp, parallel);
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -739,15 +1046,16 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
 	public void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
 			int numberOfModels, double forceConstantDist, double forceConsantTorsion, 
-			String outputDir, String baseName, boolean cleanUp) 
+			String outputDir, String baseName, boolean cleanUp, boolean parallel) 
 	throws TinkerError, IOException {
 		
-		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp);
+		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp, parallel);
 	}
 	
 	/**
@@ -769,18 +1077,19 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */	
 	public void reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,  
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
-			String outputDir, String baseName, boolean cleanUp) 
+			String outputDir, String baseName, boolean cleanUp, boolean parallel) 
 	throws TinkerError, IOException {
 		
 		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, 
 				numberOfModels, 
 				forceConstantDist, forceConstantTorsion, 
-				false, outputDir, baseName, cleanUp);
+				false, outputDir, baseName, cleanUp, parallel);
 	}
 	
 	/** 
@@ -802,12 +1111,14 @@ public class TinkerRunner {
 	 * @param outputDir the directory where the temporary and result files will be written to
 	 * @param baseName the basename of the temporary and result files
 	 * @param cleanUp whether to mark all created files to be deleted on shutdown
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work)
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
 	 */
 	private void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
-			boolean annealing, String outputDir, String baseName, boolean cleanUp) 
+			boolean annealing, String outputDir, String baseName, boolean cleanUp, 
+			boolean parallel) 
 	throws TinkerError, IOException {
 		
 		if (!annealing) dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_MINIMIZATION;
@@ -862,10 +1173,10 @@ public class TinkerRunner {
 		cm.closeKeyFile();
 
 		// 3. run tinker's distgeom
-		try {
+		if (parallel) {
+			runParallelDistgeom(xyzFile, outputDir, baseName, numberOfModels, log);
+		} else {
 			runDistgeom(xyzFile, outputDir, baseName, numberOfModels, log);
-		} catch(InterruptedException e) {
-			throw new TinkerError(e);
 		}
 
 		// 4. converting xyz output files to pdb files and calculating rmsds
@@ -898,11 +1209,12 @@ public class TinkerRunner {
 	 * @param fastReconstruct
 	 * @param outputDir the output directory, if left null then a temp directory is used and all output removed
 	 * @param baseName the base name of the output files, if left null then a random name is used and all output removed
+	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @return
 	 * @throws IOException 
 	 * @throws TinkerError 
 	 */
-	public RIGraph geometrizeContactMap(RIGraph graph, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName) 
+	public RIGraph geometrizeContactMap(RIGraph graph, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName, boolean parallel) 
 	throws TinkerError, IOException {
 		boolean cleanUp = false;
 		if (outputDir == null || baseName == null) {
@@ -912,11 +1224,11 @@ public class TinkerRunner {
 		if (fastReconstruct) {
 			reconstructFast(graph.getSequence(), graphs, null, false, 
 					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, 
-					outputDir, baseName, cleanUp);
+					outputDir, baseName, cleanUp, parallel);
 		} else {
 			reconstruct(graph.getSequence(), graphs, null, false, 
 					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION,
-					outputDir, baseName, cleanUp);
+					outputDir, baseName, cleanUp, parallel);
 		}
 		
 		RIGEnsemble ensemble = new RIGEnsemble(graph.getContactType(), graph.getCutoff());

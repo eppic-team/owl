@@ -78,7 +78,8 @@ public class reconstruct {
 			" [-f <float>]   : force constant. Default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
 			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
 			"                  worse quality model). Default: slow (refinement via simulate\n" +
-			"                  annealing) \n\n";
+			"                  annealing) \n" +
+			" [-A]           : if specified reconstruction will be run in parallel\n\n";
 
 		boolean benchmark = true;
 		String pdbId = null;
@@ -94,9 +95,10 @@ public class reconstruct {
 		int minRange = 0;
 		int maxRange = 0;
 		boolean fast = false;
+		boolean parallel = false;
 		boolean refPdbFromFile = false;
 		
-		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:Fh?");
+		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:FAh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -132,7 +134,10 @@ public class reconstruct {
 				break;
 			case 'F':
 				fast = true;
-				break;								
+				break;
+			case 'A':
+				parallel = true;
+				break;												
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -348,9 +353,9 @@ public class reconstruct {
 			if (fast) {
 				// as this is at the moment just a reconstruction benchmarking script it doesn't make sense 
 				// at all to use a phi/psi consensus (which would come from templates): we use null and 0 for the 2 phi/psi parameters
-				tr.reconstructFast(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false);
+				tr.reconstructFast(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false, parallel);
 			} else {
-				tr.reconstruct(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false);
+				tr.reconstruct(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false, parallel);
 			}
 			
 		} catch (IOException e) {
