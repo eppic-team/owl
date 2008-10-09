@@ -27,7 +27,8 @@ CLASSPATH=.:/project/StruPPi/jars/mysql-connector-java.jar:\
 /project/StruPPi/jars/jung/collections-generic-4.01.jar:\
 /project/StruPPi/jars/jung/jung-api-2.0-beta1.jar:\
 /project/StruPPi/jars/jung/jung-graph-impl-2.0-beta1.jar:\
-/project/StruPPi/jars/jung/jung-algorithms-2.0-beta1.jar
+/project/StruPPi/jars/jung/jung-algorithms-2.0-beta1.jar:\
+/project/StruPPi/jars/drmaa.jar
 
 cd $tempdir
 
