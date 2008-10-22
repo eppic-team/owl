@@ -326,7 +326,7 @@ public class TinkerRunner {
 		if (!DEBUG) submitScript.deleteOnExit();
 		createDistgeomSubmitScript(submitScript, xyzFile, n);
 		
-		JobTemplate jt = this.session.createJobTemplate(); 
+		JobTemplate jt = this.session.createJobTemplate();
 		jt.setRemoteCommand(submitScript.getAbsolutePath());
 		jt.setJobName(SGE_JOBS_PREFIX+outBasename);
 		jt.setOutputPath(":"+outPath); // for some reason out/error paths require a ":" to start with
@@ -369,6 +369,17 @@ public class TinkerRunner {
 		session = factory.getSession();
 
 		session.init("");
+	}
+	
+	/**
+	 * Finalises the drmaa session
+	 */
+	private void finaliseDRMAASession()  {
+		try {
+			session.exit();
+		} catch (DrmaaException e) {
+			System.err.println("Couldn't finalise SGE session, some cleanup may have not been done. Error "+e.getMessage());
+		}
 	}
 	
 	/**
@@ -502,6 +513,19 @@ public class TinkerRunner {
 	}
 	
 	/**
+	 * Kills all jobs submitted in this drmaa session.
+	 * If some job doesn't exist or if it can't be killed for any other reason, 
+	 * then it prints an error message.
+	 */
+	private void killJobs() {		
+		try {
+			this.session.control(Session.JOB_IDS_SESSION_ALL, Session.TERMINATE);
+		} catch (DrmaaException e) {
+			System.err.println("Couldn't kill job while cleaning up. Error: "+e.getMessage());
+		}
+	}
+	
+	/**
 	 * Runs distgeom in parallel using one instance of distgeom per model.
 	 * Each of the distgeom instances are run through a DRMAA system (only SGE supported at the moment)
 	 * @param xyzFile
@@ -543,11 +567,8 @@ public class TinkerRunner {
 			} catch (DrmaaException e) {
 				// we are going for the moment for a conservative error handling. We don't allow any submission to fail
 				// if only one of them fails we abort by throwing exception
-				// we have to clean up the ones that did already start, 
-				// I thought we could do it with following code, but of course that also throws a DrmaaException, so for now commented out
-				//for (int j=1;j<i;j++) {
-				//	this.session.control(jobIds[j], Session.TERMINATE);
-				//}
+				// we have to clean up the ones that did already start,
+				killJobs();
 				throw new TinkerError("SGE job "+nBaseName+" failed to run. "+e.getMessage());
 			}
 			
@@ -573,19 +594,17 @@ public class TinkerRunner {
 			// b) multithreaded waiting and then allow for some failure rate (like 10%)
 			for (int i=1;i<=n;i++) {
 				JobInfo info = this.session.wait(jobIds[i],PARALLEL_JOBS_TIMEOUT);
-				int status = info.getExitStatus();
-				switch (status) {
-				case Session.QUEUED_ACTIVE:
-					// if this happens it must mean that wait exceeded the TIMEOUT
-					throw new TinkerError("Job "+jobIds[i]+" still queued after exceeding timeout");
-				case Session.RUNNING:
-					// if this happens it must mean that wait exceeded the TIMEOUT
-					throw new TinkerError("Job "+jobIds[i]+" still running after exceeding timeout");
-				case Session.FAILED:
-					throw new TinkerError("Job "+jobIds[i]+" failed, see log files "+nOLogFiles[i]+" and "+nELogFiles[i]);
-				case Session.DONE:
-					// it worked nothing to do!
+				int exitStatus = 999;
+				if (info.hasExited()) {
+					exitStatus = info.getExitStatus();
+				} else {
+					killJobs(); // we cleanup
+					throw new TinkerError("Job "+jobIds[i]+" didn't exit yet or exited abnormally");
 				}
+				if (exitStatus!=0) {
+					killJobs();
+					throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus);
+				} 
 			}
 		} catch (DrmaaException e) {
 			throw new TinkerError(e);
@@ -659,7 +678,8 @@ public class TinkerRunner {
 		this.maxUpperViol = maxUpperViol;
 		this.maxLowerViol = maxLowerViol;
 		this.rmsRestViol = rmsRestViol;
-		
+
+		finaliseDRMAASession();
 	}
 	
 	/**
@@ -1494,4 +1514,5 @@ public class TinkerRunner {
 		return edgeSet;
 	}
 }
+
 
