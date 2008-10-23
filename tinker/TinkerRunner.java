@@ -599,11 +599,11 @@ public class TinkerRunner {
 					exitStatus = info.getExitStatus();
 				} else {
 					killJobs(); // we cleanup
-					throw new TinkerError("Job "+jobIds[i]+" didn't exit yet or exited abnormally");
+					throw new TinkerError("Job "+jobIds[i]+" exited abnormally or didn't exit yet. Couldn't produce output file "+nXyzOutFiles[i]);
 				}
 				if (exitStatus!=0) {
 					killJobs();
-					throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus);
+					throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus+". Couldn't produce output file "+nXyzOutFiles[i]);
 				} 
 			}
 		} catch (DrmaaException e) {
