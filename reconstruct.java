@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.sql.SQLException;
-import java.util.Formatter;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -386,17 +385,15 @@ public class reconstruct {
 		
 		if (pdbId!=null) {
 			for (int i = 1; i<=n; i++) {
-				String ext = new Formatter().format(".%03d",i).toString();
-				File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
 				try {
 					Pdb outputPdb = tr.getStructure(i);
 					rmsds[i] = pdb.rmsd(outputPdb, "Ca");
 					mRmsds[i] = mPdb.rmsd(outputPdb, "Ca");
 				}
 				catch (TinkerError e) {
-					System.err.println("Error while trying to retrieve results from Tinker: "+ e.getMessage());
+					System.err.println("Warning: couldn't load tinker pdb output file, error: "+ e.getMessage()+". Can't calculate rmsd for it.");
 				} catch (ConformationsNotSameSizeError e) {
-					System.err.println(origPdbFile+" and "+outputPdbFile+" don't have the same conformation size, can't calculate rmsd for them.");
+					System.err.println(origPdbFile+" and "+tr.getOutPdbFile(i)+" don't have the same conformation size, can't calculate rmsd for them.");
 				}				
 			}					
 		}

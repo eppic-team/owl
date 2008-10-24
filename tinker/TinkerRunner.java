@@ -16,7 +16,6 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
-import java.util.Formatter;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -74,7 +73,7 @@ public class TinkerRunner {
 	private static final int MAXSEED = 2000000000; // max seed that tinker supports
 	
 	private static final boolean DEBUG = false;              // if true temp files for parallel distgeom run are kept
-	private static final long PARALLEL_JOBS_TIMEOUT = 36000; // (36000s = 10h) timeout for SGE jobs to finish (in seconds)
+	private static final long PARALLEL_JOBS_TIMEOUT = 7200;  // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
 	private static final String SGE_JOBS_PREFIX = "RC_";     // prefix for SGE jobs
 	private static final String SGE_QUEUE = "-q all.q";      // queue were SGE jobs will run
 	private static final int MAX_RETRIES_FIND_OUTPUT = 10;   // max number of retries for checking output files of a parallel distgeom run
@@ -580,7 +579,7 @@ public class TinkerRunner {
 			if (!DEBUG) nELogFiles[i].deleteOnExit();
 						
 		}		
-		
+
 		// 1 first check jobs are finished and successful
 		try {
 			// synchronize (waits for all jobs) seems to be broken, it crashes the JVM! don't use it!
@@ -588,24 +587,25 @@ public class TinkerRunner {
 			//this.session.synchronize(jobIdsList, PARALLEL_JOBS_TIMEOUT, true);
 			//int status = this.session.getJobProgramStatus(jobIds[i]);
 			
-			// we wait for one job at a time, so one not finishing will block all the others
-			// TODO implement some better approach, ideas: 
-			// a) variable timeout: estimate it from the size of the protein or the runtime of the fastest job + 20% margin
-			// b) multithreaded waiting and then allow for some failure rate (like 10%)
+			// we wait for one job at a time, so one not finishing will block all the others until timeout
+			// TODO implement more sophisticated error handling: 
+			// - variable timeout: estimate it from the runtime of the fastest job + 50% margin: if a job hangs too long we stop waiting
+			// - for that we can't use wait() anymore but rather we have to keep checking for the job status ourselves
+			
 			for (int i=1;i<=n;i++) {
 				JobInfo info = this.session.wait(jobIds[i],PARALLEL_JOBS_TIMEOUT);
-				int exitStatus = 999;
 				if (info.hasExited()) {
-					exitStatus = info.getExitStatus();
+					int exitStatus = info.getExitStatus();
+					if (exitStatus!=0) {
+						killJobs();
+						throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus+". Couldn't produce output file "+nXyzOutFiles[i]);
+					} 
 				} else {
-					killJobs(); // we cleanup
-					throw new TinkerError("Job "+jobIds[i]+" exited abnormally or didn't exit yet. Couldn't produce output file "+nXyzOutFiles[i]);
-				}
-				if (exitStatus!=0) {
 					killJobs();
-					throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus+". Couldn't produce output file "+nXyzOutFiles[i]);
-				} 
+					throw new TinkerError("Job "+jobIds[i]+" exited abnormally or exceeded the timeout. Couldn't produce output file "+nXyzOutFiles[i]);
+				}
 			}
+			
 		} catch (DrmaaException e) {
 			throw new TinkerError(e);
 		}
@@ -1201,14 +1201,16 @@ public class TinkerRunner {
 
 		// 4. converting xyz output files to pdb files and calculating rmsds
 		for (int i = 1; i<=numberOfModels; i++) {
-			String ext = new Formatter().format(".%03d",i).toString(); // 001, 002, 003, ...
+			String ext = String.format(".%03d",i); // 001, 002, 003, ...
 			File outputXyzFile = new File(outputDir, baseName+ext);
 			File outputPdbFile = new File(outputDir, baseName+ext+".pdb");
 			if(cleanUp) {
 				outputXyzFile.deleteOnExit();
 				outputPdbFile.deleteOnExit();
 			}
+
 			runXyzpdb(outputXyzFile, seqFile, outputPdbFile, log);
+
 		}					
 		log.close();
 		
@@ -1315,9 +1317,7 @@ public class TinkerRunner {
 	 */
 	public Pdb getStructure(int i) throws TinkerError {
 		Pdb resultPdb = null;
-		
-		String ext = String.format(".%03d",i); // 001, 002, 003, ...
-		File resultPdbFile = new File(lastOutputDir, lastBaseName+ext+".pdb");
+		File resultPdbFile = getOutPdbFile(i);
 		try {
 			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath());
 			resultPdb.load(DEFAULT_RECONSTR_CHAIN_CODE); 
@@ -1326,6 +1326,17 @@ public class TinkerRunner {
 		}
 		
 		return resultPdb;
+	}
+	
+	/**
+	 * Returns the file of one of the structures generated in the last reconstruction run.
+	 * Structures are numbered from 1 to getLastNumberOfModels()
+	 * @param i the number of the model to be returned
+	 * @return
+	 */
+	public File getOutPdbFile(int i) {
+		String ext = String.format(".%03d",i); // 001, 002, 003, ...
+		return new File(lastOutputDir, lastBaseName+ext+".pdb");
 	}
 	
 	public double[] getErrorFunctionVal() {
