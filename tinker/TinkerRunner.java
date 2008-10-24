@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -72,12 +73,14 @@ public class TinkerRunner {
 	
 	private static final int MAXSEED = 2000000000; // max seed that tinker supports
 	
-	private static final boolean DEBUG = false;              // if true temp files for parallel distgeom run are kept
-	private static final long PARALLEL_JOBS_TIMEOUT = 7200;  // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
-	private static final String SGE_JOBS_PREFIX = "RC_";     // prefix for SGE jobs
-	private static final String SGE_QUEUE = "-q all.q";      // queue were SGE jobs will run
-	private static final int MAX_RETRIES_FIND_OUTPUT = 10;   // max number of retries for checking output files of a parallel distgeom run
-	private static final long RETRY_TIME_FIND_OUTPUT = 2000; // time between retries for checking output files of a parallel disgeom run
+	private static final boolean DEBUG = false;             // if true temp files for parallel distgeom run are kept
+	private static final long PARALLEL_JOBS_TIMEOUT = 7200; // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
+	private static final String SGE_JOBS_PREFIX = "RC_";    // prefix for SGE jobs
+	private static final String SGE_QUEUE = "-q all.q";		// SGE queue were jobs will run  
+    private static final String SGE_BIN_YES = "-b y";	 	// "-b y" to be able to submit directly a binary instead of a shell script
+	private static final int MAX_RETRIES_FIND_OUTPUT = 10;  // max number of retries for checking output files of a parallel distgeom run
+	private static final long RETRY_TIME_FIND_OUTPUT = 2000;// time between retries for checking output files of a parallel disgeom run
+	private static final double ESTIMATED_FAILURE_RATE = 0;	// estimated failure rate for jobs in the cluster (for parallel distgeom runs)
 	
 	/*--------------------------- member variables --------------------------*/
 	// input parameters
@@ -292,22 +295,6 @@ public class TinkerRunner {
 	}
 	
 	/**
-	 * Creates a shell script with a distgeom command to submit to the SGE system through qsub
-	 * Requires java6 to be able to set the execute permission
-	 * @param submitScript the script file
-	 * @param xyzFile distgeom input xyz file
-	 * @param n number of models for distgeom
-	 * @throws FileNotFoundException
-	 */
-	private void createDistgeomSubmitScript (File submitScript, File xyzFile, int n) throws FileNotFoundException {
-		PrintStream out = new PrintStream(submitScript);
-		out.println("#!/bin/sh");
-		out.println(distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams);
-		out.close();
-		submitScript.setExecutable(true, true); // if script not executable sge can't submit it 
-	}
-	
-	/**
 	 * Runs distgeom by submitting it to a DRMAA system. Only SGE (qsub) supported at the moment
 	 * @param xyzFile
 	 * @param outPath
@@ -321,16 +308,20 @@ public class TinkerRunner {
 	private String runDistgeomDRMAA(File xyzFile, String outPath, String outBasename, int n) throws TinkerError, IOException, DrmaaException {
 		checkDistgeomInput(xyzFile, outPath);		
 		// running distgeom program
-		File submitScript = new File(outPath,outBasename+".sh");
-		if (!DEBUG) submitScript.deleteOnExit();
-		createDistgeomSubmitScript(submitScript, xyzFile, n);
-		
 		JobTemplate jt = this.session.createJobTemplate();
-		jt.setRemoteCommand(submitScript.getAbsolutePath());
+		jt.setRemoteCommand(distgeomProg);
+		ArrayList<String> args = new ArrayList<String>();
+		args.add(xyzFile.getAbsolutePath());
+		args.add(String.valueOf(n));
+		for (String dgeomParam: dgeomParams.split(" ")) {
+			args.add(dgeomParam);
+		}
+		jt.setArgs(args);
 		jt.setJobName(SGE_JOBS_PREFIX+outBasename);
 		jt.setOutputPath(":"+outPath); // for some reason out/error paths require a ":" to start with
 		jt.setErrorPath(":"+outPath); 
 		jt.setNativeSpecification(SGE_QUEUE);
+		jt.setNativeSpecification(SGE_BIN_YES);
 		
 		String jobId = this.session.runJob(jt);
 		
@@ -536,18 +527,32 @@ public class TinkerRunner {
 	 * @throws IOException
 	 */
 	private void runParallelDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException {
+		// add shutdown hook to clean up existing jobs if CTRL-c is pressed
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                System.out.println("Cleaning up");
+                killJobs();
+        		finaliseDRMAASession();
+            }
+        });
+		
+		// To try to compensate for some failure rate we generate 10% more models than specified, 
+		// in the end we only use n of those (the first n that finish successfuly)
+		int nExtended = (int) ((1.0+ESTIMATED_FAILURE_RATE)*n);
+		
 		Random ran = new Random();
-		File[] nXyzOutFiles = new File[n+1]; 
-		File[] nOLogFiles = new File[n+1];
-		File[] nELogFiles = new File[n+1];
+		File[] nXyzOutFiles = new File[nExtended+1]; 
+		File[] nOLogFiles = new File[nExtended+1];
+		File[] nELogFiles = new File[nExtended+1];
 		try {
 			initDRMAASession();
 		} catch (DrmaaException e) {
 			throw new TinkerError("Couldn't contact the SunGridEngine system. Error "+e.getMessage());
 		}
 		
-		String[] jobIds = new String[n+1]; 
-		for (int i=1;i<=n;i++) {
+		int submissionFailures = 0;
+		String[] jobIds = new String[nExtended+1]; 
+		for (int i=1;i<=nExtended;i++) {
 			String nBaseName = getBasename(xyzFile)+"_"+i;
 			File keyFile = new File(xyzFile.getParent(),getBasename(xyzFile)+".key"); // input key file matching input xyz file
 			File nXyzFile = new File(xyzFile.getParent(),nBaseName+".xyz");
@@ -564,11 +569,15 @@ public class TinkerRunner {
 			try {
 				jobIds[i] = runDistgeomDRMAA(nXyzFile, outPath, nBaseName, 1);
 			} catch (DrmaaException e) {
-				// we are going for the moment for a conservative error handling. We don't allow any submission to fail
-				// if only one of them fails we abort by throwing exception
-				// we have to clean up the ones that did already start,
-				killJobs();
-				throw new TinkerError("SGE job "+nBaseName+" failed to run. "+e.getMessage());
+				// We allow some a percentage of the submissions to fail (the ESTIMATED_FAILURE_RATE)
+				System.err.println("Failed to submit distgeom job for file "+nXyzFile);
+				submissionFailures++;
+				if (submissionFailures>=ESTIMATED_FAILURE_RATE*n) {
+					// if more than that percentage fail we abort by throwing exception
+					// we have to clean up the ones that did already start
+					killJobs();
+					throw new TinkerError("SGE job "+nBaseName+" failed to run. "+e.getMessage());					
+				}
 			}
 			
 			// we now have to define the log file names from the name that sge gives the out/err files
@@ -592,7 +601,7 @@ public class TinkerRunner {
 			// - variable timeout: estimate it from the runtime of the fastest job + 50% margin: if a job hangs too long we stop waiting
 			// - for that we can't use wait() anymore but rather we have to keep checking for the job status ourselves
 			
-			for (int i=1;i<=n;i++) {
+			for (int i=1;i<=nExtended;i++) {
 				JobInfo info = this.session.wait(jobIds[i],PARALLEL_JOBS_TIMEOUT);
 				if (info.hasExited()) {
 					int exitStatus = info.getExitStatus();
@@ -679,7 +688,6 @@ public class TinkerRunner {
 		this.maxLowerViol = maxLowerViol;
 		this.rmsRestViol = rmsRestViol;
 
-		finaliseDRMAASession();
 	}
 	
 	/**
