@@ -35,9 +35,6 @@ public class reconstruct {
 	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
 	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
 	
-	private static final String MYSQLSERVER = "white";
-	private static final String MYSQLUSER = MySQLConnection.getUserName();
-	private static final String MYSQLPWD = "nieve";
 	private static final String PDBASEDB = "pdbase";
 
 	private static final double DEFAULT_FORCECONSTANT_DISTANCE = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE;
@@ -244,7 +241,7 @@ public class reconstruct {
 					mPdb.mirror();
 				} else {
 
-					MySQLConnection conn = new MySQLConnection(MYSQLSERVER, MYSQLUSER, MYSQLPWD);
+					MySQLConnection conn = new MySQLConnection();
 					pdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
 					pdb.load(pdbChainCode);
 					mPdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
@@ -267,7 +264,7 @@ public class reconstruct {
 				System.err.println("Given pdb code "+pdbCode+" couldn't be found in pdbase. Exiting");
 				System.exit(1);
 			} catch (SQLException e) {
-				System.err.println("Problems connecting to database for getting pdb data for "+pdbCode+". Exiting");
+				System.err.println("Problems connecting to database for getting pdb data. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
 			}
 

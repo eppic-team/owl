@@ -40,9 +40,6 @@ public class averageGraph {
 	private static final int    PHIPSI_CONSENSUS_INTERVAL = 20;
 	
 	private static final String	PDB_DB = 				"pdbase";
-	private static final String	DB_HOST = 				"white";								
-	private static final String	DB_USER = 				MySQLConnection.getUserName();
-	private static final String	DB_PWD = 				"nieve";
 	
 	private static final String CASP_CONTACT_TYPE =		"Cb";
 	private static final double CASP_CUTOFF = 			8.0;
@@ -327,7 +324,7 @@ public class averageGraph {
 			System.exit(1);			
 		}
 				
-		MySQLConnection conn = new MySQLConnection(DB_HOST,DB_USER,DB_PWD);
+		MySQLConnection conn = new MySQLConnection();
 		
 		String targetSeq = null;
 		String targetTag = null;

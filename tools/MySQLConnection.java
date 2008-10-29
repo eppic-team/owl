@@ -8,7 +8,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.StringTokenizer;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -16,17 +15,16 @@ public class MySQLConnection {
 
 	/*--------------------- constants -----------------------*/
 	
-    // -- constants for database connection --
-    static final String    HOST = 			"white";	
-    static final String    USER = 		    "";
-    static final String    PASSWORD = 		"nieve";
+    // defaults for database connection 
+    private static final String    PASSWORD       =	"nieve";
+    private static final String    DEFAULT_PORT   = "3306";
 	
 	/*------------------- member variables --------------------*/
 	
-	public Connection conn; 
+	private Connection conn; 
 	private String host;
 	private String user;
-	private String password=PASSWORD;
+	private String password;
 	private String port;
 	private String dbname;
 	
@@ -44,9 +42,9 @@ public class MySQLConnection {
 		host=dbServer;
 		user=dbUserName;
 		password=dbPassword;
-		port="";
+		port=DEFAULT_PORT;
 		dbname="";		
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
 
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
@@ -65,9 +63,9 @@ public class MySQLConnection {
 		host=dbServer;
 		user=dbUserName;
 		password=dbPassword;
-		port="";
+		port=DEFAULT_PORT;
 		dbname=dbName;		
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
 
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
@@ -83,9 +81,10 @@ public class MySQLConnection {
 		loadMySQLDriver(); 
 		host=dbServer;
 		user=getUserName();
-		port="";
+		password=PASSWORD;
+		port=DEFAULT_PORT;
 		dbname=dbName;
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
 
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
@@ -105,30 +104,44 @@ public class MySQLConnection {
 		host=dbServer;
 		user=dbUserName;
 		password=dbPassword;
-		port=":"+portNum;
+		port=String.valueOf(portNum);
 		dbname=dbName;		
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
 
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
 		
 	/**
 	 * Connect to database giving a connection file
-	 * @param connFile the connection file's name
+	 * @param connFile the connection file, if null then default ~/.my.cnf will be read
 	 * @throws SQLException 
 	 */
-	public MySQLConnection(String connFile) throws SQLException {
+	public MySQLConnection(File connFile) throws SQLException {
 		loadMySQLDriver();
 		readConnectionFile(connFile);
-		String connStr="jdbc:mysql://"+host+port+"/"+dbname;
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
 
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
 	
+	/**
+	 * Connect to database reading connection parameters from default file ~/.my.cnf
+	 * Equivalent to calling MySQLConnection(null)
+	 * @throws SQLException
+	 */
+	public MySQLConnection() throws SQLException {
+		loadMySQLDriver();
+		readConnectionFile(null);
+		String connStr="jdbc:mysql://"+host+":"+port+"/"+dbname;
+
+		conn = DriverManager.getConnection(connStr, user, password);
+	}
 	
 	/*---------------------- methods -------------------------*/
 	
-	/** get user name from operating system (for use as database username) */
+	/** 
+	 * Get user name from operating system (for use as database username) 
+	 */
 	public static String getUserName() {
 		String user = null;
 		user = System.getProperty("user.name");
@@ -166,77 +179,76 @@ public class MySQLConnection {
 	}
 
 	/**
-	 * Used in the constructor that gets a connFile as argument. To read the connection parameters from a connection file.
-	 * @param connFile
+	 * Reads mysql client connection parameters from file in standard mysql .cnf format.
+	 * Only the [mysql] section of the file is read, the rest is ignored. The fields read
+	 * are host, port, user, password and database
+	 * If file doesn't exist a warning is printed and default blank values set.
+	 * @param connFile if null default ~/.my.cnf is read
 	 */
-	private void readConnectionFile(String connFile) {
-		// reads the values of the connFile into the static variables; 
+	private void readConnectionFile(File connFile) { 
 		String homedir = System.getProperty("user.home"); 
-		if (connFile.length()==0) { // no file was specified
-			connFile=homedir+"/.my.cnf"; // assume default configuration file 
+		if (connFile==null) { // no file was specified
+			connFile=new File(homedir,".my.cnf"); // assume default configuration file 
 		}		
 		// else the location of the connection file was given 		
-		// Open the configuration file		
-		BufferedReader fileIn = null;
-		StringTokenizer str;
-		String item, oneLine;
-		// to control if the minimum mandatory 4 parameters are given in file
-		int paramCount=0; 
-		// setting default blank values for port and dbname, they are set to blank unless fields specified in file
-		port="";
-		dbname="";
-		// list the entries in the file and decompose them 
-		try {
-			fileIn = new BufferedReader(new FileReader(new File(connFile))); // open BufferedReader to file connFile 
-			while ((oneLine = fileIn.readLine()) != null ) {
-				// Construct a stringTokenizer for the line that we read with : delimited
-				str = new StringTokenizer(oneLine, "="); // true sets returnDelimiters flag 
-				while ( str.hasMoreTokens()) {
-					item = str.nextToken();
-					if( item.equals("host")) { // mandatory parameter
-						host=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if host 
-					if( item.equals("port")) { // optional parameter
-						port=":"+str.nextToken();
-						break; 
-					} // end if port
-					if( item.equals("user")) { // mandatory parameter
-						user=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password 
-					if( item.equals("password")) { // mandatory parameter
-						password=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password
-					if( item.equals("database")) { // mandatory parameter
-						dbname=str.nextToken();
-						paramCount++;
-						break; 
-					} // end if password 					
-				} // next token in this line 
-			} // next line in the file
-			if (paramCount<4){
-				System.err.println("Not all mandatory parameters are given in connection file "+connFile+". Can't connect to mysql server, exiting.");
-				System.exit(1);
-			}			
-		} 
-		catch (IOException e) {
-			System.err.println("Couldn't open file "+connFile);			
-			e.printStackTrace();
-			System.exit(1);
-		}  
-		
-		try { // closing the file
-			if (fileIn != null) fileIn.close();			
-		} catch (IOException e) {
-			System.err.println("Couldn't close file "+connFile);
-			e.printStackTrace(); 
+
+		// setting default blank values, they will stay like that unless specified in file
+		this.host = "";
+		this.port = DEFAULT_PORT;
+		this.user = "";
+		this.password = "";
+		this.dbname="";
+		// checking if file is there, if not we print a warning and go ahead with connection
+		if (!connFile.exists()) {
+			System.err.println("Warning: MySQL connection file "+connFile+" doesn't exist. Will use default parameters for connection");
+			return;
 		}
 		
+		// get parameters from file 
+		try {
+			boolean inClientSection = false;
+			String oneLine;
+			BufferedReader fileIn = new BufferedReader(new FileReader(connFile));  
+			while ((oneLine = fileIn.readLine()) != null ) {
+				if (oneLine.startsWith("#")) continue;
+				if (oneLine.startsWith("[mysql]")) {
+					inClientSection = true;
+					continue;
+				} else if (oneLine.startsWith("[")) { // any other section is not a client section
+					inClientSection = false;
+					continue;
+				}
+
+				if (inClientSection) { 
+					if( oneLine.startsWith("host=")) {
+						host=oneLine.substring(oneLine.indexOf('=')+1, oneLine.length()).trim();
+						continue; 
+					} 
+					if( oneLine.startsWith("port=")) {
+						port=oneLine.substring(oneLine.indexOf('=')+1, oneLine.length()).trim();
+						continue; 
+					}
+					if( oneLine.startsWith("user=")) {
+						user=oneLine.substring(oneLine.indexOf('=')+1, oneLine.length()).trim();
+						continue; 
+					} 
+					if( oneLine.startsWith("password=")) {
+						password=oneLine.substring(oneLine.indexOf('=')+1, oneLine.length()).trim();
+						continue; 
+					}
+					if( oneLine.startsWith("database=")) {
+						dbname=oneLine.substring(oneLine.indexOf('=')+1, oneLine.length()).trim();
+						continue; 
+					}
+				}
+			} 
+
+			fileIn.close();
+		} 
+		catch (IOException e) {
+			System.err.println("Couldn't read MySQL connection file "+connFile+". Error: "+e.getMessage()+". Exiting");			
+			System.exit(1);
+		}  		
 	}
 
 	public String getDbname() {
@@ -286,7 +298,7 @@ public class MySQLConnection {
 	 * @param query
 	 * @return the first column of the first row of the result of the given query as a string
 	 * or null if no results were returned
-	 * TODO: How to figure out whether a database error occured?
+	 * TODO: should throw the SQLException instead of catching it
 	 */	
 	public String getStringFromDb(String query) {
 		Statement    stmt;
