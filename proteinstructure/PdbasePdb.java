@@ -23,9 +23,6 @@ import tools.MySQLConnection;
  */
 public class PdbasePdb extends Pdb {
 
-	private final static String MYSQLSERVER="white";
-	private final static String MYSQLUSER=MySQLConnection.getUserName();
-	private final static String MYSQLPWD="nieve";
 	private final static String DEFAULT_PDBASE_DB="pdbase";
 
 	private MySQLConnection conn;
@@ -40,14 +37,14 @@ public class PdbasePdb extends Pdb {
 	/**
 	 * Constructs an empty Pdb object given pdb code
 	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)
-	 * MySQLConnection is taken from defaults in PdbasePdb class: MYSQLSERVER, MYSQLUSER, MYSQLPWD
+	 * MySQLConnection parameters are taken from the .my.cnf file
 	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
 	 * @param pdbCode
 	 * @throws SQLException  
 	 * @throws PdbCodeNotFoundError 
 	 */
 	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundError {
-		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD));
+		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection());
 	}
 
 	/**
