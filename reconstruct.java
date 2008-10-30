@@ -75,7 +75,7 @@ public class reconstruct {
 			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
 			"                  worse quality model). Default: slow (refinement via simulate\n" +
 			"                  annealing) \n" +
-			" [-A]           : if specified reconstruction will be run in parallel\n\n";
+			" [-A]           : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n\n";
 
 		boolean benchmark = true;
 		String pdbId = null;
