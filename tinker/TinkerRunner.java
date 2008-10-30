@@ -71,13 +71,13 @@ public class TinkerRunner {
 	
 	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
 	
+	// parallel distgeom constants
 	private static final int MAXSEED = 2000000000; // max seed that tinker supports
 	
 	private static final boolean DEBUG = false;             // if true temp files for parallel distgeom run are kept
 	private static final long PARALLEL_JOBS_TIMEOUT = 7200; // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
 	private static final String SGE_JOBS_PREFIX = "RC_";    // prefix for SGE jobs
-	private static final String SGE_QUEUE = "-q all.q";		// SGE queue were jobs will run  
-    private static final String SGE_BIN_YES = "-b y";	 	// "-b y" to be able to submit directly a binary instead of a shell script
+	private static final String SGE_QUEUE = "-q all.q";		// SGE queue were jobs will run    
 	private static final int MAX_RETRIES_FIND_OUTPUT = 10;  // max number of retries for checking output files of a parallel distgeom run
 	private static final long RETRY_TIME_FIND_OUTPUT = 2000;// time between retries for checking output files of a parallel disgeom run
 	private static final double ESTIMATED_FAILURE_RATE = 0;	// estimated failure rate for jobs in the cluster (for parallel distgeom runs)
@@ -318,11 +318,23 @@ public class TinkerRunner {
 		}
 		jt.setArgs(args);
 		jt.setJobName(SGE_JOBS_PREFIX+outBasename);
-		jt.setOutputPath(":"+outPath); // for some reason out/error paths require a ":" to start with
+		// NOTE: outPath can be relative or absolute. 
+		// Then when using setOutPath/setErrorPath by default SGE considers the paths to refer to home directory.
+		// We change that behaviour with setWorkingDirectory to outPath (as absolute), after even if outPath is relative in
+		// setOutPath/setErrorPath it will be referring to the absolute outPath
+		jt.setWorkingDirectory(new File(outPath).getAbsolutePath());
+		// It is not possible to directly pass absolute paths to setOutPath/setErrPath because the absolute path in our case 
+		// gets prefixed with the automounter prefix (/amd/talyn/1/project/StruPPi/...) and for some reason SGE doesn't like
+		// that when the job is transferred to the exec node.
+		// I also tried the approach of using the -cwd option to do path aliasing (see man sge_aliases). With qsub it does work, but
+		// apparently drmaa doesn't allow -cwd because is not thread safe (see http://blogs.sun.com/templedf/entry/running_job_scripts_with_drmaa)
+		// NOTE2: for some reason out/error paths must start with a ":"
+		jt.setOutputPath(":"+outPath); 
 		jt.setErrorPath(":"+outPath); 
 		jt.setNativeSpecification(SGE_QUEUE);
-		jt.setNativeSpecification(SGE_BIN_YES);
-		
+		//jt.setNativeSpecification("-b y"); // no need for binary=yes, it is the default in drmaa (but not in qsub)
+
+ 
 		String jobId = this.session.runJob(jt);
 		
 		this.session.deleteJobTemplate(jt);
