@@ -17,9 +17,11 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,7 +29,6 @@ import java.util.regex.Pattern;
 import javax.vecmath.Point3d;
 
 import org.ggf.drmaa.DrmaaException;
-import org.ggf.drmaa.JobInfo;
 import org.ggf.drmaa.JobTemplate;
 import org.ggf.drmaa.Session;
 import org.ggf.drmaa.SessionFactory;
@@ -74,13 +75,14 @@ public class TinkerRunner {
 	// parallel distgeom constants
 	private static final int MAXSEED = 2000000000; // max seed that tinker supports
 	
-	private static final boolean DEBUG = false;             // if true temp files for parallel distgeom run are kept
-	private static final long PARALLEL_JOBS_TIMEOUT = 7200; // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
-	private static final String SGE_JOBS_PREFIX = "RC_";    // prefix for SGE jobs
-	private static final String SGE_QUEUE = "-q all.q";		// SGE queue were jobs will run    
-	private static final int MAX_RETRIES_FIND_OUTPUT = 10;  // max number of retries for checking output files of a parallel distgeom run
-	private static final long RETRY_TIME_FIND_OUTPUT = 2000;// time between retries for checking output files of a parallel disgeom run
-	private static final double ESTIMATED_FAILURE_RATE = 0;	// estimated failure rate for jobs in the cluster (for parallel distgeom runs)
+	private static final boolean DEBUG = false;               // if true temp files for parallel distgeom run are kept
+	private static final long PARALLEL_JOBS_TIMEOUT = 7200;   // (7200s = 2h) timeout for SGE jobs to finish (in seconds)
+	private static final String SGE_JOBS_PREFIX = "RC_";      // prefix for SGE jobs
+	private static final String SGE_QUEUE = "-q all.q";		  // SGE queue were jobs will run
+	private static final long RETRY_TIME_CHECK_JOBS = 2000;   // time between retries to check if SGE jobs are done
+	private static final int MAX_RETRIES_FIND_OUTPUT = 10;    // max number of retries for checking output files of a parallel distgeom run
+	private static final long RETRY_TIME_FIND_OUTPUT = 2000;  // time between retries for checking output files of a parallel disgeom run
+	private static final double ESTIMATED_FAILURE_RATE = 0.1; // estimated failure rate for jobs in the cluster (for parallel distgeom runs)
 	
 	/*--------------------------- member variables --------------------------*/
 	// input parameters
@@ -539,7 +541,7 @@ public class TinkerRunner {
 	 * @throws IOException
 	 */
 	private void runParallelDistgeom(File xyzFile, String outPath, String outBasename, int n, PrintWriter log) throws TinkerError, IOException {
-		// add shutdown hook to clean up existing jobs if CTRL-c is pressed
+		// add shutdown hook to clean up existing jobs if CTRL-c is pressed (also runs on normal termination)
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
                 System.out.println("Cleaning up");
@@ -576,6 +578,8 @@ public class TinkerRunner {
 			
 			// we predict what's going to be the xyz output file name (tinker will add a _2, _3, ... if file already exists with .001)
 			nXyzOutFiles[i] = getTinkerOutputFileName(nXyzFile, "001");
+			// later we rename these files (so no need to remove them), but if more than n jobs succeed then some are not renamed and need deleting
+			if (!DEBUG) nXyzOutFiles[i].deleteOnExit();  
 			
 			// submit jobs
 			try {
@@ -602,34 +606,61 @@ public class TinkerRunner {
 		}		
 
 		// 1 first check jobs are finished and successful
+		TreeSet<Integer> jobsSucceeded = new TreeSet<Integer>();
 		try {
-			// synchronize (waits for all jobs) seems to be broken, it crashes the JVM! don't use it!
-			//List<String> jobIdsList = Arrays.asList(jobIds);
-			//this.session.synchronize(jobIdsList, PARALLEL_JOBS_TIMEOUT, true);
-			//int status = this.session.getJobProgramStatus(jobIds[i]);
-			
-			// we wait for one job at a time, so one not finishing will block all the others until timeout
-			// TODO implement more sophisticated error handling: 
-			// - variable timeout: estimate it from the runtime of the fastest job + 50% margin: if a job hangs too long we stop waiting
-			// - for that we can't use wait() anymore but rather we have to keep checking for the job status ourselves
-			
-			for (int i=1;i<=nExtended;i++) {
-				JobInfo info = this.session.wait(jobIds[i],PARALLEL_JOBS_TIMEOUT);
-				if (info.hasExited()) {
-					int exitStatus = info.getExitStatus();
-					if (exitStatus!=0) {
-						killJobs();
-						throw new TinkerError("Job "+jobIds[i]+" finished with exit status "+exitStatus+". Couldn't produce output file "+nXyzOutFiles[i]);
-					} 
-				} else {
+			TreeSet<Integer> jobsFailed = new TreeSet<Integer>();
+			long start = System.currentTimeMillis();
+			while (jobsSucceeded.size()<n 
+					&& (System.currentTimeMillis()-start)/1000.0<PARALLEL_JOBS_TIMEOUT) {
+				try {
+					Thread.sleep(RETRY_TIME_CHECK_JOBS);
+				} catch (InterruptedException e) {
+					System.err.println("Unexpected error: couldn't sleep to wait for output files");
+					System.exit(1);
+				}
+
+				for (int i=1;i<=nExtended;i++) {
+					int status = this.session.getJobProgramStatus(jobIds[i]);
+					switch (status) {
+					case Session.DONE:
+						jobsSucceeded.add(i);
+						break;
+					case Session.FAILED:
+						jobsFailed.add(i);
+						break;
+					// we put the rest of cases here as placeholders, we don't do anything at all with them yet
+					// if they do happen they will be ignored and the loop will continue until timeout
+					case Session.RUNNING:
+						break;
+					case Session.QUEUED_ACTIVE:
+						break;
+					case Session.UNDETERMINED:
+						break;
+					case Session.SYSTEM_ON_HOLD:
+					case Session.SYSTEM_SUSPENDED:
+					case Session.USER_ON_HOLD:
+					case Session.USER_SUSPENDED:
+					case Session.USER_SYSTEM_ON_HOLD:
+					case Session.USER_SYSTEM_SUSPENDED:
+						break;
+					}
+				}
+				if (jobsFailed.size()>ESTIMATED_FAILURE_RATE*n){
+					// if more than that percentage failed we abort, no point on waiting on the rest (they are already less jobs running than required)
+					// we kill other jobs that might still be running
 					killJobs();
-					throw new TinkerError("Job "+jobIds[i]+" exited abnormally or exceeded the timeout. Couldn't produce output file "+nXyzOutFiles[i]);
+					throw new TinkerError(jobsFailed.size()+" jobs failed. Sorry that's too many failures...");					
 				}
 			}
-			
 		} catch (DrmaaException e) {
 			throw new TinkerError(e);
 		}
+		
+		// while loop finished: it means either we reached timeout or we have the required number of jobs (n)
+		if (jobsSucceeded.size()<n) {
+			throw new TinkerError("Timeout was reached and only "+jobsSucceeded.size()+" jobs finished successfully.");
+		}
+		if (DEBUG) System.out.println(jobsSucceeded.size()+" jobs successful");
 		
 		// 2 if jobs successful check output files are there
 		// we've got to retry a few times with waiting of 2s in between
@@ -645,9 +676,8 @@ public class TinkerRunner {
 				System.err.println("Unexpected error: couldn't sleep to wait for output files");
 				System.exit(1);
 			}
-			for (int i=1;i<=n;i++) {
+			for (int i:jobsSucceeded) { // we only check the output files for the jobs we know succeeded
 				if (!nXyzOutFiles[i].exists()) {
-					//throw new TinkerError("All jobs finished but output file "+nXyzOutFiles[i]+" not present");
 					break;
 				}
 				allFilesFound = true;
@@ -655,7 +685,7 @@ public class TinkerRunner {
 		}
 		if (!allFilesFound) 
 			throw new TinkerError("All jobs finished but some output files were not found");
-		
+
 		// now we need to convert the split output into a normal (non-parallel output)
 		double[] errorFunctionVal = new double[n+1];
 		int[] numUpperBoundViol = new int[n+1];
@@ -668,12 +698,16 @@ public class TinkerRunner {
 		double[] maxUpperViol = new double[n+1];
 		double[] maxLowerViol = new double[n+1];
 		double[] rmsRestViol = new double[n+1];
-		
+
+		// we use only the list of succeeded jobs (>=n): we have at least n output files with some non-consecutive indexing
+		// Note that the number of jobs succeeded can be bigger than n, we take the first n succeeded jobs
+		Iterator<Integer> jobsSucceededIt = jobsSucceeded.iterator();
 		for (int i=1;i<=n;i++) {
+			int succeededJobIndex = jobsSucceededIt.next();
 			// 1 rename all bn_i.001 files to bn.iii
-			nXyzOutFiles[i].renameTo(new File(outPath,outBasename+String.format(".%03d",i)));
+			nXyzOutFiles[succeededJobIndex].renameTo(new File(outPath,outBasename+String.format(".%03d",i)));
 			// 2 parse log to get distgeom statistics and write individual logs to main log file
-			BufferedReader l = new BufferedReader(new FileReader(nOLogFiles[i]));
+			BufferedReader l = new BufferedReader(new FileReader(nOLogFiles[succeededJobIndex]));
 			parseDistgeomOutput(l, 1, log);
 			// 3 get the individual violation statistics and put them into a new array 
 			errorFunctionVal[i] = this.getErrorFunctionVal()[1];
