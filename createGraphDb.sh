@@ -15,7 +15,7 @@ function usage {
 #
 graphDb=""
 mode=""
-h="white"
+h="talyn"
 
 while getopts d:m: opt
 do

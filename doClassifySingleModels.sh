@@ -43,7 +43,7 @@ case "$arch" in
 esac
 
 mysqlbin=$mysqldir/bin/mysql
-h=white
+h=talyn
 
 $mysqlbin -pnieve -h $h -B -N $db <<ENDSQL
 SET sql_mode = "NO_UNSIGNED_SUBTRACTION,TRADITIONAL";
