@@ -46,7 +46,7 @@ case "$arch" in
 esac
 
 mysqlbin=$mysqldir/bin/mysql
-master=white
+master=talyn
 db=test
 
 if [ "$mode" == "CREATE" ]
