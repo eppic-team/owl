@@ -203,7 +203,7 @@ public class BlastUtils {
 		File matrixFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.matrix");
 		TemplateList templateList = new TemplateList(templateFile);
 		
-		writeClusterGraph(templateList, new MySQLConnection("white","duarte","nieve"),"pdbase",graphFile, matrixFile, 6.0);
+		writeClusterGraph(templateList, new MySQLConnection("talyn","duarte","nieve"),"pdbase",graphFile, matrixFile, 6.0);
 		
 		
 	}
