@@ -1552,6 +1552,25 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Resets coordinates of all atoms to (0,0,0)
+	 */
+	public void resetConformation() {
+		for (int atomser:getAllAtomSerials()){
+			this.atomser2coord.put(atomser,new Point3d(0,0,0));
+		}
+	}
+	
+	/**
+	 * Sets the coordinates for given atom and residue serial
+	 * @param resser
+	 * @param atom
+	 * @param coord
+	 */
+	public void setAtomCoord(int resser, String atom, Point3d coord) {
+		this.atomser2coord.put(getAtomSerFromResSerAndAtom(resser, atom),coord);
+	}
+	
+	/**
 	 * Gets the atom name given the atom serial
 	 * @param atomser
 	 * @return
@@ -1867,7 +1886,7 @@ public abstract class Pdb {
 	 * @return
 	 * @throws ConformationsNotSameSizeError
 	 */
-	private double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeError{
+	public static double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeError{
 		if (conformation1.length!=conformation2.length) {
 			//System.err.println("Conformations not the same size");
 			throw new ConformationsNotSameSizeError(
@@ -1953,7 +1972,7 @@ public abstract class Pdb {
 	}
 
 	/** Gets a Jama.Matrix object from a Vector3d[] (deep copies) */
-	private Matrix vector3dAr2matrix(Vector3d[] vecArray) {
+	private static Matrix vector3dAr2matrix(Vector3d[] vecArray) {
 		double[][] array = new double[vecArray.length][3];
 		for (int i=0;i<vecArray.length;i++){
 			vecArray[i].get(array[i]);
