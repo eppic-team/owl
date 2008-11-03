@@ -380,7 +380,7 @@ public class PhiPsiAverager {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
+		MySQLConnection conn = new MySQLConnection("talyn","duarte","nieve");
 		String pdbaseDb = "pdbase";
 		
 		//File templatesFile = new File("/scratch/local/phipsi/T0332.templates");

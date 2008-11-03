@@ -31,7 +31,7 @@ public class PdbParsersTest {
 	String cifdir="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
 	String listFile = "/project/StruPPi/michael/cullpdb/cullpdb_20";
 	String pdbaseDB = "pdbase";
-	String mysqlServer = "white";
+	String mysqlServer = "talyn";
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {

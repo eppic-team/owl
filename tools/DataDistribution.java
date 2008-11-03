@@ -10,7 +10,7 @@ public class DataDistribution {
 
 	final static String ADMINDIR="/project/StruPPi/Cluster/admin";
 	final static String HOSTSFILE=ADMINDIR+"/hosts_mysql_server.txt";
-	public final static String MASTER="white";
+	public final static String MASTER="talyn";
 	public final static String KEYMASTERDB="key_master";
 	
 	final static long TIME_OUT = 3000;

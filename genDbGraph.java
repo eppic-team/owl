@@ -21,7 +21,7 @@ public class genDbGraph {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
-	public static final String			DB_HOST = "white";								
+	public static final String			DB_HOST = "talyn";								
 	public static final String			DB_USER = getUserName();
 	public static final String			DB_PWD = "nieve";
 	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
@@ -279,6 +279,7 @@ public class genDbGraph {
 						//pdb.writeToDb(conn,outputDb);
 						pdb.writeToDbFast(conn, outputDb);
 					}
+				
 					// get graphs
 					if (!mode.equals("PDB")) {
 						for (int j = 0; j<edgeTypes.length; j++) {

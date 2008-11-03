@@ -24,7 +24,7 @@ public class DbRIGraph extends RIGraph {
 
 	private static final long serialVersionUID = 1L;
 
-	private final static String MYSQLSERVER="white";
+	private final static String MYSQLSERVER="talyn";
 	private final static String MYSQLUSER=MySQLConnection.getUserName();
 	private final static String MYSQLPWD="nieve";
 	

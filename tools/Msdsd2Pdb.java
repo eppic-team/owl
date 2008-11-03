@@ -37,7 +37,7 @@ public class Msdsd2Pdb {
 	
 	public static String MSDSDDB="msdsd_00_07_a";
 	public static String INFODB="my_msdsd_00_07_a";
-	public static String HOST="white";
+	public static String HOST="talyn";
 	public static String PWD="nieve";
 	
 	

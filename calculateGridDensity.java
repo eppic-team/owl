@@ -27,7 +27,7 @@ public class calculateGridDensity {
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
 	public static String			PDB_DB = "pdbase";
-	public static String			DB_HOST = "white";								
+	public static String			DB_HOST = "talyn";								
 	public static String			DB_USER = getUserName();
 	public static String			DB_PWD = "nieve";
 

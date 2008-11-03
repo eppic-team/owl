@@ -231,7 +231,7 @@ public class BlastRunner {
 			System.out.println("Generating cluster graph...");
 			String[] ids = hits2.getTemplateIds();
 			TemplateList templates = new TemplateList(ids);
-			BlastUtils.writeClusterGraph(templates, new MySQLConnection("white","duarte", "nieve"), "pdbase",new File("out.gdl"), new File("out.matrix"), 6.0);
+			BlastUtils.writeClusterGraph(templates, new MySQLConnection("talyn","duarte", "nieve"), "pdbase",new File("out.gdl"), new File("out.matrix"), 6.0);
 		}
 	}
 }

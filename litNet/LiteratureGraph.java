@@ -253,7 +253,7 @@ public class LiteratureGraph extends DirectedSparseGraph<Article, Reference> {
 		
 		String wilmaFileName = "/project/StruPPi/incoming/litnet.xwg";
 		
-		String dbHost = "white";
+		String dbHost = "talyn";
 		String dbUser = "stehr";
 		String dbPwd = "nieve";
 		MySQLConnection conn = new MySQLConnection(dbHost, dbUser, dbPwd);

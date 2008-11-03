@@ -23,7 +23,7 @@ import tools.MySQLConnection;
  */
 public class MsdsdPdb extends Pdb {
 	
-	private final static String MYSQLSERVER="white";
+	private final static String MYSQLSERVER="talyn";
 	private final static String MYSQLUSER=MySQLConnection.getUserName();
 	private final static String MYSQLPWD="nieve";
 	//private final static String DEFAULT_MYMSDSD_DB="my_msdsd_00_07_a";

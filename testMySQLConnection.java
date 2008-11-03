@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 public class testMySQLConnection {
 
 	/**
-	 * "Hello World" for a MySQLConnection to white
+	 * "Hello World" for a MySQLConnection to talyn
 	 * 
 	 * @author duarte
 	 */
@@ -18,7 +18,7 @@ public class testMySQLConnection {
 				
 		MySQLConnection conn = null;
 		try {
-			conn = new MySQLConnection("white",user,"nieve","newmsdgraph");
+			conn = new MySQLConnection("talyn",user,"nieve","newmsdgraph");
 		} catch (SQLException e1) {
 			e1.printStackTrace();
 			System.err.println("Can't connect to the db. Exiting");

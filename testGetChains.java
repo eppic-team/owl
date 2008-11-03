@@ -22,7 +22,7 @@ public class testGetChains {
 		
 		String pdbFilesDir = "/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb";
 		String cifFilesDir = "/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF";
-		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
+		MySQLConnection conn = new MySQLConnection("talyn","duarte","nieve");
 		
 		//String[] pdbCodes = {"12as", "3eca", "1bxy"} ;
 		

@@ -206,7 +206,7 @@ public class PaulStructAligner implements StructAligner {
 		File templatesFile = new File("/project/StruPPi/OncoGenesHL/modeling/results/FBXW7_WT/P2/FBXW7_WT.blast.templates");
 		File logFile = new File("/scratch/local/temp/tmp2/paul.log");
 		
-		MySQLConnection conn = new MySQLConnection("white", "pdbase");
+		MySQLConnection conn = new MySQLConnection("talyn", "pdbase");
 		
 		TemplateList templates = new TemplateList(templatesFile);
 		templates.loadPdbData(conn, "pdbase");

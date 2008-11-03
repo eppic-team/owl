@@ -13,7 +13,7 @@ public class testDbRIGraph {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
-	public static final String			DB_HOST = "white";								
+	public static final String			DB_HOST = "talyn";								
 	public static final String			DB_USER = getUserName();
 	public static final String			DB_PWD = "nieve";
 	

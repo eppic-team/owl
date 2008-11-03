@@ -232,7 +232,7 @@ public class GraphIODb<V,E> {
 
 		MySQLConnection conn = null;
 		try {
-			conn = new MySQLConnection("white", "duarte", "nieve");
+			conn = new MySQLConnection("talyn", "duarte", "nieve");
 		} catch(SQLException e) {
 			System.err.println("Error while opening database connection: " + e.getMessage());
 			System.exit(1);

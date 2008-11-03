@@ -148,7 +148,7 @@ public class GTGParser {
 		System.out.println("Number of hits: "+hits.size());
 		hits.printTabular();
 		
-		MySQLConnection conn = new MySQLConnection("white","duarte","nieve");
+		MySQLConnection conn = new MySQLConnection("talyn","duarte","nieve");
 		String pdbaseDb ="pdbase";
 
 

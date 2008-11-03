@@ -268,7 +268,7 @@ public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 		String edgeFileName = "/project/StruPPi/ppi/fyi.txt";
 		String wilmaFileName = "/project/StruPPi/ppi/xwg/fyi.xwg";
 		
-		String dbHost = "white";
+		String dbHost = "talyn";
 		String dbUser = "stehr";
 		String dbPwd = "nieve";
 		MySQLConnection conn = new MySQLConnection(dbHost, dbUser, dbPwd);
