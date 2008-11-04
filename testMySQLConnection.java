@@ -4,42 +4,29 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
 
+/**
+ * "Hello World" for a MySQLConnection to our MySQL server (talyn)
+ * 
+ * @author duarte
+ */
 public class testMySQLConnection {
 
-	/**
-	 * "Hello World" for a MySQLConnection to talyn
-	 * 
-	 * @author duarte
-	 */
-	
-	static String user = "duarte"	; // change user name!!
-	
-	public static void main(String[] args){
+	// we throw the SQLException, the program will terminate upon a SQLException and print the stack trace
+	public static void main(String[] args) throws SQLException{
 				
-		MySQLConnection conn = null;
-		try {
-			conn = new MySQLConnection("talyn",user,"nieve","newmsdgraph");
-		} catch (SQLException e1) {
-			e1.printStackTrace();
-			System.err.println("Can't connect to the db. Exiting");
-			System.exit(1);
+		// using the empty MySQLConnection constructor the connection settings are read from the ~/.my.cnf file
+		MySQLConnection conn = new MySQLConnection();
+
+		String sql = "SELECT num,res FROM cullpdb_20.single_model_node limit 3";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		while (rsst.next()) {				
+			int num = rsst.getInt(1); // 1st column -- num
+			String res = rsst.getString(2); // 2nd column -- res
+			System.out.println("serial number: "+num+", residue type: "+res);
 		}
 		
-		try {
-			String sql = "SELECT num,res FROM nodes limit 3;";
-			Statement stmt = conn.createStatement();
-			ResultSet rsst = stmt.executeQuery(sql);
-			while (rsst.next()) {				
-				int num = rsst.getInt(1); // 1st column -- num
-				String res = rsst.getString(2); // 2nd column -- res
-				System.out.println("serial number: "+num+", residue type: "+res);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			System.err.println("SQLException: " + e.getMessage());
-			System.err.println("SQLState:     " + e.getSQLState());
-		}
-
+		conn.close();
 	}
 
 }
