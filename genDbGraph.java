@@ -21,9 +21,6 @@ public class genDbGraph {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
-	public static final String			DB_HOST = "talyn";								
-	public static final String			DB_USER = getUserName();
-	public static final String			DB_PWD = "nieve";
 	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
 	public static final String			DSSP_PARAMS = "--";
 	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
@@ -32,18 +29,8 @@ public class genDbGraph {
 	//public static double			cutoff = 4.2;
 	//public static String			edgeType = "ALL";
 	
-	/*---------------------------- private methods --------------------------*/
-	/** 
-	 * Get user name from operating system (for use as database username). 
-	 * */
-	private static String getUserName() {
-		String user = null;
-		user = System.getProperty("user.name");
-		if(user == null) {
-			System.err.println("Could not get user name from operating system.");
-		}
-		return user;
-	}
+
+	// main
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -181,7 +168,7 @@ public class genDbGraph {
 		MySQLConnection conn = null;		
 
 		try{
-			conn = new MySQLConnection(DB_HOST, DB_USER, DB_PWD);
+			conn = new MySQLConnection();
 			conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 		} catch (Exception e) {
 			System.err.println("Error opening database connection. Exiting");

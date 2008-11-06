@@ -18,9 +18,6 @@ public class dumpseq {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
-	public static final String			DB_HOST = "talyn";								
-	public static final String			DB_USER = MySQLConnection.getUserName();
-	public static final String			DB_PWD = "nieve";
 
 	public static final String			GAP_CHARACTER = "-";
 	
@@ -95,7 +92,7 @@ public class dumpseq {
 		MySQLConnection conn = null;		
 
 		try{
-			conn = new MySQLConnection(DB_HOST, DB_USER, DB_PWD);
+			conn = new MySQLConnection();
 		} catch (Exception e) {
 			System.err.println("Error opening database connection. Exiting");
 			System.exit(1);
