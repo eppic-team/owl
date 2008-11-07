@@ -120,6 +120,7 @@ public class TinkerRunner {
 	
 	// for parallel runs
 	Session session;			// the DRMAA session to communicate with the sge system
+	boolean isDrmaaSessionOpen; // to keep the status of the drmaa session (if true we have an open connection, if false is closed)
 	
 	/*----------------------------- constructors ----------------------------*/
 	
@@ -146,6 +147,8 @@ public class TinkerRunner {
 		this.lastOutputDir = null;
 		this.lastBaseName = null;
 		this.lastNumberOfModels = 0;
+		
+		this.isDrmaaSessionOpen = false;
 	}
 		
 	/*---------------------------- private methods --------------------------*/
@@ -381,6 +384,7 @@ public class TinkerRunner {
 	private void finaliseDRMAASession()  {
 		try {
 			session.exit();
+			this.isDrmaaSessionOpen = false;
 		} catch (DrmaaException e) {
 			System.err.println("Couldn't finalise SGE session, some cleanup may have not been done. Error "+e.getMessage());
 		}
@@ -546,7 +550,9 @@ public class TinkerRunner {
             public void run() {
                 System.out.println("Cleaning up");
                 killJobs();
-        		finaliseDRMAASession();
+                // we have to check if session is open, otherwise if is close session.exit() would throw an exception
+                if (isDrmaaSessionOpen) 
+                	finaliseDRMAASession();
             }
         });
 		
@@ -560,6 +566,7 @@ public class TinkerRunner {
 		File[] nELogFiles = new File[nExtended+1];
 		try {
 			initDRMAASession();
+			this.isDrmaaSessionOpen = true;
 		} catch (DrmaaException e) {
 			throw new TinkerError("Couldn't contact the SunGridEngine system. Error "+e.getMessage());
 		}
@@ -734,6 +741,9 @@ public class TinkerRunner {
 		this.maxLowerViol = maxLowerViol;
 		this.rmsRestViol = rmsRestViol;
 
+		// we need to finalise the session here, even if the shutdown hook has a finalise as well
+		// because it can happen that we run several runParallelDistgeom within the same JVM
+		finaliseDRMAASession();  
 	}
 	
 	/**
@@ -1281,6 +1291,8 @@ public class TinkerRunner {
 	 * ensemble output one would see which edges were physically possible compare to the input contact map.
 	 * We are not sure if this works it's just an idea, but if it does would be great!   
 	 * @param graph
+	 * @param phiPsiConsensus
+	 * @param forceTransOmega
 	 * @param numberOfModels
 	 * @param fastReconstruct
 	 * @param outputDir the output directory, if left null then a temp directory is used and all output removed
@@ -1290,7 +1302,7 @@ public class TinkerRunner {
 	 * @throws IOException 
 	 * @throws TinkerError 
 	 */
-	public RIGraph geometrizeContactMap(RIGraph graph, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName, boolean parallel) 
+	public RIGraph geometrizeContactMap(RIGraph graph, TreeMap<Integer,ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName, boolean parallel) 
 	throws TinkerError, IOException {
 		boolean cleanUp = false;
 		if (outputDir == null || baseName == null) {
@@ -1298,11 +1310,11 @@ public class TinkerRunner {
 		}
 		RIGraph[] graphs = {graph};
 		if (fastReconstruct) {
-			reconstructFast(graph.getSequence(), graphs, null, false, 
+			reconstructFast(graph.getSequence(), graphs, phiPsiConsensus, forceTransOmega, 
 					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, 
 					outputDir, baseName, cleanUp, parallel);
 		} else {
-			reconstruct(graph.getSequence(), graphs, null, false, 
+			reconstruct(graph.getSequence(), graphs, phiPsiConsensus, forceTransOmega, 
 					numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION,
 					outputDir, baseName, cleanUp, parallel);
 		}
