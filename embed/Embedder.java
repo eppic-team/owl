@@ -197,6 +197,22 @@ public class Embedder {
 		return (1/avrgMass)*summjDij-(1/(avrgMass*avrgMass))*summjmkDjk;
 	}
 	
+	/*----------------- statics -----------------*/
+	
+	/**
+	 * Creates a vector (double[]) of given size with all values set to given value.
+	 * @param value
+	 * @param size
+	 * @return
+	 */
+	public static double[] createTrivialVector(double value, int size) {
+		double[] vector = new double[size];
+		for (int i=0;i<size;i++) {
+			vector[i] = value;
+		}
+		return vector;
+	}
+	
 	/*------------------- main ------------------*/
 	
 	/**
@@ -228,12 +244,8 @@ public class Embedder {
 			sqDistMatrix.set(resser2ind.get(pair.getSecond()), resser2ind.get(pair.getFirst()), currentElem*currentElem);
 		}
 
-		double[] masses = new double[n];
-		double[] weights= new double[n];
-		for (int i=0;i<n;i++) {
-			masses[i] = 1.0;
-			weights[i] = 1.0;
-		}
+		double[] masses = createTrivialVector(1.0, n);
+		double[] weights = createTrivialVector(1.0, n);
 		
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
