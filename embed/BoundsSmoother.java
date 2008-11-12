@@ -1,5 +1,8 @@
 package embed;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.TreeMap;
 
@@ -10,6 +13,7 @@ import org.apache.commons.collections15.Transformer;
 import Jama.Matrix;
 
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
+import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -37,8 +41,8 @@ public class BoundsSmoother {
 
 	/*----------------- helper classes and transformers -----------------*/
 	
-	Transformer<SimpleEdge, Double> WeightTransformer = new Transformer<SimpleEdge, Double>() {
-		public Double transform(SimpleEdge input) {
+	Transformer<SimpleEdge, Number> WeightTransformer = new Transformer<SimpleEdge, Number>() {
+		public Number transform(SimpleEdge input) {
 			return input.weight;
 		}
 	};
@@ -47,6 +51,38 @@ public class BoundsSmoother {
 		public double weight;
 		public SimpleEdge(double weight) {
 			this.weight = weight;
+		}
+	}
+	
+	private class BoundsDigraphNode {
+		public static final boolean LEFT = true;
+		public static final boolean RIGHT = false;
+		private boolean side; // true: left, false: right
+		private int resSerial;
+		public BoundsDigraphNode(int resSerial, boolean side) {
+			this.resSerial = resSerial;
+			this.side = side;
+		}
+		public boolean isRight() {
+			return !side;
+		}
+		public boolean isLeft() {
+			return side;
+		}
+		public int getSerial() {
+			return resSerial;
+		}
+		public boolean equals(Object other) {
+			if (! (other instanceof BoundsDigraphNode)) return false;
+			BoundsDigraphNode otherNode = (BoundsDigraphNode)other;
+			if (otherNode.resSerial==this.resSerial && otherNode.side == this.side) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+		public String toString() {
+			return resSerial+(side?"L":"R");
 		}
 	}
 
@@ -68,6 +104,8 @@ public class BoundsSmoother {
 	private RIGraph rig;
 	private TreeMap<Integer,Integer> matIdx2Resser;
 	private int conformationSize;
+	private HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>> nodesBoundsDigraph; // map of serial/side to nodes in the bounds digraph
+	private double lmax; // maximum of the lower bounds: offset value for the boundsDigraph (not to have negative weights so that we can use Dijkstra's algo)
 	
 	/*------------------------ constructors ------------------------------*/
 	
@@ -97,10 +135,18 @@ public class BoundsSmoother {
 		double[][] upperBounds = getUpperBoundsAllPairs();
 		for (int i=0;i<lowerBounds.length;i++) {
 			for (int j=0;j<lowerBounds[i].length;j++) {
-				// we fill in the lower half of the upper bounds matrix which was missing from upperBounds
+				// we fill in the lower half of the matrix which was missing from upperBounds/lowerBounds
 				double upperBound = upperBounds[i][j];
-				if (i>j) upperBound = upperBounds[j][i];
-				bounds[i][j]=new Bound(lowerBounds[i][j],upperBound);
+				double lowerBound = lowerBounds[i][j];
+				if (i>j) {
+					upperBound = upperBounds[j][i];
+					lowerBound = lowerBounds[j][i];
+				}
+				bounds[i][j]=new Bound(lowerBound,upperBound);
+				// sanity check: lower bounds can be bigger than upper bounds!, i<j condition is only to do half of the matrix
+				if (i<j && lowerBound>lowerBound) {
+					System.err.println("Warning: lower bound ("+lowerBound+") for pair "+i+" "+j+" is bigger than upper bound ("+upperBound+")");
+				}
 			}
 		}
 		return bounds;
@@ -170,31 +216,41 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Computes lower bounds for all pairs given a sparse set of upper/lower bounds
-	 * At the moment it doesn't compute anything but just copies the first lower bound 
-	 * and uses that value for all pairs.
+	 * Computes lower bounds for all pairs given a sparse set of upper/lower bounds based on the triangle inequality.
 	 * 
+	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
+	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Because of this the boundsDigraph result 
+	 * of calling {@link #convertBoundsGraphToBoundsDigraph(SparseGraph)}} have values offset with the maximum lower bound (lmax).
+	 * Thus after computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
+	 *  
 	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
+	 * 
+	 * @see {@link #convertBoundsGraphToBoundsDigraph(SparseGraph)} and {@link #getUpperBoundsAllPairs()}
 	 */
 	private double[][] getLowerBoundsAllPairs() {
-		// for now we implement the simplest approach: hard-spheres for all lower bounds
-		// in the simplest way... we take the first lower bound from the boundsGraph as the lower bound for all pairs
-		double lowerBound = 0;
-		for (Bound bounds: boundsGraph.getEdges()){
-			lowerBound = bounds.lower;
-			break;
-		}
-		double[][] lowerBoundMatrix = new double[conformationSize][conformationSize];
-		for (int iMatIdx=0;iMatIdx<conformationSize;iMatIdx++) {
-			for (int jMatIdx=0;jMatIdx<conformationSize;jMatIdx++) {
-				if (iMatIdx!=jMatIdx) {
-					lowerBoundMatrix[iMatIdx][jMatIdx] = lowerBound;
+		double[][] lowerBoundsMatrix = new double[conformationSize][conformationSize];		
+		// this is the bounds digraph as described by Crippen and Havel
+		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsGraphToBoundsDigraph(boundsGraph);
+		DijkstraShortestPath<BoundsDigraphNode, SimpleEdge> dd = new DijkstraShortestPath<BoundsDigraphNode, SimpleEdge>(boundsDigraph,WeightTransformer);
+		int iMatIdx = 0;
+		for (int i:rig.getSerials()) {
+			int jMatIdx = 0;
+			for (int j:rig.getSerials()) {
+				if (jMatIdx>iMatIdx) {
+					int hops = dd.getPath(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)).size();
+					lowerBoundsMatrix[iMatIdx][jMatIdx] = Math.abs(
+						(dd.getDistance(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), 
+									   nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)
+							           ).doubleValue()) 
+						- (hops*lmax)); // the lower limit for the triangle inequality is: Math.abs(shortestpath-(hops*lmax))
 				}
+				jMatIdx++;
 			}
+			iMatIdx++;
 		}
-		return lowerBoundMatrix;
+		return lowerBoundsMatrix;
 		
 	}
 
@@ -213,7 +269,63 @@ public class BoundsSmoother {
 		}
 		return upperBoundGraph;
 	}
-	
+
+	/**
+	 * Constructs a bounds digraph (as described by Crippen and Havel) to compute the triangle inequality limits
+	 * for the lower bounds.
+	 * The graph is composed by 2 subgraphs (we call them left and right) each of them containing the set of all atoms. 
+	 * Within the subgraphs there is an undirected edge between atoms i,j with weight the upper bounds for i,j
+	 * Between the subgraphs there is a directed edge from left to right between atoms i(left) to j(right) 
+	 * with weight the negative of the lower bound i,j
+	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
+	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Thus we offset the values here to the maximum lower bound.
+	 * After computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
+	 * @param distanceGraph
+	 * @return
+	 */
+	private SparseGraph<BoundsDigraphNode,SimpleEdge> convertBoundsGraphToBoundsDigraph(SparseGraph<Integer,Bound> distanceGraph) {
+		// to do the offset thing (see docs above) we need to know first of all the max lower bound
+		ArrayList<Double> lowerBounds = new ArrayList<Double>();
+		for (Bound bounds:distanceGraph.getEdges()) {
+			lowerBounds.add(bounds.lower);
+		}
+		lmax = Collections.max(lowerBounds); // this is the offset value
+		
+		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = new SparseGraph<BoundsDigraphNode, SimpleEdge>();
+		// we have to store all nodes in a HashMap, so we can retrieve them by residue serial and side after 
+		nodesBoundsDigraph = new HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>>();
+		nodesBoundsDigraph.put(BoundsDigraphNode.LEFT , new HashMap<Integer, BoundsDigraphNode>());
+		nodesBoundsDigraph.put(BoundsDigraphNode.RIGHT, new HashMap<Integer, BoundsDigraphNode>());
+		// first we create the nodes and store them into the HashMap
+		for (int i:distanceGraph.getVertices()) {
+			BoundsDigraphNode leftNode = new BoundsDigraphNode(i, BoundsDigraphNode.LEFT);
+			BoundsDigraphNode rightNode = new BoundsDigraphNode(i, BoundsDigraphNode.RIGHT);
+			boundsDigraph.addVertex(leftNode);
+			boundsDigraph.addVertex(rightNode);
+			nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).put(i,leftNode);
+			nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).put(i,rightNode);
+		}
+		
+		for (Bound bounds:distanceGraph.getEdges()) {
+			Pair<Integer> pair = distanceGraph.getEndpoints(bounds);
+			// first we add the upper bounds as undirected edges to the 2 subgraphs (left and right)
+			boundsDigraph.addEdge(new SimpleEdge(lmax+bounds.upper), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getFirst()), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getSecond()), 
+					EdgeType.UNDIRECTED);
+			boundsDigraph.addEdge(new SimpleEdge(lmax+bounds.upper), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getFirst()), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getSecond()), 
+					EdgeType.UNDIRECTED);
+			// then we add the negative of the lower bounds as directed edges connecting nodes of subgraph left to subgraph right
+			boundsDigraph.addEdge(new SimpleEdge(lmax-bounds.lower), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getFirst()), 
+					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getSecond()), 
+					EdgeType.DIRECTED);			
+		}
+		return boundsDigraph;
+	}
+
 	/**
 	 * Convert the given RIGraph to a bounds graph: residue serials as nodes and distance bounds as edges.
 	 * Will only admit single atom contact type RIGraphs
