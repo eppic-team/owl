@@ -38,6 +38,8 @@ import proteinstructure.RIGraph;
  */
 public class BoundsSmoother {
 	
+	private static final double BB_CA_DIST = 3.8;
+	private static final double HARD_SPHERES_BOUND = AAinfo.DIST_MIN_CA ;
 
 	/*----------------- helper classes and transformers -----------------*/
 	
@@ -251,11 +253,12 @@ public class BoundsSmoother {
 			for (int j:rig.getSerials()) {
 				if (jMatIdx>iMatIdx) {
 					int hops = dd.getPath(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)).size();
-					lowerBoundsMatrix[iMatIdx][jMatIdx] = Math.abs(
+					double lower = Math.abs(
 						(dd.getDistance(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), 
 									   nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)
 							           ).doubleValue()) 
 						- (hops*lmax)); // the lower limit for the triangle inequality is: Math.abs(shortestpath-(hops*lmax))
+					lowerBoundsMatrix[iMatIdx][jMatIdx] = Math.max(lower, HARD_SPHERES_BOUND); // we only set the new lower bound to the one found if is above the HARD_SPHERES_BOUND
 				}
 				jMatIdx++;
 			}
@@ -373,7 +376,15 @@ public class BoundsSmoother {
 			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
 			Bound bounds = new Bound(dist_min, dist_max);
-			distanceGraph.addEdge(bounds, pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial(), EdgeType.UNDIRECTED);
+			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
+				distanceGraph.addEdge(bounds, pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial(), EdgeType.UNDIRECTED);
+			}
+		}
+		// adding contiguous CA distance backbone constraints
+		for (int i:graph.getSerials()) {
+			if (i!=graph.getLastResidueSerial()) {
+				distanceGraph.addEdge(new Bound(BB_CA_DIST,BB_CA_DIST), i, i+1, EdgeType.UNDIRECTED);
+			}
 		}
 		return distanceGraph;
 	}
@@ -384,8 +395,8 @@ public class BoundsSmoother {
 	 * To test the class
 	 */
 	public static void main (String[] args) throws Exception {
-		boolean debug = false;
-		int numModels = 100;
+		boolean debug = true;
+		int numModels = 1;
 		String pdbCode = "1bxy";
 		String pdbChainCode = "A";
 		
@@ -407,7 +418,7 @@ public class BoundsSmoother {
 			System.out.println();
 		}
 
-		System.out.printf("%5s\t%5s", "rmsd","rmsdm");
+		System.out.printf("%6s\t%6s", "rmsd","rmsdm");
 		System.out.println();
 		for (int model=0;model<numModels;model++) {
 			Matrix matrix = bs.sampleBounds(bounds);
@@ -428,8 +439,28 @@ public class BoundsSmoother {
 			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
 			pdb.mirror();
 			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
-			System.out.printf("%5.2f\t%5.2f",rmsd,rmsdm);
+			
+			if (rmsd>rmsdm ) {
+				pdbEmbedded.mirror();
+			}
+			pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+".pdb");
+			
+			System.out.printf("%6.3f\t%6.3f",rmsd,rmsdm);
 			System.out.println();
+			
+			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
+			for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
+				for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
+					if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+						System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
+					}
+				}
+			}
+//			IntPairSet violEdges = TinkerRunner.getViolatedEdges(graph, pdbEmbedded);
+//			RIGraph graphEmbedded = pdbEmbedded.get_graph("Ca", 8);
+//			for (Pair<Integer> violEdge:violEdges) {
+//				System.out.println(violEdge+" "+graphEmbedded.getEdgeFromSerials(violEdge.getFirst(), violEdge.getSecond()).getDistance());
+//			}
 		}
 	}
 	

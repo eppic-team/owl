@@ -887,6 +887,32 @@ public abstract class Pdb {
 	}
 
 	/**
+	 * Returns the distance matrix (one distance per pair of residues) as a Jama Matrix object. 
+	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
+	 * residues. 
+	 * The indices of the matrix will be 0 to get_length()-1 and will be in the same order 
+	 * as the residue serials
+	 * @param ct contact type for which distances are being calculated
+	 * @return
+	 */
+	public Matrix calculateDistMatrix(String ct) {
+		HashMap<Integer,Integer> resser2ind = new HashMap<Integer, Integer>();
+		int i = 0;
+		for (int resser:this.getAllSortedResSerials()) {
+			resser2ind.put(resser,i);
+			i++;
+		}
+		HashMap<Pair<Integer>, Double> distHM = this.calculate_dist_matrix("Ca");
+		Matrix matrix = new Matrix(this.get_length(), this.get_length());
+		for (Pair<Integer> pair: distHM.keySet()) {
+			double currentElem = distHM.get(pair);
+			matrix.set(resser2ind.get(pair.getFirst()), resser2ind.get(pair.getSecond()), currentElem);
+			matrix.set(resser2ind.get(pair.getSecond()), resser2ind.get(pair.getFirst()), currentElem);
+		}
+		return matrix;
+	}
+	
+	/**
 	 * Returns the distance matrix as a HashMap with residue serial pairs as keys
 	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
 	 * residues 

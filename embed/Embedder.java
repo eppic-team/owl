@@ -8,8 +8,6 @@ import java.util.TreeMap;
 
 import javax.vecmath.Vector3d;
 
-import edu.uci.ics.jung.graph.util.Pair;
-
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 
@@ -238,12 +236,12 @@ public class Embedder {
 			ind++;
 		}
 		
-		HashMap<Pair<Integer>, Double> distHM = pdb.calculate_dist_matrix("Ca");
-		Matrix sqDistMatrix = new Matrix(n, n);
-		for (Pair<Integer> pair: distHM.keySet()) {
-			double currentElem = distHM.get(pair);
-			sqDistMatrix.set(resser2ind.get(pair.getFirst()), resser2ind.get(pair.getSecond()), currentElem*currentElem);
-			sqDistMatrix.set(resser2ind.get(pair.getSecond()), resser2ind.get(pair.getFirst()), currentElem*currentElem);
+		// the returned matrix from calculateDistMatrix is not yet squared
+		Matrix sqDistMatrix = pdb.calculateDistMatrix("Ca");
+		for (int i =0;i<sqDistMatrix.getRowDimension();i++) {
+			for (int j=0;j<sqDistMatrix.getColumnDimension();j++){
+				sqDistMatrix.set(i, j, sqDistMatrix.get(i, j)*sqDistMatrix.get(i,j));
+			}
 		}
 
 		double[] masses = createTrivialVector(1.0, n);
