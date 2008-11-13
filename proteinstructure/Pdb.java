@@ -1571,6 +1571,25 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Resets all coordinates and sets the coordinates of all atoms of given atom type 
+	 * to given coords.
+	 * @param coords the vector of all coordinates, must be ordered as the residue serials and of 
+	 * the same size as this Pdb's observed size
+	 * @param atom the atom type for which to set the coordinates
+	 */
+	public void setAtomsCoords(Vector3d[] coords, String atom) {
+		if (coords.length!=this.get_length()) {
+			throw new IllegalArgumentException("The given vector of coordinates has different size than the number of observed residues in the original pdb entry");
+		}
+		resetConformation();
+		int i = 0;
+		for (int resser:getAllSortedResSerials()){
+			setAtomCoord(resser, atom, new Point3d(coords[i]));
+			i++;
+		}
+	}
+	
+	/**
 	 * Gets the atom name given the atom serial
 	 * @param atomser
 	 * @return

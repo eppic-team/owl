@@ -100,7 +100,6 @@ public class BoundsSmoother {
 
 	/*---------------------- member variables ----------------------------*/
 	
-	private SparseGraph<Integer,Bound> boundsGraph;
 	private RIGraph rig;
 	private TreeMap<Integer,Integer> matIdx2Resser;
 	private int conformationSize;
@@ -117,7 +116,6 @@ public class BoundsSmoother {
 	 */
 	public BoundsSmoother(RIGraph graph) {
 		this.rig = graph;
-		this.boundsGraph = convertRIGraphToDistRangeGraph(graph);
 		this.conformationSize = this.rig.getObsLength();
 	}
 	
@@ -130,28 +128,10 @@ public class BoundsSmoother {
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
 	public Bound[][] getBoundsAllPairs() {
-		Bound[][] bounds = new Bound[conformationSize][conformationSize];
-		double[][] lowerBounds = getLowerBoundsAllPairs();
-		double[][] upperBounds = getUpperBoundsAllPairs();
-		for (int i=0;i<lowerBounds.length;i++) {
-			for (int j=0;j<lowerBounds[i].length;j++) {
-				// we fill in the lower half of the matrix which was missing from upperBounds/lowerBounds
-				double upperBound = upperBounds[i][j];
-				double lowerBound = lowerBounds[i][j];
-				if (i>j) {
-					upperBound = upperBounds[j][i];
-					lowerBound = lowerBounds[j][i];
-				}
-				bounds[i][j]=new Bound(lowerBound,upperBound);
-				// sanity check: lower bounds can be bigger than upper bounds!, i<j condition is only to do half of the matrix
-				if (i<j && lowerBound>lowerBound) {
-					System.err.println("Warning: lower bound ("+lowerBound+") for pair "+i+" "+j+" is bigger than upper bound ("+upperBound+")");
-				}
-			}
-		}
-		return bounds;
+		SparseGraph<Integer,Bound> boundsGraph = convertRIGraphToDistRangeGraph(this.rig);
+		return getBoundsAllPairs(boundsGraph);
 	}
-	
+		
 	/**
 	 * Gets a random sample from a matrix of all pairs distance ranges
 	 * @param bounds the matrix of all pairs distance ranges
@@ -171,7 +151,7 @@ public class BoundsSmoother {
 		}
 		return new Matrix(matrix);
 	}
-	
+
 	/**
 	 * Maps from residue serials to indices of the matrices returned by {@link #getBoundsAllPairs()} and
 	 * {@link #sampleBounds(Bound[][])}
@@ -185,6 +165,37 @@ public class BoundsSmoother {
 	/*----------------------- private methods  ---------------------------*/
 	
 	/**
+	 * Computes bounds for all pairs, given a graph containing a sparse set of lower/upper bounds
+	 * 
+	 * @param boundsGraph
+	 * @return a 2-dimensional array with the bounds for all pairs of residues, the
+	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
+	 * and are guaranteed to be in the same order as the residue serials.
+	 */
+	private Bound[][] getBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
+		Bound[][] bounds = new Bound[conformationSize][conformationSize];
+		double[][] lowerBounds = getLowerBoundsAllPairs(boundsGraph);
+		double[][] upperBounds = getUpperBoundsAllPairs(boundsGraph);
+		for (int i=0;i<lowerBounds.length;i++) {
+			for (int j=0;j<lowerBounds[i].length;j++) {
+				// we fill in the lower half of the matrix which was missing from upperBounds/lowerBounds
+				double upperBound = upperBounds[i][j];
+				double lowerBound = lowerBounds[i][j];
+				if (i>j) {
+					upperBound = upperBounds[j][i];
+					lowerBound = lowerBounds[j][i];
+				}
+				bounds[i][j]=new Bound(lowerBound,upperBound);
+				// sanity check: lower bounds can be bigger than upper bounds!, i<j condition is only to do half of the matrix
+				if (i<j && lowerBound>lowerBound) {
+					System.err.println("Warning: lower bound ("+lowerBound+") for pair "+i+" "+j+" is bigger than upper bound ("+upperBound+")");
+				}
+			}
+		}
+		return bounds;
+	}
+
+	/**
 	 * Computes upper bounds for all pairs from a sparse set of upper bounds based
 	 * on the triangle inequality.
 	 * The computation is actually just an all pairs shortest path using Dijkstra's 
@@ -195,7 +206,7 @@ public class BoundsSmoother {
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
-	private double[][] getUpperBoundsAllPairs() {
+	private double[][] getUpperBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
 		this.matIdx2Resser = new TreeMap<Integer,Integer>();
 		double[][] upperBoundsMatrix = new double[conformationSize][conformationSize];
 		SparseGraph<Integer,SimpleEdge> upperBoundGraph = convertBoundsGraphToUpperBoundGraph(boundsGraph);
@@ -229,7 +240,7 @@ public class BoundsSmoother {
 	 * 
 	 * @see {@link #convertBoundsGraphToBoundsDigraph(SparseGraph)} and {@link #getUpperBoundsAllPairs()}
 	 */
-	private double[][] getLowerBoundsAllPairs() {
+	private double[][] getLowerBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
 		double[][] lowerBoundsMatrix = new double[conformationSize][conformationSize];		
 		// this is the bounds digraph as described by Crippen and Havel
 		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsGraphToBoundsDigraph(boundsGraph);
@@ -373,42 +384,53 @@ public class BoundsSmoother {
 	 * To test the class
 	 */
 	public static void main (String[] args) throws Exception {
-		Pdb pdb = new PdbasePdb("1bxy");
-		pdb.load("A");
+		boolean debug = false;
+		int numModels = 100;
+		String pdbCode = "1bxy";
+		String pdbChainCode = "A";
+		
+		Pdb pdb = new PdbasePdb(pdbCode);
+		pdb.load(pdbChainCode);
+		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
+		pdbEmbedded.load(pdbChainCode);
+
 		RIGraph graph = pdb.get_graph("Ca", 8);
 		BoundsSmoother bs = new BoundsSmoother(graph);
 		Bound[][] bounds = bs.getBoundsAllPairs();
-		for (int i=0;i<bounds.length;i++) {
-			for (int j=0;j<bounds[i].length;j++) {
-				System.out.print(bounds[i][j]);
+		if (debug) {
+			for (int i=0;i<bounds.length;i++) {
+				for (int j=0;j<bounds[i].length;j++) {
+					System.out.print(bounds[i][j]);
+				}
+				System.out.println();
 			}
 			System.out.println();
 		}
-		System.out.println();
-		
-		Matrix matrix = bs.sampleBounds(bounds);
-		for (int i=0;i<matrix.getRowDimension();i++) {
-			for (int j=0;j<matrix.getColumnDimension();j++) {
-				System.out.printf("%4.1f ",matrix.get(i, j));
-			}
-			System.out.println();
-		}
-		int size = pdb.get_length();
-		Embedder embedder = new Embedder(matrix,Embedder.createTrivialVector(1.0, size), Embedder.createTrivialVector(1.0, size));
-		Vector3d[] embedding = embedder.embed();
-		Vector3d[] originalConformation = new Vector3d[size];
-		for (int i=0;i<size;i++) {
-			originalConformation[i]=new Vector3d(pdb.getAtomCoord(bs.getResserFromIdx(i), "CA"));
-		}
-		
-		double rmsd = Pdb.calculate_rmsd(originalConformation, embedding);
-		for (int i=0;i<originalConformation.length;i++){
-			originalConformation[i].scale(-1);
-		}
-		double rmsdm = Pdb.calculate_rmsd(originalConformation, embedding);
-		System.out.println("rmsd of embedded to original conformation: "+rmsd);
-		System.out.println("rmsd of embedded to mirrored original conformation: "+rmsdm);
 
+		System.out.printf("%5s\t%5s", "rmsd","rmsdm");
+		System.out.println();
+		for (int model=0;model<numModels;model++) {
+			Matrix matrix = bs.sampleBounds(bounds);
+			if (debug) {
+				for (int i=0;i<matrix.getRowDimension();i++) {
+					for (int j=0;j<matrix.getColumnDimension();j++) {
+						System.out.printf("%4.1f ",matrix.get(i, j));
+					}
+					System.out.println();
+				}
+			}
+
+			int size = pdb.get_length();
+			Embedder embedder = new Embedder(matrix,Embedder.createTrivialVector(1.0, size), Embedder.createTrivialVector(1.0, size));
+			Vector3d[] embedding = embedder.embed();
+			pdbEmbedded.setAtomsCoords(embedding, "CA");
+
+			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
+			pdb.mirror();
+			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
+			System.out.printf("%5.2f\t%5.2f",rmsd,rmsdm);
+			System.out.println();
+		}
 	}
 	
 }

@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
-import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
@@ -63,6 +62,7 @@ public class Embedder {
 	
 	/**
 	 * Returns the 3-dimensional embedding for the data given in constructor. 
+	 * The vector will be indexed as the original squareDistances Matrix
 	 * @return
 	 */
 	public Vector3d[] embed() {
@@ -226,6 +226,8 @@ public class Embedder {
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
+		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
+		pdbEmbedded.load(pdbChainCode);
 		int n = pdb.get_length();
 		int ind = 0;
 		TreeMap<Integer, Integer> resser2ind = new TreeMap<Integer,Integer>();
@@ -250,32 +252,21 @@ public class Embedder {
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
 		Vector3d[] embedding = embedder.embed();
+		pdbEmbedded.setAtomsCoords(embedding, "CA");
 		
-		Vector3d[] originalConformation = new Vector3d[n];
-		for (int i=0;i<n;i++) {
-			originalConformation[i]=new Vector3d(pdb.getAtomCoord(ind2resser.get(i), "CA"));
-		}
-		
-		double rmsd = Pdb.calculate_rmsd(originalConformation, embedding);
-		for (int i=0;i<originalConformation.length;i++){
-			originalConformation[i].scale(-1);
-		}
-		double rmsdm = Pdb.calculate_rmsd(originalConformation, embedding);
+		double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
+		pdb.mirror();
+		double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
 		System.out.println("rmsd of embedded to original conformation: "+rmsd);
 		System.out.println("rmsd of embedded to mirrored original conformation: "+rmsdm);
 
-		pdb.resetConformation();
-		for (int resser:pdb.getAllSortedResSerials()){
-			pdb.setAtomCoord(resser, "CA", new Point3d(embedding[resser2ind.get(resser)]));
-		}
-
 		// of the 2 enantiomers we take the one with lowest rmsd
 		if (rmsdm<rmsd) {
-			pdb.mirror();
+			pdbEmbedded.mirror();
 		}
 		
 		System.out.println("Writing out embedding as CA trace pdb file "+outPdbFile);
-		pdb.dump2pdbfile(outPdbFile.getAbsolutePath());
+		pdbEmbedded.dump2pdbfile(outPdbFile.getAbsolutePath());
 
 	}
 }
