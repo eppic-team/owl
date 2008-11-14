@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
+import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 import proteinstructure.Pdb;
@@ -97,6 +98,8 @@ public class Embedder {
 		for (int i=0;i<n;i++){
 			embedding[i] = new Vector3d(X.get(i, 0), X.get(i,1), X.get(i,2));
 		}
+		
+		scaleEmbedding(embedding);
 		
 		return embedding;
 	}
@@ -195,7 +198,75 @@ public class Embedder {
 		return (1/avrgMass)*summjDij-(1/(avrgMass*avrgMass))*summjmkDjk;
 	}
 	
+	/**
+	 * Modifies the given embedding conformation to scale it to match the input
+	 * distance matrix.
+	 * Two ways of doing this right now: scale through radius of gyration, scale 
+	 * through average of the inter-Calpha distances. 
+	 * @param embedding
+	 */
+	private void scaleEmbedding(Vector3d[] embedding) {
+		
+		boolean debug = false;
+		int method = 2; //1==rad gyration, 2==average inter-Calpha distances
+		
+		double scale = 0;
+
+		// getting the scale factor
+		if (method==1) {
+			// radius of gyration 
+			double radGyrInput = getRadiusGyration(sqDists);
+			double radGyrOutput = getRadiusGyration(embedding);
+			if (debug) {
+				System.out.println("radius gyration input: "+radGyrInput);
+				System.out.println("radius gyration output: "+radGyrOutput);
+			}
+			scale = radGyrInput/radGyrOutput;
+		} 
+		else if (method==2) {
+			// average of the inter-Calpha distances
+			double sumCAdists = 0;
+			for (int i=0;i<n-1;i++){
+				sumCAdists+=new Point3d(embedding[i]).distance(new Point3d(embedding[i+1]));
+			}
+			scale = BoundsSmoother.BB_CA_DIST/(sumCAdists/(n-1));			
+		}
+
+		// scaling the coordinates
+		for (int i=0;i<n;i++) {
+			embedding[i].scale(scale);
+		}
+		
+		if (debug) {
+			System.out.println("radius gyration after scaling: "+getRadiusGyration(embedding));
+		}
+
+	}
+	
 	/*----------------- statics -----------------*/
+	
+	private static double getRadiusGyration(Matrix sqDistMatrix) {
+		double squareSum = 0;
+		for (int i=0;i<sqDistMatrix.getRowDimension();i++){
+			for (int j=i+1; j<sqDistMatrix.getColumnDimension();j++){
+				squareSum+=sqDistMatrix.get(i,j);
+			}
+		}
+		return Math.sqrt(squareSum/(2.0*sqDistMatrix.getRowDimension()));
+	}
+	
+	private static double getRadiusGyration(Vector3d[] conformation) {
+		Point3d centerMass = new Point3d(0,0,0);
+		for (int i=0;i<conformation.length;i++) {
+			centerMass.add(conformation[i]);
+		}
+		centerMass.scale(1.0/conformation.length);
+		double squareSum = 0;
+		for (int i=0;i<conformation.length;i++) {
+			squareSum+=new Point3d(conformation[i]).distanceSquared(centerMass);
+		}
+		return Math.sqrt(squareSum/conformation.length);
+	}	
 	
 	/**
 	 * Creates a vector (double[]) of given size with all values set to given value.

@@ -38,8 +38,11 @@ import proteinstructure.RIGraph;
  */
 public class BoundsSmoother {
 	
-	private static final double BB_CA_DIST = 3.8;
+	protected static final double BB_CA_DIST = 3.8;
 	private static final double HARD_SPHERES_BOUND = AAinfo.DIST_MIN_CA ;
+	
+	private static final boolean DEBUG = false;
+	private static final long DEBUG_SEED = 1;
 
 	/*----------------- helper classes and transformers -----------------*/
 	
@@ -141,10 +144,15 @@ public class BoundsSmoother {
 	 */
 	public Matrix sampleBounds(Bound[][] bounds) {
 		double[][] matrix = new double[conformationSize][conformationSize];
+		Random rand = null;
+		if (DEBUG) {
+			rand = new Random(DEBUG_SEED);
+		} else {
+			rand = new Random();
+		}
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {
 				if (j>i) {
-					Random rand = new Random();
 					matrix[i][j]= bounds[i][j].lower+rand.nextDouble()*(bounds[i][j].upper-bounds[i][j].lower);
 				} else if (j<i) {
 					matrix[i][j]=matrix[j][i];
@@ -439,28 +447,31 @@ public class BoundsSmoother {
 			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
 			pdb.mirror();
 			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
-			
+
 			if (rmsd>rmsdm ) {
 				pdbEmbedded.mirror();
 			}
-			pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+".pdb");
+
+			pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
 			
 			System.out.printf("%6.3f\t%6.3f",rmsd,rmsdm);
 			System.out.println();
 			
-			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
-			for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
-				for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
-					if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-						System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
+			if (debug) {
+				Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
+				for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
+					for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
+						if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+							System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
+						}
 					}
 				}
+				//IntPairSet violEdges = TinkerRunner.getViolatedEdges(graph, pdbEmbedded);
+				//RIGraph graphEmbedded = pdbEmbedded.get_graph("Ca", 8);
+				//for (Pair<Integer> violEdge:violEdges) {
+				//	System.out.println(violEdge+" "+graphEmbedded.getEdgeFromSerials(violEdge.getFirst(), violEdge.getSecond()).getDistance());
+				//}
 			}
-//			IntPairSet violEdges = TinkerRunner.getViolatedEdges(graph, pdbEmbedded);
-//			RIGraph graphEmbedded = pdbEmbedded.get_graph("Ca", 8);
-//			for (Pair<Integer> violEdge:violEdges) {
-//				System.out.println(violEdge+" "+graphEmbedded.getEdgeFromSerials(violEdge.getFirst(), violEdge.getSecond()).getDistance());
-//			}
 		}
 	}
 	
