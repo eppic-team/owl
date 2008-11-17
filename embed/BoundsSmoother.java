@@ -42,7 +42,9 @@ public class BoundsSmoother {
 	private static final double HARD_SPHERES_BOUND = AAinfo.DIST_MIN_CA ;
 	
 	private static final boolean DEBUG = false;
-	private static final long DEBUG_SEED = 1;
+	private static final long DEBUG_SEED = 123456;
+	
+	private static final int NUM_ROOTS_PARTIAL_METRIZATION = 1;
 
 	/*----------------- helper classes and transformers -----------------*/
 	
@@ -91,25 +93,15 @@ public class BoundsSmoother {
 		}
 	}
 
-	private class Bound {
-		public double lower;
-		public double upper;
-		public Bound(double lower, double upper) {
-			this.lower = lower;
-			this.upper = upper;
-		}
-		public String toString() {
-			return String.format("[%4.1f %4.1f]", lower, upper);
-		}
-	}
-
 	/*---------------------- member variables ----------------------------*/
 	
 	private RIGraph rig;
-	private TreeMap<Integer,Integer> matIdx2Resser;
+	private TreeMap<Integer,Integer> idx2resser;
 	private int conformationSize;
 	private HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>> nodesBoundsDigraph; // map of serial/side to nodes in the bounds digraph
 	private double lmax; // maximum of the lower bounds: offset value for the boundsDigraph (not to have negative weights so that we can use Dijkstra's algo)
+	
+	private Random rand; // the random generator for sampleBounds and metrize
 	
 	/*------------------------ constructors ------------------------------*/
 	
@@ -122,6 +114,11 @@ public class BoundsSmoother {
 	public BoundsSmoother(RIGraph graph) {
 		this.rig = graph;
 		this.conformationSize = this.rig.getObsLength();
+		if (DEBUG) {
+			rand = new Random(DEBUG_SEED);
+		} else {
+			rand = new Random();
+		}
 	}
 	
 	/*----------------------- public methods  ----------------------------*/
@@ -133,23 +130,17 @@ public class BoundsSmoother {
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
 	public Bound[][] getBoundsAllPairs() {
-		SparseGraph<Integer,Bound> boundsGraph = convertRIGraphToDistRangeGraph(this.rig);
-		return getBoundsAllPairs(boundsGraph);
+		Bound[][] bounds = convertRIGraphToBoundsMatrix(this.rig);
+		return getBoundsAllPairs(bounds);
 	}
 		
 	/**
 	 * Gets a random sample from a matrix of all pairs distance ranges
 	 * @param bounds the matrix of all pairs distance ranges
-	 * @return
+	 * @return a simmetric metric matrix (both sides filled)
 	 */
 	public Matrix sampleBounds(Bound[][] bounds) {
 		double[][] matrix = new double[conformationSize][conformationSize];
-		Random rand = null;
-		if (DEBUG) {
-			rand = new Random(DEBUG_SEED);
-		} else {
-			rand = new Random();
-		}
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {
 				if (j>i) {
@@ -162,6 +153,23 @@ public class BoundsSmoother {
 		return new Matrix(matrix);
 	}
 
+	//TODO this is a draft of the metrize procedure, finish it!
+	public Matrix metrize(Bound[][] bounds) {
+		double[][] matrix = new double[conformationSize][conformationSize];
+		ArrayList<Integer> roots = new ArrayList<Integer>();
+		for (int count=1;count<=NUM_ROOTS_PARTIAL_METRIZATION;count++) {
+			int root = rand.nextInt(conformationSize);
+			System.out.println("Picked root: "+root);
+			roots.add(root);
+			sampleBoundForRoot(bounds, root); // this alters directly the input bounds array
+			bounds = getBoundsAllPairs(bounds);
+		}
+		printBounds(bounds);
+		//TODO finally pick a value at random for all the other bounds
+		
+		return new Matrix(matrix);		
+	}
+	
 	/**
 	 * Maps from residue serials to indices of the matrices returned by {@link #getBoundsAllPairs()} and
 	 * {@link #sampleBounds(Bound[][])}
@@ -169,36 +177,44 @@ public class BoundsSmoother {
 	 * @return
 	 */
 	public int getResserFromIdx(int idx) {
-		return matIdx2Resser.get(idx);
+		return idx2resser.get(idx);
 	}
 	
 	/*----------------------- private methods  ---------------------------*/
 	
+	private void sampleBoundForRoot(Bound[][] bounds, int root) {
+		for (int j=0;j<conformationSize;j++) {
+			if (j==root) continue; // avoid the diagonal (which contains a null Bound)
+			int i = root;
+			if (j<root) {
+				i = j;
+				j = root;
+			}
+			double sampledValue = bounds[i][j].lower+rand.nextDouble()*(bounds[i][j].upper-bounds[i][j].lower);
+			bounds[i][j]=new Bound(sampledValue, sampledValue);
+		}
+	}
+	
 	/**
-	 * Computes bounds for all pairs, given a graph containing a sparse set of lower/upper bounds
+	 * Computes bounds for all pairs through triangle inequalities, given a Matrix containing a sparse set of lower/upper bounds
 	 * 
-	 * @param boundsGraph
-	 * @return a 2-dimensional array with the bounds for all pairs of residues, the
-	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
+	 * @param sparseBounds
+	 * @return a 2-dimensional array with the bounds for all pairs of residues (only upper half filled), 
+	 * the indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
-	private Bound[][] getBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
+	private Bound[][] getBoundsAllPairs(Bound[][] sparseBounds) { 
 		Bound[][] bounds = new Bound[conformationSize][conformationSize];
-		double[][] lowerBounds = getLowerBoundsAllPairs(boundsGraph);
-		double[][] upperBounds = getUpperBoundsAllPairs(boundsGraph);
-		for (int i=0;i<lowerBounds.length;i++) {
-			for (int j=0;j<lowerBounds[i].length;j++) {
-				// we fill in the lower half of the matrix which was missing from upperBounds/lowerBounds
+		double[][] lowerBounds = getLowerBoundsAllPairs(sparseBounds);
+		double[][] upperBounds = getUpperBoundsAllPairs(sparseBounds);
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=i+1;j<conformationSize;j++) {
 				double upperBound = upperBounds[i][j];
 				double lowerBound = lowerBounds[i][j];
-				if (i>j) {
-					upperBound = upperBounds[j][i];
-					lowerBound = lowerBounds[j][i];
-				}
 				bounds[i][j]=new Bound(lowerBound,upperBound);
-				// sanity check: lower bounds can be bigger than upper bounds!, i<j condition is only to do half of the matrix
-				if (i<j && lowerBound>lowerBound) {
-					System.err.println("Warning: lower bound ("+lowerBound+") for pair "+i+" "+j+" is bigger than upper bound ("+upperBound+")");
+				// sanity check: lower bounds can't be bigger than upper bounds!
+				if (lowerBound>upperBound) {
+					System.err.printf("Warning: lower bound (%4.1f) for pair "+i+" "+j+" is bigger than upper bound (%4.1f)\n",lowerBound,upperBound);
 				}
 			}
 		}
@@ -216,22 +232,15 @@ public class BoundsSmoother {
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
-	private double[][] getUpperBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
-		this.matIdx2Resser = new TreeMap<Integer,Integer>();
+	private double[][] getUpperBoundsAllPairs(Bound[][] bounds) {
 		double[][] upperBoundsMatrix = new double[conformationSize][conformationSize];
-		SparseGraph<Integer,SimpleEdge> upperBoundGraph = convertBoundsGraphToUpperBoundGraph(boundsGraph);
+		SparseGraph<Integer,SimpleEdge> upperBoundGraph = convertBoundsMatrixToUpperBoundGraph(bounds);
 		DijkstraDistance<Integer, SimpleEdge> dd = new DijkstraDistance<Integer, SimpleEdge>(upperBoundGraph,WeightTransformer);
-		int iMatIdx = 0;
-		for (int i:rig.getSerials()) {
-			int jMatIdx = 0;
-			for (int j:rig.getSerials()) {
-				if (jMatIdx>iMatIdx) {
-					upperBoundsMatrix[iMatIdx][jMatIdx] = dd.getDistance(i, j).doubleValue();
-				}
-				jMatIdx++;
+
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=i+1;j<conformationSize;j++) {
+				upperBoundsMatrix[i][j] = dd.getDistance(i, j).doubleValue();
 			}
-			this.matIdx2Resser.put(iMatIdx,i);
-			iMatIdx++;
 		}
 		return upperBoundsMatrix;
 	}
@@ -241,53 +250,51 @@ public class BoundsSmoother {
 	 * 
 	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
 	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Because of this the boundsDigraph result 
-	 * of calling {@link #convertBoundsGraphToBoundsDigraph(SparseGraph)}} have values offset with the maximum lower bound (lmax).
+	 * of calling {@link #convertBoundsMatrixToBoundsDigraph(Bound[][])}} have values offset with the maximum lower bound (lmax).
 	 * Thus after computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
 	 *  
 	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 * 
-	 * @see {@link #convertBoundsGraphToBoundsDigraph(SparseGraph)} and {@link #getUpperBoundsAllPairs()}
+	 * @see {@link #convertBoundsMatrixToBoundsDigraph(Bound[][])} and {@link #getUpperBoundsAllPairs()}
 	 */
-	private double[][] getLowerBoundsAllPairs(SparseGraph<Integer,Bound> boundsGraph) {
+	private double[][] getLowerBoundsAllPairs(Bound[][] bounds) {
 		double[][] lowerBoundsMatrix = new double[conformationSize][conformationSize];		
 		// this is the bounds digraph as described by Crippen and Havel
-		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsGraphToBoundsDigraph(boundsGraph);
+		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsMatrixToBoundsDigraph(bounds);
 		DijkstraShortestPath<BoundsDigraphNode, SimpleEdge> dd = new DijkstraShortestPath<BoundsDigraphNode, SimpleEdge>(boundsDigraph,WeightTransformer);
-		int iMatIdx = 0;
-		for (int i:rig.getSerials()) {
-			int jMatIdx = 0;
-			for (int j:rig.getSerials()) {
-				if (jMatIdx>iMatIdx) {
-					int hops = dd.getPath(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)).size();
-					double lower = Math.abs(
+
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=i+1;j<conformationSize;j++) {
+				int hops = dd.getPath(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)).size();
+				double lower = Math.abs(
 						(dd.getDistance(nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), 
-									   nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)
-							           ).doubleValue()) 
+								nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j)
+						).doubleValue()) 
 						- (hops*lmax)); // the lower limit for the triangle inequality is: Math.abs(shortestpath-(hops*lmax))
-					lowerBoundsMatrix[iMatIdx][jMatIdx] = Math.max(lower, HARD_SPHERES_BOUND); // we only set the new lower bound to the one found if is above the HARD_SPHERES_BOUND
-				}
-				jMatIdx++;
+				lowerBoundsMatrix[i][j] = Math.max(lower, HARD_SPHERES_BOUND); // we only set the new lower bound to the one found if is above the HARD_SPHERES_BOUND
 			}
-			iMatIdx++;
 		}
 		return lowerBoundsMatrix;
 		
 	}
 
 	/**
-	 * Converts the bounds graph to a graph with only the upper bounds: nodes residue 
-	 * serials, edges upper bounds (in SimpleEdge objects containing the upper bound value 
+	 * Converts the bounds matrix to a graph with only the upper bounds: nodes indices of bounds 
+	 * matrix, edges upper bounds (in SimpleEdge objects containing the upper bound value 
 	 * in their weight field).
-	 * @param distanceGraph
+	 * @param bounds
 	 * @return
 	 */
-	private SparseGraph<Integer,SimpleEdge> convertBoundsGraphToUpperBoundGraph(SparseGraph<Integer,Bound> distanceGraph) {
+	private SparseGraph<Integer,SimpleEdge> convertBoundsMatrixToUpperBoundGraph(Bound[][] bounds) {
 		SparseGraph<Integer,SimpleEdge> upperBoundGraph = new SparseGraph<Integer, SimpleEdge>();
-		for (Bound bounds:distanceGraph.getEdges()) {
-			Pair<Integer> pair = distanceGraph.getEndpoints(bounds);
-			upperBoundGraph.addEdge(new SimpleEdge(bounds.upper), pair.getFirst(), pair.getSecond(), EdgeType.UNDIRECTED);
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=0;j<conformationSize;j++) {
+				if (bounds[i][j]!=null) {
+					upperBoundGraph.addEdge(new SimpleEdge(bounds[i][j].upper), i, j, EdgeType.UNDIRECTED);
+				}
+			}
 		}
 		return upperBoundGraph;
 	}
@@ -302,14 +309,18 @@ public class BoundsSmoother {
 	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
 	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Thus we offset the values here to the maximum lower bound.
 	 * After computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
-	 * @param distanceGraph
+	 * @param bounds
 	 * @return
 	 */
-	private SparseGraph<BoundsDigraphNode,SimpleEdge> convertBoundsGraphToBoundsDigraph(SparseGraph<Integer,Bound> distanceGraph) {
+	private SparseGraph<BoundsDigraphNode,SimpleEdge> convertBoundsMatrixToBoundsDigraph(Bound[][] bounds) {
 		// to do the offset thing (see docs above) we need to know first of all the max lower bound
 		ArrayList<Double> lowerBounds = new ArrayList<Double>();
-		for (Bound bounds:distanceGraph.getEdges()) {
-			lowerBounds.add(bounds.lower);
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=0;j<conformationSize;j++) {
+				if (bounds[i][j]!=null) {
+					lowerBounds.add(bounds[i][j].lower);
+				}
+			}
 		}
 		lmax = Collections.max(lowerBounds); // this is the offset value
 		
@@ -319,7 +330,7 @@ public class BoundsSmoother {
 		nodesBoundsDigraph.put(BoundsDigraphNode.LEFT , new HashMap<Integer, BoundsDigraphNode>());
 		nodesBoundsDigraph.put(BoundsDigraphNode.RIGHT, new HashMap<Integer, BoundsDigraphNode>());
 		// first we create the nodes and store them into the HashMap
-		for (int i:distanceGraph.getVertices()) {
+		for (int i=0;i<conformationSize;i++) {
 			BoundsDigraphNode leftNode = new BoundsDigraphNode(i, BoundsDigraphNode.LEFT);
 			BoundsDigraphNode rightNode = new BoundsDigraphNode(i, BoundsDigraphNode.RIGHT);
 			boundsDigraph.addVertex(leftNode);
@@ -328,38 +339,48 @@ public class BoundsSmoother {
 			nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).put(i,rightNode);
 		}
 		
-		for (Bound bounds:distanceGraph.getEdges()) {
-			Pair<Integer> pair = distanceGraph.getEndpoints(bounds);
-			// first we add the upper bounds as undirected edges to the 2 subgraphs (left and right)
-			boundsDigraph.addEdge(new SimpleEdge(lmax+bounds.upper), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getFirst()), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getSecond()), 
-					EdgeType.UNDIRECTED);
-			boundsDigraph.addEdge(new SimpleEdge(lmax+bounds.upper), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getFirst()), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getSecond()), 
-					EdgeType.UNDIRECTED);
-			// then we add the negative of the lower bounds as directed edges connecting nodes of subgraph left to subgraph right
-			boundsDigraph.addEdge(new SimpleEdge(lmax-bounds.lower), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(pair.getFirst()), 
-					nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(pair.getSecond()), 
-					EdgeType.DIRECTED);			
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=0;j<conformationSize;j++) {
+				if (bounds[i][j]!=null) {
+					// first we add the upper bounds as undirected edges to the 2 subgraphs (left and right)
+					boundsDigraph.addEdge(new SimpleEdge(lmax+bounds[i][j].upper), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(j), 
+							EdgeType.UNDIRECTED);
+					boundsDigraph.addEdge(new SimpleEdge(lmax+bounds[i][j].upper), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(i), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j), 
+							EdgeType.UNDIRECTED);
+					// then we add the negative of the lower bounds as directed edges connecting nodes of subgraph left to subgraph right
+					boundsDigraph.addEdge(new SimpleEdge(lmax-bounds[i][j].lower), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.LEFT).get(i), 
+							nodesBoundsDigraph.get(BoundsDigraphNode.RIGHT).get(j), 
+							EdgeType.DIRECTED);		
+				}
+			}
 		}
 		return boundsDigraph;
 	}
 
 	/**
-	 * Convert the given RIGraph to a bounds graph: residue serials as nodes and distance bounds as edges.
+	 * Convert the given RIGraph to a bounds matrix. The indices of the matrix can be mapped back to residue 
+	 * serials through {@link #getResserFromIdx(int)}
 	 * Will only admit single atom contact type RIGraphs
 	 * @param graph
 	 * @return
 	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
 	 */
-	private SparseGraph<Integer,Bound> convertRIGraphToDistRangeGraph(RIGraph graph) {
+	private Bound[][] convertRIGraphToBoundsMatrix(RIGraph graph) {
 		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
-		
-		SparseGraph<Integer, Bound> distanceGraph = new SparseGraph<Integer, Bound>();
-		
+		Bound[][] bounds = new Bound[conformationSize][conformationSize];
+		TreeMap<Integer,Integer> resser2idx = new TreeMap<Integer, Integer>();
+		this.idx2resser = new TreeMap<Integer, Integer>();
+		int idx = 0;
+		for (int resser:graph.getSerials()) {
+			resser2idx.put(resser,idx);
+			idx2resser.put(idx,resser);
+			idx++;
+		}
 		double cutoff = graph.getCutoff();
 		String ct = graph.getContactType();
 		String i_ct = ct;
@@ -383,18 +404,83 @@ public class BoundsSmoother {
 			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
 			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
-			Bound bounds = new Bound(dist_min, dist_max);
 			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
-				distanceGraph.addEdge(bounds, pair.getFirst().getResidueSerial(), pair.getSecond().getResidueSerial(), EdgeType.UNDIRECTED);
+				bounds[resser2idx.get(pair.getFirst().getResidueSerial())][resser2idx.get(pair.getSecond().getResidueSerial())] = new Bound(dist_min, dist_max);
 			}
 		}
 		// adding contiguous CA distance backbone constraints
-		for (int i:graph.getSerials()) {
-			if (i!=graph.getLastResidueSerial()) {
-				distanceGraph.addEdge(new Bound(BB_CA_DIST,BB_CA_DIST), i, i+1, EdgeType.UNDIRECTED);
+		for (int i=0;i<conformationSize-1;i++) {
+			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
+		}
+		return bounds;
+	}
+	
+	/**
+	 * Deep copies given array of bounds
+	 * @param bounds
+	 * @return
+	 */
+	private static Bound[][] copyBounds(Bound[][] bounds) {
+		Bound[][] newBounds = new Bound[bounds.length][bounds.length];
+		for (int i=0;i<bounds.length;i++) {
+			for (int j=0;j<bounds[i].length;j++) {
+				if (bounds[i][j]!=null) {
+					newBounds[i][j] = new Bound(bounds[i][j].lower,bounds[i][j].upper);
+				}
 			}
 		}
-		return distanceGraph;
+		return newBounds;
+	}
+	
+	/*------------------------ statics  ------------------------------*/
+	
+	private static void printBounds(Bound[][] bounds) {
+		for (int i=0;i<bounds.length;i++) {
+			for (int j=0;j<bounds[i].length;j++) {
+				if (bounds[i][j]==null) {
+					System.out.printf("%11s","null");
+				} else {
+					System.out.print(bounds[i][j]);
+				}
+			}
+			System.out.println();
+		}
+		System.out.println();
+	}
+	
+	private static void printViolations (Matrix matrixEmbedded, Bound[][] bounds) {
+		int count = 0;
+		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
+			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
+				if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+					System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
+					count++;
+				}
+			}
+		}
+		int cells = (matrixEmbedded.getRowDimension()*(matrixEmbedded.getRowDimension()-1))/2;
+		System.out.println("Number of violations: "+count+" out of "+cells+" cells in half matrix");
+	}
+	
+	private static int getNumberViolations(Matrix matrixEmbedded, Bound[][] bounds) {
+		int count = 0;
+		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
+			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
+				if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+					count++;
+				}
+			}
+		}
+		return count;
+	}
+
+	private static void printMatrix(Matrix matrix) {
+		for (int i=0;i<matrix.getRowDimension();i++) {
+			for (int j=0;j<matrix.getColumnDimension();j++) {
+				System.out.printf("%4.1f ",matrix.get(i, j));
+			}
+			System.out.println();
+		}
 	}
 	
 	/*-------------------------- main  -------------------------------*/
@@ -403,45 +489,40 @@ public class BoundsSmoother {
 	 * To test the class
 	 */
 	public static void main (String[] args) throws Exception {
-		boolean debug = true;
+		boolean debug = false;
+		boolean writeFiles = false;
 		int numModels = 1;
+		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
+		
 		String pdbCode = "1bxy";
 		String pdbChainCode = "A";
+		String ct = "Ca";
+		double cutoff = 8.0;
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
 		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
 		pdbEmbedded.load(pdbChainCode);
 
-		RIGraph graph = pdb.get_graph("Ca", 8);
+		RIGraph graph = pdb.get_graph(ct, cutoff);
 		BoundsSmoother bs = new BoundsSmoother(graph);
 		Bound[][] bounds = bs.getBoundsAllPairs();
 		if (debug) {
-			for (int i=0;i<bounds.length;i++) {
-				for (int j=0;j<bounds[i].length;j++) {
-					System.out.print(bounds[i][j]);
-				}
-				System.out.println();
-			}
-			System.out.println();
+			printBounds(bounds);
 		}
 
-		System.out.printf("%6s\t%6s", "rmsd","rmsdm");
+		Bound[][] initialAllPairs = copyBounds(bounds);
+		
+		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
 		System.out.println();
 		for (int model=0;model<numModels;model++) {
 			Matrix matrix = bs.sampleBounds(bounds);
 			if (debug) {
-				for (int i=0;i<matrix.getRowDimension();i++) {
-					for (int j=0;j<matrix.getColumnDimension();j++) {
-						System.out.printf("%4.1f ",matrix.get(i, j));
-					}
-					System.out.println();
-				}
+				printMatrix(matrix);
 			}
 
-			int size = pdb.get_length();
-			Embedder embedder = new Embedder(matrix,Embedder.createTrivialVector(1.0, size), Embedder.createTrivialVector(1.0, size));
-			Vector3d[] embedding = embedder.embed();
+			Embedder embedder = new Embedder(matrix);
+			Vector3d[] embedding = embedder.embed(scalingMethod);
 			pdbEmbedded.setAtomsCoords(embedding, "CA");
 
 			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
@@ -452,25 +533,16 @@ public class BoundsSmoother {
 				pdbEmbedded.mirror();
 			}
 
-			pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
+			if (writeFiles)
+				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
+
+			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
 			
-			System.out.printf("%6.3f\t%6.3f",rmsd,rmsdm);
+			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialAllPairs));
 			System.out.println();
 			
 			if (debug) {
-				Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
-				for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
-					for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
-						if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-							System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
-						}
-					}
-				}
-				//IntPairSet violEdges = TinkerRunner.getViolatedEdges(graph, pdbEmbedded);
-				//RIGraph graphEmbedded = pdbEmbedded.get_graph("Ca", 8);
-				//for (Pair<Integer> violEdge:violEdges) {
-				//	System.out.println(violEdge+" "+graphEmbedded.getEdgeFromSerials(violEdge.getFirst(), violEdge.getSecond()).getDistance());
-				//}
+				printViolations(matrixEmbedded, initialAllPairs);			
 			}
 		}
 	}

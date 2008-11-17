@@ -29,6 +29,9 @@ import Jama.Matrix;
  */
 public class Embedder {
 	
+	// scaling method for scaling step: radius of gyration, or averaged inter-Calpha distances
+	public enum ScalingMethod {RADGYRATION, AVRG_INTER_CA_DIST};
+	
 	private Matrix sqDists;
 	private double[] masses;
 	private double[] weights;
@@ -36,6 +39,15 @@ public class Embedder {
 	private double avrgMass;
 	
 
+	/**
+	 * Constructs a new Embedder object. Get the embedding by calling {@link #embed()}
+	 * The weights and masses will all be 1
+	 * @param squareDistances
+	 */
+	public Embedder(Matrix squareDistances) {
+		this(squareDistances,createTrivialVector(1.0, squareDistances.getRowDimension()),createTrivialVector(1.0, squareDistances.getRowDimension()));
+	}
+	
 	/**
 	 * Constructs a new Embedder object. Get the embedding by calling {@link #embed()}
 	 * @param squareDistances complete matrix of squared distances
@@ -62,9 +74,10 @@ public class Embedder {
 	/**
 	 * Returns the 3-dimensional embedding for the data given in constructor. 
 	 * The vector will be indexed as the original squareDistances Matrix
+	 * @param scalingMethod 
 	 * @return
 	 */
-	public Vector3d[] embed() {
+	public Vector3d[] embed(ScalingMethod scalingMethod) {
 		Matrix A = new Matrix(n,n);
 		double[] Do = calculateDoFromDij();
 		for (int i=0;i<n;i++){
@@ -99,7 +112,7 @@ public class Embedder {
 			embedding[i] = new Vector3d(X.get(i, 0), X.get(i,1), X.get(i,2));
 		}
 		
-		scaleEmbedding(embedding);
+		scaleEmbedding(embedding, scalingMethod);
 		
 		return embedding;
 	}
@@ -204,16 +217,15 @@ public class Embedder {
 	 * Two ways of doing this right now: scale through radius of gyration, scale 
 	 * through average of the inter-Calpha distances. 
 	 * @param embedding
+	 * @param method 
 	 */
-	private void scaleEmbedding(Vector3d[] embedding) {
+	private void scaleEmbedding(Vector3d[] embedding, ScalingMethod method) {
 		
 		boolean debug = false;
-		int method = 2; //1==rad gyration, 2==average inter-Calpha distances
 		
 		double scale = 0;
-
 		// getting the scale factor
-		if (method==1) {
+		if (method==ScalingMethod.RADGYRATION) {
 			// radius of gyration 
 			double radGyrInput = getRadiusGyration(sqDists);
 			double radGyrOutput = getRadiusGyration(embedding);
@@ -223,7 +235,7 @@ public class Embedder {
 			}
 			scale = radGyrInput/radGyrOutput;
 		} 
-		else if (method==2) {
+		else if (method==ScalingMethod.AVRG_INTER_CA_DIST) {
 			// average of the inter-Calpha distances
 			double sumCAdists = 0;
 			for (int i=0;i<n-1;i++){
@@ -320,7 +332,7 @@ public class Embedder {
 		
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
-		Vector3d[] embedding = embedder.embed();
+		Vector3d[] embedding = embedder.embed(ScalingMethod.RADGYRATION);
 		pdbEmbedded.setAtomsCoords(embedding, "CA");
 		
 		double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
