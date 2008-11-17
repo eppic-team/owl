@@ -265,8 +265,8 @@ public class BlastHit {
 	 */
 	public Alignment getAlignmentFullSeqs(String fullQuerySeq, String fullSubjectSeq) {
 		
-		String querySeqNoGaps = this.al.getAlignedSequence(queryId);
-		String subjectSeqNoGaps = this.al.getAlignedSequence(subjectId);
+		String querySeqNoGaps = this.al.getSequenceNoGaps(queryId);
+		String subjectSeqNoGaps = this.al.getSequenceNoGaps(subjectId);
 
 		if (!fullQuerySeq.contains(querySeqNoGaps)){
 			throw new IllegalArgumentException("Given full query sequence is not a superstring of this BlastHit's alignment query sequence");
