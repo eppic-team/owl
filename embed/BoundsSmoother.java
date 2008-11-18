@@ -31,7 +31,10 @@ import proteinstructure.RIGraph;
  *  
  * Taken from "Distance Geometry: Theory, Algorithms, and Chemical Applications" (section 3.1) by T.F. Havel, 
  * in Encyclopedia of Computational Chemistry (Wiley, New York, 1998). 
- * See also "Distance Geometry and Molecular Conformation" (Chapter 5) by G.M. Crippen and T.F. Havel (Wiley)
+ * See also:
+ *  "Distance Geometry and Molecular Conformation" (Chapter 5) by G.M. Crippen and T.F. Havel (Wiley)
+ *  "Sampling and efficiency of metric matrix distance geometry: A novel partial
+ *   metrization algorithm", Kuszewski J, Nilges M, Bruenger AT, 1992, Journal of Biomolecular NMR
  *   
  * @author duarte
  *
@@ -44,7 +47,7 @@ public class BoundsSmoother {
 	private static final boolean DEBUG = false;
 	private static final long DEBUG_SEED = 123456;
 	
-	private static final int NUM_ROOTS_PARTIAL_METRIZATION = 4;
+	private static final int NUM_ROOTS_PARTIAL_METRIZATION = 4; // we choose 4 as in Kuszewski et al.
 
 	/*----------------- helper classes and transformers -----------------*/
 	
@@ -101,6 +104,8 @@ public class BoundsSmoother {
 	private HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>> nodesBoundsDigraph; // map of serial/side to nodes in the bounds digraph
 	private double lmax; // maximum of the lower bounds: offset value for the boundsDigraph (not to have negative weights so that we can use Dijkstra's algo)
 	
+	private Bound[][] bounds; // the bounds (half-)matrix with lower/upper bounds for all pairs (or with nulls for pairs without assigned bounds yet) 
+	
 	private Random rand; // the random generator for sampleBounds and metrize
 	
 	/*------------------------ constructors ------------------------------*/
@@ -125,21 +130,23 @@ public class BoundsSmoother {
 	
 	/**
 	 * Computes bounds for all pairs, based on the set of sparse distance ranges
+	 * The returned array is a new array not the reference to the internal bounds array.
 	 * @return a 2-dimensional array with the bounds for all pairs of residues, the
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
 	public Bound[][] getBoundsAllPairs() {
-		Bound[][] bounds = convertRIGraphToBoundsMatrix(this.rig);
-		return getBoundsAllPairs(bounds);
+		convertRIGraphToBoundsMatrix(this.rig); // this initializes the bounds array
+		computeTriangleInequality();
+		return copyBounds(bounds); // we return a copy of the internal bounds array so that we can keep modifying it without side-effects to the returned reference
 	}
 		
 	/**
-	 * Gets a random sample from a matrix of all pairs distance ranges
-	 * @param bounds the matrix of all pairs distance ranges
+	 * Gets a random sample from the internal bounds array of all pairs distance ranges
 	 * @return a simmetric metric matrix (both sides filled)
+	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
 	 */
-	public Matrix sampleBounds(Bound[][] bounds) {
+	public Matrix sampleBounds() {
 		double[][] matrix = new double[conformationSize][conformationSize];
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {
@@ -154,26 +161,34 @@ public class BoundsSmoother {
 	}
 
 	/**
-	 * Performs partial metrization for the given bounds 
-	 * @param bounds
+	 * Performs partial metrization for the internal bounds array.
+	 * The internal bounds array is updated with the new bounds after metrization.
+	 * The idea is that metrization doesn't need to be done for all atoms but only 
+	 * for a handful of them (called roots). This results in a much faster algorithm having 
+	 * almost the same sampling properties as full metrization.
+	 * See "Sampling and efficiency of metric matrix distance geometry: A novel partial
+	 * metrization algorithm", Kuszewski J, Nilges M, Bruenger AT, 1992, Journal of Biomolecular NMR
 	 * @return
 	 */
-	public Matrix metrize(Bound[][] bounds) {
+	public Matrix metrize() {
 
 		ArrayList<Integer> roots = new ArrayList<Integer>();
 		for (int count=1;count<=NUM_ROOTS_PARTIAL_METRIZATION;count++) {
 			int root = rand.nextInt(conformationSize);
-			if (roots.contains(root)) System.err.println("Warning: repeated root atom while doing metrization: "+root);
+			if (roots.contains(root)) {
+				root = rand.nextInt(conformationSize);
+			}	
+			if (roots.contains(root)) { 
+				System.err.println("Warning: repeated root atom while doing metrization: "+root);
+			}
 			if (DEBUG) System.out.println("Picked root: "+root);			
 			roots.add(root);
-			sampleBoundForRoot(bounds, root); // this alters directly the input bounds array
-			bounds = getBoundsAllPairs(bounds);
+			sampleBoundForRoot(root); // this alters directly the input bounds array
+			computeTriangleInequality();
 		}
-		// bounds after metrization
-		if (DEBUG) printBounds(bounds);
 		
 		// finally pick a value at random for all the other bounds
-		return sampleBounds(bounds);		
+		return sampleBounds();		
 	}
 	
 	/**
@@ -188,7 +203,12 @@ public class BoundsSmoother {
 	
 	/*----------------------- private methods  ---------------------------*/
 	
-	private void sampleBoundForRoot(Bound[][] bounds, int root) {
+	/**
+	 * For given root atom samples a value from the distance ranges of the root 
+	 * to all of its neighbours (updating the internal bounds array with the new sampled bounds)
+	 * @param root
+	 */
+	private void sampleBoundForRoot(int root) {
 		for (int neighb=0;neighb<conformationSize;neighb++) {
 			if (neighb==root) continue; // avoid the diagonal (which contains a null Bound)
 			int i = root;
@@ -206,53 +226,57 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Computes bounds for all pairs through triangle inequalities, given a Matrix containing a sparse set of lower/upper bounds
-	 * 
-	 * @param sparseBounds
-	 * @return a 2-dimensional array with the bounds for all pairs of residues (only upper half filled), 
-	 * the indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
-	 * and are guaranteed to be in the same order as the residue serials.
+	 * Computes bounds for all pairs through triangle inequalities from the bounds member variable
+	 * containing a set of lower/upper bounds (sparse or full)
+	 * The bounds array is modified to contain the new bounds. 
+	 * This is guaranteed to run in o(nmlog(n)), thus if the input is sparse then it's pretty fast: o(n2log(n)) but if 
+	 * the input is the full set of bounds then we have o(n3log(n)).
 	 */
-	private Bound[][] getBoundsAllPairs(Bound[][] sparseBounds) { 
+	private void computeTriangleInequality() { 
 		double MARGIN = 0.0001; // for comparing doubles we need some tolerance value
-		Bound[][] bounds = new Bound[conformationSize][conformationSize];
-		double[][] lowerBounds = getLowerBoundsAllPairs(sparseBounds);
-		double[][] upperBounds = getUpperBoundsAllPairs(sparseBounds);
+
+		double[][] lowerBounds = getLowerBoundsAllPairs();
+		double[][] upperBounds = getUpperBoundsAllPairs();
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=i+1;j<conformationSize;j++) {
 				double upperBound = upperBounds[i][j];
 				double lowerBound = lowerBounds[i][j];
-				if (sparseBounds[i][j]!=null && lowerBound>upperBound+MARGIN) {
-					//System.err.println("old: "+sparseBounds[i][j]+" new: "+new Bound(lowerBound,upperBound));
-					
-					// During metrization sometimes a new upper bound is found that is below the new lower bound 
-					// (actually in these cases the new lower bound coincides with the old one i.e. nothing new was 
-					// found through triangle inequality for the lower bound).
-					// For some reason it doesn't happen the other way around: a new lower bound found that is 
-					// above the new (coinciding with old) upper bound. I suppose this is because the triangle inequality 
-					// "is a lot more effective at reducing the upper bounds than increasing the lower bounds" (quoting Havel) 
-					// To correct this we set both lower and upper to the newly found upper, i.e. we assume that 
-					// the new upper bound is better because is in accordance to the triangle inequality 
-					lowerBound=upperBound;
-					
-					//if (upperBound<sparseBounds[i][j].upper-MARGIN) 
-					//	System.err.printf("new upper bound (%4.1f) for pair %3d %3d is smaller than old upper bound (%4.1f)\n",upperBound,i,j,sparseBounds[i][j].upper);
-					//if (lowerBound>sparseBounds[i][j].lower+MARGIN) 
-					//	System.err.printf("new lower bound (%4.1f) for pair %3d %3d is bigger than old lower bound (%4.1f)\n",lowerBound,i,j,sparseBounds[i][j].lower);
+				
+				if (bounds[i][j]!=null) {
+					if (lowerBound>upperBound+MARGIN) {
+						//System.err.println("old: "+sparseBounds[i][j]+" new: "+new Bound(lowerBound,upperBound));
+
+						// During metrization sometimes a new upper bound is found that is below the new lower bound 
+						// (actually in these cases the new lower bound coincides with the old one i.e. nothing new was 
+						// found through triangle inequality for the lower bound).
+						// For some reason it doesn't happen the other way around: a new lower bound found that is 
+						// above the new (coinciding with old) upper bound. I suppose this is because the triangle inequality 
+						// "is a lot more effective at reducing the upper bounds than increasing the lower bounds" (quoting Havel) 
+						// To correct this we set both lower and upper to the newly found upper, i.e. we assume that 
+						// the new upper bound is better because is in accordance to the triangle inequality 
+						lowerBound=upperBound;
+
+						//if (upperBound<sparseBounds[i][j].upper-MARGIN) 
+						//	System.err.printf("new upper bound (%4.1f) for pair %3d %3d is smaller than old upper bound (%4.1f)\n",upperBound,i,j,sparseBounds[i][j].upper);
+						//if (lowerBound>sparseBounds[i][j].lower+MARGIN) 
+						//	System.err.printf("new lower bound (%4.1f) for pair %3d %3d is bigger than old lower bound (%4.1f)\n",lowerBound,i,j,sparseBounds[i][j].lower);
+					}
+
+					bounds[i][j].lower = lowerBound;
+					bounds[i][j].upper = upperBound;
+				} else {
+					bounds[i][j] = new Bound(lowerBound,upperBound);
 				}
-					
-				bounds[i][j]=new Bound(lowerBound,upperBound);
 				// sanity check: lower bounds can't be bigger than upper bounds!
 				if (lowerBound>upperBound+MARGIN) {
 					System.err.printf("Warning: lower bound (%4.1f) for pair "+i+" "+j+" is bigger than upper bound (%4.1f)\n",lowerBound,upperBound);
 				}
 			}
 		}
-		return bounds;
 	}
 
 	/**
-	 * Computes upper bounds for all pairs from a sparse set of upper bounds based
+	 * Computes upper bounds for all pairs from a set of upper bounds (sparse or full) based
 	 * on the triangle inequality.
 	 * The computation is actually just an all pairs shortest path using Dijkstra's 
 	 * shortest path algorithm (as the set of distance coming from contact maps is
@@ -262,9 +286,9 @@ public class BoundsSmoother {
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
-	private double[][] getUpperBoundsAllPairs(Bound[][] bounds) {
+	private double[][] getUpperBoundsAllPairs() {
 		double[][] upperBoundsMatrix = new double[conformationSize][conformationSize];
-		SparseGraph<Integer,SimpleEdge> upperBoundGraph = convertBoundsMatrixToUpperBoundGraph(bounds);
+		SparseGraph<Integer,SimpleEdge> upperBoundGraph = convertBoundsMatrixToUpperBoundGraph();
 		DijkstraDistance<Integer, SimpleEdge> dd = new DijkstraDistance<Integer, SimpleEdge>(upperBoundGraph,WeightTransformer);
 
 		for (int i=0;i<conformationSize;i++) {
@@ -276,23 +300,24 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Computes lower bounds for all pairs given a sparse set of upper/lower bounds based on the triangle inequality.
+	 * Computes lower bounds for all pairs given a set of upper/lower bounds (sparse or full) 
+	 * based on the triangle inequality.
 	 * 
 	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
 	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Because of this the boundsDigraph result 
-	 * of calling {@link #convertBoundsMatrixToBoundsDigraph(Bound[][])}} have values offset with the maximum lower bound (lmax).
+	 * of calling {@link #convertBoundsMatrixToBoundsDigraph()}} have values offset with the maximum lower bound (lmax).
 	 * Thus after computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
 	 *  
 	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the
 	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
 	 * and are guaranteed to be in the same order as the residue serials.
 	 * 
-	 * @see {@link #convertBoundsMatrixToBoundsDigraph(Bound[][])} and {@link #getUpperBoundsAllPairs()}
+	 * @see {@link #convertBoundsMatrixToBoundsDigraph()} and {@link #getUpperBoundsAllPairs()}
 	 */
-	private double[][] getLowerBoundsAllPairs(Bound[][] bounds) {
+	private double[][] getLowerBoundsAllPairs() {
 		double[][] lowerBoundsMatrix = new double[conformationSize][conformationSize];		
 		// this is the bounds digraph as described by Crippen and Havel
-		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsMatrixToBoundsDigraph(bounds);
+		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsMatrixToBoundsDigraph();
 		DijkstraShortestPath<BoundsDigraphNode, SimpleEdge> dd = new DijkstraShortestPath<BoundsDigraphNode, SimpleEdge>(boundsDigraph,WeightTransformer);
 
 		for (int i=0;i<conformationSize;i++) {
@@ -317,7 +342,7 @@ public class BoundsSmoother {
 	 * @param bounds
 	 * @return
 	 */
-	private SparseGraph<Integer,SimpleEdge> convertBoundsMatrixToUpperBoundGraph(Bound[][] bounds) {
+	private SparseGraph<Integer,SimpleEdge> convertBoundsMatrixToUpperBoundGraph() {
 		SparseGraph<Integer,SimpleEdge> upperBoundGraph = new SparseGraph<Integer, SimpleEdge>();
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {
@@ -339,10 +364,9 @@ public class BoundsSmoother {
 	 * NOTE that because we use Dijkstra's algorithm for the computation of the shortest paths, we can't use negative 
 	 * weights (see http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm). Thus we offset the values here to the maximum lower bound.
 	 * After computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
-	 * @param bounds
 	 * @return
 	 */
-	private SparseGraph<BoundsDigraphNode,SimpleEdge> convertBoundsMatrixToBoundsDigraph(Bound[][] bounds) {
+	private SparseGraph<BoundsDigraphNode,SimpleEdge> convertBoundsMatrixToBoundsDigraph() {
 		// to do the offset thing (see docs above) we need to know first of all the max lower bound
 		ArrayList<Double> lowerBounds = new ArrayList<Double>();
 		for (int i=0;i<conformationSize;i++) {
@@ -402,7 +426,7 @@ public class BoundsSmoother {
 	 */
 	private Bound[][] convertRIGraphToBoundsMatrix(RIGraph graph) {
 		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
-		Bound[][] bounds = new Bound[conformationSize][conformationSize];
+		bounds = new Bound[conformationSize][conformationSize];
 		TreeMap<Integer,Integer> resser2idx = new TreeMap<Integer, Integer>();
 		this.idx2resser = new TreeMap<Integer, Integer>();
 		int idx = 0;
@@ -444,7 +468,13 @@ public class BoundsSmoother {
 		}
 		return bounds;
 	}
+
+	private void printBounds() {
+		printBounds(this.bounds);
+	}
 	
+	/*------------------------ statics  ------------------------------*/
+
 	/**
 	 * Deep copies given array of bounds
 	 * @param bounds
@@ -461,9 +491,7 @@ public class BoundsSmoother {
 		}
 		return newBounds;
 	}
-	
-	/*------------------------ statics  ------------------------------*/
-	
+
 	private static void printBounds(Bound[][] bounds) {
 		for (int i=0;i<bounds.length;i++) {
 			for (int j=0;j<bounds[i].length;j++) {
@@ -521,8 +549,9 @@ public class BoundsSmoother {
 	public static void main (String[] args) throws Exception {
 		boolean debug = false;
 		boolean writeFiles = false;
-		int numModels = 5;
+		int numModels = 10;
 		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
+		boolean metrize = true; // if true metrization performed, if false random sampling
 		
 		String pdbCode = "1bxy";
 		String pdbChainCode = "A";
@@ -536,25 +565,29 @@ public class BoundsSmoother {
 
 		RIGraph graph = pdb.get_graph(ct, cutoff);
 		BoundsSmoother bs = new BoundsSmoother(graph);
-		Bound[][] bounds = bs.getBoundsAllPairs();
+		Bound[][] initialBoundsAllPairs = bs.getBoundsAllPairs();
 
-		Bound[][] initialAllPairs = copyBounds(bounds);
 		if (debug) {
-			// all pais bounds after triangle inequality
-			printBounds(initialAllPairs);
+			// all pairs bounds after triangle inequality
+			printBounds(initialBoundsAllPairs);
 		}
 		
 		
 		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
 		System.out.println();
 		for (int model=0;model<numModels;model++) {
-			//Matrix matrix = bs.sampleBounds(bounds);
 			
-			Matrix matrix = bs.metrize(bounds);
-			//if (debug) {
+			Matrix matrix = null;
+			if (!metrize) {
+				matrix = bs.sampleBounds();
+			} else {
+				matrix = bs.metrize();
+			}
+			
+			if (debug) {
 				// bounds after metrization
-				//printBounds(bounds);
-			//}
+				bs.printBounds();
+			}
 			
 			if (debug) {
 				printMatrix(matrix);
@@ -573,15 +606,15 @@ public class BoundsSmoother {
 			}
 
 			if (writeFiles)
-				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
+				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
 
 			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
 			
-			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialAllPairs));
+			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialBoundsAllPairs));
 			System.out.println();
 			
 			if (debug) {
-				printViolations(matrixEmbedded, initialAllPairs);			
+				printViolations(matrixEmbedded, initialBoundsAllPairs);			
 			}
 		}
 	}
