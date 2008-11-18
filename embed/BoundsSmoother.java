@@ -44,7 +44,7 @@ public class BoundsSmoother {
 	private static final boolean DEBUG = false;
 	private static final long DEBUG_SEED = 123456;
 	
-	private static final int NUM_ROOTS_PARTIAL_METRIZATION = 1;
+	private static final int NUM_ROOTS_PARTIAL_METRIZATION = 4;
 
 	/*----------------- helper classes and transformers -----------------*/
 	
@@ -153,21 +153,27 @@ public class BoundsSmoother {
 		return new Matrix(matrix);
 	}
 
-	//TODO this is a draft of the metrize procedure, finish it!
+	/**
+	 * Performs partial metrization for the given bounds 
+	 * @param bounds
+	 * @return
+	 */
 	public Matrix metrize(Bound[][] bounds) {
-		double[][] matrix = new double[conformationSize][conformationSize];
+
 		ArrayList<Integer> roots = new ArrayList<Integer>();
 		for (int count=1;count<=NUM_ROOTS_PARTIAL_METRIZATION;count++) {
 			int root = rand.nextInt(conformationSize);
-			System.out.println("Picked root: "+root);
+			if (roots.contains(root)) System.err.println("Warning: repeated root atom while doing metrization: "+root);
+			if (DEBUG) System.out.println("Picked root: "+root);			
 			roots.add(root);
 			sampleBoundForRoot(bounds, root); // this alters directly the input bounds array
 			bounds = getBoundsAllPairs(bounds);
 		}
-		printBounds(bounds);
-		//TODO finally pick a value at random for all the other bounds
+		// bounds after metrization
+		if (DEBUG) printBounds(bounds);
 		
-		return new Matrix(matrix);		
+		// finally pick a value at random for all the other bounds
+		return sampleBounds(bounds);		
 	}
 	
 	/**
@@ -183,16 +189,20 @@ public class BoundsSmoother {
 	/*----------------------- private methods  ---------------------------*/
 	
 	private void sampleBoundForRoot(Bound[][] bounds, int root) {
-		for (int j=0;j<conformationSize;j++) {
-			if (j==root) continue; // avoid the diagonal (which contains a null Bound)
+		for (int neighb=0;neighb<conformationSize;neighb++) {
+			if (neighb==root) continue; // avoid the diagonal (which contains a null Bound)
 			int i = root;
-			if (j<root) {
-				i = j;
+			int j = neighb;
+			if (neighb<root) {
+				i = neighb;
 				j = root;
 			}
 			double sampledValue = bounds[i][j].lower+rand.nextDouble()*(bounds[i][j].upper-bounds[i][j].lower);
-			bounds[i][j]=new Bound(sampledValue, sampledValue);
+			bounds[i][j].lower = sampledValue;
+			bounds[i][j].upper = sampledValue;
+			if (DEBUG) System.out.print(bounds[i][j]);
 		}
+		if (DEBUG) System.out.println("\n");
 	}
 	
 	/**
@@ -204,6 +214,7 @@ public class BoundsSmoother {
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
 	private Bound[][] getBoundsAllPairs(Bound[][] sparseBounds) { 
+		double MARGIN = 0.0001; // for comparing doubles we need some tolerance value
 		Bound[][] bounds = new Bound[conformationSize][conformationSize];
 		double[][] lowerBounds = getLowerBoundsAllPairs(sparseBounds);
 		double[][] upperBounds = getUpperBoundsAllPairs(sparseBounds);
@@ -211,9 +222,28 @@ public class BoundsSmoother {
 			for (int j=i+1;j<conformationSize;j++) {
 				double upperBound = upperBounds[i][j];
 				double lowerBound = lowerBounds[i][j];
+				if (sparseBounds[i][j]!=null && lowerBound>upperBound+MARGIN) {
+					//System.err.println("old: "+sparseBounds[i][j]+" new: "+new Bound(lowerBound,upperBound));
+					
+					// During metrization sometimes a new upper bound is found that is below the new lower bound 
+					// (actually in these cases the new lower bound coincides with the old one i.e. nothing new was 
+					// found through triangle inequality for the lower bound).
+					// For some reason it doesn't happen the other way around: a new lower bound found that is 
+					// above the new (coinciding with old) upper bound. I suppose this is because the triangle inequality 
+					// "is a lot more effective at reducing the upper bounds than increasing the lower bounds" (quoting Havel) 
+					// To correct this we set both lower and upper to the newly found upper, i.e. we assume that 
+					// the new upper bound is better because is in accordance to the triangle inequality 
+					lowerBound=upperBound;
+					
+					//if (upperBound<sparseBounds[i][j].upper-MARGIN) 
+					//	System.err.printf("new upper bound (%4.1f) for pair %3d %3d is smaller than old upper bound (%4.1f)\n",upperBound,i,j,sparseBounds[i][j].upper);
+					//if (lowerBound>sparseBounds[i][j].lower+MARGIN) 
+					//	System.err.printf("new lower bound (%4.1f) for pair %3d %3d is bigger than old lower bound (%4.1f)\n",lowerBound,i,j,sparseBounds[i][j].lower);
+				}
+					
 				bounds[i][j]=new Bound(lowerBound,upperBound);
 				// sanity check: lower bounds can't be bigger than upper bounds!
-				if (lowerBound>upperBound) {
+				if (lowerBound>upperBound+MARGIN) {
 					System.err.printf("Warning: lower bound (%4.1f) for pair "+i+" "+j+" is bigger than upper bound (%4.1f)\n",lowerBound,upperBound);
 				}
 			}
@@ -491,7 +521,7 @@ public class BoundsSmoother {
 	public static void main (String[] args) throws Exception {
 		boolean debug = false;
 		boolean writeFiles = false;
-		int numModels = 1;
+		int numModels = 5;
 		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
 		
 		String pdbCode = "1bxy";
@@ -507,16 +537,25 @@ public class BoundsSmoother {
 		RIGraph graph = pdb.get_graph(ct, cutoff);
 		BoundsSmoother bs = new BoundsSmoother(graph);
 		Bound[][] bounds = bs.getBoundsAllPairs();
-		if (debug) {
-			printBounds(bounds);
-		}
 
 		Bound[][] initialAllPairs = copyBounds(bounds);
+		if (debug) {
+			// all pais bounds after triangle inequality
+			printBounds(initialAllPairs);
+		}
+		
 		
 		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
 		System.out.println();
 		for (int model=0;model<numModels;model++) {
-			Matrix matrix = bs.sampleBounds(bounds);
+			//Matrix matrix = bs.sampleBounds(bounds);
+			
+			Matrix matrix = bs.metrize(bounds);
+			//if (debug) {
+				// bounds after metrization
+				//printBounds(bounds);
+			//}
+			
 			if (debug) {
 				printMatrix(matrix);
 			}
