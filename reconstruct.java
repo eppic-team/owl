@@ -75,7 +75,8 @@ public class reconstruct {
 			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
 			"                  worse quality model). Default: slow (refinement via simulate\n" +
 			"                  annealing) \n" +
-			" [-A]           : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n\n";
+			" [-A]           : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n" +
+			" [-g]           : debug mode, prints some debug info\n\n";
 
 		boolean benchmark = true;
 		String pdbId = null;
@@ -93,8 +94,9 @@ public class reconstruct {
 		boolean fast = false;
 		boolean parallel = false;
 		boolean refPdbFromFile = false;
+		boolean debug = false;
 		
-		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:FAh?");
+		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:FAgh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -133,7 +135,10 @@ public class reconstruct {
 				break;
 			case 'A':
 				parallel = true;
-				break;												
+				break;
+			case 'g':
+				debug = true;
+				break;																
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -356,9 +361,15 @@ public class reconstruct {
 			
 		} catch (IOException e) {
 			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			if (debug) {
+				e.printStackTrace();
+			}
 			System.exit(1);
 		} catch (TinkerError e) {
 			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			if (debug) {
+				e.printStackTrace();
+			}
 			System.exit(1);
 		}
 				
