@@ -153,7 +153,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 		if (this.lookup.containsKey(subjectId))	{
 			return this.lookup.get(subjectId);
 		} else {
-			throw new IllegalArgumentException("Given subjectId "+subjectId+"doesn't exist in this blast hit list");
+			throw new IllegalArgumentException("Given subjectId "+subjectId+" doesn't exist in this blast hit list");
 		}
 	}
 	
@@ -204,5 +204,14 @@ public class BlastHitList implements Iterable<BlastHit> {
 	 */
 	public Iterator<BlastHit> iterator() {
 		return this.hits.iterator();
+	}
+	
+	/**
+	 * Returns true if this BlastHitList contains a hit with the given subjectId
+	 * @param subjectId
+	 * @return
+	 */
+	public boolean contains(String subjectId) {
+		return this.lookup.containsKey(subjectId);
 	}
 }
