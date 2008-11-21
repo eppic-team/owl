@@ -237,6 +237,18 @@ public class TinkerRunner {
 			throw new TinkerError("Tinker error, revise log file. ");
 		}
 		
+		int exitValue = 1;
+		try {
+			exitValue = protProc.waitFor();
+		} catch (InterruptedException e) {
+			throw new TinkerError("Unexpected error when waiting for protein to finish. Error: "+e.getMessage());
+		}
+		
+		if (exitValue!=0) { 
+			log.flush();
+			throw new TinkerError("protein exited with a non 0 exit code: "+exitValue);
+		}
+		
 		log.flush();
 	}
 
@@ -803,6 +815,18 @@ public class TinkerRunner {
 			throw new TinkerError("Tinker error while running xyzpdb, revise log file.");
 		}
 		
+		int exitValue = 1;
+		try {
+			exitValue = xyzpdbProc.waitFor();
+		} catch (InterruptedException e) {
+			throw new TinkerError("Unexpected error when waiting for xyzpdb to finish. Error: "+e.getMessage());
+		}
+		
+		if (exitValue!=0) { 
+			log.flush();
+			throw new TinkerError("xyzpdb exited with a non 0 exit code: "+exitValue);
+		}
+		
 		log.flush();
 	}
 	
@@ -849,6 +873,19 @@ public class TinkerRunner {
 			log.flush(); 
 			throw new TinkerError("Tinker error while running pdbxyz, revise log file.");
 		}
+		
+		int exitValue = 1;
+		try {
+			exitValue = pdbxyzProc.waitFor();
+		} catch (InterruptedException e) {
+			throw new TinkerError("Unexpected error when waiting for pdbxyz to finish. Error: "+e.getMessage());
+		}
+		
+		if (exitValue!=0) { 
+			log.flush();
+			throw new TinkerError("pdbxyz exited with a non 0 exit code: "+exitValue);
+		}
+
 		
 		log.flush();
 	}
