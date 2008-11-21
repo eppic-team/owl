@@ -66,6 +66,9 @@ public class TinkerRunner {
 	private static final String TINKER_ERROR_STR = " TINKER is Unable to Continue";
 	private static final String CHECKXYZ_WARNING = " CHKXYZ";
 	
+	private static final long RETRY_TIME_FINDXYZFILE = 2000;
+	private static final int  RETRIES_FINDXYZFILE = 10;
+	
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
 	
 	public static final String DEFAULT_RECONSTR_CHAIN_CODE = Pdb.NULL_CHAIN_CODE;
@@ -152,6 +155,27 @@ public class TinkerRunner {
 	}
 		
 	/*---------------------------- private methods --------------------------*/
+	
+	/**
+	 * Throws a FileNotFoundException if given file can't be found after given number of 
+	 * retries with given timeBetweenRetries
+	 * @param file the file to search for
+	 * @param retries number of times to try to find the file
+	 * @param timeBetweenRetries time between retries in milliseconds
+	 */
+	private void findFile(File file, int retries, long timeBetweenRetries) throws FileNotFoundException {
+		for (int i=0;i<retries;i++) {
+			try {
+				Thread.sleep(timeBetweenRetries);
+			} catch (InterruptedException e) {
+				System.err.println("Unexpected error while waiting for file "+file+". Error "+e.getMessage());
+			}
+			if (file.exists()) {
+				return;
+			}
+		}
+		throw new FileNotFoundException();
+	}
 	
 	/**
 	 * To get the expected File that a tinker program will output given an input 
@@ -1268,7 +1292,10 @@ public class TinkerRunner {
 		
 		// 1. run tinker's protein program (create unfolded protein chain)	
 		runProtein(sequence, outputDir, baseName, log);
-
+		// before running xyzpdb we wait to make sure that file is there, it seems that 
+		// sometimes (with many jobs running in parallel) there are some sync problems with the file system
+		findFile(xyzFile, RETRIES_FINDXYZFILE, RETRY_TIME_FINDXYZFILE);
+		
 		// 1a. convert xyz file to pdb to be able to map atom serials after
 		runXyzpdb(xyzFile, seqFile, pdbFile, log);
 
