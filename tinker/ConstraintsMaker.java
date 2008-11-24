@@ -7,7 +7,6 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Formatter;
 import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
@@ -180,10 +179,10 @@ public class ConstraintsMaker {
 	 * 	- all single atom types and any cross between them
 	 *  - BB, SC, BB/SC
 	 *  - all crosses between BB, SC and single atom contact types, e.g. BB/Cg
-	 * That means: 'ALL' CANNOT be used. No exception will be thrown for that, input must be correct
 	 * 
 	 * @param graph
 	 * @param defaultForceConstant a global force constant used for all distance restraints
+	 * @throws IllegalArgumentException if contact type of graph is 'ALL' or if it's a non valid contact type
 	 */
 	public void createDistanceConstraints(RIGraph graph, double defaultForceConstant) {
 
@@ -197,9 +196,12 @@ public class ConstraintsMaker {
 		}
 		
 		// ALL is not a valid contact type for creating constraints!
-		assert (!i_ct.equals("ALL"));
-		assert (!j_ct.equals("ALL"));
-
+		if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
+			throw new IllegalArgumentException("ALL is not a valid contact type for creating constraints.");
+		}
+		if (!AAinfo.isValidContactType(i_ct) || !AAinfo.isValidContactType(j_ct)) {
+			throw new IllegalArgumentException("Either "+i_ct+" or "+j_ct+" are not valid contact types");
+		}
 		
 		for (RIGEdge cont:graph.getEdges()){
 			Pair<RIGNode> pair = graph.getEndpoints(cont);
@@ -222,7 +224,8 @@ public class ConstraintsMaker {
 					int i_xyz = pdb2xyz.get(i_pdb);
 					int j_pdb = pdb.getAtomSerFromResSerAndAtom(pair.getSecond().getResidueSerial(), j_atom);
 					int j_xyz = pdb2xyz.get(j_pdb);
-					fkey.println(new Formatter().format(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f",i_xyz,j_xyz,defaultForceConstant,dist_min,dist_max).toString());
+					fkey.printf(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f\n",
+							i_xyz,j_xyz,defaultForceConstant,dist_min,dist_max);
 				}
 			}
 			
