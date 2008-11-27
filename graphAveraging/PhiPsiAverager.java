@@ -5,13 +5,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
 import proteinstructure.Alignment;
+import proteinstructure.Interval;
+import proteinstructure.IntervalSet;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.Pdb;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.SecStrucElement;
 import proteinstructure.SecondaryStructure;
 import proteinstructure.Template;
 import proteinstructure.TemplateList;
@@ -374,6 +378,56 @@ public class PhiPsiAverager {
 			}			
 		}
 	}
+	
+	/*------------------------------ statics -------------------------------------*/
+	
+	/**
+	 * Returns a set of phi/psi angle constraints by taking the phi/psi
+	 * values of the given structure only for secondary structure elements (helices and strands)
+	 * A margin is added to the exact values from the given structure so the 
+	 * restrains will be phi+-margin, psi+-margin
+	 * @param pdb
+	 * @param margin
+	 * @return
+	 */
+	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForSS(Pdb pdb, int margin) {
+		IntervalSet intervals = new IntervalSet();
+		Iterator<SecStrucElement> itSecStr = pdb.getSecondaryStructure().getIterator();
+		while (itSecStr.hasNext()) {
+			SecStrucElement ss = itSecStr.next();
+			if (ss.getType()==SecStrucElement.HELIX || ss.getType()==SecStrucElement.STRAND) {
+				intervals.add(ss.getInterval());
+			}
+		}
+		return getPhiPsiForInterval(pdb, margin, intervals);
+	}
+	
+	/**
+	 * Returns a set of phi/psi angle constraints by taking phi/psi values
+	 * of the given structure only for residues in the given intervals.
+	 * A margin is added to the exact values from the given structure so the
+	 * restraints will be phi+-margin, psi+-margin
+	 * @param pdb
+	 * @param margin
+	 * @param intervals
+	 * @return
+	 */
+	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForInterval(Pdb pdb, int margin, IntervalSet intervals) {
+		 TreeMap<Integer,double[]> allPhiPsis = pdb.getAllPhiPsi();
+		 TreeMap<Integer, ConsensusSquare> phiPsis = new TreeMap<Integer, ConsensusSquare>();
+		 for (Interval interv:intervals) {
+			 for (int resser=interv.beg;resser<=interv.end;resser++) {
+				 int phi = (int) Math.round(allPhiPsis.get(resser)[0]);
+				 int psi = (int) Math.round(allPhiPsis.get(resser)[1]);
+				 ConsensusSquare consSquare = 
+					 new ConsensusSquare(new ConsensusInterval(phi-margin,phi+margin), new ConsensusInterval(psi-margin,psi+margin));
+				 phiPsis.put(resser,consSquare);
+			 }
+		 }
+		 return phiPsis;
+	}
+	
+	/*-------------------------------- main -------------------------------------*/
 	
 	/**
 	 * To test the class
