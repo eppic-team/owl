@@ -413,15 +413,17 @@ public class PhiPsiAverager {
 	 * @return
 	 */
 	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForInterval(Pdb pdb, int margin, IntervalSet intervals) {
-		 TreeMap<Integer,double[]> allPhiPsis = pdb.getAllPhiPsi();
 		 TreeMap<Integer, ConsensusSquare> phiPsis = new TreeMap<Integer, ConsensusSquare>();
 		 for (Interval interv:intervals) {
 			 for (int resser=interv.beg;resser<=interv.end;resser++) {
-				 int phi = (int) Math.round(allPhiPsis.get(resser)[0]);
-				 int psi = (int) Math.round(allPhiPsis.get(resser)[1]);
-				 ConsensusSquare consSquare = 
-					 new ConsensusSquare(new ConsensusInterval(phi-margin,phi+margin), new ConsensusInterval(psi-margin,psi+margin));
-				 phiPsis.put(resser,consSquare);
+				 // we check at the same time resser, resser-1 and resser+1, thus we take both phi/psi angles or none
+				 if (pdb.hasCoordinates(resser) && pdb.hasCoordinates(resser-1) && pdb.hasCoordinates(resser+1)) {
+					 int phi = (int) Math.round(pdb.getPhiAngle(resser));
+					 int psi = (int) Math.round(pdb.getPsiAngle(resser));
+					 ConsensusSquare consSquare = 
+						 new ConsensusSquare(new ConsensusInterval(phi-margin,phi+margin), new ConsensusInterval(psi-margin,psi+margin));
+					 phiPsis.put(resser,consSquare);
+				 }
 			 }
 		 }
 		 return phiPsis;

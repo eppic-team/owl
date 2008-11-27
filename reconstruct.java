@@ -1,5 +1,6 @@
 import gnu.getopt.Getopt;
 import graphAveraging.ConsensusSquare;
+import graphAveraging.PhiPsiAverager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,6 +19,8 @@ import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.GraphFileFormatError;
+import proteinstructure.Interval;
+import proteinstructure.IntervalSet;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.RIGraph;
@@ -38,12 +41,10 @@ public class reconstruct {
 	private static final String PDBASEDB = "pdbase";
 
 	private static final double DEFAULT_FORCECONSTANT_DISTANCE = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE;
+	private static final int MARGIN_PHIPSI = 3;
 	private static final String DEFAULT_CONTACT_TYPE = "Cb";
 	private static final double DEFAULT_CUTOFF = 8.0;
 	private static final String DEFAULT_BASENAME = "rec";
-	
-	private static final TreeMap<Integer, ConsensusSquare> NO_PHIPSI_CONSTRAINTS = null;
-	private static final boolean NO_OMEGA_CONSTRAINTS = false;
 	
 	private static final String PROG_NAME = "reconstruct";
 	
@@ -58,25 +59,30 @@ public class reconstruct {
 			"                   optionally contact type (-t) and cutoff (-d)\n" +
 			"Usage:\n" +
 			PROG_NAME+" [options] [contact_map_file_1 [contact_map_file_2] [...]] \n"+
-			"  -p <string>   : pdb code + pdb chain code, e.g. 1abcA or a pdb file (benchmarking)\n" +
-			"                  If in a) i.e. reconstructing from contact map files then the \n" +
-			"                  given pdb id/pdb file will be used for rmsd reporting \n" +
-			" [-t <string>]  : one or more contact types comma separated (benchmarking). Default: "+DEFAULT_CONTACT_TYPE+" \n" +
-			" [-d <floats>]  : one or more distance cutoffs comma separated (benchmarking), \n" +
-			"                  matching given contact types. If only one specified then it will be\n" +
-			"                  used for all contact types. Default: "+DEFAULT_CUTOFF+" \n" +
+			"  -p <string>     : pdb code + pdb chain code, e.g. 1abcA or a pdb file (benchmarking)\n" +
+			"                    If in a) i.e. reconstructing from contact map files then the \n" +
+			"                    given pdb id/pdb file will be used for rmsd reporting \n" +
+			" [-t <string>]    : one or more contact types comma separated (benchmarking). Default: "+DEFAULT_CONTACT_TYPE+" \n" +
+			" [-d <floats>]    : one or more distance cutoffs comma separated (benchmarking), \n" +
+			"                    matching given contact types. If only one specified then it will be\n" +
+			"                    used for all contact types. Default: "+DEFAULT_CUTOFF+" \n" +
 			"\n" +
-			" [-b <string>]  : base name of output files. Default: "+DEFAULT_BASENAME+" or pdbId given in -p\n" +
-			" [-o <dir>]     : output dir. Default: current \n" +
-			" [-n <int>]     : number of models to generate. Default: 1 \n" +
-			" [-m <int>]     : filter contacts to min range. Default: no filtering \n" +
-			" [-M <int>]     : filter contacts to max range. Default: no filtering \n" +
-			" [-f <float>]   : force constant. Default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
-			" [-F]           : fast mode: refinement will be done via minimization (faster but \n" +
-			"                  worse quality model). Default: slow (refinement via simulate\n" +
-			"                  annealing) \n" +
-			" [-A]           : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n" +
-			" [-g]           : debug mode, prints some debug info\n\n";
+			" [-i <intervals>] : use phi/psi restraints from given structure (needs -p). Specify a\n" +
+			"                    set of intervals from the given structure from which the phi/psi\n" +
+			"                    values will be taken, e.g.: 3-23,30-35,40-50\n" +
+			" [-e]             : restrain omega torsion angles to trans conformation\n" +
+			"\n"+
+			" [-b <string>]    : base name of output files. Default: "+DEFAULT_BASENAME+" or pdbId given in -p\n" +
+			" [-o <dir>]       : output dir. Default: current \n" +
+			" [-n <int>]       : number of models to generate. Default: 1 \n" +
+			" [-m <int>]       : filter contacts to min range. Default: no filtering \n" +
+			" [-M <int>]       : filter contacts to max range. Default: no filtering \n" +
+			" [-f <float>]     : force constant. Default: "+DEFAULT_FORCECONSTANT_DISTANCE+" \n" +
+			" [-F]             : fast mode: refinement will be done via minimization (faster but \n" +
+			"                    worse quality model). Default: slow (refinement via simulate\n" +
+			"                    annealing) \n" +
+			" [-A]             : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n" +
+			" [-g]             : debug mode, prints some debug info\n\n";
 
 		boolean benchmark = true;
 		String pdbId = null;
@@ -85,6 +91,8 @@ public class reconstruct {
 		String[] cts = {DEFAULT_CONTACT_TYPE};
 		double[] cutoffs = {DEFAULT_CUTOFF};
 		File[] cmFiles = null;
+		IntervalSet intervals = null;
+		boolean forceTransOmega = false;
 		String outputDir = "."; //default current
 		String baseName = null;
 		int n = 1;
@@ -96,7 +104,7 @@ public class reconstruct {
 		boolean refPdbFromFile = false;
 		boolean debug = false;
 		
-		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:n:m:M:f:FAgh?");
+		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:i:en:m:M:f:FAgh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -117,6 +125,17 @@ public class reconstruct {
 				break;
 			case 'o':
 				outputDir = g.getOptarg();
+				break;
+			case 'i':
+				tokens = g.getOptarg().split(",");
+				intervals = new IntervalSet();
+				for (String token:tokens) {
+					intervals.add(new Interval(Integer.parseInt(token.split("-")[0]),
+											   Integer.parseInt(token.split("-")[1])));
+				}
+				break;
+			case 'e':
+				forceTransOmega = true;
 				break;
 			case 'n':
 				n = Integer.parseInt(g.getOptarg());
@@ -169,6 +188,11 @@ public class reconstruct {
 		
 		if (benchmark && cts.length!=cutoffs.length && cutoffs.length!=1) {
 			System.err.println("The number of contact types and cutoffs given must be the same. With the exception of only 1 cutoff given that will be taken for all contact types");
+			System.exit(1);
+		}
+		
+		if(pdbId==null && intervals!=null) {
+			System.err.println("Can't specify phi/psi restraints (-i) without specifying a structure (-p).");
 			System.exit(1);
 		}
 
@@ -274,6 +298,15 @@ public class reconstruct {
 			}
 
 			sequence = pdb.getSequence();
+			
+			// checking that intervals given with -i are valid for this pdb
+			int lastResser = pdb.getFullLength();
+			for (Interval interv:intervals) {
+				if (interv.end>lastResser || interv.beg>lastResser) {
+					System.err.println("Specified interval (-i): "+interv+" is not valid for the specified pdb structure "+pdbId);
+					System.exit(1);
+				}
+			}
 		} 
 
 		
@@ -351,12 +384,16 @@ public class reconstruct {
 		
 		// call reconstruction		
 		try {
+			TreeMap<Integer,ConsensusSquare> phiPsiConstraints = null;
+			if (pdbId!=null && intervals!=null) {
+				phiPsiConstraints = PhiPsiAverager.getPhiPsiForInterval(pdb, MARGIN_PHIPSI, intervals);
+			}
 			if (fast) {
 				// as this is at the moment just a reconstruction benchmarking script it doesn't make sense 
 				// at all to use a phi/psi consensus (which would come from templates): we use null and 0 for the 2 phi/psi parameters
-				tr.reconstructFast(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false, parallel);
+				tr.reconstructFast(sequence, graphs, phiPsiConstraints, forceTransOmega, n, forceConstant, 0, outputDir, baseName, false, parallel);
 			} else {
-				tr.reconstruct(sequence, graphs, NO_PHIPSI_CONSTRAINTS, NO_OMEGA_CONSTRAINTS, n, forceConstant, 0, outputDir, baseName, false, parallel);
+				tr.reconstruct(sequence, graphs, phiPsiConstraints, forceTransOmega, n, forceConstant, 0, outputDir, baseName, false, parallel);
 			}
 			
 		} catch (IOException e) {
