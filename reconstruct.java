@@ -300,11 +300,13 @@ public class reconstruct {
 			sequence = pdb.getSequence();
 			
 			// checking that intervals given with -i are valid for this pdb
-			int lastResser = pdb.getFullLength();
-			for (Interval interv:intervals) {
-				if (interv.end>lastResser || interv.beg>lastResser) {
-					System.err.println("Specified interval (-i): "+interv+" is not valid for the specified pdb structure "+pdbId);
-					System.exit(1);
+			if (intervals!=null) {
+				int lastResser = pdb.getFullLength();
+				for (Interval interv:intervals) {
+					if (interv.end>lastResser || interv.beg>lastResser) {
+						System.err.println("Specified interval (-i): "+interv+" is not valid for the specified pdb structure "+pdbId);
+						System.exit(1);
+					}
 				}
 			}
 		} 
