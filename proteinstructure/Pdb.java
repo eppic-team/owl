@@ -418,8 +418,21 @@ public abstract class Pdb {
 		return (surface/Math.pow(36*Math.PI*Math.pow(volume,2), 1.0/3.0));
 	}
 	
-	public void runNaccess(String naccessExecutable, String naccessParameters) throws Exception {
-		String pdbFileName = pdbCode+chainCode+".pdb";
+	/**
+	 * Runs naccess and parses output into member variables resser2allrsa and resser2scrsa,
+	 * removing all temporary files.
+	 * Use {@link #getAllRsaFromResSerial(int)} and {@link #getScRsaFromResSerial(int)} to get ASA values
+	 * @param naccessExecutable
+	 * @param naccessParameters
+	 * @throws IOException if I/O problems running naccess or if it finishes with an error exit status
+	 */
+	public void runNaccess(String naccessExecutable, String naccessParameters) throws IOException {
+		boolean debug = false; // set to true to keep output files and write out naccess command line
+		String tempDir = "."; // temp dir has to be current dir because naccess always writes output to current dir
+		File pdbFile = File.createTempFile(pdbCode+chainCode, ".pdb",new File(tempDir));
+		String pdbFileName = pdbFile.getCanonicalPath(); // we use getCanonicalPath to get rid of the '.', otherwise naccess doesn't work
+		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
+
 		dump2pdbfile(pdbFileName, true);
 		String line;
 		int errorLineCount = 0;
@@ -427,7 +440,9 @@ public abstract class Pdb {
 		File test = new File(naccessExecutable);
 		if(!test.canRead()) throw new IOException("Naccess Executable is not readable");
 
-		Process myNaccess = Runtime.getRuntime().exec(naccessExecutable + " " + pdbFileName + " " + naccessParameters);
+		String cmd = naccessExecutable + " " + pdbFileName + " " + naccessParameters;
+		if (debug) System.out.println(cmd);
+		Process myNaccess = Runtime.getRuntime().exec(cmd);
 		BufferedReader naccessOutput = new BufferedReader(new InputStreamReader(myNaccess.getInputStream()));
 		BufferedReader naccessError = new BufferedReader(new InputStreamReader(myNaccess.getErrorStream()));
 		while((line = naccessOutput.readLine()) != null) {
@@ -437,12 +452,17 @@ public abstract class Pdb {
 		}
 		naccessOutput.close();
 		naccessError.close();
-		int exitVal = myNaccess.waitFor();
+		int exitVal = 1;
+		try {
+			exitVal = myNaccess.waitFor();
+		} catch (InterruptedException e) {
+			System.err.println("Unexpected error while waiting for naccess to finish");
+		}
 		if ((exitVal == 1) || (errorLineCount > 0)) {
-			throw new Exception("Naccess:Wrong arguments or pdb file format!");
+			throw new IOException("Naccess error: wrong arguments or pdb file format!");
 		}
 
-		File rsa = new File(pdbCode+chainCode+".rsa");
+		File rsa = new File(tempDir,baseName+".rsa");
 		if (rsa.exists()) {
 			resser2allrsa = new HashMap<Integer,Double>();
 			resser2scrsa = new HashMap<Integer,Double>();			
@@ -457,15 +477,18 @@ public abstract class Pdb {
 				}
 			}
 			rsaInput.close();
+		} else {
+			throw new IOException("Naccess output file "+rsa+" wasn't found");
 		}
-		String[] filesToDelete = { ".pdb", ".asa", ".rsa", ".log" };
-		for (int i=0; i < filesToDelete.length; i++) {
-			File fileToDelete = new File(pdbCode+chainCode+filesToDelete[i]);
-			if (fileToDelete.exists()) {
-				fileToDelete.delete();
+		if (!debug) {
+			String[] filesToDelete = {".pdb", ".rsa", ".asa", ".log" };
+			for (int i=0; i < filesToDelete.length; i++) {
+				File fileToDelete = new File(baseName+filesToDelete[i]);
+				if (fileToDelete.exists()) {
+					fileToDelete.deleteOnExit();
+				}
 			}
 		}
-
 	}
 	
 	/**
