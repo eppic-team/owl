@@ -46,6 +46,9 @@ public abstract class Pdb {
 	public static final String NO_CHAIN_CODE = "";			// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
 	
+	private static final double DEFAULT_B_FACTOR = 0.00;		// default value if no b-factor is given
+	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
+	
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
 	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type 
 	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
@@ -56,6 +59,7 @@ public abstract class Pdb {
 
 	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
 	protected Scop scop;											// the scop annotation for this pdb object
+	protected HashMap<Integer, Double> atomser2bfactor;				// the b-factor for each atom (default: 0)
 	protected HashMap<Integer,Double> resser2allrsa;				// internal residue serials to all-atoms rsa
 	protected HashMap<Integer,Double> resser2scrsa;					// internal residue serials to SC rsa
 	protected HashMap<Integer,Double> resser2consurfhsspscore; 		// internal residue serials to SC rsa
@@ -492,6 +496,25 @@ public abstract class Pdb {
 	}
 	
 	/**
+	 * Returns the per-residue relative solvent accessible surface areas (SASA) as calculated by NACCESS.
+	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
+	 * @return a reference to the internal map from residue serial to SASA value (null if not calculated yet)
+	 */
+	public HashMap<Integer, Double> getSurfaceAccessibilities() {
+		return resser2allrsa;
+	}
+
+	/**
+	 * Returns the per-residue side-chain relative solvent accessible surface areas (SASA) as calculated by NACCESS.
+	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
+	 * @return a reference to the internal map from residue serial to SASA value (null if not calculated yet)
+	 */
+	public HashMap<Integer, Double> getSideChainSurfaceAccessibilities() {
+		return resser2scrsa;
+	}
+
+	
+	/**
 	 * Parses SCOP annotation populating the Scop object member with SCOP 
 	 * annotation for this protein chain
 	 * @param version the SCOP version that we want to parse
@@ -666,6 +689,31 @@ public abstract class Pdb {
 	}
 
 	/**
+	 * Assigns b-factor values to the atoms of this structure. If structure is written to pdb file,
+	 * these values will appear in the b-factor column. Currently, if no b-factors are assigned, the
+	 * default value 0 will be written.
+	 * @param bfactorsPerAtom a map of atom serials to b-factors
+	 */
+	public void setBFactorsPerAtom(HashMap<Integer, Double> bfactorsPerAtom) {
+		for(int atomser:bfactorsPerAtom.keySet()) {
+			this.atomser2bfactor.put(atomser, bfactorsPerAtom.get(atomser));
+		}
+	}
+	
+	/**
+	 * Assigns b-factor values to all atoms for the given residues.
+	 * @param bfactorsPerResidue a map of residue serials to b-factors
+	 */
+	public void setBFactorsPerResidue(HashMap<Integer, Double> bfactorsPerResidue) {
+		if(atomser2bfactor == null) atomser2bfactor = new HashMap<Integer, Double>();
+		for(int resser:bfactorsPerResidue.keySet()) {
+			for(int atomser:this.getAtomSersFromResSer(resser)) {
+				this.atomser2bfactor.put(atomser, bfactorsPerResidue.get(resser));
+			}
+		}
+	}
+	
+	/**
 	 * Writes to given PrintWriter the PDB file format HEADER line
 	 * @param Out
 	 */
@@ -724,6 +772,14 @@ public abstract class Pdb {
 	}
 	
 	/** 
+	 * Writes atom lines for this structure to the given output stream.
+	 * @param Out the output stream to write the atom lines to
+	 */
+	public void writeAtomLines(PrintStream out) {
+		writeAtomLines(out, true);
+	}
+	
+	/** 
 	 * Writes atom lines for this structure to the given output stream
 	 * @param Out
 	 * @param pdbCompatible if true, chain codes will be written with shorten 
@@ -743,12 +799,14 @@ public abstract class Pdb {
 			String res_type = resser2restype.get(res_serial);
 			Point3d coords = atomser2coord.get(atomserial);
 			String atomType = atom.substring(0,1);
-			Object[] fields = {atomserial, atom, res_type, chainCodeStr, res_serial, coords.x, coords.y, coords.z, atomType};
+			double occupancy = DEFAULT_OCCUPANCY;
+			double bFactor = (atomser2bfactor == null || !atomser2bfactor.containsKey(atomserial))?DEFAULT_B_FACTOR:atomser2bfactor.get(atomserial);
+			Object[] fields = {atomserial, atom, res_type, chainCodeStr, res_serial, coords.x, coords.y, coords.z, occupancy, bFactor, atomType};
 			lines.put(atomserial, fields);
 		}
 		for (int atomserial:lines.keySet()){
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f  1.00  0.00           %s\n",lines.get(atomserial));
+			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n",lines.get(atomserial));
 		}		
 	}
 
@@ -1522,15 +1580,37 @@ public abstract class Pdb {
 	}
 
 	/**
-	 * Gets the atom serial given the residue serial and atom name
+	 * Gets the atom serial given the residue serial and atom name.
+	 * The caller of this functions needs to check whether the resser, atom and combination of the two exists
+	 * using {@link #hasCoordinates(int, String)}. Otherwise, if this function
+	 * is called and no atom serial exists, a null pointer exception will be thrown.
 	 * @param resser
 	 * @param atom
-	 * @return
+	 * @return the atom serial
+	 * @throws NullPointerException if no atom serial for this resser and atom exists
 	 */
 	public int getAtomSerFromResSerAndAtom(int resser, String atom) {
-		return resser_atom2atomserial.get(resser+"_"+atom);
+		return resser_atom2atomserial.get(resser+"_"+atom);			
 	}
 
+	/**
+	 * Returns the set of all atom serials for the given residue serial.
+	 * Note that atoms for which no coordinates are given will be missing.
+	 * @param resser the residue serial
+	 * @return an ordered set of serials of the atoms in this residue
+	 */
+	public Set<Integer> getAtomSersFromResSer(int resser) {
+		TreeSet<Integer> atomSers = new TreeSet<Integer>();
+		Set<String> atomTypes = AAinfo.getAtomsForCTAndRes("ALL", getResTypeFromResSerial(resser));
+		for(String atomType:atomTypes) {
+			if(hasCoordinates(resser, atomType)) {
+				int atomSer = getAtomSerFromResSerAndAtom(resser, atomType);
+				atomSers.add(atomSer);
+			}
+		}
+		return atomSers;
+	}
+	
 	/**
 	 * Checks whether the given residue serial has any associated coordinates.
 	 * @param ser  the residue serial
