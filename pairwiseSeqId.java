@@ -8,7 +8,7 @@ import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentExcep
 
 
 /**
- * Executable to check the pairwise sequence identity for a list of sequences
+ * Executable to check the pairwise sequence identity for a list of sequences (multiple fasta file).
  * @author stehr
  *
  */
@@ -117,20 +117,24 @@ public class pairwiseSeqId {
 		for(x = 0; x < n; x++) {
 			System.out.printf("%3d", x);
 		}
-		System.out.println("\tavg\n");
+		System.out.println("\tavg\tmax\n");
 		x = 0;
 		for(String t1:seqs.keySet()) {
 			System.out.printf("%5s\t%4d\t", t1, x);
 			float rowAvg = 0;
+			float rowMax = 0;
+			float rowMin = 100;
 			for(y = 0; y < n; y++) {
 				if(y!=x) {
 					System.out.printf("%3.0f",ids[x][y]);
 					rowAvg+=ids[x][y];
+					rowMax = Math.max(rowMax, ids[x][y]);
+					rowMin = Math.min(rowMin, ids[x][y]);
 				} else {
 					System.out.printf("   ");
 				}
 			}
-			System.out.printf("\t%3.0f\n", rowAvg / (y-1));
+			System.out.printf("\t%3.0f\t%3.0f\n", rowAvg / (y-1), rowMax);
 			x++;
 		}
 		} else {
