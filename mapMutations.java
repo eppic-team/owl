@@ -1,69 +1,71 @@
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
-import java.util.HashMap;
 
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.SecStrucElement;
 
 /**
- * Loads a structure from a file or from PDBase and saves it as a pdb file where the b-factor column is the
- * relative per-residue solvent accessible surface area (SASA) as calculated by NACCESS. These values can be
- * displayed in e.g. Pymol with the command 'spectrum b'.
- * If a cutoff is given, the b-factor is set to 1 (exposed) or 0 (buried) depending on whether the SASA exceeds
- * the given cutoff or not. Otherwise the SASA value itself (in percent but can sometimes exceed 100) is written.
+ * Given a structure and a list of mutations, visualize the mutated sites on the structure
+ * and calculate their surface accessibility and secondary structure state.
  * @author stehr
  */
-public class writeSASAtoBFactor {
+public class mapMutations {
 
 	private static final String NACCESS_EXECUTABLE = "/project/StruPPi/bin/naccess";
+	private static final String NACCESS_PARAMETERS = "";
+	private static final String DSSP_EXECUTABLE = "/project/StruPPi/Software/dssp/dsspcmbi";
+	private static final String DSSP_PARAMETERS = "--";
+	private static final double EXPOSURE_CUTOFF = 5.0; // everything above this cutoff is considered exposed
 	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		if(args.length < 2) {
-			System.out.println(writeSASAtoBFactor.class.getName() + " <pdbcode or filename> <outfile> [<cutoff for buried/exposed>]");
+			System.out.println(mapMutations.class.getName() + " <pdbcode or filename> <mutated positions>");
 			System.exit(1);
 		}
-		String arg = args[0];
-		String outFile = args[1];
-		double cutoff = -1;
-		if(args.length > 2) {
-			cutoff = Double.parseDouble(args[2]);
+		
+		Pdb pdb = readStructureOrExit(args[0]);		
+		
+		int[] mutations = new int[args.length-1];
+		for (int i = 1; i < args.length; i++) {
+			int pos = Integer.parseInt(args[i]);
+			if(pos > pdb.get_length()) {
+				System.err.println("Error: Position " + pos + " is bigger than length of protein (" + pdb.get_length() + "). Skipping.");
+			} else {
+				mutations[i-1] = pos;
+			}
 		}
-
-		Pdb pdb = readStructureOrExit(arg);
-				
-		// now we have a pdb structure
+		
 		try {
-			pdb.runNaccess(NACCESS_EXECUTABLE, "");
-			HashMap<Integer, Double> sasas = pdb.getSurfaceAccessibilities();
-			if(sasas == null) {
-				System.err.println("Error: no surface accessibility values found.");
-				System.exit(1);
-			}
-			if(cutoff >= 0) {
-				System.out.println("Discretizing values");
-				sasas = discretizeValues(sasas, cutoff);
-			}
-			pdb.setBFactorsPerResidue(sasas);
-			try {
-				System.out.println("Writing " + outFile);
-				pdb.dump2pdbfile(outFile);
-			} catch (IOException e) {
-				System.err.println("Error writing to file " + outFile + ": " + e.getMessage());
-				System.exit(1);
-			}
+			pdb.runNaccess(NACCESS_EXECUTABLE, NACCESS_PARAMETERS);
 		} catch (IOException e) {
 			System.err.println("Error running NACCESS: " + e.getMessage());
 			System.exit(1);
 		}
+			
+		try {
+			pdb.runDssp(DSSP_EXECUTABLE, DSSP_PARAMETERS);
+		} catch (IOException e) {
+			System.err.println("Error running DSSP: " + e.getMessage());
+			System.exit(1);
+		}
 		
-		System.out.println("done.");
+		for (int i = 0; i < mutations.length; i++) {
+			int pos = mutations[i];
+			boolean exposed = pdb.getAllRsaFromResSerial(pos) > EXPOSURE_CUTOFF;
+			char ssState = pdb.getSecondaryStructure().getSecStrucElement(pos).getType();
+			System.out.printf("Position %d :                     %s\n", pos, pdb.getResTypeFromResSerial(pos));
+			System.out.printf("Relative surface accessibility :  %2.0f%% (%s)\n", pdb.getAllRsaFromResSerial(pos), exposed?"exposed":"buried");
+			System.out.printf("Secondary structure state:        %3s (%s)\n", ssState, SecStrucElement.getTypeDescription(ssState));
+			System.out.println();
+		}
 	}
 
 	/**
@@ -124,24 +126,6 @@ public class writeSASAtoBFactor {
 			}
 		}
 		return pdb;
-	}
-	
-	/**
-	 * Transform all values above the threshold to 1 and all below or equal to 0. 
-	 * @param map
-	 * @param cutoff
-	 * @return the map with the new values
-	 */
-	public static HashMap<Integer, Double> discretizeValues(HashMap<Integer, Double> map, double cutoff) {
-		HashMap<Integer, Double> map2 = new HashMap<Integer, Double>();
-		for(int key:map.keySet()) {
-			if(map.get(key) > cutoff) {
-				map2.put(key, 1.0);
-			} else {
-				map2.put(key, 0.0);
-			}
-		}
-		return map2; 
 	}
 	
 }
