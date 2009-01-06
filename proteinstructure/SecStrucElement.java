@@ -37,6 +37,22 @@ public class SecStrucElement {
 	/*---------------------------- public methods ---------------------------*/
 	
 	/**
+	 * Returns a description for the given secondary structure state.
+	 * @return the secondary structure type description
+	 */
+	public static String getTypeDescription(char ssType) {
+		switch(ssType) {
+		case HELIX : return "Helix";
+		case STRAND : return "Strand";
+		case TURN : return "Hydrogen bonded turn";
+		case OTHER : return "Other";
+		case EXTENDED : return "Extended";
+		case LOOP : return "Loop";
+		default : return "Unknown";
+		}
+	}
+	
+	/**
 	 * Deep copies this ss element
 	 * @return
 	 */
@@ -61,6 +77,16 @@ public class SecStrucElement {
 	 */ 
 	public char getType() {
 		return secStrucType;
+	}
+	
+	/** 
+	 * Returns the type of this element as a string (Helix, Sheet, ...) 
+	 * The type depends on whether this secondary structure annotation has been 
+	 * assigned with 3, 4 or 8 states (see constants above)
+	 * @return
+	 */ 
+	public String getTypeName() {
+		return getTypeDescription(getType());
 	}
 	
 	/** 
