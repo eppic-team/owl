@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
  * Beware that everything is static in this file. The JVM will initialise the static
  * variables when they are first called and keep them as if if the static class itself 
  * was a global instantiated object
+ * 
+ * See also: {@link AminoAcid}
  */
 public class AAinfo {
 
@@ -584,6 +586,10 @@ public class AAinfo {
 	    return "GAP";
 	}
 	
+	/**
+	 * Returns the one letter representation of a gap in a protein sequence
+	 * @return a one letter representation of a gap in a protein sequence
+	 */
 	public static char getGapCharacterOneLetter() {
 	    return '-';
 	}
