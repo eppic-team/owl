@@ -433,7 +433,8 @@ public abstract class Pdb {
 	public void runNaccess(String naccessExecutable, String naccessParameters) throws IOException {
 		boolean debug = false; // set to true to keep output files and write out naccess command line
 		String tempDir = "."; // temp dir has to be current dir because naccess always writes output to current dir
-		File pdbFile = File.createTempFile(pdbCode+chainCode, ".pdb",new File(tempDir));
+		String prefix = ((pdbCode+chainCode).length() < 3)?"1xxx":(pdbCode+chainCode);
+		File pdbFile = File.createTempFile(prefix, ".pdb",new File(tempDir));
 		String pdbFileName = pdbFile.getCanonicalPath(); // we use getCanonicalPath to get rid of the '.', otherwise naccess doesn't work
 		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 
