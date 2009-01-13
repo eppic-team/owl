@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.TreeMap;
-
-import javax.vecmath.Vector3d;
 
 import org.apache.commons.collections15.Transformer;
 
@@ -16,13 +13,7 @@ import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
-import edu.uci.ics.jung.graph.util.Pair;
 import proteinstructure.AAinfo;
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
 
 /**
  * Implementation of the bounds smoothing part of the EMBED algorithm of Crippen and Havel
@@ -41,7 +32,6 @@ import proteinstructure.RIGraph;
  */
 public class BoundsSmoother {
 	
-	protected static final double BB_CA_DIST = 3.8;
 	private static final double HARD_SPHERES_BOUND = AAinfo.DIST_MIN_CA ;
 	
 	private static final boolean DEBUG = false;
@@ -98,8 +88,6 @@ public class BoundsSmoother {
 
 	/*---------------------- member variables ----------------------------*/
 	
-	private RIGraph rig;
-	private TreeMap<Integer,Integer> idx2resser;
 	private int conformationSize;
 	private HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>> nodesBoundsDigraph; // map of serial/side to nodes in the bounds digraph
 	private double lmax; // maximum of the lower bounds: offset value for the boundsDigraph (not to have negative weights so that we can use Dijkstra's algo)
@@ -116,14 +104,9 @@ public class BoundsSmoother {
 	 * as upper limit and hard-spheres as lower limit. 
 	 * @param graph
 	 */
-	public BoundsSmoother(RIGraph graph) {
-		this.rig = graph;
-		this.conformationSize = this.rig.getObsLength();
-		if (DEBUG) {
-			rand = new Random(DEBUG_SEED);
-		} else {
-			rand = new Random();
-		}
+	public BoundsSmoother(Bound[][] bounds) {
+		this.bounds = bounds;
+		this.conformationSize = bounds.length;
 	}
 	
 	/*----------------------- public methods  ----------------------------*/
@@ -136,30 +119,19 @@ public class BoundsSmoother {
 	 * and are guaranteed to be in the same order as the residue serials.
 	 */
 	public Bound[][] getBoundsAllPairs() {
-		convertRIGraphToBoundsMatrix(this.rig); // this initializes the bounds array
 		computeTriangleInequality();
 		return copyBounds(bounds); // we return a copy of the internal bounds array so that we can keep modifying it without side-effects to the returned reference
 	}
 		
 	/**
-	 * Gets a random sample from the internal bounds array of all pairs distance ranges
-	 * @return a simmetric metric matrix (both sides filled)
-	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
+	 * Gets a random sample from the internal bounds array of all pairs of distance ranges
+	 * @return a symmetric metric matrix (both sides filled)
+	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs 
 	 */
 	public Matrix sampleBounds() {
-		double[][] matrix = new double[conformationSize][conformationSize];
-		for (int i=0;i<conformationSize;i++) {
-			for (int j=0;j<conformationSize;j++) {
-				if (j>i) {
-					matrix[i][j]= bounds[i][j].lower+rand.nextDouble()*(bounds[i][j].upper-bounds[i][j].lower);
-				} else if (j<i) {
-					matrix[i][j]=matrix[j][i];
-				}
-			}
-		}
-		return new Matrix(matrix);
+		return sampleBounds(true);
 	}
-
+	
 	/**
 	 * Performs partial metrization for the internal bounds array.
 	 * The internal bounds array is updated with the new bounds after metrization.
@@ -172,6 +144,8 @@ public class BoundsSmoother {
 	 */
 	public Matrix metrize() {
 
+		initSeed();
+		
 		ArrayList<Integer> roots = new ArrayList<Integer>();
 		for (int count=1;count<=NUM_ROOTS_PARTIAL_METRIZATION;count++) {
 			int root = rand.nextInt(conformationSize);
@@ -188,21 +162,46 @@ public class BoundsSmoother {
 		}
 		
 		// finally pick a value at random for all the other bounds
-		return sampleBounds();		
-	}
-	
-	/**
-	 * Maps from residue serials to indices of the matrices returned by {@link #getBoundsAllPairs()} and
-	 * {@link #sampleBounds(Bound[][])}
-	 * @param idx
-	 * @return
-	 */
-	public int getResserFromIdx(int idx) {
-		return idx2resser.get(idx);
+		return sampleBounds(false);		
 	}
 	
 	/*----------------------- private methods  ---------------------------*/
 	
+	/**
+	 * Initialises (or resets the random seed).
+	 * If DEBUG flag is true the random seed will be a fixed value DEBUG_SEED
+	 */
+	private void initSeed() {
+		if (DEBUG) {
+			rand = new Random(DEBUG_SEED);
+		} else {
+			rand = new Random();
+		} 
+	}
+	
+	/**
+	 * Gets a random sample from the internal bounds array of all pairs distance ranges
+	 * @param initSeed if true the random seed is reinitialised, if false the existing one will be used
+	 * @return a symmetric metric matrix (both sides filled)
+	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
+	 */
+	private Matrix sampleBounds(boolean initSeed) {
+		if (initSeed) {
+			initSeed();
+		}
+		double[][] matrix = new double[conformationSize][conformationSize];
+		for (int i=0;i<conformationSize;i++) {
+			for (int j=0;j<conformationSize;j++) {
+				if (j>i) {
+					matrix[i][j]= bounds[i][j].lower+rand.nextDouble()*(bounds[i][j].upper-bounds[i][j].lower);
+				} else if (j<i) {
+					matrix[i][j]=matrix[j][i];
+				}
+			}
+		}
+		return new Matrix(matrix);
+	}
+
 	/**
 	 * For given root atom samples a value from the distance ranges of the root 
 	 * to all of its neighbours (updating the internal bounds array with the new sampled bounds)
@@ -416,60 +415,7 @@ public class BoundsSmoother {
 		return boundsDigraph;
 	}
 
-	/**
-	 * Convert the given RIGraph to a bounds matrix. The indices of the matrix can be mapped back to residue 
-	 * serials through {@link #getResserFromIdx(int)}
-	 * Will only admit single atom contact type RIGraphs
-	 * @param graph
-	 * @return
-	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
-	 */
-	private Bound[][] convertRIGraphToBoundsMatrix(RIGraph graph) {
-		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
-		bounds = new Bound[conformationSize][conformationSize];
-		TreeMap<Integer,Integer> resser2idx = new TreeMap<Integer, Integer>();
-		this.idx2resser = new TreeMap<Integer, Integer>();
-		int idx = 0;
-		for (int resser:graph.getSerials()) {
-			resser2idx.put(resser,idx);
-			idx2resser.put(idx,resser);
-			idx++;
-		}
-		double cutoff = graph.getCutoff();
-		String ct = graph.getContactType();
-		String i_ct = ct;
-		String j_ct = ct;
-		if (ct.contains("/")){
-			i_ct = ct.split("/")[0];
-			j_ct = ct.split("/")[1];
-		}
-		
-		if (!AAinfo.isValidSingleAtomContactType(i_ct) || !AAinfo.isValidSingleAtomContactType(j_ct)){
-			throw new IllegalArgumentException("Contact type "+i_ct+" or "+j_ct+" is not valid for reconstruction");
-		}
-		
-		for (RIGEdge cont:graph.getEdges()){
-			Pair<RIGNode> pair = graph.getEndpoints(cont);
-			String i_res = pair.getFirst().getResidueType();
-			String j_res = pair.getSecond().getResidueType();
-
-			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
-			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
-			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
-			
-			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
-				bounds[resser2idx.get(pair.getFirst().getResidueSerial())][resser2idx.get(pair.getSecond().getResidueSerial())] = new Bound(dist_min, dist_max);
-			}
-		}
-		// adding contiguous CA distance backbone constraints
-		for (int i=0;i<conformationSize-1;i++) {
-			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
-		}
-		return bounds;
-	}
-
-	private void printBounds() {
+	protected void printBounds() {
 		printBounds(this.bounds);
 	}
 	
@@ -480,7 +426,7 @@ public class BoundsSmoother {
 	 * @param bounds
 	 * @return
 	 */
-	private static Bound[][] copyBounds(Bound[][] bounds) {
+	protected static Bound[][] copyBounds(Bound[][] bounds) {
 		Bound[][] newBounds = new Bound[bounds.length][bounds.length];
 		for (int i=0;i<bounds.length;i++) {
 			for (int j=0;j<bounds[i].length;j++) {
@@ -492,7 +438,7 @@ public class BoundsSmoother {
 		return newBounds;
 	}
 
-	private static void printBounds(Bound[][] bounds) {
+	protected static void printBounds(Bound[][] bounds) {
 		for (int i=0;i<bounds.length;i++) {
 			for (int j=0;j<bounds[i].length;j++) {
 				if (bounds[i][j]==null) {
@@ -505,118 +451,83 @@ public class BoundsSmoother {
 		}
 		System.out.println();
 	}
-	
-	private static void printViolations (Matrix matrixEmbedded, Bound[][] bounds) {
-		int count = 0;
-		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
-			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
-				if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-					System.out.printf("%3d %3d %4.1f %s\n",i,j,matrixEmbedded.get(i,j),bounds[i][j].toString());
-					count++;
-				}
-			}
-		}
-		int cells = (matrixEmbedded.getRowDimension()*(matrixEmbedded.getRowDimension()-1))/2;
-		System.out.println("Number of violations: "+count+" out of "+cells+" cells in half matrix");
-	}
-	
-	private static int getNumberViolations(Matrix matrixEmbedded, Bound[][] bounds) {
-		int count = 0;
-		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
-			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
-				if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-					count++;
-				}
-			}
-		}
-		return count;
-	}
 
-	private static void printMatrix(Matrix matrix) {
-		for (int i=0;i<matrix.getRowDimension();i++) {
-			for (int j=0;j<matrix.getColumnDimension();j++) {
-				System.out.printf("%4.1f ",matrix.get(i, j));
-			}
-			System.out.println();
-		}
-	}
-	
 	/*-------------------------- main  -------------------------------*/
 	
 	/**
 	 * To test the class
 	 */
-	public static void main (String[] args) throws Exception {
-		boolean debug = false;
-		boolean writeFiles = false;
-		int numModels = 10;
-		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
-		boolean metrize = true; // if true metrization performed, if false random sampling
-		
-		String pdbCode = "1bxy";
-		String pdbChainCode = "A";
-		String ct = "Ca";
-		double cutoff = 8.0;
-		
-		Pdb pdb = new PdbasePdb(pdbCode);
-		pdb.load(pdbChainCode);
-		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
-		pdbEmbedded.load(pdbChainCode);
-
-		RIGraph graph = pdb.get_graph(ct, cutoff);
-		BoundsSmoother bs = new BoundsSmoother(graph);
-		Bound[][] initialBoundsAllPairs = bs.getBoundsAllPairs();
-
-		if (debug) {
-			// all pairs bounds after triangle inequality
-			printBounds(initialBoundsAllPairs);
-		}
-		
-		
-		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
-		System.out.println();
-		for (int model=0;model<numModels;model++) {
-			
-			Matrix matrix = null;
-			if (!metrize) {
-				matrix = bs.sampleBounds();
-			} else {
-				matrix = bs.metrize();
-			}
-			
-			if (debug) {
-				// bounds after metrization
-				bs.printBounds();
-			}
-			
-			if (debug) {
-				printMatrix(matrix);
-			}
-
-			Embedder embedder = new Embedder(matrix);
-			Vector3d[] embedding = embedder.embed(scalingMethod);
-			pdbEmbedded.setAtomsCoords(embedding, "CA");
-
-			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
-			pdb.mirror();
-			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
-
-			if (rmsd>rmsdm ) {
-				pdbEmbedded.mirror();
-			}
-
-			if (writeFiles)
-				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
-
-			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
-			
-			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialBoundsAllPairs));
-			System.out.println();
-			
-			if (debug) {
-				printViolations(matrixEmbedded, initialBoundsAllPairs);			
-			}
-		}
-	}
+//	public static void main (String[] args) throws Exception {
+//		boolean debug = false;
+//		boolean writeFiles = false;
+//		int numModels = 10;
+//		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
+//		boolean metrize = true; // if true metrization performed, if false random sampling
+//		
+//		String pdbCode = "1bxy";
+//		String pdbChainCode = "A";
+//		String ct = "Ca";
+//		double cutoff = 8.0;
+//		
+//		Pdb pdb = new PdbasePdb(pdbCode);
+//		pdb.load(pdbChainCode);
+//		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
+//		pdbEmbedded.load(pdbChainCode);
+//
+//		RIGraph graph = pdb.get_graph(ct, cutoff);
+//		BoundsSmoother bs = new BoundsSmoother(graph);
+//		Bound[][] initialBoundsAllPairs = bs.getBoundsAllPairs();
+//
+//		if (debug) {
+//			// all pairs bounds after triangle inequality
+//			printBounds(initialBoundsAllPairs);
+//		}
+//		
+//		
+//		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
+//		System.out.println();
+//		for (int model=0;model<numModels;model++) {
+//			
+//			Matrix matrix = null;
+//			if (!metrize) {
+//				matrix = bs.sampleBounds();
+//			} else {
+//				matrix = bs.metrize();
+//			}
+//			
+//			if (debug) {
+//				// bounds after metrization
+//				bs.printBounds();
+//			}
+//			
+//			if (debug) {
+//				printMatrix(matrix);
+//			}
+//
+//			Embedder embedder = new Embedder(matrix);
+//			Vector3d[] embedding = embedder.embed(scalingMethod);
+//			pdbEmbedded.setAtomsCoords(embedding, "CA");
+//
+//			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
+//			pdb.mirror();
+//			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
+//
+//			if (rmsd>rmsdm ) {
+//				pdbEmbedded.mirror();
+//			}
+//
+//			if (writeFiles)
+//				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
+//
+//			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
+//			
+//			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialBoundsAllPairs));
+//			System.out.println();
+//			
+//			if (debug) {
+//				printViolations(matrixEmbedded, initialBoundsAllPairs);			
+//			}
+//		}
+//	}
 	
 }

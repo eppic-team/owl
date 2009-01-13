@@ -9,6 +9,7 @@ import java.util.TreeMap;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
+import proteinstructure.ModelPdb;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 
@@ -241,7 +242,7 @@ public class Embedder {
 			for (int i=0;i<n-1;i++){
 				sumCAdists+=new Point3d(embedding[i]).distance(new Point3d(embedding[i+1]));
 			}
-			scale = BoundsSmoother.BB_CA_DIST/(sumCAdists/(n-1));			
+			scale = Reconstructer.BB_CA_DIST/(sumCAdists/(n-1));			
 		}
 
 		// scaling the coordinates
@@ -307,8 +308,6 @@ public class Embedder {
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
-		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
-		pdbEmbedded.load(pdbChainCode);
 		int n = pdb.get_length();
 		int ind = 0;
 		TreeMap<Integer, Integer> resser2ind = new TreeMap<Integer,Integer>();
@@ -333,7 +332,7 @@ public class Embedder {
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
 		Vector3d[] embedding = embedder.embed(ScalingMethod.RADGYRATION);
-		pdbEmbedded.setAtomsCoords(embedding, "CA");
+		Pdb pdbEmbedded = new ModelPdb(pdb.getSequence(),embedding, "CA");
 		
 		double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
 		pdb.mirror();
