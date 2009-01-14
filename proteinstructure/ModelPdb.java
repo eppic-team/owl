@@ -31,6 +31,8 @@ public class ModelPdb extends Pdb {
 		this.dataLoaded = true;
 		
 		this.setSequence(sequence);
+		this.setResidueData();
+		this.setAtomData();
 	}
 	
 	/**
@@ -50,6 +52,8 @@ public class ModelPdb extends Pdb {
 		
 		this.dataLoaded = true;
 		this.setSequence(sequence);
+		this.setResidueData();
+		this.setAtomData();
 		this.setAtomsCoords(coords, atom);
 	}
 	
@@ -77,34 +81,49 @@ public class ModelPdb extends Pdb {
 	}
 	
 	/**
-	 * Initializes all required data fields of the Pdb. 
-	 * Coordinates of all atoms are set to (0,0,0)
+	 * Initializes sequence, fullLength and obsLength fields 
 	 * @param sequence
 	 */
 	private void setSequence(String sequence) {
 		this.sequence = sequence;
 		this.fullLength = sequence.length();
-		this.obsLength = this.fullLength;
-		
+		this.obsLength = this.fullLength;		
+	}
+
+	/**
+	 * Initializes all residue data of this Pdb object
+	 */
+	private void setResidueData() {
 		resser2restype = new HashMap<Integer, String>();
-		resser_atom2atomserial = new HashMap<String, Integer>();
-		atomser2resser = new HashMap<Integer, Integer>();
-		atomser2atom = new HashMap<Integer, String>();
 		pdbresser2resser = new HashMap<String, Integer>();
 		resser2pdbresser = new HashMap<Integer, String>();
-		atomser2coord = new HashMap<Integer, Point3d>();
-		
-		int atomSerial = 1; 
 		for (int i=0;i<sequence.length();i++) {
 			int resser = i+1;
 			String aa = AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i)));
 			if (!AAinfo.isValidAA(aa)) {
 				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+aa);
 			}
-			
 			// initialization of resser2restype
 			resser2restype.put(resser, aa);	
-			
+			// initialization of resser2pdbresser and pdbresser2resser
+			pdbresser2resser.put(String.valueOf(resser),resser);
+			resser2pdbresser.put(resser,String.valueOf(resser));			
+		}
+	}
+	
+	/**
+	 * Initializes all atom data for this Pdb data.
+	 * All (non-H) atoms are added and assigned coordinate (0,0,0)
+	 */
+	private void setAtomData() {
+		resser_atom2atomserial = new HashMap<String, Integer>();
+		atomser2resser = new HashMap<Integer, Integer>();
+		atomser2atom = new HashMap<Integer, String>();
+		atomser2coord = new HashMap<Integer, Point3d>(); // we only initialise the Map but don't assing any coordinates	
+
+		int atomSerial = 1; 
+		for (int resser:getAllSortedResSerials()) {
+			String aa = getResTypeFromResSerial(resser);
 			for (String atom:AAinfo.getAtomsForCTAndRes("ALL", aa)) {
 				// initialization of resser_atom2atomserial
 				resser_atom2atomserial.put(resser+"_"+atom,atomSerial);
@@ -112,17 +131,12 @@ public class ModelPdb extends Pdb {
 				atomser2resser.put(atomSerial, resser);
 				// initialization of atomser2atom
 				atomser2atom.put(atomSerial, atom);
-				// initialization of resser2pdbresser and pdbresser2resser
-				pdbresser2resser.put(String.valueOf(resser),resser);
-				resser2pdbresser.put(resser,String.valueOf(resser));
-				// initialization of atomser2coord
-				atomser2coord.put(atomSerial,new Point3d(0,0,0));
+				// atomser2coord
+				atomser2coord.put(atomSerial, new Point3d(0,0,0));
 				atomSerial++;
 			}
 		}
-
-		secondaryStructure = new SecondaryStructure(sequence);
-		//atomser2bfactor;				// should we initialize it to 0 too?
+		//atomser2bfactor;				// should we initialize it to 0 too?		
 	}
 	
 	/**
@@ -163,13 +177,20 @@ public class ModelPdb extends Pdb {
 		}
 	}
 
-	
 	/**
-	 * To test the class
+	 * Removes all atoms that have (0,0,0) coordinates
 	 */
-	public static void main(String[] args) {
-
-
+	public void removeAtomsWith0Coords() {
+		for (int atomser:getAllAtomSerials()) {
+			if (getAtomCoord(atomser).epsilonEquals(new Point3d(0,0,0), 0.0000001)) {
+				int resser = get_resser_from_atomser(atomser);
+				String atom = getAtomNameFromAtomSer(atomser);
+				resser_atom2atomserial.put(resser+"_"+atom,atomser);
+				atomser2resser.remove(atomser);
+				atomser2atom.remove(atomser);
+				atomser2coord.remove(atomser);
+			}
+		}
 	}
-
+	
 }

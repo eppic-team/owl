@@ -99,9 +99,7 @@ public class BoundsSmoother {
 	/*------------------------ constructors ------------------------------*/
 	
 	/**
-	 * Constructs a new BoundsSmoother object given a RIGraph.
-	 * The RIGraph is converted into a set of distance ranges using the cutoff
-	 * as upper limit and hard-spheres as lower limit. 
+	 * Constructs a new BoundsSmoother object given a matrix of Bounds.
 	 * @param graph
 	 */
 	public BoundsSmoother(Bound[][] bounds) {
@@ -114,9 +112,8 @@ public class BoundsSmoother {
 	/**
 	 * Computes bounds for all pairs, based on the set of sparse distance ranges
 	 * The returned array is a new array not the reference to the internal bounds array.
-	 * @return a 2-dimensional array with the bounds for all pairs of residues, the
-	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
-	 * and are guaranteed to be in the same order as the residue serials.
+	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the 
+	 * indices of the array are guaranteed to be in the same order as the residue serials.
 	 */
 	public Bound[][] getBoundsAllPairs() {
 		computeTriangleInequality();
@@ -281,9 +278,8 @@ public class BoundsSmoother {
 	 * shortest path algorithm (as the set of distance coming from contact maps is
 	 * very sparse this algorithm should be more efficient than Floyd's: Dijkstra's is
 	 * o(nm logn) and Floyd's is o(n3))
-	 * @return a 2-dimensional array with the upper bounds for all pairs of residues, the
-	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
-	 * and are guaranteed to be in the same order as the residue serials.
+	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the 
+	 * indices of the array are guaranteed to be in the same order as the residue serials.
 	 */
 	private double[][] getUpperBoundsAllPairs() {
 		double[][] upperBoundsMatrix = new double[conformationSize][conformationSize];
@@ -307,10 +303,8 @@ public class BoundsSmoother {
 	 * of calling {@link #convertBoundsMatrixToBoundsDigraph()}} have values offset with the maximum lower bound (lmax).
 	 * Thus after computing the shortest paths we have to revert back that offset by counting the number of hops the shortest path has.
 	 *  
-	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the
-	 * indices of the array can be mapped to residue serials through {@link #getResserFromIdx(int)}
-	 * and are guaranteed to be in the same order as the residue serials.
-	 * 
+	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the 
+	 * indices of the array are guaranteed to be in the same order as the residue serials. 
 	 * @see {@link #convertBoundsMatrixToBoundsDigraph()} and {@link #getUpperBoundsAllPairs()}
 	 */
 	private double[][] getLowerBoundsAllPairs() {
@@ -452,82 +446,5 @@ public class BoundsSmoother {
 		System.out.println();
 	}
 
-	/*-------------------------- main  -------------------------------*/
-	
-	/**
-	 * To test the class
-	 */
-//	public static void main (String[] args) throws Exception {
-//		boolean debug = false;
-//		boolean writeFiles = false;
-//		int numModels = 10;
-//		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
-//		boolean metrize = true; // if true metrization performed, if false random sampling
-//		
-//		String pdbCode = "1bxy";
-//		String pdbChainCode = "A";
-//		String ct = "Ca";
-//		double cutoff = 8.0;
-//		
-//		Pdb pdb = new PdbasePdb(pdbCode);
-//		pdb.load(pdbChainCode);
-//		Pdb pdbEmbedded = new PdbasePdb(pdbCode);
-//		pdbEmbedded.load(pdbChainCode);
-//
-//		RIGraph graph = pdb.get_graph(ct, cutoff);
-//		BoundsSmoother bs = new BoundsSmoother(graph);
-//		Bound[][] initialBoundsAllPairs = bs.getBoundsAllPairs();
-//
-//		if (debug) {
-//			// all pairs bounds after triangle inequality
-//			printBounds(initialBoundsAllPairs);
-//		}
-//		
-//		
-//		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
-//		System.out.println();
-//		for (int model=0;model<numModels;model++) {
-//			
-//			Matrix matrix = null;
-//			if (!metrize) {
-//				matrix = bs.sampleBounds();
-//			} else {
-//				matrix = bs.metrize();
-//			}
-//			
-//			if (debug) {
-//				// bounds after metrization
-//				bs.printBounds();
-//			}
-//			
-//			if (debug) {
-//				printMatrix(matrix);
-//			}
-//
-//			Embedder embedder = new Embedder(matrix);
-//			Vector3d[] embedding = embedder.embed(scalingMethod);
-//			pdbEmbedded.setAtomsCoords(embedding, "CA");
-//
-//			double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
-//			pdb.mirror();
-//			double rmsdm = pdb.rmsd(pdbEmbedded, "Ca");
-//
-//			if (rmsd>rmsdm ) {
-//				pdbEmbedded.mirror();
-//			}
-//
-//			if (writeFiles)
-//				pdbEmbedded.dump2pdbfile("/project/StruPPi/jose/embed/embed_"+pdbCode+pdbChainCode+"_"+model+".pdb");
-//
-//			Matrix matrixEmbedded = pdbEmbedded.calculateDistMatrix("Ca");
-//			
-//			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, initialBoundsAllPairs));
-//			System.out.println();
-//			
-//			if (debug) {
-//				printViolations(matrixEmbedded, initialBoundsAllPairs);			
-//			}
-//		}
-//	}
 	
 }

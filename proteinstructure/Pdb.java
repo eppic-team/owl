@@ -726,6 +726,8 @@ public abstract class Pdb {
 			source = ((PdbfilePdb) this).getPdbFileName();
 		} else if (this instanceof PdbasePdb || this instanceof MsdsdPdb){
 			source = db;
+		} else if (this instanceof ModelPdb) {
+			source = "model";
 		}
 		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);		
 	}
@@ -783,32 +785,27 @@ public abstract class Pdb {
 	/** 
 	 * Writes atom lines for this structure to the given output stream
 	 * @param Out
-	 * @param pdbCompatible if true, chain codes will be written with shorten 
-	 * to one character (so that file is complies correctly with PDB format 
+	 * @param pdbCompatible if true, chain codes will be written shorten 
+	 * to one character (so that file complies correctly with PDB format 
 	 * in cases where chain code has more than 1 character)   
 	 */
 	public void writeAtomLines(PrintStream Out, boolean pdbCompatible) {
-		TreeMap<Integer,Object[]> lines = new TreeMap<Integer,Object[]>();
 		String chainCodeStr = chainCode;
 		if (pdbCompatible) {
 			chainCodeStr = chainCode.substring(0,1);
 		}
-		for (String resser_atom:resser_atom2atomserial.keySet()){
-			int atomserial = resser_atom2atomserial.get(resser_atom);
-			int res_serial = Integer.parseInt(resser_atom.split("_")[0]);
-			String atom = resser_atom.split("_")[1];
-			String res_type = resser2restype.get(res_serial);
-			Point3d coords = atomser2coord.get(atomserial);
+		for (int atomser:this.getAllAtomSerials()) {
+			int resser = get_resser_from_atomser(atomser);
+			String atom = getAtomNameFromAtomSer(atomser);
 			String atomType = atom.substring(0,1);
+			String res = getResTypeFromResSerial(resser);
+			Point3d coords = getAtomCoord(atomser);
 			double occupancy = DEFAULT_OCCUPANCY;
-			double bFactor = (atomser2bfactor == null || !atomser2bfactor.containsKey(atomserial))?DEFAULT_B_FACTOR:atomser2bfactor.get(atomserial);
-			Object[] fields = {atomserial, atom, res_type, chainCodeStr, res_serial, coords.x, coords.y, coords.z, occupancy, bFactor, atomType};
-			lines.put(atomserial, fields);
-		}
-		for (int atomserial:lines.keySet()){
+			double bFactor = (atomser2bfactor == null || !atomser2bfactor.containsKey(atomser))?DEFAULT_B_FACTOR:atomser2bfactor.get(atomser);
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n",lines.get(atomserial));
-		}		
+			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n",
+					atomser, atom, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
+		}
 	}
 
 	/**
@@ -1613,9 +1610,10 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Checks whether the given residue serial has any associated coordinates.
-	 * @param ser  the residue serial
-	 * @return true if there is at least one atom with valid coordinates, else false 
+	 * Checks whether the given residue serial has any associated coordinates
+	 * for its atoms.
+	 * @param resser  the residue serial
+	 * @return true if there is at least one atom with coordinates, else false 
 	 */
 	public boolean hasCoordinates(int resser) {
 		return atomser2resser.values().contains(resser);
@@ -1691,15 +1689,19 @@ public abstract class Pdb {
 	}
 	
 	/**
-	 * Gets all atom serials in a Set
+	 * Returns a Set of all ordered atom serials (only observed atoms)
+	 * The order is according to atom serials (not necessarily ordered by residue
+	 * although they almost always are)
 	 * @return
 	 */
 	public Set<Integer> getAllAtomSerials() {
-		return this.atomser2resser.keySet();
+		TreeSet<Integer> atomSers = new TreeSet<Integer>();
+		atomSers.addAll(atomser2resser.keySet());
+		return atomSers;
 	}
 
 	/**
-	 * Returns all residue serials (of observed residues) sorted
+	 * Returns a Set of all ordered residue serials (only observed residues)
 	 * @return
 	 */
 	public Set<Integer> getAllSortedResSerials() {

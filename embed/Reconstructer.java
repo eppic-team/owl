@@ -1,6 +1,6 @@
 package embed;
 
-import java.util.TreeMap;
+import java.io.File;
 
 import javax.vecmath.Vector3d;
 
@@ -26,40 +26,43 @@ import edu.uci.ics.jung.graph.util.Pair;
 public class Reconstructer {
 	
 	protected static final double BB_CA_DIST = 3.8;
+	private static final String EMBEDDING_ATOM_TYPE = "CA"; // this is the atom for which the embedded coordinates
+															// will be set in the Pdb models produced by reconstruct()
+															// It shouldn't be a constant but at the moment we are only supporting 
+															// reconstruction of Ca contact maps  
 	
 	private RIGraph rig;
-	private TreeMap<Integer,Integer> idx2resser;
 	
 	private Bound[][] initialBounds;			// bounds as they are given from the input graph (i.e. sparse)
 	private Bound[][] initialBoundsAllPairs;	// bounds for all pairs of atoms after triangle inequality
 	
+	/**
+	 * Constructs a new Reconstructer object from a RIGraph
+	 * The RIGraph is converted into a set of distance ranges (bounds matrix) using the cutoff
+	 * as upper limit and hard-spheres as lower limit.  
+	 * @param graph
+	 */
 	public Reconstructer(RIGraph graph) {
 		this.rig = graph;
 		this.initialBounds = convertRIGraphToBoundsMatrix();
 	}
 	
-	
-	
 	/**
 	 * Convert the given RIGraph to a bounds matrix. The indices of the matrix can be mapped back to residue 
 	 * serials through {@link #getResserFromIdx(int)}
-	 * Will only admit single atom contact type RIGraphs
+	 * At the moment supports only Ca contact type 
 	 * @return
 	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
 	 */
 	private Bound[][] convertRIGraphToBoundsMatrix() {
-		//TODO this class works right now only for proteins with no non-observed residues, FIX IT!
-		int conformationSize = rig.getObsLength();
+		// sanity check
+		if (rig.getSequence().length()!=rig.getFullLength()) {
+			throw new IllegalArgumentException("Full length of RIG and length of sequence differ!");
+		}
+		
+		int conformationSize = rig.getFullLength();
 		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
 		Bound[][] bounds = new Bound[conformationSize][conformationSize];
-		TreeMap<Integer,Integer> resser2idx = new TreeMap<Integer, Integer>();
-		this.idx2resser = new TreeMap<Integer, Integer>();
-		int idx = 0;
-		for (int resser:rig.getSerials()) {
-			resser2idx.put(resser,idx);
-			idx2resser.put(idx,resser);
-			idx++;
-		}
 		double cutoff = rig.getCutoff();
 		String ct = rig.getContactType();
 		String i_ct = ct;
@@ -84,7 +87,7 @@ public class Reconstructer {
 			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
 			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
-				bounds[resser2idx.get(pair.getFirst().getResidueSerial())][resser2idx.get(pair.getSecond().getResidueSerial())] = new Bound(dist_min, dist_max);
+				bounds[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = new Bound(dist_min, dist_max);
 			}
 		}
 		// adding contiguous CA distance backbone constraints
@@ -97,13 +100,12 @@ public class Reconstructer {
 	}
 	
 	/**
-	 * Maps from residue serials to indices of the matrices returned by {@link #getBoundsAllPairs()} and
-	 * {@link #sampleBounds(Bound[][])}
-	 * @param idx
+	 * Maps from residue serials to indices of the bounds matrices 
+	 * @param idx the matrix index
 	 * @return
 	 */
 	public int getResserFromIdx(int idx) {
-		return idx2resser.get(idx);
+		return idx+1;
 	}
 	
 	/**
@@ -155,7 +157,8 @@ public class Reconstructer {
 			
 			Embedder emb = new Embedder(matrix);
 			Vector3d[] embedding = emb.embed(scalingMethod);
-			models[model] = new ModelPdb(this.rig.getSequence(), embedding, "CA");
+			models[model] = new ModelPdb(this.rig.getSequence(), embedding, EMBEDDING_ATOM_TYPE);
+			((ModelPdb) models[model]).removeAtomsWith0Coords();
 			
 		}
 		
@@ -207,7 +210,8 @@ public class Reconstructer {
 	 */
 	public static void main (String[] args) throws Exception {
 		boolean debug = false;
-		boolean writeFiles = false;
+		boolean writeFiles = true;
+		String outDir = "/project/StruPPi/jose/embed";
 		int numModels = 10;
 		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
 		boolean metrize = true; // if true metrization performed, if false random sampling
@@ -252,7 +256,7 @@ public class Reconstructer {
 
 			
 			if (writeFiles)
-				model.dump2pdbfile("/project/StruPPi/jose/embed/embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb");
+				model.dump2pdbfile(new File(outDir,"embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb").getAbsolutePath());
 			
 			modelnum++;
 		}
