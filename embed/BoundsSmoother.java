@@ -121,15 +121,6 @@ public class BoundsSmoother {
 	}
 		
 	/**
-	 * Gets a random sample from the internal bounds array of all pairs of distance ranges
-	 * @return a symmetric metric matrix (both sides filled)
-	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs 
-	 */
-	public Matrix sampleBounds() {
-		return sampleBounds(true);
-	}
-	
-	/**
 	 * Performs partial metrization for the internal bounds array.
 	 * The internal bounds array is updated with the new bounds after metrization.
 	 * The idea is that metrization doesn't need to be done for all atoms but only 
@@ -139,27 +130,29 @@ public class BoundsSmoother {
 	 * metrization algorithm", Kuszewski J, Nilges M, Bruenger AT, 1992, Journal of Biomolecular NMR
 	 * @return
 	 */
-	public Matrix metrize() {
+	public Matrix metrize(Bound[][] initialBoundsAllPairs) {
 
+		bounds = initialBoundsAllPairs;
+		
 		initSeed();
 		
 		ArrayList<Integer> roots = new ArrayList<Integer>();
 		for (int count=1;count<=NUM_ROOTS_PARTIAL_METRIZATION;count++) {
-			int root = rand.nextInt(conformationSize);
-			if (roots.contains(root)) {
+			int root;
+			while (true) {
+				// if the random selection of the root atom gives us an already used atom we continue until we get one unused
 				root = rand.nextInt(conformationSize);
-			}	
-			if (roots.contains(root)) { 
-				System.err.println("Warning: repeated root atom while doing metrization: "+root);
+				if (!roots.contains(root)) break;
 			}
 			if (DEBUG) System.out.println("Picked root: "+root);			
 			roots.add(root);
 			sampleBoundForRoot(root); // this alters directly the input bounds array
 			computeTriangleInequality();
 		}
+		//System.out.println("roots: "+roots.toString());
 		
 		// finally pick a value at random for all the other bounds
-		return sampleBounds(false);		
+		return sampleBounds(bounds);		
 	}
 	
 	/**
@@ -185,15 +178,13 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Gets a random sample from the internal bounds array of all pairs distance ranges
-	 * @param initSeed if true the random seed is reinitialised, if false the existing one will be used
+	 * Gets a random sample from the given bounds array of all pairs distance ranges
 	 * @return a symmetric metric matrix (both sides filled)
 	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
 	 */
-	private Matrix sampleBounds(boolean initSeed) {
-		if (initSeed) {
-			initSeed();
-		}
+	public Matrix sampleBounds(Bound[][] bounds) {
+		initSeed();
+
 		double[][] matrix = new double[conformationSize][conformationSize];
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {

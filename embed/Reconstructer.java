@@ -148,9 +148,9 @@ public class Reconstructer {
 			
 			Matrix matrix;
 			if (!metrize) {
-				matrix = bs.sampleBounds();
+				matrix = bs.sampleBounds(initialBoundsAllPairs);
 			} else {
-				matrix = bs.metrize();
+				matrix = bs.metrize(initialBoundsAllPairs);
 			}
 			
 			if (debug) {
@@ -224,7 +224,7 @@ public class Reconstructer {
 		boolean debug = false;
 		boolean writeFiles = true;
 		String outDir = "/project/StruPPi/jose/embed";
-		int numModels = 10;
+		int numModels = 20;
 		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
 		boolean metrize = true; // if true metrization performed, if false random sampling
 		
