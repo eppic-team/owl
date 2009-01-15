@@ -33,6 +33,8 @@ public class Reconstructer {
 	
 	private RIGraph rig;
 	
+	BoundsSmoother bs;
+	
 	private Bound[][] initialBounds;			// bounds as they are given from the input graph (i.e. sparse)
 	private Bound[][] initialBoundsAllPairs;	// bounds for all pairs of atoms after triangle inequality
 	
@@ -100,6 +102,14 @@ public class Reconstructer {
 	}
 	
 	/**
+	 * Gets a reference to the current bounds matrix of the bs BoundsSmoother 
+	 * @return
+	 */
+	private Bound[][] getBounds() {
+		return bs.getBounds();
+	}
+	
+	/**
 	 * Maps from residue serials to indices of the bounds matrices 
 	 * @param idx the matrix index
 	 * @return
@@ -124,7 +134,7 @@ public class Reconstructer {
 		
 		// we deep copy before passing to BoundsSmoother, to make sure we keep here a copy of initialBounds that is not modified
 		// and can potentially be reused (by calling again reconstruct)
-		BoundsSmoother bs = new BoundsSmoother(BoundsSmoother.copyBounds(initialBounds));
+		bs = new BoundsSmoother(BoundsSmoother.copyBounds(initialBounds));
 		
 		initialBoundsAllPairs = bs.getBoundsAllPairs();
 		
@@ -182,15 +192,17 @@ public class Reconstructer {
 	}
 	
 	private static int getNumberViolations(Matrix matrixEmbedded, Bound[][] bounds) {
-		int count = 0;
+		int violCount = 0;
 		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
 			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
-				if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-					count++;
+				if (bounds[i][j]!=null) { // for a sparse bounds matrix there will be missing cells, we want to only count violations to cells with values
+					if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+						violCount++;
+					}
 				}
 			}
-		}
-		return count;
+		} 
+		return violCount;
 	}
 	
 	private static void printMatrix(Matrix matrix) {
@@ -228,11 +240,13 @@ public class Reconstructer {
 		pdbMirror.mirror();
 
 		RIGraph graph = pdb.get_graph(ct, cutoff);
+		int numberContacts = graph.getEdgeCount();
+		int sizeHalfMatrix = (graph.getFullLength()*(graph.getFullLength()-1))/2;
 		Reconstructer rec = new Reconstructer(graph);
 		Pdb[] pdbs = rec.reconstruct(numModels, metrize, scalingMethod, debug);
 
 		
-		System.out.printf("%6s\t%6s\t%6s", "rmsd","rmsdm","viols");
+		System.out.printf("%6s\t%6s\t%6s\t%6s", "rmsd","rmsdm","restrains_viols","bounds_viols");
 		System.out.println();
 		
 		int modelnum=1;
@@ -246,12 +260,12 @@ public class Reconstructer {
 			}
 			
 			Matrix matrixEmbedded = model.calculateDistMatrix("Ca");
-			
-			System.out.printf("%6.3f\t%6.3f\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, rec.initialBoundsAllPairs));
+			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, rec.initialBounds),getNumberViolations(matrixEmbedded, rec.getBounds()));
 			System.out.println();
 			
 			if (debug) {
 				printViolations(matrixEmbedded, rec.initialBoundsAllPairs);			
+				//printViolations(matrixEmbedded, rec.getBounds());
 			}
 
 			
@@ -260,5 +274,6 @@ public class Reconstructer {
 			
 			modelnum++;
 		}
+		System.out.println("Total restraints: "+numberContacts+", total cells half matrix: "+sizeHalfMatrix);
 	}
 }

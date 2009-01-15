@@ -162,6 +162,14 @@ public class BoundsSmoother {
 		return sampleBounds(false);		
 	}
 	
+	/**
+	 * Gets a reference to the current bounds matrix 
+	 * @return
+	 */
+	protected Bound[][] getBounds() {
+		return bounds;
+	}
+	
 	/*----------------------- private methods  ---------------------------*/
 	
 	/**
