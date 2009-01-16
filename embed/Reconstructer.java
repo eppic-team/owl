@@ -91,14 +91,24 @@ public class Reconstructer {
 				bounds[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = new Bound(dist_min, dist_max);
 			}
 		}
-		// adding contiguous CA distance backbone constraints
+		
+		// adding contiguous CA distance backbone restraints
 		// TODO this assumes we are using Ca contact type, thus this method is not general for any contact type!
 		// of course for other contact types would be good to have the CA constraints too
-		for (int i=0;i<conformationSize-1;i++) {
-			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
-		}
+		addBackboneRestraints(bounds);
 		return bounds;
 	}	
+	
+	/**
+	 * Adds backbone restrains to the given bounds matrix. 
+	 * At the moment the restraints are the contiguous CA distances only
+	 * @param bounds
+	 */
+	private void addBackboneRestraints(Bound[][] bounds) {
+		for (int i=0;i<bounds.length-1;i++) {
+			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
+		}
+	}
 	
 	/**
 	 * Gets a reference to the initial all pairs bounds matrix 
@@ -188,20 +198,25 @@ public class Reconstructer {
 		System.out.println("Number of violations: "+count+" out of "+cells+" cells in half matrix");
 	}
 	
-	private static int getNumberViolations(Matrix matrixEmbedded, Bound[][] bounds) {
-		int violCount = 0;
+	private static int[] getViolations(Matrix matrixEmbedded, Bound[][] bounds) {
+		int upperViol = 0;
+		int lowerViol = 0;
 		for (int i=0;i<matrixEmbedded.getRowDimension();i++) {
 			for (int j=i+1;j<matrixEmbedded.getColumnDimension();j++) {
 				if (bounds[i][j]!=null) { // for a sparse bounds matrix there will be missing cells, we want to only count violations to cells with values
-					if ((matrixEmbedded.get(i,j)<bounds[i][j].lower) || (matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
-						violCount++;
+					if ((matrixEmbedded.get(i,j)<bounds[i][j].lower)) {
+						lowerViol++;
+					}				
+					if ((matrixEmbedded.get(i,j)>bounds[i][j].upper)) {
+						upperViol++;
 					}
 				}
 			}
 		} 
-		return violCount;
+		int[] viols = {lowerViol, upperViol};
+		return viols;
 	}
-	
+
 	private static void printMatrix(Matrix matrix) {
 		for (int i=0;i<matrix.getRowDimension();i++) {
 			for (int j=0;j<matrix.getColumnDimension();j++) {
@@ -232,7 +247,7 @@ public class Reconstructer {
 		System.out.println(pdbCode+pdbChainCode);
 		System.out.println("Total restraints: "+numberContacts+", total cells half matrix: "+sizeHalfMatrix);
 		
-		System.out.printf("%6s\t%6s\t%6s\t%6s", "rmsd","rmsdm","restrains_viols","bounds_viols");
+		System.out.printf("%6s\t%6s\t%6s\t%6s\t%6s\t%6s\t%6s\t%6s", "rmsd","rmsdm","low_restr_viols", "upp_restr_viols", "low_bounds_viols", "upp_bounds_viols", "restr_viols", "bounds_viols");
 		System.out.println();
 		
 		int modelnum=1;
@@ -246,9 +261,9 @@ public class Reconstructer {
 			}
 			
 			Matrix matrixEmbedded = model.calculateDistMatrix("Ca");
-			int restViols = getNumberViolations(matrixEmbedded, rec.initialBounds);
-			int boundsViols = getNumberViolations(matrixEmbedded, rec.getInitialBoundsAllPairs());
-			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d",rmsd,rmsdm,restViols,boundsViols);
+			int[] restViols = getViolations(matrixEmbedded, rec.initialBounds);
+			int[] boundsViols = getViolations(matrixEmbedded, rec.getInitialBoundsAllPairs());
+			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d\t%6d\t%6d\t%6d\t%6d",rmsd,rmsdm,restViols[0],restViols[1],boundsViols[0],boundsViols[1],restViols[0]+restViols[1],boundsViols[0]+boundsViols[1]);
 			System.out.println();
 			
 			if (debug) {
@@ -284,10 +299,10 @@ public class Reconstructer {
 		String ct = "Ca";
 		double cutoff = 8.0;
 		
-		String[] pdbCodes = {"1i1b", "1agd", "1mjc", "2acy", "1sha", "1rbp", "3eca", "1ho4", "1fap"};
-		String[] pdbChainCodes = {"A", "B", "A", "A", "A", "A", "A", "A", "B"};
-		//String[] pdbCodes = {"1bxy"};
-		//String[] pdbChainCodes = {"A"};
+		//String[] pdbCodes = {"1i1b", "1agd", "1mjc", "2acy", "1sha", "1rbp", "3eca", "1ho4", "1fap"};
+		//String[] pdbChainCodes = {"A", "B", "A", "A", "A", "A", "A", "A", "B"};
+		String[] pdbCodes = {"1bxy"};
+		String[] pdbChainCodes = {"A"};
 		
 		System.out.println("#### SAMPLING ");
 		for (int i=0; i<pdbCodes.length; i++) {
