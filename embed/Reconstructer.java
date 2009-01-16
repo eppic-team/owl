@@ -36,7 +36,6 @@ public class Reconstructer {
 	BoundsSmoother bs;
 	
 	private Bound[][] initialBounds;			// bounds as they are given from the input graph (i.e. sparse)
-	private Bound[][] initialBoundsAllPairs;	// bounds for all pairs of atoms after triangle inequality
 	
 	/**
 	 * Constructs a new Reconstructer object from a RIGraph
@@ -99,16 +98,16 @@ public class Reconstructer {
 			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
 		}
 		return bounds;
-	}
+	}	
 	
 	/**
-	 * Gets a reference to the current bounds matrix of the bs BoundsSmoother 
+	 * Gets a reference to the initial all pairs bounds matrix 
 	 * @return
 	 */
-	private Bound[][] getBounds() {
-		return bs.getBounds();
+	private Bound[][] getInitialBoundsAllPairs() {
+		return bs.getInitialBoundsAllPairs();
 	}
-	
+
 	/**
 	 * Maps from residue serials to indices of the bounds matrices 
 	 * @param idx the matrix index
@@ -132,30 +131,28 @@ public class Reconstructer {
 		
 		Pdb[] models = new ModelPdb[numModels];
 		
-		// we deep copy before passing to BoundsSmoother, to make sure we keep here a copy of initialBounds that is not modified
+		// BoundsSmoother makes its own copy of initialBounds so we are sure that the copy of initialBounds in this class is not modified
 		// and can potentially be reused (by calling again reconstruct)
-		bs = new BoundsSmoother(BoundsSmoother.copyBounds(initialBounds));
-		
-		initialBoundsAllPairs = bs.getBoundsAllPairs();
+		bs = new BoundsSmoother(initialBounds);
 		
 		if (debug) {
 			// all pairs bounds after triangle inequality
 			System.out.println("Bounds for all pairs after triangle inequality:");
-			BoundsSmoother.printBounds(initialBoundsAllPairs);
+			BoundsSmoother.printBounds(bs.getInitialBoundsAllPairs());
 		}
 		
 		for (int model=0;model<numModels;model++) {
 			
 			Matrix matrix;
 			if (!metrize) {
-				matrix = bs.sampleBounds(initialBoundsAllPairs);
+				matrix = bs.sampleBounds();
 			} else {
-				matrix = bs.metrize(initialBoundsAllPairs);
+				matrix = bs.metrize();
 			}
 			
-			if (debug) {
-				// bounds after sampling/metrization
-				System.out.println("Bounds after "+((metrize)?"metrization":"sampling")+":");
+			if (debug && metrize) {
+				// bounds after metrization (no need to print them if sampling because they don't change)
+				System.out.println("Bounds after metrization");
 				bs.printBounds();
 			}
 			
@@ -214,25 +211,12 @@ public class Reconstructer {
 		}
 	}
 
-	
-	/*-------------------------- main  -------------------------------*/
-	
-	/**
-	 * To test the class
-	 */
-	public static void main (String[] args) throws Exception {
-		boolean debug = false;
-		boolean writeFiles = true;
-		String outDir = "/project/StruPPi/jose/embed";
-		int numModels = 20;
-		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
-		boolean metrize = true; // if true metrization performed, if false random sampling
-		
-		String pdbCode = "1bxy";
-		String pdbChainCode = "A";
-		String ct = "Ca";
-		double cutoff = 8.0;
-		
+	public static void benchmarkReconstruction(String pdbCode, String pdbChainCode,
+			String ct, double cutoff,
+			boolean debug, boolean writeFiles, 
+			String outDir, 
+			int numModels,Embedder.ScalingMethod scalingMethod, boolean metrize) 
+	throws Exception{
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
 		Pdb pdbMirror = new PdbasePdb(pdbCode);
@@ -245,6 +229,8 @@ public class Reconstructer {
 		Reconstructer rec = new Reconstructer(graph);
 		Pdb[] pdbs = rec.reconstruct(numModels, metrize, scalingMethod, debug);
 
+		System.out.println(pdbCode+pdbChainCode);
+		System.out.println("Total restraints: "+numberContacts+", total cells half matrix: "+sizeHalfMatrix);
 		
 		System.out.printf("%6s\t%6s\t%6s\t%6s", "rmsd","rmsdm","restrains_viols","bounds_viols");
 		System.out.println();
@@ -260,12 +246,13 @@ public class Reconstructer {
 			}
 			
 			Matrix matrixEmbedded = model.calculateDistMatrix("Ca");
-			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d",rmsd,rmsdm,getNumberViolations(matrixEmbedded, rec.initialBounds),getNumberViolations(matrixEmbedded, rec.getBounds()));
+			int restViols = getNumberViolations(matrixEmbedded, rec.initialBounds);
+			int boundsViols = getNumberViolations(matrixEmbedded, rec.getInitialBoundsAllPairs());
+			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d",rmsd,rmsdm,restViols,boundsViols);
 			System.out.println();
 			
 			if (debug) {
-				printViolations(matrixEmbedded, rec.initialBoundsAllPairs);			
-				//printViolations(matrixEmbedded, rec.getBounds());
+				printViolations(matrixEmbedded, rec.getInitialBoundsAllPairs());
 			}
 
 			
@@ -274,6 +261,43 @@ public class Reconstructer {
 			
 			modelnum++;
 		}
-		System.out.println("Total restraints: "+numberContacts+", total cells half matrix: "+sizeHalfMatrix);
+		
+
 	}
+
+	
+	/*-------------------------- main  -------------------------------*/
+	
+	/**
+	 * To test the class
+	 */
+	public static void main (String[] args) throws Exception {
+		boolean debug = false;
+		boolean writeFiles = false;
+		String outDir = "/project/StruPPi/jose/embed";
+		int numModels = 20;
+		Embedder.ScalingMethod scalingMethod = Embedder.ScalingMethod.AVRG_INTER_CA_DIST;
+		//boolean metrize = true; // if true metrization performed, if false random sampling
+		
+		//String pdbCode = "1bxy";
+		//String pdbChainCode = "A";
+		String ct = "Ca";
+		double cutoff = 8.0;
+		
+		String[] pdbCodes = {"1i1b", "1agd", "1mjc", "2acy", "1sha", "1rbp", "3eca", "1ho4", "1fap"};
+		String[] pdbChainCodes = {"A", "B", "A", "A", "A", "A", "A", "A", "B"};
+		//String[] pdbCodes = {"1bxy"};
+		//String[] pdbChainCodes = {"A"};
+		
+		System.out.println("#### SAMPLING ");
+		for (int i=0; i<pdbCodes.length; i++) {
+			benchmarkReconstruction(pdbCodes[i], pdbChainCodes[i], ct, cutoff, debug, writeFiles, outDir, numModels, scalingMethod, false);
+		}
+		
+		System.out.println("#### METRIZATION ");
+		for (int i=0; i<pdbCodes.length; i++) {
+			benchmarkReconstruction(pdbCodes[i], pdbChainCodes[i], ct, cutoff, debug, writeFiles, outDir, numModels, scalingMethod, true);
+		}
+	}
+	
 }

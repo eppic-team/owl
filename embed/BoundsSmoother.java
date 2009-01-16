@@ -92,36 +92,33 @@ public class BoundsSmoother {
 	private HashMap<Boolean, HashMap<Integer,BoundsDigraphNode>> nodesBoundsDigraph; // map of serial/side to nodes in the bounds digraph
 	private double lmax; // maximum of the lower bounds: offset value for the boundsDigraph (not to have negative weights so that we can use Dijkstra's algo)
 	
-	private Bound[][] bounds; // the bounds (half-)matrix with lower/upper bounds for all pairs (or with nulls for pairs without assigned bounds yet) 
+	private Bound[][] initialBoundsAllPairs; // the initial bounds for all pairs (input bounds + triangle inequality)
+	private Bound[][] bounds;
 	
 	private Random rand; // the random generator for sampleBounds and metrize
 	
 	/*------------------------ constructors ------------------------------*/
 	
 	/**
-	 * Constructs a new BoundsSmoother object given a matrix of Bounds.
+	 * Constructs a new BoundsSmoother object given a (sparse) matrix of Bounds
+	 * infering bounds for all other pairs through the triangle inequality
 	 * @param graph
 	 */
-	public BoundsSmoother(Bound[][] bounds) {
-		this.bounds = bounds;
+	public BoundsSmoother(Bound[][] inputBounds) {
+		//we don't want to touch the inputBounds, we make a copy and work with that one
+		bounds = copyBounds(inputBounds); 
 		this.conformationSize = bounds.length;
+		computeTriangleInequality();
+		// after computing the triangle inequality bounds contain the bounds for all pairs
+		// we want to keep a copy of this initial bounds that can't be modified later
+		this.initialBoundsAllPairs = copyBounds(bounds);
 	}
 	
 	/*----------------------- public methods  ----------------------------*/
 	
 	/**
-	 * Computes bounds for all pairs, based on the set of sparse distance ranges
-	 * The returned array is a new array not the reference to the internal bounds array.
-	 * @return a 2-dimensional array with the lower bounds for all pairs of residues, the 
-	 * indices of the array are guaranteed to be in the same order as the residue serials.
-	 */
-	public Bound[][] getBoundsAllPairs() {
-		computeTriangleInequality();
-		return copyBounds(bounds); // we return a copy of the internal bounds array so that we can keep modifying it without side-effects to the returned reference
-	}
-		
-	/**
-	 * Performs partial metrization for the internal bounds array.
+	 * Performs partial metrization starting from the initialBoundsAllPairs array and 
+	 * updating the internal bounds array.
 	 * The internal bounds array is updated with the new bounds after metrization.
 	 * The idea is that metrization doesn't need to be done for all atoms but only 
 	 * for a handful of them (called roots). This results in a much faster algorithm having 
@@ -130,9 +127,9 @@ public class BoundsSmoother {
 	 * metrization algorithm", Kuszewski J, Nilges M, Bruenger AT, 1992, Journal of Biomolecular NMR
 	 * @return
 	 */
-	public Matrix metrize(Bound[][] initialBoundsAllPairs) {
+	public Matrix metrize() {
 
-		bounds = initialBoundsAllPairs;
+		bounds = copyBounds(initialBoundsAllPairs);
 		
 		initSeed();
 		
@@ -156,33 +153,33 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Gets a reference to the current bounds matrix 
-	 * @return
-	 */
-	protected Bound[][] getBounds() {
-		return bounds;
-	}
-	
-	/*----------------------- private methods  ---------------------------*/
-	
-	/**
-	 * Initialises (or resets the random seed).
-	 * If DEBUG flag is true the random seed will be a fixed value DEBUG_SEED
-	 */
-	private void initSeed() {
-		if (DEBUG) {
-			rand = new Random(DEBUG_SEED);
-		} else {
-			rand = new Random();
-		} 
-	}
-	
-	/**
-	 * Gets a random sample from the given bounds array of all pairs distance ranges
+	 * Randomly samples a metric matrix from the all pairs initial bounds, i.e.
+	 * the input restraints extended to all pairs through the triangle inequality 
 	 * @return a symmetric metric matrix (both sides filled)
 	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
 	 */
-	public Matrix sampleBounds(Bound[][] bounds) {
+	public Matrix sampleBounds() {
+		return sampleBounds(initialBoundsAllPairs);
+	}
+	
+	/**
+	 * Gets a reference to the initial all pairs bounds matrix 
+	 * @return
+	 */
+	public Bound[][] getInitialBoundsAllPairs() {
+		return initialBoundsAllPairs;
+	}
+	
+	/*----------------------- private methods  ---------------------------*/
+
+	/**
+	 * Gets a random sample for the given all pairs bounds array
+	 * Does not modify the bounds array
+	 * @param bounds
+	 * @return a symmetric metric matrix (both sides filled)
+	 * @throws NullPointerException if the internal bounds array doesn't contain bounds for all pairs
+	 */
+	private Matrix sampleBounds(Bound[][] bounds) {
 		initSeed();
 
 		double[][] matrix = new double[conformationSize][conformationSize];
@@ -196,6 +193,18 @@ public class BoundsSmoother {
 			}
 		}
 		return new Matrix(matrix);
+	}
+
+	/**
+	 * Initialises (or resets the random seed).
+	 * If DEBUG flag is true the random seed will be a fixed value DEBUG_SEED
+	 */
+	private void initSeed() {
+		if (DEBUG) {
+			rand = new Random(DEBUG_SEED);
+		} else {
+			rand = new Random();
+		} 
 	}
 
 	/**
@@ -221,7 +230,7 @@ public class BoundsSmoother {
 	}
 	
 	/**
-	 * Computes bounds for all pairs through triangle inequalities from the bounds member variable
+	 * Computes bounds for all pairs through triangle inequalities for the internal bounds array
 	 * containing a set of lower/upper bounds (sparse or full)
 	 * The bounds array is modified to contain the new bounds. 
 	 * This is guaranteed to run in o(nmlog(n)), thus if the input is sparse then it's pretty fast: o(n2log(n)) but if 
