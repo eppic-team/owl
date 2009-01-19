@@ -140,6 +140,13 @@ public abstract class Pdb {
 		return dataLoaded;
 	}
 	
+	/**
+	 * Queries local copies of PQS and PISA data for the current PDB code and
+	 * returns the reported oligomeric state or null if pdb code was not found.
+	 * The member variable 'oligomeric' will be set to the result.
+	 * @return the presumed oligomeric state or null if no data found
+	 * @throws IOException if data files are not readable
+	 */
 	public int checkOligomeric() throws IOException {
 		BufferedReader in;
 		String inputLine;
@@ -177,6 +184,15 @@ public abstract class Pdb {
 		return oligomeric.getState();		
 	}
 	
+	/**
+	 * Queries the Catalytic Site Atlas (Porter et al. NAR 32: D129-D133, 2004) for the current
+	 * pdb code and fills the member variable 'catalSiteSet' with the results.
+	 * If no entry is found, 'catalSiteSet' is set to null.
+	 * @param version the CSA version to use (e.g. {@link CatalSiteSet.LATEST_VERSION})
+	 * @param online whether to access online version of CSA or use a local copy
+	 * @return number of errors (mismatching residues between this structure and the CSA annotation)
+	 * @throws IOException if local file or online database could not be read
+	 */
 	public int checkCSA(String version, boolean online) throws IOException {
 		BufferedReader in;
 		String inputLine;
@@ -2639,6 +2655,92 @@ public abstract class Pdb {
 			System.out.printf("%7.2f %7.2f\n",phipsi.get(resser)[0],phipsi.get(resser)[1]);
 		}
 	}
+	
+	/*---------------------------- static methods ---------------------------*/
+	
+	/**
+	 * Loads a pdb structure where arg can be a pdbcode+chaincode or a pdb file name.
+	 * If something goes wrong, prints an error message and exits.
+	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
+	 * @return the newly created pdb object
+	 */
+	public static Pdb readStructureOrExit(String arg) {
+		return readFromFileOrPdbCode(arg, true, false);
+	}
+	
+	/**
+	 * Loads a pdb structure where arg can be a pdbcode+chaincode or a pdb file name.
+	 * If something goes wrong, prints an error message and returns null;
+	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
+	 * @return the newly created pdb object or null
+	 */	
+	public static Pdb readStructureOrNull(String arg) {
+		return readFromFileOrPdbCode(arg, true, false);		
+	}
+	
+	/**
+	 * Loads a pdb structure given a pdbcode+chaincode or a pdb file name.
+	 * Common exceptions are caught internally. The behvaiour in case of an error is
+	 * specified by the parameters <code>exit</code> and <code>silent</code>.
+	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
+	 * @param exit if true, system.exit(1) is called on error
+	 * @param silent if false, error messages will be printed
+	 * @return the structure object
+	 */
+	public static Pdb readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
+		Pdb pdb = null;
+		
+		// check if argument is a filename
+		File inFile = new File(arg);
+		if(inFile.canRead()) {
+			System.out.println("Reading file " + arg);
+			pdb = new PdbfilePdb(arg);
+			try {
+				String[] chains = pdb.getChains();
+				System.out.println("Loading chain " + chains[0]);
+				pdb.load(chains[0]);
+			} catch (PdbLoadError e) {
+				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
+			}
+		} else {
+			// check if argument is a pdb code
+			if(arg.length() < 4 || arg.length() > 5) {
+				if(!silent) System.err.println(arg + "is neither a valid file name nor a valid pdb code");
+				if(exit) System.exit(1);
+			} else {
+				String pdbCode = arg.substring(0,4);
+				String chainCode = arg.substring(4,5);
+				try {
+					if(!silent) System.out.println("Loading pdb code " + pdbCode);
+					pdb = new PdbasePdb(pdbCode);
+					if(chainCode.length() == 0) {
+						try {
+							chainCode = pdb.getChains()[0];
+						} catch (PdbLoadError e) {
+							if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
+							if(exit) System.exit(1);
+						}
+					}
+					try {
+						if(!silent) System.out.println("Loading chain " + chainCode);
+						pdb.load(pdb.getChains()[0]);
+					} catch (PdbLoadError e) {
+						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
+						if(exit) System.exit(1);
+					}
+				} catch (SQLException e) {
+					if(!silent) System.err.println("Database error: " + e.getMessage());
+					if(exit) System.exit(1);
+				} catch (PdbCodeNotFoundError e) {
+					if(!silent) System.err.println("Pdb code " + pdbCode + " not found in database.");
+					if(exit) System.exit(1);
+				}
+			}
+		}
+		return pdb;
+	}
+	
+	/*--------------------------------- main --------------------------------*/
 	
 	// to test the class
 	public static void main(String[] args) throws Exception {
