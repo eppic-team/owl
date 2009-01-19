@@ -77,5 +77,13 @@ public class CatalyticSite {
 			System.out.println("site:"+id+"-res:"+resSer+"-func:"+getChemFuncFromResSerial(resSer));
 		}
 	}
+	
+	public String toString() {
+		String msg = "";
+		for(int resSer:resser2chemfunc.keySet()) {
+			msg += String.format("Site:%3d Res:%4d Function:%2s \n", id, resSer, getChemFuncFromResSerial(resSer));
+		}
+		return msg;
+	}
 }
 

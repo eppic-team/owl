@@ -11,7 +11,8 @@ public class CatalSiteSet {
 
 	/*------------------------------ constants ------------------------------*/
 	
-	private static final String LATEST_VERSION = "2.2.7"; // default version
+	//private static final String LATEST_VERSION = "2.2.7"; // default version
+	public static final String LATEST_VERSION = "2.2.10"; // as of 2008-10-02
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -61,7 +62,7 @@ public class CatalSiteSet {
 	public Iterator<CatalyticSite> getIterator() {
 		return catalyticSites.iterator();
 	}
-	
+		
 	/** 
 	 * For a given residue returns the catalytic sites this residue participates in,
 	 * or null if the residue is not in an assigned catalytic site.
@@ -170,5 +171,15 @@ public class CatalSiteSet {
         	CatalyticSite cs = (CatalyticSite)iterator.next();
         	cs.print();
         } 
+	}
+	
+	public String toString() {
+		String msg = "";
+		Iterator<CatalyticSite> iterator = catalyticSites.iterator ();
+        while (iterator.hasNext ()) {
+        	CatalyticSite cs = (CatalyticSite)iterator.next();
+        	msg += cs.toString();
+        } 		
+        return msg;
 	}
 }
