@@ -45,70 +45,8 @@ public class Reconstructer {
 	 */
 	public Reconstructer(RIGraph graph) {
 		this.rig = graph;
-		this.initialBounds = convertRIGraphToBoundsMatrix();
-	}
-	
-	/**
-	 * Convert the given RIGraph to a bounds matrix. The indices of the matrix can be mapped back to residue 
-	 * serials through {@link #getResserFromIdx(int)}
-	 * At the moment supports only Ca contact type 
-	 * @return
-	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
-	 */
-	private Bound[][] convertRIGraphToBoundsMatrix() {
-		// sanity check
-		if (rig.getSequence().length()!=rig.getFullLength()) {
-			throw new IllegalArgumentException("Full length of RIG and length of sequence differ!");
-		}
-		
-		int conformationSize = rig.getFullLength();
-		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
-		Bound[][] bounds = new Bound[conformationSize][conformationSize];
-		double cutoff = rig.getCutoff();
-		String ct = rig.getContactType();
-		String i_ct = ct;
-		String j_ct = ct;
-		if (ct.contains("/")){
-			i_ct = ct.split("/")[0];
-			j_ct = ct.split("/")[1];
-		}
-		
-		if (!AAinfo.isValidSingleAtomContactType(i_ct) || !AAinfo.isValidSingleAtomContactType(j_ct)){
-			throw new IllegalArgumentException("Contact type "+i_ct+" or "+j_ct+" is not valid for reconstruction");
-		}
-		
-		for (RIGEdge cont:rig.getEdges()){
-			Pair<RIGNode> pair = rig.getEndpoints(cont);
-			String i_res = pair.getFirst().getResidueType();
-			String j_res = pair.getSecond().getResidueType();
-
-			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
-			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
-			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
-			
-			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
-				bounds[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = new Bound(dist_min, dist_max);
-			}
-		}
-		
-		// adding contiguous CA distance backbone restraints
-		// TODO this assumes we are using Ca contact type, thus this method is not general for any contact type!
-		// of course for other contact types would be good to have the CA constraints too
-		addBackboneRestraints(bounds);
-		return bounds;
+		this.initialBounds = convertRIGraphToBoundsMatrix(this.rig);
 	}	
-	
-	/**
-	 * Adds backbone restrains to the given bounds matrix. 
-	 * At the moment the restraints are the contiguous CA distances only
-	 * @param bounds
-	 */
-	private void addBackboneRestraints(Bound[][] bounds) {
-		for (int i=0;i<bounds.length-1;i++) {
-			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
-		}
-	}
 	
 	/**
 	 * Gets a reference to the initial all pairs bounds matrix 
@@ -183,6 +121,68 @@ public class Reconstructer {
 	}
 	
 	/*------------------------ statics  ------------------------------*/
+	
+	/**
+	 * Convert the given RIGraph to a bounds matrix. The indices of the matrix can be mapped back to residue 
+	 * serials through {@link #getResserFromIdx(int)}
+	 * At the moment supports only Ca contact type 
+	 * @return
+	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
+	 */
+	protected static Bound[][] convertRIGraphToBoundsMatrix(RIGraph rig) {
+		// sanity check
+		if (rig.getSequence().length()!=rig.getFullLength()) {
+			throw new IllegalArgumentException("Full length of RIG and length of sequence differ!");
+		}
+		
+		int conformationSize = rig.getFullLength();
+		// code cloned from ConstraintsMaker.createDistanceConstraints with some modifications
+		Bound[][] bounds = new Bound[conformationSize][conformationSize];
+		double cutoff = rig.getCutoff();
+		String ct = rig.getContactType();
+		String i_ct = ct;
+		String j_ct = ct;
+		if (ct.contains("/")){
+			i_ct = ct.split("/")[0];
+			j_ct = ct.split("/")[1];
+		}
+		
+		if (!AAinfo.isValidSingleAtomContactType(i_ct) || !AAinfo.isValidSingleAtomContactType(j_ct)){
+			throw new IllegalArgumentException("Contact type "+i_ct+" or "+j_ct+" is not valid for reconstruction");
+		}
+		
+		for (RIGEdge cont:rig.getEdges()){
+			Pair<RIGNode> pair = rig.getEndpoints(cont);
+			String i_res = pair.getFirst().getResidueType();
+			String j_res = pair.getSecond().getResidueType();
+
+			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
+			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
+			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
+			
+			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
+				bounds[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = new Bound(dist_min, dist_max);
+			}
+		}
+		
+		// adding contiguous CA distance backbone restraints
+		// TODO this assumes we are using Ca contact type, thus this method is not general for any contact type!
+		// of course for other contact types would be good to have the CA constraints too
+		addBackboneRestraints(bounds);
+		return bounds;
+	}	
+	
+	/**
+	 * Adds backbone restrains to the given bounds matrix. 
+	 * At the moment the restraints are the contiguous CA distances only
+	 * @param bounds
+	 */
+	protected static void addBackboneRestraints(Bound[][] bounds) {
+		for (int i=0;i<bounds.length-1;i++) {
+			bounds[i][i+1]=new Bound(BB_CA_DIST,BB_CA_DIST);
+		}
+	}
 	
 	private static void printViolations (Matrix matrixEmbedded, Bound[][] bounds) {
 		int count = 0;
