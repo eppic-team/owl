@@ -9,11 +9,14 @@ import java.util.Random;
 import java.util.TreeSet;
 
 import edu.uci.ics.jung.graph.util.Pair;
+import graphAveraging.GraphAverager;
+import graphAveraging.GraphAveragerError;
 
 import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.RIGEdge;
+import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGraph;
 
 public class Distiller {
@@ -48,6 +51,7 @@ public class Distiller {
 	private int totalNumberContacts;
 	private double finalContacts;
 	private int cmapSize;
+	private RIGraph rig;
 	
 	private ArrayList<SetScore> allSampledSets;
 	
@@ -59,6 +63,7 @@ public class Distiller {
 	 * @param finalContacts
 	 */
 	public Distiller(RIGraph rig, double finalContacts) {
+		this.rig = rig;
 		this.cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		this.totalNumberContacts = rig.getEdgeCount();
 		this.finalContacts = finalContacts;
@@ -174,8 +179,8 @@ public class Distiller {
 	/*-------------------------- publics  -------------------------------*/
 	
 	/**
-	 * Samples random subsets of the contact map scoring them and storing all results in the
-	 * allSampledSets ArrayList. Get the max and min scoring subsets with {@link #getMaxErrorSetScore()} and 
+	 * Samples random subsets of the contact map scoring them and storing all results in the 
+	 * allSampledSets ArrayList (sorted by scores). Get the max and min scoring subsets with {@link #getMaxErrorSetScore()} and 
 	 * {@link #getMinErrorSetScore()}. Write all scores out with {@link #writeScores(PrintStream)}
 	 * @param numSamples
 	 */
@@ -196,6 +201,7 @@ public class Distiller {
 			if (i!=0 && i%1000==0) System.out.println(" "+i);
 		}
 				
+		Collections.sort(allSampledSets);
 	}
 	
 	/**
@@ -203,7 +209,7 @@ public class Distiller {
 	 * @return
 	 */
 	public SetScore getMinErrorSetScore() {
-		return Collections.min(allSampledSets);
+		return allSampledSets.get(0);
 	}
 
 	/**
@@ -211,7 +217,7 @@ public class Distiller {
 	 * @return
 	 */
 	public SetScore getMaxErrorSetScore() {
-		return Collections.max(allSampledSets);
+		return allSampledSets.get(allSampledSets.size()-1);
 	}
 	
 	/**
@@ -223,14 +229,44 @@ public class Distiller {
 			out.printf("%8.3f\n",ss.score);
 		}
 	}
+	
+	/**
+	 * Returns a RIGraph containing the union of edges of the best percentileForBestSet percent 
+	 * subsets out of all the sampled subsets. The edges are weighted by the fraction of occurrence 
+	 * in the subsets.
+	 * @param percentileForBestSet
+	 * @return
+	 */
+	public RIGraph getRIGEnsembleForBestSets(double percentileForBestSet) {
+		int numberBestSets = (int)(allSampledSets.size()*percentileForBestSet);
+		System.out.println("Getting the 1st percentile of the best scores: "+numberBestSets);
+		double sumScore = 0;
+		RIGEnsemble rigs = new RIGEnsemble(rig.getContactType(), rig.getCutoff());
+		for (int i=0;i<numberBestSets;i++) {
+			SetScore setScore = allSampledSets.get(i);
+			sumScore+=setScore.score;
+			rigs.addRIG(createRIGraphFromIntPairSet(rig.getSequence(), setScore.set, rig.getContactType(), rig.getCutoff()));
+		}
+		System.out.printf("Average error value for best sets: %8.3f\n",(sumScore/(double)numberBestSets));
+		GraphAverager ga = null;
+		try { 
+			ga = new GraphAverager(rigs);
+		} catch (GraphAveragerError e) {
+			// this shouldn't happen
+			System.err.println("Unexpected error while creating the average RIG: "+e.getMessage());
+		}
+		return ga.getAverageGraph();
+	}
 		
 	/*------------------------- statics  -----------------------------*/
 	
-	private static RIGraph createRIGraphFromIntPairSet(String sequence, IntPairSet set) {
+	private static RIGraph createRIGraphFromIntPairSet(String sequence, IntPairSet set, String contactType, double distCutoff) {
 		RIGraph graph = new RIGraph(sequence);
 		for (Pair<Integer> pair:set) {
 			graph.addEdge(new RIGEdge(1.0), graph.getNodeFromSerial(pair.getFirst()+1), graph.getNodeFromSerial(pair.getSecond()+1));
 		}
+		graph.setContactType(contactType);
+		graph.setCutoff(distCutoff);
 		return graph;
 	}
 	
@@ -238,27 +274,31 @@ public class Distiller {
 	
 	public static void main(String[] args) throws Exception {
 		
-		if (args.length<1) {
-			System.err.println("Usage: Distiller <num_samples>");
+		if (args.length<2) {
+			System.err.println("Usage: Distiller <num_samples> <out_dir>");
 		}
 		int numSamples = Integer.parseInt(args[0]);
-		
+		String outDir = args[1];
+
+		double finalContactPercent = 0.05;
+		double percentileForBestSet = 0.01;
 		
 		String pdbCode = "1sha";
 		String pdbChainCode = "A";
 		String ct = "Ca";
 		double cutoff = 8.0;
 
-		File essenceFile = new File("/project/StruPPi/jose/embed/"+pdbCode+pdbChainCode+"_essence.cm");
-		File maxErrorFile = new File("/project/StruPPi/jose/embed/"+pdbCode+pdbChainCode+"_maxError.cm");
-		File scoresFile = new File("/project/StruPPi/jose/embed/"+pdbCode+pdbChainCode+".scores");
+		File essenceFile = new File(outDir,pdbCode+pdbChainCode+"_essence.cm");
+		File maxErrorFile = new File(outDir,pdbCode+pdbChainCode+"_maxError.cm");
+		File scoresFile = new File(outDir,pdbCode+pdbChainCode+".scores");
+		File ensembleFile = new File(outDir,pdbCode+pdbChainCode+"_ensemble_best_"+String.format("%4.2f",percentileForBestSet)+".cm");
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
 		RIGraph graph = pdb.get_graph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());
 		
-		Distiller dist = new Distiller(graph, 0.05);
+		Distiller dist = new Distiller(graph, finalContactPercent);
 		
 		dist.distillRandomSampling(numSamples);
 
@@ -267,12 +307,15 @@ public class Distiller {
 
 		System.out.println();
 		
-		System.out.printf("Max error: %4.2e \n", maxErrorSetScore.score);
-		createRIGraphFromIntPairSet(pdb.getSequence(), maxErrorSetScore.set).write_graph_to_file(maxErrorFile.getAbsolutePath());
+		System.out.printf("Max error: %8.3f \n", maxErrorSetScore.score);
+		createRIGraphFromIntPairSet(pdb.getSequence(), maxErrorSetScore.set, ct, cutoff).write_graph_to_file(maxErrorFile.getAbsolutePath());
 
-		System.out.printf("Min error: %4.2e \n", minErrorSetScore.score);
-		createRIGraphFromIntPairSet(pdb.getSequence(), minErrorSetScore.set).write_graph_to_file(essenceFile.getAbsolutePath());
+		System.out.printf("Min error: %8.3f \n", minErrorSetScore.score);
+		createRIGraphFromIntPairSet(pdb.getSequence(), minErrorSetScore.set, ct, cutoff).write_graph_to_file(essenceFile.getAbsolutePath());
 				
 		dist.writeScores(new PrintStream(scoresFile));
+		
+		RIGraph ensembleOfBests = dist.getRIGEnsembleForBestSets(percentileForBestSet);
+		ensembleOfBests.write_graph_to_file(ensembleFile.getAbsolutePath());
 	}
 }
