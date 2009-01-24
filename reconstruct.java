@@ -463,6 +463,9 @@ public class reconstruct {
 						runId = origPdbFile.getName(); 
 					else
 						runId = pdbCode+pdbChainCode;
+				} else {
+					// if reconstructing from files (normal mode) we take the name of the first file as id
+					runId = cmFiles[0].getName();
 				}
 				double cutoff1 = cutoffs[0], cutoff2 = 0, cutoff3 = 0;
 				String ct1 = cts[0], ct2 = "-", ct3 = "-";
