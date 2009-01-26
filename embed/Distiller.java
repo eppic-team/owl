@@ -1,7 +1,9 @@
 package embed;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -21,29 +23,8 @@ import proteinstructure.RIGraph;
 
 public class Distiller {
 	
-	private static final int DIAGONALS_TO_SKIP = 3;
-	
-	
-	/**
-	 * Class to store a IntPairSet (set of contacts) together with its score.
-	 * Can be sorted based on the score order. 
-	 * @author duarte
-	 *
-	 */
-	private class SetScore implements Comparable<SetScore>{
-		public double score;
-		public IntPairSet set;
-		public SetScore(double score, IntPairSet set) {
-			this.score = score;
-			this.set = set;
-		}
-		public int compareTo(SetScore o) {
-			if (this.score<o.score) return -1;
-			if (this.score>o.score) return 1;
-			return 0;
-		}
-	}
-	
+	private static final int DIAGONALS_TO_SKIP = 4;
+	protected static final String SCORE_PRINT_FORMAT = "%9.4f";
 	
 	/*-------------------------- members  -------------------------------*/
 	
@@ -73,28 +54,29 @@ public class Distiller {
 	/*------------------------- privates  -------------------------------*/
 	
 	/**
-	 * Calculates the sum square deviation of the given all pairs bounds matrix 
+	 * Calculates the sum deviation of the given all pairs bounds matrix 
 	 * against the contact map bounds measuring the deviation of the upper bounds 
-	 * to the ones in the contact map: sum((u'i-ui)2)
+	 * to the ones in the contact map: sum(max(0,(u'i-ui))), i.e. if upper bound in 
+	 * given matrix is below the one in the contact map there is no penalty.
 	 * @param bounds
 	 * @return
 	 */
-	private double computeSumSquareDeviation(Bound[][] bounds) {
-		double sumSquareDev = 0;
+	private double computeSumDeviation(Bound[][] bounds) {
+		double sumDev = 0;
 		for (int i=0;i<cmapSize;i++) {
 			for (int j=i+1;j<cmapSize;j++) {
 				if (cmapBounds[i][j]!=null) {
-					sumSquareDev += ((bounds[i][j].upper-cmapBounds[i][j].upper)*(bounds[i][j].upper-cmapBounds[i][j].upper));
+					sumDev += Math.max(0,bounds[i][j].upper-cmapBounds[i][j].upper);
 				}
 			}
 		}
-		return sumSquareDev;
+		return sumDev;
 
 	}
 	
 	/**
-	 * Measures the error function for the given sparseBounds matrix (a subset of the contact map) by first 
-	 * inferring bounds for all pairs through the triangle inequality and then 
+	 * Measures the error function for the given sparseBounds matrix (a subset of the contact map) 
+	 * by first inferring bounds for all pairs through the triangle inequality and then 
 	 * measuring how well the all pairs matrix fits the contact map.  
 	 * Thus a high error value means the given sparseBounds matrix has low information content
 	 * about the rest of the contact map and low error value that the matrix has high 
@@ -105,7 +87,7 @@ public class Distiller {
 	private double getError(Bound[][] sparseBounds) {
 		// infer bounds for all pairs through triangle inequality
 		Bound[][] bounds = inferAllBounds(sparseBounds);
-		return (computeSumSquareDeviation(bounds))/(double) cmapSize; 
+		return (computeSumDeviation(bounds))/(double) cmapSize; 
 	}
 	
 	/**
@@ -189,16 +171,17 @@ public class Distiller {
 		allSampledSets = new ArrayList<SetScore>();		
 
 		int numSampledContacts = (int)(totalNumberContacts*finalContacts);
-		System.out.println("Sampling "+numSamples+" subsets of "+numSampledContacts+" contacts ");
+		System.out.println("Sampling "+numSamples+" subsets of "+numSampledContacts+" contacts, with sequence separation above "+DIAGONALS_TO_SKIP);
 		
 		for (int i=0;i<numSamples;i++) {
 			Bound[][] boundsSubset = sampleSubset(numSampledContacts);
 			double error = getError(boundsSubset);
 		
-			allSampledSets.add(new SetScore(error,getPairs(boundsSubset, DIAGONALS_TO_SKIP)));			
+			// we have to skip the first diagonal that we've added to the random subset
+			allSampledSets.add(new SetScore(error,getPairs(boundsSubset, 1)));			
 			//System.out.printf("sample "+i+": "+getPairs(boundsSubset,1).size()+" contacts. Error value: %4.2e\n",error);
-			if (i!=0 && i%10==0) System.out.print(".");
-			if (i!=0 && i%1000==0) System.out.println(" "+i);
+			if (i!=0 && i%100==0) System.out.print(".");
+			if (i!=0 && i%10000==0) System.out.println(" "+i);
 		}
 				
 		Collections.sort(allSampledSets);
@@ -226,7 +209,7 @@ public class Distiller {
 	 */
 	public void writeScores(PrintStream out) {
 		for (SetScore ss:allSampledSets) {
-			out.printf("%8.3f\n",ss.score);
+			out.printf(""+SCORE_PRINT_FORMAT+"\n",ss.score);
 		}
 	}
 	
@@ -247,7 +230,7 @@ public class Distiller {
 			sumScore+=setScore.score;
 			rigs.addRIG(createRIGraphFromIntPairSet(rig.getSequence(), setScore.set, rig.getContactType(), rig.getCutoff()));
 		}
-		System.out.printf("Average error value for best sets: %8.3f\n",(sumScore/(double)numberBestSets));
+		System.out.printf("Average error value for best sets: "+SCORE_PRINT_FORMAT+"\n",(sumScore/(double)numberBestSets));
 		GraphAverager ga = null;
 		try { 
 			ga = new GraphAverager(rigs);
@@ -257,10 +240,33 @@ public class Distiller {
 		}
 		return ga.getAverageGraph();
 	}
+	
+	/**
+	 * Writes all sampled subsets and scores to two files in table format with a subsetId column
+	 * linking the two tables. Useful to import into a relational database.
+	 * @param edgesTableFile
+	 * @param scoresTableFile
+	 * @param startingID the starting subset id to use
+	 * @throws IOException
+	 */
+	public void writeSubsetsToTables(File edgesTableFile, File scoresTableFile, int startingID) throws IOException {
+		PrintWriter pwE = new PrintWriter(edgesTableFile);
+		PrintWriter pwS = new PrintWriter(scoresTableFile);
+		int i = startingID;
+		for (SetScore ss: allSampledSets) {
+			pwS.printf("%d\t"+SCORE_PRINT_FORMAT+"\n",i,ss.score);
+			for (Pair<Integer> pair:ss.set) {
+				pwE.println(i+"\t"+(pair.getFirst()+1)+"\t"+(pair.getSecond()+1));
+			}
+			i++;
+		}
+		pwE.close();
+		pwS.close();
+	}
 		
 	/*------------------------- statics  -----------------------------*/
 	
-	private static RIGraph createRIGraphFromIntPairSet(String sequence, IntPairSet set, String contactType, double distCutoff) {
+	public static RIGraph createRIGraphFromIntPairSet(String sequence, IntPairSet set, String contactType, double distCutoff) {
 		RIGraph graph = new RIGraph(sequence);
 		for (Pair<Integer> pair:set) {
 			graph.addEdge(new RIGEdge(1.0), graph.getNodeFromSerial(pair.getFirst()+1), graph.getNodeFromSerial(pair.getSecond()+1));
@@ -269,29 +275,28 @@ public class Distiller {
 		graph.setCutoff(distCutoff);
 		return graph;
 	}
-	
+		
 	/*-------------------------- main  -------------------------------*/
 	
 	public static void main(String[] args) throws Exception {
 		
-		if (args.length<2) {
-			System.err.println("Usage: Distiller <num_samples> <out_dir>");
+		if (args.length<3) {
+			System.err.println("Usage: Distiller <num_samples> <out_dir> <starting_subset_id>");
+			System.exit(1);
 		}
 		int numSamples = Integer.parseInt(args[0]);
 		String outDir = args[1];
+		int startingID = Integer.parseInt(args[2]);
 
 		double finalContactPercent = 0.05;
-		double percentileForBestSet = 0.01;
 		
 		String pdbCode = "1sha";
 		String pdbChainCode = "A";
 		String ct = "Ca";
 		double cutoff = 8.0;
 
-		File essenceFile = new File(outDir,pdbCode+pdbChainCode+"_essence.cm");
-		File maxErrorFile = new File(outDir,pdbCode+pdbChainCode+"_maxError.cm");
-		File scoresFile = new File(outDir,pdbCode+pdbChainCode+".scores");
-		File ensembleFile = new File(outDir,pdbCode+pdbChainCode+"_ensemble_best_"+String.format("%4.2f",percentileForBestSet)+".cm");
+		File edgesTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".subsets");
+		File scoresTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".scores");
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
@@ -301,21 +306,16 @@ public class Distiller {
 		Distiller dist = new Distiller(graph, finalContactPercent);
 		
 		dist.distillRandomSampling(numSamples);
-
+		
+		dist.writeSubsetsToTables(edgesTableFile, scoresTableFile, startingID);
+		
 		SetScore maxErrorSetScore = dist.getMaxErrorSetScore();
 		SetScore minErrorSetScore = dist.getMinErrorSetScore();
 
 		System.out.println();
 		
-		System.out.printf("Max error: %8.3f \n", maxErrorSetScore.score);
-		createRIGraphFromIntPairSet(pdb.getSequence(), maxErrorSetScore.set, ct, cutoff).write_graph_to_file(maxErrorFile.getAbsolutePath());
+		System.out.printf("Max error: "+SCORE_PRINT_FORMAT+" \n", maxErrorSetScore.score);
+		System.out.printf("Min error: "+SCORE_PRINT_FORMAT+" \n", minErrorSetScore.score);	
 
-		System.out.printf("Min error: %8.3f \n", minErrorSetScore.score);
-		createRIGraphFromIntPairSet(pdb.getSequence(), minErrorSetScore.set, ct, cutoff).write_graph_to_file(essenceFile.getAbsolutePath());
-				
-		dist.writeScores(new PrintStream(scoresFile));
-		
-		RIGraph ensembleOfBests = dist.getRIGEnsembleForBestSets(percentileForBestSet);
-		ensembleOfBests.write_graph_to_file(ensembleFile.getAbsolutePath());
 	}
 }
