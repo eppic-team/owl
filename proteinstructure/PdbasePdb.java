@@ -359,10 +359,10 @@ public class PdbasePdb extends Pdb {
 			double z = rsst.getDouble(7);				// z
 			Point3d coords = new Point3d(x, y, z);
 			if (AAinfo.isValidAA(res_type)) {
-				atomser2coord.put(atomserial, coords);
-				atomser2resser.put(atomserial, res_serial);
 				resser2restype.put(res_serial, res_type);
 				if (AAinfo.isValidAtomWithOXT(res_type,atom)){
+					atomser2coord.put(atomserial, coords);
+					atomser2resser.put(atomserial, res_serial);
 					resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
 				}
 			}
