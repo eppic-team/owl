@@ -52,8 +52,8 @@ public class AAinfo {
 	public static final String NONSTANDARD_AA_THREE_LETTER="XXX";
 	
 	// 1/3 letter code for unknown unobserved residues (used when reading from pdb file with no SEQRES and we have to introduce gaps)
-	public static final String UNKNOWN_UNOBSERVED_RES_ONE_LETTER = "?"; 
-	public static final String UNKNOWN_UNOBSERVED_RES_THREE_LETTER = "???";
+	public static final String UNKNOWN_UNOBSERVED_RES_ONE_LETTER = "X"; 
+	public static final String UNKNOWN_UNOBSERVED_RES_THREE_LETTER = "XXX";
 	
 	
 	/*----------------------- "member" variables ---------------------------*/
