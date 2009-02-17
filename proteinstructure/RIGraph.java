@@ -1091,14 +1091,16 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 		
 		// copying the SecondaryStructure object by retrieving all references from the new nodes
-		SecondaryStructure secStruct = new SecondaryStructure(this.getSecondaryStructure().getSequence());
-		for (RIGNode node:newGraph.getVertices()) {
-			SecStrucElement sselem = node.getSecStrucElement();
-			if (sselem!=null && !secStruct.contains(sselem)) {
-				secStruct.add(sselem);
+		if (this.getSecondaryStructure()!=null) {
+			SecondaryStructure secStruct = new SecondaryStructure(this.getSecondaryStructure().getSequence());
+			for (RIGNode node:newGraph.getVertices()) {
+				SecStrucElement sselem = node.getSecStrucElement();
+				if (sselem!=null && !secStruct.contains(sselem)) {
+					secStruct.add(sselem);
+				}
 			}
+			newGraph.setSecondaryStructure(secStruct);
 		}
-		newGraph.setSecondaryStructure(secStruct);		
 		
 		return newGraph;
 	}
