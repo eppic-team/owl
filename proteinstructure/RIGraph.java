@@ -220,6 +220,18 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		} 
 	}
 	
+	/**
+	 * Filter this RIGraph by removing the edges with weight below the given minWeight value.
+	 * @param minWeight
+	 */
+	public void filterByMinWeight(double minWeight) {
+		for (RIGEdge edge:this.getEdges()) {
+			if (edge.getWeight()<=minWeight) {
+				this.removeEdge(edge);
+			}
+		}
+	}
+	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
 	//     But to be able to put them there we would need to pass here a Transformer that gets atom or residue serials depending if we are in AI or RI Graph 
 	/**
