@@ -78,6 +78,22 @@ public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 		}
 		return motif;
 	}
+
+	public String getMotifNoGaps(){
+		String motif="";
+		int min=Math.min(Math.min(iNode.getResidueSerial(),jNode.getResidueSerial()), Collections.min(this.keySet()));
+		int max=Math.max(Math.max(iNode.getResidueSerial(),jNode.getResidueSerial()), Collections.max(this.keySet()));
+		for (int i=min;i<=max;i++){
+			if (this.containsKey(i)){
+				motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());	
+			} else if (i==iNode.getResidueSerial()){
+				motif+="x";
+			} else if (i==jNode.getResidueSerial()){
+				motif+="y";				
+			} 
+		}
+		return motif;
+	}
 	
 	public String getCommaSeparatedResSerials(){
 		String ressers="";
