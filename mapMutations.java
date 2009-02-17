@@ -37,6 +37,8 @@ public class mapMutations {
 	private static final double EXPOSURE_CUTOFF = 5.0; // everything above this cutoff is considered exposed
 	private static final String PYMOL_EXECUTABLE = "/project/StruPPi/bin/pymol -c";
 	
+	private static final boolean keepPymolScript = true;	// if false, script will be deleted on exit
+	
 	/**
 	 * @param args
 	 */
@@ -216,7 +218,7 @@ public class mapMutations {
 				
 		try {
 			File scriptFile = File.createTempFile("temp", ".pml");
-			scriptFile.deleteOnExit();
+			if(!keepPymolScript) scriptFile.deleteOnExit();
 			File pdbFile = File.createTempFile("temp", ".pdb");
 			pdbFile.deleteOnExit();
 			pdb.dump2pdbfile(pdbFile.toString());
