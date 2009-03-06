@@ -39,9 +39,9 @@ public class Distiller {
 	/*----------------------- constructors  -----------------------------*/
 	
 	/**
-	 * 
-	 * @param rig
-	 * @param finalContacts
+	 * Constructs a Distiller 
+	 * @param rig the residue interaction graph
+	 * @param finalContacts fraction of total contacts we want to be selected for the subset
 	 */
 	public Distiller(RIGraph rig, double finalContacts) {
 		this.rig = rig;
@@ -280,15 +280,14 @@ public class Distiller {
 	
 	public static void main(String[] args) throws Exception {
 		
-		if (args.length<3) {
-			System.err.println("Usage: Distiller <num_samples> <out_dir> <starting_subset_id>");
+		if (args.length<4) {
+			System.err.println("Usage: Distiller <num_samples> <out_dir> <starting_subset_id> <final_contact_percent>");
 			System.exit(1);
 		}
 		int numSamples = Integer.parseInt(args[0]);
 		String outDir = args[1];
 		int startingID = Integer.parseInt(args[2]);
-
-		double finalContactPercent = 0.05;
+		double finalContactRatio = Double.parseDouble(args[3])/(double)100;
 		
 		String pdbCode = "1sha";
 		String pdbChainCode = "A";
@@ -303,7 +302,7 @@ public class Distiller {
 		RIGraph graph = pdb.get_graph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());
 		
-		Distiller dist = new Distiller(graph, finalContactPercent);
+		Distiller dist = new Distiller(graph, finalContactRatio);
 		
 		dist.distillRandomSampling(numSamples);
 		
