@@ -30,7 +30,6 @@ public class Distiller {
 	
 	private Bound[][] cmapBounds;
 	private int totalNumberContacts;
-	private double finalContacts;
 	private int cmapSize;
 	private RIGraph rig;
 	
@@ -41,64 +40,16 @@ public class Distiller {
 	/**
 	 * Constructs a Distiller 
 	 * @param rig the residue interaction graph
-	 * @param finalContacts fraction of total contacts we want to be selected for the subset
 	 */
-	public Distiller(RIGraph rig, double finalContacts) {
+	public Distiller(RIGraph rig) {
 		this.rig = rig;
 		this.cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		this.totalNumberContacts = rig.getEdgeCount();
-		this.finalContacts = finalContacts;
 		this.cmapSize = cmapBounds.length;
 	}
 	
-	/*------------------------- privates  -------------------------------*/
-	
-	/**
-	 * Calculates the sum deviation of the given all pairs bounds matrix 
-	 * against the contact map bounds measuring the deviation of the upper bounds 
-	 * to the ones in the contact map: sum(max(0,(u'i-ui))), i.e. if upper bound in 
-	 * given matrix is below the one in the contact map there is no penalty.
-	 * @param bounds
-	 * @return
-	 */
-	private double computeSumDeviation(Bound[][] bounds) {
-		double sumDev = 0;
-		for (int i=0;i<cmapSize;i++) {
-			for (int j=i+1;j<cmapSize;j++) {
-				if (cmapBounds[i][j]!=null) {
-					sumDev += Math.max(0,bounds[i][j].upper-cmapBounds[i][j].upper);
-				}
-			}
-		}
-		return sumDev;
 
-	}
-	
-	/**
-	 * Measures the error function for the given sparseBounds matrix (a subset of the contact map) 
-	 * by first inferring bounds for all pairs through the triangle inequality and then 
-	 * measuring how well the all pairs matrix fits the contact map.  
-	 * Thus a high error value means the given sparseBounds matrix has low information content
-	 * about the rest of the contact map and low error value that the matrix has high 
-	 * information content  
-	 * @param sparseBounds
-	 * @return
-	 */
-	private double getError(Bound[][] sparseBounds) {
-		// infer bounds for all pairs through triangle inequality
-		Bound[][] bounds = inferAllBounds(sparseBounds);
-		return (computeSumDeviation(bounds))/(double) cmapSize; 
-	}
-	
-	/**
-	 * Infer bounds for all pairs from a spare bounds matrix via the triangle inequality
-	 * @param sparseBounds
-	 * @return
-	 */
-	private Bound[][] inferAllBounds(Bound[][] sparseBounds) {
-		BoundsSmoother bs = new BoundsSmoother(sparseBounds);
-		return bs.getInitialBoundsAllPairs();
-	}
+	/*------------------------- privates  -------------------------------*/
 
 	/**
 	 * Gets all pairs of the given bounds matrix except for the first 
@@ -165,17 +116,18 @@ public class Distiller {
 	 * allSampledSets ArrayList (sorted by scores). Get the max and min scoring subsets with {@link #getMaxErrorSetScore()} and 
 	 * {@link #getMinErrorSetScore()}. Write all scores out with {@link #writeScores(PrintStream)}
 	 * @param numSamples
+	 * @param contactsToSample fraction of total contacts we want to be selected for the subset 
 	 */
-	public void distillRandomSampling(int numSamples) {
+	public void distillRandomSampling(int numSamples, double contactsToSample) {
 		 
 		allSampledSets = new ArrayList<SetScore>();		
 
-		int numSampledContacts = (int)(totalNumberContacts*finalContacts);
+		int numSampledContacts = (int)(totalNumberContacts*contactsToSample);
 		System.out.println("Sampling "+numSamples+" subsets of "+numSampledContacts+" contacts, with sequence separation above "+DIAGONALS_TO_SKIP);
 		
 		for (int i=0;i<numSamples;i++) {
 			Bound[][] boundsSubset = sampleSubset(numSampledContacts);
-			double error = getError(boundsSubset);
+			double error = Scorer.getCMError(boundsSubset, rig);
 		
 			// we have to skip the first diagonal that we've added to the random subset
 			allSampledSets.add(new SetScore(error,getPairs(boundsSubset, 1)));			
@@ -280,17 +232,18 @@ public class Distiller {
 	
 	public static void main(String[] args) throws Exception {
 		
-		if (args.length<4) {
-			System.err.println("Usage: Distiller <num_samples> <out_dir> <starting_subset_id> <final_contact_percent>");
+		if (args.length<5) {
+			System.err.println("Usage: Distiller <pdbCode+pdbChainCode> <num_samples> <out_dir> <starting_subset_id> <subset_percent_size>");
 			System.exit(1);
 		}
-		int numSamples = Integer.parseInt(args[0]);
-		String outDir = args[1];
-		int startingID = Integer.parseInt(args[2]);
-		double finalContactRatio = Double.parseDouble(args[3])/(double)100;
+		String pdbId = args[0]; 
+		int numSamples = Integer.parseInt(args[1]);
+		String outDir = args[2];
+		int startingID = Integer.parseInt(args[3]);
+		double contactsToSample = Double.parseDouble(args[4])/(double)100;
 		
-		String pdbCode = "1sha";
-		String pdbChainCode = "A";
+		String pdbCode = pdbId.substring(0, 4);
+		String pdbChainCode = pdbId.substring(4,5);
 		String ct = "Ca";
 		double cutoff = 8.0;
 
@@ -302,9 +255,9 @@ public class Distiller {
 		RIGraph graph = pdb.get_graph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());
 		
-		Distiller dist = new Distiller(graph, finalContactRatio);
+		Distiller dist = new Distiller(graph);
 		
-		dist.distillRandomSampling(numSamples);
+		dist.distillRandomSampling(numSamples, contactsToSample);
 		
 		dist.writeSubsetsToTables(edgesTableFile, scoresTableFile, startingID);
 		
