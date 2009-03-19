@@ -10,9 +10,9 @@ import java.util.HashMap;
  * 
  * An amino acid in a protein sequence. Each of the twenty naturally occuring 
  * amino acids is an instance of this class. Additionally, a placeholder 'X' for
- * an unknown amino acid is defined. This class also provides static methods for
- * obtaining amino acid objects by their number, one letter code or three letter
- * code and to convert between these representations. 
+ * an unknown amino acid and a stop codon are defined. This class also provides
+ * static methods for obtaining amino acid objects by their number, one letter
+ * code or three letter code and to convert between these representations. 
  * 
  * Note: Currently, most classes in the package still use a simple string representation of
  * amino acids. Helper functions for these are provided in the class AAinfo.
@@ -22,6 +22,7 @@ import java.util.HashMap;
  * Changelog:
  * 2006/02/06 first created by HS
  * 2009/01/05 moved to package proteinstructure
+ * 2009/03/18 adding stop codon
  */
 public enum AminoAcid {
 		
@@ -48,7 +49,8 @@ public enum AminoAcid {
 	 TRP (18, "Tryptophan",    'W', "TRP", 10, -0.45, true,  true,  false, true,  false, false, false, false, false),
 	 TYR (19, "Tyrosine",      'Y', "TYR",  8,  0.22, true,  true,  false, true,  false, false, false, false, false),
 	 VAL (20, "Valine",        'V', "VAL",  3, -0.61, true,  false, true,  false, false, false, false, true , false),
-	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false);
+	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false),
+	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false);	 
 		
 	int number;
 	String name;			
@@ -69,7 +71,7 @@ public enum AminoAcid {
 	/*------------------------- constants ------------------------------*/
 	public static final char 	INVALID_ONE_LETTER_CODE 	= '?';
 	public static final String 	INVALID_THREE_LETTER_CODE 	= null;
-	public static final int 	INVALID_AA_NUMBER 			= -1;
+	public static final int 	INVALID_AA_NUMBER 			= -2;
 	
 	/*---------------------- static variables --------------------------*/
 	
@@ -181,7 +183,7 @@ public enum AminoAcid {
 	/**
 	 * convert amino acid three letter code to number
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
-	 * @return amino acid number (between 1 and 20) or -1 if input is invalid
+	 * @return amino acid number (between 1 and 20) or -2 if input is invalid
 	 */
 	public static int three2num(String three) {
 		AminoAcid aa = getByThreeLetterCode(three);
@@ -190,7 +192,7 @@ public enum AminoAcid {
 	
 	/**
 	 * convert amino acid number to three letter code 
-	 * @param num amino acid number (between 0 and 20) (e.g. 1 for Alanine)
+	 * @param num amino acid number (between -1 and 20) (e.g. 1 for Alanine, -1 for stop codon)
 	 * @return amino acid three letter code or null if input is invalid  
 	 */
 	public static String num2three(int num) {
@@ -201,7 +203,8 @@ public enum AminoAcid {
 	/**
 	 * convert amino acid one letter code to number
 	 * @param one amino acid one letter code (e.g. "ALA" for Alanine)
-	 * @return amino acid number (between 1 and 20 or 0 for unknown type) or -1 if input is invalid
+	 * @return amino acid number (between 1 and 20 or 0 for unknown type, -1 for stop codon) 
+	 * or -2 if input is invalid
 	 */
 	public static int one2num(char one) {
 		AminoAcid aa = getByOneLetterCode(one);
@@ -210,7 +213,7 @@ public enum AminoAcid {
 	
 	/**
 	 * convert amino acid number to one letter code 
-	 * @param num amino acid number (between 1 and 20) (e.g. 1 for Alanine)
+	 * @param num amino acid number (between -1 and 20) (e.g. 1 for Alanine, -1 for stop codon, 0 for unknown)
 	 * @return amino acid one letter code or '?' if input is invalid  
 	 */
 	public static char num2one(int num) {
@@ -311,17 +314,17 @@ public enum AminoAcid {
 		System.out.print("Step 4");
 		ok = true;	
 	
-		System.out.print("."); if(AminoAcid.getByNumber(-1) != null) { ok = false; } 
-		System.out.print("."); if(AminoAcid.num2one(-1) != '?') { ok = false; }
-		System.out.print("."); if(AminoAcid.num2three(-1) != null) { ok = false;  }
+		System.out.print("."); if(AminoAcid.getByNumber(-2) != null) { ok = false; } 
+		System.out.print("."); if(AminoAcid.num2one(-2) != '?') { ok = false; }
+		System.out.print("."); if(AminoAcid.num2three(-2) != null) { ok = false;  }
 
 		System.out.print("."); if(AminoAcid.getByOneLetterCode('?') != null) { ok = false;  }
-		System.out.print("."); if(AminoAcid.one2num('?') != -1) { ok = false;  }
+		System.out.print("."); if(AminoAcid.one2num('?') != -2) { ok = false;  }
 		System.out.print("."); if(AminoAcid.one2three('?') != null) { ok = false;  }
 		
 		System.out.print("."); if(AminoAcid.getByThreeLetterCode("") != null) { ok = false;  }
 		System.out.print("."); if(AminoAcid.three2one("") != '?') { ok = false;  }
-		System.out.print("."); if(AminoAcid.three2num("") != -1) { ok = false;  }	
+		System.out.print("."); if(AminoAcid.three2num("") != -2) { ok = false;  }	
 		
 		if(ok) System.out.println("passed.");
 		else System.out.println("failed.");
@@ -334,9 +337,9 @@ public enum AminoAcid {
 		for(AminoAcid aa : AminoAcid.values()) {
 			System.out.print(".");
 			// for unknown amino acids, the reported number of atoms should be -1
-			if(aa == XXX) {
+			if(aa == XXX || aa == STP) {
 				if(aa.getNumberOfAtoms() != -1) {
-					System.err.printf("Unexpected number of atoms reported for unknown amino acid type");
+					System.err.printf("Unexpected number of atoms reported for unknown amino acid type or stop codon");
 					ok = false; 
 					break; 					
 				}
