@@ -119,6 +119,8 @@ public class PdbSet {
 		readFromList(pdbCodes);
 	}
 	
+	/*---------------------------- static methods ---------------------------*/
+	
 	/**
 	 * Convenience method to load pdb+chain codes of the cullpdb20 database. Currently, a hard-coded version
 	 * from January 2009 is being used. Eventually, the latest version could be downloaded
