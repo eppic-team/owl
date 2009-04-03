@@ -41,7 +41,7 @@ public class analyseHistone {
 	
 	public static void main(String[] args) throws Exception {
 		File pdbFile = new File("/project/StruPPi/jose/histone/pdb1kx5.ent");
-		String[] chains = {"A", "B", "C", "D", "E", "F", "G", "H"};
+		String[] chains = {"A", "B", "C", "D", "E", "F", "G", "H","I", "J"};
 		
 		// residues defining the core of the histone (excluding tails) 
 		Set<String> resisetA = getResiSet("A",1,37,133,135);
@@ -59,11 +59,13 @@ public class analyseHistone {
 		// output files
 		File lysFile = new File("/project/StruPPi/jose/histone/lys_z_theta.txt");
 		File argFile = new File("/project/StruPPi/jose/histone/arg_z_theta.txt");
+		File dnaFile = new File("/project/StruPPi/jose/histone/dna_z_theta.txt");
 		
-		
+		// reading histone pdb file
 		Polymer mol = new Polymer();
 		mol.readFromPdbFile(pdbFile, chains);
 		
+		// removing tails
 		mol.removeResidues(resisetA);
 		mol.removeResidues(resisetB);
 		mol.removeResidues(resisetC);
@@ -73,13 +75,16 @@ public class analyseHistone {
 		mol.removeResidues(resisetG);
 		mol.removeResidues(resisetH);
 		
+		
+		
 		Point3d centerOfMass = mol.getCenterOfMass();
-		System.out.println("Center of mass: "+centerOfMass );
+		System.out.printf("Center of mass: (%9.2f, %9.2f, %9.2f)\n",centerOfMass.x,centerOfMass.y,centerOfMass.z);
+		
 		double diam = mol.getDiameter();
 		System.out.println("Diameter: "+diam);
 		Vector3d axis = mol.getBiggestInertiaAxis(mol.getCenterOfMass());
 		axis.normalize(); // we normalize it so that it is easy to handle it later
-		System.out.println("biggest inertia moment axis: "+axis);
+		System.out.printf("Biggest inertia moment axis: (%5.3f, %5.3f, %5.3f)\n",axis.x,axis.y,axis.z);
 		
 		// changing reference frame to origin center of mass and biggest inertial axis lying on the z axis
 		mol.transformRefFrameToCenterAndAxis(centerOfMass, axis);
@@ -87,6 +92,7 @@ public class analyseHistone {
 		// opening files for output
 		PrintStream outLys = new PrintStream(new FileOutputStream(lysFile));
 		PrintStream outArg = new PrintStream(new FileOutputStream(argFile));
+		PrintStream outDNA = new PrintStream(new FileOutputStream(dnaFile));
 		
 		System.out.println("Getting LYSs");
 		ArrayList<Residue> lysResidues = mol.getResiduesOfType("LYS");
@@ -94,13 +100,29 @@ public class analyseHistone {
 		System.out.println("Getting ARGs");
 		ArrayList<Residue> argResidues = mol.getResiduesOfType("ARG");
 		projectOnCylinder(argResidues, outArg);
+		System.out.println("Getting DNA residues");
+		ArrayList<Residue> aResidues = mol.getResiduesOfType("DA");
+		ArrayList<Residue> cResidues = mol.getResiduesOfType("DC");
+		ArrayList<Residue> tResidues = mol.getResiduesOfType("DT");
+		ArrayList<Residue> gResidues = mol.getResiduesOfType("DG");
+		ArrayList<Residue> dnaResidues = new ArrayList<Residue>();
+		dnaResidues.addAll(aResidues);
+		dnaResidues.addAll(cResidues);
+		dnaResidues.addAll(tResidues);
+		dnaResidues.addAll(gResidues);
+		projectOnCylinder(dnaResidues, outDNA);
+		
 		
 		outLys.close();
 		outArg.close();
+		outDNA.close();
 		
 		// sanity checks: center should be now at (0,0,0), biggest inertia axis aligned to z axis
-		System.out.println(mol.getCenterOfMass());
-		System.out.println(mol.getBiggestInertiaAxis(mol.getCenterOfMass()));
+		System.out.println("Sanity check, center of mass at (0,0,0) and biggest principal inertia axis on z-axis:");
+		Point3d endCoM = mol.getCenterOfMass();
+		Vector3d endInAxis = mol.getBiggestInertiaAxis(endCoM);
+		System.out.printf("Center of mass: (%9.2f, %9.2f, %9.2f)\n",endCoM.x,endCoM.y,endCoM.z);
+		System.out.printf("Biggest inertia moment axis: (%5.3f, %5.3f, %5.3f)\n",endInAxis.x,endInAxis.y,endInAxis.z);
 	}
 	
 	private static void projectOnCylinder(ArrayList<Residue> residues, PrintStream out) {

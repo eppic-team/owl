@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import java.util.HashMap;
+
 import javax.vecmath.Point3d;
 
 /**
@@ -9,6 +11,13 @@ import javax.vecmath.Point3d;
  *
  */
 public class Residue {
+
+	// masses taken from http://physics.nist.gov/cgi-bin/Compositions/stand_alone.pl?ele=&ascii=html&isotype=some
+	// masses measured in unified atomic mass units (u)
+	private static double C_MASS = 12.0;
+	private static double P_MASS = 30.974;	
+	private static HashMap<String, Double> masses = initialiseMassesMap();
+	
 	
 	private String type;
 	private int serial;
@@ -17,14 +26,16 @@ public class Residue {
 	
 	//TODO eventually there should be an atom class
 	//TODO here we restrict a residue to one atom only (CA), it should allow multiple atoms
+	private String atomType;
 	private Point3d coords;
 	
 	
-	public Residue(String type, int serial, String chainCode, String pdbChainCode, Point3d coords) {
+	public Residue(String type, int serial, String chainCode, String pdbChainCode, String atomType, Point3d coords) {
 		this.type = type;
 		this.serial = serial;
 		this.chainCode = chainCode;
 		this.pdbChainCode = pdbChainCode;
+		this.atomType = atomType;
 		this.coords = coords;
 	}
 
@@ -76,6 +87,14 @@ public class Residue {
 
 
 
+	public String getAtomType() {
+		return atomType;
+	}
+
+	public void setAtomType(String atomType) {
+		this.atomType = atomType;
+	}
+
 	public Point3d getCoords() {
 		return coords;
 	}
@@ -90,5 +109,19 @@ public class Residue {
 		return chainCode+serial;
 	}
 
+	public double getMass() {
+		return getMassForAtom(this.atomType.substring(0, 1));
+	}
+	
+	private static HashMap<String,Double> initialiseMassesMap() {
+		HashMap<String,Double> masses = new HashMap<String, Double>();
+		masses.put("C", C_MASS);
+		masses.put("P", P_MASS);
+		return masses;
+	}
+	
+	public static double getMassForAtom(String atom) {
+		return masses.get(atom);
+	}
 	
 }

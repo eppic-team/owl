@@ -85,6 +85,8 @@ public class Polymer implements Iterable<Residue> {
 		}
 		chainCodeRegex+="]";
 		
+		String atomTypeRegex = "CA |P  "; // for protein we take the CA, for DNA the P
+		
 		BufferedReader fpdb = new BufferedReader(new FileReader(pdbFile));
 		int linecount=0;
 		String line;
@@ -92,9 +94,10 @@ public class Polymer implements Iterable<Residue> {
 		while((line = fpdb.readLine()) != null ) {
 			linecount++;
 			if (line.startsWith("ATOM")) {
-				Pattern pl = Pattern.compile("^.{6}(.....).{2}(CA ).{1}(...).{1}("+chainCodeRegex+")(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+				Pattern pl = Pattern.compile("^.{6}(.....).{2}("+atomTypeRegex+").{1}(...).{1}("+chainCodeRegex+")(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
 				Matcher ml = pl.matcher(line);
 				if (ml.find()) {
+					String atomType = ml.group(2).trim();
 					String resType = ml.group(3).trim();
 					String chainCode = ml.group(4);
 					int resSerial = Integer.parseInt(ml.group(5).trim());
@@ -102,7 +105,7 @@ public class Polymer implements Iterable<Residue> {
 					double y = Double.parseDouble(ml.group(8).trim());
 					double z = Double.parseDouble(ml.group(9).trim());
 					Point3d coords = new Point3d(x,y,z);
-					this.addResidue(new Residue(resType,resSerial,chainCode,chainCode,coords));
+					this.addResidue(new Residue(resType,resSerial,chainCode,chainCode,atomType,coords));
 				}
 			}		
 		}
@@ -132,15 +135,19 @@ public class Polymer implements Iterable<Residue> {
 	}
 
 	/**
-	 * Gets the center of mass coordinates
+	 * Gets the center of mass 
 	 * @return
 	 */
 	public Point3d getCenterOfMass() {
+		double massSum = 0;
 		Point3d sum = new Point3d();
 		for (Residue residue:this) {
-			sum.add(residue.getCoords());
+			Point3d coord = new Point3d(residue.getCoords());
+			coord.scale(residue.getMass());
+			sum.add(coord);
+			massSum+=residue.getMass();
 		}
-		sum.scale(1.0/(double)residues.size());
+		sum.scale(1.0/massSum);
 		return sum;
 	}
 	
@@ -236,11 +243,10 @@ public class Polymer implements Iterable<Residue> {
 	 */
 	public double[][] getMomentInertiaTensor(Point3d center) {
 		double[][] tensor = new double[3][3];
-		// in principle masses could be different for each atom, here they are all the same, so we use 1
-		double m = 1.0;
 		for (Residue residue:this) {
 			Point3d coords = new Point3d(residue.getCoords());
 			coords.sub(center);
+			double m = residue.getMass();
 			tensor[0][0] += m*(coords.y*coords.y+coords.z*coords.z); 
 			tensor[1][1] += m*(coords.x*coords.x+coords.z*coords.z);
 			tensor[2][2] += m*(coords.x*coords.x+coords.y*coords.y);
@@ -326,7 +332,7 @@ public class Polymer implements Iterable<Residue> {
 	public void writeAtomLines(PrintStream out) {
 		int atomser = 1;
 		for (Residue residue:this) {
-			String atom = "CA";
+			String atom = residue.getAtomType();
 			String res = residue.getType();
 			String chainCodeStr = residue.getChainCode();
 			int resser = residue.getSerial();
