@@ -316,6 +316,23 @@ public class Polymer implements Iterable<Residue> {
 			rot.transform(coords);			
 		}	
 	}
+	
+	/**
+	 * Perform a rotate of this polymer around rotAxis with the given rotAngle 
+	 * @param rotAxis the vector around which the rotation will be performed
+	 * @param rotAngle the rotation angle in radians
+	 */
+	public void rotate(Vector3d rotAxis, double rotAngle) {
+		AxisAngle4d axisAngle = new AxisAngle4d(rotAxis, rotAngle);
+		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
+		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
+		rot.setRotation(axisAngle);
+		for (Residue residue:this) { 
+			Point3d coords = residue.getCoords();
+			// rotate
+			rot.transform(coords);			
+		}			
+	}
 
 	/**
 	 * Write this polymer in PDB file format.

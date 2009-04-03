@@ -56,6 +56,11 @@ public class analyseHistone {
 		Set<String> resisetD = getResiSet("D",1,29,123,125);
 		Set<String> resisetH = getResiSet("H",1,29,123,125);
 		
+		// reference residue to measure the theta angles
+		// ARG G42 is approx at the center of the thickest side of the histone
+		String refResChainCode = "G";
+		int refResSerial = 42; 
+		
 		// output files
 		File lysFile = new File("/project/StruPPi/jose/histone/lys_z_theta.txt");
 		File argFile = new File("/project/StruPPi/jose/histone/arg_z_theta.txt");
@@ -88,6 +93,15 @@ public class analyseHistone {
 		
 		// changing reference frame to origin center of mass and biggest inertial axis lying on the z axis
 		mol.transformRefFrameToCenterAndAxis(centerOfMass, axis);
+		
+		// rotating so that x axis is aligned along the reference residue
+		Residue refRes = mol.getResidue(refResSerial, refResChainCode);
+		Point3d refResCoords = refRes.getCoords();
+		Vector3d iVec = new Vector3d(1,0,0);
+		double rotAngle = iVec.angle(new Vector3d(refResCoords.x,refResCoords.y, 0));
+		mol.rotate(new Vector3d(0,0,1), rotAngle);
+		// sanity check: coords of ref residue should have now y=0
+		//System.out.println("coordinates of reference residue G42 after rotating: "+refResCoords);
 		
 		// opening files for output
 		PrintStream outLys = new PrintStream(new FileOutputStream(lysFile));
@@ -143,7 +157,7 @@ public class analyseHistone {
 			double theta = iVec.angle(new Vector3d(coords.x, coords.y, 0)); // angle between x axis and xy plane projection of the residue coords
 			// angle function is restricted to [0,PI], we have to correct for the vectors on the y<0 side of the plane
 			if (coords.y<0) {
-				theta = 2*Math.PI-theta;
+				theta = -theta; // the output will be angles in [-PI,PI]
 			}
 			// adding this z coordinate to the list of z coordinates
 			zs.add(coords.z);
