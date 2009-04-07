@@ -101,7 +101,7 @@ public class BoundsSmoother {
 	
 	/**
 	 * Constructs a new BoundsSmoother object given a (sparse) matrix of Bounds
-	 * infering bounds for all other pairs through the triangle inequality
+	 * inferring bounds for all other pairs through the triangle inequality
 	 * @param graph
 	 */
 	public BoundsSmoother(Bound[][] inputBounds) {
@@ -196,7 +196,7 @@ public class BoundsSmoother {
 	}
 
 	/**
-	 * Initialises (or resets the random seed).
+	 * Initializes (or resets the random seed).
 	 * If DEBUG flag is true the random seed will be a fixed value DEBUG_SEED
 	 */
 	private void initSeed() {
@@ -239,13 +239,17 @@ public class BoundsSmoother {
 	private void computeTriangleInequality() { 
 		double MARGIN = 0.0001; // for comparing doubles we need some tolerance value
 
+		//double array initialized
 		double[][] lowerBounds = getLowerBoundsAllPairs();
+		//double array initialized
 		double[][] upperBounds = getUpperBoundsAllPairs();
+		//loop to calculate and check lower and upper bounds
 		for (int i=0;i<conformationSize;i++) {
+			//loop to calculate and check lower and upper bounds
 			for (int j=i+1;j<conformationSize;j++) {
 				double upperBound = upperBounds[i][j];
 				double lowerBound = lowerBounds[i][j];
-				
+				//
 				if (bounds[i][j]!=null) {
 					if (lowerBound>upperBound+MARGIN) {
 						//System.err.println("old: "+sparseBounds[i][j]+" new: "+new Bound(lowerBound,upperBound));
@@ -316,6 +320,7 @@ public class BoundsSmoother {
 	 * @see {@link #convertBoundsMatrixToBoundsDigraph()} and {@link #getUpperBoundsAllPairs()}
 	 */
 	private double[][] getLowerBoundsAllPairs() {
+		//double array with entries corresponding to 'conformationSize'
 		double[][] lowerBoundsMatrix = new double[conformationSize][conformationSize];		
 		// this is the bounds digraph as described by Crippen and Havel
 		SparseGraph<BoundsDigraphNode,SimpleEdge> boundsDigraph = convertBoundsMatrixToBoundsDigraph();

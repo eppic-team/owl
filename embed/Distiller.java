@@ -77,7 +77,7 @@ public class Distiller {
 	 * @param numSampledContacts
 	 * @return
 	 */
-	private Bound[][] sampleSubset(int numSampledContacts) {
+	protected Bound[][] sampleSubset(int numSampledContacts) {
 		Bound[][] subset = new Bound[cmapSize][cmapSize];
 		
 		Random rand = new Random();
