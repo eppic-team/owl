@@ -310,7 +310,7 @@ public class Polymer implements Iterable<Residue> {
 		rot.setRotation(axisAngle);
 		for (Residue residue:this) { 
 			Point3d coords = residue.getCoords();
-			// translate to new origin at center of mass
+			// translate to new origin
 			coords.sub(center);
 			// rotate so that z axis is the given axis
 			rot.transform(coords);			
@@ -332,6 +332,18 @@ public class Polymer implements Iterable<Residue> {
 			// rotate
 			rot.transform(coords);			
 		}			
+	}
+	
+	/**
+	 * Translate this Polymer to given center
+	 * @param center
+	 */
+	public void translate(Point3d center) {
+		for (Residue residue:this) { 
+			Point3d coords = residue.getCoords();
+			// translate to new origin
+			coords.sub(center);
+		}	
 	}
 
 	/**
@@ -364,6 +376,18 @@ public class Polymer implements Iterable<Residue> {
 			atomser++;
 		}
 
+	}
+	
+	/**
+	 * Deep copies this Polymer
+	 * @return
+	 */
+	public Polymer copy() {
+		Polymer mol = new Polymer();
+		for (Residue residue:this) {
+			mol.addResidue(residue.copy());
+		}
+		return mol;
 	}
 	
 }

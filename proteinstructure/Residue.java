@@ -112,6 +112,16 @@ public class Residue {
 	public double getMass() {
 		return getMassForAtom(this.atomType.substring(0, 1));
 	}
+
+	/**
+	 * Deep copies this Residue
+	 * @return
+	 */
+	public Residue copy() {
+		Point3d coords = this.getCoords();
+		Residue residue = new Residue(this.getType(),this.getSerial(),this.getChainCode(),this.getPdbChainCode(),this.getAtomType(),new Point3d(coords.x,coords.y,coords.z));
+		return residue;
+	}
 	
 	private static HashMap<String,Double> initialiseMassesMap() {
 		HashMap<String,Double> masses = new HashMap<String, Double>();
