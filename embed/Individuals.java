@@ -176,15 +176,16 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param rig
 	 * @param conn
 	 * @param randomize
+	 * @throws Exception 
 	 * @throws Exception
 	 */
-	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize) throws Exception {
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize) throws Exception  {
 		this.setName(rig.getPdbCode());
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		double cut = rig.getCutoff();
 		String ct = rig.getContactType();
-		int lengt = rig.getEdgeCount(), l = 0;
-		this.entries = new int[lengt][2];
+		int lengt = bound.length, l = 0;
+		this.entries = new int[rig.getEdgeCount()][2];
 		Pdb n = getFullProt(rig, conn);
 		RIGraph r = n.get_graph(ct, cut);
 		double[][] dm = distMap(n);
@@ -730,17 +731,18 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		prot.load(input.getPdbChainCode());
 		RIGraph full = prot.get_graph(ct, cuto);
 		int numOfConts = input.getEdgeCount();
-		/*Distiller dist = new Distiller(full);
-		Bound[][] subset = dist.sampleSubset((int) (full.getEdgeCount()*percent));*/
-		Bound[][] allbounds = Reconstructer.convertRIGraphToBoundsMatrix(full);
-		allbounds = Scorer.inferAllBounds(allbounds);
-		Bound[][] subset = new Bound[numOfConts][numOfConts];
+		Distiller dist = new Distiller(full);
+		//double percent = (double) numOfConts/(double) full.getEdgeCount();
+		Bound[][] subset = dist.sampleSubset(numOfConts);
+		//Bound[][] allbounds = Reconstructer.convertRIGraphToBoundsMatrix(full);
+		/*allbounds = Scorer.inferAllBounds(allbounds);
 		int allboundsdim = allbounds.length;
+		Bound[][] subset = new Bound[allboundsdim][allboundsdim];
 		int i = 0;
 		while( i < numOfConts){
 			Random rand = new Random();
-			int random1 = rand.nextInt();
-			int random2 = rand.nextInt();
+			int random1 = rand.nextInt(allboundsdim);
+			int random2 = rand.nextInt(allboundsdim - random1) + random1;/*
 			random1 = (int) ((long) random1) % allboundsdim;
 			random2 = (int) ((long) random2) % allboundsdim;
 			if((random1 < allboundsdim && random1 >= 0)&&(random2 < allboundsdim && random2 >= 0)){
@@ -749,7 +751,14 @@ public class Individuals extends HashSet<Pair<Integer>> {
 					i++;
 				}
 			}
-		}
+		}*/
+		/*for (int i=0;i< subset.length;i++) {
+			for (int j=i+2;j< subset.length;j++) {
+				if (subset[i][j]!=null) {
+					System.out.println(i+" "+j+": "+subset[i][j]);
+				}
+			*/
+		
 		return subset;
 	}
 	
