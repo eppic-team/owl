@@ -45,7 +45,7 @@ public class Scorer {
 	 * @param sparseBounds
 	 * @return
 	 */
-	private static Bound[][] inferAllBounds(Bound[][] sparseBounds) {
+	protected static Bound[][] inferAllBounds(Bound[][] sparseBounds) {
 		BoundsSmoother bs = new BoundsSmoother(sparseBounds);
 		return bs.getInitialBoundsAllPairs();
 	}

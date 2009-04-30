@@ -47,14 +47,14 @@ public class BoundsSmoother {
 		}
 	};
 	
-	private class SimpleEdge {
+	protected class SimpleEdge {
 		public double weight;
 		public SimpleEdge(double weight) {
 			this.weight = weight;
 		}
 	}
 	
-	private class BoundsDigraphNode {
+	protected class BoundsDigraphNode {
 		public static final boolean LEFT = true;
 		public static final boolean RIGHT = false;
 		private boolean side; // true: left, false: right
@@ -348,7 +348,7 @@ public class BoundsSmoother {
 	 * @param bounds
 	 * @return
 	 */
-	private SparseGraph<Integer,SimpleEdge> convertBoundsMatrixToUpperBoundGraph() {
+	protected SparseGraph<Integer,SimpleEdge> convertBoundsMatrixToUpperBoundGraph() {
 		SparseGraph<Integer,SimpleEdge> upperBoundGraph = new SparseGraph<Integer, SimpleEdge>();
 		for (int i=0;i<conformationSize;i++) {
 			for (int j=0;j<conformationSize;j++) {
