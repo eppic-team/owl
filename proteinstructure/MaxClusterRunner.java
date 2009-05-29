@@ -122,14 +122,14 @@ public class MaxClusterRunner {
 
 	/**
 	 * Performs all against all comparison of files from a predictionList returning a matrix of pairwise scores
-	 * @param predictionList
+	 * @param predictionList the name of a text file containing file names of models to be evaluated
 	 * @param scoreType 
-	 * @return list of the rankings or null if something goes wrong
+	 * @return matrix of the pairwise scores or null if something goes wrong
 	 */
 	public HashMap<Pair<Integer>, Double> calculateMatrix (String predictionList, ScoreType scoreType) throws IOException {
 		String scoreTypeStr = "";
 		File outFile = new File(System.getProperty("java.io.tmpdir"),TMP_MATRIX_FILE);
-		//outFile.deleteOnExit();
+		outFile.deleteOnExit();
 		if (scoreType==ScoreType.GDT) scoreTypeStr = "gdt";
 		if (scoreType==ScoreType.RMSD) scoreTypeStr = "rmsd";
 		String cmdLine = String.format("%s -l %s -C 0 -R %s -%s", maxClusterExecutable, predictionList, outFile, scoreTypeStr);
@@ -145,9 +145,9 @@ public class MaxClusterRunner {
 	/**
 	 * Performs all against all comparison of files from a predictionList returning a matrix of pairwise scores
 	 * using sequence independent mode.
-	 * @param predictionList
+	 * @param predictionList the name of a text file containing file names of models to be evaluated
 	 * @param scoreType 
-	 * @return list of the rankings or null if something goes wrong
+	 * @return matrix of the pairwise scores or null if something goes wrong
 	 */
 	public HashMap<Pair<Integer>, Double> calculateSequenceIndependentMatrix (String predictionList, ScoreType scoreType) throws IOException {
 		String scoreTypeStr = "";
