@@ -16,30 +16,67 @@ import embed.BoundsSmoother.SimpleEdge;*/
 import tools.*;
 //import org.jgap.Chromosome;
 
+/**
+ * this class generates a random subset to a given number of contacts and provides methods to calculate the two 
+ * different error estimation methods: DMError() and CMError()
+ */
 public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
-	 * Fields
+	 * field
 	 */
 	private static final long serialVersionUID = 1L;
 	
+	/**
+	 * field: contact type - default: C-alpha
+	 */
 	private final String ct = "Ca";
 	
+	/**
+	 * field: cutoff distance, set to default 9 angstroem
+	 */
 	private final double di = 9.0;
 
+	/**
+	 * field: array of integers representing contact pairs
+	 */
 	private int [][] entries;
 	
+	/**
+	 * field
+	 */
+	protected boolean fifty;
+	
+	/**
+	 * field: same as 'entries', in this case all contact pairs are stored in a HashSet, to avoid redundancy
+	 */
 	private HashSet<Pair<Integer>> store;
 	
+	/**
+	 * field: number of contacts
+	 */
 	private int numOfContacts;
 	
+	/**
+	 * String fields: 'name' = PDB code, 'sequence' = protein sequence and 'chainCode' = chain identifier
+	 */
 	private String name, sequence, chainCode;
 	
 	private double CMError, DMError;
 	
 	/*----------------------Constructors--------------------------------------------------*/
+	/**
+	 * zeror parameter constructor, defines the default values of all non final fields
+	 */
 	public Individuals () {
-		
+		this.chainCode = " ";
+		this.CMError = 0.0;
+		this.DMError = 0.0;
+		this.entries = new int[1][2];
+		this.name = " ";
+		this.sequence = " ";
+		this.storer();
+		this.numOfContacts = 0;
 	}
 	
 	/**
@@ -63,20 +100,60 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param rig
 	 * @throws Exception
 	 */
-	public Individuals (RIGraph rig) throws Exception {
+	public Individuals (RIGraph rig) {
 		this.setIndis(rig);
 	}
 	
 	/**
 	 * three parameter constructor, reads instances of RIGraph, MySQLConnection and a boolean expression
-	 * as input parameter
+	 * as input parameter, the boolean parameter defines whether (true) or not (false) random sampling is needed
 	 * @param rig
 	 * @param conn
 	 * @param rand
+	 * @throws PdbLoadError 
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws NullPointerException 
+	 * @throws ArrayIndexOutOfBoundsException 
+	 * @throws Exception 
 	 * @throws Exception
 	 */
-	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand) throws Exception {
+	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
 		this.setIndis(rig, conn, rand);
+	}
+	
+	/**
+	 * four parameter constructor, can either randomly sample a specified number of contacts or takes a specified number
+	 * of contacts, the boolean parameter defines whether (true) or not (false) random sampling is needed
+	 * @param rig
+	 * @param conn
+	 * @param rand
+	 * @param val
+	 * @throws ArrayIndexOutOfBoundsException
+	 * @throws NullPointerException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 */
+	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, int val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
+		this.setIndis(rig, conn, rand, val);
+	}
+	
+	/**
+	 * four parameter constructor, can either randomly sample a specified number of contacts or takes a specified number
+	 * of contacts, the boolean parameter defines whether (true) or not (false) random sampling is needed 
+	 * @param rig
+	 * @param conn
+	 * @param rand
+	 * @param val
+	 * @throws ArrayIndexOutOfBoundsException
+	 * @throws NullPointerException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 */
+	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, double val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
+		this.setIndis(rig, conn, rand, val);
 	}
 	
 	/**
@@ -102,6 +179,8 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		this.CMError = in.getCM();
 		this.DMError = in.getDM();
 		this.numOfContacts = in.getNumOfContacts();
+		this.sequence = in.getSequence();
+		this.chainCode = in.getChainCode();
 	}
 	
 	/**
@@ -111,19 +190,20 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	public void setIndis (int [][] indices) {
 		int dim = indices.length;
 		int k = 0;
-		while(indices[k][0] != 0 || indices[k][1] != 0){
+		while(k < dim && (indices[k][0] != 0 || indices[k][1] != 0)){
 			k++;
 		}
 		this.entries = new int[k][2];
 		int counter1 = 0;
 		int counter2 = 0;
 		for(int i = 0; i < dim; i++){
-			for(int j = i + 1; j < dim; j++){
-				if(i != j - 1){
-					this.entries[counter1][counter2] = indices[i][j];
+			//for(int j = i + 1; j < dim; j++){
+				if(indices[i][0] != indices[i][1] - 1){
+					this.entries[counter1][0] = indices[i][0];
+					this.entries[counter1][1] = indices[i][1];
 					counter1++;
 					counter2++;
-				}
+				
 			}
 		}
 	}
@@ -148,9 +228,8 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	/**
 	 * setter, converts a RIGraph instance to a Individuals instance
 	 * @param rig
-	 * @throws Exception
 	 */
-	public void setIndis (RIGraph rig) throws Exception {
+	public void setIndis (RIGraph rig) {
 		this.setName(rig.getPdbCode());
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		int lengt = rig.getEdgeCount(), l = 0;		
@@ -177,9 +256,15 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param conn
 	 * @param randomize
 	 * @throws Exception 
+	 * @throws NullPointerException 
+	 * @throws ArrayIndexOutOfBoundsException 
+	 * @throws PdbLoadError 
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws Exception 
 	 * @throws Exception
 	 */
-	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize) throws Exception  {
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
 		this.setName(rig.getPdbCode());
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		double cut = rig.getCutoff();
@@ -197,6 +282,106 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		for(int i = 0; i < lengt; i++){
 			for(int j = i + 1; j < lengt; j++){
 				if((bound[i][j] != null)&&(l < lengt)){
+					if(i != j - 1){
+						this.entries[l][0] = i;
+						this.entries[l][1] = j;
+						l++;
+					}
+				}
+			}
+		}
+		this.storer();
+		this.setNumOfContacts(this.getHashSet());
+		this.setSequence(rig.getSequence());
+		this.setChainCode(rig.getPdbChainCode());
+	}
+	
+	/**
+	 * setter, does the same as setIndis (RIGraph rig) setter method, can do random sampling over a set of Individuals
+	 * number of contactes specified by 'NumCont' parameter
+	 * @param rig
+	 * @param conn
+	 * @param randomize
+	 * @param NumCont
+	 * @throws ArrayIndexOutOfBoundsException
+	 * @throws NullPointerException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 */
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, int NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
+		this.setName(rig.getPdbCode());
+		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
+		double cut = rig.getCutoff();
+		String ct = rig.getContactType();
+		int lengt = bound.length, l = 0;
+		Pdb n = getFullProt(rig, conn);
+		RIGraph r = n.get_graph(ct, cut);
+		int edgec = r.getEdgeCount();
+		int edgepercent = (int) ((double) NumCont/100.0*(double) edgec);
+		double[][] dm = distMap(n);
+		if(randomize){
+			bound = randomSet(rig,conn,edgepercent);
+			this.entries = new int[edgepercent][2];
+		}
+		else{
+			this.entries = new int[rig.getEdgeCount()][2];
+		}
+		this.setCMError(bound, r);
+		this.setDMError(bound, dm);
+		for(int i = 0; i < lengt; i++){
+			for(int j = i + 1; j < lengt; j++){
+				if((bound[i][j] != null)&&(l < edgepercent)){
+					if(i != j - 1){
+						this.entries[l][0] = i;
+						this.entries[l][1] = j;
+						l++;
+					}
+				}
+			}
+		}
+		this.storer();
+		this.setNumOfContacts(this.getHashSet());
+		this.setSequence(rig.getSequence());
+		this.setChainCode(rig.getPdbChainCode());
+	}
+	
+	/**
+	 * setter, does the same as setIndis (RIGraph rig) setter method, can do random sampling over a set of Individuals
+	 * number of contactes specified by 'NumCont' parameter
+	 * @param rig
+	 * @param conn
+	 * @param randomize
+	 * @param NumCont
+	 * @throws ArrayIndexOutOfBoundsException
+	 * @throws NullPointerException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 */
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, double NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
+		this.setName(rig.getPdbCode());
+		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
+		double cut = rig.getCutoff();
+		String ct = rig.getContactType();
+		int lengt = bound.length, l = 0;
+		Pdb n = getFullProt(rig, conn);
+		RIGraph r = n.get_graph(ct, cut);
+		int edgec = r.getEdgeCount();
+		int edgepercent = (int) (NumCont/100.0*(double) edgec);
+		double[][] dm = distMap(n);
+		if(randomize){
+			bound = randomSet(rig,conn,edgepercent);
+			this.entries = new int[edgepercent][2];
+		}
+		else{
+			this.entries = new int[rig.getEdgeCount()][2];
+		}
+		this.setCMError(bound, r);
+		this.setDMError(bound, dm);
+		for(int i = 0; i < lengt; i++){
+			for(int j = i + 1; j < lengt; j++){
+				if((bound[i][j] != null)&&(l < edgepercent)){
 					if(i != j - 1){
 						this.entries[l][0] = i;
 						this.entries[l][1] = j;
@@ -249,7 +434,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param rig
 	 * @throws Exception
 	 */
-	public void setCMError (Bound[][] bound, RIGraph rig) throws Exception {
+	public void setCMError (Bound[][] bound, RIGraph rig) {
 		this.CMError = Scorer.getCMError(bound, rig);
 	}
 	
@@ -320,10 +505,15 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		this.chainCode = chain;
 	}
 	
+	public void setFifty (boolean tr) {
+		this.fifty = tr;
+	}
+	
 	/*----------------------getters----------------------------------------------*/
 	
 	/**
 	 * getter, returns contact type, by default: "CA" 
+	 * @return 'ct' - this contact type
 	 */
 	public String getContactT () {
 		return this.ct;
@@ -331,7 +521,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this contact distance
-	 * @return
+	 * @return 'di' - this cutoff distance
 	 */
 	public double getContactDist () {
 		return this.di;
@@ -339,7 +529,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this chain code
-	 * @return
+	 * @return 'chainCode'
 	 */
 	public String getChainCode () {
 		return this.chainCode;
@@ -374,7 +564,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * getter, returns this entries at position (i,j)
 	 * @param i
 	 * @param j
-	 * @return
+	 * @return 'entries[i][j]'
 	 */
 	public int getNumbers (int i, int j) {
 		return this.entries[i][j];
@@ -382,7 +572,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 
 	/**
 	 * getter, returns instance variable 'entries' as array of integers
-	 * @return
+	 * @return 'entries'
 	 */
 	public int[][] getEntries () {
 		return this.entries;
@@ -390,7 +580,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this name of the protein (using PDB code convention)
-	 * @return
+	 * @return 'name'
 	 */
 	public String getName () {
 		return this.name;
@@ -398,7 +588,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this CMError
-	 * @return
+	 * @return 'CMError'
 	 */
 	public double getCM () {
 		return this.CMError;
@@ -406,15 +596,43 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this DMError
-	 * @return
+	 * @return 'DMError
 	 */
 	public double getDM () {
 		return this.DMError;
 	}
+
+	/**
+	 * getter, returns this CMError
+	 * @param pop
+	 * @return error
+	 */
+	public static double[] getCM (Individuals[] pop){
+		int dim = pop.length;
+		double[] error = new double[dim];
+		for(int i = 0; i < dim; i++){
+			error[i] = pop[i].getCM();
+		}
+		return error;
+	}
+	
+	/**
+	 * getter, returns this DMError
+	 * @param pop
+	 * @return error
+	 */
+	public static double[] getDM (Individuals[] pop){
+		int dim = pop.length;
+		double[] error = new double[dim];
+		for(int i = 0; i < dim; i++){
+			error[i] = pop[i].getDM();
+		}
+		return error;
+	}
 	
 	/**
 	 * getter, returns this numOfContacts
-	 * @return
+	 * @return 'numOfContacts'
 	 */
 	public int getNumOfContacts () {
 		return this.numOfContacts;
@@ -422,7 +640,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this protein sequence
-	 * @return
+	 * @return 'sequence'
 	 */
 	public String getSequence () {
 		return this.sequence;
@@ -430,6 +648,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * defines a new hash function
+	 * @return 'hasher'
 	 */
 	public int hashCode() {
 		Individuals ind;
@@ -452,16 +671,24 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	
 	/**
 	 * getter, returns this HashSet
-	 * @return
+	 * @return 'store'
 	 */
 	public HashSet<Pair<Integer>> getHashSet () {
 		return this.store;
+	}
+		
+	/**
+	 * getter, returns boolean field 'fifty'
+	 * @return 'fifty'
+	 */
+	public boolean getFifty() {
+		return this.fifty;
 	}
 	
 	/**
 	 * compares this Individuals with in Individuals retaining only all contacts they have in common
 	 * @param in
-	 * @return
+	 * @return 'hash1' - a Hashset where all entries are the same
 	 */
 	public boolean comPare(Individuals in) {
 		HashSet<Pair<Integer>> hash1 = this.getHashSet();
@@ -508,13 +735,16 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	}*/
 	
 	/**
-	 * compares two instances of Individuals by their HashSets retaining only those contacts both have in common
+	 * compares two instances of Individuals by their HashSets retaining only those contacts both have in common,
+	 * if contacts are missing the remaining gaps are filled randomly with contacts from both 'parents'
 	 * @param in1
 	 * @param in2
 	 * @return neu
-	 * @throws Exception
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbLoadError
 	 */
-	public static Individuals breedIndis (Individuals in1, Individuals in2) throws Exception {
+	public static Individuals breedIndis (Individuals in1, Individuals in2) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		Individuals neu = new Individuals();
 		HashSet<Pair<Integer>> hash1 = new HashSet<Pair<Integer>>(in1.getHashSet());
 		HashSet<Pair<Integer>> hash2 = new HashSet<Pair<Integer>>(in2.getHashSet());
@@ -530,7 +760,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 			Iterator<Pair<Integer>> j = hash2.iterator();
 			while(neu.getNumOfContacts() != in1.getNumOfContacts()) {
 				Random rand = new Random();
-				if(rand.nextInt() % 2 == 0) {
+				if(rand.nextInt(2) % 2 == 0) {
 					boolean test = neu.store.add(i.next());
 					while(!test && i.hasNext()){
 						test = neu.store.add(i.next());
@@ -558,6 +788,38 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		neu.setDMError(Reconstructer.convertRIGraphToBoundsMatrix(rig), distMap(prot));
 		return neu;
 	}
+	
+	/**
+	 * Method, to copy a Individuals instance to a specified Individuals instance
+	 * @param in source to be copied
+	 * @param out destination
+	 */
+	public static void copyInd (Individuals in, Individuals out){
+		if(out != null){
+		out.setIndis(in);
+		}
+		else{
+			out = new Individuals(in);
+		}
+	}
+	
+	public static Individuals[] shrinkIndArray (Individuals[] in){
+		int dim = in.length, counter1 = 0, counter2 = 0;
+		boolean[] test = new boolean[dim];
+		for(int i = 0; i < dim; i++){
+			if(in[i] != null){
+				test[i] = true;
+				counter1++;
+			}
+		}
+		Individuals[] shrunk = new Individuals[counter1];
+		for(int i = 0; i < dim; i++){
+			if(test[i]){
+				copyInd(in[i],shrunk[counter2]);
+			}
+		}
+		return shrunk;
+	}
 	/*-----------------------display methods-------------------------------------------*/
 	
 	/**
@@ -576,12 +838,10 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		int ind = (this.getEntries()).length - 1;
 		System.out.print("# of contacts :"+this.getEntries().length+" and contacts of "+this.name+": ");
 		for(int i = 0; i < ind; i++){
-			//if(this.getNumbers(i, 0) + 1 != this.getNumbers(i, 1)){
-				System.out.print("{ "+this.getNumbers(i, 0)+", ");
-				System.out.print(this.getNumbers(i, 1)+"},");//}
+			System.out.print("{ "+this.getNumbers(i, 0)+", ");
+			System.out.print(this.getNumbers(i, 1)+"},");//}
 		}
-		//if(this.getNumbers(ind, 0) + 1 != this.getNumbers(ind, 1)){
-			System.out.print("{ "+this.getNumbers(ind,0)+", "+this.getNumbers(ind,1)+"}");//}
+		System.out.print("{ "+this.getNumbers(ind,0)+", "+this.getNumbers(ind,1)+"}");//}
 		System.out.println("}, with CMError:"+this.getCM()+" and DMError: "+this.getDM());
 	}
 	
@@ -594,122 +854,17 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param conn
 	 * @param percent
 	 * @return in
-	 * @throws Exception
+	 * @throws PdbCodeNotFoundError
 	 * @throws NullPointerException
 	 * @throws ArrayIndexOutOfBoundsException
+	 * @throws SQLException
+	 * @throws PdbLoadError
 	 */
-	public static Individuals randomSets (RIGraph input, MySQLConnection conn, double percent) throws Exception, NullPointerException, ArrayIndexOutOfBoundsException {
+	public static Individuals randomSets (RIGraph input, MySQLConnection conn, double percent) throws NullPointerException, ArrayIndexOutOfBoundsException, PdbCodeNotFoundError, SQLException, PdbLoadError{
 		Distiller dist = new Distiller(input);
 		Bound[][] subset = dist.sampleSubset((int) (input.getEdgeCount()*percent));
 		Individuals in = new Individuals(subset, input.getPdbCode(), distMap(getFullProt(input, conn)));
 		return in;
-	}
-	
-	/**
-	 * method, to determine the average error (CM and DM) and breeds with the 50% best fittest to return and new array
-	 * of Individuals
-	 * @param parents
-	 * @return offspring
-	 * @throws Exception
-	 */
-	public static Individuals[] evolve (Individuals[] parents) throws Exception {
-		int dim = parents.length;
-		double[][] array = new double[dim][2];
-		for(int i = 0; i < parents.length; i++){
-			array[i][0] = parents[i].getDM();
-			array[i][1] = (double) i;
-		}
-		double CMav = getAverageCMError(parents);
-		double DMav = getAverageDMError(parents);
-		Individuals[] offspring = new Individuals[dim];
-		for(int i = 0; i < dim - 1; i++){
-			for(int j = i + 1; j < dim; j ++){
-				if(parents[i].getCM() <= CMav && parents[j].getCM() <= CMav){
-					if(parents[i].getDM() <= DMav && parents[j].getDM() <= DMav){
-						offspring[i] = breedIndis(parents[i], parents[j]);
-					}
-				}
-			}
-		}
-		return offspring;
-	}
-	
-	/*public static void sortArray(double[][] array, int row, int dim2){
-		int dim = array.length;
-		int[] sorting = new int[dim];
-		for(int k = 1; k < (int) ((double) dim)*0.5; k++){
-			for(int i = 0; i < dim - k - 1; i++){
-				if(array[sorting[i]][row] < array[sorting[i + k]][row]){
-					sorting[i + k] = (int) array[i][1];
-					sorting[i + k + 1] = (int) array[i + k][1];
-				}
-				else{
-					sorting[i + k] = (int) array[i + k][1];
-					sorting[i + k + 1] = (int) array[i][1];
-				}
-			}
-		}
-		double[][] l = new double[dim][dim2];
-		for(int j = 0; j < dim; j++){
-			for(int m = 0; m < dim2 ; m++){
-				l[j][m] = array[j][m];
-			}
-		}
-		for(int i = 0; i < dim ; i++){
-			for(int j = 0; j < dim2; j++){
-				array[i][j] = l[sorting[i]][j];
-			}
-		}
-	}
-	/**muss noch ueberarbeitet werden, z.b. mit methode, die in liste nur nach Individuals instanzen sucht, die unterhalb eines thresholds liegen
-	 * 
-	 * @param array
-	 * @param row
-	 */
-	/*public static void sortA (double[][] array, int row){
-		TreeSet<Pair<Double>> h = new TreeSet<Pair<Double>>();
-		for(int i = 0; i < array.length; i++){
-			Pair<Double> n = new Pair<Double>(new Double(array[i][0]), new Double (array[i][1]));
-			//Comparator<? super Pair<Double>> c = h.comparator();
-			h.add(n);
-			compareTo(h.last(), n);
-		}
-		Iterator<Pair<Double>> i = h.iterator();
-		int j = 0;
-		while(i.hasNext()){
-			Pair<Double> pair = new Pair<Double>(i.next());
-			array[j][0] = pair.getFirst().doubleValue();
-			array[j][1] = pair.getSecond().doubleValue();
-			j++;
-		}
-	}*/
-
-	/**
-	 * method to determine average DM error
-	 * @param pop
-	 * @return avverageDMError
-	 */
-	public static double getAverageDMError (Individuals[] pop) {
-		int dim = pop.length;
-		double averageDMError = 0.0;
-		for(int i = 0; i < dim; i++){
-			averageDMError = averageDMError + pop[i].getDM();
-		}
-		return averageDMError/(double) dim;
-	}
-
-	/**
-	 * method to determine average CM error
-	 * @param pop
-	 * @return avverageCMError
-	 */
-	public static double getAverageCMError (Individuals[] pop) {
-		int dim = pop.length;
-		double averageCMError = 0.0;
-		for(int i = 0; i < dim; i++){
-			averageCMError = averageCMError + pop[i].getCM();
-		}
-		return averageCMError/(double) dim;
 	}
 	
 	/**
@@ -724,7 +879,7 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @throws NullPointerException
 	 * @throws ArrayIndexOutOfBoundsException
 	 */
-	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn) throws Exception, SQLException, PdbLoadError, PdbCodeNotFoundError, NullPointerException, ArrayIndexOutOfBoundsException {
+	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn) throws SQLException, PdbLoadError, PdbCodeNotFoundError, NullPointerException, ArrayIndexOutOfBoundsException {
 		double cuto = input.getCutoff();
 		String ct = input.getContactType();
 		Pdb prot = getFullProt(input, conn);
@@ -732,33 +887,31 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		RIGraph full = prot.get_graph(ct, cuto);
 		int numOfConts = input.getEdgeCount();
 		Distiller dist = new Distiller(full);
-		//double percent = (double) numOfConts/(double) full.getEdgeCount();
 		Bound[][] subset = dist.sampleSubset(numOfConts);
-		//Bound[][] allbounds = Reconstructer.convertRIGraphToBoundsMatrix(full);
-		/*allbounds = Scorer.inferAllBounds(allbounds);
-		int allboundsdim = allbounds.length;
-		Bound[][] subset = new Bound[allboundsdim][allboundsdim];
-		int i = 0;
-		while( i < numOfConts){
-			Random rand = new Random();
-			int random1 = rand.nextInt(allboundsdim);
-			int random2 = rand.nextInt(allboundsdim - random1) + random1;/*
-			random1 = (int) ((long) random1) % allboundsdim;
-			random2 = (int) ((long) random2) % allboundsdim;
-			if((random1 < allboundsdim && random1 >= 0)&&(random2 < allboundsdim && random2 >= 0)){
-				if(allbounds[random1][random2] != null){
-					subset[random1][random2] = new Bound(allbounds[random1][random2].lower, allbounds[random1][random2].upper);
-					i++;
-				}
-			}
-		}*/
-		/*for (int i=0;i< subset.length;i++) {
-			for (int j=i+2;j< subset.length;j++) {
-				if (subset[i][j]!=null) {
-					System.out.println(i+" "+j+": "+subset[i][j]);
-				}
-			*/
-		
+		return subset;
+	}
+	
+	/**
+	 * method that randomly selects contacts from the full contact map 
+	 * @param input
+	 * @param conn
+	 * @param NumCont
+	 * @return
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 * @throws PdbCodeNotFoundError
+	 * @throws NullPointerException
+	 * @throws ArrayIndexOutOfBoundsException
+	 */
+	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn, int NumCont) throws SQLException, PdbLoadError, PdbCodeNotFoundError, NullPointerException, ArrayIndexOutOfBoundsException {
+		double cuto = input.getCutoff();
+		String ct = input.getContactType();
+		Pdb prot = getFullProt(input, conn);
+		prot.load(input.getPdbChainCode());
+		RIGraph full = prot.get_graph(ct, cuto);
+		int numOfConts = NumCont;
+		Distiller dist = new Distiller(full);
+		Bound[][] subset = dist.sampleSubset(numOfConts);
 		return subset;
 	}
 	
@@ -767,9 +920,11 @@ public class Individuals extends HashSet<Pair<Integer>> {
 	 * @param rig
 	 * @param conn
 	 * @return prot
-	 * @throws Exception
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbLoadError
 	 */
-	public static Pdb getFullProt (RIGraph rig, MySQLConnection conn) throws Exception {
+	public static Pdb getFullProt (RIGraph rig, MySQLConnection conn) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
 		String pdbCode = rig.getPdbCode();
 		String pdbaseDb = "pdbase";
 		Pdb prot = new PdbasePdb(pdbCode, pdbaseDb, conn);
@@ -798,15 +953,34 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		MySQLConnection conn = new MySQLConnection();
 		/*Individuals indi = new Individuals(sub, conn, false);
 		indi.displayIndis();*/
-		Individuals[] neus = new Individuals[6];
+		Individuals[] neus = new Individuals[20];
 		for(int i = 0; i < neus.length; i++){
 			neus[i] = new Individuals(sub, conn, true);
 			neus[i].displayIndis();
 		}
-		Individuals[] off = evolve(neus);
-		for(int zahl = 0; zahl < off.length; zahl++){
-			off[zahl].displayIndis();	
+		System.out.println("Average DMError: "+Population.getAverageDMError(neus));
+		Individuals[] off1 = new Individuals[neus.length];
+		Individuals[] off2 = new Individuals[neus.length];
+		Population.copyInd(neus,off1);
+		Population.copyInd(neus,off2);
+		for(int i = 0; i < 5; i++){
+			Population pop1 = new Population(off1);
+			Population pop2 = new Population(off2);
+			Population.copyInd(Population.evolve(false, pop1),off1);
+			System.out.print("Average DMError of best 50 %: "+Population.getAverageDMError(off1)+", ");
+			System.out.println("standart dev. of DMError of best 50 %: "+Population.getDMStDeviation(off1)+" ");
+			Population.copyInd(Population.evolve(false, pop2),off2);
+			System.out.print("Average DMError: "+Population.getAverageDMError(off2)+", ");
+			System.out.println("standart dev of DMError: "+Population.getDMStDeviation(off2));
 		}
+		for(int zahl = 0; zahl < off1.length; zahl++){
+			off1[zahl].displayIndis();
+		}
+		System.out.println("Average DMError of best 50 %: "+Population.getAverageDMError(off1));
+		for(int zahl = 0; zahl < off1.length; zahl++){
+			off2[zahl].displayIndis();
+		}
+		System.out.println("Average DMError of all below mean value: "+Population.getAverageDMError(off2));
 		conn.close();
 	}
 	
@@ -816,11 +990,3 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		return (val1 < val2 ? -1 : (val1 == val2 ? 0 : 1));
 	}
 }
-
-/*class CompType implements Comparator<Pair<Double>> {
-	public int compare (Pair<Double> tree, Pair<Double> input){
-		double val1 = tree.getFirst().doubleValue();
-		double val2 = input.getFirst().doubleValue();
-		return (val1 < val2 ? -1 : (val1 == val2 ? 0 : 1));
-	}
-}*/
