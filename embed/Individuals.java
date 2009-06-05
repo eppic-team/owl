@@ -546,11 +546,11 @@ public class Individuals extends HashSet<Pair<Integer>> {
 		Iterator<Pair<Integer>> i = in.getHashSet().iterator();
 		while(i.hasNext()) {
 			Pair<Integer> pair = i.next();
-			String aa1 = Character.toString(aa.charAt(pair.getFirst() + 1));
-			String aa2 = Character.toString(aa.charAt(pair.getSecond() + 1));
-			graph.addVertex(new RIGNode(pair.getFirst(), aa1));
-			graph.addVertex(new RIGNode(pair.getSecond(), aa2));
-			graph.addEdgeIJ(pair.getFirst(), pair.getSecond());
+			String aa1 = AAinfo.oneletter2threeletter(Character.toString(aa.charAt(pair.getFirst())));
+			String aa2 = AAinfo.oneletter2threeletter(Character.toString(aa.charAt(pair.getSecond())));
+			graph.addVertex(new RIGNode(pair.getFirst()+1, aa1));
+			graph.addVertex(new RIGNode(pair.getSecond()+1, aa2));
+			graph.addEdgeIJ(pair.getFirst()+1, pair.getSecond()+1);
 		}
 		graph.setContactType(in.getContactT());
 		graph.setCutoff(in.getContactDist());
