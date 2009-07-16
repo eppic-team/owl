@@ -64,7 +64,7 @@ public class PdbasePdb extends Pdb {
 		this.conn = conn;
 		
 		// this makes sure that we find the pdb code in the database
-		this.entrykey = get_entry_key();
+		this.entrykey = getEntryKey();
 		this.title = getTitle(); // this is available once we have the entry key
 	}
 
@@ -87,22 +87,22 @@ public class PdbasePdb extends Pdb {
 			this.model = modelSerial;
 			if (ccType==ChainCodeType.PDB_CHAIN_CODE) {
 				this.pdbChainCode=chainCode;	// NOTE! pdb chain code are case sensitive!
-				this.asymid=get_asym_id();		
+				this.asymid=getAsymId();		
 				this.chainCode = asymid;
 			} else if (ccType==ChainCodeType.CIF_CHAIN_CODE) {
 				this.chainCode = chainCode;
 				this.asymid = chainCode;
-				this.pdbChainCode = get_pdb_strand_id();
+				this.pdbChainCode = getPdbStrandId();
 			}
-			this.entitykey=get_entity_key();
-			this.alt_locs_sql_str=get_atom_alt_locs();
+			this.entitykey=getEntityKey();
+			this.alt_locs_sql_str=getAtomAltLocs();
 			
-			this.sequence = read_seq();
+			this.sequence = readSeq();
 			this.fullLength = sequence.length();
 			
-			this.pdbresser2resser = get_ressers_mapping();
+			this.pdbresser2resser = getRessersMapping();
    
-			this.read_atomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
+			this.readAtomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
 
 			this.obsLength = resser2restype.size();
 			
@@ -189,7 +189,7 @@ public class PdbasePdb extends Pdb {
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 */
-	private int get_entry_key() throws PdbCodeNotFoundError, SQLException {
+	private int getEntryKey() throws PdbCodeNotFoundError, SQLException {
 		String sql="SELECT entry_key, title FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -215,7 +215,7 @@ public class PdbasePdb extends Pdb {
 	 * @throws PdbChainCodeNotFoundError
 	 * @throws SQLException
 	 */
-	private String get_asym_id() throws PdbChainCodeNotFoundError, SQLException {
+	private String getAsymId() throws PdbChainCodeNotFoundError, SQLException {
 		String asymid = null;
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
@@ -250,7 +250,7 @@ public class PdbasePdb extends Pdb {
 	 * @throws PdbChainCodeNotFoundError
 	 * @throws SQLException
 	 */
-	private String get_pdb_strand_id() throws PdbChainCodeNotFoundError, SQLException {
+	private String getPdbStrandId() throws PdbChainCodeNotFoundError, SQLException {
 		String pdbstrandid = null;
 		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
 		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
@@ -275,7 +275,7 @@ public class PdbasePdb extends Pdb {
 	
 	// NOTE: Entity key not really needed since there can be only one entity_key
 	// per entry_key,asym_id combination 
-	private int get_entity_key() throws PdbaseInconsistencyError, SQLException {
+	private int getEntityKey() throws PdbaseInconsistencyError, SQLException {
 		String sql="SELECT entity_key " +
 				" FROM "+db+".struct_asym " +
 				" WHERE entry_key="+ entrykey +
@@ -296,30 +296,37 @@ public class PdbasePdb extends Pdb {
 		return entitykey;
 	}
 	
-	private String get_atom_alt_locs() throws PdbaseInconsistencyError, SQLException{
+	private String getAtomAltLocs() throws PdbaseInconsistencyError, SQLException{
 		ArrayList<String> alt_ids = new ArrayList<String>();
-		HashMap<String,Integer> alt_ids2keys = new HashMap<String,Integer>();
-		String alt_loc_field="label_alt_key";
-		String sql="SELECT id, atom_sites_alt_key FROM "+db+".atom_sites_alt WHERE entry_key="+entrykey;
-
+		String alt_loc_field="label_alt_id";
+		String sql = "SELECT DISTINCT " + alt_loc_field + 
+					" FROM "+db+".atom_site " +
+					" WHERE entry_key="+entrykey +
+					" AND label_asym_id='"+asymid+"' " +
+					" AND label_entity_key="+ entitykey +
+					" AND model_num="+ model;
+		
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		int count=0;
 		while (rsst.next()) {
 			count++;
 			alt_ids.add(rsst.getString(1));
-			alt_ids2keys.put(rsst.getString(1), rsst.getInt(2));
 		}
-		if (count!=0){
-			if ((! alt_ids.contains(".")) || alt_ids.indexOf(".")!=alt_ids.lastIndexOf(".")){ // second term is a way of finding out if there is more than 1 ocurrence of "." in the ArrayList 
-				throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is either no default value '.' or more than 1 '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+		if (count>0){
+			if (! alt_ids.contains(".")){ 
+				throw new PdbaseInconsistencyError("alt_codes exist for entry_key "+entrykey+" but there is no default value '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 			}
-			alt_ids.remove(".");
-			Collections.sort(alt_ids);
-			String lowest_alt_id = alt_ids.get(0);
-			alt_locs_sql_str = "("+alt_loc_field+"="+alt_ids2keys.get(".")+" OR "+alt_loc_field+"="+alt_ids2keys.get(lowest_alt_id)+")";
+			if (count==1) {
+				alt_locs_sql_str = alt_loc_field+"='.'";
+			} else {
+				alt_ids.remove(".");
+				Collections.sort(alt_ids);
+				String lowest_alt_id = alt_ids.get(0);
+				alt_locs_sql_str = "("+alt_loc_field+"='.' OR "+alt_loc_field+"='"+lowest_alt_id+"')";
+			}
 		} else {
-			alt_locs_sql_str=alt_loc_field+" IS NULL";
+			throw new PdbaseInconsistencyError("No records returned from atom_site table for entry_key="+entrykey+", entity_key="+entitykey+", asym_id="+asymid+", model_num="+model);
 		} 
 
 		rsst.close();
@@ -328,7 +335,7 @@ public class PdbasePdb extends Pdb {
 		return alt_locs_sql_str;
 	}
 	
-	private void read_atomData() throws PdbaseInconsistencyError, SQLException{
+	private void readAtomData() throws PdbaseInconsistencyError, SQLException{
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
@@ -375,7 +382,7 @@ public class PdbasePdb extends Pdb {
 		stmt.close();
 	}
 	
-	private String read_seq() throws PdbaseInconsistencyError, SQLException{
+	private String readSeq() throws PdbaseInconsistencyError, SQLException{
 		String sequence="";
 
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
@@ -406,7 +413,7 @@ public class PdbasePdb extends Pdb {
 		return sequence;
 	}
 	
-	private HashMap<String,Integer> get_ressers_mapping() throws PdbaseInconsistencyError, SQLException{
+	private HashMap<String,Integer> getRessersMapping() throws PdbaseInconsistencyError, SQLException{
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";

@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -40,11 +39,10 @@ public class CiffilePdb extends Pdb {
 	// fields we will read
 	private static final String entryId = "_entry";
 	private static final String atomSiteId = "_atom_site";
-	private static final String atomSitesAltId = "_atom_sites_alt";
 	private static final String pdbxPolySeqId = "_pdbx_poly_seq_scheme";
 	private static final String structConfId = "_struct_conf";
 	private static final String structSheetId = "_struct_sheet_range"; 
-	private static final String[] ids = {entryId,atomSitesAltId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId};
+	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -53,12 +51,32 @@ public class CiffilePdb extends Pdb {
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
 	private TreeMap<Integer,Long[]> loopelements2contentOffset;    // begin and end line index of each loop element
 	
-	private String altLoc;
-	
 	private RandomAccessFile fcif;
  
 	private boolean fieldsTitlesRead;
 	
+	/*---------------------------- inner classes ----------------------------*/
+	
+	/**
+	 * A class to store all data that we read from the atom lines of the atom_site element
+	 */
+	private class AtomLine{
+		public String labelAltId;
+		public int atomserial;
+		public String atom;
+		public String res_type;
+		public int res_serial;
+		public Point3d coords;
+
+		public AtomLine(String labelAltId, int atomserial, String atom, String res_type, int res_serial, Point3d coords) {
+			this.labelAltId = labelAltId;
+			this.atomserial = atomserial;
+			this.atom = atom;
+			this.res_type = res_type;
+			this.res_serial = res_serial;
+			this.coords = coords;
+		}
+	}
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
@@ -258,8 +276,7 @@ public class CiffilePdb extends Pdb {
 		}		
 		// now reading separate elements separately using private methods
 		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
-		this.pdbCode = readPdbCode();
-		readAtomAltLocs(); // sets altLoc String (needed in readAtomSite to get the right alt atom locations)		
+		this.pdbCode = readPdbCode();		
 		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
 		readAtomSite(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser 		
 		secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
@@ -336,56 +353,17 @@ public class CiffilePdb extends Pdb {
 		return fields2values.get(entryId+".id").trim().toLowerCase();
 	}
 	
-	private void readAtomAltLocs() throws IOException, CiffileFormatError {
-		// The read of the atom_sites_alt element must be done previously to scanning the atom_site element
-		// This is because the order of the different elements in the cif files is not guaranteed, so atom_sites_alt can come before or after atom_site
-		// (and altLoc needs to be set before starting reading the atom_site element)
-
-		ArrayList<String> altLocs = new ArrayList<String>();
-		// we initialise to ".", this is the default value in the cif files for the alt loc field. If no atom_sites_alt is present it's ok to stay with this value
-		altLoc = ".";  
-		
-		// atom_sites_alt element is optional
-		Long[] intAtomSitesAlt = null;
-		if (ids2elements.containsKey(atomSitesAltId)){
-			intAtomSitesAlt = loopelements2contentOffset.get(ids2elements.get(atomSitesAltId));
-		}
-
-		int recordCount = 0;
-		// atom_sites_alt (optional element)
-		if (intAtomSitesAlt!=null) {
-			
-			fcif.seek(intAtomSitesAlt[0]);			
-			while(fcif.getFilePointer()<intAtomSitesAlt[1]) {
-				recordCount++;
-				 
-				int idIdx = fields2indices.get(atomSitesAltId+".id");
-				// id=0
-				// A ?
-				int numberFields = ids2fieldsIdx.get(atomSitesAltId);
-				String[] tokens = tokeniseFields(numberFields);
-				if (tokens.length!=numberFields) {
-					throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSitesAltId);
-				}
-				if (!tokens[idIdx].equals(".")) {
-					altLocs.add(tokens[idIdx]);
-				}
-			}
-		}
-		if (!altLocs.isEmpty()){
-			altLoc = Collections.min(altLocs);
-		}
-	}
-		
 	private void readAtomSite() throws IOException, PdbChainCodeNotFoundError, CiffileFormatError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
 		atomser2resser = new HashMap<Integer,Integer>();
 		
+		ArrayList<AtomLine>	atomLinesData = new ArrayList<AtomLine>(); // to temporarily store all data from atom lines, we keep then only the ones matching the alt locations that we want
+		TreeSet<String> labelAltIds = new TreeSet<String>(); // to store the alt location ids (label_alt_id) (the default char "." is not stored)
+		
 		Long[] intAtomSite = loopelements2contentOffset.get(ids2elements.get(atomSiteId));
 		
-		boolean empty = true;
 		int recordCount = 0;
 		
 		fcif.seek(intAtomSite[0]);
@@ -411,30 +389,42 @@ public class CiffilePdb extends Pdb {
 			if (tokens.length!=numberFields) {
 				throw new CiffileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId);
 			}
-			if (tokens[groupPdbIdx].equals("ATOM") && tokens[labelAsymIdIdx].equals(chainCode) && Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
-				empty = false;
-				if (tokens[labelAltIdIdx].equals(".") || tokens[labelAltIdIdx].equals(altLoc)) { // don't read lines with something else as "." or altLoc
-					int atomserial=Integer.parseInt(tokens[idIdx]); // id
-					String atom = tokens[labelAtomIdIdx]; // label_atom_id
-					String res_type = tokens[labelCompIdIdx]; // label_comp_id
-					int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
-					double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
-					double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
-					double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
-					Point3d coords = new Point3d(x,y,z);
-					if (AAinfo.isValidAA(res_type)) {
-						resser2restype.put(res_serial, res_type);
-						if (AAinfo.isValidAtomWithOXT(res_type,atom)){
-							atomser2coord.put(atomserial, coords);
-							atomser2resser.put(atomserial, res_serial);
-							resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
-						}
+			if (tokens[groupPdbIdx].equals("ATOM") && 
+				tokens[labelAsymIdIdx].equals(chainCode) && 
+				Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
+				
+				String labelAltId = tokens[labelAltIdIdx];
+				if (!labelAltId.equals(".")) labelAltIds.add(labelAltId);
+				int atomserial=Integer.parseInt(tokens[idIdx]); // id
+				String atom = tokens[labelAtomIdIdx]; // label_atom_id
+				String res_type = tokens[labelCompIdIdx]; // label_comp_id
+				int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
+				double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
+				double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
+				double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
+				Point3d coords = new Point3d(x,y,z);
+				atomLinesData.add(new AtomLine(labelAltId, atomserial, atom, res_type, res_serial, coords));
+			}
+		}
+		if (atomLinesData.isEmpty()) { // no atom data was found for given pdb chain code and model
+			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
+		}
+		
+		String firstAltCode = null;
+		if (!labelAltIds.isEmpty()) {
+			firstAltCode = labelAltIds.first();
+		}
+		for (AtomLine atomLine:atomLinesData) {
+			if (atomLine.labelAltId.equals(".") || (firstAltCode!=null && atomLine.labelAltId.equals(firstAltCode))) {
+				if (AAinfo.isValidAA(atomLine.res_type)) {
+					resser2restype.put(atomLine.res_serial, atomLine.res_type);
+					if (AAinfo.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
+						atomser2coord.put(atomLine.atomserial, atomLine.coords);
+						atomser2resser.put(atomLine.atomserial, atomLine.res_serial);
+						resser_atom2atomserial.put(atomLine.res_serial+"_"+atomLine.atom, atomLine.atomserial);
 					}
 				}
 			}
-		}
-		if (empty) { // no atom data was found for given pdb chain code and model
-			throw new PdbChainCodeNotFoundError("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 	}
 	
