@@ -57,7 +57,7 @@ public class PdbfilePdb extends Pdb {
 			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 
 			this.sequence = ""; // we initialize to blank so we can append to the string in read_pdb_data_from_file
-			read_pdb_data_from_file();
+			parse();
 			
 			this.obsLength = resser2restype.size();
 			
@@ -172,7 +172,7 @@ public class PdbfilePdb extends Pdb {
 	 * @throws PdbChainCodeNotFoundError if no ATOM lines are found for given 
 	 * pdbChainCode and model
 	 */
-	private void read_pdb_data_from_file() throws IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
+	private void parse() throws IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
 		resser_atom2atomserial = new HashMap<String,Integer>();
 		resser2restype = new HashMap<Integer,String>();
 		atomser2coord = new HashMap<Integer,Point3d>();
@@ -415,6 +415,10 @@ public class PdbfilePdb extends Pdb {
 		} else { // we could read the sequence from SEQRES
 			// 1) we check that the sequences from ATOM lines and SEQRES coincide (except for unobserved residues)
 			for (int resser:resser2restype.keySet()) {
+				// before checking the sequence matching we need to be sure that the resser is not out of the range of the SEQRES sequence length 
+				if (resser>sequence.length()) {
+					throw new PdbfileFormatError("Residue serial "+resser+" from ATOM line is bigger than SEQRES sequence length. Incorrect residue numbering in PDB file "+pdbfile);
+				}
 				if (!String.valueOf(sequence.charAt(resser-1)).equals(AAinfo.threeletter2oneletter(resser2restype.get(resser)))) {
 					throw new PdbfileFormatError("Sequences from ATOM lines and SEQRES do not match for position "+resser+". Incorrect residue numbering in PDB file "+pdbfile);
 				}
@@ -425,7 +429,7 @@ public class PdbfilePdb extends Pdb {
 	}
 	
 	/**
-	 * Reformats a parent record in one of the verious styles found in Casp files to our standard form
+	 * Reformats a parent record in one of the various styles found in Casp files to our standard form
 	 * @param s the input parent string
 	 * @return a parent string in our convention
 	 */

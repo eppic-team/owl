@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import junit.framework.Assert;
 
@@ -15,6 +17,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import proteinstructure.AAinfo;
 import proteinstructure.CiffileFormatError;
 import proteinstructure.CiffilePdb;
 import proteinstructure.Pdb;
@@ -22,6 +25,7 @@ import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbaseInconsistencyError;
 import proteinstructure.PdbasePdb;
+import proteinstructure.PdbfilePdb;
 import proteinstructure.SecondaryStructure;
 import tools.MySQLConnection;
 
@@ -29,6 +33,7 @@ public class PdbParsersTest {
 	
 	
 	String cifdir="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
+	String pdbdir="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
 	String listFile = "/project/StruPPi/michael/cullpdb/cullpdb_20";
 	String pdbaseDB = "pdbase";
 	String mysqlServer = "talyn";
@@ -49,7 +54,7 @@ public class PdbParsersTest {
 	public void tearDown() throws Exception {
 	}
 
-	@Test
+//	@Test
 	public void testCIFagainstPDBASE() throws CiffileFormatError, PdbaseInconsistencyError, SQLException, IOException {
 
 		MySQLConnection conn = new MySQLConnection(mysqlServer, pdbaseDB);
@@ -145,8 +150,84 @@ public class PdbParsersTest {
 	}
 	
 	@Test
-	public void testPdbfileParser() {
-		//TODO implement it!, interesting things to test: 
-		// lengths, observed, unobserved... basically every special case that we try to catch in the parser we should test here
+	public void testPdbfileParser() throws IOException, SQLException {
+		BufferedReader flist = new BufferedReader(new FileReader(listFile));
+		String line;
+		while ((line = flist.readLine() ) != null ) {
+			String pdbCode = line.split("\\s+")[0].toLowerCase();
+			//String pdbChainCode = line.split("\\s+")[1];
+			
+			System.out.println(pdbCode);
+			
+			Pdb pdbfilePdb = null;
+			Pdb pdbasePdb = null;
+			
+			try {
+				pdbfilePdb = new PdbfilePdb(new File(pdbdir,"pdb"+pdbCode+".ent").getAbsolutePath());
+				pdbasePdb = new PdbasePdb(pdbCode);
+				String[] chains = pdbfilePdb.getChains();
+				// test getChains/getModels
+				Assert.assertTrue(chains.length>0);
+				Integer[] models = pdbfilePdb.getModels();
+				Assert.assertTrue(models.length>0);
+				Assert.assertFalse(pdbfilePdb.isDataLoaded());
+				
+				// loading all chains and all models
+				for (int model:models) {
+					System.out.println(model);
+					for (String chain:chains) {
+						pdbasePdb.load(chain);
+						System.out.println(chain);
+						pdbfilePdb.load(chain,model);
+						Assert.assertTrue(pdbfilePdb.isDataLoaded());
+						
+						// pdbCode properly read
+						Pattern p = Pattern.compile("^\\d\\w\\w\\w$");
+						Matcher m = p.matcher(pdbfilePdb.getPdbCode());
+						Assert.assertTrue(m.matches());
+						Assert.assertEquals(pdbasePdb.getPdbCode(), pdbfilePdb.getPdbCode());
+						
+						// chain codes coincide
+						Assert.assertEquals(chain,pdbfilePdb.getChainCode());
+						Assert.assertEquals(pdbfilePdb.getChainCode(), pdbfilePdb.getPdbChainCode());
+						Assert.assertEquals(pdbasePdb.getPdbChainCode(), pdbfilePdb.getPdbChainCode());
+						// model as input
+						Assert.assertEquals(model,pdbfilePdb.getModel());
+						
+						// sequence
+						Assert.assertTrue(pdbfilePdb.getObservedSequence().length()<=pdbfilePdb.getSequence().length());
+						Assert.assertTrue(pdbfilePdb.get_length()==pdbfilePdb.getObservedSequence().length());
+						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().length());
+						Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
+						String seq = pdbfilePdb.getSequence();
+						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
+							Assert.assertEquals(pdbfilePdb.getResTypeFromResSerial(resser), 
+												AAinfo.oneletter2threeletter(String.valueOf(seq.charAt(resser-1))));
+						}
+
+						// atom number: at least 1 atom per observed residue
+						Assert.assertTrue(pdbfilePdb.getNumAtoms()>=pdbfilePdb.get_length());
+						
+						// info from atom serials
+						for (int atomser:pdbfilePdb.getAllAtomSerials()) {
+							Assert.assertNotNull(pdbfilePdb.getAtomCoord(atomser));
+							Assert.assertNotNull(pdbfilePdb.get_resser_from_atomser(atomser));
+						}
+
+						// sec structure
+						SecondaryStructure ss = pdbfilePdb.getSecondaryStructure();
+						Assert.assertNotNull(ss);
+						Assert.assertEquals(pdbfilePdb.getSequence(), ss.getSequence());
+
+					}
+				}		
+				
+			} catch (PdbLoadError e) {
+				System.err.println("pdb load error, cause: "+e.getMessage());
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("pdb code not found in pdbase");			
+			}
+		}
+		flist.close();
 	}
 }
