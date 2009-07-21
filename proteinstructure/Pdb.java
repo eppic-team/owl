@@ -1,7 +1,19 @@
 package proteinstructure;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,7 +26,6 @@ import java.util.TreeSet;
 import java.util.Vector;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
-import java.util.Arrays;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
@@ -28,6 +39,7 @@ import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 
 import tools.MySQLConnection;
+
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -37,6 +49,7 @@ import java.sql.Statement;
  */
 public abstract class Pdb {
 
+	/*------------------------------------  constants ---------------------------------------------*/
 	protected static final int DEFAULT_MODEL=1;				// default model serial (NMR structures)
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code. 
 															// Should be safe now to change the value of this constant from "NULL" to something else,
@@ -49,8 +62,22 @@ public abstract class Pdb {
 	private static final double DEFAULT_B_FACTOR = 0.00;		// default value if no b-factor is given
 	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
 	
+	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	
+	private static final String PQS_FILE = "/project/StruPPi/Databases/PQS/pqs.txt";
+	private static final String PISA_FILE = "/project/StruPPi/Databases/PISA/pisa.txt";
+	private static final String CSA_DIR = "/project/StruPPi/Databases/CSA";
+	private static final String CSA_URL_PREFIX = "http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/";
+	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
+	private static final String PDB2EC_MAPPING_FILE = "/project/StruPPi/Databases/PDBSProtEC/mapping.txt";
+	private static final String CONSURF_URL_PREFIX = "http://consurf.tau.ac.il/results/";
+	private static final String CONSURF_DIR = "/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades";
+	private static final String SCOP_URL_PREFIX = "http://scop.mrc-lmb.cam.ac.uk/scop/parse/";
+	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
+	
+	/*-------------------------------------  members ---------------------------------------------*/
 	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
-	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type 
+	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type (only observed residues)
 	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
 	protected HashMap<Integer,Integer> atomser2resser;  	// atom serials to residue serials
 	protected HashMap<Integer,String> atomser2atom;     	// atom serials to atom names
@@ -154,7 +181,7 @@ public abstract class Pdb {
 		this.oligomeric = new OligomericState();
 		
 		// parse PQS
-		File pqsFile = new File("/project/StruPPi/Databases/PQS/pqs.txt");
+		File pqsFile = new File(PQS_FILE);
 		in = new BufferedReader(new FileReader(pqsFile));
 
 		while ((inputLine = in.readLine()) != null) {
@@ -168,7 +195,7 @@ public abstract class Pdb {
 		in.close();		
 
 		// parse PISA
-		File pisaFile = new File("/project/StruPPi/Databases/PISA/pisa.txt");
+		File pisaFile = new File(PISA_FILE);
 		in = new BufferedReader(new FileReader(pisaFile));
 
 		while ((inputLine = in.readLine()) != null) {
@@ -198,7 +225,7 @@ public abstract class Pdb {
 		String inputLine;
 
 		if (online) {
-			URL csa = new URL("http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/CSA_"+version.replaceAll("\\.","_")+".dat.gz");
+			URL csa = new URL(CSA_URL_PREFIX+"CSA_"+version.replaceAll("\\.","_")+".dat.gz");
 			URLConnection conn = csa.openConnection();
 			InputStream inURL = conn.getInputStream();
 			OutputStream out = new BufferedOutputStream(new FileOutputStream("CSA_"+version.replaceAll("\\.","_")+".dat.gz"));
@@ -213,7 +240,7 @@ public abstract class Pdb {
 			out.close();
 			in = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream("CSA_"+version.replaceAll(".","_")+".dat.gz"))));
 		} else {
-			File csaFile = new File("/project/StruPPi/Databases/CSA/CSA_"+version.replaceAll("\\.","_")+".dat");
+			File csaFile = new File(CSA_DIR,"CSA_"+version.replaceAll("\\.","_")+".dat");
 			in = new BufferedReader(new FileReader(csaFile));			
 		}
 
@@ -279,6 +306,12 @@ public abstract class Pdb {
 		return csaMistakes;
 	}
 
+	/**
+	 * Parses local/remote pdb to EC mapping and assigns the values to 
+	 * member variable <code>ec</code>.
+	 * @param online
+	 * @throws IOException
+	 */
 	public void checkEC(boolean online) throws IOException {
 
 		this.ec = new EC();	
@@ -289,11 +322,11 @@ public abstract class Pdb {
 		Pattern p = Pattern.compile("^ \\d");
 
 		if (online) {
-			URL pdb2ecMapping = new URL("http://www.bioinf.org.uk/pdbsprotec/mapping.txt");
+			URL pdb2ecMapping = new URL(PDB2EC_MAPPING_URL);
 			URLConnection p2e= pdb2ecMapping.openConnection();
 			in = new BufferedReader(new InputStreamReader(p2e.getInputStream()));
 		} else {
-			File pdb2ecMapping = new File("/project/StruPPi/Databases/PDBSProtEC/mapping.txt");
+			File pdb2ecMapping = new File(PDB2EC_MAPPING_FILE);
 			in = new BufferedReader(new FileReader(pdb2ecMapping));
 		}
 
@@ -317,19 +350,26 @@ public abstract class Pdb {
 
 	}
 
+	/**
+	 * Parses consurf data from remote/local file assigning values to 
+	 * member variables <code>resser2consurfhsspcore</code>, <code>resser2consurfhsspcolor</code>
+	 * @param online if true will grab consurf data from web, if false will use local file
+	 * @return
+	 * @throws IOException
+	 */
 	public int checkConsurfHssp(boolean online) throws IOException {
 
 		BufferedReader in;
 		if (online) {
 			// TODO: Check if url exists and if not do the same as for the offline case
-			URL consurfhssp = new URL("http://consurf.tau.ac.il/results/HSSP_ML_"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
+			URL consurfhssp = new URL(CONSURF_URL_PREFIX+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 			URLConnection ch = consurfhssp.openConnection();
 			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
 		} else {
-			File consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
+			File consurfhssp = new File(CONSURF_DIR,pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
 			if (!consurfhssp.exists() && pdbChainCode.equals("A")) {
 				System.out.println("consurf");
-				consurfhssp = new File("/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades/"+pdbCode+"_.grades");
+				consurfhssp = new File(CONSURF_DIR,pdbCode+"_.grades");
 			}
 			in = new BufferedReader(new FileReader(consurfhssp));
 		}
@@ -337,10 +377,9 @@ public abstract class Pdb {
 		Pattern p = Pattern.compile("^\\s+\\d+");
 		int lineCount = 0;
 		int consurfHsspMistakes = 0;
-
-		Integer[] ressers = new Integer[resser2restype.size()];
-		resser2restype.keySet().toArray(ressers);
-		Arrays.sort(ressers);
+			
+		Integer[] ressers = new Integer[get_length()];
+		getAllSortedResSerials().toArray(ressers);
 
 		resser2consurfhsspscore = new HashMap<Integer,Double>();
 		resser2consurfhsspcolor = new HashMap<Integer,Integer>();
@@ -412,7 +451,7 @@ public abstract class Pdb {
 	public double calcVolume(String calcExecutable, String calcParameters) throws IOException {
 		String line;
 		double vol = 0;
-		String pdbFileName = "/tmp/"+pdbCode+chainCode+"_"+System.currentTimeMillis()+".pdb";
+		String pdbFileName = new File(TMP_DIR,pdbCode+chainCode+"_"+System.currentTimeMillis()+".pdb").getAbsolutePath();
 		dump2pdbfile(pdbFileName, true);
 		
 		File test = new File(calcExecutable);
@@ -432,8 +471,14 @@ public abstract class Pdb {
 		return vol;
 	}
 	
-	// Micheal H. Zehfus and George D. Rose (1986) Compact Units in Proteins. Biochemistry 25: 5759-5765.
-	// DOI: 10.1021/bi00367a062
+	/**
+	 * Calculates compactness coefficient as defined by:
+	 * Micheal H. Zehfus and George D. Rose (1986) Compact Units in Proteins. Biochemistry 25: 5759-5765.
+	 * DOI: 10.1021/bi00367a062
+	 * @param surface
+	 * @param volume
+	 * @return
+	 */
 	public double calcCompactnessCoefficient(double surface, double volume) {
 		return (surface/Math.pow(36*Math.PI*Math.pow(volume,2), 1.0/3.0));
 	}
@@ -547,11 +592,11 @@ public abstract class Pdb {
 		String inputLine;
 	
 		if (online) {
-			URL scop_cla = new URL("http://scop.mrc-lmb.cam.ac.uk/scop/parse/dir.cla.scop.txt_"+version);
+			URL scop_cla = new URL(SCOP_URL_PREFIX+"dir.cla.scop.txt_"+version);
 			URLConnection sc = scop_cla.openConnection();
 			in = new BufferedReader(new InputStreamReader(sc.getInputStream()));
 		} else {
-			File scop_cla = new File("/project/StruPPi/Databases/SCOP/dir.cla.scop.txt_"+version);
+			File scop_cla = new File(SCOP_DIR,"dir.cla.scop.txt_"+version);
 			in = new BufferedReader(new FileReader(scop_cla));
 		}
 
@@ -2742,7 +2787,7 @@ public abstract class Pdb {
 	
 	/*--------------------------------- main --------------------------------*/
 	
-	// to test the class
+	// to test the class, see also PdbTest class in tests.proteinstructure package
 	public static void main(String[] args) throws Exception {
 		// tester for omega angles
 		Pdb pdb = new PdbfilePdb(args[0]);

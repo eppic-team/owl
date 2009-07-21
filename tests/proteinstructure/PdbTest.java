@@ -67,4 +67,17 @@ public class PdbTest {
 		
 	}
 	
+	@Test
+	public void testCheckConsurfHssp() throws IOException, PdbLoadError {
+		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE);
+		pdb.load(TEST_CHAIN);
+		pdb.checkConsurfHssp(false);
+		for (int resser:pdb.getAllSortedResSerials()){
+			// very basic test, not sure how to test this better 
+			Assert.assertNotNull(pdb.getConsurfhsspColorFromResSerial(resser));
+			Assert.assertNotNull(pdb.getConsurfhsspScoreFromResSerial(resser));
+		}
+ 
+	}
+	
 }
