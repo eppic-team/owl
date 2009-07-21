@@ -10,7 +10,7 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 import proteinstructure.Polymer;
-import proteinstructure.Residue;
+import proteinstructure.PolResidue;
 
 /**
  * Class to read a Histone molecule from a PDB file and output the coordinates 
@@ -95,7 +95,7 @@ public class analyseHistone {
 		mol.transformRefFrameToCenterAndAxis(centerOfMass, axis);
 		
 		// rotating so that x axis is aligned along the reference residue
-		Residue refRes = mol.getResidue(refResSerial, refResChainCode);
+		PolResidue refRes = mol.getResidue(refResSerial, refResChainCode);
 		Point3d refResCoords = refRes.getCoords();
 		Vector3d iVec = new Vector3d(1,0,0);
 		double rotAngle = iVec.angle(new Vector3d(refResCoords.x,refResCoords.y, 0));
@@ -109,17 +109,17 @@ public class analyseHistone {
 		PrintStream outDNA = new PrintStream(new FileOutputStream(dnaFile));
 		
 		System.out.println("Getting LYSs");
-		ArrayList<Residue> lysResidues = mol.getResiduesOfType("LYS");
+		ArrayList<PolResidue> lysResidues = mol.getResiduesOfType("LYS");
 		projectOnCylinder(lysResidues, outLys);
 		System.out.println("Getting ARGs");
-		ArrayList<Residue> argResidues = mol.getResiduesOfType("ARG");
+		ArrayList<PolResidue> argResidues = mol.getResiduesOfType("ARG");
 		projectOnCylinder(argResidues, outArg);
 		System.out.println("Getting DNA residues");
-		ArrayList<Residue> aResidues = mol.getResiduesOfType("DA");
-		ArrayList<Residue> cResidues = mol.getResiduesOfType("DC");
-		ArrayList<Residue> tResidues = mol.getResiduesOfType("DT");
-		ArrayList<Residue> gResidues = mol.getResiduesOfType("DG");
-		ArrayList<Residue> dnaResidues = new ArrayList<Residue>();
+		ArrayList<PolResidue> aResidues = mol.getResiduesOfType("DA");
+		ArrayList<PolResidue> cResidues = mol.getResiduesOfType("DC");
+		ArrayList<PolResidue> tResidues = mol.getResiduesOfType("DT");
+		ArrayList<PolResidue> gResidues = mol.getResiduesOfType("DG");
+		ArrayList<PolResidue> dnaResidues = new ArrayList<PolResidue>();
 		dnaResidues.addAll(aResidues);
 		dnaResidues.addAll(cResidues);
 		dnaResidues.addAll(tResidues);
@@ -139,7 +139,7 @@ public class analyseHistone {
 		System.out.printf("Biggest inertia moment axis: (%5.3f, %5.3f, %5.3f)\n",endInAxis.x,endInAxis.y,endInAxis.z);
 	}
 	
-	private static void projectOnCylinder(ArrayList<Residue> residues, PrintStream out) {
+	private static void projectOnCylinder(ArrayList<PolResidue> residues, PrintStream out) {
 		
 		ArrayList<Double> zs = new ArrayList<Double>();
 		ArrayList<Double> thetas = new ArrayList<Double>();
@@ -148,7 +148,7 @@ public class analyseHistone {
 		// we take the x axis as reference to measure the theta angle
 		Vector3d iVec = new Vector3d(1,0,0); 
 		
-		for (Residue residue:residues) {
+		for (PolResidue residue:residues) {
 			Point3d coords = residue.getCoords();
 			// getting distance to the z axis
 			double dist = new Point3d(coords.x,coords.y,0).distance(new Point3d(0,0,0));			

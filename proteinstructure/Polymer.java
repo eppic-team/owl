@@ -30,7 +30,7 @@ import Jama.Matrix;
  * @author duarte
  *
  */
-public class Polymer implements Iterable<Residue> {
+public class Polymer implements Iterable<PolResidue> {
 
 	private static final double DEFAULT_B_FACTOR = 0.00;		// default value if no b-factor is given
 	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
@@ -60,15 +60,15 @@ public class Polymer implements Iterable<Residue> {
 	 * The Map containing all residues. The keys are of the form 
 	 * chainCode+residueSerial, e.g. A123 for residue 123 of chain A
 	 */
-	private TreeMap<String,Residue> residues;
+	private TreeMap<String,PolResidue> residues;
 
 
 	/**
-	 * Creates a new Polymer with no residues. Use {@link #addResidue(Residue)}
+	 * Creates a new Polymer with no residues. Use {@link #addResidue(PolResidue)}
 	 * to add residues subsequently.
 	 */
 	public Polymer() {
-		residues = new TreeMap<String, Residue>();
+		residues = new TreeMap<String, PolResidue>();
 	}
 
 	/**
@@ -105,7 +105,7 @@ public class Polymer implements Iterable<Residue> {
 					double y = Double.parseDouble(ml.group(8).trim());
 					double z = Double.parseDouble(ml.group(9).trim());
 					Point3d coords = new Point3d(x,y,z);
-					this.addResidue(new Residue(resType,resSerial,chainCode,chainCode,atomType,coords));
+					this.addResidue(new PolResidue(resType,resSerial,chainCode,chainCode,atomType,coords));
 				}
 			}		
 		}
@@ -116,7 +116,7 @@ public class Polymer implements Iterable<Residue> {
 	 * Adds a residue to this Polymer
 	 * @param residue
 	 */
-	public void addResidue(Residue residue) {
+	public void addResidue(PolResidue residue) {
 		residues.put(residue.getChainCode()+residue.getSerial(),residue);
 	}
 	
@@ -126,11 +126,11 @@ public class Polymer implements Iterable<Residue> {
 	 * @param chainCode
 	 * @return
 	 */
-	public Residue getResidue(int serial, String chainCode) {
+	public PolResidue getResidue(int serial, String chainCode) {
 		return residues.get(chainCode+serial);
 	}
 
-	public Iterator<Residue> iterator() {
+	public Iterator<PolResidue> iterator() {
 		return residues.values().iterator();
 	}
 
@@ -141,7 +141,7 @@ public class Polymer implements Iterable<Residue> {
 	public Point3d getCenterOfMass() {
 		double massSum = 0;
 		Point3d sum = new Point3d();
-		for (Residue residue:this) {
+		for (PolResidue residue:this) {
 			Point3d coord = new Point3d(residue.getCoords());
 			coord.scale(residue.getMass());
 			sum.add(coord);
@@ -156,9 +156,9 @@ public class Polymer implements Iterable<Residue> {
 	 * @param residues
 	 */
 	public void removeResidues(Set<String> residues) {
-		Iterator<Residue> it = this.iterator();
+		Iterator<PolResidue> it = this.iterator();
 		while (it.hasNext()){
-			Residue residue = it.next();
+			PolResidue residue = it.next();
 			if (residues.contains(residue.getChainCode()+residue.getSerial())) {
 				it.remove();
 			}
@@ -170,9 +170,9 @@ public class Polymer implements Iterable<Residue> {
 	 * @param type
 	 * @return
 	 */
-	public ArrayList<Residue> getResiduesOfType(String type) {
-		ArrayList<Residue> residues = new ArrayList<Residue>();
-		for (Residue residue:this) {
+	public ArrayList<PolResidue> getResiduesOfType(String type) {
+		ArrayList<PolResidue> residues = new ArrayList<PolResidue>();
+		for (PolResidue residue:this) {
 			if (residue.getType().equals(type)) {
 				residues.add(residue);
 			}
@@ -196,7 +196,7 @@ public class Polymer implements Iterable<Residue> {
 	private Point3d[] getCoordsArray() {
 		Point3d[] coordsArray = new Point3d[this.size()];
 		int i=0;
-		for (Residue residue:this) {
+		for (PolResidue residue:this) {
 			coordsArray[i] = residue.getCoords();
 			i++;
 		}
@@ -243,7 +243,7 @@ public class Polymer implements Iterable<Residue> {
 	 */
 	public double[][] getMomentInertiaTensor(Point3d center) {
 		double[][] tensor = new double[3][3];
-		for (Residue residue:this) {
+		for (PolResidue residue:this) {
 			Point3d coords = new Point3d(residue.getCoords());
 			coords.sub(center);
 			double m = residue.getMass();
@@ -308,7 +308,7 @@ public class Polymer implements Iterable<Residue> {
 		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
 		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
 		rot.setRotation(axisAngle);
-		for (Residue residue:this) { 
+		for (PolResidue residue:this) { 
 			Point3d coords = residue.getCoords();
 			// translate to new origin
 			coords.sub(center);
@@ -327,7 +327,7 @@ public class Polymer implements Iterable<Residue> {
 		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
 		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
 		rot.setRotation(axisAngle);
-		for (Residue residue:this) { 
+		for (PolResidue residue:this) { 
 			Point3d coords = residue.getCoords();
 			// rotate
 			rot.transform(coords);			
@@ -339,7 +339,7 @@ public class Polymer implements Iterable<Residue> {
 	 * @param center
 	 */
 	public void translate(Point3d center) {
-		for (Residue residue:this) { 
+		for (PolResidue residue:this) { 
 			Point3d coords = residue.getCoords();
 			// translate to new origin
 			coords.sub(center);
@@ -360,7 +360,7 @@ public class Polymer implements Iterable<Residue> {
 	
 	public void writeAtomLines(PrintStream out) {
 		int atomser = 1;
-		for (Residue residue:this) {
+		for (PolResidue residue:this) {
 			String atom = residue.getAtomType();
 			String res = residue.getType();
 			String chainCodeStr = residue.getChainCode();
@@ -384,7 +384,7 @@ public class Polymer implements Iterable<Residue> {
 	 */
 	public Polymer copy() {
 		Polymer mol = new Polymer();
-		for (Residue residue:this) {
+		for (PolResidue residue:this) {
 			mol.addResidue(residue.copy());
 		}
 		return mol;
