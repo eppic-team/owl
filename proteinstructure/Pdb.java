@@ -50,16 +50,16 @@ import java.sql.Statement;
 public abstract class Pdb {
 
 	/*------------------------------------  constants ---------------------------------------------*/
-	protected static final int DEFAULT_MODEL=1;				// default model serial (NMR structures)
+	protected static final int DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code. 
 															// Should be safe now to change the value of this constant from "NULL" to something else,
 															// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
-	public static final String NO_PDB_CODE = "";			// to specify no pdb code
+	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
-	public static final String NO_CHAIN_CODE = "";			// to specify no internal chain code
+	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
 	
-	private static final double DEFAULT_B_FACTOR = 0.00;		// default value if no b-factor is given
+	private static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
 	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
 	
 	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
@@ -84,13 +84,14 @@ public abstract class Pdb {
 	protected HashMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
 	protected HashMap<Integer,String> resser2pdbresser; 	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 
-	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
-	protected Scop scop;											// the scop annotation for this pdb object
 	protected HashMap<Integer, Double> atomser2bfactor;				// the b-factor for each atom (default: 0)
 	protected HashMap<Integer,Double> resser2allrsa;				// internal residue serials to all-atoms rsa
 	protected HashMap<Integer,Double> resser2scrsa;					// internal residue serials to SC rsa
-	protected HashMap<Integer,Double> resser2consurfhsspscore; 		// internal residue serials to SC rsa
-	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to SC rsa
+	protected HashMap<Integer,Double> resser2consurfhsspscore; 		// internal residue serials to consurf score
+	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to consurf color
+	
+	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
+	protected Scop scop;											// the scop annotation for this pdb object
 	protected EC ec;												// the ec annotation for this pdb object
 	protected CatalSiteSet catalSiteSet;							// the catalytic site annotation for this pdb object
 	protected OligomericState oligomeric;							// the oligomeric state for this pdb object
@@ -361,7 +362,8 @@ public abstract class Pdb {
 
 		BufferedReader in;
 		if (online) {
-			// TODO: Check if url exists and if not do the same as for the offline case
+			// TODO: Check if url exists and if not do the same as for the offline case 
+			// NOTE: the URL doesn't seem to work anymore - Jose 21.07.2009
 			URL consurfhssp = new URL(CONSURF_URL_PREFIX+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 			URLConnection ch = consurfhssp.openConnection();
 			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
@@ -421,6 +423,7 @@ public abstract class Pdb {
 	 * Runs an external calc-surface executable and returns the total ASA 
 	 * @param calcExecutable
 	 * @param calcParameters
+	 * @return
 	 */
 	public double calcSurface(String calcExecutable, String calcParameters) throws IOException {
 		String line;
@@ -447,6 +450,7 @@ public abstract class Pdb {
 	 * Runs an external calc-volume executable and returns the volume 
 	 * @param calcExecutable
 	 * @param calcParameters
+	 * @return
 	 */
 	public double calcVolume(String calcExecutable, String calcParameters) throws IOException {
 		String line;
