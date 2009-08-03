@@ -50,5 +50,5 @@ public interface HasFeatures {
 		 * Attach the given feature to the implementing object.
 		 * @param feature
 		 */
-		public void addFeature(Feature feature);
+		public void addFeature(Feature feature) throws InvalidFeatureCoordinatesException, OverlappingFeatureException;
 }
