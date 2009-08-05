@@ -4,23 +4,30 @@ import proteinstructure.Interval;
 import proteinstructure.IntervalSet;
 
 /**
- * A general sequence/structure feature.
+ * A feature based on a Uniprot annotation.
  * @author stehr
  */
-public class GeneralFeature implements Feature {
+public class UniprotFeature implements Feature {
 
 	/*--------------------------- member variables --------------------------*/
-
-	FeatureType type;
-	String description;
 	IntervalSet position;
+	String description;
+	FeatureType type;
+	
+	// type specific data
+	String uniprotTypeName;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
-	public GeneralFeature(IntervalSet position, String description) {
-		this.type = FeatureType.GENERAL;
-		this.position = position;
+	/**
+	 * Createas a UniprotFeature based on a Feature object from the Uniprot Remote API.
+	 */
+	public UniprotFeature(int begRes, int endRes, String uniprotTypeName, String description) {
+		this.type = FeatureType.UNIPROT;
+		this.position = new IntervalSet();
+		this.position.add(new Interval(begRes, endRes));
 		this.description = description;
+		this.uniprotTypeName = uniprotTypeName;
 	}
 	
 	/*-------------------------- implemented methods ------------------------*/
@@ -36,11 +43,11 @@ public class GeneralFeature implements Feature {
 	public FeatureType getType() {
 		return this.type;
 	}
-	
+
 	/*---------------------------- public methods ---------------------------*/
 	
 	public String toString() {
-		return Interval.createSelectionString(this.getIntervalSet().getIntegerSet()) + " : " + this.description;
+		return this.uniprotTypeName + " " + this.description + " : " + Interval.createSelectionString(this.getIntervalSet().getIntegerSet());
 	}
-
+	
 }

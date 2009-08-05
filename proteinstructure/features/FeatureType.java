@@ -10,7 +10,9 @@ package proteinstructure.features;
  */
 public enum FeatureType {
 	GENERAL,	// A general, not further specified feature
-	//CSA,		// A catalytic site from Catalytic Site Atlas
+	CSA,		// A catalytic site from Catalytic Site Atlas
+	UNIPROT,	// A feature based on a Uniprot annotation
+	PROSITE;	// A feature based on a matching Prosite motif
 	//SCOP,		// A Scop domain annotation
 	//EC;			// A catalytic domain as defined by EC
 }
