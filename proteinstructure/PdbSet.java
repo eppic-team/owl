@@ -142,6 +142,31 @@ public class PdbSet {
 		return pdbCodes;
 	}	
 	
+	/*--------------------------------- main --------------------------------*/
+	
+	public static void main(String[] args) {
+		
+		// prints the lengths of the cullpdb20 proteins
+		
+		Collection<String> pdbCodes = null;
+		try {
+			pdbCodes = readCullPdb20List();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("Loading " + pdbCodes.size() + " structures...");
+		int n = 0;
+		for(String pdbCode:pdbCodes) {
+			Pdb pdb = Pdb.readStructureOrNull(pdbCode);
+			if(pdb != null) {
+				System.out.println(pdb.getFullLength());
+				n++;
+			}
+		}
+		System.out.println("Done reading " + n + " structures.");
+	}
+	
 }
 
 
