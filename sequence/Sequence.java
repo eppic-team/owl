@@ -75,6 +75,18 @@ public class Sequence {
 		String[] tags = {this.getName()};
 		writeSeqs(fastaFile, seqs, tags);
 	}
+	
+	/**
+	 * Writes this sequence to the given PrintStream.
+	 * Output line length is fixed at 80
+	 * @param fastaFile
+	 * @throws IOException
+	 */
+	public void writeToPrintStream(PrintStream out) throws IOException {
+		String[] seqs = {this.getSeq()};
+		String[] tags = {this.getName()};
+		writeSeqs(out, seqs, tags);
+	}
 
 	/**
 	 * @return the name
@@ -122,6 +134,19 @@ public class Sequence {
 	 */
 	public static void writeSeqs(File seqFile, String[] seqs, String[] tags) throws FileNotFoundException {
 		PrintStream Out = new PrintStream(new FileOutputStream(seqFile));
+		writeSeqs(Out, seqs, tags);
+		Out.close();
+	} 
+	
+	/**
+	 * Writes given sequences and tags to given PrintStream in FASTA format
+	 * Output line length is fixed at 80
+	 * @param seqFile
+	 * @param seqs
+	 * @param tags
+	 * @throws FileNotFoundException 
+	 */
+	public static void writeSeqs(PrintStream Out, String[] seqs, String[] tags) {
 		int len = 80;
 		for (int seqIdx=0;seqIdx<seqs.length;seqIdx++) { 
 			Out.println(">"+tags[seqIdx]);
@@ -129,7 +154,6 @@ public class Sequence {
 				Out.println(seqs[seqIdx].substring(i, Math.min(i+len,seqs[seqIdx].length())));
 			}		
 		}
-		Out.close();
 	} 
 	
 	/**
