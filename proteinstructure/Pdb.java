@@ -1577,7 +1577,7 @@ public abstract class Pdb {
 	/**
 	 * Gets the all atoms rsa given an internal residue serial
 	 * @param resser
-	 * @return
+	 * @return the rsa or null if rsa has not been calculated yet or the residue number cannot be found
 	 */
 	public Double getAllRsaFromResSerial(int resser){
 		if (resser2allrsa != null) {
@@ -2714,7 +2714,7 @@ public abstract class Pdb {
 	 * @return the newly created pdb object
 	 */
 	public static Pdb readStructureOrExit(String arg) {
-		return readFromFileOrPdbCode(arg, true, false);
+		return readFromFileOrPdbCode(arg, true, true);
 	}
 	
 	/**
@@ -2724,37 +2724,48 @@ public abstract class Pdb {
 	 * @return the newly created pdb object or null
 	 */	
 	public static Pdb readStructureOrNull(String arg) {
-		return readFromFileOrPdbCode(arg, true, false);		
+		return readFromFileOrPdbCode(arg, false, true);		
 	}
 	
+	public static Pdb readStructureOrNull(String arg, String chain) {
+		return readFromFileOrPdbCode(arg, chain, true, true);		
+	}	
+
 	/**
-	 * Loads a pdb structure given a pdbcode+chaincode or a pdb file name.
+	 * Loads a pdb structure given a pdbcode+chaincode or a pdb file name and chain code.
 	 * Common exceptions are caught internally. The behvaiour in case of an error is
 	 * specified by the parameters <code>exit</code> and <code>silent</code>.
+	 * Parameter chain code is only used if first parameter is a file, otherwise ignored.
 	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
+	 * @param chain a chain code or null (first chain code in file)
 	 * @param exit if true, system.exit(1) is called on error
 	 * @param silent if false, error messages will be printed
 	 * @return the structure object
 	 */
-	public static Pdb readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
+	public static Pdb readFromFileOrPdbCode(String arg, String chain, boolean exit, boolean silent) {
 		Pdb pdb = null;
 		
 		// check if argument is a filename
 		File inFile = new File(arg);
 		if(inFile.canRead()) {
-			System.out.println("Reading file " + arg);
+			if(!silent) System.out.println("Reading file " + arg);
 			pdb = new PdbfilePdb(arg);
 			try {
-				String[] chains = pdb.getChains();
-				System.out.println("Loading chain " + chains[0]);
-				pdb.load(chains[0]);
+				if(chain == null) {
+					String[] chains = pdb.getChains();
+					if(!silent) System.out.println("Loading chain " + chains[0]);
+					pdb.load(chains[0]);
+				} else {
+					if(!silent) System.out.println("Loading chain " + chain);
+					pdb.load(chain);
+				}
 			} catch (PdbLoadError e) {
 				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
 			// check if argument is a pdb code
 			if(arg.length() < 4 || arg.length() > 5) {
-				if(!silent) System.err.println(arg + "is neither a valid file name nor a valid pdb code");
+				if(!silent) System.err.println(arg + "is neither a valid file name nor a valid pdb(+chain) code");
 				if(exit) System.exit(1);
 			} else {
 				String pdbCode = arg.substring(0,4);
@@ -2772,7 +2783,7 @@ public abstract class Pdb {
 					}
 					try {
 						if(!silent) System.out.println("Loading chain " + chainCode);
-						pdb.load(pdb.getChains()[0]);
+						pdb.load(chainCode);
 					} catch (PdbLoadError e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
 						if(exit) System.exit(1);
@@ -2786,7 +2797,21 @@ public abstract class Pdb {
 				}
 			}
 		}
-		return pdb;
+		return pdb;	
+	}
+	
+	
+	/**
+	 * Loads a pdb structure given a pdbcode+chaincode or a pdb file name.
+	 * Common exceptions are caught internally. The behvaiour in case of an error is
+	 * specified by the parameters <code>exit</code> and <code>silent</code>.
+	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
+	 * @param exit if true, system.exit(1) is called on error
+	 * @param silent if false, error messages will be printed
+	 * @return the structure object
+	 */
+	public static Pdb readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
+		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
 	
 	/*--------------------------------- main --------------------------------*/
