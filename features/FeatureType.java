@@ -1,4 +1,4 @@
-package proteinstructure.features;
+package features;
 
 /**
  * Enumeration of features implementing the Feature interface.

@@ -1,4 +1,4 @@
-package proteinstructure.features;
+package features;
 
 /**
  * Exception which is thrown by the HasFeatures.addFeature() method when attempting to add a feature where

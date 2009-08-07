@@ -1,4 +1,4 @@
-package proteinstructure.features;
+package features;
 
 import proteinstructure.Interval;
 import proteinstructure.IntervalSet;

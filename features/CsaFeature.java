@@ -1,4 +1,4 @@
-package proteinstructure.features;
+package features;
 
 import java.util.TreeSet;
 

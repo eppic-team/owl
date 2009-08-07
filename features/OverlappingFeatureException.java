@@ -1,4 +1,4 @@
-package proteinstructure.features;
+package features;
 
 /**
  * An exception which is thrown if on overlapping feature is being added to an object which implements the HasFeatures interface.
