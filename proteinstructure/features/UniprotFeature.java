@@ -50,4 +50,7 @@ public class UniprotFeature implements Feature {
 		return this.uniprotTypeName + " " + this.description + " : " + Interval.createSelectionString(this.getIntervalSet().getIntegerSet());
 	}
 	
+	public String getUniprotTypeName() {
+		return this.uniprotTypeName;
+	}
 }
