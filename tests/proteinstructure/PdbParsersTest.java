@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,11 +34,11 @@ import tools.MySQLConnection;
 public class PdbParsersTest {
 	
 	
-	String cifdir="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
-	String pdbdir="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
-	String listFile = "/project/StruPPi/michael/cullpdb/cullpdb_20";
-	String pdbaseDB = "pdbase";
-	String mysqlServer = "talyn";
+	private static final String CIFDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
+	private static final String PDBDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
+	private static final String LISTFILE = "tests/proteinstructure/data/cullpdb_20";
+	private static final String PDBASE_DB = "pdbase";
+	private static final String MYSQLSERVER = "talyn";
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -54,16 +56,18 @@ public class PdbParsersTest {
 	public void tearDown() throws Exception {
 	}
 
-//	@Test
+	@Test
 	public void testCIFagainstPDBASE() throws CiffileFormatError, PdbaseInconsistencyError, SQLException, IOException {
 
-		MySQLConnection conn = new MySQLConnection(mysqlServer, pdbaseDB);
+		MySQLConnection conn = new MySQLConnection(MYSQLSERVER, PDBASE_DB);
 		
-		BufferedReader flist = new BufferedReader(new FileReader(listFile));
+		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
 			String pdbChainCode = line.split("\\s+")[1];
+			
+			String message = "Failed for "+pdbCode+pdbChainCode;
 			
 			System.out.println(pdbCode+" "+pdbChainCode);
 			
@@ -72,13 +76,37 @@ public class PdbParsersTest {
 
 			try {
 				
-				ciffilePdb = new CiffilePdb(new File(cifdir,pdbCode+".cif"));
+				ciffilePdb = new CiffilePdb(new File(CIFDIR,pdbCode+".cif"));
 				ciffilePdb.load(pdbChainCode);
 				
-				pdbasePdb = new PdbasePdb(pdbCode, pdbaseDB, conn);
+				pdbasePdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
 				pdbasePdb.load(pdbChainCode);
 				
 				// asserting
+				
+				// getChains/getModels
+				String[] ciffileChains = ciffilePdb.getChains(); 
+				String[] pdbaseChains = pdbasePdb.getChains();
+				Integer[] ciffileModels = ciffilePdb.getModels(); 
+				Integer[] pdbaseModels = pdbasePdb.getModels();
+				Assert.assertTrue(ciffileChains.length==pdbaseChains.length);
+				Assert.assertTrue(ciffileModels.length==pdbaseModels.length);
+				HashSet<String> ciffileChainsSet = new HashSet<String>(Arrays.asList(ciffileChains));
+				HashSet<String> pdbaseChainsSet = new HashSet<String>(Arrays.asList(pdbaseChains));
+				for (String chain:pdbaseChains) {
+					Assert.assertTrue(ciffileChainsSet.contains(chain)); 
+				}
+				for (String chain:ciffileChains) {
+					Assert.assertTrue(pdbaseChainsSet.contains(chain)); 
+				}
+				HashSet<Integer> ciffileModelsSet = new HashSet<Integer>(Arrays.asList(ciffileModels));
+				HashSet<Integer> pdbaseModelsSet = new HashSet<Integer>(Arrays.asList(pdbaseModels));
+				for (int model:pdbaseModels) {
+					Assert.assertTrue(ciffileModelsSet.contains(model));
+				}
+				for (int model:ciffileModels) {
+					Assert.assertTrue(pdbaseModelsSet.contains(model));
+				}
 				
 				// identifiers
 				Assert.assertEquals(pdbasePdb.getPdbCode(), ciffilePdb.getPdbCode());
@@ -112,7 +140,8 @@ public class PdbParsersTest {
 					Assert.assertEquals(pdbasePdb.get_pdbresser_from_resser(resser), ciffilePdb.get_pdbresser_from_resser(resser));
 					String pdbresser = pdbasePdb.get_pdbresser_from_resser(resser);
 					Assert.assertEquals(pdbasePdb.get_resser_from_pdbresser(pdbresser), ciffilePdb.get_resser_from_pdbresser(pdbresser));
-					
+								
+					Assert.assertEquals(pdbasePdb.getResidue(resser).getAaType(),ciffilePdb.getResidue(resser).getAaType());
 					Assert.assertEquals(pdbasePdb.getResTypeFromResSerial(resser), ciffilePdb.getResTypeFromResSerial(resser));
 				}
 
@@ -127,10 +156,16 @@ public class PdbParsersTest {
 				// secondary structure
 				SecondaryStructure pdbaseSS = pdbasePdb.getSecondaryStructure();
 				SecondaryStructure ciffileSS = ciffilePdb.getSecondaryStructure();
-				Assert.assertEquals(pdbaseSS.getNumElements(), ciffileSS.getNumElements());
-				
+				Assert.assertEquals(message,pdbaseSS.getNumElements(), ciffileSS.getNumElements());
+
 				for (int resser:pdbasePdb.getAllSortedResSerials()) {
-					Assert.assertEquals("Failed for resser "+resser,pdbaseSS.getSecStrucElement(resser), ciffileSS.getSecStrucElement(resser));
+					String resserMsg = "Failed for "+pdbCode+pdbChainCode+" and resser "+resser; 
+					Assert.assertEquals(resserMsg,pdbaseSS.getSecStrucElement(resser), ciffileSS.getSecStrucElement(resser));
+					// checking that the 2 ways of accessing the sec struct element coincide
+					Assert.assertSame(pdbaseSS.getSecStrucElement(resser), pdbasePdb.getResidue(resser).getSsElem());
+					Assert.assertEquals(resserMsg,pdbaseSS.getSecStrucElement(resser),pdbasePdb.getResidue(resser).getSsElem());
+					Assert.assertSame(ciffileSS.getSecStrucElement(resser), ciffilePdb.getResidue(resser).getSsElem());
+					Assert.assertEquals(resserMsg,ciffileSS.getSecStrucElement(resser),ciffilePdb.getResidue(resser).getSsElem());
 				}
 				
 				
@@ -151,7 +186,7 @@ public class PdbParsersTest {
 	
 	@Test
 	public void testPdbfileParser() throws IOException, SQLException {
-		BufferedReader flist = new BufferedReader(new FileReader(listFile));
+		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
@@ -163,7 +198,7 @@ public class PdbParsersTest {
 			Pdb pdbasePdb = null;
 			
 			try {
-				pdbfilePdb = new PdbfilePdb(new File(pdbdir,"pdb"+pdbCode+".ent").getAbsolutePath());
+				pdbfilePdb = new PdbfilePdb(new File(PDBDIR,"pdb"+pdbCode+".ent").getAbsolutePath());
 				pdbasePdb = new PdbasePdb(pdbCode);
 				String[] chains = pdbfilePdb.getChains();
 				// test getChains/getModels
@@ -198,16 +233,19 @@ public class PdbParsersTest {
 						Assert.assertTrue(pdbfilePdb.getObservedSequence().length()<=pdbfilePdb.getSequence().length());
 						Assert.assertTrue(pdbfilePdb.get_length()==pdbfilePdb.getObservedSequence().length());
 						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().length());
-						Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
+						// we can't assert the sequences against pdbase because of some very weird entries. See http://pdbwiki.org/index.php/1ejg
+						//Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
+						Assert.assertEquals(pdbasePdb.getObservedSequence(), pdbfilePdb.getObservedSequence());
 						String seq = pdbfilePdb.getSequence();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
 							Assert.assertEquals(pdbfilePdb.getResTypeFromResSerial(resser), 
 												AAinfo.oneletter2threeletter(String.valueOf(seq.charAt(resser-1))));
+							// at least 1 atom per observed residue
+							Assert.assertTrue(pdbfilePdb.getResidue(resser).getNumAtoms()>0);
+							// at least the CA atom must be present, doesn't work for all, e.g. 2cioB residue 80
+							//Assert.assertNotNull(pdbfilePdb.getResidue(resser).getAtom("CA"));
 						}
 
-						// atom number: at least 1 atom per observed residue
-						Assert.assertTrue(pdbfilePdb.getNumAtoms()>=pdbfilePdb.get_length());
-						
 						// info from atom serials
 						for (int atomser:pdbfilePdb.getAllAtomSerials()) {
 							Assert.assertNotNull(pdbfilePdb.getAtomCoord(atomser));
@@ -218,6 +256,13 @@ public class PdbParsersTest {
 						SecondaryStructure ss = pdbfilePdb.getSecondaryStructure();
 						Assert.assertNotNull(ss);
 						Assert.assertEquals(pdbfilePdb.getSequence(), ss.getSequence());
+
+						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
+							String resserMsg = "Failed for "+pdbCode+chain+" and resser "+resser;
+							// checking that the 2 ways of accessing the sec struct element coincide
+							Assert.assertSame(ss.getSecStrucElement(resser), pdbfilePdb.getResidue(resser).getSsElem());
+							Assert.assertEquals(resserMsg,ss.getSecStrucElement(resser),pdbfilePdb.getResidue(resser).getSsElem());
+						}
 
 					}
 				}		

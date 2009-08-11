@@ -52,21 +52,21 @@ public enum AminoAcid {
 	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false),
 	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false);	 
 		
-	int number;
-	String name;			
-	char oneLetterCode;
-	String threeLetterCode;
-	int numberOfAtoms;		// number of heavy side chain atoms
-	double hydrophobicity;
-	boolean hydrophobic;
-	boolean aromatic;	
-	boolean aliphatic;		
-	boolean polar;
-	boolean charged;	
-	boolean positive; 		// = basic (TODO: is H in this or not?)
-	boolean negative; 		// = acidic	
-	boolean small;	
-	boolean tiny;
+	private int number;
+	private String name;			
+	private char oneLetterCode;
+	private String threeLetterCode;
+	private int numberOfAtoms;		// number of heavy side chain atoms
+	private double hydrophobicity;
+	private boolean hydrophobic;
+	private boolean aromatic;	
+	private boolean aliphatic;		
+	private boolean polar;
+	private boolean charged;	
+	private boolean positive; 		// = basic (TODO: is H in this or not?)
+	private boolean negative; 		// = acidic	
+	private boolean small;	
+	private boolean tiny;
 	
 	/*------------------------- constants ------------------------------*/
 	public static final char 	INVALID_ONE_LETTER_CODE 	= '?';
@@ -126,6 +126,16 @@ public enum AminoAcid {
 	public boolean isCharged() { return this.charged; }
 	public boolean isNegative() { return this.negative; }
 	
+	/**
+	 * Returns true if this AminoAcid is one of the 20 standard amino acids
+	 * or false otherwise
+	 * @return true if this AminoAcid is one of the 20 standard amino acids
+	 * or false otherwise
+	 */
+	public boolean isStandardAA() {
+		return (this.getNumber()<21 && this.getNumber()>0);
+	}
+	
 	/*----------------------- static methods ---------------------------*/
 	
 	/**
@@ -152,7 +162,7 @@ public enum AminoAcid {
 	 * Get amino acid object by three letter code
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
 	 * @return An amino acid object of the given type 
-	 * or null, if one letter code is invalid
+	 * or null, if three letter code is invalid
 	 */
 	public static AminoAcid getByThreeLetterCode(String three) {
 		return three2aa.get(three.toUpperCase());
@@ -220,7 +230,31 @@ public enum AminoAcid {
 		AminoAcid aa = getByNumber(num);
 		return aa==null?INVALID_ONE_LETTER_CODE:aa.getOneLetterCode();		
 	}	
-		
+	
+	/**
+	 * Returns true if given string is the three-letter code of a standard aminoacid,
+	 * false otherwise
+	 * @param three
+	 * @return true if given string is the three-letter code of a standard aminoacid, 
+	 * false otherwise
+	 */
+	public static boolean isStandardAA(String three) {
+		AminoAcid aa = getByThreeLetterCode(three);
+		return aa==null?false:aa.isStandardAA();
+	}
+
+	/**
+	 * Returns true if given char is the one-letter code of a standard aminoacid,
+	 * false otherwise
+	 * @param one
+	 * @return true if given char is the one-letter code of a standard aminoacid,
+	 * false otherwise
+	 */
+	public static boolean isStandardAA(char one) {
+		AminoAcid aa = getByOneLetterCode(one);
+		return aa==null?false:aa.isStandardAA();		
+	}
+
 	/*----------------------- private methods --------------------------*/
 	/**
 	 * initialize static map to get amino acid by its ordinal number

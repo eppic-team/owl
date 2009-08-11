@@ -7,7 +7,6 @@ import javax.vecmath.Vector3d;
 import Jama.Matrix;
 
 import proteinstructure.AAinfo;
-import proteinstructure.ModelPdb;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.RIGEdge;
@@ -77,7 +76,7 @@ public class Reconstructer {
 	 */
 	public Pdb[] reconstruct(int numModels, boolean metrize, Embedder.ScalingMethod scalingMethod, boolean debug) {
 		
-		Pdb[] models = new ModelPdb[numModels];
+		Pdb[] models = new Pdb[numModels];
 		
 		// BoundsSmoother makes its own copy of initialBounds so we are sure that the copy of initialBounds in this class is not modified
 		// and can potentially be reused (by calling again reconstruct)
@@ -112,8 +111,7 @@ public class Reconstructer {
 			
 			Embedder emb = new Embedder(matrix);
 			Vector3d[] embedding = emb.embed(scalingMethod);
-			models[model] = new ModelPdb(this.rig.getSequence(), embedding, EMBEDDING_ATOM_TYPE);
-			((ModelPdb) models[model]).removeAtomsWith0Coords();
+			models[model] = new Pdb(this.rig.getSequence(), embedding, EMBEDDING_ATOM_TYPE);
 			
 		}
 		

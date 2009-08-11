@@ -9,7 +9,6 @@ import java.util.TreeMap;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
-import proteinstructure.ModelPdb;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 
@@ -332,7 +331,7 @@ public class Embedder {
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
 		Vector3d[] embedding = embedder.embed(ScalingMethod.RADGYRATION);
-		Pdb pdbEmbedded = new ModelPdb(pdb.getSequence(),embedding, "CA");
+		Pdb pdbEmbedded = new Pdb(pdb.getSequence(),embedding, "CA");
 		
 		double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
 		pdb.mirror();

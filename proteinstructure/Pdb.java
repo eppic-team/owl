@@ -47,10 +47,11 @@ import java.sql.Statement;
  * A single chain pdb protein structure
  * 
  */
-public abstract class Pdb {
+public class Pdb {
 
 	/*------------------------------------  constants ---------------------------------------------*/
-	protected static final int DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
+	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
+	public static final String DEFAULT_CHAIN   = "A";		// used when constructing models, this will be the chain assigned to them
 	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code. 
 															// Should be safe now to change the value of this constant from "NULL" to something else,
 															// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
@@ -59,10 +60,7 @@ public abstract class Pdb {
 	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
 	
-	private static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
-	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
-	
-	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
 	private static final String PQS_FILE = "/project/StruPPi/Databases/PQS/pqs.txt";
 	private static final String PISA_FILE = "/project/StruPPi/Databases/PISA/pisa.txt";
@@ -76,37 +74,34 @@ public abstract class Pdb {
 	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
 	
 	/*-------------------------------------  members ---------------------------------------------*/
-	protected HashMap<String,Integer> resser_atom2atomserial; // residue serial+atom name (separated by underscore) to atom serials
-	protected HashMap<Integer,String> resser2restype;   	// residue serial to 3 letter residue type (only observed residues)
-	protected HashMap<Integer,Point3d> atomser2coord;  		// atom serials to 3D coordinates
-	protected HashMap<Integer,Integer> atomser2resser;  	// atom serials to residue serials
-	protected HashMap<Integer,String> atomser2atom;     	// atom serials to atom names
-	protected HashMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insetion codes so they are strings) to internal residue serials
-	protected HashMap<Integer,String> resser2pdbresser; 	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 
-	protected HashMap<Integer, Double> atomser2bfactor;				// the b-factor for each atom (default: 0)
-	protected HashMap<Integer,Double> resser2allrsa;				// internal residue serials to all-atoms rsa
-	protected HashMap<Integer,Double> resser2scrsa;					// internal residue serials to SC rsa
-	protected HashMap<Integer,Double> resser2consurfhsspscore; 		// internal residue serials to consurf score
-	protected HashMap<Integer,Integer> resser2consurfhsspcolor; 	// internal residue serials to consurf color
+	// atom/residue data
+	private TreeMap<Integer, Residue> residues;			// residue serials to residue object references (only observed residues)
+	private TreeMap<Integer, Atom>    atomser2atom;		// atom serials to Atom object references, we keep this is as a separate map to speed up searches
+	protected TreeMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
+	protected TreeMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
+	protected int fullLength; 							// length of full sequence as it appears in SEQRES field 
+														// to get observed length use method get_length()
 	
-	protected SecondaryStructure secondaryStructure;				// the secondary structure annotation for this pdb object (should never be null)
-	protected Scop scop;											// the scop annotation for this pdb object
-	protected EC ec;												// the ec annotation for this pdb object
-	protected CatalSiteSet catalSiteSet;							// the catalytic site annotation for this pdb object
-	protected OligomericState oligomeric;							// the oligomeric state for this pdb object
+	// sequence features (annotations)
+	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
+	protected Scop scop;								// the scop annotation for this pdb object
+	protected EC ec;									// the ec annotation for this pdb object
+	protected CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
+	protected OligomericState oligomeric;				// the oligomeric state for this pdb object
 	
-	protected String sequence; 		// full sequence as it appears in SEQRES field
-	protected String pdbCode;
-	// given "external" pdb chain code, i.e. the classic (author's) pdb code (Pdb.NULL_CHAIN_CODE if it is blank in original pdb file)	
-	protected String pdbChainCode;
-	// Our internal chain identifier:
-	// - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-	// - in reading from pdb file it coincides with pdbChainCode except for Pdb.NULL_CHAIN_CODE where we use "A"
-	protected String chainCode;
-	protected int model;  			// the model serial for NMR structures
-	protected String sid;			// the scop id if Pdb has been restricted (restrictToScopDomain)
-	protected String title;			// the title of the structure (e.g. from the PDB)
+	// identifiers
+	protected String sequence; 			// full sequence as it appears in SEQRES field
+	protected String pdbCode;			// the 4 letters PDB code. By convention we always use lower case. 
+	protected String pdbChainCode;		// Given "external" pdb chain code, i.e. the classic (author's) pdb code 
+										// If it is blank in original PDB file then it is: Pdb.NULL_CHAIN_CODE
+	protected String chainCode;			// Our internal chain identifier:
+										// - in reading from pdbase it will be set to the internal chain id (asym_id field)
+										// - in reading from PDB file it coincides with pdbChainCode except for 
+										//   Pdb.NULL_CHAIN_CODE where we use "A"
+	protected int model;  				// the model serial for NMR structures
+	protected String title;				// the title of the structure (e.g. from the PDB)
+	protected String sid;				// the scop id if Pdb has been restricted (restrictToScopDomain)
 	
 	// optional fields for structures based on casp predictions
 	protected int targetNum;
@@ -114,58 +109,245 @@ public abstract class Pdb {
 	protected String caspAuthorStr;
 	protected String caspMethodStr;
 	protected int groupNum;
-	protected String[] caspParents;	// optional list of parents used for modelling, may be null
+	protected String[] caspParents;		// optional list of parents used for modelling, may be null
 
-	protected int fullLength; // length of full sequence as it appears in SEQRES field 
-	protected int obsLength;  // length without unobserved, non standard aas 
+	// flags
+	protected boolean dataLoaded;		// true if this object has been loaded with pdb data, false when is empty
+	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
+	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 
-	protected boolean dataLoaded;	// true if this object has been loaded with pdb data, false when is empty
-	
-	protected String db;			// the db from which we have taken the data (if applies)
-	protected MySQLConnection conn;
+	/*----------------------------------  constructors -----------------------------------------------*/
 
-	/*---------------------------------  abstract methods --------------------------------------------*/
 	/**
-	 * Returns all pdb chain codes for this Pdb entry (be it a file or an entry in a database)
-	 * @return pdb chain codes
+	 * Constructs an empty Pdb with no sequence, no residues and no atoms 
 	 */
-	public abstract String[] getChains() throws PdbLoadError;
+	public Pdb() {
+		this.chainCode = DEFAULT_CHAIN;
+		this.pdbChainCode = DEFAULT_CHAIN;
+		this.model = DEFAULT_MODEL;
+		this.pdbCode = NO_PDB_CODE;
+		
+		this.dataLoaded = false;
+		this.hasASA = false;
+		this.hasBfactors = false;
+		
+		this.initialiseResidues();
+	}
 	
 	/**
-	 * Returns all models for this Pdb entry (be it a file or an entry in a database)
-	 * @return
+	 * Constructs a Pdb for given sequence with empty residues (residues with no atoms)
+	 * @param sequence
+	 * @throws IllegalArgumentException if sequence contains invalid characters
 	 */
-	public abstract Integer[] getModels() throws PdbLoadError;
+	public Pdb(String sequence) {
+		this.chainCode = DEFAULT_CHAIN;
+		this.pdbChainCode = DEFAULT_CHAIN;
+		this.model = DEFAULT_MODEL;
+		this.pdbCode = NO_PDB_CODE;
+		
+		this.dataLoaded = true;
+		this.hasASA = false;
+		this.hasBfactors = false;
+		
+		this.sequence = sequence;
+		this.fullLength = sequence.length();
+		this.initialiseResidues();
+		this.resser2pdbresser = new TreeMap<Integer, String>();
+		this.pdbresser2resser = new TreeMap<String, Integer>();
+
+		for (int i=0;i<sequence.length();i++) {
+			int resser = i+1;
+			char one = sequence.charAt(i);
+			if (!AminoAcid.isStandardAA(one)) {
+				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
+			}
+			this.addResidue(new Residue(AminoAcid.getByOneLetterCode(one),resser,this));
+			resser2pdbresser.put(resser, String.valueOf(resser));
+			pdbresser2resser.put(String.valueOf(resser), resser);
+		}
+		
+		this.initialiseMaps();
+
+	}
 	
 	/**
-	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
-	 * for given pdbChainCode and modelSerial
+	 * Constructs a Pdb for given sequence setting coordinates of the given atom type to 
+	 * the given coordinates coords
+	 * @param sequence
+	 * @param coords the array of all coordinates, must be ordered as the sequence and be
+	 * of the same size 
+	 * @param atom the atom code for which to set the coordinates
+	 * @throws IllegalArgumentException if sequence contains invalid characters or if array
+	 * of coordinates is of different length as sequence
+	 */
+	public Pdb(String sequence, Vector3d[] coords, String atom) {
+		this.chainCode = DEFAULT_CHAIN;
+		this.pdbChainCode = DEFAULT_CHAIN;
+		this.model = DEFAULT_MODEL;
+		this.pdbCode = NO_PDB_CODE;
+		
+		this.dataLoaded = true;
+		this.hasASA = false;
+		this.hasBfactors = false;
+		
+		if (coords.length!=sequence.length()) {
+			throw new IllegalArgumentException("Array of coordinates is not of same length as given sequence");
+		}
+		
+		this.sequence = sequence;
+		this.fullLength = sequence.length();
+		this.initialiseResidues();
+		this.resser2pdbresser = new TreeMap<Integer, String>();
+		this.pdbresser2resser = new TreeMap<String, Integer>();
+
+		for (int i=0;i<sequence.length();i++) {
+			int resser = i+1;
+			char one = sequence.charAt(i);
+			if (!AminoAcid.isStandardAA(one)) {
+				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
+			}
+			this.addResidue(new Residue(AminoAcid.getByOneLetterCode(one),resser,this));
+			resser2pdbresser.put(resser, String.valueOf(resser));
+			pdbresser2resser.put(String.valueOf(resser), resser);
+		}
+		
+		int i = 0;
+		for (Residue residue:this.residues.values()) {
+			residue.addAtom(new Atom(i+1, atom, new Point3d(coords[i]), residue));
+			i++;
+		}
+		this.initialiseMaps();
+	}
+	
+	/*-------------------------   methods to be overriden by subclasses  -----------------------------*/
+	// these methods should really be abstract, but we can't as Pdb is not an abstract class anymore
+	// to work around that we implement them here just throwing an error if they are called at all
+	// because in fact it's an error to call them!
+	
+	public void load(String pdbChainCode, int model) throws PdbLoadError {
+		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	}
+	
+	public String[] getChains() throws PdbLoadError {
+		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	}
+	
+	public Integer[] getModels() throws PdbLoadError {
+		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	}
+
+	// this method doesn't actually call load(String,int) above but rather the overridden ones in subclasses
+	/**
+	 * Load (from file/db) the given pdbChainCode and the default model {@link #DEFAULT_MODEL}
 	 * @param pdbChainCode
-	 * @param modelSerial
 	 * @throws PdbLoadError
 	 */
-	public abstract void load(String pdbChainCode, int modelSerial) throws PdbLoadError;
-	
-	
-	/*---------------------------------  public methods ----------------------------------------------*/
-
-	/**
-	 * Loads pdb data (coordinates, sequence, etc.) from the source (file or database)
-	 * for given pdbChainCode and default model serial (1)
-	 * @param pdbChainCode
-	 * @throws PdbLoadError	 
-	 */
-
 	public void load(String pdbChainCode) throws PdbLoadError {
 		load(pdbChainCode, DEFAULT_MODEL);
 	}
 	
+	/*---------------------------------  public methods ----------------------------------------------*/
+
 	/**
 	 * Returns true if this Pdb has been loaded with pdb data (i.e. when 
 	 * load(pdbChainCode) has been called), false if it is empty
 	 */
 	public boolean isDataLoaded() {
 		return dataLoaded;
+	}
+	
+	/**
+	 * Initialises the residues to an empty map. 
+	 */
+	protected void initialiseResidues() {
+		residues = new TreeMap<Integer, Residue>();
+	}
+	
+	/**
+	 * Adds a residue to this Pdb
+	 */
+	public void addResidue(Residue residue) {
+		residues.put(residue.getSerial(), residue);
+	}
+	
+	/**
+	 * Gets a Residue given its serial
+	 * @param resSerial
+	 * @return the reference to the Residue object or null if residue serial doesn't exist
+	 * for instance because it's not observed
+	 */
+	public Residue getResidue(int resSerial) {
+		return residues.get(resSerial);
+	}
+	
+	/**
+	 * Tells whether residue of given residue number is an observed residue in this Pdb
+	 * instance
+	 * @param resSerial
+	 * @return
+	 */
+	public boolean containsResidue(int resSerial) {
+		return residues.containsKey(resSerial);
+	}
+	
+	/**
+	 * Gets a new Map with residue serials to Residues that contain only the atoms for the 
+	 * given contact type. The Residue objects are new, but the Atom objects to which they 
+	 * point to are the same old references.
+	 * @param ct
+	 * @return
+	 */
+	private TreeMap<Integer, Residue> getReducedResidues(String ct) {
+		TreeMap<Integer,Residue> reducedResidues = new TreeMap<Integer, Residue>();
+		for (Residue residue:residues.values()) {
+			reducedResidues.put(residue.getSerial(),residue.getReducedResidue(ct));
+		}
+		return reducedResidues;
+	}
+	
+	/**
+	 * Gets an Atom given its serial
+	 * @param atomSerial
+	 * @return
+	 */
+	public Atom getAtom(int atomSerial) {
+		return atomser2atom.get(atomSerial);
+	}
+	
+	/**
+	 * Populates the atomser2atom map (from the Residues and Atoms objects)
+	 * and the pdbResSerials of the Residue objects from resser2pdbresser map
+	 */
+	protected void initialiseMaps() {
+		atomser2atom = new TreeMap<Integer, Atom>();
+		for (Residue residue:residues.values()) {
+			for (Atom atom:residue.getAtoms()) {
+				atomser2atom.put(atom.getSerial(), atom);
+			}
+			if (resser2pdbresser.containsKey(residue.getSerial())) {
+				residue.setPdbSerial(get_pdbresser_from_resser(residue.getSerial()));
+			}
+		}
+		
+	}
+	
+	/**
+	 * Sets the secondary structure members of the Residue objects from the SecondaryStructure object
+	 */
+	protected void initialiseResiduesSecStruct() {
+		Iterator<SecStrucElement> it = this.getSecondaryStructure().getIterator();
+		while (it.hasNext()) {
+			SecStrucElement ssElem = it.next();
+			for (int resser=ssElem.getInterval().beg;resser<=ssElem.getInterval().end;resser++) {
+				if (this.containsResidue(resser)) {
+					this.getResidue(resser).setSsElem(ssElem);
+				} else {
+					// we don't warn because this does happen really often!
+					//System.err.println("Warning: the residue serial "+resser+" can't be assigned with the secondary structure element "+
+					//		ssElem.getId()+" with interval "+ssElem.getInterval()+" because it's not present in this Pdb (e.g. it's not observed)");
+				}
+			}			
+		}
 	}
 	
 	/**
@@ -262,7 +444,7 @@ public abstract class Pdb {
 					curResType = fields[2];
 					curSiteId = Integer.valueOf(fields[1]);
 					// only if the pdb residue type is a standard AA
-					if (AAinfo.isValidAA(curResType)) {
+					if (AminoAcid.isStandardAA(curResType)) {
 						// only if the pdb residue type agrees with our residue type
 						if (getResTypeFromResSerial(get_resser_from_pdbresser(curPdbResSerial)).equals(curResType)) {
 							// each time the site changes except for the first site of a chain,
@@ -380,11 +562,8 @@ public abstract class Pdb {
 		int lineCount = 0;
 		int consurfHsspMistakes = 0;
 			
-		Integer[] ressers = new Integer[get_length()];
+		Integer[] ressers = new Integer[this.get_length()];
 		getAllSortedResSerials().toArray(ressers);
-
-		resser2consurfhsspscore = new HashMap<Integer,Double>();
-		resser2consurfhsspcolor = new HashMap<Integer,Integer>();
 
 		while ((inputLine = in.readLine()) != null) { 
 			Matcher m = p.matcher(inputLine);
@@ -393,10 +572,15 @@ public abstract class Pdb {
 				int resser = ressers[lineCount-1];
 				String[] fields = inputLine.split("\\s+");
 				String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
-				if (fields[2].equals(AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser))) &
+				if (fields[2].equals(String.valueOf(getResidue(resser).getAaType().getOneLetterCode())) &
 						(pdbresser.equals("-") | pdbresser.equals(get_pdbresser_from_resser(resser)))) {
-					resser2consurfhsspscore.put(resser, Double.valueOf(fields[4]));
-					resser2consurfhsspcolor.put(resser, Integer.valueOf(fields[5]));
+					if (this.containsResidue(resser)) {
+						Residue residue = this.getResidue(resser);
+						residue.setConsurfScore(Double.valueOf(fields[4]));
+						residue.setConsurfColor(Integer.valueOf(fields[5]));
+					} else {
+						consurfHsspMistakes++;
+					}
 				} else {
 					consurfHsspMistakes++;
 				}
@@ -404,10 +588,17 @@ public abstract class Pdb {
 		}
 		in.close();
 
-        consurfHsspMistakes += Math.abs(ressers.length - resser2consurfhsspscore.size());
+		// checking how many were actually assigned
+		int assigned = 0;
+		for (Residue residue:residues.values()) {
+    		if (residue.getConsurfScore()!=null)	assigned++;
+		}
+        consurfHsspMistakes += Math.abs(this.get_length() - assigned);
         if (consurfHsspMistakes > 0) {
-			resser2consurfhsspscore.clear();
-			resser2consurfhsspcolor.clear();
+        	for (Residue residue:residues.values()) {
+        		residue.setConsurfScore(null);
+        		residue.setConsurfColor(null);
+        	}
 		}
 
 		return consurfHsspMistakes;
@@ -534,16 +725,17 @@ public abstract class Pdb {
 
 		File rsa = new File(tempDir,baseName+".rsa");
 		if (rsa.exists()) {
-			resser2allrsa = new HashMap<Integer,Double>();
-			resser2scrsa = new HashMap<Integer,Double>();			
 			BufferedReader rsaInput = new BufferedReader(new FileReader(rsa));
 			while ((line = rsaInput.readLine()) != null) {
 				if (line.startsWith("RES")) {
 					int resser = Integer.valueOf(line.substring(9,13).trim());
 					double allrsa = Double.valueOf(line.substring(22,28).trim());
 					double scrsa = Double.valueOf(line.substring(35,41).trim());
-					resser2allrsa.put(resser, allrsa);
-					resser2scrsa.put(resser, scrsa);
+					if (this.containsResidue(resser)) {
+						Residue residue = this.getResidue(resser);
+						residue.setRsa(allrsa);
+						residue.setScRsa(scrsa);
+					}
 				}
 			}
 			rsaInput.close();
@@ -559,24 +751,41 @@ public abstract class Pdb {
 				}
 			}
 		}
+		hasASA = true;
 	}
 	
 	/**
 	 * Returns the per-residue relative solvent accessible surface areas (SASA) as calculated by NACCESS.
 	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
-	 * @return a reference to the internal map from residue serial to SASA value (null if not calculated yet)
+	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
 	public HashMap<Integer, Double> getSurfaceAccessibilities() {
-		return resser2allrsa;
+		if (hasASA()) {
+			HashMap<Integer, Double> resser2allrsa = new HashMap<Integer, Double>();
+			for (Residue residue:residues.values()) {
+				resser2allrsa.put(residue.getSerial(), residue.getRsa());
+			}
+			return resser2allrsa;
+		} else {
+			return null;
+		}
 	}
 
 	/**
 	 * Returns the per-residue side-chain relative solvent accessible surface areas (SASA) as calculated by NACCESS.
 	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
-	 * @return a reference to the internal map from residue serial to SASA value (null if not calculated yet)
+	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
 	public HashMap<Integer, Double> getSideChainSurfaceAccessibilities() {
-		return resser2scrsa;
+		if (hasASA()) {
+			HashMap<Integer, Double> resser2scrsa = new HashMap<Integer, Double>();
+			for (Residue residue:residues.values()) {
+				resser2scrsa.put(residue.getSerial(), residue.getScRsa());
+			}
+			return resser2scrsa;
+		} else {
+			return null;
+		}
 	}
 
 	
@@ -624,8 +833,8 @@ public abstract class Pdb {
 								startPdbResSer = m.group(5);
 								endPdbResSer = m.group(6);								
 							} else {
-								startPdbResSer = get_pdbresser_from_resser(Collections.min(resser2pdbresser.keySet()));
-								endPdbResSer = get_pdbresser_from_resser(Collections.max(resser2pdbresser.keySet()));
+								startPdbResSer = this.get_pdbresser_from_resser(this.getMinObsResSerial());
+								endPdbResSer = this.get_pdbresser_from_resser(this.getMaxObsResSerial());
 							}
 							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
 							scop.add(sr);
@@ -752,6 +961,7 @@ public abstract class Pdb {
 		secondaryStructure.add(ssElem);
 
 		secondaryStructure.setComment("DSSP");
+		this.initialiseResiduesSecStruct();
 	}
 
 	/**
@@ -762,21 +972,30 @@ public abstract class Pdb {
 	 */
 	public void setBFactorsPerAtom(HashMap<Integer, Double> bfactorsPerAtom) {
 		for(int atomser:bfactorsPerAtom.keySet()) {
-			this.atomser2bfactor.put(atomser, bfactorsPerAtom.get(atomser));
+			getAtom(atomser).setBfactor(bfactorsPerAtom.get(atomser));
 		}
+		hasBfactors = true;
 	}
 	
 	/**
 	 * Assigns b-factor values to all atoms for the given residues.
 	 * @param bfactorsPerResidue a map of residue serials to b-factors
+	 * @throws IllegalArgumentException when residue serials given in input are not
+	 * present in this Pdb instance
 	 */
 	public void setBFactorsPerResidue(HashMap<Integer, Double> bfactorsPerResidue) {
-		if(atomser2bfactor == null) atomser2bfactor = new HashMap<Integer, Double>();
 		for(int resser:bfactorsPerResidue.keySet()) {
-			for(int atomser:this.getAtomSersFromResSer(resser)) {
-				this.atomser2bfactor.put(atomser, bfactorsPerResidue.get(resser));
+			if (this.containsResidue(resser)) {
+				Residue residue = this.getResidue(resser);
+				double bfactor = bfactorsPerResidue.get(resser);
+				for(Atom atom:residue.getAtoms()) {
+					atom.setBfactor(bfactor);
+				}
+			} else {
+				System.err.println("Warning! Can't assign bfactor for residue serial "+resser+", it is not present in this Pdb instance, pdbCode "+pdbCode+", pdbChainCode "+pdbChainCode);
 			}
 		}
+		hasBfactors = true;
 	}
 	
 	/**
@@ -789,9 +1008,9 @@ public abstract class Pdb {
 			source = ((CiffilePdb) this).getCifFile().getAbsolutePath();
 		} else if (this instanceof PdbfilePdb) {
 			source = ((PdbfilePdb) this).getPdbFileName();
-		} else if (this instanceof PdbasePdb || this instanceof MsdsdPdb){
-			source = db;
-		} else if (this instanceof ModelPdb) {
+		} else if (this instanceof PdbasePdb){
+			source = ((PdbasePdb) this).getDb();
+		} else {
 			source = "model";
 		}
 		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);		
@@ -860,16 +1079,17 @@ public abstract class Pdb {
 			chainCodeStr = chainCode.substring(0,1);
 		}
 		for (int atomser:this.getAllAtomSerials()) {
-			int resser = get_resser_from_atomser(atomser);
-			String atom = getAtomNameFromAtomSer(atomser);
-			String atomType = atom.substring(0,1);
-			String res = getResTypeFromResSerial(resser);
-			Point3d coords = getAtomCoord(atomser);
-			double occupancy = DEFAULT_OCCUPANCY;
-			double bFactor = (atomser2bfactor == null || !atomser2bfactor.containsKey(atomser))?DEFAULT_B_FACTOR:atomser2bfactor.get(atomser);
+			Atom atom = getAtom(atomser);
+			int resser = atom.getParentResSerial();
+			String atomCode = atom.getCode();
+			String atomType = atom.getType().getSymbol();
+			String res = atom.getParentResidue().getAaType().getThreeLetterCode();
+			Point3d coords = atom.getCoords();
+			double occupancy = atom.getOccupancy();
+			double bFactor = atom.getBfactor();
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
 			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n",
-					atomser, atom, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
+					atomser, atomCode, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
 		}
 	}
 
@@ -952,7 +1172,7 @@ public abstract class Pdb {
 	 * @return number of observed standard residues
 	 */
 	public int get_length(){
-		return obsLength;
+		return residues.size();
 	}
 
 	/** 
@@ -977,54 +1197,18 @@ public abstract class Pdb {
 	 * @param ct
 	 * @return
 	 */
-	private TreeMap<Integer,Point3d> get_coords_for_ct(String ct) {
-		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>(); 
-		for (int resser:resser2restype.keySet()){
-			Set<String> atoms = AAinfo.getAtomsForCTAndRes(ct, resser2restype.get(resser));
-			for (String atom:atoms){
-				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
-					int atomser = resser_atom2atomserial.get(resser+"_"+atom);
-					Point3d coord = atomser2coord.get(atomser);
-					coords.put(atomser, coord);
-				}
-				else {
-					//NOTE:CHECK FOR MISSING ATOMS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!					
-					System.err.println("Couldn't find "+atom+" atom for resser="+resser+" in protein "+pdbCode+" and chain "+chainCode+". Continuing without that atom for this resser.");
-				}
+	private TreeMap<Integer,Point3d> getCoordsForCt(String ct) {
+		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>();
+		for (Residue residue:residues.values()) {
+			Set<String> atomCodes = AAinfo.getAtomsForCTAndRes(ct, residue.getAaType().getThreeLetterCode());
+			for (String atomCode:atomCodes){
+				if (residue.containsAtom(atomCode)) {
+					coords.put(residue.getAtom(atomCode).getSerial(),residue.getAtom(atomCode).getCoords());
+				} 
 			}
 			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
-			if ((ct.equals("ALL") || ct.equals("BB")) && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
-				int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
-				Point3d coord = atomser2coord.get(atomser);
-				coords.put(atomser, coord);
-			}
-		}
-		return coords;
-	}
-
-	/**
-	 * Gets a TreeMap with residue serials+"_"+atomname as keys and their coordinates as values for the given contact type
-	 * The contact type can't be a cross contact type, it doesn't make sense here
-	 * Used in rmsd method
-	 * @param ct
-	 * @return
-	 */
-	private TreeMap<String,Point3d> get_coords_for_ct_4rmsd(String ct) {
-		TreeMap<String,Point3d> coords = new TreeMap<String,Point3d>(); 
-		for (int resser:resser2restype.keySet()){
-			Set<String> atoms = AAinfo.getAtomsForCTAndRes(ct,resser2restype.get(resser));
-			for (String atom:atoms){
-				if (resser_atom2atomserial.containsKey(resser+"_"+atom)){
-					int atomser = resser_atom2atomserial.get(resser+"_"+atom);
-					Point3d coord = atomser2coord.get(atomser);
-					coords.put(resser+"_"+atom, coord);
-				}
-			}
-			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
-			if ((ct.equals("ALL") || ct.equals("BB")) && resser_atom2atomserial.containsKey(resser+"_"+"OXT")){
-				int atomser = resser_atom2atomserial.get(resser+"_"+"OXT");
-				Point3d coord = atomser2coord.get(atomser);
-				coords.put(resser+"_"+"OXT", coord);
+			if ((ct.equals("ALL") || ct.equals("BB")) &&  residue.containsOXT()) { 
+				coords.put(residue.getAtom("OXT").getSerial(), residue.getAtom("OXT").getCoords());
 			}
 		}
 		return coords;
@@ -1094,7 +1278,7 @@ public abstract class Pdb {
 	public HashMap<Pair<Integer>, Double> calculate_atom_dist_matrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
-			TreeMap<Integer,Point3d> coords = get_coords_for_ct(ct);
+			TreeMap<Integer,Point3d> coords = getCoordsForCt(ct);
 			for (int i_atomser:coords.keySet()){
 				for (int j_atomser:coords.keySet()){
 					if (j_atomser>i_atomser) {
@@ -1106,8 +1290,8 @@ public abstract class Pdb {
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			TreeMap<Integer,Point3d> i_coords = get_coords_for_ct(i_ct);
-			TreeMap<Integer,Point3d> j_coords = get_coords_for_ct(j_ct);
+			TreeMap<Integer,Point3d> i_coords = getCoordsForCt(i_ct);
+			TreeMap<Integer,Point3d> j_coords = getCoordsForCt(j_ct);
 			for (int i_atomser:i_coords.keySet()){
 				for (int j_atomser:j_coords.keySet()){
 					if (j_atomser!=i_atomser){
@@ -1144,13 +1328,13 @@ public abstract class Pdb {
 		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
 		boolean crossed = false;
 		if (!ct.contains("/")){
-			i_coords = get_coords_for_ct(ct);
+			i_coords = getCoordsForCt(ct);
 			crossed = false;
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			i_coords = get_coords_for_ct(i_ct);
-			j_coords = get_coords_for_ct(j_ct);
+			i_coords = getCoordsForCt(i_ct);
+			j_coords = getCoordsForCt(j_ct);
 			crossed = true;
 		}
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
@@ -1249,10 +1433,10 @@ public abstract class Pdb {
 			SecStrucElement sselem = secondaryStructureCopy.getSecStrucElement(resser);
 			if (!rignodemap.containsKey(resser)) {
 				// NOTE!: we are passing references to the SecStrucElement objects! they point to the same objects as secondaryStructureCopy 
-				RIGNode resNode = new RIGNode(resser, resser2restype.get(resser), sselem);
+				RIGNode resNode = new RIGNode(resser, getResidue(resser).getAaType().getThreeLetterCode(), sselem);
 				rignodemap.put(resser,resNode);
 			}
-			AIGNode atomNode = new AIGNode(atomSer,atomser2atom.get(atomSer),rignodemap.get(resser));
+			AIGNode atomNode = new AIGNode(atomSer,getAtom(atomSer).getCode(),rignodemap.get(resser));
 			graph.addVertex(atomNode); // this also adds the atomNode to the serials2nodes map
 		}
 		
@@ -1360,13 +1544,13 @@ public abstract class Pdb {
 		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymmetric edge types
 		boolean directed = false;
 		if (!ct.contains("/")){
-			i_coords = get_coords_for_ct(ct);			// mapping from atom serials to coordinates
+			i_coords = getCoordsForCt(ct);			// mapping from atom serials to coordinates
 			directed = false;
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			i_coords = get_coords_for_ct(i_ct);
-			j_coords = get_coords_for_ct(j_ct);
+			i_coords = getCoordsForCt(i_ct);
+			j_coords = getCoordsForCt(j_ct);
 			directed = true;
 		}
 		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
@@ -1544,48 +1728,31 @@ public abstract class Pdb {
 	 * Gets the Consurf-HSSP score given an internal residue serial
 	 * @param resser
 	 * @return
+	 * @throws NullPointerException if residue serial not present in this Pdb instance
 	 */
 	public Double getConsurfhsspScoreFromResSerial(int resser){
-		if (resser2consurfhsspscore != null) {
-			if (resser2consurfhsspscore.get(resser) != null) {
-				return resser2consurfhsspscore.get(resser);
-			} else {
-				return null;
-			}		
-		} else {
-			return null;
-		}
+		return getResidue(resser).getConsurfScore();
 	}
 
 	/**
 	 * Gets the Consurf-HSSP color rsa given an internal residue serial
 	 * @param resser
+	 * @throws NullPointerException if residue serial not present in this Pdb instance 
 	 * @return
 	 */
 	public Integer getConsurfhsspColorFromResSerial(int resser){
-		if (resser2consurfhsspcolor != null) {
-			if (resser2consurfhsspcolor.get(resser) != null) {
-				return resser2consurfhsspcolor.get(resser);
-			} else {
-				return null;
-			}		
-		} else {
-			return null;
-		}
+		return getResidue(resser).getConsurfColor();
 	}
 
 	/**
 	 * Gets the all atoms rsa given an internal residue serial
 	 * @param resser
 	 * @return the rsa or null if rsa has not been calculated yet or the residue number cannot be found
+	 * @throws NullPointerException if residue serial not present in this Pdb instance 
 	 */
 	public Double getAllRsaFromResSerial(int resser){
-		if (resser2allrsa != null) {
-			if (resser2allrsa.get(resser) != null) {
-				return resser2allrsa.get(resser);
-			} else {
-				return null;
-			}		
+		if (hasASA()) {
+			return getResidue(resser).getRsa();
 		} else {
 			return null;
 		}
@@ -1595,14 +1762,11 @@ public abstract class Pdb {
 	 * Gets the sc rsa given an internal residue serial
 	 * @param resser
 	 * @return
+	 * @throws NullPointerException if residue serial not present in this Pdb instance 
 	 */
 	public Double getScRsaFromResSerial(int resser){
-		if (resser2scrsa != null) {
-			if (resser2scrsa.get(resser) != null) {
-				return resser2scrsa.get(resser);
-			} else {
-				return null;
-			}		
+		if (hasASA()) {
+			return getResidue(resser).getScRsa();
 		} else {
 			return null;
 		}
@@ -1622,10 +1786,10 @@ public abstract class Pdb {
 	 * Gets the pdb residue serial (author assignment) given an internal residue serial (cif)
 	 * TODO refactor
 	 * @param resser
-	 * @return
+	 * @return 
 	 */
 	public String get_pdbresser_from_resser (int resser){
-		return resser2pdbresser.get(resser);
+		return this.resser2pdbresser.get(resser);
 	}
 
 	/**
@@ -1635,41 +1799,47 @@ public abstract class Pdb {
 	 * @return
 	 */
 	public int get_resser_from_atomser(int atomser){
-		return atomser2resser.get(atomser);
-	}
-
-	public String getResTypeFromResSerial(int resser) {
-		return resser2restype.get(resser);
+		return atomser2atom.get(atomser).getParentResSerial();
 	}
 
 	/**
-	 * Gets the atom serial given the residue serial and atom name.
+	 * Convenience method to get residue type (3-letter code) from residue serial.
+	 * It is also possible to use {@link #getResidue(int)} and from that get any
+	 * other residue properties.
+	 * @param resser
+	 * @return
+	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 */
+	public String getResTypeFromResSerial(int resser) {
+		return getResidue(resser).getAaType().getThreeLetterCode();
+	}
+
+	/**
+	 * Gets the atom serial given the residue serial and atom code.
 	 * The caller of this functions needs to check whether the resser, atom and combination of the two exists
 	 * using {@link #hasCoordinates(int, String)}. Otherwise, if this function
 	 * is called and no atom serial exists, a null pointer exception will be thrown.
 	 * @param resser
-	 * @param atom
+	 * @param atomCode
 	 * @return the atom serial
-	 * @throws NullPointerException if no atom serial for this resser and atom exists
+	 * @throws NullPointerException if residue serial not present in this Pdb 
+	 * instance or if no atom of given type exists for given residue
 	 */
-	public int getAtomSerFromResSerAndAtom(int resser, String atom) {
-		return resser_atom2atomserial.get(resser+"_"+atom);			
+	public int getAtomSerFromResSerAndAtom(int resser, String atomCode) {
+		return getResidue(resser).getAtom(atomCode).getSerial();			
 	}
 
 	/**
-	 * Returns the set of all atom serials for the given residue serial.
-	 * Note that atoms for which no coordinates are given will be missing.
+	 * Returns the set of all atom serials for observed atoms of the given residue serial.
 	 * @param resser the residue serial
-	 * @return an ordered set of serials of the atoms in this residue
+	 * @return an ordered set of serials of the (observed) atoms in this residue
+	 * @throws NullPointerException if given residue serial not present in this Pdb
+	 * instance
 	 */
 	public Set<Integer> getAtomSersFromResSer(int resser) {
 		TreeSet<Integer> atomSers = new TreeSet<Integer>();
-		Set<String> atomTypes = AAinfo.getAtomsForCTAndRes("ALL", getResTypeFromResSerial(resser));
-		for(String atomType:atomTypes) {
-			if(hasCoordinates(resser, atomType)) {
-				int atomSer = getAtomSerFromResSerAndAtom(resser, atomType);
-				atomSers.add(atomSer);
-			}
+		for (Atom atom:this.getResidue(resser).getAtoms()) {
+			atomSers.add(atom.getSerial());
 		}
 		return atomSers;
 	}
@@ -1681,17 +1851,26 @@ public abstract class Pdb {
 	 * @return true if there is at least one atom with coordinates, else false 
 	 */
 	public boolean hasCoordinates(int resser) {
-		return atomser2resser.values().contains(resser);
+		if (this.containsResidue(resser)) {
+			if (this.getResidue(resser).getNumAtoms()>0) {
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
 	}
 
 	/**
 	 * Checks wheter the given atom type for the given residue serial has any associated coordinates
 	 * @param resser the residue serial
-	 * @param atom true if there is coordinates for given resser-atom, else false
-	 * @return
+	 * @param atomCode  
+	 * @return true if there is coordinates for given resser-atom, else false
+	 * @throws NullPointerException if residue serial not present in this Pdb instance 
 	 */
-	public boolean hasCoordinates(int resser, String atom) {
-		return resser_atom2atomserial.containsKey(resser+"_"+atom);
+	public boolean hasCoordinates(int resser, String atomCode) {
+		return getResidue(resser).containsAtom(atomCode);
 	}
 	
 	/**
@@ -1731,26 +1910,28 @@ public abstract class Pdb {
 	 * @return
 	 */
 	public Point3d getAtomCoord(int atomser) {
-		return this.atomser2coord.get(atomser);
+		return getAtom(atomser).getCoords();
 	}
 
 	/**
-	 * Gets the atom coordinates (a Point3d) given the residue serial and atom type 
+	 * Gets the atom coordinates (a Point3d) given the residue serial and atom code 
+	 * (standard PDB atom name, e.g. CA, N, C, O, CB, ...) 
 	 * @param resser
-	 * @param atom
+	 * @param atomCode
 	 * @return
 	 */
-	public Point3d getAtomCoord(int resser, String atom) {
-		return getAtomCoord(getAtomSerFromResSerAndAtom(resser, atom));
+	public Point3d getAtomCoord(int resser, String atomCode) {
+		return getResidue(resser).getAtom(atomCode).getCoords();
 	}
 	
 	/**
-	 * Gets the atom name given the atom serial
+	 * Gets the atom code (standard PDB atom name, e.g. CA, N, C, O, CB, ...) given the 
+	 * atom serial
 	 * @param atomser
 	 * @return
 	 */
 	public String getAtomNameFromAtomSer(int atomser) {
-		return this.atomser2atom.get(atomser);
+		return this.getAtom(atomser).getCode();
 	}
 	
 	/**
@@ -1760,9 +1941,7 @@ public abstract class Pdb {
 	 * @return
 	 */
 	public Set<Integer> getAllAtomSerials() {
-		TreeSet<Integer> atomSers = new TreeSet<Integer>();
-		atomSers.addAll(atomser2resser.keySet());
-		return atomSers;
+		return this.atomser2atom.keySet();
 	}
 
 	/**
@@ -1770,9 +1949,23 @@ public abstract class Pdb {
 	 * @return
 	 */
 	public Set<Integer> getAllSortedResSerials() {
-		TreeSet<Integer> ressers = new TreeSet<Integer> ();
-		ressers.addAll(resser2restype.keySet());
-		return ressers;
+		return residues.keySet();
+	}
+	
+	/**
+	 * Returns the lowest observed residue serial 
+	 * @return
+	 */
+	public int getMinObsResSerial() {
+		return residues.firstEntry().getKey();
+	}
+	
+	/**
+	 * Returns the highest observed residue serial 
+	 * @return
+	 */
+	public int getMaxObsResSerial() {
+		return residues.lastEntry().getKey();
 	}
 	
 	/**
@@ -1889,12 +2082,8 @@ public abstract class Pdb {
 	 */
 	public String getObservedSequence() {
 		String obsSequence = "";
-		TreeSet<Integer> ressers = new TreeSet<Integer>();
-		for (int resser:resser2restype.keySet()) {
-			ressers.add(resser);
-		}
-		for (int resser:ressers) {
-			obsSequence += AAinfo.threeletter2oneletter(resser2restype.get(resser));
+		for (Residue residue:residues.values()) {
+			obsSequence += residue.getAaType().getOneLetterCode();
 		}
 		return obsSequence;
 	}
@@ -1907,11 +2096,29 @@ public abstract class Pdb {
 		if (sequence==null) return false;
 		return !sequence.equals("");
 	}
+	
+	/**
+	 * Returns true if this Pdb instance has been assigned atom b-factors 
+	 * @return
+	 */
+	public boolean hasBfactors() {
+		return hasBfactors;
+	}
+	
+	/**
+	 * Returns true if naccess has been run and thus ASA values are present
+	 * in this Pdb instance
+	 * @return
+	 */
+	public boolean hasASA() {
+		return hasASA;
+	}
 
 	// csa related methods
 
 	/** 
 	 * Returns true if csa information is available, false otherwise. 
+	 * @return
 	 */
 	public boolean hasCSA() {
 		if (catalSiteSet == null) {
@@ -1925,6 +2132,7 @@ public abstract class Pdb {
 	
 	/**
 	 * Returns the oligomeric state object of this graph.
+	 * @return
 	 */
 	public OligomericState getOligomericState() {
 		return oligomeric;
@@ -1932,6 +2140,7 @@ public abstract class Pdb {
 	
 	/**
 	 * Returns the csa annotation object of this graph.
+	 * @return
 	 */
 	public CatalSiteSet getCSA() {
 		return catalSiteSet;
@@ -1941,6 +2150,7 @@ public abstract class Pdb {
 
 	/** 
 	 * Returns true if ec information is available, false otherwise. 
+	 * @return
 	 */
 	public boolean hasEC() {
 		if (ec == null) {
@@ -1954,6 +2164,7 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the ec annotation object of this graph.
+	 * @return
 	 */
 	public EC getEC() {
 		return ec;
@@ -1964,7 +2175,8 @@ public abstract class Pdb {
 	// scop related methods
 
 	/** 
-	 * Returns true if scop information is available, false otherwise. 
+	 * Returns true if scop information is available, false otherwise.
+	 * @return 
 	 */
 	public boolean hasScop() {
 		if (scop == null) {
@@ -1978,6 +2190,7 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the scop annotation object of this graph.
+	 * @return
 	 */
 	public Scop getScop() {
 		return scop;
@@ -1988,7 +2201,8 @@ public abstract class Pdb {
 	// secondary structure related methods
 
 	/** 
-	 * Returns true if secondary structure information is available, false otherwise. 
+	 * Returns true if secondary structure information is available, false otherwise.
+	 * @return 
 	 */
 	public boolean hasSecondaryStructure() {
 		return !this.secondaryStructure.isEmpty();
@@ -1996,6 +2210,7 @@ public abstract class Pdb {
 
 	/**
 	 * Returns the secondary structure annotation object of this graph.
+	 * @return
 	 */
 	public SecondaryStructure getSecondaryStructure() {
 		return this.secondaryStructure;
@@ -2013,28 +2228,32 @@ public abstract class Pdb {
 	 * @throws ConformationsNotSameSizeError
 	 */
 	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeError {
-		TreeMap<String,Point3d> thiscoords = this.get_coords_for_ct_4rmsd(ct);
-		TreeMap<String,Point3d> othercoords = otherPdb.get_coords_for_ct_4rmsd(ct);
+		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct);
+		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct);
 
+		ArrayList<Vector3d> conf1AL = new ArrayList<Vector3d>();
+		ArrayList<Vector3d> conf2AL = new ArrayList<Vector3d>();	
 		// there might be unobserved residues or some missing atoms for a residue
 		// here we get the ones that are in common
-		ArrayList<String> common = new ArrayList<String>();
-		for (String resser_atom:thiscoords.keySet()){
-			if (othercoords.containsKey(resser_atom)){
-				common.add(resser_atom);
+		for (int resser:thisResidues.keySet()) {
+			Residue thisRes = thisResidues.get(resser);
+			if (otherResidues.containsKey(resser)) {
+				Residue otherRes = otherResidues.get(resser);
+				for (Atom atom:thisRes.getAtoms()) {
+					if (otherRes.containsAtom(atom.getCode())) {
+						conf1AL.add(new Vector3d(atom.getCoords()));
+						conf2AL.add(new Vector3d(otherRes.getAtom(atom.getCode()).getCoords()));
+					}
+				}
 			}
 		}
 
-		// converting the TreeMaps to Vector3d arrays (input format for calculate_rmsd)
-		Vector3d[] conformation1 = new Vector3d[common.size()]; 
-		Vector3d[] conformation2 = new Vector3d[common.size()];
-		int i = 0;
-		for (String resser_atom:common){
-			conformation1[i] = new Vector3d(thiscoords.get(resser_atom).x,thiscoords.get(resser_atom).y,thiscoords.get(resser_atom).z);
-			conformation2[i] = new Vector3d(othercoords.get(resser_atom).x,othercoords.get(resser_atom).y,othercoords.get(resser_atom).z);
-			i++;
-		}
-
+		// converting the ArrayLists to arrays
+		Vector3d[] conformation1 = new Vector3d[conf1AL.size()]; 
+		Vector3d[] conformation2 = new Vector3d[conf2AL.size()];
+		conf1AL.toArray(conformation1);
+		conf2AL.toArray(conformation2);
+		
 		// this as well as calculating the rmsd, changes conformation1 and conformation2 to be optimally superposed
 		double rmsd = calculate_rmsd(conformation1, conformation2);
 
@@ -2172,8 +2391,8 @@ public abstract class Pdb {
 
 		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 
-		for (int resser:resser2restype.keySet()) {
-			String resType = AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser));
+		for (int resser:getAllSortedResSerials()) {
+			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
 			String pdbresser = get_pdbresser_from_resser(resser);
 
 			String secStructType = null;
@@ -2252,8 +2471,8 @@ public abstract class Pdb {
 		
 		PrintStream resOut = new PrintStream(new FileOutputStream(pdbCode+chainCode+"_residues.txt"));
 		
-		for (int resser:resser2restype.keySet()) {
-			String resType = AAinfo.threeletter2oneletter(getResTypeFromResSerial(resser));
+		for (int resser:getAllSortedResSerials()) {
+			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
 			String pdbresser = get_pdbresser_from_resser(resser);
 			
 			String secStructType = "\\N";
@@ -2480,58 +2699,20 @@ public abstract class Pdb {
 		// getting list of the residue serials to keep
 		TreeSet<Integer> resSersToKeep = intervSet.getIntegerSet();
 
-		// removing residues from resser2restype and resser2pdbresser
-		Iterator<Integer> itressers = resser2restype.keySet().iterator();
-		while (itressers.hasNext()) {
-			int resSer = itressers.next();
-			if (!resSersToKeep.contains(resSer)) {
-				itressers.remove();
-				resser2pdbresser.remove(resSer);
-				if (resser2allrsa != null) {
-					resser2allrsa.remove(resSer);
-					resser2scrsa.remove(resSer);
-				}
-				if (resser2consurfhsspscore != null) {
-					resser2consurfhsspscore.remove(resSer);
-					resser2consurfhsspcolor.remove(resSer);
-				}
+		// removing residues
+		Iterator<Residue> resIt = residues.values().iterator();
+		while (resIt.hasNext()) {
+			int resser = resIt.next().getSerial();
+			if (!resSersToKeep.contains(resser)) {
+				resIt.remove();
 				if (catalSiteSet != null) {
-					catalSiteSet.removeCatalSiteRes(resSer);
+					catalSiteSet.removeCatalSiteRes(resser);
 				}
 			}
 		}
-		
-		// removing residues from pdbresser2resser
-		Iterator<String> pdbressers = pdbresser2resser.keySet().iterator();
-		while (pdbressers.hasNext()) {
-			String pdbresser = pdbressers.next();
-			int resSer = pdbresser2resser.get(pdbresser);
-			if (!resSersToKeep.contains(resSer)) {
-				pdbressers.remove();
-			}
-		}
-		
-		// removing residues(atoms) from resser_atom2atomserial
-		for (int atomSer:atomser2resser.keySet()) {
-			String atom = atomser2atom.get(atomSer);
-			int resSer = atomser2resser.get(atomSer);
-			String resser_atom = resSer+"_"+atom;
-			if (!resSersToKeep.contains(resSer)) {
-				resser_atom2atomserial.remove(resser_atom);
-			}
-		}
-		
-		// removing atoms belonging to unwanted residues from atomser2resser, atomser2atom and atomser2coord
-		Iterator<Integer> itatomsers = atomser2resser.keySet().iterator();
-		while (itatomsers.hasNext()) {
-			int atomSer = itatomsers.next();
-			if (!resSersToKeep.contains(atomser2resser.get(atomSer))) {
-				itatomsers.remove();
-				atomser2atom.remove(atomSer);
-				atomser2coord.remove(atomSer);
-			}
-		}
-		
+		// reinitialise the maps
+		initialiseMaps();
+			
 		// setting sequence to scop sequence and obsLength and fullLength respectively
 		Iterator<Interval> regionsToKeep = intervSet.iterator();
 		String newSequence = "";
@@ -2541,7 +2722,6 @@ public abstract class Pdb {
 		}
 		sequence = newSequence;
 		fullLength = sequence.length();
-		obsLength = resser2restype.size();		
 		
 	}
 	
@@ -2687,7 +2867,7 @@ public abstract class Pdb {
 	 */
 	public TreeMap<Integer, double[]> getAllPhiPsi() {
 		TreeMap<Integer, double[]> phipsi = new TreeMap<Integer, double[]>();
-		for (int resser: this.resser2restype.keySet()) {
+		for (int resser: getAllSortedResSerials()) {
 			double[] angles = {getPhiAngle(resser), getPsiAngle(resser)};
 			phipsi.put(resser, angles);
 		}

@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -25,6 +24,7 @@ public class PdbasePdb extends Pdb {
 
 	private final static String DEFAULT_PDBASE_DB="pdbase";
 
+	private String db;				// the pdbase db from which we have taken the data
 	private MySQLConnection conn;
 	
 	public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
@@ -59,15 +59,22 @@ public class PdbasePdb extends Pdb {
 	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, SQLException  {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
 		this.db=db;
-		this.dataLoaded = false;
 		
 		this.conn = conn;
 		
 		// this makes sure that we find the pdb code in the database
 		this.entrykey = getEntryKey();
 		this.title = getTitle(); // this is available once we have the entry key
+		
 	}
 
+	/**
+	 * Loads PDB data (coordinates, sequence, etc.) from pdbase
+	 * for given pdbChainCode and modelSerial
+	 * @param pdbChainCode
+	 * @param modelSerial
+	 * @throws PdbLoadError
+	 */
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
 		load(pdbChainCode, modelSerial, ChainCodeType.PDB_CHAIN_CODE);
 	}
@@ -84,6 +91,7 @@ public class PdbasePdb extends Pdb {
 	 */
 	public void load(String chainCode, int modelSerial, ChainCodeType ccType) throws PdbLoadError {
 		try {
+			this.initialiseResidues();
 			this.model = modelSerial;
 			if (ccType==ChainCodeType.PDB_CHAIN_CODE) {
 				this.pdbChainCode=chainCode;	// NOTE! pdb chain code are case sensitive!
@@ -100,14 +108,11 @@ public class PdbasePdb extends Pdb {
 			this.sequence = readSeq();
 			this.fullLength = sequence.length();
 			
-			this.pdbresser2resser = getRessersMapping();
-   
-			this.readAtomData(); // populates resser_atom2atomserial, resser2restype, atomser2coord, atomser2resser
+			this.readAtomData(); 
 
-			this.obsLength = resser2restype.size();
-			
-			// we initialise resser2pdbresser from the pdbresser2resser HashMap
-			this.resser2pdbresser = new HashMap<Integer, String>();
+			this.pdbresser2resser = getRessersMapping();
+			// we initialise resser2pdbresser from the pdbresser2resser TreeMap
+			this.resser2pdbresser = new TreeMap<Integer, String>();
 			for (String pdbresser:pdbresser2resser.keySet()){
 				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 			}
@@ -116,16 +121,10 @@ public class PdbasePdb extends Pdb {
 			readSecStructure();
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("Pdbase");
+				this.initialiseResiduesSecStruct();
 			}
 			
-			// initialising atomser2atom from resser_atom2atomserial
-			atomser2atom = new HashMap<Integer, String>();
-			for (String resser_atom:resser_atom2atomserial.keySet()){
-				int atomserial = resser_atom2atomserial.get(resser_atom);
-				String atom = resser_atom.split("_")[1];
-				atomser2atom.put(atomserial,atom);
-			}
-			
+			this.initialiseMaps();
 			dataLoaded = true;
 			
 		} catch (SQLException e) {
@@ -138,6 +137,10 @@ public class PdbasePdb extends Pdb {
 
 	}
 	
+	/**
+	 * Returns all PDB chain codes for this entry in pdbase 
+	 * @return array with all pdb chain codes
+	 */
 	public String[] getChains()	throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
@@ -160,6 +163,10 @@ public class PdbasePdb extends Pdb {
 		return chainsArray;
 	}
 	
+	/**
+	 * Returns all model serials for this entry in pdbase
+	 * @return array with all model serials
+	 */
 	public Integer[] getModels() throws PdbLoadError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
@@ -336,11 +343,6 @@ public class PdbasePdb extends Pdb {
 	}
 	
 	private void readAtomData() throws PdbaseInconsistencyError, SQLException{
-		resser_atom2atomserial = new HashMap<String,Integer>();
-		resser2restype = new HashMap<Integer,String>();
-		atomser2coord = new HashMap<Integer,Point3d>();
-		atomser2resser = new HashMap<Integer,Integer>();
-
 		// NOTE: label_entity_key not really needed since there can be only one entity_key
 		// per entry_key,asym_id combination
 		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
@@ -366,11 +368,12 @@ public class PdbasePdb extends Pdb {
 			double z = rsst.getDouble(7);				// z
 			Point3d coords = new Point3d(x, y, z);
 			if (AAinfo.isValidAA(res_type)) {
-				resser2restype.put(res_serial, res_type);
+				if (!this.containsResidue(res_serial)) { 
+					this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, this));
+				}
 				if (AAinfo.isValidAtomWithOXT(res_type,atom)){
-					atomser2coord.put(atomserial, coords);
-					atomser2resser.put(atomserial, res_serial);
-					resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+					Residue residue = this.getResidue(res_serial);
+					residue.addAtom(new Atom(atomserial, atom,coords,residue));
 				}
 			}
 
@@ -413,13 +416,13 @@ public class PdbasePdb extends Pdb {
 		return sequence;
 	}
 	
-	private HashMap<String,Integer> getRessersMapping() throws PdbaseInconsistencyError, SQLException{
+	private TreeMap<String,Integer> getRessersMapping() throws PdbaseInconsistencyError, SQLException{
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
 
-		HashMap<String,Integer> map = new HashMap<String, Integer>();
+		TreeMap<String,Integer> map = new TreeMap<String, Integer>();
 		String sql="SELECT seq_id, concat(pdb_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
 					" FROM "+db+".pdbx_poly_seq_scheme " +
 					" WHERE entry_key=" + entrykey +
@@ -534,5 +537,14 @@ public class PdbasePdb extends Pdb {
 		rsst.close();
 		stmt.close();
 		return map;
+	}
+	
+	/**
+	 * Returns the database name from which the PDB data has
+	 * been read.
+	 * @return
+	 */
+	public String getDb() {
+		return this.db;
 	}
 }

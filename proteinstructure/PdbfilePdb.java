@@ -2,12 +2,10 @@ package proteinstructure;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +24,8 @@ import javax.vecmath.Point3d;
 public class PdbfilePdb extends Pdb {
 	
 	private static final String NULL_chainCode = "A";
+	// the regex to use for selecting an atom based on its alt code: either a space or an A are valid
+	private static final String ALTCODEREGEX = "[ A]";
 	
 	private String pdbfile;
 	private boolean isCaspTS; // whether we are reading a CASP TS file (true) or a normal PDB file (false)
@@ -38,18 +38,23 @@ public class PdbfilePdb extends Pdb {
 	 */
 	public PdbfilePdb (String pdbfile) {
 		this.pdbfile = pdbfile;
-		this.pdbCode = NO_PDB_CODE; // we initialise to unknown in case we don't find it in pdb file
-		this.dataLoaded = false;
 		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
 		this.hasSeqRes = false; // we assume that there is no SEQRES in this pdb file, if SEQRES is found when reading we set it to true
 		
 		// we initialise the secondary structure to empty, if no sec structure info is found then it remains empty
 		this.secondaryStructure = new SecondaryStructure("");		
-		
 	}
 
+	/**
+	 * Loads PDB data (coordinates, sequence, etc.) from the PDB file
+	 * for given pdbChainCode and modelSerial
+	 * @param pdbChainCode
+	 * @param modelSerial
+	 * @throws PdbLoadError
+	 */
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
 		try {
+			initialiseResidues();
 			this.model=modelSerial;
 			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
 			// we set chainCode to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use "A"
@@ -59,33 +64,22 @@ public class PdbfilePdb extends Pdb {
 			this.sequence = ""; // we initialize to blank so we can append to the string in read_pdb_data_from_file
 			parse();
 			
-			this.obsLength = resser2restype.size();
-			
 			secondaryStructure.setSequence(this.sequence);
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("Author");
+				this.initialiseResiduesSecStruct();
 			}
 			
 			// when reading from pdb file we have no information of residue numbers or author's (original) pdb residue number, so we fill the mapping with the residue numbers we know
-			this.resser2pdbresser = new HashMap<Integer, String>();
-			this.pdbresser2resser = new HashMap<String, Integer>();
-			for (int resser:resser2restype.keySet()){
+			this.resser2pdbresser = new TreeMap<Integer, String>();
+			this.pdbresser2resser = new TreeMap<String, Integer>();
+			for (int resser:getAllSortedResSerials()){
 				resser2pdbresser.put(resser, String.valueOf(resser));
 				pdbresser2resser.put(String.valueOf(resser), resser);
 			}
-			
-			// initialising atomser2atom from resser_atom2atomserial
-			atomser2atom = new HashMap<Integer, String>();
-			for (String resser_atom:resser_atom2atomserial.keySet()){
-				int atomserial = resser_atom2atomserial.get(resser_atom);
-				String atom = resser_atom.split("_")[1];
-				atomser2atom.put(atomserial,atom);
-			}
-			
+			this.initialiseMaps();
 			dataLoaded = true;
 			
-		} catch (FileNotFoundException e) {
-			throw new PdbLoadError(e);
 		} catch (PdbfileFormatError e) {
 			throw new PdbLoadError(e);
 		} catch (IOException e) {
@@ -95,6 +89,10 @@ public class PdbfilePdb extends Pdb {
 		}
 	}
 	
+	/**
+	 * Returns all PDB chain codes present in the PDB file
+	 * @return array with all pdb chain codes
+	 */
 	public String[] getChains() throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
@@ -119,6 +117,10 @@ public class PdbfilePdb extends Pdb {
 		return chainsArray;
 	}
 	
+	/**
+	 * Returns all model serials present in the PDB file
+	 * @return array with all model serials
+	 */
 	public Integer[] getModels() throws PdbLoadError {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
@@ -173,10 +175,6 @@ public class PdbfilePdb extends Pdb {
 	 * pdbChainCode and model
 	 */
 	private void parse() throws IOException, PdbfileFormatError, PdbChainCodeNotFoundError {
-		resser_atom2atomserial = new HashMap<String,Integer>();
-		resser2restype = new HashMap<Integer,String>();
-		atomser2coord = new HashMap<Integer,Point3d>();
-		atomser2resser = new HashMap<Integer,Integer>();
 		Pattern p;
 		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
@@ -322,8 +320,9 @@ public class PdbfilePdb extends Pdb {
 			m = p.matcher(line);
 			if (m.find()){
 				try {
-					//                                 serial    atom   res_type      chain 	   res_ser icode    x     y     z
-					Pattern pl = Pattern.compile("^.{6}(.....).{2}(...).{1}(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",Pattern.CASE_INSENSITIVE);
+					//                                 serial    atom       altcode     restype      chain 	   res_ser icode    x     y     z
+					Pattern pl = Pattern.compile("^.{6}(.....).{2}(...)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",
+												Pattern.CASE_INSENSITIVE);
 					Matcher ml = pl.matcher(line);
 					if (ml.find()) {
 						empty=false;
@@ -363,11 +362,12 @@ public class PdbfilePdb extends Pdb {
 						} 
 						
 						if (AAinfo.isValidAA(res_type)) {
-							resser2restype.put(res_serial, res_type);
+							if (!this.containsResidue(res_serial)) {
+								this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type),res_serial,this));
+							}
 							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
-								atomser2coord.put(atomserial, coords);
-								atomser2resser.put(atomserial, res_serial);
-								resser_atom2atomserial.put(res_serial+"_"+atom, atomserial);
+								Residue residue = this.getResidue(res_serial);
+								residue.addAtom(new Atom(atomserial, atom, coords, residue));
 							}
 						}
 	
@@ -384,14 +384,14 @@ public class PdbfilePdb extends Pdb {
 		}
 
 		// we check also that resser2restype is not empty: happens when all residues in chain are non-standard
-		if (resser2restype.isEmpty()) {
+		if (this.get_length()==0) {
 			throw new PdbfileFormatError("No standard aminoacids found for given chain in ATOM lines");
 		}
 		
 		if (!hasSeqRes){ // no SEQRES could be read
 			
 			// 1) check whether first observed residue number is <100, if so we warn because it's likely to be an error
-			int minResSer = Collections.min(resser2restype.keySet()); 
+			int minResSer = this.getMinObsResSerial(); 
 			if (minResSer>=100) {
 				System.err.println("Warning! PDB file "+pdbfile+" starts with residue number "+minResSer+ ". "+
 						"This is likely to be an error in the residue numbering of this PDB file. " +
@@ -402,9 +402,9 @@ public class PdbfilePdb extends Pdb {
 			// we assume the numbering is correct: we introduce non-observed gaps whenever we don't have the resser in resser2restype, 
 			// that only misses non-observed gaps at end of chain which we can't know about
 			sequence = "";
-			for (int resser=1;resser<=Collections.max(resser2restype.keySet());resser++) {
-				if (resser2restype.containsKey(resser)) {
-					sequence += AAinfo.threeletter2oneletter(resser2restype.get(resser));
+			for (int resser=1;resser<=getMaxObsResSerial();resser++) {
+				if (this.containsResidue(resser)) {
+					sequence += this.getResidue(resser).getAaType().getOneLetterCode();
 				} else {
 					sequence += AAinfo.UNKNOWN_UNOBSERVED_RES_ONE_LETTER;
 				}
@@ -414,12 +414,12 @@ public class PdbfilePdb extends Pdb {
 			
 		} else { // we could read the sequence from SEQRES
 			// 1) we check that the sequences from ATOM lines and SEQRES coincide (except for unobserved residues)
-			for (int resser:resser2restype.keySet()) {
+			for (int resser:getAllSortedResSerials()) {
 				// before checking the sequence matching we need to be sure that the resser is not out of the range of the SEQRES sequence length 
 				if (resser>sequence.length()) {
 					throw new PdbfileFormatError("Residue serial "+resser+" from ATOM line is bigger than SEQRES sequence length. Incorrect residue numbering in PDB file "+pdbfile);
 				}
-				if (!String.valueOf(sequence.charAt(resser-1)).equals(AAinfo.threeletter2oneletter(resser2restype.get(resser)))) {
+				if (sequence.charAt(resser-1)!=this.getResidue(resser).getAaType().getOneLetterCode()) {
 					throw new PdbfileFormatError("Sequences from ATOM lines and SEQRES do not match for position "+resser+". Incorrect residue numbering in PDB file "+pdbfile);
 				}
 			}
@@ -444,7 +444,7 @@ public class PdbfilePdb extends Pdb {
 	}
 	
 	/**
-	 * Sets the sequence for this pdb object, overriding any current sequence information.
+	 * Sets the sequence for this PdbasePdb object, overriding any current sequence information.
 	 * If the observed residues (those having 3d coordinates) do not match the new sequence,
 	 * an exception will be thrown.
 	 * @param seq the new sequence
@@ -452,8 +452,8 @@ public class PdbfilePdb extends Pdb {
 	 */
 	public void setSequence(String seq) throws PdbLoadError {
 		// we check that the sequences from ATOM lines and the new sequence coincide (except for unobserved residues)
-		for (int resser:resser2restype.keySet()) {
-			if (!String.valueOf(seq.charAt(resser-1)).equals(AAinfo.threeletter2oneletter(resser2restype.get(resser)))) {
+		for (int resser:getAllSortedResSerials()) {
+			if (seq.charAt(resser-1)!=this.getResidue(resser).getAaType().getOneLetterCode()) {
 				throw new PdbLoadError("Given sequence does not match observed sequence from ATOM lines for position "+resser+".");
 			}
 		}

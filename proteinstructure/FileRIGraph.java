@@ -14,7 +14,8 @@ import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
- * A RIGraph derived from a single chain pdb protein structure loaded from a graph file in aglappe's format
+ * A RIGraph derived from a single chain pdb protein structure loaded from a 
+ * graph file in aglappe's format
  * 
  */
 public class FileRIGraph extends RIGraph {
@@ -54,7 +55,7 @@ public class FileRIGraph extends RIGraph {
 		this.chainCode=Pdb.NO_CHAIN_CODE;
 		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
 		
-		read_graph_from_file(contactsfile);  
+		readFromFile(contactsfile);  
 		
 	}
 	
@@ -65,7 +66,7 @@ public class FileRIGraph extends RIGraph {
 	 * @throws GraphFileFormatError if file does not start with #AGLAPPE or #CMVIEW 
 	 * if file format not the right version, if sequence is not present
 	 */
-	private void read_graph_from_file (String contactsfile) throws IOException, GraphFileFormatError {
+	private void readFromFile (String contactsfile) throws IOException, GraphFileFormatError {
 		HashMap<Pair<Integer>,Double> contacts2weights = new HashMap<Pair<Integer>,Double>();
 		HashSet<Integer> allserials = new HashSet<Integer>();
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
@@ -151,9 +152,11 @@ public class FileRIGraph extends RIGraph {
 
 		// populating this RIGraph with nodes and setting fullLength
 		this.fullLength = sequence.length();
-		for (int i=0;i<sequence.length();i++){
-			String letter = String.valueOf(sequence.charAt(i));
-			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
+		for (int serial:allserials){
+			if (serial>sequence.length()) 
+				throw new GraphFileFormatError("Residue serial "+serial+" found in edges list is bigger than length of sequence");
+			String letter = String.valueOf(sequence.charAt(serial-1));
+			RIGNode node = new RIGNode(serial,AAinfo.oneletter2threeletter(letter));
 			this.addVertex(node);
 		}
 
