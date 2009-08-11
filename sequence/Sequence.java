@@ -13,14 +13,21 @@ import java.util.regex.Pattern;
 import proteinstructure.FastaFileFormatError;
 
 /**
- * Presenting our sequence object(!).
+ * Presenting our sequence object(!). Provides method for reading and writing
+ * sequences in Fasta format.
  */
 public class Sequence {
 
+	/*------------------------------ constants ------------------------------*/
+	
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)"; // see also the REGEX in Alignment class
+	
+	/*--------------------------- member variables --------------------------*/
 	
 	private String name;
 	private String seq;
+	
+	/*----------------------------- constructors ----------------------------*/
 	
 	/** 
 	 * Creates a new empty sequence object
@@ -38,6 +45,53 @@ public class Sequence {
 	public Sequence(String name, String seq) {
 		this.name = name;
 		this.seq = seq;
+	}
+
+	/*-------------------------- getters and setters ------------------------*/
+	
+	/**
+	 * @return the name
+	 */
+	public String getName() {
+		return name;
+	}
+
+	/**
+	 * @return the sequence
+	 */
+	public String getSeq() {
+		return seq;
+	}
+
+	/**
+	 * @param name the name to set
+	 */
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	/**
+	 * @param seq the sequence to set
+	 */
+	public void setSeq(String seq) {
+		this.seq = seq;
+	}
+	
+	/**
+	 * Returns the length of this sequence.
+	 * @return
+	 */
+	public int getLength() {
+		return this.seq.length();
+	}
+	
+	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * @return the string representation of this sequence (without header)
+	 */
+	public String toString() {
+		return this.seq.toString();
 	}
 	
 	/**
@@ -88,42 +142,8 @@ public class Sequence {
 		writeSeqs(out, seqs, tags);
 	}
 
-	/**
-	 * @return the name
-	 */
-	public String getName() {
-		return name;
-	}
-
-	/**
-	 * @return the seq
-	 */
-	public String getSeq() {
-		return seq;
-	}
-
-	/**
-	 * @param name the name to set
-	 */
-	public void setName(String name) {
-		this.name = name;
-	}
-
-	/**
-	 * @param seq the seq to set
-	 */
-	public void setSeq(String seq) {
-		this.seq = seq;
-	}
+	/*---------------------------- static methods ---------------------------*/
 	
-	/**
-	 * Returns the length of this sequence.
-	 * @return
-	 */
-	public int getLength() {
-		return this.seq.length();
-	}
-
 	/**
 	 * Writes given sequences and tags to given sequence file in FASTA format
 	 * Output line length is fixed at 80
