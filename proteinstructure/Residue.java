@@ -1,9 +1,11 @@
 package proteinstructure;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeMap;
 
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 
 /**
@@ -11,8 +13,31 @@ import javax.vecmath.Point3d;
  * @author duarte
  *
  */
-public class Residue {
+public class Residue implements Iterable<Atom> {
 
+	public enum Chirality {
+		L( 1,"L","L-form"),
+		D(-1,"D","D-form"),
+		U(10,"U","undetermined"),
+		C( 0,"C","coplanar");
+		private int number;
+		private String abbrev;
+		private String name;
+		private Chirality(int number, String abbrev, String name) {
+			this.number = number;
+			this.abbrev = abbrev;
+			this.name = name;
+		}
+		public int getNumber() {
+			return number;
+		}
+		public String getAbbrev() {
+			return abbrev;
+		}
+		public String getName() {
+			return name;
+		}
+	}
 	
 	private AminoAcid aaType;
 	private int serial;
@@ -230,8 +255,46 @@ public class Residue {
 		return centroid;
 	}
 	
+	/**
+	 * Finds out wheter this Residue is of the L-form or the D-form or has 
+	 * no chiral center, either because it is a Gly or because one of the 4 atoms 
+	 * around the CA is missing: C, CB, HA or N 
+	 * See Chapter "The Mathematics of Chirality", Distance Geometry and Molecular Conformation,
+	 * G.M. Crippen, T.M. Havel
+	 * @return
+	 */
+	public Chirality getChirality() {
+		if (!containsAtom("C") || !containsAtom("CB") || !containsAtom("HA") || !containsAtom("N")) {
+			return Chirality.U;
+		}
+		Point3d h = getAtom("HA").getCoords();
+		Point3d c = getAtom("C").getCoords();
+		Point3d r = getAtom("CB").getCoords();
+		Point3d n = getAtom("N").getCoords();
+		
+		// see equation 2.1 of book mentioned above
+		Matrix4d oriVolMat = new Matrix4d(1,   1,   1,   1, 
+										h.x, c.x, r.x, n.x, 
+										h.y, c.y, r.y, n.y,
+										h.z, c.z, r.z, n.z);
+		double oriVol = oriVolMat.determinant();
+		if (oriVol>0) {
+			return Chirality.L;
+		} else if (oriVol<0) {
+			return Chirality.D;
+		} else {
+			// this shouldn't ever happen because oriVol can't really be 0 exactly
+			// anyway we keep this just in case
+			return Chirality.C;
+		}
+	}
+	
 	public String toString() {
 		return this.getChainCode()+serial+aaType.getOneLetterCode();
+	}
+
+	public Iterator<Atom> iterator() {
+		return atoms.values().iterator();
 	}
 	
 }

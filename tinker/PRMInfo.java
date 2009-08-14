@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import proteinstructure.AAinfo;
+import proteinstructure.AminoAcid;
 
 /**
  * Class containing information (atom identities) parsed from 
@@ -106,7 +107,7 @@ public class PRMInfo {
 				if(molName.startsWith(name)) molName=AAinfo.fullname2threeletter(name);
 			}
 			
-			if (AAinfo.isValidAA(molName.substring(0, 3))) {
+			if (AminoAcid.isStandardAA(molName.substring(0, 3))) {
 				// Hydrogens will also be in the mapping, in case we need them later
 				prmid2res_atom.put(prmid, molName.substring(0,3)+"_"+atomName);
 			}

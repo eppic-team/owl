@@ -56,7 +56,7 @@ public enum AminoAcid {
 	private String name;			
 	private char oneLetterCode;
 	private String threeLetterCode;
-	private int numberOfAtoms;		// number of heavy side chain atoms
+	private int numberOfAtoms;		// number of heavy (non-Hydrogen) side chain atoms
 	private double hydrophobicity;
 	private boolean hydrophobic;
 	private boolean aromatic;	
@@ -114,7 +114,14 @@ public enum AminoAcid {
 	public String getName() { return this.name; }
 	public char getOneLetterCode() { return this.oneLetterCode; }
 	public String getThreeLetterCode() { return this.threeLetterCode; }
+	
+	/**
+	 * Returns the number of side chain heavy (non-Hydrogen) atoms for this
+	 * AminoAcid 
+	 * @return number of side chain heavy atoms
+	 */
 	public int getNumberOfAtoms() {return this.numberOfAtoms; }
+	
 	public double getHydrophobicity() {return this.hydrophobicity; }
 	public boolean isAromatic() { return this.aromatic; }
 	public boolean isHydrophobic() { return this.hydrophobic; }

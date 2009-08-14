@@ -65,7 +65,8 @@ public class AAinfo {
 	
 	private final static Map<String,ContactType> cts = initialiseCTsFromFile();
 	
-	private final static Map<String,Set<String>> aas2atoms = initialiseAas2atoms(); // depends on cts 
+	private final static Map<String,Set<String>> aas2heavyAtoms = initialiseAas2heavyAtoms(); // grabs the data from the cts map above 
+	private final static Map<String,Set<String>> aas2atoms = initialiseAas2atoms(); // grabs the data from the cts map above
 	
 	private final static Map<String,String> fullname2threeletter = initialiseFullNames2Threeletter();
 	
@@ -185,9 +186,15 @@ public class AAinfo {
 		return aas;
 	}
 	
-	private static Map<String,Set<String>> initialiseAas2atoms() {
+	private static Map<String,Set<String>> initialiseAas2heavyAtoms() {
 		Map<String,Set<String>> aas2atoms = new HashMap<String, Set<String>>();
 		aas2atoms = cts.get("ALL");
+		return aas2atoms;
+	}
+	
+	private static Map<String,Set<String>> initialiseAas2atoms() {
+		Map<String,Set<String>> aas2atoms = new HashMap<String, Set<String>>();
+		aas2atoms = cts.get("ALL_H");
 		return aas2atoms;
 	}
 	
@@ -272,7 +279,8 @@ public class AAinfo {
 	/*----------------------- public methods ---------------------------*/
 	
 	/**
-	 * Given a three letter code returns true if is a standard aminoacid
+	 * Given a three letter code returns true if it corresponds to a standard aminoacid
+	 * @return
 	 */
 	public static boolean isValidAA(String three) {
 		return aas.contains(three);
@@ -526,8 +534,33 @@ public class AAinfo {
 	
 	/**
 	 * Given a three letter code aminoacid and an atom name say whether 
-	 * the atom is a valid atom for that aminoacid 
+	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
 	 * Doesn't consider OXT to be a valid atom for any aminoacid
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidHeavyAtom(String aa, String atom) {
+		return aas2heavyAtoms.get(aa).contains(atom);
+	}
+
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
+	 * Considers OXT to be a valid atom for all aminoacids
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidHeavyAtomWithOXT(String aa, String atom) {
+		if (atom.equals("OXT")) return true;
+		return aas2heavyAtoms.get(aa).contains(atom);
+	}
+
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
+ 	 * Doesn't consider OXT to be a valid atom for any aminoacid
 	 * @param aa
 	 * @param atom
 	 * @return
@@ -535,11 +568,11 @@ public class AAinfo {
 	public static boolean isValidAtom(String aa, String atom) {
 		return aas2atoms.get(aa).contains(atom);
 	}
-
+	
 	/**
 	 * Given a three letter code aminoacid and an atom name say whether 
-	 * the atom is a valid atom for that aminoacid 
-	 * Considers OXT to be a valid atom for all aminoacids
+	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
+	 * Considers OXT to be a valid atom for all aminoacids 
 	 * @param aa
 	 * @param atom
 	 * @return
@@ -548,23 +581,23 @@ public class AAinfo {
 		if (atom.equals("OXT")) return true;
 		return aas2atoms.get(aa).contains(atom);
 	}
-
+	
 	/**
-	 * Gets all (non-Hydrogen) atoms for an aminoacid (three letter code)
+	 * Gets all (non-Hydrogen) atoms given a three letter code aminoacid
 	 * @param aa
 	 * @return
 	 */
 	public static Set<String> getAtoms(String aa) {
-		return aas2atoms.get(aa);
+		return aas2heavyAtoms.get(aa);
 	}
 	
 	/**
-	 * Gets the number of non-hydrogen atoms for an aminoacid (three letter code)
+	 * Gets the number of non-Hydrogen atoms given a three letter code aminoacid
 	 * @param aa
 	 * @return
 	 */
 	public static int getNumberAtoms(String aa) {
-		return aas2atoms.get(aa).size();
+		return aas2heavyAtoms.get(aa).size();
 	}
 	
 	/**

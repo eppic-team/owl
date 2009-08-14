@@ -367,7 +367,7 @@ public class PdbasePdb extends Pdb {
 			double y = rsst.getDouble(6);				// y
 			double z = rsst.getDouble(7);				// z
 			Point3d coords = new Point3d(x, y, z);
-			if (AAinfo.isValidAA(res_type)) {
+			if (AminoAcid.isStandardAA(res_type)) {
 				if (!this.containsResidue(res_serial)) { 
 					this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, this));
 				}
@@ -401,8 +401,8 @@ public class PdbasePdb extends Pdb {
         while (rsst.next()) {
         	count++;
         	String res_type = rsst.getString(1);
-        	if (AAinfo.isValidAA(res_type)){
-        		sequence+=AAinfo.threeletter2oneletter(res_type);
+        	if (AminoAcid.isStandardAA(res_type)){
+        		sequence+=AminoAcid.three2one(res_type);
         	} else {
         		sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
         	}

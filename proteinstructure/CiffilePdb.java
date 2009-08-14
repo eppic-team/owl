@@ -416,7 +416,7 @@ public class CiffilePdb extends Pdb {
 		}
 		for (AtomLine atomLine:atomLinesData) {
 			if (atomLine.labelAltId.equals(".") || (firstAltCode!=null && atomLine.labelAltId.equals(firstAltCode))) {
-				if (AAinfo.isValidAA(atomLine.res_type)) {
+				if (AminoAcid.isStandardAA(atomLine.res_type)) {
 					if(!this.containsResidue(atomLine.res_serial)) {
 						this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(atomLine.res_type),atomLine.res_serial,this));
 					}
@@ -470,8 +470,8 @@ public class CiffilePdb extends Pdb {
 				}
 				String res_type = tokens[monIdIdx]; // mon_id
 				// sequence
-				if (AAinfo.isValidAA(res_type)){
-					sequence+=AAinfo.threeletter2oneletter(res_type);
+				if (AminoAcid.isStandardAA(res_type)){
+					sequence+=AminoAcid.three2one(res_type);
 				} else {
 					sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
 				}

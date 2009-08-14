@@ -265,6 +265,7 @@ public class Pdb {
 	
 	/**
 	 * Adds a residue to this Pdb
+	 * @param residue
 	 */
 	public void addResidue(Residue residue) {
 		residues.put(residue.getSerial(), residue);
@@ -281,8 +282,8 @@ public class Pdb {
 	}
 	
 	/**
-	 * Tells whether residue of given residue number is an observed residue in this Pdb
-	 * instance
+	 * Tells whether residue of given residue number is a (observed) residue in this Pdb
+	 * instance. See also {@link #hasCoordinates(int)}
 	 * @param resSerial
 	 * @return
 	 */
@@ -1087,8 +1088,13 @@ public class Pdb {
 			Point3d coords = atom.getCoords();
 			double occupancy = atom.getOccupancy();
 			double bFactor = atom.getBfactor();
+			
+			String printfStr = "ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+			if (atomCode.length()==4) { // some hydrogens have a 4 letter code and it is not aligned to column 14 but to 13 instead 
+				printfStr = "ATOM  %5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+			}
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			Out.printf(Locale.US,"ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n",
+			Out.printf(Locale.US, printfStr,
 					atomser, atomCode, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
 		}
 	}

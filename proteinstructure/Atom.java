@@ -41,8 +41,8 @@ public class Atom {
 		this.parentResidue = parentResidue;
 		this.bfactor = DEFAULT_B_FACTOR;
 		this.occupancy = DEFAULT_OCCUPANCY;
-		// getting atom type from code. This works for C, H, S, N and O atoms, not necessarily for others
-		Pattern p = Pattern.compile("^\\d?(\\w)\\w*$");
+		// getting atom type from code. This works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
+		Pattern p = Pattern.compile("^(\\w)\\w*$");
 		Matcher m = p.matcher(code);
 		if (m.matches()) {
 			this.type = AtomType.getBySymbol(m.group(1));

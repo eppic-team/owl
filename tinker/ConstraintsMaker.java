@@ -15,6 +15,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.ConsensusSquare;
 
 import proteinstructure.AAinfo;
+import proteinstructure.AminoAcid;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
@@ -33,7 +34,7 @@ import proteinstructure.RIGraph;
 public class ConstraintsMaker {
 
 	public static final int OMEGA_LOWER_BOUND = 178 - 5; // taken from Whatcheck output: omega angles for trans-peptides
-	public static final int OMEGA_UPPER_BOUND = 178 + 5; // are guassian distributed with mean 178 and stddev 5.5
+	public static final int OMEGA_UPPER_BOUND = 178 + 5; // are gaussian distributed with mean 178 and stddev 5.5
 	
 	private File xyzFile;
 	private Pdb pdb;
@@ -94,21 +95,23 @@ public class ConstraintsMaker {
 			String res = res_atom.split("_")[0];
 			String atom = res_atom.split("_")[1];
 		
-			resFromSeq = AAinfo.oneletter2threeletter(String.valueOf((sequence.charAt(pdbResSerial-1))));
+			resFromSeq = AminoAcid.one2three(sequence.charAt(pdbResSerial-1));
 			int totalNumAtoms = AAinfo.getNumberAtoms(resFromSeq);
 			
-			// when current atom counts coincides with the totalNumAtoms this residue type should have (Hs excluded) then we increment residue serial and reset atom count
+			// when current atom counts coincides with the totalNumAtoms this residue type should have (Hydrogens excluded) 
+			// then we increment residue serial and reset atom count
 			if (numAtoms==totalNumAtoms) {
 				pdbResSerial++;
 				numAtoms = 0;
 			}
 			
-			// if we are in last aminoacid and we've counted all non-Hydrogen atoms for it then we don't want to continue reading lines in the xyz file
+			// if we are in last aminoacid and we've counted all non-Hydrogen atoms for it then we don't want to continue 
+			// reading lines in the xyz file
 			if (pdbResSerial>sequence.length()) { 
 				break;
 			}
 			
-			if (!atom.startsWith("H")) { // we don't want Hydrogens as we don't have them in the pdb object
+			if (!atom.startsWith("H")) { // we are not interested in Hydrogens as we don't use them for constraints
 				numAtoms++;
 				atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
 				int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);

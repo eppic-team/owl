@@ -234,8 +234,8 @@ public class PdbfilePdb extends Pdb {
 			if (m.find()){
 				for (int i=19;i<=67;i+=4) {
 					if (!line.substring(i, i+3).equals("   ")) {
-						if (AAinfo.isValidAA(line.substring(i, i+3))) { // for non-standard aas
-							sequence+= AAinfo.threeletter2oneletter(line.substring(i, i+3));
+						if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
+							sequence+= AminoAcid.three2one(line.substring(i, i+3));
 						} else {
 							sequence+= AAinfo.NONSTANDARD_AA_ONE_LETTER;
 						}
@@ -321,7 +321,7 @@ public class PdbfilePdb extends Pdb {
 			if (m.find()){
 				try {
 					//                                 serial    atom       altcode     restype      chain 	   res_ser icode    x     y     z
-					Pattern pl = Pattern.compile("^.{6}(.....).{2}(...)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",
+					Pattern pl = Pattern.compile("^.{6}(.....).(....)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",
 												Pattern.CASE_INSENSITIVE);
 					Matcher ml = pl.matcher(line);
 					if (ml.find()) {
@@ -361,7 +361,7 @@ public class PdbfilePdb extends Pdb {
 							}
 						} 
 						
-						if (AAinfo.isValidAA(res_type)) {
+						if (AminoAcid.isStandardAA(res_type)) {
 							if (!this.containsResidue(res_serial)) {
 								this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type),res_serial,this));
 							}

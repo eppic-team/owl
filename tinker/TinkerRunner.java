@@ -134,12 +134,26 @@ public class TinkerRunner {
 	 * @throws FileNotFoundException
 	 */
 	public TinkerRunner(String tinkerBinDir, String forceFieldFileName) throws FileNotFoundException {
+		this(tinkerBinDir, DISTGEOM_PROG, forceFieldFileName);
+	}
+	
+	/**
+	 * Constructs a TinkerRunner object passing initial parameters. 
+	 * @param tinkerBinDir The directory where the tinker executables are
+	 * @param distgeomProg The distgeom executable file name within the tinkerBinDir
+	 * @param forceFieldFileName The force field file
+	 * @throws FileNotFoundException
+	 */
+	public TinkerRunner(String tinkerBinDir, String distgeomProg, String forceFieldFileName) throws FileNotFoundException {
 		this.tinkerBinDir = tinkerBinDir;
 		File tinkerbindir = new File(tinkerBinDir);
 		if (!(tinkerbindir.isDirectory() && tinkerbindir.canRead())) throw new FileNotFoundException("Can't read tinker bin directory "+tinkerBinDir);
 		this.forceFieldFileName = forceFieldFileName;
 		this.proteinProg = new File(this.tinkerBinDir,PROTEIN_PROG).getAbsolutePath();
-		this.distgeomProg = new File(this.tinkerBinDir,DISTGEOM_PROG).getAbsolutePath();
+		File distgeomProgFile = new File(this.tinkerBinDir,distgeomProg);
+		if (!distgeomProgFile.canRead()) throw new FileNotFoundException("Can't read distgeom executable "+distgeomProgFile);
+		this.distgeomProg = distgeomProgFile.getAbsolutePath();
+		
 		this.pdbxyzProg = new File(this.tinkerBinDir,PDBXYZ_PROG).getAbsolutePath();
 		this.xyzpdbProg = new File(this.tinkerBinDir,XYZPDB_PROG).getAbsolutePath();
 		this.minimizeProg = new File(this.tinkerBinDir,MINIMIZE_PROG).getAbsolutePath();
@@ -151,9 +165,9 @@ public class TinkerRunner {
 		this.lastBaseName = null;
 		this.lastNumberOfModels = 0;
 		
-		this.isDrmaaSessionOpen = false;
+		this.isDrmaaSessionOpen = false;	
 	}
-		
+	
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
