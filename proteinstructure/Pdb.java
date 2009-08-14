@@ -979,6 +979,33 @@ public class Pdb {
 	}
 	
 	/**
+	 * Calculates for each atom in this structure the deviation to the atom with the same serial
+	 * in the reference structure and returns a map from atom serials to differences in Angstrom.
+	 * If no reference atom is found, the value Atom.DEFAULT_B_FACTOR will be used. To give useful
+	 * results the two structures need to have the same set of atoms (with the same numbering) and
+	 * have to be properly superimposed. This holds for example for two consecutive states in an MD
+	 * trajectory or a mutant model.
+	 * The returned values can be assigned to the b-factor column using this.setBFactorsPerAtom()
+	 * and can then be visualized in PyMol with the command 'spectrum b'. 
+	 * @param referencePdb the reference structures to compare to
+	 * @return the per atom distances between this and the reference structure
+	 */
+	public HashMap<Integer, Double> getPerAtomDistances(Pdb referencePdb) {
+		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
+		for(int atomSer: this.getAllAtomSerials()) {
+			Atom a1 = this.getAtom(atomSer);
+			Atom a2 = referencePdb.getAtom(atomSer);
+			if(a2 != null) {
+				double dist = Math.abs(a1.getCoords().distance(a2.getCoords()));
+				distances.put(atomSer,dist);
+			} else {
+				distances.put(atomSer,Atom.DEFAULT_B_FACTOR);
+			}
+		}
+		return distances;
+	}
+	
+	/**
 	 * Assigns b-factor values to all atoms for the given residues.
 	 * @param bfactorsPerResidue a map of residue serials to b-factors
 	 * @throws IllegalArgumentException when residue serials given in input are not

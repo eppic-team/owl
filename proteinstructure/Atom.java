@@ -12,8 +12,8 @@ import javax.vecmath.Point3d;
  */
 public class Atom {
 
-	private static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
-	private static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
+	public static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
+	public static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
 	
 	
 	private AtomType type;
