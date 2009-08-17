@@ -979,12 +979,14 @@ public class Pdb {
 	}
 	
 	/**
-	 * Calculates for each atom in this structure the deviation to the atom with the same serial
+	 * Calculates for each atom in this structure the deviation to the corresponding atom
 	 * in the reference structure and returns a map from atom serials to differences in Angstrom.
-	 * If no reference atom is found, the value Atom.DEFAULT_B_FACTOR will be used. To give useful
-	 * results the two structures need to have the same set of atoms (with the same numbering) and
-	 * have to be properly superimposed. This holds for example for two consecutive states in an MD
-	 * trajectory or a mutant model.
+	 * The corresponding atom is the atom with the same residue serial and the same PDB residue code
+	 * (e.g. CA, CB, N), ignoring residues which are mutated between this and the reference structure.
+	 * If no corresponding atom is found, the value Atom.DEFAULT_B_FACTOR will be used. To give useful
+	 * results the two structures need to have the same residue numbering (save mutations) and have to
+	 * be properly superimposed. This holds for example for two consecutive states in an MD trajectory
+	 * or for different FoldX mutant models based in the same original structure.
 	 * The returned values can be assigned to the b-factor column using this.setBFactorsPerAtom()
 	 * and can then be visualized in PyMol with the command 'spectrum b'. 
 	 * @param referencePdb the reference structures to compare to
@@ -992,14 +994,33 @@ public class Pdb {
 	 */
 	public HashMap<Integer, Double> getPerAtomDistances(Pdb referencePdb) {
 		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
+		
+		// first set all distances to the default value, so that the map contains the full set of atoms
 		for(int atomSer: this.getAllAtomSerials()) {
-			Atom a1 = this.getAtom(atomSer);
-			Atom a2 = referencePdb.getAtom(atomSer);
-			if(a2 != null) {
-				double dist = Math.abs(a1.getCoords().distance(a2.getCoords()));
-				distances.put(atomSer,dist);
-			} else {
 				distances.put(atomSer,Atom.DEFAULT_B_FACTOR);
+		}
+		
+		// then set the real distance whereever possible
+		for(int resSer: this.getAllSortedResSerials()) {
+			Residue r = this.getResidue(resSer);
+			AminoAcid thisType = r.getAaType();
+			if(referencePdb.hasCoordinates(resSer)) {
+				AminoAcid refType = referencePdb.getResidue(resSer).getAaType();
+				if(thisType == refType) {
+					for(Atom a1:r.getAtoms()) {
+						int atomSer = a1.getSerial();
+						if(referencePdb.hasCoordinates(resSer, a1.getCode())) {
+							Atom a2 = referencePdb.getAtom(referencePdb.getAtomSerFromResSerAndAtom(resSer, a1.getCode()));
+							// a2 should never be null
+							double dist = Math.abs(a1.getCoords().distance(a2.getCoords()));
+							distances.put(atomSer,dist);
+						}
+					}
+				} else {
+					System.err.println("Skipping mismatching residue at position " + resSer + " ("+ thisType + "!=" + refType + ")");
+				}
+			} else {
+				System.err.println("Skipping " + thisType.getThreeLetterCode() + " at position " + resSer + ". Not found in reference structure.");
 			}
 		}
 		return distances;

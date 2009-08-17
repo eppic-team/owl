@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeSet;
@@ -8,8 +9,8 @@ import proteinstructure.Pdb;
 public class writePerAtomDistancesToBFactor {
 
 	/**
-	 * Loads two structures from file PDBase and outputs the first structure as a pdb file where the b-factor for
-	 * each atom is set to the distance between the atom in structure 1 and the atom with the same number of structure 2.
+	 * Loads two structures from file or PDBase and outputs the first structure as a pdb file where the b-factor for
+	 * each atom is set to the distance between the atom in structure 1 and the corresponding atom in structure 2.
 	 * If there is no such atom in structure 2, the default b-factor 0 is used. These values can be displayed in Pymol
 	 * with the command 'spectrum b'.
 	 * @author stehr
@@ -25,6 +26,12 @@ public class writePerAtomDistancesToBFactor {
 		String arg2 = args[1];
 		String outFileName = args[2];
 		
+		if(!new File(arg1).canRead()) {
+			System.err.println("Can not read file " + arg1);
+		}
+		if(!new File(arg2).canRead()) {
+			System.err.println("Can not read file " + arg2);
+		}
 		Pdb pdb1 = Pdb.readStructureOrExit(arg1);
 		Pdb pdb2 = Pdb.readStructureOrExit(arg2);
 		
