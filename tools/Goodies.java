@@ -2,7 +2,7 @@ package tools;
 import java.util.*;
 
 /**
- * Collection of small useful helper method.
+ * Collection of small useful helper methods.
  * @author stehr
  *
  */

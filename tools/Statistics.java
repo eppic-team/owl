@@ -1,10 +1,59 @@
 package tools;
 
+import java.util.Collection;
+
 /**
  * Class to keep some simple statistical methods. Originally created for the pearson function.
  */
 public class Statistics {
 	
+	/**
+	 * Returns the mean of the numbers in the given collection.
+	 * Note that all values are casted to double before summation.
+	 * @param values a collection of numbers (Integer, Double, ...)
+	 * @return the mean
+	 */
+	public static <T extends Number> double mean(Collection<T> values) {
+		double sum = 0;
+		for(T n:values) {
+			sum += (Double) n;
+		}
+		double result = sum / values.size();
+		return result;
+	}
+	
+	/**
+	 * Returns the standard deviation of the numbers in the given collection.
+	 * Note that all values are casted to double before summation.
+	 * @param values a collection of numbers (Integer, Double, ...)
+	 * @return the standard deviation
+	 */	
+	public static <T extends Number> double sd(Collection<T> values) {
+		double mean = mean(values);
+		double sum = 0;
+		for(T n:values) {
+			sum += ((Double)n - mean) * ((Double)n - mean);
+		}
+		double result = Math.sqrt(sum / values.size());
+		return result;
+	}
+
+	/**
+	 * Returns the sample standard deviation (using Bessel's correction) of the numbers in the given collection.
+	 * Note that all values are casted to double before summation.
+	 * @param values a collection of numbers (Integer, Double, ...)
+	 * @return the sample standard deviation
+	 */	
+	public static <T extends Number> double ssd(Collection<T> values) {
+		double mean = mean(values);
+		double sum = 0;
+		for(T n:values) {
+			sum += ((Double)n - mean) * ((Double)n - mean);
+		}
+		double result = Math.sqrt(sum / (values.size() - 1));
+		return result;
+	}
+
 	/**
 	 * Returns the pearson correlation coeffcient for the input vectors x and y.
 	 * If x and y are not the same size, the first n values are used where n=min(len(x),len(y)).
