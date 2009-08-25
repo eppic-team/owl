@@ -1,6 +1,9 @@
 package tools;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  * Class to keep some simple statistical methods. Originally created for the pearson function.
@@ -87,6 +90,38 @@ public class Statistics {
 		return correlation;
 	}
 	
+	/**
+	 * Returns the spearman correlation coefficient for the input vectors x and y.
+	 * @param x
+	 * @param y
+	 * @return the spearman correlation coefficient
+	 * @throws IllegalArgumentException if arrays of different length
+	 */
+	public static double spearman(double[] x, double[] y) {
+		if (x.length!=y.length) throw new IllegalArgumentException("Arrays given to spearman calculation are of different length");
+		return pearson(getRanks(x),getRanks(y));
+	}
+	
+	/**
+	 * Gets the (ascending) ranks of the given array of values in a double array 
+	 * @param values
+	 * @return
+	 */
+	private static double[] getRanks(double[] values) {
+		HashMap<Integer, Double> vals = new HashMap<Integer, Double>();
+		for (int i=0;i<values.length;i++) {
+			vals.put(i, values[i]);
+		}
+		LinkedHashMap<Integer, Double> valsSorted = Goodies.sortMapByValue(vals, Goodies.ASCENDING);
+		ArrayList<Integer> indices = new ArrayList<Integer>(valsSorted.keySet());
+		double[] ranks = new double[indices.size()];
+		for (int i=0;i<indices.size();i++) {
+			ranks[indices.get(i)] = i+1; 
+		}
+		return ranks;
+		
+	}
+	
 	public static void main(String[] args) {
 		// testing method pearson()
 		double[] x1 = {1.0,2.0,3.0};
@@ -105,6 +140,7 @@ public class Statistics {
 		double[] y3 = {0.1419, 0.4218, 0.9157};
 		System.out.println("x = [0.9572, 0.4854, 0.8003]");
 		System.out.println("y = [0.1419, 0.4218, 0.9157]");
-		System.out.println("corr(x,y) = " + pearson(x3,y3));	// should be -0.1733
+		System.out.println("pearson corr(x,y)  = " + pearson(x3,y3));	// should be -0.1733
+		System.out.println("spearman corr(x,y) = " + spearman(x3, y3)); // should be -0.5
 	}
 }
