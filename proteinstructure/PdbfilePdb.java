@@ -91,7 +91,7 @@ public class PdbfilePdb extends Pdb {
 	
 	/**
 	 * Returns all PDB chain codes present in the PDB file
-	 * @return array with all pdb chain codes
+	 * @return array with all pdb chain codes or null if no chains found
 	 */
 	public String[] getChains() throws PdbLoadError {
 		TreeSet<String> chains = new TreeSet<String>();
@@ -100,9 +100,11 @@ public class PdbfilePdb extends Pdb {
 			String  line;
 			while ((line=fpdb.readLine())!=null) {
 				if (line.startsWith("ATOM")) {
-					String chain = line.substring(21, 22);
-					if (chain.equals(" ")) chain=Pdb.NULL_CHAIN_CODE;
-					chains.add(chain);
+					if (line.length()>22) {
+						String chain = line.substring(21, 22);
+						if (chain.equals(" ")) chain=Pdb.NULL_CHAIN_CODE;
+						chains.add(chain);						 
+					}
 				}
 			}
 			fpdb.close();
@@ -233,11 +235,16 @@ public class PdbfilePdb extends Pdb {
 			m = p.matcher(line);
 			if (m.find()){
 				for (int i=19;i<=67;i+=4) {
-					if (!line.substring(i, i+3).equals("   ")) {
-						if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
-							sequence+= AminoAcid.three2one(line.substring(i, i+3));
-						} else {
-							sequence+= AAinfo.NONSTANDARD_AA_ONE_LETTER;
+					// most pdb files have blank spaces up to 80 characters, but some don't.
+					// because of that we need to check that (in the last line of SEQRES) the line is long enough
+					// else we'd get an out of bounds error
+					if (line.length()>=i+3) {  
+						if (!line.substring(i, i+3).equals("   ")) {
+							if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
+								sequence+= AminoAcid.three2one(line.substring(i, i+3));
+							} else {
+								sequence+= AAinfo.NONSTANDARD_AA_ONE_LETTER;
+							}
 						}
 					}
 				}
