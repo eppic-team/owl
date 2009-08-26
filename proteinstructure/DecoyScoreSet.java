@@ -1,12 +1,17 @@
 package proteinstructure;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import tools.Statistics;
 
@@ -18,13 +23,24 @@ import tools.Statistics;
  */
 public class DecoyScoreSet implements Iterable<DecoyScore> {
 
-	private HashMap<String,DecoyScore> set;
+	private String decoyName;
+	private HashMap<String,DecoyScore> set; // decoy file name (no path) to DecoyScore
 
 	/**
 	 * Constructs an empty DecoyScoreSet 
 	 */
-	public DecoyScoreSet() {
+	public DecoyScoreSet(String decoyName) {
+		this.decoyName = decoyName;
 		set = new HashMap<String, DecoyScore>();
+	}
+	
+	/**
+	 * Returns the decoy name of this set. The decoy name corresponds usually to the pdb 
+	 * code of the native. 
+	 * @return
+	 */
+	public String getDecoyName() {
+		return decoyName;
 	}
 	
 	/**
@@ -139,4 +155,28 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	public Iterator<DecoyScore> iterator() {
 		return set.values().iterator();
 	}
+	
+	/**
+	 * Read rmsds of a decoy set from a rmsd file in 'decoys r us' format.
+	 * @param file
+	 * @return map of file names to rmsd values
+	 * @throws IOException
+	 */
+	public static HashMap<String,Double> readRmsds(File file) throws IOException {
+		HashMap<String,Double> rmsds = new HashMap<String, Double>();
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		String line;
+		while ((line=br.readLine())!=null) {
+			Pattern p = Pattern.compile("^cRMSD.*and\\s([^\\s]+\\.pdb)\\sis\\s+([\\d\\.]+)");
+			Matcher m = p.matcher(line);
+			if (m.matches()) {
+				String filename = m.group(1);
+				double rmsd = Double.parseDouble(m.group(2));
+				rmsds.put(filename, rmsd);
+			}
+		}
+		br.close();
+		return rmsds;
+	}
+
 }
