@@ -75,8 +75,8 @@ public abstract class TypeScorer {
 	/**
 	 * Tells whether given Pdb passes the minimal checks to be valid
 	 * as a training set member (i.e. for compiling a scoring matrix). The checks are: 
-	 * observed length above {@value #MIN_VALID_CHAIN_LENGTH} and at least half of its 
-	 * residues contain more than 4 atoms (i.e. it's not CA only or BB only) 
+	 * observed length above {@value #MIN_VALID_CHAIN_LENGTH} and given Pdb is an
+	 * all-atom pdb (see Pdb.isAllAtom()) 
 	 * @param pdb
 	 * @return
 	 */
@@ -84,17 +84,7 @@ public abstract class TypeScorer {
 		if (pdb.get_length()<=MIN_VALID_CHAIN_LENGTH) {
 			return false;
 		}
-		int morethan4count = 0;
-		for (int resser:pdb.getAllSortedResSerials()){
-			if (pdb.getResidue(resser).getNumAtoms()>=4) {
-				morethan4count++;
-			}
-		}
-		if (morethan4count>pdb.get_length()/2) {
-			return true;
-		} else {
-			return false;
-		}
+		return pdb.isAllAtom();
 	}
 	
 	private void countTotals() {

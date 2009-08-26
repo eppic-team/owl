@@ -60,6 +60,9 @@ public class Pdb {
 	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
 	
+	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue corresponds to  
+															// that of an all atoms protein. See isAllAtom()
+	
 	protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
 	private static final String PQS_FILE = "/project/StruPPi/Databases/PQS/pqs.txt";
@@ -1238,11 +1241,23 @@ public class Pdb {
 	}
 
 	/**
-	 * Returns number of (non-Hydrogen) atoms in the protein
-	 * @return number of non-Hydrogen atoms
+	 * Returns number of atoms in the protein, including Hydrogens if they are present
+	 * @return number of atoms
 	 */
 	public int getNumAtoms() {
 		return atomser2atom.size();
+	}
+	
+	/**
+	 * Returns number of heavy (non-Hydrogen) atoms in the protein
+	 * @return number of (non-Hydrogen) atoms
+	 */
+	public int getNumHeavyAtoms() {
+		int numAtoms = 0;
+		for (Residue residue: residues.values()) {
+			numAtoms+=residue.getNumHeavyAtoms();
+		}
+		return numAtoms;
 	}
 
 	/**
@@ -1896,6 +1911,24 @@ public class Pdb {
 			atomSers.add(atom.getSerial());
 		}
 		return atomSers;
+	}
+	
+	/**
+	 * Checks whether this Pdb is an all-atom one (disregarding Hydrogens), i.e. is not a 
+	 * CA only or BB only or has no other major group of atoms missing.
+	 * Even PDB structures with all atoms can still have missing atoms for some residues, 
+	 * here what we check is that the average number of (non-Hydrogen) atoms per residue is above the 
+	 * threshold {@value #MIN_AVRG_NUM_ATOMS_RES} . This threshold has been obtained from statistics of a set of non-redundant 
+	 * PDB structures.
+	 * 
+	 * @return true if above average atoms per residue threshold, false otherwise
+	 */
+	public boolean isAllAtom() {
+		if (((double)this.getNumHeavyAtoms()/(double)this.get_length())<MIN_AVRG_NUM_ATOMS_RES) {
+			return false;
+		} else {
+			return true;
+		}
 	}
 	
 	/**

@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import gnu.getopt.Getopt;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -9,6 +11,10 @@ import tools.MySQLConnection;
 
 public class AtomTypeScorer extends TypeScorer {
 
+	private static final File DEFAULT_LIST_FILE = new File("/project/StruPPi/jose/emp_potential/cullpdb_pc20_res1.6_R0.25_d090728_chains1627.list");
+	private static final double DEFAULT_CUTOFF = 4.0;
+	private static final int DEFAULT_MIN_SEQ_SEP = 3;
+	
 	private static final int NUM_ATOM_TYPES = 167;
 
 	/**
@@ -131,19 +137,57 @@ public class AtomTypeScorer extends TypeScorer {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		double CUTOFF_ALL = 4;
-		File listFile = new File("/project/StruPPi/jose/emp_potential/cullpdb_pc20_res1.6_R0.25_d090728_chains1627.list");
-		File scMatFile = new File("/project/StruPPi/jose/emp_potential/scoremat.atom.cullpdb20");
-		//File outScMatFile = new File("/project/StruPPi/jose/emp_potential/scoremat.atom.cullpdb20.tmp");
+		String help = 
+		"\nCompiles a scoring matrix based on atom types from a given file with a list of \n" +
+		"pdb structures.\n" +
+		"Usage:\n" +
+		"AtomTypeScorer -o <output_matrix_file> [-l <list_file> -c <cutoff> -m <out>]\n"+
+		"  -o <file>     : file to write the scoring matrix to\n" +
+		"  -l <file>     : file with list of pdbCodes+pdbChainCodes to use as training set \n" +
+		"                  the scoring matrix. Default is "+DEFAULT_LIST_FILE+"\n" +
+		"  -c <float>    : distance cutoff for the atom contacts. Default: "+DEFAULT_CUTOFF+"\n" +
+		"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n";
+
+		File listFile = DEFAULT_LIST_FILE;
+		File scMatFile = null;
+		double cutoff = DEFAULT_CUTOFF;
+		int minSeqSep = DEFAULT_MIN_SEQ_SEP;
+
+		Getopt g = new Getopt("AtomTypeScorer", args, "l:c:o:m:h?");
+		int c;
+		while ((c = g.getopt()) != -1) {
+			switch(c){
+			case 'l':
+				listFile = new File(g.getOptarg());
+				break;
+			case 'c':
+				cutoff = Double.parseDouble(g.getOptarg());
+				break;				
+			case 'o':
+				scMatFile = new File(g.getOptarg());
+				break;
+			case 'm':
+				minSeqSep = Integer.parseInt(g.getOptarg());
+				break;				
+			case 'h':
+			case '?':
+				System.out.println(help);
+				System.exit(0);
+				break; // getopt() already printed an error
+			}
+		}
+
+		if (scMatFile==null) {
+			System.err.println("Missing argument output matrix file (-o)");
+			System.exit(1);
+		}
+
 		String[] ids = TemplateList.readIdsListFile(listFile);
-		AtomTypeScorer sc = new AtomTypeScorer(ids,CUTOFF_ALL,3);
+		AtomTypeScorer sc = new AtomTypeScorer(ids,cutoff,minSeqSep);
 		sc.countAtomTypes();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);
 		
-//		AtomScorer scFromFile = new AtomScorer(scMatFile);
-
-
 		
 	}
 

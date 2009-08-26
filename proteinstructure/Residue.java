@@ -119,11 +119,26 @@ public class Residue implements Iterable<Atom> {
 	}
 	
 	/**
-	 * Returns the number of atoms that this Residue contains
+	 * Returns the number of atoms in this Residue, including Hydrogens if they are 
+	 * present
 	 * @return
 	 */
 	public int getNumAtoms() {
 		return atoms.size();
+	}
+	
+	/**
+	 * Returns the number of heavy (non-Hydrogen) atoms in this Residue
+	 * @return
+	 */
+	public int getNumHeavyAtoms() {
+		int numAtoms = 0;
+		for (Atom atom:atoms.values()) {
+			if (atom.getType()!=AtomType.H) {
+				numAtoms++;
+			}
+		}
+		return numAtoms;
 	}
 	
 	public AminoAcid getAaType() {
