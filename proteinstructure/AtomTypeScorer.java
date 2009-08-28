@@ -3,6 +3,7 @@ package proteinstructure;
 import gnu.getopt.Getopt;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -50,7 +51,7 @@ public class AtomTypeScorer extends TypeScorer {
 	 * @throws FileFormatError
 	 */
 	public AtomTypeScorer(File scMatFile) throws IOException, FileFormatError  {
-		readFromFile(scMatFile);
+		readScMatFromFile(scMatFile);
 	}
 	
 	private void initAtomMap() {
@@ -68,12 +69,12 @@ public class AtomTypeScorer extends TypeScorer {
 		}
 	}
 	
-	/**
-	 * Performs the counts of the atom type pairs and stores them in the internal arrays.
-	 * Use subsequently {@link #calcScoringMat()} to compute the scoring matrix from counts arrays.
-	 * @throws SQLException
-	 */
-	public void countAtomTypes() throws SQLException {
+	public void writeScMatToFile(File file, boolean writeCounts) throws FileNotFoundException {
+		writeScMatToFile(file, writeCounts,ScoringMethod.ATOMTYPE);
+	}
+
+	@Override
+	public void countPairs() throws SQLException {
 		this.initAtomMap();
 
 		for (String id:structureIds) {
@@ -184,7 +185,7 @@ public class AtomTypeScorer extends TypeScorer {
 
 		String[] ids = TemplateList.readIdsListFile(listFile);
 		AtomTypeScorer sc = new AtomTypeScorer(ids,cutoff,minSeqSep);
-		sc.countAtomTypes();
+		sc.countPairs();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);
 		

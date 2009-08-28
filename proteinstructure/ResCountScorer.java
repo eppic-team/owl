@@ -10,18 +10,17 @@ import java.util.HashMap;
 
 import tools.MySQLConnection;
 
-public class ResTypeScorer extends TypeScorer {
-	
+public class ResCountScorer extends CountScorer {
+
 	private static final File DEFAULT_LIST_FILE = new File("/project/StruPPi/jose/emp_potential/cullpdb_pc20_res1.6_R0.25_d090728_chains1627.list");
 	private static final double DEFAULT_CUTOFF = 8.0;
-	private static final int DEFAULT_MIN_SEQ_SEP = 3;
+	private static final int DEFAULT_MIN_SEQ_SEP = 0;
 	private static final String DEFAULT_CT = "Cb";
 
 	private static final int NUM_RES_TYPES = 20;
-	
 
 	/**
-	 * Constructs a ResTypeScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
+	 * Constructs a ResCountScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
 	 * and parameters contact type, distance cutoff and minimum sequence separation used for 
 	 * calculating the scoring matrix. 
 	 * @param structureIds the list of PDB ids (pdbCode+pdbChainCode)
@@ -30,16 +29,16 @@ public class ResTypeScorer extends TypeScorer {
 	 * @param minSeqSep the minimum sequence separation to be used when counting type pairs
 	 * @throws SQLException if can't establish connection to db server
 	 */
-	public ResTypeScorer(String[] structureIds, String ct, double cutoff, int minSeqSep) throws SQLException {
+	public ResCountScorer(String[] structureIds, String ct, double cutoff, int minSeqSep) throws SQLException {
 		
 		this.structureIds = structureIds;
 		this.ct = ct;
 		this.cutoff = cutoff;
 		this.minSeqSep = minSeqSep;
 		
-		this.numEntities = NUM_RES_TYPES;
-		entityCounts = new int[numEntities];
-		pairCounts = new int[numEntities][numEntities];
+		this.numCountBins = NUM_COUNT_BINS;
+		this.numTypes = NUM_RES_TYPES;
+		binCountsPerType = new int[numCountBins][numTypes];
 		totalStructures = 0;
 		
 		this.conn = new MySQLConnection();
@@ -47,17 +46,16 @@ public class ResTypeScorer extends TypeScorer {
 	}
 
 	/**
-	 * Constructs a ResTypeScorer given a file with a scoring matrix. All values of the matrix 
+	 * Constructs a ResCountScorer given a file with a scoring matrix. All values of the matrix 
 	 * and some other necessary fields will be read from the file.
 	 * @param scMatFile
 	 * @throws IOException
 	 * @throws FileFormatError
 	 */
-	public ResTypeScorer(File scMatFile) throws IOException, FileFormatError  {
+	public ResCountScorer(File scMatFile) throws IOException, FileFormatError  {
 		readScMatFromFile(scMatFile);
 	}
 
-	
 	private void initResMap() {
 		types2indices = new HashMap<String, Integer>();
 		int i=0;
@@ -70,13 +68,13 @@ public class ResTypeScorer extends TypeScorer {
 			indices2types.put(types2indices.get(resType), resType);
 		}
 	}
-	
+
 	public void writeScMatToFile(File file, boolean writeCounts) throws FileNotFoundException {
-		writeScMatToFile(file, writeCounts,ScoringMethod.RESTYPE);
+		writeScMatToFile(file, writeCounts,ScoringMethod.RESCOUNT);
 	}
 
 	@Override
-	public void countPairs() throws SQLException {
+	public void countNodes() throws SQLException {
 		this.initResMap();
 
 		for (String id:structureIds) {
@@ -103,43 +101,43 @@ public class ResTypeScorer extends TypeScorer {
 			RIGraph graph = pdb.get_graph(ct, cutoff);
 			graph.restrictContactsToMinRange(minSeqSep);
 			for (RIGNode node:graph.getVertices()) {
-				countEntity(types2indices.get(node.getResidueType()));
-			}
-			for (RIGEdge edge:graph.getEdges()) {
-				String iRes = graph.getEndpoints(edge).getFirst().getResidueType();
-				String jRes = graph.getEndpoints(edge).getSecond().getResidueType();
-				countPair(types2indices.get(iRes),types2indices.get(jRes));
+				int nbrCount = graph.getNeighborCount(node);
+				count(nbrCount,types2indices.get(node.getResidueType()));
 			}
 		}
 	}
-	
+
 	@Override
 	public double scoreIt(Pdb pdb, int minSeqSep) {
 		RIGraph graph = pdb.get_graph(this.ct, this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 		
 		double totalScore = 0;
-		for (RIGEdge edge:graph.getEdges()) {
-			String iRes = graph.getEndpoints(edge).getFirst().getResidueType();
-			String jRes = graph.getEndpoints(edge).getSecond().getResidueType();
-			int i = types2indices.get(iRes);
-			int j = types2indices.get(jRes);
-			if (j>=i) {
-				totalScore+= scoringMat[i][j];
+		for (RIGNode node:graph.getVertices()) {
+			String res = node.getResidueType();
+			int nbrCount = graph.getNeighborCount(node);
+			int typeIdx = types2indices.get(res);
+			if (nbrCount<scoringMat.length) {
+				totalScore+= scoringMat[nbrCount][typeIdx];
 			} else {
-				totalScore+= scoringMat[j][i];
+				// it can occur that a certain bin is not in the matrix, 
+				// that basically means that in the background data there was not
+				// a single instance of that neighbor-count bin. Thus we consider is
+				// as a TOO_FEW_COUNTS_SCORE
+				totalScore+=TOO_FEW_COUNTS_SCORE;
 			}
+
 		}
 		
-		return (totalScore/graph.getEdgeCount());
+		return (totalScore/graph.getVertexCount());
 	}
-
+	
 	public static void main(String[] args) throws Exception {
 		String help = 
-			"\nCompiles a scoring matrix based on residue types from a given file with a list of \n" +
+			"\nCompiles a scoring matrix based on residue counts from a given file with a list of \n" +
 			"pdb structures.\n" +
 			"Usage:\n" +
-			"ResTypeScorer -o <output_matrix_file> [-l <list_file> -c <cutoff> -m <min_seq_sep>]\n"+
+			"ResCountScorer -o <output_matrix_file> [-l <list_file> -c <cutoff> -m <min_seq_sep>]\n"+
 			"  -o <file>     : file to write the scoring matrix to\n" +
 			"  -l <file>     : file with list of pdbCodes+pdbChainCodes to use as training set \n" +
 			"                  the scoring matrix. Default is "+DEFAULT_LIST_FILE+"\n" +
@@ -153,7 +151,7 @@ public class ResTypeScorer extends TypeScorer {
 			int minSeqSep = DEFAULT_MIN_SEQ_SEP;
 			String ct = DEFAULT_CT;
 
-			Getopt g = new Getopt("ResTypeScorer", args, "l:t:c:o:m:h?");
+			Getopt g = new Getopt("ResCountScorer", args, "l:t:c:o:m:h?");
 			int c;
 			while ((c = g.getopt()) != -1) {
 				switch(c){
@@ -186,12 +184,15 @@ public class ResTypeScorer extends TypeScorer {
 			}
 
 		String[] ids = TemplateList.readIdsListFile(listFile);
-		ResTypeScorer sc = new ResTypeScorer(ids,ct,cutoff,minSeqSep);
-		sc.countPairs();
+		ResCountScorer sc = new ResCountScorer(ids,ct,cutoff,minSeqSep);
+		sc.countNodes();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);
+
+		// testing reading of score matrix file
+		//ResCountScorer newSc = new ResCountScorer(scMatFile);
+		//newSc.writeScMatToFile(new File(scMatFile+".tmp"), false);
 		
 	}
-
 
 }

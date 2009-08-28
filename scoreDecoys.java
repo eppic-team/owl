@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 
+import proteinstructure.AtomCountScorer;
 import proteinstructure.AtomTypeScorer;
 import proteinstructure.DecoyScoreSet;
 import proteinstructure.DecoySetStats;
@@ -14,7 +15,9 @@ import proteinstructure.DecoyScore;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
+import proteinstructure.ResCountScorer;
 import proteinstructure.ResTypeScorer;
+import proteinstructure.Scorer;
 import tools.RegexFileFilter;
 
 
@@ -35,8 +38,8 @@ public class scoreDecoys {
 			"Usage:\n" +
 			"scoreDecoys -o <out_dir> -a <file> -r <file> [-m <min_seq_sep>]\n"+
 			"  -o <dir>      : output directory where all output files will be written\n" +
-			"  -a <file>     : file with atom-type scoring matrix\n" +
-			"  -r <file>     : file with residue-type scoring matrix\n" +
+			"  -a <file>     : file with atom scoring matrix\n" +
+			"  -r <file>     : file with residue scoring matrix\n" +
 			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n\n" +
 			"Either an atom scoring matrix file or a residue scoring matrix file or both can be provided. If both\n" +
 			"are provided then the stats file will contain the statistics for both side by side.";
@@ -79,7 +82,7 @@ public class scoreDecoys {
 		}
 
 		if (atomScMatFile==null && resScMatFile==null) {
-			System.err.println("At least an atom-type or a residue-type scoring matrix file must be specified");
+			System.err.println("At least an atom or a residue scoring matrix file must be specified");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -87,12 +90,22 @@ public class scoreDecoys {
 
 		
 		
-		AtomTypeScorer atomScorer = null;
-		if (atomScMatFile!=null)
-			atomScorer = new AtomTypeScorer(atomScMatFile);
-		ResTypeScorer resScorer = null;
-		if (resScMatFile!=null)
-			resScorer = new ResTypeScorer(resScMatFile);
+		Scorer atomScorer = null;
+		if (atomScMatFile!=null) {
+			atomScorer = Scorer.readScoreMatFromFile(atomScMatFile);
+			if (!(atomScorer instanceof AtomTypeScorer) && !(atomScorer instanceof AtomCountScorer)) {
+				System.err.println("Wrong score matrix file "+atomScMatFile+", was expecting an atom scoring matrix file");
+				System.exit(1);
+			}
+		}
+		Scorer resScorer = null;
+		if (resScMatFile!=null) {
+			resScorer = Scorer.readScoreMatFromFile(resScMatFile);
+			if (!(resScorer instanceof ResTypeScorer) && !(resScorer instanceof ResCountScorer)) {
+				System.err.println("Wrong score matrix file "+resScMatFile+", was expecting a residue scoring matrix file");
+				System.exit(1);
+			}
+		}
 		
 		File decoysSetDir = new File(DECOYS_BASEDIR);
 		int countAllDecoys = 0;
