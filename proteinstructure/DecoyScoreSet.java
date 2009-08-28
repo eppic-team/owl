@@ -24,6 +24,7 @@ import tools.Statistics;
 public class DecoyScoreSet implements Iterable<DecoyScore> {
 
 	private String decoyName;
+	private String nativeFileName;
 	private HashMap<String,DecoyScore> set; // decoy file name (no path) to DecoyScore
 
 	/**
@@ -31,6 +32,7 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 */
 	public DecoyScoreSet(String decoyName) {
 		this.decoyName = decoyName;
+		this.nativeFileName = decoyName+".pdb";
 		set = new HashMap<String, DecoyScore>();
 	}
 	
@@ -42,7 +44,17 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	public String getDecoyName() {
 		return decoyName;
 	}
-	
+
+	/**
+	 * Returns the name of the native PDB file for this set. The DecoyScore for it is not
+	 * necessarily a member of this set (e.g. because it was missing in the decoy data).
+	 * Check whether the native file is member of this set with {@link #containsNative()} 
+	 * @return
+	 */
+	public String getNativeFileName() {
+		return nativeFileName;
+	}
+
 	/**
 	 * Adds the given decoyScore to this set
 	 * @param decoyScore
@@ -67,6 +79,14 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 */
 	public boolean containsDecoyScore(String fileName) {
 		return set.containsKey(fileName);
+	}
+	
+	/**
+	 * Tells whether the native structure is contained within this DecoyScoreSet 
+	 * @return true if native is in this set, false otherwise
+	 */
+	public boolean containsNative() {
+		return containsDecoyScore(nativeFileName);
 	}
 	
 	/**
@@ -122,6 +142,16 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	}
 	
 	/**
+	 * Returns the z-score of the native with respect to the whole set, i.e. how far the score 
+	 * of the native is from the mean of this set measured in units of standard deviation.
+	 * @return
+	 * @throws NullPointerException if native not present in this set. Check with {@link #containsNative()}
+	 */
+	public double getNativeZscore() {
+		return getZscore(nativeFileName);
+	}
+	
+	/**
 	 * Tells whether given structure (as a file name) is ranked 1 (maximum score) in this set.
 	 * @param decoyFileName the file name without the path
 	 * @return true if given decoy file name is ranked first, false if not ranked first or given 
@@ -134,6 +164,15 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		} else {
 			return false;
 		}
+	}
+	
+	/**
+	 * Tells whether native structure is ranked 1 (maximum score) in this set.
+	 * @return true if native is ranked first, false if not ranked first or native not
+	 * present in set
+	 */
+	public boolean isNativeRank1() {
+		return isRank1(nativeFileName);
 	}
 	
 	/**
@@ -178,5 +217,90 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		br.close();
 		return rmsds;
 	}
+
+	/**
+	 * Writes the scoring statistics of a group of decoy sets to text file with 5 columns:
+	 * decoy name, number of decoys, is native ranked 1, z-score of native, correlation    
+	 * @param file
+	 * @param stats
+	 */
+	public static void writeStats(File file, ArrayList<DecoyScoreSet> stats) {
+		try {
+			PrintWriter pw = new PrintWriter(file);
+			pw.printf("#%9s\t%6s\t%6s\t%6s\t%6s\n",
+					"decoy","nod","rank1","z","corr");
+			double sumz = 0,sumcorr = 0;
+			int countrank1 = 0;
+			for (int i=0;i<stats.size();i++) {
+				String decoy = stats.get(i).getDecoyName();
+				int numScDecoys = stats.get(i).size();
+				double z = stats.get(i).getNativeZscore();
+				double corr = stats.get(i).getSpearman();
+				boolean isRank1 = stats.get(i).isNativeRank1();
+				sumz+=z;
+				sumcorr+=corr;
+				if (isRank1) countrank1++;
+				pw.printf("%10s\t%6d\t%6s\t%6.1f\t%5.2f\n",
+						decoy,numScDecoys,isRank1,z,corr);
+			}
+			int N = stats.size();
+			pw.println();
+			pw.printf("#%9s\t%6s\t%6s\t%6.1f\t%5.2f\n",
+					"means","",countrank1+"/"+N,sumz/N,sumcorr/N);
+			pw.close();
+		} catch (FileNotFoundException e) {
+			System.err.println("Couldn't write stats file "+file);
+		}
+	}
+	
+	/**
+	 * Writes the scoring statistics (2 scorings: residue-based and atom-based) of a group 
+	 * of decoy sets to text file with 8 columns:
+	 * decoy name, number of decoys, is native ranked 1 (res-based scoring), z-score of 
+	 * native (res-based scoring), correlation (res-based scoring), is native ranked 1 
+	 * (atom-based scoring), z-score of native (atom-based scoring), correlation (atom-based 
+	 * scoring).     
+	 * @param file
+	 * @param resStats
+	 * @param atomStats
+	 */
+	public static void writeStats(File file, ArrayList<DecoyScoreSet> resStats, ArrayList<DecoyScoreSet> atomStats) {
+		try {
+			PrintWriter pw = new PrintWriter(file);
+			pw.printf("#%9s\t%6s\t%6s\t%6s\t%6s\t%6s\t%6s\t%6s\n",
+					"decoy","nod","res_r1","resz","rescor","atom_r1","atomz","atomcor");
+			double sumresz = 0,sumrescor = 0, sumatomz = 0, sumatomcor = 0;
+			int countresr1 = 0, countatomr1 = 0;
+			for (int i=0;i<resStats.size();i++) {
+				String decoy = resStats.get(i).getDecoyName();
+				int resNumScDec = resStats.get(i).size();
+				double resz = resStats.get(i).getNativeZscore();
+				double rescor = resStats.get(i).getSpearman();
+				boolean resr1 = resStats.get(i).isNativeRank1();
+				int atomNumScDec = atomStats.get(i).size();
+				double atomz = atomStats.get(i).getNativeZscore();
+				double atomcor = atomStats.get(i).getSpearman();
+				boolean atomr1 = atomStats.get(i).isNativeRank1();
+				if (resNumScDec!=atomNumScDec) 
+					System.err.println("Warning: number of residue-scored decoys doesn't coincide with number of atom-scored decoys");
+				sumresz+=resz;
+				sumrescor+=rescor;
+				sumatomz+=atomz;
+				sumatomcor+=atomcor;
+				if (resr1) countresr1++;
+				if (atomr1) countatomr1++;
+				pw.printf("%10s\t%6d\t%6s\t%6.1f\t%5.2f\t%6s\t%6.1f\t%5.2f\n",
+						decoy,resNumScDec,resr1,resz,rescor,atomr1,atomz,atomcor);
+			}
+			int N = resStats.size();
+			pw.println();
+			pw.printf("#%9s\t%6s\t%6s\t%6.1f\t%5.2f\t%6s\t%6.1f\t%5.2f\n",
+					"means","",countresr1+"/"+N,sumresz/N,sumrescor/N,countatomr1+"/"+N,sumatomz/N,sumatomcor/N);
+			pw.close();
+		} catch (FileNotFoundException e) {
+			System.err.println("Couldn't write stats file "+file);
+		}
+	}
+
 
 }

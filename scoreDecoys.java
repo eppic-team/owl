@@ -4,12 +4,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import proteinstructure.AtomCountScorer;
 import proteinstructure.AtomTypeScorer;
 import proteinstructure.DecoyScoreSet;
-import proteinstructure.DecoySetStats;
 import proteinstructure.FileFormatError;
 import proteinstructure.DecoyScore;
 import proteinstructure.Pdb;
@@ -118,12 +118,12 @@ public class scoreDecoys {
 				System.err.println("Can't find list file "+listFile);
 				continue;
 			}
-			HashMap<String, DecoySetStats> resStats = null;
+			ArrayList<DecoyScoreSet> resStats = null;
 			if (resScMatFile!=null) 
-				resStats = new HashMap<String, DecoySetStats>();
-			HashMap<String, DecoySetStats> atomStats = null;
+				resStats = new ArrayList<DecoyScoreSet>();
+			ArrayList<DecoyScoreSet> atomStats = null;
 			if (atomScMatFile!=null)
-				atomStats = new HashMap<String, DecoySetStats>();
+				atomStats = new ArrayList<DecoyScoreSet>();
 			
 			BufferedReader br = new BufferedReader(new FileReader(listFile));
 			String line;
@@ -187,11 +187,11 @@ public class scoreDecoys {
 				}
 				System.out.println();
 			
-				if ((allResScores!=null && allResScores.containsDecoyScore(decoy+".pdb")) ||
-						(allAtomScores!=null && allAtomScores.containsDecoyScore(decoy+".pdb"))) {
-					String nativeFileName = decoy+".pdb";
-					if (resStats!=null)  resStats.put(decoy, new DecoySetStats(allResScores,nativeFileName));
-					if (atomStats!=null) atomStats.put(decoy, new DecoySetStats(allAtomScores,nativeFileName));
+				if ((allResScores!=null && allResScores.containsNative()) ||
+						(allAtomScores!=null && allAtomScores.containsNative())) {
+
+					if (resStats!=null)  resStats.add(allResScores);
+					if (atomStats!=null) atomStats.add(allAtomScores);
 					countValDecoys++;
 				} else {
 					System.err.println("\nCouldn't find native structure from decoy "+decoy+" of set "+decoySet+". Will exclude this decoy from stats.");
@@ -210,16 +210,18 @@ public class scoreDecoys {
 			// writing stats file
 			File statsFile = new File(outDir,decoySet+".stats");
 			if (resStats!=null && atomStats!=null){
-				DecoySetStats.writeStats(statsFile, resStats, atomStats);
+				DecoyScoreSet.writeStats(statsFile, resStats, atomStats);
 			} else if (resStats!=null){
-				DecoySetStats.writeStats(statsFile, resStats);
+				DecoyScoreSet.writeStats(statsFile, resStats);
 			} else if (atomStats!=null) {
-				DecoySetStats.writeStats(statsFile, atomStats);
+				DecoyScoreSet.writeStats(statsFile, atomStats);
 			}
 			
 		}
 		System.out.println("Done. Total decoys "+countAllDecoys+", scored including native: "+countValDecoys);
 
 	}
+	
+	
 		
 }
