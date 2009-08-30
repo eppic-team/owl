@@ -37,6 +37,17 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	}
 	
 	/**
+	 * Constructs a DecoyScoreSet by reading the decoy scores from given file
+	 * @param decoySetScoreFile
+	 * @throws IOException
+	 * @throws FileFormatError if native structure can't be found in file
+	 */
+	public DecoyScoreSet(File decoySetScoreFile) throws IOException, FileFormatError {
+		set = new HashMap<String, DecoyScore>();
+		readFromFile(decoySetScoreFile);
+	}
+	
+	/**
 	 * Returns the decoy name of this set. The decoy name corresponds usually to the pdb 
 	 * code of the native. 
 	 * @return
@@ -120,6 +131,38 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 			pw.printf("%s\t%7.2f\t%6.3f\n",fs.file.getName(), fs.score, fs.rmsd);
 		}
 		pw.close();
+
+	}
+	
+	/**
+	 * Reads a decoy set scores file in our format. See {@link #writeToFile(File)}
+	 * @param file
+	 * @throws IOException
+	 * @throws FileFormatError if native structure can't be found in file
+	 */
+	public void readFromFile(File file) throws IOException, FileFormatError {
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		String line;
+		Pattern p = Pattern.compile("^(\\d\\w\\w\\w(-\\w)?)\\.pdb$");
+		boolean nativeFound = false;
+		while ((line=br.readLine())!=null) {
+			if (line.startsWith("#")) continue;
+			String[] cols = line.split("\\s+");
+			addDecoyScore(new DecoyScore(new File(cols[0]),Double.parseDouble(cols[1]),Double.parseDouble(cols[2])));
+			Matcher m = p.matcher(cols[0]);
+			if (m.matches()) {
+				this.decoyName = m.group(1);
+				this.nativeFileName = m.group(1)+".pdb";
+				nativeFound = true;
+			} else if (cols[2].equals("0.000")) {
+				this.nativeFileName = cols[0];
+				this.decoyName = cols[0].substring(0,cols[0].lastIndexOf(".pdb"));
+				nativeFound = true;
+			}
+		}
+		br.close();
+		if (!nativeFound)
+			throw new FileFormatError("Couldn't find native decoy in decoy set file "+file);
 
 	}
 	
@@ -216,41 +259,6 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		}
 		br.close();
 		return rmsds;
-	}
-
-	/**
-	 * Writes the scoring statistics of a group of decoy sets to text file with 5 columns:
-	 * decoy name, number of decoys, is native ranked 1, z-score of native, correlation    
-	 * @param file
-	 * @param stats
-	 */
-	public static void writeStats(File file, ArrayList<DecoyScoreSet> stats) {
-		try {
-			PrintWriter pw = new PrintWriter(file);
-			pw.printf("#%9s\t%6s\t%6s\t%6s\t%6s\n",
-					"decoy","nod","rank1","z","corr");
-			double sumz = 0,sumcorr = 0;
-			int countrank1 = 0;
-			for (int i=0;i<stats.size();i++) {
-				String decoy = stats.get(i).getDecoyName();
-				int numScDecoys = stats.get(i).size();
-				double z = stats.get(i).getNativeZscore();
-				double corr = stats.get(i).getSpearman();
-				boolean isRank1 = stats.get(i).isNativeRank1();
-				sumz+=z;
-				sumcorr+=corr;
-				if (isRank1) countrank1++;
-				pw.printf("%10s\t%6d\t%6s\t%6.1f\t%5.2f\n",
-						decoy,numScDecoys,isRank1,z,corr);
-			}
-			int N = stats.size();
-			pw.println();
-			pw.printf("#%9s\t%6s\t%6s\t%6.1f\t%5.2f\n",
-					"means","",countrank1+"/"+N,sumz/N,sumcorr/N);
-			pw.close();
-		} catch (FileNotFoundException e) {
-			System.err.println("Couldn't write stats file "+file);
-		}
 	}
 	
 	/**

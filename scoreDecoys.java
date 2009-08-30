@@ -4,27 +4,23 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 
-import proteinstructure.AtomCountScorer;
-import proteinstructure.AtomTypeScorer;
 import proteinstructure.DecoyScoreSet;
+import proteinstructure.DecoyScoreSetsGroup;
 import proteinstructure.FileFormatError;
 import proteinstructure.DecoyScore;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
-import proteinstructure.ResCountScorer;
-import proteinstructure.ResTypeScorer;
 import proteinstructure.Scorer;
 import tools.RegexFileFilter;
 
 
 public class scoreDecoys {
 	
-	private static final String DECOYS_BASEDIR = "/scratch/local/decoys/ioannis/dd/multiple";
-	private static final String[] DECOYSETS = 
+	public static final String DECOYS_BASEDIR = "/scratch/local/decoys/ioannis/dd/multiple";
+	public static final String[] DECOYSETS = 
 	{"4state_reduced", "fisa", "fisa_casp3", "hg_structal", "ig_structal", "ig_structal_hires", "lattice_ssfit", "lmds", "vhp_mcmd"};
 	
 	private static final int DEFAULT_MIN_SEQ_SEP = 3;
@@ -38,31 +34,24 @@ public class scoreDecoys {
 			"Usage:\n" +
 			"scoreDecoys -o <out_dir> -a <file> -r <file> [-m <min_seq_sep>]\n"+
 			"  -o <dir>      : output directory where all output files will be written\n" +
-			"  -a <file>     : file with atom scoring matrix\n" +
-			"  -r <file>     : file with residue scoring matrix\n" +
-			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n\n" +
-			"Either an atom scoring matrix file or a residue scoring matrix file or both can be provided. If both\n" +
-			"are provided then the stats file will contain the statistics for both side by side.";
+			"  -s <file>     : file with scoring matrix\n" +
+			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n\n";
 
 		
 		File outDir = null;
-		File atomScMatFile = null;
-		File resScMatFile = null;
+		File scMatFile = null;
 		int minSeqSep = DEFAULT_MIN_SEQ_SEP;
 
-		Getopt g = new Getopt("scoreDecoys", args, "o:a:r:m:h?");
+		Getopt g = new Getopt("scoreDecoys", args, "o:s:m:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
 			case 'o':
 				outDir = new File(g.getOptarg());
 				break;
-			case 'a':
-				atomScMatFile = new File(g.getOptarg());
+			case 's':
+				scMatFile = new File(g.getOptarg());
 				break;
-			case 'r':
-				resScMatFile = new File(g.getOptarg());
-				break;				
 			case 'm':
 				minSeqSep = Integer.parseInt(g.getOptarg());
 				break;				
@@ -81,8 +70,8 @@ public class scoreDecoys {
 			System.exit(1);
 		}
 
-		if (atomScMatFile==null && resScMatFile==null) {
-			System.err.println("At least an atom or a residue scoring matrix file must be specified");
+		if (scMatFile==null) {
+			System.err.println("A scoring matrix file must be specified (-s)");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -90,22 +79,7 @@ public class scoreDecoys {
 
 		
 		
-		Scorer atomScorer = null;
-		if (atomScMatFile!=null) {
-			atomScorer = Scorer.readScoreMatFromFile(atomScMatFile);
-			if (!(atomScorer instanceof AtomTypeScorer) && !(atomScorer instanceof AtomCountScorer)) {
-				System.err.println("Wrong score matrix file "+atomScMatFile+", was expecting an atom scoring matrix file");
-				System.exit(1);
-			}
-		}
-		Scorer resScorer = null;
-		if (resScMatFile!=null) {
-			resScorer = Scorer.readScoreMatFromFile(resScMatFile);
-			if (!(resScorer instanceof ResTypeScorer) && !(resScorer instanceof ResCountScorer)) {
-				System.err.println("Wrong score matrix file "+resScMatFile+", was expecting a residue scoring matrix file");
-				System.exit(1);
-			}
-		}
+		Scorer scorer = Scorer.readScoreMatFromFile(scMatFile);
 		
 		File decoysSetDir = new File(DECOYS_BASEDIR);
 		int countAllDecoys = 0;
@@ -118,12 +92,8 @@ public class scoreDecoys {
 				System.err.println("Can't find list file "+listFile);
 				continue;
 			}
-			ArrayList<DecoyScoreSet> resStats = null;
-			if (resScMatFile!=null) 
-				resStats = new ArrayList<DecoyScoreSet>();
-			ArrayList<DecoyScoreSet> atomStats = null;
-			if (atomScMatFile!=null)
-				atomStats = new ArrayList<DecoyScoreSet>();
+			
+			DecoyScoreSetsGroup setsGroup = new DecoyScoreSetsGroup();
 			
 			BufferedReader br = new BufferedReader(new FileReader(listFile));
 			String line;
@@ -135,12 +105,8 @@ public class scoreDecoys {
 				File dir = new File(decoysDir,decoy);
 				File[] files = dir.listFiles(new RegexFileFilter("^.*\\.pdb"));			
 
-				DecoyScoreSet allAtomScores = null;
-				if (atomScMatFile!=null) 
-					allAtomScores = new DecoyScoreSet(decoy);
-				DecoyScoreSet allResScores = null;
-				if (resScMatFile!=null)
-					allResScores = new DecoyScoreSet(decoy);
+				DecoyScoreSet decoyScoreSet = new DecoyScoreSet(decoy);
+				
 				File rmsdFile = new File(dir,"rmsds");
 				HashMap<String,Double> rmsds = null;
 				try {
@@ -167,16 +133,10 @@ public class scoreDecoys {
 					}
 					
 					if (pdb.isAllAtom()) {
-						double atomScore = Double.NaN;
-						if (atomScorer!=null) 
-							atomScore = atomScorer.scoreIt(pdb,minSeqSep);
-						double resScore = Double.NaN;
-						if (resScorer!=null)
-							resScore = resScorer.scoreIt(pdb,minSeqSep);
+						double score = scorer.scoreIt(pdb,minSeqSep);
 
 						if (rmsds.containsKey(file.getName())) {
-							if (allAtomScores!=null) allAtomScores.addDecoyScore(new DecoyScore(file,atomScore,rmsds.get(file.getName())));
-							if (allResScores!=null)  allResScores.addDecoyScore(new DecoyScore(file,resScore,rmsds.get(file.getName())));
+							decoyScoreSet.addDecoyScore(new DecoyScore(file,score,rmsds.get(file.getName())));
 						} else {
 							System.err.println("Couldn't find rmsd value for "+file+". Skipping it.");
 						}
@@ -187,21 +147,16 @@ public class scoreDecoys {
 				}
 				System.out.println();
 			
-				if ((allResScores!=null && allResScores.containsNative()) ||
-						(allAtomScores!=null && allAtomScores.containsNative())) {
-
-					if (resStats!=null)  resStats.add(allResScores);
-					if (atomStats!=null) atomStats.add(allAtomScores);
+				if (decoyScoreSet.containsNative()) {
+					setsGroup.addDecoyScoreSet(decoyScoreSet);
 					countValDecoys++;
 				} else {
 					System.err.println("\nCouldn't find native structure from decoy "+decoy+" of set "+decoySet+". Will exclude this decoy from stats.");
 				}
 
 				// writing scores files
-				File resScoreFile  = new File(outDir,decoySet+"_"+decoy+".res.scores");
-				File atomScoreFile = new File(outDir,decoySet+"_"+decoy+".atom.scores");
-				if (allResScores!=null)  allResScores.writeToFile(resScoreFile);
-				if (allAtomScores!=null) allAtomScores.writeToFile(atomScoreFile);
+				File scoreFile = new File(outDir,decoySet+"_"+decoy+".scores");
+				decoyScoreSet.writeToFile(scoreFile);
 				
 			}
 			
@@ -209,13 +164,7 @@ public class scoreDecoys {
 			
 			// writing stats file
 			File statsFile = new File(outDir,decoySet+".stats");
-			if (resStats!=null && atomStats!=null){
-				DecoyScoreSet.writeStats(statsFile, resStats, atomStats);
-			} else if (resStats!=null){
-				DecoyScoreSet.writeStats(statsFile, resStats);
-			} else if (atomStats!=null) {
-				DecoyScoreSet.writeStats(statsFile, atomStats);
-			}
+			setsGroup.writeStatsToFile(statsFile);
 			
 		}
 		System.out.println("Done. Total decoys "+countAllDecoys+", scored including native: "+countValDecoys);
