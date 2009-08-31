@@ -32,7 +32,7 @@ public abstract class CountScorer extends Scorer {
 	private static final int TOO_FEW_COUNTS_THRESHOLD = 10;
 	protected static final double TOO_FEW_COUNTS_SCORE = 0.0;
 	
-	protected static final int NUM_COUNT_BINS= 50;
+	protected static final int NUM_COUNT_BINS= 120; // for high cut-offs it really goes very high
 	
 	protected int[] binCounts; 				// the counts of the members of each neighbour-count bin. Size: numCountBins
 	protected int[] typeCounts;				// the counts of types
