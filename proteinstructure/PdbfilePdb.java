@@ -221,9 +221,11 @@ public class PdbfilePdb extends Pdb {
 							if (m.find()) {
 								this.targetNum = Integer.parseInt(m.group(1));
 							} else {
+								fpdb.close();
 								throw new PdbfileFormatError("The CASP TS file "+pdbfile+" does not have a TARGET line");
 							}
 						} else {
+							fpdb.close();
 							throw new PdbfileFormatError("The CASP TS file "+pdbfile+" is empty after the PFRMAT line");
 						}
 					}
@@ -338,18 +340,22 @@ public class PdbfilePdb extends Pdb {
 						String res_type = ml.group(3).trim();
 						int res_serial = Integer.parseInt(ml.group(4).trim());
 						if (res_serial<1) {
+							fpdb.close();
 							throw new PdbfileFormatError("A residue serial <=0 was found in the ATOM lines");
 						}
 						if (res_serial<lastResSerial) {
+							fpdb.close();
 							throw new PdbfileFormatError("Residue serials do not occur in ascending order in ATOM lines of the PDB file "+pdbfile);
 						}
 						if(atomserial <= lastAtomSerial) {
+							fpdb.close();
 							throw new PdbfileFormatError("Atom serials do not occur in ascending order in PDB file " + pdbfile + "(atom=" + atomserial + ")");
 						}
 						lastResSerial = res_serial;
 						lastAtomSerial = atomserial;
 						String iCode = ml.group(5);
 						if (!iCode.equals(" ")) {
+							fpdb.close();
 							throw new PdbfileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
 						}
 						double x = Double.parseDouble(ml.group(6).trim());
@@ -380,6 +386,7 @@ public class PdbfilePdb extends Pdb {
 	
 					}
 				} catch(NumberFormatException e) {
+					fpdb.close();
 					throw new PdbfileFormatError("Wrong number format: " + e.getMessage());
 				}
 				
@@ -387,11 +394,13 @@ public class PdbfilePdb extends Pdb {
 		}
 		fpdb.close();
 		if (empty) {
+			fpdb.close();
 			throw new PdbChainCodeNotFoundError("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 
 		// we check also that resser2restype is not empty: happens when all residues in chain are non-standard
 		if (this.get_length()==0) {
+			fpdb.close();
 			throw new PdbfileFormatError("No standard aminoacids found for given chain in ATOM lines");
 		}
 		
@@ -424,9 +433,11 @@ public class PdbfilePdb extends Pdb {
 			for (int resser:getAllSortedResSerials()) {
 				// before checking the sequence matching we need to be sure that the resser is not out of the range of the SEQRES sequence length 
 				if (resser>sequence.length()) {
+					fpdb.close();
 					throw new PdbfileFormatError("Residue serial "+resser+" from ATOM line is bigger than SEQRES sequence length. Incorrect residue numbering in PDB file "+pdbfile);
 				}
 				if (sequence.charAt(resser-1)!=this.getResidue(resser).getAaType().getOneLetterCode()) {
+					fpdb.close();
 					throw new PdbfileFormatError("Sequences from ATOM lines and SEQRES do not match for position "+resser+". Incorrect residue numbering in PDB file "+pdbfile);
 				}
 			}
