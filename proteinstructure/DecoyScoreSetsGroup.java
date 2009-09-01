@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
+import tools.MySQLConnection;
 import tools.RegexFileFilter;
 
 /**
@@ -74,6 +76,12 @@ public class DecoyScoreSetsGroup {
 			if (set.isNativeRank1()) numRank1++;
 		}
 		return numRank1;
+	}
+	
+	public void writeToDb(MySQLConnection conn, String db, String table) throws SQLException {
+		for (DecoyScoreSet set:setsGroup) {
+			set.writeToDb(conn, db, table);
+		}
 	}
 
 	/**

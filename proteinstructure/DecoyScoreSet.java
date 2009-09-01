@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,6 +15,9 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import proteinstructure.Scorer.ScoringMethod;
+
+import tools.MySQLConnection;
 import tools.Statistics;
 
 /**
@@ -25,15 +30,32 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 
 	private String decoyName;
 	private String nativeFileName;
+	
+	private ScoringMethod scoringMethod;
+	private String ct;
+	private double cutoff;
+	private int minSeqSep;
+	private File trainingSetFile;
+	private int numStructsTrainingSet;
+	
 	private HashMap<String,DecoyScore> set; // decoy file name (no path) to DecoyScore
 
 	/**
 	 * Constructs an empty DecoyScoreSet 
+	 * @param decoyName
+	 * @param scorer
 	 */
-	public DecoyScoreSet(String decoyName) {
+	public DecoyScoreSet(String decoyName, Scorer scorer) {
 		this.decoyName = decoyName;
 		this.nativeFileName = decoyName+".pdb";
 		set = new HashMap<String, DecoyScore>();
+		
+		this.scoringMethod = scorer.getScoringMethod();
+		this.ct = scorer.getContactType();
+		this.cutoff = scorer.getCutoff();
+		this.minSeqSep = scorer.getMinSeqSep();
+		this.trainingSetFile = scorer.getListFile();
+		this.numStructsTrainingSet = scorer.sizeOfTrainingSet();
 	}
 	
 	/**
@@ -126,6 +148,14 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	public void writeToFile(File file) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(file);
 		ArrayList<DecoyScore> allScores = this.getSortedList();
+		
+		pw.println("# SCORE METHOD: "+this.scoringMethod.getDescription());
+		pw.println("# contact type: "+this.ct);
+		pw.println("# cutoff: "+this.cutoff);
+		pw.println("# min sequence separation: "+this.minSeqSep);
+		pw.println("# structures: "+this.numStructsTrainingSet);
+		pw.println("# list: "+this.trainingSetFile.toString());
+
 		pw.printf("#%s\t%s\t%s\n","file","score","rmsd");
 		for (DecoyScore fs:allScores) {
 			pw.printf("%s\t%7.2f\t%6.3f\n",fs.file.getName(), fs.score, fs.rmsd);
@@ -146,24 +176,80 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		Pattern p = Pattern.compile("^(\\d\\w\\w\\w(-\\w)?)\\.pdb$");
 		boolean nativeFound = false;
 		while ((line=br.readLine())!=null) {
-			if (line.startsWith("#")) continue;
-			String[] cols = line.split("\\s+");
-			addDecoyScore(new DecoyScore(new File(cols[0]),Double.parseDouble(cols[1]),Double.parseDouble(cols[2])));
-			Matcher m = p.matcher(cols[0]);
-			if (m.matches()) {
-				this.decoyName = m.group(1);
-				this.nativeFileName = m.group(1)+".pdb";
-				nativeFound = true;
-			} else if (cols[2].equals("0.000")) {
-				this.nativeFileName = cols[0];
-				this.decoyName = cols[0].substring(0,cols[0].lastIndexOf(".pdb"));
-				nativeFound = true;
+			if (line.startsWith("#")) {
+				Pattern p1 = Pattern.compile("^# SCORE METHOD: (.*)$");
+				Matcher m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.scoringMethod = ScoringMethod.getByDescription(m1.group(1));
+				}				
+				p1 = Pattern.compile("^# contact type: (.*)$");
+				m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.ct = m1.group(1);
+				}
+				p1 = Pattern.compile("^# cutoff: (.*)$");
+				m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.cutoff = Double.parseDouble(m1.group(1));
+				}
+				p1 = Pattern.compile("^# min sequence separation: (.*)$");
+				m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.minSeqSep = Integer.parseInt(m1.group(1));
+				}			
+				p1 = Pattern.compile("^# structures: (.*)$");
+				m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.numStructsTrainingSet = Integer.parseInt(m1.group(1));
+				}
+				p1 = Pattern.compile("^# list: (.*)$");
+				m1 = p1.matcher(line);
+				if (m1.matches()) {
+					this.trainingSetFile = new File(m1.group(1));
+				}			
+
+			} else {
+				String[] cols = line.split("\\s+");
+				addDecoyScore(new DecoyScore(new File(cols[0]),Double.parseDouble(cols[1]),Double.parseDouble(cols[2])));
+				Matcher m = p.matcher(cols[0]);
+				if (m.matches()) {
+					this.decoyName = m.group(1);
+					this.nativeFileName = m.group(1)+".pdb";
+					nativeFound = true;
+				} else if (cols[2].equals("0.000")) {
+					this.nativeFileName = cols[0];
+					this.decoyName = cols[0].substring(0,cols[0].lastIndexOf(".pdb"));
+					nativeFound = true;
+				}
 			}
 		}
 		br.close();
 		if (!nativeFound)
 			throw new FileFormatError("Couldn't find native decoy in decoy set file "+file);
 
+	}
+	
+	/**
+	 * Writes to db all data for this decoy score set
+	 * @param conn
+	 * @param db
+	 * @param table
+	 * @throws SQLException
+	 */
+	public void writeToDb(MySQLConnection conn, String db, String table) throws SQLException {
+		Statement st = conn.createStatement();
+		
+		for (DecoyScore decoyScore:this) {
+			String sql = "INSERT INTO "+db+"."+table+
+			" (method, ct, cutoff, min_seq_sep, train_set_size, train_set_file, decoy_set_name, file, score, rmsd) " +
+			" VALUES (" +
+			"'"+scoringMethod.getId()+"', " +
+			"'"+ct+"', "+cutoff+", "+minSeqSep+", "+numStructsTrainingSet+", '"+trainingSetFile.getName()+"', " +
+			"'"+decoyName+"', '"+decoyScore.file.getName()+"', "+decoyScore.score+", "+decoyScore.rmsd+")";
+			st.executeUpdate(sql);	
+		}
+		st.close();
+		
 	}
 	
 	/**

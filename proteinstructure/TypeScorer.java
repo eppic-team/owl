@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import tools.MySQLConnection;
 
 /**
  * Class to score a PDB structure based on type frequencies (residue or atom types).
@@ -27,15 +26,12 @@ import tools.MySQLConnection;
  */
 public abstract class TypeScorer extends Scorer {
 
-	protected static final String DB = "pdbase";
-		
 	private static final int TOO_FEW_COUNTS_THRESHOLD = 20;
 	private static final double TOO_FEW_COUNTS_SCORE = 0.0;
 	
 	protected int[] entityCounts; 		// the counts of the entities, i.e. of the residue or atom types
 	protected int[][] pairCounts;		// the counts of the pairs, using always defined indices, see types2indices and indices2types maps
 	protected double[][] scoringMat;	// the scoring matrix
-	protected int totalStructures;		// total number of structures used to compile the scoring matrix
 	
 	private int totalEntityCount;		// the total number of entities, i.e. of residues or atoms
 	private long totalPairsCount; 		// the total number of pairs, to be on the safe side we make it 
@@ -44,17 +40,8 @@ public abstract class TypeScorer extends Scorer {
 	protected HashMap<String,Integer> types2indices;	// map of types to indices of the above arrays
 	protected HashMap<Integer,String> indices2types;	// map of indices of the above arrays to types
 	
-	protected String[] structureIds;					// ids (pdbCode+pdbChainCode) of all structures used for the scoring matrix
-	
 	protected int numEntities;							// the number of entities, i.e. atom types (167) or residue types (20)
-	
-	protected String ct;								// the contact type, only used in the case of residue type scoring
-	protected double cutoff;							// the distance cutoff
-	protected int minSeqSep;							// the minimum sequence separation for which contacts are considered 
-														// when compiling the scoring matrix
-	
-	protected MySQLConnection conn;
-	
+		
 	protected TypeScorer() {
 
 	}
@@ -62,9 +49,10 @@ public abstract class TypeScorer extends Scorer {
 	/**
 	 * Performs the counts of the type pairs and stores them in the internal arrays.
 	 * Use subsequently {@link #calcScoringMat()} to compute the scoring matrix from counts arrays.
-	 * @throws SQLException if database server can't be accessed to get PDB data 
+	 * @throws SQLException if database server can't be accessed to get PDB data
+	 * @throws IOException if list file can't be read  
 	 */
-	public abstract void countPairs() throws SQLException;
+	public abstract void countPairs() throws SQLException, IOException;
 	
 	private void countTotals() {
 		totalEntityCount = 0;
@@ -128,7 +116,8 @@ public abstract class TypeScorer extends Scorer {
 		pw.println("# contact type: "+ct);
 		pw.println("# cutoff: "+cutoff);
 		pw.println("# min sequence separation: "+minSeqSep);
-		pw.println("# structures: "+totalStructures);
+		pw.println("# structures: "+sizeOfTrainingSet());
+		pw.println("# list: "+getListFile().toString());
 		pw.println("# nodes: "+totalEntityCount);
 		pw.println("# pairs: "+totalPairsCount);
 		pw.print("# type counts: ");
@@ -215,6 +204,11 @@ public abstract class TypeScorer extends Scorer {
 			if (m.matches()) {
 				this.totalStructures = Integer.parseInt(m.group(1));
 			}
+			p = Pattern.compile("^# list: (.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {
+				this.listFile = new File(m.group(1));
+			}			
 			p = Pattern.compile("^# nodes: (.*)$");
 			m = p.matcher(line);
 			if (m.matches()) {

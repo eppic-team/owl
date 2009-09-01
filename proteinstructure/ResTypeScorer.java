@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import tools.MySQLConnection;
@@ -24,15 +25,16 @@ public class ResTypeScorer extends TypeScorer {
 	 * Constructs a ResTypeScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
 	 * and parameters contact type, distance cutoff and minimum sequence separation used for 
 	 * calculating the scoring matrix. 
-	 * @param structureIds the list of PDB ids (pdbCode+pdbChainCode)
+	 * @param listFile the file with a list of PDB ids (pdbCode+pdbChainCode)
 	 * @param ct the contact type to be used as definition of contacts
 	 * @param cutoff the distance cutoff to be used as definition of contacts
 	 * @param minSeqSep the minimum sequence separation to be used when counting type pairs
 	 * @throws SQLException if can't establish connection to db server
 	 */
-	public ResTypeScorer(String[] structureIds, String ct, double cutoff, int minSeqSep) throws SQLException {
+	public ResTypeScorer(File listFile, String ct, double cutoff, int minSeqSep) throws SQLException {
 		
-		this.structureIds = structureIds;
+		this.structureIds = new ArrayList<String>();
+		this.listFile = listFile;
 		this.ct = ct;
 		this.cutoff = cutoff;
 		this.minSeqSep = minSeqSep;
@@ -40,7 +42,6 @@ public class ResTypeScorer extends TypeScorer {
 		this.numEntities = NUM_RES_TYPES;
 		entityCounts = new int[numEntities];
 		pairCounts = new int[numEntities][numEntities];
-		totalStructures = 0;
 		
 		this.conn = new MySQLConnection();
 		
@@ -76,10 +77,10 @@ public class ResTypeScorer extends TypeScorer {
 	}
 
 	@Override
-	public void countPairs() throws SQLException {
+	public void countPairs() throws SQLException, IOException {
 		this.initResMap();
 
-		for (String id:structureIds) {
+		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);
 			String pdbChainCode = id.substring(4,5);
 			Pdb pdb = null;
@@ -91,7 +92,7 @@ public class ResTypeScorer extends TypeScorer {
 					continue;
 				}
 				System.out.println(id);
-				totalStructures++;
+				this.structureIds.add(id);
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
@@ -111,6 +112,7 @@ public class ResTypeScorer extends TypeScorer {
 				countPair(types2indices.get(iRes),types2indices.get(jRes));
 			}
 		}
+		this.totalStructures = structureIds.size();
 	}
 	
 	@Override
@@ -185,8 +187,8 @@ public class ResTypeScorer extends TypeScorer {
 				System.exit(1);
 			}
 
-		String[] ids = TemplateList.readIdsListFile(listFile);
-		ResTypeScorer sc = new ResTypeScorer(ids,ct,cutoff,minSeqSep);
+
+		ResTypeScorer sc = new ResTypeScorer(listFile,ct,cutoff,minSeqSep);
 		sc.countPairs();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);

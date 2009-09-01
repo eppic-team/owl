@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import tools.MySQLConnection;
@@ -23,15 +24,16 @@ public class ResCountScorer extends CountScorer {
 	 * Constructs a ResCountScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
 	 * and parameters contact type, distance cutoff and minimum sequence separation used for 
 	 * calculating the scoring matrix. 
-	 * @param structureIds the list of PDB ids (pdbCode+pdbChainCode)
+	 * @param listFile the file with the list of PDB ids (pdbCode+pdbChainCode)
 	 * @param ct the contact type to be used as definition of contacts
 	 * @param cutoff the distance cutoff to be used as definition of contacts
 	 * @param minSeqSep the minimum sequence separation to be used when counting type pairs
 	 * @throws SQLException if can't establish connection to db server
 	 */
-	public ResCountScorer(String[] structureIds, String ct, double cutoff, int minSeqSep) throws SQLException {
+	public ResCountScorer(File listFile, String ct, double cutoff, int minSeqSep) throws SQLException {
 		
-		this.structureIds = structureIds;
+		this.listFile = listFile;
+		this.structureIds = new ArrayList<String>();
 		this.ct = ct;
 		this.cutoff = cutoff;
 		this.minSeqSep = minSeqSep;
@@ -39,7 +41,6 @@ public class ResCountScorer extends CountScorer {
 		this.numCountBins = NUM_COUNT_BINS;
 		this.numTypes = NUM_RES_TYPES;
 		binCountsPerType = new int[numCountBins][numTypes];
-		totalStructures = 0;
 		
 		this.conn = new MySQLConnection();
 		
@@ -74,10 +75,10 @@ public class ResCountScorer extends CountScorer {
 	}
 
 	@Override
-	public void countNodes() throws SQLException {
+	public void countNodes() throws SQLException, IOException {
 		this.initResMap();
 
-		for (String id:structureIds) {
+		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);
 			String pdbChainCode = id.substring(4,5);
 			Pdb pdb = null;
@@ -89,7 +90,8 @@ public class ResCountScorer extends CountScorer {
 					continue;
 				}
 				System.out.println(id);
-				totalStructures++;
+				structureIds.add(id);
+				
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
@@ -105,6 +107,7 @@ public class ResCountScorer extends CountScorer {
 				count(nbrCount,types2indices.get(node.getResidueType()));
 			}
 		}
+		this.totalStructures = structureIds.size();
 	}
 
 	@Override
@@ -183,8 +186,7 @@ public class ResCountScorer extends CountScorer {
 				System.exit(1);
 			}
 
-		String[] ids = TemplateList.readIdsListFile(listFile);
-		ResCountScorer sc = new ResCountScorer(ids,ct,cutoff,minSeqSep);
+		ResCountScorer sc = new ResCountScorer(listFile,ct,cutoff,minSeqSep);
 		sc.countNodes();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);

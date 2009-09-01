@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import tools.MySQLConnection;
@@ -22,14 +23,15 @@ public class AtomTypeScorer extends TypeScorer {
 	 * Constructs an AtomTypeScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
 	 * and parameters distance cutoff and minimum sequence separation used for calculating 
 	 * the scoring matrix. 
-	 * @param structureIds the list of PDB ids (pdbCode+pdbChainCode)
+	 * @param listFile the file with the list of PDB ids (pdbCode+pdbChainCode)
 	 * @param cutoff the distance cutoff to be used as definition of contacts
 	 * @param minSeqSep the minimum sequence separation to be used when counting type pairs
 	 * @throws SQLException if can't establish connection to db server
 	 */
-	public AtomTypeScorer(String[] structureIds, double cutoff, int minSeqSep) throws SQLException {
+	public AtomTypeScorer(File listFile, double cutoff, int minSeqSep) throws SQLException {
 		
-		this.structureIds = structureIds;
+		this.structureIds = new ArrayList<String>();
+		this.listFile = listFile;
 		this.ct = null;
 		this.cutoff = cutoff;
 		this.minSeqSep = minSeqSep;
@@ -37,7 +39,6 @@ public class AtomTypeScorer extends TypeScorer {
 		this.numEntities = NUM_ATOM_TYPES;
 		entityCounts = new int[numEntities];
 		pairCounts = new int[numEntities][numEntities];
-		totalStructures = 0;
 		
 		this.conn = new MySQLConnection();
 		
@@ -74,10 +75,10 @@ public class AtomTypeScorer extends TypeScorer {
 	}
 
 	@Override
-	public void countPairs() throws SQLException {
+	public void countPairs() throws SQLException, IOException {
 		this.initAtomMap();
 
-		for (String id:structureIds) {
+		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);
 			String pdbChainCode = id.substring(4,5);
 			Pdb pdb = null;
@@ -89,7 +90,8 @@ public class AtomTypeScorer extends TypeScorer {
 					continue;
 				}
 				System.out.println(id);
-				totalStructures++;
+				this.structureIds.add(id);
+				
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
@@ -113,6 +115,7 @@ public class AtomTypeScorer extends TypeScorer {
 						types2indices.get(jnode.getParent().getResidueType()+jnode.getAtomName()));
 			}
 		}
+		this.totalStructures = structureIds.size();
 	}
 
 	@Override
@@ -183,8 +186,7 @@ public class AtomTypeScorer extends TypeScorer {
 			System.exit(1);
 		}
 
-		String[] ids = TemplateList.readIdsListFile(listFile);
-		AtomTypeScorer sc = new AtomTypeScorer(ids,cutoff,minSeqSep);
+		AtomTypeScorer sc = new AtomTypeScorer(listFile,cutoff,minSeqSep);
 		sc.countPairs();
 		sc.calcScoringMat();
 		sc.writeScMatToFile(scMatFile,false);

@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 
 import proteinstructure.DecoyScoreSet;
@@ -14,20 +15,22 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.Scorer;
+import tools.MySQLConnection;
 import tools.RegexFileFilter;
 
 
 public class scoreDecoys {
 	
-	public static final String DECOYS_BASEDIR = "/scratch/local/decoys/ioannis/dd/multiple";
+	public static final String DECOYS_BASEDIR = "/scratch/local/graphletDecoys/decoys/Scratch/dd/multiple";
 	public static final String[] DECOYSETS = 
 	{"4state_reduced", "fisa", "fisa_casp3", "hg_structal", "ig_structal", "ig_structal_hires", "lattice_ssfit", "lmds", "vhp_mcmd"};
 	
 	private static final int DEFAULT_MIN_SEQ_SEP = 3;
 	
-
+	private static final String SCORES_TABLE_NAME = "scores";
+	private static final boolean DEBUG = false;
 	
-	public static void main(String[] args) throws IOException, FileFormatError {
+	public static void main(String[] args) throws IOException, FileFormatError, SQLException {
 
 		String help = 
 			"\nScores a set of decoy sets \n" +
@@ -35,14 +38,17 @@ public class scoreDecoys {
 			"scoreDecoys -o <out_dir> -a <file> -r <file> [-m <min_seq_sep>]\n"+
 			"  -o <dir>      : output directory where all output files will be written\n" +
 			"  -s <file>     : file with scoring matrix\n" +
-			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n\n";
+			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n" +
+			"  -w <db_name>  : writes results also to given database name, table "+SCORES_TABLE_NAME+"\n";
 
 		
 		File outDir = null;
 		File scMatFile = null;
 		int minSeqSep = DEFAULT_MIN_SEQ_SEP;
+		String dbName = null;
+		MySQLConnection conn = null;
 
-		Getopt g = new Getopt("scoreDecoys", args, "o:s:m:h?");
+		Getopt g = new Getopt("scoreDecoys", args, "o:s:m:w:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -55,7 +61,10 @@ public class scoreDecoys {
 			case 'm':
 				minSeqSep = Integer.parseInt(g.getOptarg());
 				break;				
-				
+			case 'w':
+				dbName = g.getOptarg();
+				conn = new MySQLConnection();
+				break;
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -105,7 +114,7 @@ public class scoreDecoys {
 				File dir = new File(decoysDir,decoy);
 				File[] files = dir.listFiles(new RegexFileFilter("^.*\\.pdb"));			
 
-				DecoyScoreSet decoyScoreSet = new DecoyScoreSet(decoy);
+				DecoyScoreSet decoyScoreSet = new DecoyScoreSet(decoy, scorer);
 				
 				File rmsdFile = new File(dir,"rmsds");
 				HashMap<String,Double> rmsds = null;
@@ -118,17 +127,21 @@ public class scoreDecoys {
 								
 				for (File file:files) {
 					Pdb pdb = new PdbfilePdb(file.getAbsolutePath());
-					System.out.print(".");
+
 					try {
 						String[] chains = pdb.getChains();
 						if (chains==null) {
-							System.out.println("\nFile "+file+" doesn't contain any chain");
+							System.out.print("x");
+							if (DEBUG) System.out.println("\nFile "+file+" doesn't contain any chain");
 							continue;
 						}
 						if (chains.length>1) System.out.println("\nWarning. More than one chain in "+file);
 						pdb.load(chains[0]);
+						System.out.print(".");
+						
 					} catch (PdbLoadError e) {
-						System.err.println("\nCouldn't load "+file+". Error: "+e.getMessage());
+						System.out.print("x");
+						if (DEBUG) System.err.println("\nCouldn't load "+file+". Error: "+e.getMessage());
 						continue;
 					}
 					
@@ -165,6 +178,9 @@ public class scoreDecoys {
 			// writing stats file
 			File statsFile = new File(outDir,decoySet+".stats");
 			setsGroup.writeStatsToFile(statsFile);
+			
+			// writing all scores to db if switch -w specified
+			if (dbName!=null) setsGroup.writeToDb(conn, dbName, SCORES_TABLE_NAME);
 			
 		}
 		System.out.println("Done. Total decoys "+countAllDecoys+", scored including native: "+countValDecoys);

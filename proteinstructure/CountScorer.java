@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import tools.MySQLConnection;
 
 /**
  * Class to score a PDB structure based on contact count frequencies (residue or atom contacts).
@@ -26,8 +25,6 @@ import tools.MySQLConnection;
  *
  */
 public abstract class CountScorer extends Scorer {
-	
-	protected static final String DB = "pdbase";
 
 	private static final int TOO_FEW_COUNTS_THRESHOLD = 10;
 	protected static final double TOO_FEW_COUNTS_SCORE = 0.0;
@@ -45,17 +42,6 @@ public abstract class CountScorer extends Scorer {
 	protected HashMap<String,Integer> types2indices;	// map of types to indices of the above arrays
 	protected HashMap<Integer,String> indices2types;	// map of indices of the above arrays to types
 
-	protected int totalStructures;			// total number of structures used to compile the scoring matrix
-	protected String[] structureIds;					// ids (pdbCode+pdbChainCode) of all structures used for the scoring matrix
-	
-	
-	protected String ct;								// the contact type, only used in the case of residue type scoring
-	protected double cutoff;							// the distance cutoff
-	protected int minSeqSep;							// the minimum sequence separation for which contacts are considered 
-														// when compiling the scoring matrix
-	
-	protected MySQLConnection conn;
-
 	protected CountScorer() {
 		
 	}
@@ -64,8 +50,9 @@ public abstract class CountScorer extends Scorer {
 	 * Performs the counts of the number of neighbours and stores them in the internal arrays.
 	 * Use subsequently {@link #calcScoringMat()} to compute the scoring matrix from counts arrays.
 	 * @throws SQLException if database server can't be access to get PDB data
+	 * @throws IOException if list file can't be read
 	 */
-	public abstract void countNodes() throws SQLException;
+	public abstract void countNodes() throws SQLException, IOException;
 	
 	private void countTotals() {
 		totalEntityCount = 0;
@@ -123,7 +110,8 @@ public abstract class CountScorer extends Scorer {
 		pw.println("# contact type: "+ct);
 		pw.println("# cutoff: "+cutoff);
 		pw.println("# min sequence separation: "+minSeqSep);
-		pw.println("# structures: "+totalStructures);
+		pw.println("# structures: "+sizeOfTrainingSet());
+		pw.println("# list: "+getListFile().toString());
 		pw.println("# nodes: "+totalEntityCount);
 		pw.print("# neighbor-count bins: ");
 		for (int i=0;i<numCountBins;i++) {
@@ -207,6 +195,11 @@ public abstract class CountScorer extends Scorer {
 			if (m.matches()) {
 				this.totalStructures = Integer.parseInt(m.group(1));
 			}
+			p = Pattern.compile("^# list: (.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {
+				this.listFile = new File(m.group(1));
+			}						
 			p = Pattern.compile("^# nodes: (.*)$");
 			m = p.matcher(line);
 			if (m.matches()) {
