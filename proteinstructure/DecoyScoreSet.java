@@ -89,6 +89,14 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	}
 
 	/**
+	 * Returns the scoring method used to score this set.
+	 * @return
+	 */
+	public ScoringMethod getScoringMethod() {
+		return scoringMethod;
+	}
+	
+	/**
 	 * Returns the name of the native PDB file for this set. The DecoyScore for it is not
 	 * necessarily a member of this set (e.g. because it was missing in the decoy data).
 	 * Check whether the native file is member of this set with {@link #containsNative()} 
