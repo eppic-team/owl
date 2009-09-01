@@ -114,7 +114,7 @@ public class scoreDecoys {
 				File dir = new File(decoysDir,decoy);
 				File[] files = dir.listFiles(new RegexFileFilter("^.*\\.pdb"));			
 
-				DecoyScoreSet decoyScoreSet = new DecoyScoreSet(decoy, scorer);
+				DecoyScoreSet decoyScoreSet = new DecoyScoreSet(decoy, decoySet, scorer);
 				
 				File rmsdFile = new File(dir,"rmsds");
 				HashMap<String,Double> rmsds = null;

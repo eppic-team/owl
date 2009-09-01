@@ -29,6 +29,7 @@ import tools.Statistics;
 public class DecoyScoreSet implements Iterable<DecoyScore> {
 
 	private String decoyName;
+	private String decoyGroup;
 	private String nativeFileName;
 	
 	private ScoringMethod scoringMethod;
@@ -45,8 +46,9 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 * @param decoyName
 	 * @param scorer
 	 */
-	public DecoyScoreSet(String decoyName, Scorer scorer) {
+	public DecoyScoreSet(String decoyName, String decoyGroup, Scorer scorer) {
 		this.decoyName = decoyName;
+		this.decoyGroup = decoyGroup;
 		this.nativeFileName = decoyName+".pdb";
 		set = new HashMap<String, DecoyScore>();
 		
@@ -76,6 +78,14 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 */
 	public String getDecoyName() {
 		return decoyName;
+	}
+	
+	/**
+	 * Returns the decoy group to which this set belongs.
+	 * @return
+	 */
+	public String getDecoyGroup() {
+		return decoyGroup;
 	}
 
 	/**
@@ -241,11 +251,12 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		
 		for (DecoyScore decoyScore:this) {
 			String sql = "INSERT INTO "+db+"."+table+
-			" (method, ct, cutoff, min_seq_sep, train_set_size, train_set_file, decoy_set_name, file, score, rmsd) " +
+			" (method, ct, cutoff, min_seq_sep, train_set_size, train_set_file, decoy_group, decoy_set_name, file, score, rmsd) " +
 			" VALUES (" +
 			"'"+scoringMethod.getId()+"', " +
 			"'"+ct+"', "+cutoff+", "+minSeqSep+", "+numStructsTrainingSet+", '"+trainingSetFile.getName()+"', " +
-			"'"+decoyName+"', '"+decoyScore.file.getName()+"', "+decoyScore.score+", "+decoyScore.rmsd+")";
+			"'"+decoyGroup+"', '"+decoyName+"', '"+decoyScore.file.getName()+"', "
+			+decoyScore.score+", "+decoyScore.rmsd+")";
 			st.executeUpdate(sql);	
 		}
 		st.close();
