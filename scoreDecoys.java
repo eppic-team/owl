@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import proteinstructure.CombinedScorer;
 import proteinstructure.DecoyScoreSet;
 import proteinstructure.DecoyScoreSetsGroup;
 import proteinstructure.FileFormatError;
@@ -25,8 +26,6 @@ public class scoreDecoys {
 	public static final String[] DECOYSETS = 
 	{"4state_reduced", "fisa", "fisa_casp3", "hg_structal", "ig_structal", "ig_structal_hires", "lattice_ssfit", "lmds", "vhp_mcmd"};
 	
-	private static final int DEFAULT_MIN_SEQ_SEP = 3;
-	
 	private static final String SCORES_TABLE_NAME = "scores";
 	private static final boolean DEBUG = false;
 	
@@ -35,20 +34,21 @@ public class scoreDecoys {
 		String help = 
 			"\nScores a set of decoy sets \n" +
 			"Usage:\n" +
-			"scoreDecoys -o <out_dir> -a <file> -r <file> [-m <min_seq_sep>]\n"+
+			"scoreDecoys -o <out_dir> -s <file> [-c <file>] [-w <db_name>]\n"+
 			"  -o <dir>      : output directory where all output files will be written\n" +
 			"  -s <file>     : file with scoring matrix\n" +
-			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n" +
+			"  -c <file>     : file with scoring matrix. If specified it must be a count scoring matrix\n" +
+			"                  and -s then must be a type scoring matrix.\n" +
 			"  -w <db_name>  : writes results also to given database name, table "+SCORES_TABLE_NAME+"\n";
 
 		
 		File outDir = null;
 		File scMatFile = null;
-		int minSeqSep = DEFAULT_MIN_SEQ_SEP;
+		File scMatFile2 = null;
 		String dbName = null;
 		MySQLConnection conn = null;
 
-		Getopt g = new Getopt("scoreDecoys", args, "o:s:m:w:h?");
+		Getopt g = new Getopt("scoreDecoys", args, "o:s:c:w:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -58,8 +58,8 @@ public class scoreDecoys {
 			case 's':
 				scMatFile = new File(g.getOptarg());
 				break;
-			case 'm':
-				minSeqSep = Integer.parseInt(g.getOptarg());
+			case 'c':
+				scMatFile2 = new File(g.getOptarg());
 				break;				
 			case 'w':
 				dbName = g.getOptarg();
@@ -85,10 +85,14 @@ public class scoreDecoys {
 			System.exit(1);			
 		}
 		
+		
+		Scorer scorer = null;
 
-		
-		
-		Scorer scorer = Scorer.readScoreMatFromFile(scMatFile);
+		if (scMatFile2 == null) {
+			scorer = Scorer.readScoreMatFromFile(scMatFile);
+		} else {
+			scorer = new CombinedScorer(scMatFile,scMatFile2);
+		}
 		
 		File decoysSetDir = new File(DECOYS_BASEDIR);
 		int countAllDecoys = 0;
@@ -146,7 +150,7 @@ public class scoreDecoys {
 					}
 					
 					if (pdb.isAllAtom()) {
-						double score = scorer.scoreIt(pdb,minSeqSep);
+						double score = scorer.scoreIt(pdb);
 
 						if (rmsds.containsKey(file.getName())) {
 							decoyScoreSet.addDecoyScore(new DecoyScore(file,score,rmsds.get(file.getName())));

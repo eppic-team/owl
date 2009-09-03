@@ -3,7 +3,6 @@ package proteinstructure;
 import gnu.getopt.Getopt;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -33,6 +32,8 @@ public class ResTypeScorer extends TypeScorer {
 	 */
 	public ResTypeScorer(File listFile, String ct, double cutoff, int minSeqSep) throws SQLException {
 		
+		this.scoringMethod = ScoringMethod.RESTYPE;
+		
 		this.structureIds = new ArrayList<String>();
 		this.listFile = listFile;
 		this.ct = ct;
@@ -55,6 +56,7 @@ public class ResTypeScorer extends TypeScorer {
 	 * @throws FileFormatError
 	 */
 	public ResTypeScorer(File scMatFile) throws IOException, FileFormatError  {
+		this.scoringMethod = ScoringMethod.RESTYPE;
 		readScMatFromFile(scMatFile);
 	}
 
@@ -72,10 +74,6 @@ public class ResTypeScorer extends TypeScorer {
 		}
 	}
 	
-	public void writeScMatToFile(File file, boolean writeCounts) throws FileNotFoundException {
-		writeScMatToFile(file, writeCounts,ScoringMethod.RESTYPE);
-	}
-
 	@Override
 	public void countPairs() throws SQLException, IOException {
 		this.initResMap();
@@ -116,7 +114,7 @@ public class ResTypeScorer extends TypeScorer {
 	}
 	
 	@Override
-	public double scoreIt(Pdb pdb, int minSeqSep) {
+	public double scoreIt(Pdb pdb) {
 		RIGraph graph = pdb.get_graph(this.ct, this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 		

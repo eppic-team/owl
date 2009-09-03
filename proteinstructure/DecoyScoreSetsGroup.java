@@ -34,6 +34,10 @@ public class DecoyScoreSetsGroup {
 		setsGroup.add(set);
 	}
 	
+	public DecoyScoreSet getDecoyScoreSet(int i) {
+		return setsGroup.get(i);
+	}
+	
 	public void readGroupOfSets(File dir, String decoySetsGroup) {
 
 		File[] files = dir.listFiles(new RegexFileFilter("^"+decoySetsGroup+"_.*\\.scores"));

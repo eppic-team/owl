@@ -106,13 +106,12 @@ public abstract class TypeScorer extends Scorer {
 	 * Writes the scoring matrix to a file
 	 * @param file the file to write to
 	 * @param writeCounts whether to also write the matrix with the pair counts
-	 * @param scMethod the scoring method
 	 * @throws FileNotFoundException if file not found
 	 */
-	protected void writeScMatToFile(File file, boolean writeCounts, Scorer.ScoringMethod scMethod) throws FileNotFoundException {
+	protected void writeScMatToFile(File file, boolean writeCounts) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(file);
 
-		pw.println("# SCORE METHOD: "+scMethod.getDescription());
+		pw.println("# SCORE METHOD: "+getScoringMethod().getDescription());
 		pw.println("# contact type: "+ct);
 		pw.println("# cutoff: "+cutoff);
 		pw.println("# min sequence separation: "+minSeqSep);

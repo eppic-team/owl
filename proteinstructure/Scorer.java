@@ -28,7 +28,9 @@ public abstract class Scorer {
 		RESTYPE("residue type", "restype"),
 		ATOMTYPE("atom type", "atomtype"),
 		RESCOUNT("residue count", "rescount"),
-		ATOMCOUNT("atom count", "atomcount");
+		ATOMCOUNT("atom count", "atomcount"),
+		ATOMCOMBINED("atom combined", "atomcomb"),
+		RESCOMBINED("residue combined", "rescomb");
 		
 		private String id;
 		private String description;
@@ -52,8 +54,10 @@ public abstract class Scorer {
 		}
 	}
 
+	protected ScoringMethod scoringMethod;
+	
 	protected File listFile;							// the file containing the training set list (list of pdbCode+pdbChainCode)
-	protected ArrayList<String> structureIds;			// ids (pdbCode+pdbChainCode) of structures used for scoring matrix (only the valide ones from the listFile)
+	protected ArrayList<String> structureIds;			// ids (pdbCode+pdbChainCode) of structures used for scoring matrix (only the valid ones from the listFile)
 	protected int totalStructures;						// the number of valid structures used for scoring matrix (i.e. size of structureIds above). 
 														// We use a separate variable to store the value for the case we read scoring matrix from file
 	
@@ -70,10 +74,9 @@ public abstract class Scorer {
 	 * through the appropriate constructor. 
 	 * Only contacts with a minimum of minSeqSep sequence separation will be considered.
 	 * @param pdb the structure to be scored
-	 * @param minSeqSep the minimum sequence separation for which contacts will be considered
 	 * @return the score
 	 */
-	public abstract double scoreIt(Pdb pdb, int minSeqSep);
+	public abstract double scoreIt(Pdb pdb);
 
 	/**
 	 * Returns the list file, i.e. the files with the list of pdbCode+pdbChainCode used for 
@@ -119,16 +122,7 @@ public abstract class Scorer {
 	}
 	
 	public ScoringMethod getScoringMethod() {
-		if (this instanceof ResTypeScorer) {
-			return ScoringMethod.RESTYPE;
-		} else if (this instanceof AtomTypeScorer) {
-			return ScoringMethod.ATOMTYPE;
-		} else if (this instanceof ResCountScorer) {
-			return ScoringMethod.RESCOUNT;
-		} else if (this instanceof AtomCountScorer) {
-			return ScoringMethod.ATOMCOUNT;
-		}
-		return null;
+		return scoringMethod;
 	}
 	
 	/**

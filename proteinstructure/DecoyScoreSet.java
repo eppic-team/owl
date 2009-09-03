@@ -97,6 +97,32 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	}
 	
 	/**
+	 * Returns the contact type upon which the scoring of
+	 * this set was based (only vaid in residue-based scoring)
+	 * @return
+	 */
+	public String getContactType() {
+		return ct;
+	}
+
+	/**
+	 * Returns the cutoff upon which the scoring of this set was based.
+	 * @return
+	 */
+	public double getCutoff() {
+		return cutoff;
+	}
+
+	/**
+	 * Returns the minimum sequence separation used for filtering when compiling
+	 * the scoring matrix and scoring.
+	 * @return
+	 */
+	public int getMinSeqSep() {
+		return minSeqSep;
+	}
+
+	/**
 	 * Returns the name of the native PDB file for this set. The DecoyScore for it is not
 	 * necessarily a member of this set (e.g. because it was missing in the decoy data).
 	 * Check whether the native file is member of this set with {@link #containsNative()} 

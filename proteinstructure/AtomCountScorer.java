@@ -3,7 +3,6 @@ package proteinstructure;
 import gnu.getopt.Getopt;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -30,6 +29,8 @@ public class AtomCountScorer extends CountScorer {
 	 * @throws SQLException if can't establish connection to db server
 	 */
 	public AtomCountScorer(File listFile, double cutoff, int minSeqSep) throws SQLException {
+		
+		this.scoringMethod = ScoringMethod.ATOMCOUNT;
 
 		this.listFile = listFile;
 		this.structureIds = new ArrayList<String>();
@@ -52,6 +53,7 @@ public class AtomCountScorer extends CountScorer {
 	 * @throws FileFormatError
 	 */
 	public AtomCountScorer(File scMatFile) throws IOException, FileFormatError  {
+		this.scoringMethod = ScoringMethod.ATOMCOUNT;
 		readScMatFromFile(scMatFile);
 	}
 	
@@ -68,10 +70,6 @@ public class AtomCountScorer extends CountScorer {
 		for (String resType:types2indices.keySet()) {
 			indices2types.put(types2indices.get(resType), resType);
 		}
-	}
-	
-	public void writeScMatToFile(File file, boolean writeCounts) throws FileNotFoundException {
-		writeScMatToFile(file, writeCounts,ScoringMethod.ATOMCOUNT);
 	}
 	
 	@Override
@@ -113,7 +111,7 @@ public class AtomCountScorer extends CountScorer {
 	}
 
 	@Override
-	public double scoreIt(Pdb pdb, int minSeqSep) {
+	public double scoreIt(Pdb pdb) {
 		AIGraph graph = pdb.getAllAtomGraph(this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 		
