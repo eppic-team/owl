@@ -97,18 +97,19 @@ public class DecoyScoreSetsGroup {
 	public void writeStatsToFile(File file) {
 		try {
 			PrintWriter pw = new PrintWriter(file);
-			pw.printf("#%9s\t%6s\t%6s\t%6s\t%6s\n",
-					"decoy","nod","rank1","z","corr");
+			pw.printf("#%9s\t%6s\t%13s\t%6s\t%6s\t%6s\n",
+					"decoy","nod","rmsdRange","rank1","z","corr");
 
 			for (int i=0;i<setsGroup.size();i++) {
 				String decoy = setsGroup.get(i).getDecoyName();
 				int numScDecoys = setsGroup.get(i).size();
+				String rmsdRange = String.format("%6.3f-%6.3f",setsGroup.get(i).getRmsdRange()[0],setsGroup.get(i).getRmsdRange()[1]);
 				double z = setsGroup.get(i).getNativeZscore();
 				double corr = setsGroup.get(i).getSpearman();
 				boolean isRank1 = setsGroup.get(i).isNativeRank1();
 
-				pw.printf("%10s\t%6d\t%6s\t%6.1f\t%5.2f\n",
-						decoy,numScDecoys,isRank1,z,corr);
+				pw.printf("%10s\t%6d\t%13s\t%6s\t%6.1f\t%5.2f\n",
+						decoy,numScDecoys,rmsdRange,isRank1,z,corr);
 			}
 			
 			pw.println();

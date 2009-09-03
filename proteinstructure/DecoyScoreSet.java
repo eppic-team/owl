@@ -365,6 +365,22 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		return Statistics.spearman(scores, rmsds);
 	}
 
+	/**
+	 * Returns the minimum and maximum values of rmsds in this set as an array of size 2
+	 * (excluding the native)
+	 * @return array of size 2 with {min rmsd, max rmsd}
+	 */
+	public double[] getRmsdRange() {
+		ArrayList<Double> rmsds = new ArrayList<Double>();
+		for (DecoyScore ds:this){
+			if (!ds.file.getName().equals(nativeFileName)) {
+				rmsds.add(ds.rmsd);
+			}
+		}
+		double[] minmax = {Collections.min(rmsds),Collections.max(rmsds)}; 
+		return minmax;
+	}
+	
 	public Iterator<DecoyScore> iterator() {
 		return set.values().iterator();
 	}
