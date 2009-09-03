@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import proteinstructure.Scorer.ScoringMethod;
+import proteinstructure.FileFormatError;
 
 import tools.MySQLConnection;
 import tools.Statistics;

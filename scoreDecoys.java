@@ -7,15 +7,14 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import proteinstructure.CombinedScorer;
-import proteinstructure.DecoyScoreSet;
-import proteinstructure.DecoyScoreSetsGroup;
 import proteinstructure.FileFormatError;
-import proteinstructure.DecoyScore;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
-import proteinstructure.Scorer;
+import proteinstructure.DecoyScoring.DecoyScore;
+import proteinstructure.DecoyScoring.DecoyScoreSet;
+import proteinstructure.DecoyScoring.DecoyScoreSetsGroup;
+import proteinstructure.DecoyScoring.Scorer;
 import tools.MySQLConnection;
 import tools.RegexFileFilter;
 
@@ -29,6 +28,9 @@ public class scoreDecoys {
 	private static final String SCORES_TABLE_NAME = "scores";
 	private static final boolean DEBUG = false;
 	
+	private static final double TYPE_WEIGHT = 1.0;
+	private static final double COUNT_WEIGHT = 1.0;
+	
 	public static void main(String[] args) throws IOException, FileFormatError, SQLException {
 
 		String help = 
@@ -39,6 +41,8 @@ public class scoreDecoys {
 			"  -s <file>     : file with scoring matrix\n" +
 			"  -c <file>     : file with scoring matrix. If specified it must be a count scoring matrix\n" +
 			"                  and -s then must be a type scoring matrix.\n" +
+			"  -S <float>    : weight for type scoring (if both -s, -c given). Default "+TYPE_WEIGHT+"\n"+
+			"  -C <float>    : weight for count scoring (if both -s, -c given). Default "+COUNT_WEIGHT+"\n"+
 			"  -w <db_name>  : writes results also to given database name, table "+SCORES_TABLE_NAME+"\n";
 
 		
@@ -47,8 +51,10 @@ public class scoreDecoys {
 		File scMatFile2 = null;
 		String dbName = null;
 		MySQLConnection conn = null;
+		double weightType = TYPE_WEIGHT;
+		double weightCount = COUNT_WEIGHT;
 
-		Getopt g = new Getopt("scoreDecoys", args, "o:s:c:w:h?");
+		Getopt g = new Getopt("scoreDecoys", args, "o:s:c:S:C:w:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -60,7 +66,13 @@ public class scoreDecoys {
 				break;
 			case 'c':
 				scMatFile2 = new File(g.getOptarg());
+				break;
+			case 'S':
+				weightType = Double.parseDouble(g.getOptarg());
 				break;				
+			case 'C':
+				weightCount = Double.parseDouble(g.getOptarg());
+				break;								
 			case 'w':
 				dbName = g.getOptarg();
 				conn = new MySQLConnection();
@@ -91,7 +103,7 @@ public class scoreDecoys {
 		if (scMatFile2 == null) {
 			scorer = Scorer.readScoreMatFromFile(scMatFile);
 		} else {
-			scorer = new CombinedScorer(scMatFile,scMatFile2);
+			scorer = Scorer.readScoreMatsFromFiles(scMatFile,scMatFile2,weightType,weightCount);
 		}
 		
 		File decoysSetDir = new File(DECOYS_BASEDIR);

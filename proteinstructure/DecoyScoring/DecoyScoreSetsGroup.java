@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.ArrayList;
+
+import proteinstructure.FileFormatError;
 
 import tools.MySQLConnection;
 import tools.RegexFileFilter;
@@ -113,8 +115,8 @@ public class DecoyScoreSetsGroup {
 			}
 			
 			pw.println();
-			pw.printf("#%9s\t%6s\t%6s\t%6.1f\t%5.2f\n",
-					"means","",this.getNumberOfRank1()+"/"+this.size(),this.getMeanNativeZscore(),this.getMeanSpearman());
+			pw.printf("#%9s\t%6s\t%13s\t%6s\t%6.1f\t%5.2f\n",
+					"means","","",this.getNumberOfRank1()+"/"+this.size(),this.getMeanNativeZscore(),this.getMeanSpearman());
 			pw.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("Couldn't write stats file "+file);

@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import java.io.File;
 

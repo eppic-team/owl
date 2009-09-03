@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import proteinstructure.FileFormatError;
+import proteinstructure.Pdb;
 
 import tools.MySQLConnection;
 
@@ -19,41 +22,8 @@ public abstract class Scorer {
 
 	protected static final String DB = "pdbase";
 	
-	/**
-	 * Enum to identify the different scoring methods
-	 * @author duarte
-	 *
-	 */
-	public enum ScoringMethod {
-		RESTYPE("residue type", "restype"),
-		ATOMTYPE("atom type", "atomtype"),
-		RESCOUNT("residue count", "rescount"),
-		ATOMCOUNT("atom count", "atomcount"),
-		ATOMCOMBINED("atom combined", "atomcomb"),
-		RESCOMBINED("residue combined", "rescomb");
-		
-		private String id;
-		private String description;
-		private ScoringMethod(String description, String id) {
-			this.description = description;
-			this.id = id;
-		}
-		public String getDescription() {
-			return description;
-		}
-		public String getId() {
-			return id;
-		}
-		public static ScoringMethod getByDescription(String description) {
-			for (ScoringMethod scMethod:values()) {
-				if (scMethod.getDescription().equals(description)) {
-					return scMethod;
-				}
-			}
-			return null;
-		}
-	}
-
+	
+	
 	protected ScoringMethod scoringMethod;
 	
 	protected File listFile;							// the file containing the training set list (list of pdbCode+pdbChainCode)
@@ -161,7 +131,83 @@ public abstract class Scorer {
 		}
 		br.close();
 		
-		return new AtomCountScorer(scMatFile);
+		return null;
+	}
+
+	/**
+	 * Returns a Scorer object of the appropriate type given a scoring matrix file.
+	 * It first detects the type of scoring matrix by reading its header and based on 
+	 * that returns the Scorer object of the appropriate subclass.
+	 * @param scMatFileType
+	 * @param scMatFileCount
+	 * @param typeWeight
+	 * @param countWeight
+	 * @return
+	 * @throws IOException
+	 * @throws FileFormatError if no header found in file or type of scoring matrix file
+	 * not recognised
+	 */
+	public static Scorer readScoreMatsFromFiles(File scMatFileType, File scMatFileCount, double typeWeight, double countWeight) 
+	throws IOException, FileFormatError {
+		
+		ScoringMethod typeMethod = null;
+		ScoringMethod countMethod = null;
+		
+		BufferedReader br = new BufferedReader(new FileReader(scMatFileType));
+		String line;
+		while ((line=br.readLine())!=null) {
+			Pattern p = Pattern.compile("^# SCORE METHOD: (.*)$");
+			Matcher m = p.matcher(line);
+			if (m.matches()) {
+				String method = m.group(1);
+				if (method.equals(ScoringMethod.ATOMTYPE.getDescription())) {
+					typeMethod = ScoringMethod.ATOMTYPE;
+					break;
+				} else if (method.equals(ScoringMethod.RESTYPE.getDescription())) {
+					typeMethod = ScoringMethod.RESTYPE;
+					break;
+				} else {
+					throw new FileFormatError("File "+scMatFileType+" is not a type-based score matrix file");
+				}
+			} else {
+				throw new FileFormatError("File "+scMatFileType+" doesn't contain a #SCORE METHOD header");
+			}
+			
+		}
+		br.close();
+		
+		br = new BufferedReader(new FileReader(scMatFileCount));
+		while ((line=br.readLine())!=null) {
+			Pattern p = Pattern.compile("^# SCORE METHOD: (.*)$");
+			Matcher m = p.matcher(line);
+			if (m.matches()) {
+				String method = m.group(1);
+				if (method.equals(ScoringMethod.ATOMCOUNT.getDescription())) {
+					countMethod = ScoringMethod.ATOMCOUNT;
+					break;
+				} else if (method.equals(ScoringMethod.RESCOUNT.getDescription())) {
+					countMethod = ScoringMethod.RESCOUNT;
+					break;
+				} else {
+					throw new FileFormatError("File "+scMatFileCount+" is not a count-based score matrix file");
+				}
+			} else {
+				throw new FileFormatError("File "+scMatFileCount+" doesn't contain a #SCORE METHOD header");
+			}
+			
+		}
+		br.close();
+		
+		if ((typeMethod==ScoringMethod.ATOMTYPE && countMethod==ScoringMethod.RESCOUNT) ||
+			(typeMethod==ScoringMethod.RESTYPE && countMethod==ScoringMethod.ATOMCOUNT)) {
+			throw new IllegalArgumentException("Incompatible type and count matrices files given ("+scMatFileType+", "+scMatFileCount+")");
+		}
+		if (typeMethod==ScoringMethod.ATOMTYPE) {
+			return new AtomCombinedScorer(scMatFileType, scMatFileCount, typeWeight, countWeight);
+		} else {
+			return new ResCombinedScorer(scMatFileType, scMatFileCount, typeWeight, countWeight);
+		}
+		
 	}
 	
 	/**

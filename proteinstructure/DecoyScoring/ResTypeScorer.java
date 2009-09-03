@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import gnu.getopt.Getopt;
 
@@ -7,6 +7,17 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import proteinstructure.AAinfo;
+import proteinstructure.FileFormatError;
+import proteinstructure.Pdb;
+import proteinstructure.PdbCodeNotFoundError;
+import proteinstructure.PdbLoadError;
+import proteinstructure.PdbasePdb;
+import proteinstructure.RIGEdge;
+import proteinstructure.RIGNode;
+import proteinstructure.RIGraph;
+import proteinstructure.TemplateList;
 
 import tools.MySQLConnection;
 
@@ -117,7 +128,10 @@ public class ResTypeScorer extends TypeScorer {
 	public double scoreIt(Pdb pdb) {
 		RIGraph graph = pdb.get_graph(this.ct, this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
-		
+		return scoreIt(graph);
+	}
+
+	protected double scoreIt(RIGraph graph) {
 		double totalScore = 0;
 		for (RIGEdge edge:graph.getEdges()) {
 			String iRes = graph.getEndpoints(edge).getFirst().getResidueType();
@@ -133,7 +147,8 @@ public class ResTypeScorer extends TypeScorer {
 		
 		return (totalScore/graph.getEdgeCount());
 	}
-
+	
+	
 	public static void main(String[] args) throws Exception {
 		String help = 
 			"\nCompiles a scoring matrix based on residue types from a given file with a list of \n" +

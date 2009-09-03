@@ -1,4 +1,4 @@
-package proteinstructure;
+package proteinstructure.DecoyScoring;
 
 import gnu.getopt.Getopt;
 
@@ -7,6 +7,17 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import proteinstructure.AAinfo;
+import proteinstructure.AIGEdge;
+import proteinstructure.AIGNode;
+import proteinstructure.AIGraph;
+import proteinstructure.FileFormatError;
+import proteinstructure.Pdb;
+import proteinstructure.PdbCodeNotFoundError;
+import proteinstructure.PdbLoadError;
+import proteinstructure.PdbasePdb;
+import proteinstructure.TemplateList;
 
 import tools.MySQLConnection;
 
@@ -120,7 +131,10 @@ public class AtomTypeScorer extends TypeScorer {
 	public double scoreIt(Pdb pdb) {
 		AIGraph graph = pdb.getAllAtomGraph(this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
-		
+		return scoreIt(graph);
+	}
+
+	protected double scoreIt(AIGraph graph) {
 		double totalScore = 0;
 		for (AIGEdge edge:graph.getEdges()) {
 			AIGNode inode = graph.getEndpoints(edge).getFirst();
@@ -137,6 +151,7 @@ public class AtomTypeScorer extends TypeScorer {
 
 		return (totalScore/graph.getEdgeCount());
 	}
+	
 	
 	public static void main(String[] args) throws Exception {
 		String help = 
