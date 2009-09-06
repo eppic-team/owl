@@ -76,6 +76,19 @@ public class DecoyScoreSetsGroup {
 		return sumcorr/this.size();
 	}
 	
+	/**
+	 * Gets the average number of decoys with rmsd below given rmsd for this group.
+	 * @param rmsd
+	 * @return
+	 */
+	public double getMeanNumBelowRmsd(double rmsd) {
+		int sumnum = 0;
+		for (DecoyScoreSet set:setsGroup) {
+			sumnum+=set.getNumDecoysBelowRmsd(rmsd);
+		}
+		return (double)sumnum/(double)this.size();
+	}
+	
 	public int getNumberOfRank1() {
 		int numRank1 = 0;
 		for (DecoyScoreSet set:setsGroup) {
@@ -99,24 +112,33 @@ public class DecoyScoreSetsGroup {
 	public void writeStatsToFile(File file) {
 		try {
 			PrintWriter pw = new PrintWriter(file);
-			pw.printf("#%9s\t%6s\t%13s\t%6s\t%6s\t%6s\n",
-					"decoy","nod","rmsdRange","rank1","z","corr");
+			pw.printf("#%9s\t%6s\t%13s\t%8s\t%8s\t%8s\t%6s\t%6s\t%6s\n",
+					"decoy","nod","rmsdRange","rmsd<1.0","rmsd<1.5","rmsd<2.0","rank1","z","corr");
 
 			for (int i=0;i<setsGroup.size();i++) {
 				String decoy = setsGroup.get(i).getDecoyName();
 				int numScDecoys = setsGroup.get(i).size();
 				String rmsdRange = String.format("%6.3f-%6.3f",setsGroup.get(i).getRmsdRange()[0],setsGroup.get(i).getRmsdRange()[1]);
+				int numBelow1 = setsGroup.get(i).getNumDecoysBelowRmsd(1.0);
+				int numBelow1_5 = setsGroup.get(i).getNumDecoysBelowRmsd(1.5);
+				int numBelow2 = setsGroup.get(i).getNumDecoysBelowRmsd(2.0);
 				double z = setsGroup.get(i).getNativeZscore();
 				double corr = setsGroup.get(i).getSpearman();
 				boolean isRank1 = setsGroup.get(i).isNativeRank1();
 
-				pw.printf("%10s\t%6d\t%13s\t%6s\t%6.1f\t%5.2f\n",
-						decoy,numScDecoys,rmsdRange,isRank1,z,corr);
+				pw.printf("%10s\t%6d\t%13s\t%8d\t%8d\t%8d\t%6s\t%6.1f\t%5.2f\n",
+						decoy,numScDecoys,rmsdRange,numBelow1,numBelow1_5,numBelow2,isRank1,z,corr);
 			}
 			
 			pw.println();
-			pw.printf("#%9s\t%6s\t%13s\t%6s\t%6.1f\t%5.2f\n",
-					"means","","",this.getNumberOfRank1()+"/"+this.size(),this.getMeanNativeZscore(),this.getMeanSpearman());
+			pw.printf("#%9s\t%6s\t%13s\t%8.1f\t%8.1f\t%8.1f\t%6s\t%6.1f\t%5.2f\n",
+					"means","","",
+					this.getMeanNumBelowRmsd(1.0),
+					this.getMeanNumBelowRmsd(1.5),
+					this.getMeanNumBelowRmsd(2.0),
+					this.getNumberOfRank1()+"/"+this.size(),
+					this.getMeanNativeZscore(),
+					this.getMeanSpearman());
 			pw.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("Couldn't write stats file "+file);

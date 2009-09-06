@@ -381,6 +381,25 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		return minmax;
 	}
 	
+	/**
+	 * Gets the number of decoys with an rmsd value below a given rmsd (excluding the
+	 * native)
+	 * @param rmsd
+	 * @return
+	 */
+	public int getNumDecoysBelowRmsd(double rmsd) {
+		int count=0;
+		for (DecoyScore ds:this) {
+			if (ds.rmsd<rmsd) {
+				count++;
+			}
+		}
+		if (containsNative()) {
+			count--;
+		}
+		return count;
+	}
+	
 	public Iterator<DecoyScore> iterator() {
 		return set.values().iterator();
 	}

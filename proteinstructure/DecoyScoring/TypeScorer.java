@@ -104,6 +104,22 @@ public abstract class TypeScorer extends Scorer {
 		}
 	}
 	
+	public int getEntityCount(int i) {
+		return entityCounts[i];
+	}
+	
+	public double getEntityFrequency(int i) {
+		return (double)entityCounts[i]/(double)totalEntityCount;
+	}
+	
+	public String getTypeFromIndex(int i) {
+		return indices2types.get(i);
+	}
+	
+	public int getIndexFromType(String type) {
+		return types2indices.get(type);
+	}
+	
 	/**
 	 * Writes the scoring matrix to a file
 	 * @param file the file to write to
