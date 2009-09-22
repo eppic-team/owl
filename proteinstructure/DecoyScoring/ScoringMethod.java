@@ -6,11 +6,13 @@ package proteinstructure.DecoyScoring;
  *
  */
 public enum ScoringMethod {
-	
-	RESTYPE("residue type", "restype"),
-	ATOMTYPE("atom type", "atomtype"),
+
 	RESCOUNT("residue count", "rescount"),
 	ATOMCOUNT("atom count", "atomcount"),
+	RESTYPE("residue type", "restype"),
+	ATOMTYPE("atom type", "atomtype"),
+	RESTRIPLET("residue triplet", "restriplet"),
+	ATOMTRIPLET("atom triplet", "atomtriplet"),
 	ATOMCOMBINED("atom combined", "atomcomb"),
 	RESCOMBINED("residue combined", "rescomb");
 	

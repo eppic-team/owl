@@ -121,6 +121,10 @@ public abstract class Scorer {
 					return new AtomTypeScorer(scMatFile);
 				} else if (method.equals(ScoringMethod.RESTYPE.getDescription())) {
 					return new ResTypeScorer(scMatFile);
+				} else if (method.equals(ScoringMethod.RESTRIPLET.getDescription())){
+					return new ResTripletScorer(scMatFile);
+				} else if (method.equals(ScoringMethod.ATOMTRIPLET.getDescription())){
+					return new AtomTripletScorer(scMatFile);
 				} else {
 					throw new FileFormatError("Header #SCORE METHOD doesn't contain one of the recognized method descriptions");
 				}

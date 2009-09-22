@@ -1,7 +1,11 @@
 package proteinstructure;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
+
+import tools.Triplet;
 
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -389,5 +393,68 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
 			this.removeEdge(edge);
 		}
 	}
-		
+	
+	
+ 
+
+	/**
+	 * Gets all vertices triangles within this graph (without repeating)
+	 * The V class needs to implement equals() and hashCode() so that Triplet's equals() and hashCode() 
+	 * can work properly
+	 * @return
+	 */
+	public Collection<Triplet<V>> getTriangles() {
+		// for this to work properly V must implement proper hashCode() and equals()
+		// well not strictly necessary because in our case all nodes are unique and thus their 
+		// memory addresses (default hash) are good enough to identify them
+		HashSet<Triplet<V>> set = new HashSet<Triplet<V>>();
+		for (E edge:this.getEdges()) {
+			Pair<V> pair = this.getEndpoints(edge);
+			V v1 = pair.getFirst();
+			V v2 = pair.getSecond();
+			
+			Collection<V> v1nbs = this.getNeighbors(v1);
+			Collection<V> v2nbs = this.getNeighbors(v2);
+			//int countNew = 0;
+			for (V v3:v1nbs) {
+				if (v3!=v2 && v2nbs.contains(v3)) {
+					//if (set.add(new Triplet<V>(v1,v2,v3))) countNew++;
+					set.add(new Triplet<V>(v1,v2,v3));
+				}
+			}
+			//System.out.println(v1.toString()+" "+v2.toString()+": "+countNew);
+		}
+		return set;
+	}
+	
+	/**
+	 * Gets all triplets within this graph. A triplet is define as a node together with 2 of its 
+	 * neighbors (so only nodes with more than 1 neighbor can have triplets).
+	 * The V class needs to implement equals() and hashCode() so that Triplet's equals() and hashCode() 
+	 * can work properly  
+	 * @return
+	 */
+	public Collection<Triplet<V>> getTriplets() {
+		// for this to work properly V must implement proper hashCode() and equals()
+		// well not strictly necessary because in our case all nodes are unique and thus their 
+		// memory addresses (default hash) are good enough to identify them
+		HashSet<Triplet<V>> set = new HashSet<Triplet<V>>();
+		for (V node:this.getVertices()) {
+			Collection<V> nbs = this.getNeighbors(node);
+			if (nbs.size()>1) {
+				int i = 0;
+				for (V nbi:nbs) {
+					int j = 0;
+					for (V nbj:nbs) {
+						if (j>i) {
+							set.add(new Triplet<V>(node,nbi,nbj));
+						}
+						j++;
+					}
+					i++;
+				}
+			}
+		}
+		return set;
+	}
 }
