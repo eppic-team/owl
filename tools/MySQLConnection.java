@@ -329,7 +329,7 @@ public class MySQLConnection {
 	/** 
 	 * @param query
 	 * @return the first column of the first row of the result of the given query as an integer
-	 * or -1 if no results were returned
+	 * or -1 if no such results were returned
 	 */
 	public int getIntFromDb(String query) {
 		Statement    stmt;
@@ -354,6 +354,36 @@ public class MySQLConnection {
 		    e.printStackTrace();
 		} // end catch			
 		
+		return result;
+	}
+	
+	/** 
+	 * @param query
+	 * @return the first column of the first row of the result of the given query as an integer
+	 * or NaN if no such results were returned
+	 */
+	public double getDoubleFromDb(String query) {
+		Statement    stmt;
+		ResultSet    rs;
+		double       result = Double.NaN;
+
+		try { 
+			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    if(rs.next()) {
+		    	result = rs.getDouble(1);
+		    }
+		    rs.close();
+		    stmt.close(); 
+		    
+		} // end try
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} // end catch			
 		return result;
 	}
 	
