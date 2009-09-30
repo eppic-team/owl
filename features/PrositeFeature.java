@@ -26,7 +26,7 @@ public class PrositeFeature implements Feature {
 	/*----------------------------- constructors ----------------------------*/
 	
 	public PrositeFeature(PrositeHit hit) {
-		this.type = FeatureType.UNIPROT;
+		this.type = FeatureType.PROSITE;
 		this.position = new IntervalSet();
 		this.position.add(new Interval(hit.start, hit.stop));
 		
@@ -41,7 +41,7 @@ public class PrositeFeature implements Feature {
 	 * Createas a PrositeFeature using individual parameters.
 	 */
 	public PrositeFeature(int start, int stop, String signatureAc, double score, int level) {
-		this.type = FeatureType.UNIPROT;
+		this.type = FeatureType.PROSITE;
 		this.position = new IntervalSet();
 		this.position.add(new Interval(start, stop));
 		
