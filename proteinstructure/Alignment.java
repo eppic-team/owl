@@ -16,13 +16,14 @@ import java.util.regex.Pattern;
 
 import tools.MySQLConnection;
 
+
 /**
  * Package:		proteinstructure
  * Class: 		Alignment
  * Author:		Henning Stehr, Jose Duarte, Lars Petzold
  * 
  * A multiple protein sequence alignment. This class represents a set of
- * protein sequences which are globally aligned and provides funtions
+ * protein sequences which are globally aligned and provides functions
  * to map between the original and the aligned sequences.
  * 
  */
@@ -33,11 +34,11 @@ public class Alignment {
 	public static final String PIRFORMAT = "PIR";
 	public static final String FASTAFORMAT = "FASTA";
 	public static final String CLUSTALFORMAT = "CLUSTAL";
-
+	public static final String DALIFORMAT = "DALI";
 	public static final char GAPCHARACTER = '-';
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
 	private static final String FASTAHEADER_CHAR = ">";
-	
+	private static final String DALI_REGEX = "(Query|Sbjct)\\s+([a-zA-Z\\.]+)";
 	/*--------------------------- member variables --------------------------*/		
 	
 	private String[] sequences;
@@ -53,9 +54,9 @@ public class Alignment {
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Creates an Alignment from a file in either FASTA or PIR format
+	 * Creates an Alignment from a file in either FASTA, PIR or DALI format
 	 * @param fileName
-	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT} or {@link #CLUSTALFORMAT}
+	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT},  {@link #DALIFORMAT} or {@link #CLUSTALFORMAT}
 	 * @throws IOException
 	 * @throws PirFileFormatError
 	 * @throws FastaFileFormatError
@@ -68,6 +69,8 @@ public class Alignment {
 			readFileFastaFormat(fileName);
 		} else if (format.equals(CLUSTALFORMAT)) {
 			readFileClustalFormat(fileName);
+		} else if (format.equals(DALIFORMAT)){
+			readFileDALIFormat(fileName);
 		} else {
 			throw new IllegalArgumentException("Format "+format+" not supported by Alignment class");
 		}
@@ -181,7 +184,7 @@ public class Alignment {
 				}
 			}
 			mapAlign2Seq.put(i, mapAl2Seq);
-			mapSeq2Align.put(i, mapSeq2Al);
+			mapSeq2Align.put(i , mapSeq2Al);
 		}
 	}
 	
@@ -324,7 +327,66 @@ public class Alignment {
 		}
 		
 	}
-	
+		/**
+		 * 
+		 * @param fileName a DALI html-formatted output file containing the CLUSTAL-like structure alignment
+		 * @throws IOException
+		 * @throws FileFormatError
+		 */
+      private void readFileDALIFormat(String fileName) throws IOException,
+			FileFormatError {
+
+		String nextLine = "";
+		String subj = "";
+		String query = "";
+		// open file
+
+		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
+
+		// We parse the provided filename to recover the Pdb and 
+		// chain identifiers which are unfortunately not preserved by DALI
+		
+		Pattern p = Pattern.compile("(\\d[a-z0-9]{3}[A-Z])\\-(\\d[a-z0-9]{3}[A-Z])");
+		Matcher m = p.matcher(fileName);
+		m.find();
+		String firstPdbID = m.group(1);
+		String secondPdbID = m.group(2);
+		
+		// initialize TreeMap of sequences
+		ArrayList<String> seqsAL = new ArrayList<String>();
+		tags2indices = new TreeMap<String, Integer>();
+		indices2tags = new TreeMap<Integer, String>();
+
+		p = Pattern.compile(DALI_REGEX);
+		// read sequences
+		while ((nextLine = fileIn.readLine()) != null) {
+			if (nextLine.startsWith("Query")) {
+				m = p.matcher(nextLine);
+				m.find();
+				query += m.group(2);
+			} else if (nextLine.startsWith("Sbjct")) {
+				m = p.matcher(nextLine);
+				m.find();
+				subj += m.group(2);
+			}
+		}
+		if (query.length() == 0) {
+			throw new FileFormatError("File " + fileName
+					+ " does not seem to be DALI formatted");
+		}
+		indices2tags.put(0, firstPdbID);
+		tags2indices.put(firstPdbID, 0);
+
+		indices2tags.put(1, secondPdbID);
+		tags2indices.put(secondPdbID, 1);
+		seqsAL.add(query.toUpperCase().replace('.',GAPCHARACTER));
+		seqsAL.add(subj.toUpperCase().replace('.',GAPCHARACTER));
+		sequences = new String[seqsAL.size()];
+		seqsAL.toArray(sequences);
+
+		fileIn.close();
+	}
+
 	private void readFileClustalFormat(String fileName) throws IOException, FileFormatError {
 		// open file
 		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
@@ -699,7 +761,7 @@ public class Alignment {
 	
     /**
      * Gets list of consecutive non-gapped sub-sequences (by means of an interval set).
-     * Example (X denotes any valid aminoacid):
+     * Example (X denotes any valid amino acid):
      * <p>
      * 
      * The data:<br>
@@ -1174,6 +1236,7 @@ public class Alignment {
      * @throws IOException
      * @throws FastaFileFormatError 
      * @throws PirFileFormatError 
+     * @throws FileFormatError
      * @throws AlignmentConstructionError */
     public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionError {
     	if (args.length<1){
