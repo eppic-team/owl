@@ -3081,6 +3081,23 @@ public class Pdb {
 		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
 	
+	public int countUnobserved() {
+		return fullLength-residues.size();
+	}
+	
+	public TreeMap<Integer,Character> getUnobservedResidues() {
+		TreeMap<Integer,Character> unobserved = new TreeMap<Integer,Character>();
+
+		// detect all unobserved residues
+		for(int i = 1; i <= fullLength; ++i) {
+			if(!residues.containsKey(i)) {
+				unobserved.put(i,sequence.charAt(i-1));
+			}
+		}
+		return unobserved;
+		
+	}
+	
 	/*--------------------------------- main --------------------------------*/
 	
 	// to test the class, see also PdbTest class in tests.proteinstructure package
