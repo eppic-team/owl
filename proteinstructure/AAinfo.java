@@ -595,6 +595,7 @@ public class AAinfo {
 	 * Gets the number of non-Hydrogen atoms given a three letter code aminoacid
 	 * @param aa
 	 * @return
+	 * @throws NullPointerException if aa not a valid 3 letter code standard aminoacid
 	 */
 	public static int getNumberAtoms(String aa) {
 		return aas2heavyAtoms.get(aa).size();

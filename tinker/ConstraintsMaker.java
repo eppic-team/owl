@@ -96,7 +96,21 @@ public class ConstraintsMaker {
 			String atom = res_atom.split("_")[1];
 		
 			resFromSeq = AminoAcid.one2three(sequence.charAt(pdbResSerial-1));
-			int totalNumAtoms = AAinfo.getNumberAtoms(resFromSeq);
+			int totalNumAtoms = 0;
+			boolean inUNKres = false;
+			if (!AminoAcid.isStandardAA(resFromSeq)) { // i.e. a non-standard aa (X)
+				// the 'protein' program interprets the Xs in the sequence as 'UNK', but actually writes
+				// an xyz file treating the residue as if it were a 'GLY' (just the seq file keeps the UNK 
+				// in the sequence). Then 'xyzpdb' writes a pdb file that contains coordinates for that 
+				// residue (again as if it were a GLY), but names the residue 'UNK'.
+				// Because of this we don't want to consider these atoms at all
+				// we set a flag and use GLY for the totalNumAtoms (we still need the totalNumAtoms to be
+				// able to keep track of on which residue we are on)
+				inUNKres = true;
+				totalNumAtoms = AAinfo.getNumberAtoms("GLY");
+			} else {
+				totalNumAtoms = AAinfo.getNumberAtoms(resFromSeq);
+			}
 			
 			// when current atom counts coincides with the totalNumAtoms this residue type should have (Hydrogens excluded) 
 			// then we increment residue serial and reset atom count
@@ -113,14 +127,16 @@ public class ConstraintsMaker {
 			
 			if (!atom.startsWith("H")) { // we are not interested in Hydrogens as we don't use them for constraints
 				numAtoms++;
-				atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
-				int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);
-				if (!pdb.getResTypeFromResSerial(pdbResSerial).equals(res)){
-					// sanity check, shouldn't happen at all
-					System.err.println("error! res types don't match for res serial "+pdbResSerial+" res type "+res);
+				if (!inUNKres) {
+					atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
+					int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);
+					if (!pdb.getResTypeFromResSerial(pdbResSerial).equals(res)){
+						// sanity check, shouldn't happen at all
+						System.err.println("error! res types don't match for res serial "+pdbResSerial+" res type "+res);
+					}
+					// we assign the atom serial mapping
+					pdb2xyz.put(pdbAtomSer, xyzAtomSer);
 				}
-				// we assign the atom serial mapping
-				pdb2xyz.put(pdbAtomSer, xyzAtomSer);
 			}
 		}
 		fxyz.close();
@@ -213,6 +229,10 @@ public class ConstraintsMaker {
 
 			//TODO get force constants from weights
 
+			if (!AminoAcid.isStandardAA(i_res) || !AminoAcid.isStandardAA(j_res)) {
+				// we have to skip contacts that involve non standard aminoacids
+				continue;
+			}
 			Set<String> i_atoms = AAinfo.getAtomsForCTAndRes(i_ct, i_res);
 			Set<String> j_atoms = AAinfo.getAtomsForCTAndRes(j_ct, j_res);
 
@@ -242,9 +262,16 @@ public class ConstraintsMaker {
 	public void createPhiPsiConstraints(TreeMap<Integer,ConsensusSquare> phiPsiConsensus, double defaultForceConstantPhiPsi) {
 		for (int resser:phiPsiConsensus.keySet()) {
 			// we can't assign a phi angle for residue 1 or a psi for the last residue so we have to skip those
-			// (here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and thus with coordinates for all residues)
 			if (resser==1) continue;
 			if (resser==pdb.getFullLength()) continue;
+			if (!pdb.hasCoordinates(resser-1) || !pdb.hasCoordinates(resser) || !pdb.hasCoordinates(resser+1)) {
+				// Here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and 
+				// thus with coordinates for all residues
+				// BUT! if there were non-standard aas in the sequence, then our pdb object will not have coordinates for 
+				// those (the file does have the coordinates but we don't read non-standard aas).
+				// We thus have to check if resser or +1 or -1 are not there
+				continue;
+			}
 			
 			// get all atoms necessary for the phi/psi angles 
 			int Ciminus1 = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser-1, "C"));
@@ -267,8 +294,15 @@ public class ConstraintsMaker {
 	public void createOmegaConstraints(double defaultForceConstantOmega) {
 		for (int resser:pdb.getAllSortedResSerials()) {
 			// we can't assign an omega angle for the last residue so we have to skip those
-			// (here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and thus with coordinates for all residues)
 			if (resser==pdb.getFullLength()) continue;
+			if (!pdb.hasCoordinates(resser) || !pdb.hasCoordinates(resser+1)) {
+				// Here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and 
+				// thus with coordinates for all residues
+				// BUT! if there were non-standard aas in the sequence, then our pdb object will not have coordinates for 
+				// those (the file does have the coordinates but we don't read non-standard aas).
+				// We thus have to check if resser or resser+1 are not there
+				continue;
+			}
 			
 			// get all atoms necessary for the phi/psi angles 
 			int CAi = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(resser, "CA"));

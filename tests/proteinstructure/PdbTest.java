@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -353,9 +354,29 @@ public class PdbTest {
 
 	}
 	
+	@Test
+	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
+		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,PDBASE_DB);
+		for (String pdbId:pdbIds) {
+			System.out.print(pdbId+"\t");
+			String pdbCode = pdbId.substring(0,4);
+			String pdbChainCode = pdbId.substring(4,5);
+
+			Pdb pdb = new PdbasePdb(pdbCode,PDBASE_DB,conn);
+			pdb.load(pdbChainCode);
+			
+			TreeMap<Integer,double[]> phipsi = pdb.getAllPhiPsi();
+			Assert.assertEquals(pdb.get_length(), phipsi.size());
+			// Can't do much asserting here, ideas?
+			// At least we check if there aren't exceptions in running getAllPhiPsi, which 
+			// in turn is a good test for hasCoordinates(int,String)
+		}
+	}
+	
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
 		PdbTest pdbTest = new PdbTest();
-		pdbTest.testGetGraph();
+		pdbTest.testGetAllPhiPsi();
 	}
 }

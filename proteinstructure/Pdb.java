@@ -1261,7 +1261,24 @@ public class Pdb {
 	}
 
 	/**
-	 * Gets a TreeMap with atom serials as keys and their coordinates as values for the given contact type
+	 * Returns the number of chain breaks in this structure, i.e. how many unobserved 
+	 * gaps are there in the chain (excluding unobserved regions in the terminals)
+	 * @return
+	 */
+	public int getNumChainBreaks() {
+		int numChainBreaks = 0;
+		int lastResser = 0;
+		for (int resser:getAllSortedResSerials()) {
+			if (lastResser!=0 && resser-lastResser>1) 
+				numChainBreaks++;
+			lastResser = resser;
+		}
+		return numChainBreaks;
+	}
+	
+	/**
+	 * Gets a TreeMap with atom serials as keys and their coordinates as values for the 
+	 * given contact type.
 	 * The contact type can't be a cross contact type, it doesn't make sense here
 	 * @param ct
 	 * @return
@@ -1877,7 +1894,8 @@ public class Pdb {
 	 * other residue properties.
 	 * @param resser
 	 * @return
-	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 * @throws NullPointerException if residue serial not present in this Pdb instance
+	 * or if residue serial is unobserved. Use {@link #hasCoordinates(int)} to check 
 	 */
 	public String getResTypeFromResSerial(int resser) {
 		return getResidue(resser).getAaType().getThreeLetterCode();
@@ -1885,7 +1903,7 @@ public class Pdb {
 
 	/**
 	 * Gets the atom serial given the residue serial and atom code.
-	 * The caller of this functions needs to check whether the resser, atom and combination of the two exists
+	 * The caller of this method needs to check whether the resser, atom and combination of the two exists
 	 * using {@link #hasCoordinates(int, String)}. Otherwise, if this function
 	 * is called and no atom serial exists, a null pointer exception will be thrown.
 	 * @param resser
@@ -1950,13 +1968,14 @@ public class Pdb {
 	}
 
 	/**
-	 * Checks wheter the given atom type for the given residue serial has any associated coordinates
+	 * Checks whether the given atom type for the given residue serial has any associated coordinates
 	 * @param resser the residue serial
 	 * @param atomCode  
-	 * @return true if there is coordinates for given resser-atom, else false
-	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 * @return true if there is coordinates for given resser-atom, else false 
 	 */
 	public boolean hasCoordinates(int resser, String atomCode) {
+		if (!this.containsResidue(resser)) 
+			return false;
 		return getResidue(resser).containsAtom(atomCode);
 	}
 	
