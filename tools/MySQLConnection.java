@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class MySQLConnection {
 
@@ -137,12 +138,12 @@ public class MySQLConnection {
 		conn = DriverManager.getConnection(connStr, user, password);
 	}
 	
-	/*---------------------- methods -------------------------*/
+	/*---------------------------- private methods --------------------------*/
 	
 	/** 
 	 * Get user name from operating system (for use as database username) 
 	 */
-	public static String getUserName() {
+	private static String getUserName() {
 		String user = null;
 		user = System.getProperty("user.name");
 		if(user == null) {
@@ -152,7 +153,7 @@ public class MySQLConnection {
 		return user;
 	}
 	
-	public static void loadMySQLDriver() {
+	protected static void loadMySQLDriver() {
 		try {
 			Class.forName("com.mysql.jdbc.Driver").newInstance();
 		}
@@ -251,6 +252,8 @@ public class MySQLConnection {
 		}  		
 	}
 
+	/*-------------------------- getters and setters ------------------------*/
+	
 	public String getDbname() {
 		return dbname;
 	}
@@ -283,112 +286,31 @@ public class MySQLConnection {
 		this.user = user;
 	}
 
+	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * Returns a statement object created from the underlying connection.
+	 */
 	public Statement createStatement() throws SQLException {
 		return this.conn.createStatement();
 	}
 	
+	/**
+	 * Execute an SQL operation, e.g. update or delete, ignoring any output.
+	 * @param query
+	 * @throws SQLException
+	 */
 	public void executeSql(String query) throws SQLException{
 		Statement stmt;		
 		stmt = conn.createStatement();	
 		stmt.execute(query);
 		stmt.close();		    
 	}
-		
-	/** 
-	 * @param query
-	 * @return the first column of the first row of the result of the given query as a string
-	 * or null if no results were returned
-	 * TODO: should throw the SQLException instead of catching it
-	 */	
-	public String getStringFromDb(String query) {
-		Statement    stmt;
-		ResultSet    rs;
-		String       result = null;
-		
-		try { 
-			
-		    stmt = conn.createStatement();
-		    rs = stmt.executeQuery(query);
-		    if(rs.next()) {
-		    	result = rs.getString(1);
-		    }
-		    rs.close();
-		    stmt.close(); 
-		    
-		} // end try
-		catch (SQLException e) {
-		    System.err.println("SQLException: " + e.getMessage());
-		    System.err.println("SQLState:     " + e.getSQLState());
-		    System.err.println("VendorError:  " + e.getErrorCode());
-		    e.printStackTrace();
-		} // end catch				
-		
-		return result;
-	}
 	
-	/** 
-	 * @param query
-	 * @return the first column of the first row of the result of the given query as an integer
-	 * or -1 if no such results were returned
+	/**
+	 * Closes the current connection. Errors are written to stdout.
 	 */
-	public int getIntFromDb(String query) {
-		Statement    stmt;
-		ResultSet    rs;
-		int          result = -1;
-
-		try { 
-			
-		    stmt = conn.createStatement();
-		    rs = stmt.executeQuery(query);
-		    if(rs.next()) {
-		    	result = rs.getInt(1);
-		    }
-		    rs.close();
-		    stmt.close(); 
-		    
-		} // end try
-		catch (SQLException e) {
-		    System.err.println("SQLException: " + e.getMessage());
-		    System.err.println("SQLState:     " + e.getSQLState());
-		    System.err.println("VendorError:  " + e.getErrorCode());
-		    e.printStackTrace();
-		} // end catch			
-		
-		return result;
-	}
-	
-	/** 
-	 * @param query
-	 * @return the first column of the first row of the result of the given query as an integer
-	 * or NaN if no such results were returned
-	 */
-	public double getDoubleFromDb(String query) {
-		Statement    stmt;
-		ResultSet    rs;
-		double       result = Double.NaN;
-
-		try { 
-			
-		    stmt = conn.createStatement();
-		    rs = stmt.executeQuery(query);
-		    if(rs.next()) {
-		    	result = rs.getDouble(1);
-		    }
-		    rs.close();
-		    stmt.close(); 
-		    
-		} // end try
-		catch (SQLException e) {
-		    System.err.println("SQLException: " + e.getMessage());
-		    System.err.println("SQLState:     " + e.getSQLState());
-		    System.err.println("VendorError:  " + e.getErrorCode());
-		    e.printStackTrace();
-		} // end catch			
-		return result;
-	}
-	
-	public void close() {
-		
+	public void close() {		
 		try {
 			conn.close();
 	    } catch (SQLException e) {
@@ -400,15 +322,16 @@ public class MySQLConnection {
 	}
 	
 	/**
-	 * Get the actual Connection object within this MySQLConnection. In case that an external library need a Connection object
-	 * @return
+	 * Returns the actual Connection object within this MySQLConnection. This is useful in case that an external
+	 * library needs a default Connection object.
+	 * @return the underling connection object of this connection
 	 */
 	public Connection getConnectionObject() {
 		return this.conn;
 	}
 
     /**
-     * To print the db size info for the given db of this MySQLConnection.
+     * Prints the database size info for the given database.
      * @param dbName
      */
 	public void printDbSizeInfo (String dbName) {
@@ -441,11 +364,12 @@ public class MySQLConnection {
     }
 
     /**
-     * To get range of a column from a table in this MySQLConnection. Note that if the connection was created without pointing 
-     * to a particular database then the argument table must be specified as dbname.tablename.
+     * Returns the minimum and the maximum value of the given double column in the given database.
+     * Note that if the connection was created without pointing to a particular database then the
+     * argument table must be specified as dbname.tablename.
      * @param table
      * @param column
-     * @return
+     * @return a double[2] array where arr[0] = min and arr[1] = max
      */
     public double[] getRange(String table, String column) {
     	String query = "";
@@ -473,9 +397,9 @@ public class MySQLConnection {
     }
 
     /**
-     * To get range of a column from a table in this MySQLConnection using a given WHERE condition. Note that if 
-     * the connection was created without pointing to a particular database then the argument table must 
-     * be specified as dbname.tablename.
+     * Returns the minimum and the maximum value of the given double column in the given database
+     * subject to a given WHERE condition. Note that if the connection was created without pointing
+     * to a particular database then the argument table must be specified as dbname.tablename.
      * @param table
      * @param column
      * @param whereStr
@@ -507,10 +431,10 @@ public class MySQLConnection {
     }
 	
     /**
-     * To get all indexes names for a certain table. Note the MySQLConnection object must be created with a non-blank database.
-     * Using INFORMATION_SCHEMA db, only works from mysql 5.0
+     * To get all index names for a certain table. Note the MySQLConnection object must be created with a non-blank database.
+     * Using INFORMATION_SCHEMA db, only works for mysql 5.0 and above.
      * @param table
-     * @return
+     * @return the names of the indexes
      */
     public String[] getAllIndexes4Table(String table) {
     	ArrayList<String> indexesAL=new ArrayList<String>();
@@ -757,5 +681,203 @@ public class MySQLConnection {
     	    e.printStackTrace();    		
     	}
     }
+    
+    // Convenience methods for retrieving data from the database without having to iterate
+    // over result sets
+    
+	/** 
+	 * Returns the first column of the first row of the result of the given query as a string
+	 * or null if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the first column of the first row of the result of the given query as a string
+	 * or null if no results were found
+	 */	
+	public String getStringFromDb(String query) {
+		Statement    stmt;
+		ResultSet    rs;
+		String       result = null;
+		
+		try { 			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    if(rs.next()) {
+		    	result = rs.getString(1);
+		    }
+		    rs.close();
+		    stmt.close(); 		    
+		} // end try
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} // end catch				
+		
+		return result;
+	}
+	
+	/** 
+	 * Returns the first column of the first row of the result of the given query as an integer
+	 * or -1 if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the first column of the first row of the result of the given query as a string
+	 * or -1 if no such results were found
+	 */
+	public int getIntFromDb(String query) {
+		Statement    stmt;
+		ResultSet    rs;
+		int          result = -1;
+
+		try { 			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    if(rs.next()) {
+		    	result = rs.getInt(1);
+		    }
+		    rs.close();
+		    stmt.close();		    
+		} // end try
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} // end catch			
+		
+		return result;
+	}
+	
+	/** 
+	 * Returns the first column of the first row of the result of the given query as a double
+	 * or NaN if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the first column of the first row of the result of the given query as a string
+	 * or NaN if no such results were returned
+	 */
+	public double getDoubleFromDb(String query) {
+		Statement    stmt;
+		ResultSet    rs;
+		double       result = Double.NaN;
+
+		try {		
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    if(rs.next()) {
+		    	result = rs.getDouble(1);
+		    }
+		    rs.close();
+		    stmt.close(); 
+		    
+		} // end try
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		} // end catch			
+		return result;
+	}
+	
+	/**
+	 * Returns the first column of the results of the given query as an array of strings.
+	 * or null if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the results of the given query as an array of strings.
+	 * or null if no such results were found.
+	 */
+	public String[] getStringsFromDb(String query) {
+
+		Statement    stmt;
+		ResultSet    rs;
+		String[]     result = null;
+		LinkedList<String> resultList = new LinkedList<String>();
+		
+		try { 			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    while(rs.next()) {
+		    	resultList.add(rs.getString(1));
+		    }
+		    rs.close();
+		    stmt.close();
+		    result = resultList.toArray(result);
+		}
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Returns the first column of the results of the given query as an array of integers.
+	 * or null if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the results of the given query as an array of integers.
+	 * or null if no such results were found.
+	 */
+	public Integer[] getIntsFromDb(String query) {
+
+		Statement    stmt;
+		ResultSet    rs;
+		Integer[]     result = null;
+		LinkedList<Integer> resultList = new LinkedList<Integer>();
+		
+		try { 			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    while(rs.next()) {
+		    	resultList.add(rs.getInt(1));
+		    }
+		    rs.close();
+		    stmt.close();
+		    result = resultList.toArray(result);
+		}
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Returns the first column of the results of the given query as an array of doubles.
+	 * or null if no results were found. SQL errors are printed to stderr.
+	 * @param query the sql query string
+	 * @return the results of the given query as an array of doubles.
+	 * or null if no such results were found.
+	 */
+	public Double[] getDoublesFromDb(String query) {
+
+		Statement    stmt;
+		ResultSet    rs;
+		Double[]     result = null;
+		LinkedList<Double> resultList = new LinkedList<Double>();
+		
+		try { 			
+		    stmt = conn.createStatement();
+		    rs = stmt.executeQuery(query);
+		    while(rs.next()) {
+		    	resultList.add(rs.getDouble(1));
+		    }
+		    rs.close();
+		    stmt.close();
+		    result = resultList.toArray(result);
+		}
+		catch (SQLException e) {
+		    System.err.println("SQLException: " + e.getMessage());
+		    System.err.println("SQLState:     " + e.getSQLState());
+		    System.err.println("VendorError:  " + e.getErrorCode());
+		    e.printStackTrace();
+		}
+		
+		return result;
+	}
     
 }

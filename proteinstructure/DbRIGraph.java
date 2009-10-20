@@ -25,7 +25,7 @@ public class DbRIGraph extends RIGraph {
 	private static final long serialVersionUID = 1L;
 
 	private final static String MYSQLSERVER="talyn";
-	private final static String MYSQLUSER=MySQLConnection.getUserName();
+	private final static String MYSQLUSER=System.getProperty("user.name");
 	private final static String MYSQLPWD="nieve";
 	
 	private final static String DEFAULT_CR ="(true)"; 	// default contact range (CR field in graph db)
