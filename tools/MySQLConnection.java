@@ -800,7 +800,10 @@ public class MySQLConnection {
 		    }
 		    rs.close();
 		    stmt.close();
-		    result = resultList.toArray(result);
+		    if(resultList.size() > 0) {
+		    	result = new String[resultList.size()];
+		    	result = resultList.toArray(result);
+		    }
 		}
 		catch (SQLException e) {
 		    System.err.println("SQLException: " + e.getMessage());
@@ -834,7 +837,10 @@ public class MySQLConnection {
 		    }
 		    rs.close();
 		    stmt.close();
-		    result = resultList.toArray(result);
+		    if(resultList.size() > 0) {
+		    	result = new Integer[resultList.size()];
+		    	result = resultList.toArray(result);
+		    }
 		}
 		catch (SQLException e) {
 		    System.err.println("SQLException: " + e.getMessage());
@@ -868,7 +874,10 @@ public class MySQLConnection {
 		    }
 		    rs.close();
 		    stmt.close();
-		    result = resultList.toArray(result);
+		    if(resultList.size() > 0) {
+		    	result = new Double[resultList.size()];
+		    	result = resultList.toArray(result);
+		    }
 		}
 		catch (SQLException e) {
 		    System.err.println("SQLException: " + e.getMessage());
