@@ -26,7 +26,7 @@ public class GeneralFeature implements Feature {
 	/*-------------------------- implemented methods ------------------------*/
 	
 	public String getDescription() {
-		return this.getDescription();
+		return this.description;
 	}
 
 	public IntervalSet getIntervalSet() {
