@@ -33,6 +33,8 @@ import org.ggf.drmaa.JobTemplate;
 import org.ggf.drmaa.Session;
 import org.ggf.drmaa.SessionFactory;
 
+import actionTools.TinkerStatusNotifier;
+
 import proteinstructure.AAinfo;
 import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
@@ -87,9 +89,21 @@ public class TinkerRunner {
 	private static final long RETRY_TIME_FIND_OUTPUT = 2000;  // time between retries for checking output files of a parallel disgeom run
 	private static final double ESTIMATED_FAILURE_RATE = 0.1; // estimated failure rate for jobs in the cluster (for parallel distgeom runs)
 	
+	// Options, TODO: use in this class, not just cmview
+	
+	public static enum PARALLEL {NONE,CLUSTER};
+	public static enum REFINEMENT {ANNEALING,MINIMIZATION};
+	// currently processes step: creating unfolded PROTEIN, generating CONSTRAINTS, generating STRUCTURES, 
+	// SELECTION of best structure, LOADING into cmview (not used here)
+	
+	public static enum STATE {PROTEIN,CONSTRAINTS, STRUCTURES,SELECTION,LOADING}
+
+	
+	private TinkerStatusNotifier notifier = null; 
 	/*--------------------------- member variables --------------------------*/
 	// input parameters
 	private String tinkerBinDir;
+	private String tmpDir;
 	private String forceFieldFileName;
 	private double forceConstant;
 	
@@ -165,10 +179,41 @@ public class TinkerRunner {
 		this.lastBaseName = null;
 		this.lastNumberOfModels = 0;
 		
-		this.isDrmaaSessionOpen = false;	
+		this.isDrmaaSessionOpen = false;
+		
+		this.tmpDir = System.getProperty("java.io.tmpdir");
 	}
 	
+	/**
+	 * Sets a notifier that will be called when this job's status changes
+	 * @param n
+	 */
+	
+	public void setNotifier(TinkerStatusNotifier n) {
+		notifier = n;
+	}
+	
+	
+	public void setTmpDir(String absolutePath) {
+		tmpDir = absolutePath;
+		
+	}
 	/*---------------------------- private methods --------------------------*/
+	
+
+	/** 
+	 * Sends a notification if a notifier exists
+	 */
+	
+	private void notify(STATE s) {
+		if (notifier != null) {
+			notifier.sendStatus(s);
+		}
+	}
+	private void notifySucceeded(int i) {
+		notifier.filesDone(i);
+	}
+	
 	
 	/**
 	 * Throws a FileNotFoundException if given file can't be found after given number of 
@@ -272,7 +317,7 @@ public class TinkerRunner {
 		
 		if (tinkerError) {
 			log.flush();
-			throw new TinkerError("Tinker error, revise log file. ");
+			throw new TinkerError("Tinker error, see log file. ");
 		}
 		
 		int exitValue = 1;
@@ -310,6 +355,7 @@ public class TinkerRunner {
 		boolean tinkerError = false; // to store the exit state of the tinker program
 		String cmdLine = distgeomProg+" "+xyzFile.getAbsolutePath()+" "+n+" "+dgeomParams;
 		Process dgeomProc = Runtime.getRuntime().exec(cmdLine);
+		
 		// logging and capturing output
 		BufferedReader dgeomOutput = new BufferedReader(new InputStreamReader(dgeomProc.getInputStream()));
 		log.println("#cmd: "+cmdLine);
@@ -570,6 +616,12 @@ public class TinkerRunner {
 		out.close();		
 	}
 	
+	public void stop() {
+		if (isDrmaaSessionOpen) {
+			killJobs();
+		} 
+	}
+	
 	/**
 	 * Kills all jobs submitted in this drmaa session.
 	 * If some job doesn't exist or if it can't be killed for any other reason, 
@@ -667,6 +719,7 @@ public class TinkerRunner {
 		try {
 			TreeSet<Integer> jobsFailed = new TreeSet<Integer>();
 			long start = System.currentTimeMillis();
+			int lastSucceeded = 0;
 			while (jobsSucceeded.size()<n 
 					&& (System.currentTimeMillis()-start)/1000.0<PARALLEL_JOBS_TIMEOUT) {
 				try {
@@ -675,7 +728,11 @@ public class TinkerRunner {
 					System.err.println("Unexpected error: couldn't sleep to wait for output files");
 					System.exit(1);
 				}
-
+				if (jobsSucceeded.size() > lastSucceeded) {
+					notifySucceeded(jobsSucceeded.size());
+					lastSucceeded = jobsSucceeded.size();
+				}
+				
 				for (int i=1;i<=nExtended;i++) {
 					int status = this.session.getJobProgramStatus(jobIds[i]);
 					switch (status) {
@@ -688,11 +745,8 @@ public class TinkerRunner {
 					// we put the rest of cases here as placeholders, we don't do anything at all with them yet
 					// if they do happen they will be ignored and the loop will continue until timeout
 					case Session.RUNNING:
-						break;
 					case Session.QUEUED_ACTIVE:
-						break;
 					case Session.UNDETERMINED:
-						break;
 					case Session.SYSTEM_ON_HOLD:
 					case Session.SYSTEM_SUSPENDED:
 					case Session.USER_ON_HOLD:
@@ -714,6 +768,8 @@ public class TinkerRunner {
 		}
 		
 		// while loop finished: it means either we reached timeout or we have the required number of jobs (n)
+		notifySucceeded(jobsSucceeded.size());
+		
 		if (jobsSucceeded.size()<n) {
 			throw new TinkerError("Timeout was reached and only "+jobsSucceeded.size()+" jobs finished successfully.");
 		}
@@ -722,7 +778,7 @@ public class TinkerRunner {
 		// 2 if jobs successful check output files are there
 		// we've got to retry a few times with waiting of 2s in between
 		// to leave a bit of time between jobs finish and check of output, 
-		// file system seems to have problems to detect the files inmediately after jobs finished
+		// file system seems to have problems to detect the files immediately after jobs finished
 		boolean allFilesFound = false;
 		int retries = 0;
 		while (!allFilesFound && retries<MAX_RETRIES_FIND_OUTPUT) {
@@ -1085,7 +1141,7 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
-	 * @returns A pdb object containg the generated structure
+	 * @returns A pdb object containing the generated structure
 	 */
 	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
 	throws TinkerError, IOException {
@@ -1140,12 +1196,12 @@ public class TinkerRunner {
 		
 		Pdb resultPdb = null;
 		
-		String outputDir = System.getProperty("java.io.tmpdir");
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
 		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
-				forceConstantDist, forceConstantTorsion, true, outputDir, baseName, cleanUp, parallel);
+				forceConstantDist, forceConstantTorsion, true, tmpDir, baseName, cleanUp, parallel);
+
 		int pickedIdx = pickByLeastBoundViols();
 		resultPdb = getStructure(pickedIdx);
 		
@@ -1175,7 +1231,7 @@ public class TinkerRunner {
 		
 		Pdb resultPdb = null;
 		
-		String outputDir = System.getProperty("java.io.tmpdir");
+		String outputDir = tmpDir;
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
 		
@@ -1305,6 +1361,7 @@ public class TinkerRunner {
 		}
 		
 		// 1. run tinker's protein program (create unfolded protein chain)	
+		notify(STATE.PROTEIN);
 		runProtein(sequence, outputDir, baseName, log);
 		// before running xyzpdb we wait to make sure that file is there, it seems that 
 		// sometimes (with many jobs running in parallel) there are some sync problems with the file system
@@ -1314,6 +1371,8 @@ public class TinkerRunner {
 		runXyzpdb(xyzFile, seqFile, pdbFile, log);
 
 		// 2. creating constraints into key file
+		notify(STATE.CONSTRAINTS);
+		
 		ConstraintsMaker cm = null;
 		try {
 			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile);
@@ -1335,6 +1394,8 @@ public class TinkerRunner {
 		cm.closeKeyFile();
 
 		// 3. run tinker's distgeom
+		notify(STATE.STRUCTURES)
+		;
 		if (parallel) {
 			runParallelDistgeom(xyzFile, outputDir, baseName, numberOfModels, log);
 		} else {
@@ -1342,6 +1403,8 @@ public class TinkerRunner {
 		}
 
 		// 4. converting xyz output files to pdb files and calculating rmsds
+		notify(STATE.SELECTION);
+		
 		for (int i = 1; i<=numberOfModels; i++) {
 			String ext = String.format(".%03d",i); // 001, 002, 003, ...
 			File outputXyzFile = new File(outputDir, baseName+ext);
@@ -1668,6 +1731,8 @@ public class TinkerRunner {
 		}
 		return edgeSet;
 	}
+
+	
 }
 
 

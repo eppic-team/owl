@@ -281,7 +281,9 @@ public class Pdb {
 	 * for instance because it's not observed
 	 */
 	public Residue getResidue(int resSerial) {
-		return residues.get(resSerial);
+		
+		Residue res = residues.get(resSerial);
+		return res;
 	}
 	
 	/**
