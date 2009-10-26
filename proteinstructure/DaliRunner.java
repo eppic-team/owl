@@ -72,7 +72,7 @@ public class DaliRunner {
 	 * @throws FileFormatError
 	 */
 	
-  private void correctFileDALIFormat(String fileName) throws IOException {
+  private void correctFileDALIFormat(String fileName) throws IOException, AlignmentConstructionError {
 
 	String nextLine = "";
 	String subj = "";
@@ -93,7 +93,7 @@ public class DaliRunner {
 	p = Pattern.compile(DALI_REGEX);
 
 	// read sequences
-
+	try {
 	while ((nextLine = fileIn.readLine()) != null) {
 		if (nextLine.startsWith("Query")) {
 			m = p.matcher(nextLine);
@@ -104,6 +104,9 @@ public class DaliRunner {
 			m.find();
 			subj += m.group(2);
 		}
+	}
+	} catch (IllegalStateException e) {
+		throw new AlignmentConstructionError("Could not read DALI alignment. Check "+fileName+" for errors");
 	}
 
 	// We convert the dot used by DALI to whatever we are using
