@@ -143,7 +143,11 @@ public class NbhStringRanker extends tools.MySQLConnection {
 				for(int i = 0; i < length; i++){
 					//loop over the File array
 					
-					this.setAANbhStringMaps(list[i], false);
+					if(!list[i].getAbsolutePath().contains(final_generation)){
+						//check, that the final generation is not placed in the same field
+						
+						this.setAANbhStringMaps(list[i], false);
+					}
 				}
 			}
 			else{
