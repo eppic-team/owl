@@ -1,10 +1,11 @@
 package embed;
 
 import java.io.*;
-import java.io.IOException;
 import java.sql.SQLException;
 //import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
+
+import edu.uci.ics.jung.graph.util.Pair;
 //import java.util.HashMap;
 //import java.util.HashSet;
 //import java.util.Random;
@@ -13,15 +14,7 @@ import java.util.Arrays;
 
 import Jama.Matrix;
 
-import proteinstructure.FileRIGraph;
-import proteinstructure.GraphFileFormatError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-//import proteinstructure.RIGEdge;
-//import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
+import proteinstructure.*;
 
 import tools.MySQLConnection;
 import tools.RegexFileFilter;
@@ -65,9 +58,31 @@ public class Scorer {
 	 * @param sparseBounds
 	 * @param fullContactMap
 	 * @return
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbLoadError 
 	 */
 	public static double getCMError(Bound[][] sparseBounds, RIGraph fullContactMap) {
 		Bound[][] cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
+		// infer bounds for all pairs through triangle inequality
+		Bound[][] bounds = inferAllBounds(sparseBounds);
+		double sumDev = 0;
+		for (int i=0;i<bounds.length;i++) {
+			for (int j=i+1;j<bounds.length;j++) {
+				if (cmapBounds[i][j]!=null) {
+					sumDev += Math.max(0,bounds[i][j].upper-cmapBounds[i][j].upper);
+				}
+			}
+		}
+		return sumDev/(double) fullContactMap.getFullLength(); 
+	}
+	
+	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
+		MySQLConnection conn = new MySQLConnection ();
+		Pdb pdb = new PdbasePdb(fullContactMap.getPdbCode(), "pdbase_20090728", conn);
+		pdb.load(fullContactMap.getChainCode());
+		Matrix distmat = pdb.calculateDistMatrix("Ca");
+		Bound[][] cmapBounds = convertRIGraphToBounds(fullContactMap,distmat.getArray());//Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
 		// infer bounds for all pairs through triangle inequality
 		Bound[][] bounds = inferAllBounds(sparseBounds);
 		double sumDev = 0;
@@ -91,8 +106,11 @@ public class Scorer {
 	 * @param subset
 	 * @param fullContactMap
 	 * @return
+	 * @throws PdbLoadError 
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
 	 */
-	public static double getCMError(RIGraph subset, RIGraph fullContactMap) {
+	public static double getCMError(RIGraph subset, RIGraph fullContactMap) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
 		
 		//initializing Bound array instance using class 'Reconstructer' method 'convertRIGraphToBoundsMatrix()' 
 		Bound[][] subsetBounds = Reconstructer.convertRIGraphToBoundsMatrix(subset);
@@ -255,18 +273,30 @@ public class Scorer {
 	 */
 	public static double getDMError (Bound[][] sub, double[][] full) {
 		Bound[][] sparse = inferAllBounds(sub);
-		double fehler = 0;
+		//inferring all bounds via triangular inequality
+		
+		double error = 0;
 		for(int index1 = 0; index1 < full.length; index1++){
+			//looping over all bounds, first dimension
+			
 			for(int index2 = index1 +1; index2 < full.length; index2++){
+				//looping over all bounds, second dimension
+				
 				if(full[index1][index2] != 0.0) {
+					//only contacts of type (i,j), with j >= i + 1 are considered
+					
 					if(sparse[index1][index2].upper > full[index1][index2]){
-					fehler = fehler + Math.pow(sparse[index1][index2].upper - full[index1][index2],2.0 );
+					//only if the upper bound is greater than the exact distance value error is calculated
+					
+					error += Math.pow(sparse[index1][index2].upper - full[index1][index2],2.0 );
+					//error function: square root of the sum of the square difference of upper bound and the exact distance,
+					//divided by 1/2*n*(n - 1), where n is the number all contacts
 					}
 				}
 			}
 		}
-		fehler = Math.pow(fehler, 0.5);
-	return 2.0*fehler/((double) full.length*(full.length - 1));
+		error = Math.pow(error, 0.5);
+	return 2.0*error/((double) full.length*(full.length - 1));
 	}
 	
 	/**
@@ -401,6 +431,44 @@ public class Scorer {
 		file.println(", st deviation: "+values[1]);
 		System.out.println("file written...");
 				
+	}
+	
+	public static Bound[][] convertRIGraphToBounds (RIGraph rig, double[][] fulldistancematrix){
+		HashSet<Pair<Integer>> contact_pairs = convertRIGraphToHashSet(rig); 
+		Iterator<Pair<Integer>> it = contact_pairs.iterator();
+		int cont_size = rig.getSequence().length(), counter = 0;
+		Bound[][] bounds = new Bound[cont_size][cont_size];
+		while(it.hasNext()){
+			Pair<Integer> pair = it.next();
+			int f_val = pair.getFirst().intValue() - 1, s_val = pair.getSecond().intValue() - 1;
+			double value = fulldistancematrix[f_val][s_val];
+			bounds[f_val][s_val] = new Bound(value,value);
+			bounds[s_val][f_val] = new Bound(value,value);
+			counter ++;
+		}
+		return bounds;
+	}
+	
+	public static HashSet<Pair<Integer>> convertRIGraphToHashSet (RIGraph rig){
+		HashSet<RIGEdge> rig_set = new HashSet<RIGEdge> (rig.getEdges());
+		Iterator<RIGEdge> it = rig_set.iterator();
+		HashSet<Pair<Integer>> pairs = new HashSet<Pair<Integer>> (2*rig_set.size());
+		while(it.hasNext()){
+			RIGEdge edge = it.next();
+			RIGNode node1 = rig.getEndpoints(edge).getFirst(), node2 = rig.getEndpoints(edge).getSecond();
+			Integer index_a = new Integer (node1.getResidueSerial()), index_b = new Integer (node2.getResidueSerial());
+			Pair<Integer> pair = new Pair<Integer> (0,0);
+			if(index_a.intValue() < index_b.intValue()){
+				pair = new Pair<Integer> (index_a,index_b);
+			}
+			else{
+				if(index_a.intValue() > index_b.intValue()){
+					pair = new Pair<Integer> (index_b,index_a);
+				}
+			}
+			pairs.add(pair);
+		}
+		return pairs;
 	}
 	/*-------------------------- main  -------------------------------*/
 
