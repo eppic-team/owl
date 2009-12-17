@@ -50,32 +50,32 @@ public class DistMatrix {
 	/**
 	 * dimension of the contact map representing matrix
 	 */
-    public int dim;
+    private int dim;
     
     /**
      * highest power p - 1, appearing in the power sequence
      */
-    public int max_power;
+    private int max_power;
 
     /**
      * eigenvalues of the contact map representing matrix
      */
-    public double[] eigenvalues;
+    private double[] eigenvalues;
 
     /**
      * the contact map representing matrix
      */
-    public Matrix mat;
+    private Matrix mat;
     
     /**
      * the transformation matrix, converting <code>{@link #mat}</code> to a diagonal (or Jacobian) matrix
      */
-    public Matrix transformer;
+    private Matrix transformer;
     
     /**
      * chain code of the protein
      */
-    public String name;
+    private String name;
     
     /**
      * a String instance representing the minimal polynomial <tt>m_A</tt>, by definition the minimal polynomial
@@ -83,17 +83,17 @@ public class DistMatrix {
      * that holds <tt>m_A | p_A</tt> and <tt>m_A(A) = 0</tt>, where <tt>0</tt> is the zero matrix. <tt>A</tt> is
      * similar to a diagonal matrix <tt>D</tt> if and only if <tt>m_A = p_A</tt>. 
      */
-    public String minpoly;
+    private String minpoly;
     
     /**
      * the eigenvalue decomposition of <code>{@link #mat}</code>.
      */
-    public EigenvalueDecomposition eigmats;
+    private EigenvalueDecomposition eigmats;
     
     /**
      * the power sequence of the matrix
      */
-    public HashMap<Integer,HashMap<Integer,Matrix>> potence_sequence;
+    private HashMap<Integer,HashMap<Integer,Matrix>> potence_sequence;
     
     
     /**
@@ -376,6 +376,10 @@ public class DistMatrix {
     		}
     	}
     	return greatest;
+    }
+    
+    public Matrix getTransformer (){
+    	return new Matrix (this.transformer.getArray());
     }
     
     public String toString(){
