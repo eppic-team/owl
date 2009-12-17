@@ -17,25 +17,25 @@ import tools.RegexFileFilter;
  */
 public class NeighbourhoodString {
 	
-	public HashMap<Integer,HashSet<Integer>> index_map_sparse;
+	private HashMap<Integer,HashSet<Integer>> index_map_sparse;
 	
-	public HashMap<Integer,Integer> index_counter;
+	private HashMap<Integer,Integer> index_counter;
 	
-	public HashMap<Integer,String> sequence;
+	private HashMap<Integer,String> sequence;
 	
-	public String file_name;
+	private String file_name;
 	
-	public String output;
+	private String output;
 	
-	public String content;
+	private String content;
 	
-	public String pdb_code;
+	private String pdb_code;
 	
-	public String chain_code;
+	private String chain_code;
 	
-	public String path;
+	private String path;
 	
-	public static final String separator = "%x";
+	private static final String separator = "%x";
 	
 	/*---------------------------------------constructors-------------------------------------------------------*/
 	
