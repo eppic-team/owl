@@ -23,15 +23,15 @@ import java.util.*;
  */
 public class Stripper {
 	
-	public static final String database = "pdbase_20090728";
+	private static final String database = "pdbase_20090728";
 	
-	public int num_of_cycles;
+	private int num_of_cycles;
 	
-	public Pdb protein;
+	private Pdb protein;
 	
-	public RIGraph prot_graph;
+	private RIGraph prot_graph;
 	
-	public HashMap<Integer,Individuals> unstrip_array;
+	private HashMap<Integer,Individuals> unstrip_array;
 	
 	public Stripper (){
 		this.protein = new Pdb();
