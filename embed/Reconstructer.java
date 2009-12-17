@@ -127,7 +127,7 @@ public class Reconstructer {
 	 * @return
 	 * @throws IllegalArgumentException if contact type of given RIGraph is not a single atom contact type
 	 */
-	protected static Bound[][] convertRIGraphToBoundsMatrix(RIGraph rig) {
+	public static Bound[][] convertRIGraphToBoundsMatrix(RIGraph rig) {
 		// sanity check
 		if (rig.getSequence().length()!=rig.getFullLength()) {
 			throw new IllegalArgumentException("Full length of RIG and length of sequence differ!");

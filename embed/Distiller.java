@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -16,6 +17,8 @@ import graphAveraging.GraphAveragerError;
 
 import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
+import proteinstructure.PdbCodeNotFoundError;
+import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.RIGEdge;
 import proteinstructure.RIGEnsemble;
@@ -77,7 +80,7 @@ public class Distiller {
 	 * @param numSampledContacts
 	 * @return
 	 */
-	protected Bound[][] sampleSubset(int numSampledContacts) {
+	public Bound[][] sampleSubset(int numSampledContacts) {
 		Bound[][] subset = new Bound[cmapSize][cmapSize];
 		
 		Random rand = new Random();
@@ -117,8 +120,11 @@ public class Distiller {
 	 * {@link #getMinErrorSetScore()}. Write all scores out with {@link #writeScores(PrintStream)}
 	 * @param numSamples
 	 * @param contactsToSample fraction of total contacts we want to be selected for the subset 
+	 * @throws PdbLoadError 
+	 * @throws SQLException 
+	 * @throws PdbCodeNotFoundError 
 	 */
-	public void distillRandomSampling(int numSamples, double contactsToSample) {
+	public void distillRandomSampling(int numSamples, double contactsToSample) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
 		 
 		allSampledSets = new ArrayList<SetScore>();		
 
