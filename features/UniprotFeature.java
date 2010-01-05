@@ -33,7 +33,7 @@ public class UniprotFeature implements Feature {
 	/*-------------------------- implemented methods ------------------------*/
 	
 	public String getDescription() {
-		return this.getDescription();
+		return this.description;
 	}
 
 	public IntervalSet getIntervalSet() {

@@ -37,7 +37,7 @@ public class CsaFeature implements Feature {
 	/*-------------------------- implemented methods ------------------------*/
 	
 	public String getDescription() {
-		return this.getDescription();
+		return this.description;
 	}
 
 	public IntervalSet getIntervalSet() {
