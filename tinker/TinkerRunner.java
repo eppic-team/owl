@@ -211,7 +211,9 @@ public class TinkerRunner {
 		}
 	}
 	private void notifySucceeded(int i) {
-		notifier.filesDone(i);
+		if (notifier != null) {
+			notifier.filesDone(i);
+		}
 	}
 	
 	
