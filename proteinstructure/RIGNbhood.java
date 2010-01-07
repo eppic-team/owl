@@ -284,6 +284,19 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 		return ressers;
 	}
 
+	
+	public String getNbString(){
+		String ressers="";
+		for (int resser:this.keySet()){
+			if (resser!=centralResidue.getResidueSerial()) {
+				ressers += AAinfo.threeletter2oneletter(this.get(resser).getResidueType());
+			} else {
+				ressers += 'x';
+			}
+		}
+		return ressers;	
+	}
+	
 	public String toString(){
 		if (this.isEmpty()) return "";
 		else return this.getMotif();

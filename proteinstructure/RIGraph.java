@@ -1193,4 +1193,16 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			serials2nodes.put(node.getResidueSerial(),node);
 		}
 	}
+
+	/**
+	 * 
+	 * @param serial
+	 * @return a neighborrhood String in the "LKxTV" format
+	 */
+	
+	public String getNeighborhoodString(int serial) {
+		RIGNode node = getNodeFromSerial(serial);
+		
+		return null;
+	}
 }

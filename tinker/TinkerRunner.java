@@ -1127,6 +1127,16 @@ public class TinkerRunner {
 		return minIdx;
 	}
 	
+	/**
+	 * Returns the number of bound violations for a given structure id
+	 * @return int the number of (upper and lower bound) violations
+	 */
+	
+	public int getBoundViols(int id) {
+		return numLowerBoundViol[id]+numUpperBoundViol[id];
+	}
+	
+	
 	// reconstruction
 	
 	/** 
