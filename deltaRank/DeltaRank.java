@@ -20,23 +20,30 @@ public class DeltaRank {
 	private RIGraph graph;
 	private double[][] matrix;
 	private double score = 0;
-	private int scoringCellsCount = 0;
+	private int scoringResiduesCount;
+	private String[] vectors;
 	
 	public DeltaRank(MySQLConnection myConn, RIGraph riGraph) {
 		conn= myConn;
 		graph = riGraph;
 		score = 0.0;
+		vectors = new String[graph.getFullLength()];
 		matrix = new double[graph.getFullLength()][graph.getFullLength()];
 		for (int i = 1; i <= graph.getFullLength();i++) {
 			for (int j = 1; j <= graph.getFullLength();j++) {
 				matrix[i-1][j-1] = calculateDeltaRank(i,j);
-				if (matrix[i-1][j-1] > -80) {
-					scoringCellsCount += 1;
-					score += matrix[i-1][j-1];
-				}
 			}
 		}
+		updateScore();
+		updateVectors();
 	}
+	
+	/**
+	 * Calculates the delta rank for one cell of a contact map matrix
+	 * @param i
+	 * @param j
+	 * @return delta rank, -100 if not enough data
+	 */
 	
 	private double calculateDeltaRank(int i, int j) {
 		RIGNbhood nbhoodj,nbhoodi, nbhoodjAfter, nbhoodiAfter;
@@ -47,6 +54,7 @@ public class DeltaRank {
 		RIGNode nodeI, nodeJ;
 		nodeJ = graph.getNodeFromSerial(j);
 		nodeI = graph.getNodeFromSerial(i);
+
 		
 		if (nodeJ == null || nodeI == null) {
 			return -100;
@@ -61,7 +69,6 @@ public class DeltaRank {
 		nbi = nbhoodi.getNeighbors();
 		nbi.add(nodeJ);
 		nbhoodiAfter = new RIGNbhood(nodeI, nbi);
-		
 		String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodi.getNbString()+"') -	" +
 					 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodiAfter.getNbString()+"')) +" +
 					 	"((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodj.getNbString()+"') -	" +
@@ -91,31 +98,94 @@ public class DeltaRank {
 	}
 
 	public double getScore() {
-		return (score/(double)scoringCellsCount)*100;
+		return (double)score/(double)scoringResiduesCount;
+	}
+	
+	
+	/**
+	 * Updates the delta rank vectors
+	 */
+	
+	private void updateVectors() {
+		RIGNbhood nbhood;
+		RIGNode node;
+		Statement stm;
+		ResultSet res;
+		
+		for (int i = 1; i <= graph.getFullLength(); i++) {
+			node = graph.getNodeFromSerial(i);
+			if (node == null) { continue; }
+			nbhood = graph.getNbhood(node);
+			String sql = "SELECT rvector from mw.vectors where nbstring='"+nbhood.getNbString()+"';";
+			try {
+				stm = conn.createStatement();
+				res = stm.executeQuery(sql);
+				if (res.next()) {
+					vectors[i-1] = res.getString(1);
+				} else {
+					vectors[i-1] = "";
+				}
+				
+				res.close();
+				stm.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				e.getMessage();
+			} 
+		}
+	}
+	
+	/**
+	 * The delta rank score is defined as the net sum of rank changes compared with the background distribution 
+	 */
+	
+	private void updateScore() {
+		RIGNbhood nbhood;
+		RIGNode node;
+		Statement stm;
+		ResultSet res;
+		int ret;
+		score = 0;
+		scoringResiduesCount = 0;
+		
+		for (int i = 1; i <= graph.getFullLength(); i++) {
+			node = graph.getNodeFromSerial(i);
+			if (node == null) { continue; }
+			nbhood = graph.getNbhood(node);
+			String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(node.getResidueType())+"',rvector) from mw.vectors where nbstring='x') -	" +
+		 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(node.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhood.getNbString()+"')),-100);";
+			try {
+				stm = conn.createStatement();
+				res = stm.executeQuery(sql);
+				if (res.next()) {
+					ret =  res.getInt(1);
+					if (ret > -50) {
+						scoringResiduesCount++;
+						score += ret;
+					}
+				} 
+				
+				res.close();
+				stm.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				e.getMessage();
+			} 
+		}
 	}
 	
 	public void updateMap(Pair<Integer> cont) {
 		for (int i = 1; i <= graph.getFullLength();i++) {
-			if (matrix[i-1][cont.getSecond()-1] > -90) {
-				scoringCellsCount--;
-				score -= matrix[i-1][cont.getSecond()-1];
-			}
 			matrix[i-1][cont.getSecond()-1] = calculateDeltaRank(i,cont.getSecond());
-			if (matrix[i-1][cont.getSecond()-1] > -90) {
-				score += matrix[i-1][cont.getSecond()-1];
-				scoringCellsCount++;
-			}
 		}
 		for (int j = 1; j <= graph.getFullLength();j++) {
-			if (matrix[cont.getFirst()-1][j-1] > -90) {
-				score -= matrix[cont.getFirst()-1][j-1];
-				scoringCellsCount--;
-			}
 			matrix[cont.getFirst()-1][j-1] = calculateDeltaRank(cont.getFirst(),j);				
-			if (matrix[cont.getFirst()-1][j-1] > -90) {
-				scoringCellsCount++;
-				score += matrix[cont.getFirst()-1][j-1];
-			}
 		}
+		updateScore();
+		updateVectors();
+	}
+
+	public String[] getVectors() {
+		return vectors;
 	}
 }
