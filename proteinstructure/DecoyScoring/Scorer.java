@@ -237,7 +237,6 @@ public abstract class Scorer {
 	 * @param indices2types
 	 */
 	protected static void initAtomMap(HashMap<String,Integer> types2indices, HashMap<Integer,String> indices2types) {
-		types2indices = new HashMap<String, Integer>();
 		int i=0;
 		for (String resType:AAinfo.getAAs()) {
 			for (String atom:AAinfo.getAtomsForCTAndRes("ALL", resType)) {
@@ -245,7 +244,6 @@ public abstract class Scorer {
 				i++;				
 			}
 		}
-		indices2types = new HashMap<Integer, String>();
 		for (String resType:types2indices.keySet()) {
 			indices2types.put(types2indices.get(resType), resType);
 		}
@@ -257,13 +255,11 @@ public abstract class Scorer {
 	 * @param indices2types
 	 */
 	protected static void initResMap(HashMap<String,Integer> types2indices, HashMap<Integer,String> indices2types) {
-		types2indices = new HashMap<String, Integer>();
 		int i=0;
 		for (String resType:AAinfo.getAAs()) {
 			types2indices.put(resType,i);
 			i++;
 		}
-		indices2types = new HashMap<Integer, String>();
 		for (String resType:types2indices.keySet()) {
 			indices2types.put(types2indices.get(resType), resType);
 		}

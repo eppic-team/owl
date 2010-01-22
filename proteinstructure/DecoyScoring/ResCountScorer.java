@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
@@ -41,6 +42,9 @@ public class ResCountScorer extends CountScorer {
 		
 		this.scoringMethod = ScoringMethod.RESCOUNT;
 		
+		this.types2indices = new HashMap<String, Integer>();
+		this.indices2types = new HashMap<Integer, String>();
+
 		this.listFile = listFile;
 		this.structureIds = new ArrayList<String>();
 		this.ct = ct;

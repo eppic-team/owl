@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import proteinstructure.AIGNode;
 import proteinstructure.AIGraph;
@@ -39,6 +40,9 @@ public class AtomCountScorer extends CountScorer {
 	public AtomCountScorer(File listFile, double cutoff, int minSeqSep) throws SQLException {
 		
 		this.scoringMethod = ScoringMethod.ATOMCOUNT;
+
+		this.types2indices = new HashMap<String, Integer>();
+		this.indices2types = new HashMap<Integer, String>();
 
 		this.listFile = listFile;
 		this.structureIds = new ArrayList<String>();

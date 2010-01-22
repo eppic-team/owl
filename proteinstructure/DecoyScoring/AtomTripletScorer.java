@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 
 import proteinstructure.AIGNode;
 import proteinstructure.AIGraph;
@@ -43,6 +44,9 @@ public class AtomTripletScorer extends TripletScorer {
 		
 		this.scoringMethod = ScoringMethod.ATOMTRIPLET;
 		
+		this.types2indices = new HashMap<String, Integer>();
+		this.indices2types = new HashMap<Integer, String>();
+
 		this.structureIds = new ArrayList<String>();
 		this.listFile = listFile;
 		this.cutoff = cutoff;
