@@ -8,9 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 
-import proteinstructure.AAinfo;
 import proteinstructure.AIGNode;
 import proteinstructure.AIGraph;
 import proteinstructure.FileFormatError;
@@ -71,24 +69,9 @@ public class AtomTripletScorer extends TripletScorer {
 	}
 
 	
-	private void initAtomMap() {
-		types2indices = new HashMap<String, Integer>();
-		int i=0;
-		for (String resType:AAinfo.getAAs()) {
-			for (String atom:AAinfo.getAtomsForCTAndRes("ALL", resType)) {
-				types2indices.put(resType+atom,i);
-				i++;				
-			}
-		}
-		indices2types = new HashMap<Integer, String>();
-		for (String resType:types2indices.keySet()) {
-			indices2types.put(types2indices.get(resType), resType);
-		}
-	}
-	
 	@Override
 	public void countTriplets() throws SQLException, IOException {
-		this.initAtomMap();
+		Scorer.initAtomMap(types2indices, indices2types);
 
 		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);

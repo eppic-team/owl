@@ -6,9 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
-import proteinstructure.AAinfo;
 import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
@@ -69,22 +67,9 @@ public class ResCountScorer extends CountScorer {
 		readScMatFromFile(scMatFile);
 	}
 
-	private void initResMap() {
-		types2indices = new HashMap<String, Integer>();
-		int i=0;
-		for (String resType:AAinfo.getAAs()) {
-			types2indices.put(resType,i);
-			i++;
-		}
-		indices2types = new HashMap<Integer, String>();
-		for (String resType:types2indices.keySet()) {
-			indices2types.put(types2indices.get(resType), resType);
-		}
-	}
-
 	@Override
 	public void countNodes() throws SQLException, IOException {
-		this.initResMap();
+		Scorer.initResMap(types2indices, indices2types);
 
 		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);

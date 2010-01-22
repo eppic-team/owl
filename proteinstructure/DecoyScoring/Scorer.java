@@ -5,9 +5,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import proteinstructure.AAinfo;
 import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
 
@@ -227,5 +229,43 @@ public abstract class Scorer {
 			return false;
 		}
 		return pdb.isAllAtom();
+	}
+	
+	/**
+	 * Given two maps populates them with atom types and indices.
+	 * @param types2indices
+	 * @param indices2types
+	 */
+	protected static void initAtomMap(HashMap<String,Integer> types2indices, HashMap<Integer,String> indices2types) {
+		types2indices = new HashMap<String, Integer>();
+		int i=0;
+		for (String resType:AAinfo.getAAs()) {
+			for (String atom:AAinfo.getAtomsForCTAndRes("ALL", resType)) {
+				types2indices.put(resType+atom,i);
+				i++;				
+			}
+		}
+		indices2types = new HashMap<Integer, String>();
+		for (String resType:types2indices.keySet()) {
+			indices2types.put(types2indices.get(resType), resType);
+		}
+	}
+	
+	/**
+	 * Given two maps populates them with residue types and indices.
+	 * @param types2indices
+	 * @param indices2types
+	 */
+	protected static void initResMap(HashMap<String,Integer> types2indices, HashMap<Integer,String> indices2types) {
+		types2indices = new HashMap<String, Integer>();
+		int i=0;
+		for (String resType:AAinfo.getAAs()) {
+			types2indices.put(resType,i);
+			i++;
+		}
+		indices2types = new HashMap<Integer, String>();
+		for (String resType:types2indices.keySet()) {
+			indices2types.put(types2indices.get(resType), resType);
+		}
 	}
 }
