@@ -17,14 +17,16 @@ import tools.MySQLConnection;
 public class DeltaRank {
 
 	private MySQLConnection conn;
+	private String db;
 	private RIGraph graph;
 	private double[][] matrix;
 	private double score = 0;
 	private int scoringResiduesCount;
 	private String[] vectors;
 	
-	public DeltaRank(MySQLConnection myConn, RIGraph riGraph) {
+	public DeltaRank(MySQLConnection myConn, RIGraph riGraph, String db) {
 		conn= myConn;
+		this.db = db;
 		graph = riGraph;
 		score = 0.0;
 		vectors = new String[graph.getFullLength()];
@@ -69,10 +71,10 @@ public class DeltaRank {
 		nbi = nbhoodi.getNeighbors();
 		nbi.add(nodeJ);
 		nbhoodiAfter = new RIGNbhood(nodeI, nbi);
-		String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodi.getNbString()+"') -	" +
-					 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodiAfter.getNbString()+"')) +" +
-					 	"((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodj.getNbString()+"') -	" +
-							 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhoodjAfter.getNbString()+"')),-100);";
+		String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodi.getNbString()+"') -	" +
+					 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodiAfter.getNbString()+"')) +" +
+					 	"((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodj.getNbString()+"') -	" +
+							 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodjAfter.getNbString()+"')),-100);";
 		try {
 			stm = conn.createStatement();
 			res = stm.executeQuery(sql);
