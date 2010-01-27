@@ -14,7 +14,9 @@ public enum ScoringMethod {
 	RESTRIPLET("residue triplet", "restriplet"),
 	ATOMTRIPLET("atom triplet", "atomtriplet"),
 	ATOMCOMBINED("atom combined", "atomcomb"),
-	RESCOMBINED("residue combined", "rescomb");
+	RESCOMBINED("residue combined", "rescomb"),
+	ATOMDISTANCEDEP("atom distance dependent", "atomdist");
+	
 	
 	private String id;
 	private String description;

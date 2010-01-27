@@ -102,6 +102,7 @@ public class scoreDecoys {
 
 		if (scMatFile2 == null) {
 			scorer = Scorer.readScoreMatFromFile(scMatFile);
+
 		} else {
 			scorer = Scorer.readScoreMatsFromFiles(scMatFile,scMatFile2,weightType,weightCount);
 		}
