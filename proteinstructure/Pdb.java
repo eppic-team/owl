@@ -298,15 +298,29 @@ public class Pdb {
 	
 	/**
 	 * Gets a new Map with residue serials to Residues that contain only the atoms for the 
-	 * given contact type. The Residue objects are new, but the Atom objects to which they 
-	 * point to are the same old references.
-	 * @param ct
+	 * given contact type and given interval set. The Residue objects are new, but the Atom 
+	 * objects to which they point to are the same old references.
+	 * @param ct the contact type
+	 * @param intervSet only residues of this intervals will be considered, if null then
+	 * all residues taken
 	 * @return
 	 */
-	private TreeMap<Integer, Residue> getReducedResidues(String ct) {
+	private TreeMap<Integer, Residue> getReducedResidues(String ct, IntervalSet intervSet) {
 		TreeMap<Integer,Residue> reducedResidues = new TreeMap<Integer, Residue>();
-		for (Residue residue:residues.values()) {
-			reducedResidues.put(residue.getSerial(),residue.getReducedResidue(ct));
+		
+		if (intervSet!=null) {
+			for (Interval interv:intervSet) {
+				for (int resser=interv.beg;resser<=interv.end;resser++) {
+					Residue residue = getResidue(resser);
+					if (residue==null) 
+						throw new IllegalArgumentException("Invalid interval specified, residue "+resser+" is not part of this Pdb");
+					reducedResidues.put(resser,residue.getReducedResidue(ct));
+				}
+			}
+		} else { // we take all observed residues
+			for (Residue residue:residues.values()) {
+				reducedResidues.put(residue.getSerial(),residue.getReducedResidue(ct));
+			}
 		}
 		return reducedResidues;
 	}
@@ -804,6 +818,8 @@ public class Pdb {
 	 * @throws IOException	 * 
 	 */
 	public void checkScop(String version, boolean online) throws IOException {
+		if (pdbCode==null || pdbCode.equals(NO_PDB_CODE)) return; // if this is not a pdb entry with a pdb code there's no SCOP id to get
+		
 		this.scop = new Scop();	
 		ScopRegion sr = null;
 		String startPdbResSer = "", endPdbResSer = "";
@@ -2336,8 +2352,24 @@ public class Pdb {
 	 * @throws ConformationsNotSameSizeError
 	 */
 	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeError {
-		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct);
-		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct);
+		return rmsd(otherPdb, ct, null);
+	}
+	
+	/**
+	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
+	 * restricted only to the given set of intervals
+	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
+	 * 
+	 * @param otherPdb
+	 * @param ct the contact type (crossed contact types don't make sense here)
+	 * @param intervSet an interval set of residues for which the rmsd will be calculated, if 
+	 * null then all residues will be considered
+	 * @return
+	 * @throws ConformationsNotSameSizeError
+	 */
+	public double rmsd(Pdb otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeError {
+		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct,intervSet);
+		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
 
 		ArrayList<Vector3d> conf1AL = new ArrayList<Vector3d>();
 		ArrayList<Vector3d> conf2AL = new ArrayList<Vector3d>();	
