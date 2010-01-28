@@ -30,6 +30,8 @@ import proteinstructure.Atom;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.GraphFileFormatError;
+import proteinstructure.Interval;
+import proteinstructure.IntervalSet;
 import proteinstructure.MaxClusterRunner;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
@@ -137,6 +139,15 @@ public class PdbTest {
 			Assert.assertEquals(0.0,pdb1.rmsd(pdb1p, ct),0.0001);
 			Assert.assertEquals(0.0,pdb1p.rmsd(pdb1, ct),0.0001);			
 		}
+		// rmsd on intervals check
+		IntervalSet intervSet = new IntervalSet();
+		intervSet.add(new Interval(pdb1.getMinObsResSerial()+10,pdb1.getMaxObsResSerial()-10));
+		// check that rmsd is 0 on an interval
+		for (String ct:cts) {
+			Assert.assertEquals(0.0,pdb1.rmsd(pdb1p, ct, intervSet),0.0001);
+			Assert.assertEquals(0.0,pdb1p.rmsd(pdb1, ct, intervSet),0.0001);			
+		}
+
 		MaxClusterRunner mcr = new MaxClusterRunner(MAX_CLUSTER_EXE);
 		double mcrmsd = mcr.calculatePairwiseScore(TEST_PDB_FILE_1, TEST_PDB_FILE_2, MaxClusterRunner.ScoreType.RMSD);
 		double ourrmsd = pdb1.rmsd(pdb2, "Ca");
