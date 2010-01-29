@@ -145,7 +145,7 @@ public class genGraph {
 					pdb.load(pdbChainCode);
 
 					// get graph
-					RIGraph graph = pdb.get_graph(edgeType, cutoff);
+					RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 					
 					String edgeTypeStr = edgeType.replaceAll("/", ":");
 					
@@ -187,7 +187,7 @@ public class genGraph {
 				}
 
 				pdb.load(pdbChainCode4file);
-				RIGraph graph = pdb.get_graph(edgeType, cutoff);
+				RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 
 				String edgeTypeStr = edgeType.replaceAll("/", ":");
 				

@@ -58,7 +58,7 @@ public class mirrorIt {
 		}
 		
 		pdb.mirror();
-		pdb.dump2pdbfile(outFile.getAbsolutePath());
+		pdb.writeToPDBFile(outFile.getAbsolutePath());
 	}
 
 }

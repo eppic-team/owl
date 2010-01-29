@@ -1,7 +1,7 @@
 import java.io.File;
 import java.io.IOException;
 
-import proteinstructure.FastaFileFormatError;
+import proteinstructure.FileFormatError;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 
@@ -25,7 +25,7 @@ public class alignSeq {
 		Sequence seq1 = new Sequence();
 		try {
 			seq1.readFromFastaFile(fa1);
-		} catch (FastaFileFormatError e) {
+		} catch (FileFormatError e) {
 			System.err.println("Error reading from file " + fa1 + ": " + e.getMessage());
 			System.exit(2);
 		} catch (IOException e) {
@@ -38,7 +38,7 @@ public class alignSeq {
 		Sequence seq2 = new Sequence();
 		try {
 			seq2.readFromFastaFile(fa2);
-		} catch (FastaFileFormatError e) {
+		} catch (FileFormatError e) {
 			System.err.println("Error reading from file " + fa2 + ": " + e.getMessage());
 			System.exit(3);
 		} catch (IOException e) {

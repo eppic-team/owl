@@ -1,4 +1,4 @@
-package proteinstructure.DecoyScoring;
+package proteinstructure.decoyScoring;
 
 /**
  * Enum to identify the different scoring methods

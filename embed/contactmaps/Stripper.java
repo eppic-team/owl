@@ -55,7 +55,7 @@ public class Stripper {
 		this.protein = new PdbasePdb (protein_PDB_code, database, conn);
 		this.protein.load("A");
 		this.prot_graph = new RIGraph ();
-		this.prot_graph = this.protein.get_graph("Ca", 9.0);
+		this.prot_graph = this.protein.getRIGraph("Ca", 9.0);
 		this.unstrip_array = new HashMap<Integer,Individuals> (num_of_runs * 2);
 		Individuals.setFullContactMap(this.prot_graph);
 		Individuals ind = new Individuals (this.prot_graph);

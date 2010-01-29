@@ -258,7 +258,7 @@ public class Distiller {
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
-		RIGraph graph = pdb.get_graph(ct, cutoff);
+		RIGraph graph = pdb.getRIGraph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());
 		
 		Distiller dist = new Distiller(graph);

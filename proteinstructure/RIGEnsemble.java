@@ -140,7 +140,7 @@ public class RIGEnsemble {
 							//System.out.println(filename + ":" + chains[0]);
 							pdb.load(chains[0], models[0]);	// load first chain and first model
 							if(commonSequence != null) ((PdbfilePdb) pdb).setSequence(commonSequence.getSeq());
-							graph = pdb.get_graph(this.edgeType, this.distCutoff);
+							graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
@@ -154,7 +154,7 @@ public class RIGEnsemble {
 							pdb = new CiffilePdb(file.getAbsolutePath());
 							String[] chains = pdb.getChains();
 							pdb.load(chains[0]);	// load first chain
-							graph = pdb.get_graph(this.edgeType, this.distCutoff);
+							graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
@@ -169,7 +169,7 @@ public class RIGEnsemble {
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
-						} catch (GraphFileFormatError e) {
+						} catch (FileFormatError e) {
 							System.err.println("Error loading from contact map file: " + e.getMessage());
 							//System.exit(1);
 						}
@@ -180,7 +180,7 @@ public class RIGEnsemble {
 								this.addRIG(graph);
 								this.addFileName(filename);
 								fr++;
-							} catch (GraphFileFormatError e) {
+							} catch (FileFormatError e) {
 								System.err.println("Error loading from RR file: " + e.getMessage());
 								//System.exit(1);
 							}
@@ -217,7 +217,7 @@ public class RIGEnsemble {
 			for(int mod: models) {
 				//pdb = new PdbfilePdb(file.getAbsolutePath());
 				pdb.load(chain, mod);
-				graph = pdb.get_graph(this.edgeType, this.distCutoff);
+				graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
 				mr++;
 			}
@@ -230,7 +230,7 @@ public class RIGEnsemble {
 			for(int mod: models) {
 				//pdb = new CiffilePdb(file.getAbsolutePath());
 				pdb.load(chain, mod);
-				graph = pdb.get_graph(this.edgeType, this.distCutoff);
+				graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
 				mr++;
 			}
@@ -362,7 +362,7 @@ public class RIGEnsemble {
 			commonSequence = new Sequence();
 			try {
 				commonSequence.readFromFastaFile(new File(seqFileName));
-			} catch (FastaFileFormatError e) {
+			} catch (FileFormatError e) {
 				System.err.println("Failed to read from Fasta file " + seqFileName + ":" + e.getMessage());
 				System.exit(1);
 			}

@@ -12,12 +12,12 @@ import proteinstructure.*;
 
 public class testJUNGframework {
 
-	public static void main(String[] args) throws GraphFileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundError {
+	public static void main(String[] args) throws FileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundError {
 		Pdb pdb = new PdbasePdb("7adh");
 		pdb.load("A");
 		
-		RIGraph graph = pdb.get_graph("Ca", 8.0);
-		RIGraph graph2 = pdb.get_graph("Ca/Cg", 8.0);
+		RIGraph graph = pdb.getRIGraph("Ca", 8.0);
+		RIGraph graph2 = pdb.getRIGraph("Ca/Cg", 8.0);
 		//RIGraph graph = new FileRIGraph("/scratch/local/temp.graph");
 		//RIGraph graph = new DbRIGraph("casp_decoys",9);
 		//System.out.println(graph);
@@ -147,8 +147,8 @@ public class testJUNGframework {
 		pdb1.load("A");
 		Pdb pdb2 = new PdbasePdb("1sha");
 		pdb2.load("A");
-		RIGraph g1 = pdb1.get_graph("Ca", 8);
-		RIGraph g2 = pdb2.get_graph("Ca", 8);
+		RIGraph g1 = pdb1.getRIGraph("Ca", 8);
+		RIGraph g2 = pdb2.getRIGraph("Ca", 8);
 		System.out.println("g1: "+g1.getPdbCode()+" nodes: "+g1.getVertexCount()+" edges: "+g1.getEdgeCount());
 		System.out.println("g2: "+g2.getPdbCode()+" nodes: "+g2.getVertexCount()+" edges: "+g2.getEdgeCount());
 		RIGraph newgraph = g1.copy();

@@ -40,8 +40,8 @@ public class DaliRunner {
 		first = query;
 		second = subj;
 		workdir = createTempDirectory(tempdir);
-		first.dump2pdbfile(workdir.getAbsolutePath()+"/mod1.pdb", true);
-		second.dump2pdbfile(workdir.getAbsolutePath()+"/mod2.pdb", true);
+		first.writeToPDBFile(workdir.getAbsolutePath()+"/mod1.pdb");
+		second.writeToPDBFile(workdir.getAbsolutePath()+"/mod2.pdb");
 		
 		String daliOutputFilename = workdir.getAbsolutePath()+"/"+first.pdbCode+first.pdbChainCode+
 									"-"+second.pdbCode+second.pdbChainCode+".html";

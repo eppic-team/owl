@@ -74,7 +74,7 @@ public class CompareIndis extends Demes {
 			Iterator<Integer> it = keys.iterator();
 			Pdb pr = new PdbasePdb(pdb,"pdbase_20090728",this.conn);
 			pr.load("A");
-			RIGraph rig = pr.get_graph("Ca", 9.0);
+			RIGraph rig = pr.getRIGraph("Ca", 9.0);
 			Individuals.setFullContactMap(rig);
 			while(it.hasNext()){
 				Integer index = it.next();

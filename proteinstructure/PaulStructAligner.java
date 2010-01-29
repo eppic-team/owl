@@ -87,7 +87,7 @@ public class PaulStructAligner implements StructAligner {
 		}
 		RIGraph[] graphs = new RIGraph[pdbs.length];
 		for (int i=0;i<pdbs.length;i++) {
-			graphs[i]=pdbs[i].get_graph(contactType, cutoff);
+			graphs[i]=pdbs[i].getRIGraph(contactType, cutoff);
 		}
 		return alignStructures(graphs,tags);
 	}

@@ -272,7 +272,7 @@ public class genDbGraph {
 						for (int j = 0; j<edgeTypes.length; j++) {
 							System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 							
-							RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
+							RIGraph graph = pdb.getRIGraph(edgeTypes[j], cutoffs[j], directed[j]);
 							//graph.restrictContactsBetweenSs();
 							if (seqseps != null) {
 								if (seqseps[j] > 1) {
@@ -381,7 +381,7 @@ public class genDbGraph {
 					for (int j = 0; j<edgeTypes.length; j++) {
 						System.out.print("--> "+(directed[j]?"directed":"")+" graph "+edgeTypes[j]+" for cutoff "+cutoffs[j]);
 						
-						RIGraph graph = pdb.get_graph(edgeTypes[j], cutoffs[j], directed[j]);
+						RIGraph graph = pdb.getRIGraph(edgeTypes[j], cutoffs[j], directed[j]);
 						//graph.restrictContactsBetweenSs();
 						if (seqseps != null) {
 							if (seqseps[j] > 1) {

@@ -411,7 +411,7 @@ public class averageGraph {
 			// if in benchmark we get the original graph to later calculate accuracy/coverage
 			RIGraph originalGraph = null;
 			if (mode==Modes.BENCHMARK) {
-				originalGraph = targetPdb.get_graph(cts[ctIdx], cutoffs[ctIdx]);
+				originalGraph = targetPdb.getRIGraph(cts[ctIdx], cutoffs[ctIdx]);
 			}
 			
 			// we get graphs for our templates
@@ -507,7 +507,7 @@ public class averageGraph {
 			}
 			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
-			pdb.dump2pdbfile(outpdbfile.getAbsolutePath());
+			pdb.writeToPDBFile(outpdbfile.getAbsolutePath());
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
 			if (casp) {
 				File outcasptsfile = new File(outDir,basename+".reconstructed.casp");

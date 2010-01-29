@@ -307,7 +307,7 @@ public class Embedder {
 		
 		Pdb pdb = new PdbasePdb(pdbCode);
 		pdb.load(pdbChainCode);
-		int n = pdb.get_length();
+		int n = pdb.getObsLength();
 		int ind = 0;
 		TreeMap<Integer, Integer> resser2ind = new TreeMap<Integer,Integer>();
 		TreeMap<Integer, Integer> ind2resser = new TreeMap<Integer, Integer>();
@@ -318,7 +318,7 @@ public class Embedder {
 		}
 		
 		// the returned matrix from calculateDistMatrix is not yet squared
-		Matrix sqDistMatrix = pdb.calculateDistMatrix("Ca");
+		Matrix sqDistMatrix = pdb.calcDistMatrixJamaFormat("Ca");
 		for (int i =0;i<sqDistMatrix.getRowDimension();i++) {
 			for (int j=0;j<sqDistMatrix.getColumnDimension();j++){
 				sqDistMatrix.set(i, j, sqDistMatrix.get(i, j)*sqDistMatrix.get(i,j));
@@ -345,7 +345,7 @@ public class Embedder {
 		}
 		
 		System.out.println("Writing out embedding as CA trace pdb file "+outPdbFile);
-		pdbEmbedded.dump2pdbfile(outPdbFile.getAbsolutePath());
+		pdbEmbedded.writeToPDBFile(outPdbFile.getAbsolutePath());
 
 	}
 }

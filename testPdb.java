@@ -22,11 +22,11 @@ public class testPdb {
 		Pdb pdbFromPdbase = new PdbasePdb(pdbCode); // by default it goes to database "pdbase", a name for another pdbase database + a MySQLConnection can also be passed
 		pdbFromPdbase.load(pdbChainCode);
 		System.out.println("dumping structure to pdb file");
-		pdbFromPdbase.dump2pdbfile("test_dump_from_pdbase.pdb");
+		pdbFromPdbase.writeToPDBFile("test_dump_from_pdbase.pdb");
 		// note that the chainCode is not necessarily the same as the pdbChainCode
 		String chainCode = pdbFromPdbase.getChainCode();
 		System.out.println("getting graph");
-		RIGraph graph = pdbFromPdbase.get_graph("ALL", 4.1);
+		RIGraph graph = pdbFromPdbase.getRIGraph("ALL", 4.1);
 		System.out.println("writing graph to file");
 		graph.write_graph_to_file("test_from_pdbase.cm");
 		
@@ -44,7 +44,7 @@ public class testPdb {
 		Pdb pdbFromFile = new PdbfilePdb("test_dump_from_pdbase.pdb"); // we read from the file dumped from pdbase, note that dumped file contains internal chain identifier
 		pdbFromFile.load(chainCode);
 		System.out.println("getting graph");
-		RIGraph graph2 = pdbFromFile.get_graph("ALL", 4.1);
+		RIGraph graph2 = pdbFromFile.getRIGraph("ALL", 4.1);
 		System.out.println("writing graph to file");
 		graph2.write_graph_to_file("test_pdb_from_file.cm");
 	}

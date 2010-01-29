@@ -100,7 +100,7 @@ public class GraphIOGDLFile<V,E> {
 	public static void main(String[] args) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IOException {
 		Pdb pdb = new PdbasePdb("1bxy");
 		pdb.load("A");
-		RIGraph graph = pdb.get_graph("Ca", 8);
+		RIGraph graph = pdb.getRIGraph("Ca", 8);
 		
 		String gdlfile = "test.gdl";
 		

@@ -53,7 +53,7 @@ public class writeSASAtoBFactor {
 			pdb.setBFactorsPerResidue(sasas);
 			try {
 				System.out.println("Writing " + outFile);
-				pdb.dump2pdbfile(outFile);
+				pdb.writeToPDBFile(outFile);
 			} catch (IOException e) {
 				System.err.println("Error writing to file " + outFile + ": " + e.getMessage());
 				System.exit(1);

@@ -1,29 +1,30 @@
-package proteinstructure.DecoyScoring;
+package proteinstructure.decoyScoring;
 
 import java.io.File;
 import java.io.IOException;
 
+import proteinstructure.AIGraph;
 import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
-import proteinstructure.RIGraph;
 
-public class ResCombinedScorer extends Scorer {
-	private ResCountScorer countScorer;
-	private ResTypeScorer typeScorer;
+public class AtomCombinedScorer extends Scorer {
+
+	private AtomCountScorer countScorer;
+	private AtomTypeScorer typeScorer;
 	
 	private double countWeight;
 	private double typeWeight;
 
-	public ResCombinedScorer(File scMatType, File scMatCount, double typeWeight, double countWeight) throws IOException, FileFormatError {
+	public AtomCombinedScorer(File scMatType, File scMatCount, double typeWeight, double countWeight) throws IOException, FileFormatError {
 		
 
-		this.typeScorer = new ResTypeScorer(scMatType);
-		this.countScorer = new ResCountScorer(scMatCount);
+		this.typeScorer = new AtomTypeScorer(scMatType);
+		this.countScorer = new AtomCountScorer(scMatCount);
 
 		this.typeWeight = typeWeight;
 		this.countWeight = countWeight;
 		
-		this.scoringMethod = ScoringMethod.RESCOMBINED;
+		this.scoringMethod = ScoringMethod.ATOMCOMBINED;
 		
 		if (!typeScorer.getContactType().equals(countScorer.getContactType())) {
 			throw new IllegalArgumentException("Count scorer and type scorer are based on different contact types");
@@ -49,7 +50,7 @@ public class ResCombinedScorer extends Scorer {
 
 	@Override
 	public double scoreIt(Pdb pdb) {
-		RIGraph graph = pdb.get_graph(this.ct, this.cutoff);
+		AIGraph graph = pdb.getAllAtomGraph(this.cutoff);
 		int typeMinSeqSep = typeScorer.getMinSeqSep();
 		int countMinSeqSep = countScorer.getMinSeqSep();
 		

@@ -66,7 +66,7 @@ public class RIGraphMinSpanningTree {
 		
 		Pdb pdb = new PdbasePdb("1bxy");
 		pdb.load("A");
-		RIGraph graph = pdb.get_graph("Cb", 8);
+		RIGraph graph = pdb.getRIGraph("Cb", 8);
 		
 		System.out.println("Vertex count: "+graph.getVertexCount());
 		System.out.println("Edge count: "+graph.getEdgeCount());

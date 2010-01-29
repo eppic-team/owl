@@ -343,7 +343,7 @@ public class CMGrabber {
 	}
 	
 	/**
-	 * Auxiliary method: creates a PDB file by calling the <code>{@link #PDB.dump2pdbfile(String)}</code>. The method
+	 * Auxiliary method: creates a PDB file by calling the <code>{@link #PDB.writeToPDBFile(String)}</code>. The method
 	 * does not create a PDB file, if a file having the same name already exists.
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundError
@@ -357,7 +357,7 @@ public class CMGrabber {
 			MySQLConnection conn = new MySQLConnection ();
 			Pdb pdb = new PdbasePdb(this.name, "pdbase_20090728", conn);
 			pdb.load("A");
-			pdb.dump2pdbfile(title);
+			pdb.writeToPDBFile(title);
 		}
 		else{
 			System.err.println(title + " file already exists...");

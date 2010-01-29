@@ -1,4 +1,4 @@
-package proteinstructure.DecoyScoring;
+package proteinstructure.decoyScoring;
 
 import gnu.getopt.Getopt;
 
@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 
 import proteinstructure.FileFormatError;
@@ -13,14 +15,14 @@ import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
-import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.TemplateList;
 
 import tools.MySQLConnection;
+import tools.Triplet;
 
-public class ResTypeScorer extends TypeScorer {
+public class ResTripletScorer extends TripletScorer {
 	
 	private static final File DEFAULT_LIST_FILE = new File("/project/StruPPi/jose/emp_potential/cullpdb_pc20_res1.6_R0.25_d090728_chains1627.list");
 	private static final double DEFAULT_CUTOFF = 8.0;
@@ -31,18 +33,18 @@ public class ResTypeScorer extends TypeScorer {
 	
 
 	/**
-	 * Constructs a ResTypeScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
+	 * Constructs a ResTripletScorer by taking a list of structure ids (pdbCodes+pdbChainCodes),
 	 * and parameters contact type, distance cutoff and minimum sequence separation used for 
 	 * calculating the scoring matrix. 
 	 * @param listFile the file with a list of PDB ids (pdbCode+pdbChainCode)
 	 * @param ct the contact type to be used as definition of contacts
 	 * @param cutoff the distance cutoff to be used as definition of contacts
-	 * @param minSeqSep the minimum sequence separation to be used when counting type pairs
+	 * @param minSeqSep the minimum sequence separation for a contact to be considered
 	 * @throws SQLException if can't establish connection to db server
 	 */
-	public ResTypeScorer(File listFile, String ct, double cutoff, int minSeqSep) throws SQLException {
+	public ResTripletScorer(File listFile, String ct, double cutoff, int minSeqSep) throws SQLException {
 		
-		this.scoringMethod = ScoringMethod.RESTYPE;
+		this.scoringMethod = ScoringMethod.RESTRIPLET;
 		
 		this.types2indices = new HashMap<String, Integer>();
 		this.indices2types = new HashMap<Integer, String>();
@@ -55,27 +57,27 @@ public class ResTypeScorer extends TypeScorer {
 		
 		this.numEntities = NUM_RES_TYPES;
 		entityCounts = new int[numEntities];
-		pairCounts = new int[numEntities][numEntities];
+		tripletCounts = new int[numEntities][numEntities][numEntities];
 		
 		this.conn = new MySQLConnection();
 		
 	}
 
 	/**
-	 * Constructs a ResTypeScorer given a file with a scoring matrix. All values of the matrix 
+	 * Constructs a ResTripletScorer given a file with a scoring matrix. All values of the matrix 
 	 * and some other necessary fields will be read from the file.
 	 * @param scMatFile
 	 * @throws IOException
 	 * @throws FileFormatError
 	 */
-	public ResTypeScorer(File scMatFile) throws IOException, FileFormatError  {
-		this.scoringMethod = ScoringMethod.RESTYPE;
+	public ResTripletScorer(File scMatFile) throws IOException, FileFormatError  {
+		this.scoringMethod = ScoringMethod.RESTRIPLET;
 		readScMatFromFile(scMatFile);
 	}
 
 	
 	@Override
-	public void countPairs() throws SQLException, IOException {
+	public void countTriplets() throws SQLException, IOException {
 		Scorer.initResMap(types2indices, indices2types);
 
 		for (String id:TemplateList.readIdsListFile(listFile)) {
@@ -99,15 +101,17 @@ public class ResTypeScorer extends TypeScorer {
 				continue;
 			}
 
-			RIGraph graph = pdb.get_graph(ct, cutoff);
+			RIGraph graph = pdb.getRIGraph(ct, cutoff);
 			graph.restrictContactsToMinRange(minSeqSep);
 			for (RIGNode node:graph.getVertices()) {
 				countEntity(types2indices.get(node.getResidueType()));
 			}
-			for (RIGEdge edge:graph.getEdges()) {
-				String iRes = graph.getEndpoints(edge).getFirst().getResidueType();
-				String jRes = graph.getEndpoints(edge).getSecond().getResidueType();
-				countPair(types2indices.get(iRes),types2indices.get(jRes));
+			//for (Triplet<RIGNode> trip:graph.getTriangles()) {
+			for (Triplet<RIGNode> trip:graph.getTriplets()) {
+				String iRes = trip.getFirst().getResidueType();
+				String jRes = trip.getSecond().getResidueType();
+				String kRes = trip.getThird().getResidueType();
+				countTriplet(types2indices.get(iRes),types2indices.get(jRes),types2indices.get(kRes));
 			}
 		}
 		this.totalStructures = structureIds.size();
@@ -115,26 +119,25 @@ public class ResTypeScorer extends TypeScorer {
 	
 	@Override
 	public double scoreIt(Pdb pdb) {
-		RIGraph graph = pdb.get_graph(this.ct, this.cutoff);
+		RIGraph graph = pdb.getRIGraph(this.ct, this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 		return scoreIt(graph);
 	}
 
 	protected double scoreIt(RIGraph graph) {
 		double totalScore = 0;
-		for (RIGEdge edge:graph.getEdges()) {
-			String iRes = graph.getEndpoints(edge).getFirst().getResidueType();
-			String jRes = graph.getEndpoints(edge).getSecond().getResidueType();
-			int i = types2indices.get(iRes);
-			int j = types2indices.get(jRes);
-			if (j>=i) {
-				totalScore+= scoringMat[i][j];
-			} else {
-				totalScore+= scoringMat[j][i];
-			}
+		//Collection<Triplet<RIGNode>> triplets = graph.getTriangles();
+		Collection<Triplet<RIGNode>> triplets = graph.getTriplets();
+ 		for (Triplet<RIGNode> trip:triplets) {
+			String iRes = trip.getFirst().getResidueType();
+			String jRes = trip.getSecond().getResidueType();
+			String kRes = trip.getSecond().getResidueType();
+			int[] ind = {types2indices.get(iRes),types2indices.get(jRes),types2indices.get(kRes)};
+			Arrays.sort(ind);
+			totalScore+= scoringMat[ind[0]][ind[1]][ind[2]];
 		}
 		
-		return (totalScore/graph.getEdgeCount());
+		return (totalScore/triplets.size());
 	}
 	
 	
@@ -143,21 +146,23 @@ public class ResTypeScorer extends TypeScorer {
 			"\nCompiles a scoring matrix based on residue types from a given file with a list of \n" +
 			"pdb structures.\n" +
 			"Usage:\n" +
-			"ResTypeScorer -o <output_matrix_file> [-l <list_file> -c <cutoff> -m <min_seq_sep>]\n"+
+			"ResTripletScorer -o <output_matrix_file> [-l <list_file> -c <cutoff> -m <min_seq_sep>]\n"+
 			"  -o <file>     : file to write the scoring matrix to\n" +
 			"  -l <file>     : file with list of pdbCodes+pdbChainCodes to use as training set \n" +
 			"                  the scoring matrix. Default is "+DEFAULT_LIST_FILE+"\n" +
 			"  -t <string>   : contact type. Default: "+DEFAULT_CT+"\n"+
 			"  -c <float>    : distance cutoff for the contacts. Default: "+DEFAULT_CUTOFF+"\n" +
-			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n";
+			"  -m <int>      : minimum sequence separation to consider a contact. Default: "+DEFAULT_MIN_SEQ_SEP+"\n" +
+			"  -w            : write counts matrix as well as scoring matrix \n";
 
 			File listFile = DEFAULT_LIST_FILE;
 			File scMatFile = null;
 			double cutoff = DEFAULT_CUTOFF;
 			int minSeqSep = DEFAULT_MIN_SEQ_SEP;
 			String ct = DEFAULT_CT;
+			boolean writeCounts = false;
 
-			Getopt g = new Getopt("ResTypeScorer", args, "l:t:c:o:m:h?");
+			Getopt g = new Getopt("ResTripletScorer", args, "l:t:c:o:m:wh?");
 			int c;
 			while ((c = g.getopt()) != -1) {
 				switch(c){
@@ -175,7 +180,10 @@ public class ResTypeScorer extends TypeScorer {
 					break;
 				case 'm':
 					minSeqSep = Integer.parseInt(g.getOptarg());
-					break;				
+					break;
+				case 'w':
+					writeCounts = true;
+					break;									
 				case 'h':
 				case '?':
 					System.out.println(help);
@@ -190,12 +198,11 @@ public class ResTypeScorer extends TypeScorer {
 			}
 
 
-		ResTypeScorer sc = new ResTypeScorer(listFile,ct,cutoff,minSeqSep);
-		sc.countPairs();
+		ResTripletScorer sc = new ResTripletScorer(listFile,ct,cutoff,minSeqSep);
+		sc.countTriplets();
 		sc.calcScoringMat();
-		sc.writeScMatToFile(scMatFile,false);
-		
-	}
+		sc.writeScMatToFile(scMatFile,writeCounts);
 
+	}
 
 }

@@ -308,7 +308,7 @@ public class PolyposeRunner {
 			file = new File(TMP_DIR, "polypose.temp" + filenum + ".pdb");	// TODO: AAARGH!
 			//file.deleteOnExit();
 			PrintStream out = new PrintStream(new FileOutputStream(file));
-			pdb.writeAtomLines(out, true);
+			pdb.writeAtomLines(out);
 			out.close();
 			filenames.add(file.getAbsolutePath());
 			filenum++;

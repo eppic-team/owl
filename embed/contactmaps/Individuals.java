@@ -520,7 +520,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		String ct = rig.getContactType();
 		int lengt = bound.length;
 		Pdb n = getFullProt(rig, conn);
-		RIGraph r = n.get_graph(ct, cut);
+		RIGraph r = n.getRIGraph(ct, cut);
 		int edgec = r.getEdgeCount();
 		int edgepercent = (int) (NumCont/100.0*(double) edgec);
 		double[][] dm = distMap(n);
@@ -697,7 +697,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 					MySQLConnection conn = new MySQLConnection ();
 					Pdb pdb = new PdbasePdb(this.name, "pdbase_20090728", conn);
 					pdb.load(this.chainCode);
-					RIGraph fullCM = pdb.get_graph("Ca", 9);
+					RIGraph fullCM = pdb.getRIGraph("Ca", 9);
 					setFullContactMap(fullCM);
 				}
 				if(this.CMError == 0.0 || this.DMError == 0.0){					
@@ -1379,9 +1379,9 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		pdb.load(pdbChainCode);
 
 		//initializing RIGraph instance with predefined parameters
-		fullcontactmap = pdb.get_graph(ct, cutoff);
+		fullcontactmap = pdb.getRIGraph(ct, cutoff);
 		
-		Matrix fullDistanceMap = pdb.calculateDistMatrix(ct);
+		Matrix fullDistanceMap = pdb.calcDistMatrixJamaFormat(ct);
 		
 		fulldistancematrix =  fullDistanceMap.getArray();
 		conn.close();
@@ -1417,9 +1417,9 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 			pdb.load(pdbChainCode);
 
 			//initializing RIGraph instance with predefined parameters
-			fullcontactmap = pdb.get_graph(ct, cutoff);
+			fullcontactmap = pdb.getRIGraph(ct, cutoff);
 
-			Matrix fullDistanceMap = pdb.calculateDistMatrix(ct);
+			Matrix fullDistanceMap = pdb.calcDistMatrixJamaFormat(ct);
 
 			fulldistancematrix =  fullDistanceMap.getArray();
 			conn.close();
@@ -1537,7 +1537,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		String ct = input.getContactType();
 		Pdb prot = getFullProt(input, conn);
 		prot.load(input.getPdbChainCode());
-		RIGraph full = prot.get_graph(ct, cuto);
+		RIGraph full = prot.getRIGraph(ct, cuto);
 		int numOfConts = input.getEdgeCount();
 		Distiller dist = new Distiller(full);
 		Bound[][] subset = dist.sampleSubset(numOfConts);
@@ -1562,7 +1562,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		String ct = input.getContactType();
 		Pdb prot = getFullProt(input, conn);
 		prot.load(input.getPdbChainCode());
-		RIGraph full = prot.get_graph(ct, cuto);
+		RIGraph full = prot.getRIGraph(ct, cuto);
 		int numOfConts = NumCont;
 		Distiller dist = new Distiller(full);
 		Bound[][] subset = dist.sampleSubset(numOfConts);
@@ -1610,7 +1610,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return fullDistanceMap
 	 */
 	public static double[][] distMap (Pdb prot) {
-		Matrix fullDistanceMap = prot.calculateDistMatrix("CA");
+		Matrix fullDistanceMap = prot.calcDistMatrixJamaFormat("CA");
 		return fullDistanceMap.getArray();
 	}
 	

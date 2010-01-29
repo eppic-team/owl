@@ -11,10 +11,10 @@ import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
-import proteinstructure.DecoyScoring.DecoyScore;
-import proteinstructure.DecoyScoring.DecoyScoreSet;
-import proteinstructure.DecoyScoring.DecoyScoreSetsGroup;
-import proteinstructure.DecoyScoring.Scorer;
+import proteinstructure.decoyScoring.DecoyScore;
+import proteinstructure.decoyScoring.DecoyScoreSet;
+import proteinstructure.decoyScoring.DecoyScoreSetsGroup;
+import proteinstructure.decoyScoring.Scorer;
 import tools.MySQLConnection;
 import tools.RegexFileFilter;
 

@@ -133,7 +133,7 @@ public class dumppdb {
 				}
 
 				pdb.writePDBFileHeader(Out);
-				pdb.writeAtomLines(Out, true);
+				pdb.writeAtomLines(Out);
 				Out.println("END");
 				
 				if (!stdout) {

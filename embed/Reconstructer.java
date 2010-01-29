@@ -236,7 +236,7 @@ public class Reconstructer {
 		pdbMirror.load(pdbChainCode);
 		pdbMirror.mirror();
 
-		RIGraph graph = pdb.get_graph(ct, cutoff);
+		RIGraph graph = pdb.getRIGraph(ct, cutoff);
 		int numberContacts = graph.getEdgeCount();
 		int sizeHalfMatrix = (graph.getFullLength()*(graph.getFullLength()-1))/2;
 		Reconstructer rec = new Reconstructer(graph);
@@ -258,7 +258,7 @@ public class Reconstructer {
 				model.mirror();
 			}
 			
-			Matrix matrixEmbedded = model.calculateDistMatrix("Ca");
+			Matrix matrixEmbedded = model.calcDistMatrixJamaFormat("Ca");
 			int[] restViols = getViolations(matrixEmbedded, rec.initialBounds);
 			int[] boundsViols = getViolations(matrixEmbedded, rec.getInitialBoundsAllPairs());
 			System.out.printf("%6.3f\t%6.3f\t%6d\t%6d\t%6d\t%6d\t%6d\t%6d",rmsd,rmsdm,restViols[0],restViols[1],boundsViols[0],boundsViols[1],restViols[0]+restViols[1],boundsViols[0]+boundsViols[1]);
@@ -270,7 +270,7 @@ public class Reconstructer {
 
 			
 			if (writeFiles)
-				model.dump2pdbfile(new File(outDir,"embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb").getAbsolutePath());
+				model.writeToPDBFile(new File(outDir,"embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb").getAbsolutePath());
 			
 			modelnum++;
 		}

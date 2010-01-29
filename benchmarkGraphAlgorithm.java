@@ -76,12 +76,12 @@ public class benchmarkGraphAlgorithm {
 				try {
 					pdb = new PdbasePdb(pdbCode, PDB_DB, conn);
 					pdb.load(chainCode);
-					int length = pdb.get_length();
+					int length = pdb.getObsLength();
 					int atoms = pdb.getNumAtoms();
 
 					// get graph
 					long start = System.currentTimeMillis();
-					RIGraph graph = pdb.get_graph(edgeType, cutoff);
+					RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 					long end = System.currentTimeMillis();
 
 					graph.write_graph_to_file(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);

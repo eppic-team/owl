@@ -345,7 +345,7 @@ public class Pdb {
 				atomser2atom.put(atom.getSerial(), atom);
 			}
 			if (resser2pdbresser.containsKey(residue.getSerial())) {
-				residue.setPdbSerial(get_pdbresser_from_resser(residue.getSerial()));
+				residue.setPdbSerial(getPdbResSerFromResSer(residue.getSerial()));
 			}
 		}
 		
@@ -466,7 +466,7 @@ public class Pdb {
 					// only if the pdb residue type is a standard AA
 					if (AminoAcid.isStandardAA(curResType)) {
 						// only if the pdb residue type agrees with our residue type
-						if (getResTypeFromResSerial(get_resser_from_pdbresser(curPdbResSerial)).equals(curResType)) {
+						if (getResTypeFromResSerial(getResSerFromPdbResSer(curPdbResSerial)).equals(curResType)) {
 							// each time the site changes except for the first site of a chain,
 							// add the site to the set
 							if ((curSiteId != prevSiteId) & (prevSiteId != -1)) {
@@ -480,7 +480,7 @@ public class Pdb {
 								cs = new CatalyticSite(curSiteId, fields[6], littEntryPdbCode, littEntryPdbChainCode); 
 							}
 							// add the res to the site
-							cs.addRes(get_resser_from_pdbresser(curPdbResSerial), fields[5]);
+							cs.addRes(getResSerFromPdbResSer(curPdbResSerial), fields[5]);
 							prevSiteId = curSiteId;
 						} else {
 							csaMistakes++;
@@ -543,7 +543,7 @@ public class Pdb {
 					endPdbResSer = inputLine.substring(27,33).trim();
 					String id = inputLine.substring(43).trim();
 					//System.out.println(curPdbCode+":"+curPdbChainCode+":"+startPdbResSer+"-"+endPdbResSer+":"+ec);
-					er = new ECRegion(id, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
+					er = new ECRegion(id, startPdbResSer, endPdbResSer, getResSerFromPdbResSer(startPdbResSer), getResSerFromPdbResSer(endPdbResSer));
 					ec.add(er);
 				}
 			}
@@ -582,7 +582,7 @@ public class Pdb {
 		int lineCount = 0;
 		int consurfHsspMistakes = 0;
 			
-		Integer[] ressers = new Integer[this.get_length()];
+		Integer[] ressers = new Integer[this.getObsLength()];
 		getAllSortedResSerials().toArray(ressers);
 
 		while ((inputLine = in.readLine()) != null) { 
@@ -593,7 +593,7 @@ public class Pdb {
 				String[] fields = inputLine.split("\\s+");
 				String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
 				if (fields[2].equals(String.valueOf(getResidue(resser).getAaType().getOneLetterCode())) &
-						(pdbresser.equals("-") | pdbresser.equals(get_pdbresser_from_resser(resser)))) {
+						(pdbresser.equals("-") | pdbresser.equals(getPdbResSerFromResSer(resser)))) {
 					if (this.containsResidue(resser)) {
 						Residue residue = this.getResidue(resser);
 						residue.setConsurfScore(Double.valueOf(fields[4]));
@@ -613,7 +613,7 @@ public class Pdb {
 		for (Residue residue:residues.values()) {
     		if (residue.getConsurfScore()!=null)	assigned++;
 		}
-        consurfHsspMistakes += Math.abs(this.get_length() - assigned);
+        consurfHsspMistakes += Math.abs(this.getObsLength() - assigned);
         if (consurfHsspMistakes > 0) {
         	for (Residue residue:residues.values()) {
         		residue.setConsurfScore(null);
@@ -646,7 +646,7 @@ public class Pdb {
 		PrintStream calcInput = new PrintStream(myCalc.getOutputStream());
 		BufferedReader calcOutput = new BufferedReader(new InputStreamReader(myCalc.getInputStream()));
 		BufferedReader calcError = new BufferedReader(new InputStreamReader(myCalc.getErrorStream()));
-		writeAtomLines(calcInput, true);	// pipe atom lines to calc-surface
+		writeAtomLines(calcInput);	// pipe atom lines to calc-surface
 		calcInput.close();
 		while((line = calcOutput.readLine()) != null) {
 			surface += Double.valueOf(line.substring(66,73).trim());
@@ -667,7 +667,7 @@ public class Pdb {
 		String line;
 		double vol = 0;
 		String pdbFileName = new File(TMP_DIR,pdbCode+chainCode+"_"+System.currentTimeMillis()+".pdb").getAbsolutePath();
-		dump2pdbfile(pdbFileName, true);
+		writeToPDBFile(pdbFileName);
 		
 		File test = new File(calcExecutable);
 		if(!test.canRead()) throw new IOException("calc-volume Executable is not readable");
@@ -714,7 +714,7 @@ public class Pdb {
 		String pdbFileName = pdbFile.getCanonicalPath(); // we use getCanonicalPath to get rid of the '.', otherwise naccess doesn't work
 		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 
-		dump2pdbfile(pdbFileName, true);
+		writeToPDBFile(pdbFileName);
 		String line;
 		int errorLineCount = 0;
 
@@ -855,10 +855,10 @@ public class Pdb {
 								startPdbResSer = m.group(5);
 								endPdbResSer = m.group(6);								
 							} else {
-								startPdbResSer = this.get_pdbresser_from_resser(this.getMinObsResSerial());
-								endPdbResSer = this.get_pdbresser_from_resser(this.getMaxObsResSerial());
+								startPdbResSer = this.getPdbResSerFromResSer(this.getMinObsResSerial());
+								endPdbResSer = this.getPdbResSerFromResSer(this.getMaxObsResSerial());
 							}
-							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, get_resser_from_pdbresser(startPdbResSer), get_resser_from_pdbresser(endPdbResSer));
+							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, getResSerFromPdbResSer(startPdbResSer), getResSerFromPdbResSer(endPdbResSer));
 							scop.add(sr);
 						}
 					}
@@ -908,7 +908,7 @@ public class Pdb {
 		PrintStream dsspInput = new PrintStream(myDssp.getOutputStream());
 		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
 		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
-		writeAtomLines(dsspInput, true);	// pipe atom lines to dssp
+		writeAtomLines(dsspInput);	// pipe atom lines to dssp
 		dsspInput.close();
 		ssTypes = new TreeMap<Integer,Character>();
 		sheetLabels = new TreeMap<Integer,Character>();
@@ -945,8 +945,8 @@ public class Pdb {
 			throw new IOException("No DSSP output found.");
 		}
 
-		if(ssTypes.size() != get_length()) {	// compare with number of observed residues
-			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + get_length() + ").");
+		if(ssTypes.size() != getObsLength()) {	// compare with number of observed residues
+			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + getObsLength() + ").");
 		}
 
 		// assign secondary structure
@@ -1129,23 +1129,13 @@ public class Pdb {
 	}
 	
 	/** 
-	 * Writes atom lines for this structure to the given output stream.
-	 * @param Out the output stream to write the atom lines to
-	 */
-	public void writeAtomLines(PrintStream out) {
-		writeAtomLines(out, true);
-	}
-	
-	/** 
 	 * Writes atom lines for this structure to the given output stream
 	 * @param Out
-	 * @param pdbCompatible if true, chain codes will be written shorten 
-	 * to one character (so that file complies correctly with PDB format 
-	 * in cases where chain code has more than 1 character)   
 	 */
-	public void writeAtomLines(PrintStream Out, boolean pdbCompatible) {
+	public void writeAtomLines(PrintStream Out) {
 		String chainCodeStr = chainCode;
-		if (pdbCompatible) {
+		if (chainCode.length()>1) {
+			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
 			chainCodeStr = chainCode.substring(0,1);
 		}
 		for (int atomser:this.getAllAtomSerials()) {
@@ -1172,34 +1162,14 @@ public class Pdb {
 	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
 	 * The residue serials written are the internal ones.
 	 * The chain dumped is the value of the chainCode variable, i.e. our internal
-	 * chain identifier for Pdb objects
-	 * If chain code has more than 1 character, the PDB file will then have wrong 
-	 * column formatting. For these cases use {@link #dump2pdbfile(String, boolean)} for getting 
-	 * PDB-format-complying files.
-	 * TODO refactor to writeToPDBFile 
-	 * @param outfile
-	 * @throws IOException
-	 */
-	public void dump2pdbfile(String outfile) throws IOException {
-		dump2pdbfile(outfile, false);
-	}
-	
-	/**
-	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
-	 * The residue serials written are the internal ones.
-	 * The chain dumped is the value of the chainCode variable, i.e. our internal
 	 * chain identifier for Pdb objects 
-	 * TODO refactor to writeToPDBFile
 	 * @param outfile
-	 * @param pdbCompatible if true, chain codes will be written with shorten 
-	 * to one character (so that file is complies correctly with PDB format 
-	 * in cases where chain code has more than 1 character) 
 	 * @throws FileNotFoundException
 	 */
-	public void dump2pdbfile(String outfile, boolean pdbCompatible) throws FileNotFoundException {
+	public void writeToPDBFile(String outfile) throws FileNotFoundException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		writePDBFileHeader(Out);
-		writeAtomLines(Out, pdbCompatible);
+		writeAtomLines(Out);
 		Out.println("END");
 		Out.close();
 	}
@@ -1218,7 +1188,7 @@ public class Pdb {
 		writeCaspTSHeader(Out, this.caspParents);
 		String oldChainCode = this.chainCode;
 		this.chainCode = DEFAULT_CASP_TS_CHAINCODE;
-		writeAtomLines(Out, true);
+		writeAtomLines(Out);
 		this.chainCode = oldChainCode;
 		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
 		Out.println("END");
@@ -1243,10 +1213,9 @@ public class Pdb {
 
 	/** 
 	 * Returns the number of observed standard residues.
-	 * TODO: Refactor method name
 	 * @return number of observed standard residues
 	 */
-	public int get_length(){
+	public int getObsLength(){
 		return residues.size();
 	}
 
@@ -1327,15 +1296,15 @@ public class Pdb {
 	 * @param ct contact type for which distances are being calculated
 	 * @return
 	 */
-	public Matrix calculateDistMatrix(String ct) {
+	public Matrix calcDistMatrixJamaFormat(String ct) {
 		HashMap<Integer,Integer> resser2ind = new HashMap<Integer, Integer>();
 		int i = 0;
 		for (int resser:this.getAllSortedResSerials()) {
 			resser2ind.put(resser,i);
 			i++;
 		}
-		HashMap<Pair<Integer>, Double> distHM = this.calculate_dist_matrix("Ca");
-		Matrix matrix = new Matrix(this.get_length(), this.get_length());
+		HashMap<Pair<Integer>, Double> distHM = this.calcDistMatrix("Ca");
+		Matrix matrix = new Matrix(this.getObsLength(), this.getObsLength());
 		for (Pair<Integer> pair: distHM.keySet()) {
 			double currentElem = distHM.get(pair);
 			matrix.set(resser2ind.get(pair.getFirst()), resser2ind.get(pair.getSecond()), currentElem);
@@ -1352,15 +1321,15 @@ public class Pdb {
 	 * @param ct contact type for which distances are being calculated
 	 * @return a map which assigns to each edge the corresponding distance 
 	 */
-	public HashMap<Pair<Integer>, Double> calculate_dist_matrix(String ct){
-		HashMap<Pair<Integer>,Double> distMatrixAtoms = calculate_atom_dist_matrix(ct);
+	public HashMap<Pair<Integer>, Double> calcDistMatrix(String ct){
+		HashMap<Pair<Integer>,Double> distMatrixAtoms = calcAtomDistMatrix(ct);
 
 		 // mapping atom serials to residue serials
 		 // TODO: we could integrate this with the code in calculate_atom_dist_matrix to avoid storing two distance maps in memory
 		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
 		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
-			int i_resser = get_resser_from_atomser(cont.getFirst());
-			int j_resser = get_resser_from_atomser(cont.getSecond());
+			int i_resser = getResSerFromAtomSer(cont.getFirst());
+			int j_resser = getResSerFromAtomSer(cont.getSecond());
 			Pair<Integer> edge = new Pair<Integer>(i_resser,j_resser);
 			if (distMatrixRes.containsKey(edge)) {
 				distMatrixRes.put(edge, Math.min(distMatrixRes.get(edge), distMatrixAtoms.get(cont)));
@@ -1374,12 +1343,12 @@ public class Pdb {
 	
 	/**
 	 * Returns the distance matrix as a HashMap with atom serial pairs as keys
-	 * This method can be used for any contact type
+	 * This method can be used for any contact type 
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
 	 * @return a map which assings to each atom pair the corresponding distance
 	 */
-	public HashMap<Pair<Integer>, Double> calculate_atom_dist_matrix(String ct){
+	public HashMap<Pair<Integer>, Double> calcAtomDistMatrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
 			TreeMap<Integer,Point3d> coords = getCoordsForCt(ct);
@@ -1414,9 +1383,9 @@ public class Pdb {
 	 * (defined as half of the maximum distance between any 2 CA atoms)
 	 * @return
 	 */
-	public double calculateRadGyration() {
+	public double calcRadGyration() {
 		//TODO this is a very raw implementation o(n^2): should optimise it if that's really needed
-		return Collections.max(this.calculate_atom_dist_matrix("Ca").values())/2;
+		return Collections.max(this.calcAtomDistMatrix("Ca").values())/2;
 	}
 	
 	/**
@@ -1533,7 +1502,7 @@ public class Pdb {
 		// adding the AIGNodes (including parent RIGNode references)
 		SecondaryStructure secondaryStructureCopy = secondaryStructure.copy();
 		for (int atomSer:atomSerials) {
-			int resser = get_resser_from_atomser(atomSer);
+			int resser = getResSerFromAtomSer(atomSer);
 			SecStrucElement sselem = secondaryStructureCopy.getSecStrucElement(resser);
 			if (!rignodemap.containsKey(resser)) {
 				// NOTE!: we are passing references to the SecStrucElement objects! they point to the same objects as secondaryStructureCopy 
@@ -1592,7 +1561,7 @@ public class Pdb {
 	 * @param directed  true if we want a directed graph, false for undirected
 	 * @return
 	 */
-	public RIGraph get_graph(String ct, double cutoff, boolean directed) {
+	public RIGraph getRIGraph(String ct, double cutoff, boolean directed) {
 		//NOTE: At the moment we don't allow directed graphs for overlapping contact types e.g. directed ALL/BB
 		//      because the code wouldn't be able to cope correctly with them
 		// To lift this restriction, one possibility would be to make AIGraph directed and
@@ -1619,19 +1588,19 @@ public class Pdb {
 	/**
 	 * Returns a RIGraph for given contact type and cutoff
 	 * Crossed contact types (i.e. those containing a "/") will be considered always as 
-	 * directed. If one wants an undirected graph for a crossed contact type then method 
-	 * get_graph(String, double, boolean) should be used instead.
+	 * directed. If one wants an undirected graph for a crossed contact type then method
+	 * {@link #getRIGraph(String, double, boolean)} should be used instead.
 	 * @param ct  the contact type
 	 * @param cutoff  the distance cutoff
 	 * @return
 	 */
-	public RIGraph get_graph(String ct, double cutoff) {
+	public RIGraph getRIGraph(String ct, double cutoff) {
 		// TODO eventually we should use the ContactType class as parameter so we could encapsulate all properties of a contact type in there
 		boolean crossed = false;
 		if (ct.contains("/")) {
 			crossed = true;
 		}		
-		return get_graph(ct, cutoff, crossed);
+		return getRIGraph(ct, cutoff, crossed);
 	}
 	
 	/**
@@ -1747,8 +1716,8 @@ public class Pdb {
 	 */
 	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
 
-		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calculate_dist_matrix(contactType2);
-		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calculate_dist_matrix(contactType1);
+		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calcDistMatrix(contactType2);
+		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calcDistMatrix(contactType1);
 		HashMap<Pair<Integer>,Double> alignedDistMatrix = new HashMap<Pair<Integer>, Double>(Math.min(this.getFullLength(), pdb2.getFullLength()));
 		int i1,i2,j1,j2;
 		TreeSet<Integer> unobserved1 = new TreeSet<Integer>();
@@ -1878,31 +1847,28 @@ public class Pdb {
 
 	/**
 	 * Gets the internal residue serial (cif) given a pdb residue serial (author assignment)
-	 * TODO refactor
 	 * @param pdbresser
 	 * @return
 	 */
-	public int get_resser_from_pdbresser (String pdbresser){
+	public int getResSerFromPdbResSer (String pdbresser){
 		return pdbresser2resser.get(pdbresser);
 	}
 
 	/**
 	 * Gets the pdb residue serial (author assignment) given an internal residue serial (cif)
-	 * TODO refactor
 	 * @param resser
 	 * @return 
 	 */
-	public String get_pdbresser_from_resser (int resser){
+	public String getPdbResSerFromResSer (int resser){
 		return this.resser2pdbresser.get(resser);
 	}
 
 	/**
 	 * Gets the residue serial given an atom serial
-	 * TODO refactor
 	 * @param atomser
 	 * @return
 	 */
-	public int get_resser_from_atomser(int atomser){
+	public int getResSerFromAtomSer(int atomser){
 		return atomser2atom.get(atomser).getParentResSerial();
 	}
 
@@ -1960,7 +1926,7 @@ public class Pdb {
 	 * @return true if above average atoms per residue threshold, false otherwise
 	 */
 	public boolean isAllAtom() {
-		if (((double)this.getNumHeavyAtoms()/(double)this.get_length())<MIN_AVRG_NUM_ATOMS_RES) {
+		if (((double)this.getNumHeavyAtoms()/(double)this.getObsLength())<MIN_AVRG_NUM_ATOMS_RES) {
 			return false;
 		} else {
 			return true;
@@ -2204,7 +2170,7 @@ public class Pdb {
 	 * they have coordinates)
 	 * @return
 	 */
-	public String getObservedSequence() {
+	public String getObsSequence() {
 		String obsSequence = "";
 		for (Residue residue:residues.values()) {
 			obsSequence += residue.getAaType().getOneLetterCode();
@@ -2533,7 +2499,7 @@ public class Pdb {
 
 		for (int resser:getAllSortedResSerials()) {
 			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
-			String pdbresser = get_pdbresser_from_resser(resser);
+			String pdbresser = getPdbResSerFromResSer(resser);
 
 			String secStructType = null;
 			String secStructId = null;
@@ -2613,7 +2579,7 @@ public class Pdb {
 		
 		for (int resser:getAllSortedResSerials()) {
 			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
-			String pdbresser = get_pdbresser_from_resser(resser);
+			String pdbresser = getPdbResSerFromResSer(resser);
 			
 			String secStructType = "\\N";
 			String secStructId = "\\N";
@@ -3134,8 +3100,12 @@ public class Pdb {
 		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
 	
+	/**
+	 * Returns the number of unobserved residues
+	 * @return
+	 */
 	public int countUnobserved() {
-		return fullLength-residues.size();
+		return getFullLength()-getObsLength();
 	}
 	
 	public TreeMap<Integer,Character> getUnobservedResidues() {

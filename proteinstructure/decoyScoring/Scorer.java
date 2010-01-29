@@ -1,4 +1,4 @@
-package proteinstructure.DecoyScoring;
+package proteinstructure.decoyScoring;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -227,7 +227,7 @@ public abstract class Scorer {
 	 * @return
 	 */
 	public static boolean isValidPdb(Pdb pdb) {
-		if (pdb.get_length()<=MIN_VALID_CHAIN_LENGTH) {
+		if (pdb.getObsLength()<=MIN_VALID_CHAIN_LENGTH) {
 			return false;
 		}
 		return pdb.isAllAtom();

@@ -1,5 +1,11 @@
 package proteinstructure;
 
+/**
+ * Exception to be thrown when parsing a file which does not comply to its format.
+ * The error message passed should specify the type of file.
+ * @author duarte
+ *
+ */
 public class FileFormatError extends Exception {
     static final long serialVersionUID = 1L;
 

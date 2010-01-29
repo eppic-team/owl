@@ -56,8 +56,7 @@ public class Alignment {
 	 * @param fileName
 	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT},  {@link #DALIFORMAT} or {@link #CLUSTALFORMAT}
 	 * @throws IOException
-	 * @throws PirFileFormatError
-	 * @throws FastaFileFormatError
+	 * @throws FileFormatError
 	 * @throws AlignmentConstructionError 
 	 */
 	public Alignment(String fileName, String format) throws IOException, FileFormatError, AlignmentConstructionError {
@@ -199,7 +198,7 @@ public class Alignment {
 		}
 	}
 	
-	private void readFilePIRFormat(String fileName) throws IOException, PirFileFormatError {
+	private void readFilePIRFormat(String fileName) throws IOException, FileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				currentSeqTag = "";
@@ -228,7 +227,7 @@ public class Alignment {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for PIR format
-					throw new PirFileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+					throw new FileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
 				}
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
 					seqsAL.add(currentSeq);
@@ -256,12 +255,12 @@ public class Alignment {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-		    throw new PirFileFormatError("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
+		    throw new FileFormatError("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
 		}
 		
 	}
 
-	private void readFileFastaFormat(String fileName) throws IOException, FastaFileFormatError {
+	private void readFileFastaFormat(String fileName) throws IOException, FileFormatError {
 		String 	nextLine = "",
 				currentSeq = "",
 				lastSeqTag = "";
@@ -288,7 +287,7 @@ public class Alignment {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for FASTA format
-					throw new FastaFileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+					throw new FileFormatError("First non-empty line of FASTA file "+fileName+" does not seem to be a FASTA header.");
 				}
 				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 				Matcher m = p.matcher(nextLine);
@@ -319,7 +318,7 @@ public class Alignment {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-		    throw new FastaFileFormatError("File does not conform with Fasta file format (could not find any fasta header in the file).",fileName,lineNum);
+		    throw new FileFormatError("File does not conform with FASTA file format (could not find any FASTA header in the file).",fileName,lineNum);
 		}
 		
 	}
@@ -1170,10 +1169,8 @@ public class Alignment {
 
     /** 
      * to test the class 
-     * @throws IOException
-     * @throws FastaFileFormatError 
-     * @throws PirFileFormatError 
-     * @throws FileFormatError
+     * @throws IOException 
+     * @throws FileFormatError 
      * @throws AlignmentConstructionError */
     public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionError {
     	if (args.length<1){

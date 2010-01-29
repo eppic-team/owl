@@ -1,13 +1,14 @@
 package tests.tools;
 
+import org.junit.Test;
+
 import tools.ColoredStrings;
 //import tools.ColoredStrings.AnsiBackground;
 //import tools.ColoredStrings.AnsiDecoration;
 //import tools.ColoredStrings.AnsiForeground;
 //import tools.ColoredStrings.AnsiIntensity;
-import junit.framework.TestCase;
 
-public class ColoredStringsTest extends TestCase {
+public class ColoredStringsTest {
 	
 	static final ColoredStrings.AnsiForeground 
 		DefaultAnsiForeground = ColoredStrings.AnsiForeground.BLACK;
@@ -19,6 +20,7 @@ public class ColoredStringsTest extends TestCase {
 	/**
 	 * Test method for class ColoredStrings
 	 */
+	@Test
 	public void testColoredStrings() {
 		
 		System.out.println("Testing ColoredStrings");

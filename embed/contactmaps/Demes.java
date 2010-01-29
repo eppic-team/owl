@@ -179,7 +179,7 @@ public class Demes {
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(starter.getName(), pdbaseDb, conn);
 		pdb.load(starter.getChainCode());
-		RIGraph rig = pdb.get_graph("Ca", 9.0);
+		RIGraph rig = pdb.getRIGraph("Ca", 9.0);
 		this.pop = new Individuals[size];
 		for(int i = 0; i < size; i++){
 			this.pop[i] = new Individuals(rig,conn,true,starter.getNumOfContacts());
@@ -666,7 +666,7 @@ public class Demes {
 					String pdbChainCode=tokens[1];
 					Pdb pdb = new PdbasePdb(pdbCode, "pdbase_20090728", conn);
 					pdb.load(pdbChainCode);
-					fullCM = pdb.get_graph("Ca", 9);
+					fullCM = pdb.getRIGraph("Ca", 9);
 					break;//counter++;
 				}
 			}

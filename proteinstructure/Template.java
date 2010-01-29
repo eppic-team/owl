@@ -115,7 +115,7 @@ public class Template {
 	 */
 	protected void loadRIGraph(String ct, double cutoff) {
 		if (this.hasPdbData()) {
-			graph = pdb.get_graph(ct, cutoff);
+			graph = pdb.getRIGraph(ct, cutoff);
 		}
 	}
 	

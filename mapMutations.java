@@ -56,8 +56,8 @@ public class mapMutations {
 		int[] mutations = new int[args.length-1];
 		for (int i = 1; i < args.length; i++) {
 			int pos = Integer.parseInt(args[i]);
-			if(pos > pdb.get_length()) {
-				System.err.println("Error: Position " + pos + " is bigger than length of protein (" + pdb.get_length() + "). Skipping.");
+			if(pos > pdb.getObsLength()) {
+				System.err.println("Error: Position " + pos + " is bigger than length of protein (" + pdb.getObsLength() + "). Skipping.");
 			} else {
 				mutations[i-1] = pos;
 			}
@@ -113,7 +113,7 @@ public class mapMutations {
 		}
 		
 		// graph analysis
-		RIGraph rig = pdb.get_graph("Ca", 8.0);
+		RIGraph rig = pdb.getRIGraph("Ca", 8.0);
 		// find center, find surface nodes (find catalytic nodes, find interface nodes, if pdb code known or close homolog)
 		// calculate shortest paths from mutated node to all other nodes
 		// report distance to center, distance to surface (distance to active site, distance to interface, if known)
@@ -221,7 +221,7 @@ public class mapMutations {
 			if(!keepPymolScript) scriptFile.deleteOnExit();
 			File pdbFile = File.createTempFile("temp", ".pdb");
 			pdbFile.deleteOnExit();
-			pdb.dump2pdbfile(pdbFile.toString());
+			pdb.writeToPDBFile(pdbFile.toString());
 			PrintWriter out = new PrintWriter(scriptFile);
 			out.println("Pymol script:");
 			out.println("load " + pdbFile);

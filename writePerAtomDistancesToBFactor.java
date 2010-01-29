@@ -42,7 +42,7 @@ public class writePerAtomDistancesToBFactor {
 		double min = sortedDistances.first();
 		double max = sortedDistances.last();
 		try {
-			pdb1.dump2pdbfile(outFileName);
+			pdb1.writeToPDBFile(outFileName);
 			System.out.println("File " + outFileName + " written.");
 			System.out.println("Minimum distance: " + min);
 			System.out.println("Maximum distance: " + max);

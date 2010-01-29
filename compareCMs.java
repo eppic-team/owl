@@ -27,8 +27,8 @@ public class compareCMs {
 		pdb2.load(chaincode2);
 
 		System.out.println("getting graphs");
-		RIGraph graph1 = pdb1.get_graph("ALL", 4.2);
-		RIGraph graph2 = pdb2.get_graph("ALL", 4.2);
+		RIGraph graph1 = pdb1.getRIGraph("ALL", 4.2);
+		RIGraph graph2 = pdb2.getRIGraph("ALL", 4.2);
 
 		HashMap<String,RIGraph> comparison = graph1.compare(graph2);
 		

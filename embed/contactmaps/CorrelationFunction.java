@@ -11,8 +11,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 
 
-//import proteinstructure.FileRIGraph;
-import proteinstructure.GraphFileFormatError;
+import proteinstructure.FileFormatError;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
@@ -222,7 +221,7 @@ public class CorrelationFunction {
 		return st;
 	}
 	
-	public static void main (String[] args) throws GraphFileFormatError, IOException, SQLException, ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, PdbLoadError  {
+	public static void main (String[] args) throws FileFormatError, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError  {
 		String dir1 = "/home/gmueller/workspace/aglappe/embed/teststructures/";
 		File dir = new File(dir1);
 		File[] test = dir.listFiles(new RegexFileFilter(".*_all\\.graph"));
@@ -242,7 +241,7 @@ public class CorrelationFunction {
 			
 			Pdb pdb = new PdbasePdb(pdbCode, "pdbase", conn);
 			pdb.load(pdbChainCode);
-			fullCM[counter] = pdb.get_graph("Ca", 9);
+			fullCM[counter] = pdb.getRIGraph("Ca", 9);
 			counter++;
 		}
 		fileIn.close();

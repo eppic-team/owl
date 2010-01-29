@@ -20,7 +20,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import proteinstructure.AAinfo;
-import proteinstructure.CiffileFormatError;
+import proteinstructure.FileFormatError;
 import proteinstructure.CiffilePdb;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
@@ -57,7 +57,7 @@ public class PdbParsersTest {
 	}
 
 	@Test
-	public void testCIFagainstPDBASE() throws CiffileFormatError, PdbaseInconsistencyError, SQLException, IOException {
+	public void testCIFagainstPDBASE() throws FileFormatError, PdbaseInconsistencyError, SQLException, IOException {
 
 		MySQLConnection conn = new MySQLConnection(MYSQLSERVER, PDBASE_DB);
 		
@@ -116,39 +116,39 @@ public class PdbParsersTest {
 
 				// sequences
 				Assert.assertEquals(pdbasePdb.getSequence(), ciffilePdb.getSequence());
-				Assert.assertEquals(pdbasePdb.getObservedSequence(), ciffilePdb.getObservedSequence());
+				Assert.assertEquals(pdbasePdb.getObsSequence(), ciffilePdb.getObsSequence());
 				
 				// lengths
 				Assert.assertEquals(pdbasePdb.getFullLength(), ciffilePdb.getFullLength());
-				Assert.assertEquals(pdbasePdb.get_length(), ciffilePdb.get_length());
+				Assert.assertEquals(pdbasePdb.getObsLength(), ciffilePdb.getObsLength());
 				Assert.assertEquals(pdbasePdb.getNumAtoms(), ciffilePdb.getNumAtoms());
 				
 				// info from atom serials 
 				for (int atomser:pdbasePdb.getAllAtomSerials()) {
 					Assert.assertEquals(pdbasePdb.getAtomCoord(atomser), ciffilePdb.getAtomCoord(atomser));
-					Assert.assertEquals(pdbasePdb.get_resser_from_atomser(atomser), ciffilePdb.get_resser_from_atomser(atomser));
+					Assert.assertEquals(pdbasePdb.getResSerFromAtomSer(atomser), ciffilePdb.getResSerFromAtomSer(atomser));
 					Assert.assertEquals(pdbasePdb.getAtomNameFromAtomSer(atomser), ciffilePdb.getAtomNameFromAtomSer(atomser));
 				}
 				
 				for (int atomser:ciffilePdb.getAllAtomSerials()) {
 					Assert.assertEquals(ciffilePdb.getAtomCoord(atomser), pdbasePdb.getAtomCoord(atomser));
-					Assert.assertEquals(ciffilePdb.get_resser_from_atomser(atomser), pdbasePdb.get_resser_from_atomser(atomser));
+					Assert.assertEquals(ciffilePdb.getResSerFromAtomSer(atomser), pdbasePdb.getResSerFromAtomSer(atomser));
 				}
 
 				// info from residue serials
 				for (int resser:pdbasePdb.getAllSortedResSerials()) {
-					Assert.assertEquals(pdbasePdb.get_pdbresser_from_resser(resser), ciffilePdb.get_pdbresser_from_resser(resser));
-					String pdbresser = pdbasePdb.get_pdbresser_from_resser(resser);
-					Assert.assertEquals(pdbasePdb.get_resser_from_pdbresser(pdbresser), ciffilePdb.get_resser_from_pdbresser(pdbresser));
+					Assert.assertEquals(pdbasePdb.getPdbResSerFromResSer(resser), ciffilePdb.getPdbResSerFromResSer(resser));
+					String pdbresser = pdbasePdb.getPdbResSerFromResSer(resser);
+					Assert.assertEquals(pdbasePdb.getResSerFromPdbResSer(pdbresser), ciffilePdb.getResSerFromPdbResSer(pdbresser));
 								
 					Assert.assertEquals(pdbasePdb.getResidue(resser).getAaType(),ciffilePdb.getResidue(resser).getAaType());
 					Assert.assertEquals(pdbasePdb.getResTypeFromResSerial(resser), ciffilePdb.getResTypeFromResSerial(resser));
 				}
 
 				for (int resser:ciffilePdb.getAllSortedResSerials()) {
-					Assert.assertEquals(ciffilePdb.get_pdbresser_from_resser(resser), pdbasePdb.get_pdbresser_from_resser(resser));
-					String pdbresser = ciffilePdb.get_pdbresser_from_resser(resser);
-					Assert.assertEquals(ciffilePdb.get_resser_from_pdbresser(pdbresser), pdbasePdb.get_resser_from_pdbresser(pdbresser));
+					Assert.assertEquals(ciffilePdb.getPdbResSerFromResSer(resser), pdbasePdb.getPdbResSerFromResSer(resser));
+					String pdbresser = ciffilePdb.getPdbResSerFromResSer(resser);
+					Assert.assertEquals(ciffilePdb.getResSerFromPdbResSer(pdbresser), pdbasePdb.getResSerFromPdbResSer(pdbresser));
 					
 					Assert.assertEquals(ciffilePdb.getResTypeFromResSerial(resser), pdbasePdb.getResTypeFromResSerial(resser));
 				}
@@ -230,12 +230,12 @@ public class PdbParsersTest {
 						Assert.assertEquals(model,pdbfilePdb.getModel());
 						
 						// sequence
-						Assert.assertTrue(pdbfilePdb.getObservedSequence().length()<=pdbfilePdb.getSequence().length());
-						Assert.assertTrue(pdbfilePdb.get_length()==pdbfilePdb.getObservedSequence().length());
+						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().length());
+						Assert.assertTrue(pdbfilePdb.getObsLength()==pdbfilePdb.getObsSequence().length());
 						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().length());
 						// we can't assert the sequences against pdbase because of some very weird entries. See http://pdbwiki.org/index.php/1ejg
 						//Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
-						Assert.assertEquals(pdbasePdb.getObservedSequence(), pdbfilePdb.getObservedSequence());
+						Assert.assertEquals(pdbasePdb.getObsSequence(), pdbfilePdb.getObsSequence());
 						String seq = pdbfilePdb.getSequence();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
 							Assert.assertEquals(pdbfilePdb.getResTypeFromResSerial(resser), 
@@ -249,7 +249,7 @@ public class PdbParsersTest {
 						// info from atom serials
 						for (int atomser:pdbfilePdb.getAllAtomSerials()) {
 							Assert.assertNotNull(pdbfilePdb.getAtomCoord(atomser));
-							Assert.assertNotNull(pdbfilePdb.get_resser_from_atomser(atomser));
+							Assert.assertNotNull(pdbfilePdb.getResSerFromAtomSer(atomser));
 						}
 
 						// sec structure

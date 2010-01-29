@@ -62,7 +62,7 @@ public class TinkerRunnerTest {
 		MySQLConnection conn = new MySQLConnection();
 		Pdb pdb = new PdbasePdb(PDB_CODE, PDBASE_DB,conn);
 		pdb.load(CHAIN);
-		RIGraph graph = pdb.get_graph(CT, CUTOFF);
+		RIGraph graph = pdb.getRIGraph(CT, CUTOFF);
 		RIGraph[] graphs = {graph};
 		TinkerRunner tr = new TinkerRunner(TINKERBINDIR,DISTGEOM_EXE,PRMFILE);
 		tr.reconstruct(graph.getSequence(), graphs, null, true, 1, 

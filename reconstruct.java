@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
-import proteinstructure.GraphFileFormatError;
+import proteinstructure.FileFormatError;
 import proteinstructure.Interval;
 import proteinstructure.IntervalSet;
 import proteinstructure.PdbLoadError;
@@ -279,7 +279,7 @@ public class reconstruct {
 					// we also write the file to the out dir so it can be used later for clustering rmsds etc.
 					origPdbFile = new File (outputDir,baseName+".native.pdb");
 					try {
-						pdb.dump2pdbfile(origPdbFile.getAbsolutePath());
+						pdb.writeToPDBFile(origPdbFile.getAbsolutePath());
 					} catch (IOException e4) {
 						System.err.println("Couldn't write original pdb file "+origPdbFile.getAbsolutePath());
 						System.err.println("Continuing without it, this is not needed for the rest of the reconstruction process but only for post processing (e.g. comparing rmsds to original)");
@@ -318,7 +318,7 @@ public class reconstruct {
 		
 		if (benchmark) {
 			for (int i=0;i<cts.length;i++) {
-				graphs[i] = pdb.get_graph(cts[i], cutoffs[i]);
+				graphs[i] = pdb.getRIGraph(cts[i], cutoffs[i]);
 			}
 		} else {
 			graphs = new RIGraph[cmFiles.length];
@@ -348,7 +348,7 @@ public class reconstruct {
 						}
 					}
 				}
-			} catch (GraphFileFormatError e) {
+			} catch (FileFormatError e) {
 				System.err.println("Contact Map file has wrong formatting: "+e.getMessage());
 				System.exit(1);
 			} catch (IOException e) {

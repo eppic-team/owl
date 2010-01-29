@@ -1,4 +1,4 @@
-package proteinstructure.DecoyScoring;
+package proteinstructure.decoyScoring;
 
 import java.io.BufferedReader;
 import java.io.File;

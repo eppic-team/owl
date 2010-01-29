@@ -81,7 +81,7 @@ public class Scorer {
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(fullContactMap.getPdbCode(), "pdbase_20090728", conn);
 		pdb.load(fullContactMap.getChainCode());
-		Matrix distmat = pdb.calculateDistMatrix("Ca");
+		Matrix distmat = pdb.calcDistMatrixJamaFormat("Ca");
 		Bound[][] cmapBounds = convertRIGraphToBounds(fullContactMap,distmat.getArray());//Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
 		// infer bounds for all pairs through triangle inequality
 		Bound[][] bounds = inferAllBounds(sparseBounds);
@@ -128,13 +128,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static double getCMError(File rigFile, String pdbaseDb, MySQLConnection conn, boolean randomsampling) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public static double getCMError(File rigFile, String pdbaseDb, MySQLConnection conn, boolean randomsampling) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 
 		//new instance of class RIGraph created using File instance 'rigFile' 
 		RIGraph graph = new FileRIGraph(rigFile.getAbsolutePath());
@@ -161,7 +161,7 @@ public class Scorer {
 		pdb.load(pdbChainCode);
 
 		//initializing RIGraph instance with predefined parameters
-		RIGraph fullContactMap = pdb.get_graph(ct, cutoff);
+		RIGraph fullContactMap = pdb.getRIGraph(ct, cutoff);
 
 		//initializing number of all given contacts of full contact input
 		int numTotalCont = fullContactMap.getEdgeCount();
@@ -202,13 +202,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static double getDMError (File test, String pdbaseDb, MySQLConnection conn, boolean randsampling) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public static double getDMError (File test, String pdbaseDb, MySQLConnection conn, boolean randsampling) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 		RIGraph sub = new FileRIGraph(test.getAbsolutePath());
 		//initializing String variable for PDB code of RIGraph instance 'graph'
 		String pdbCode = sub.getPdbCode();
@@ -228,12 +228,12 @@ public class Scorer {
 		//loading PDB file of the same protein as specified by rigFile
 		pdb.load(pdbChainCode);
 		
-		Matrix fullDistanceMap = pdb.calculateDistMatrix(ct);
+		Matrix fullDistanceMap = pdb.calcDistMatrixJamaFormat(ct);
 		double[][] dm = fullDistanceMap.getArray();
 		
 		if(randsampling){
 			double cutoff = sub.getCutoff();
-			RIGraph randsubset = pdb.get_graph(ct, cutoff);
+			RIGraph randsubset = pdb.getRIGraph(ct, cutoff);
 			
 			double tests = (double) randsubset.getEdgeCount();
 			
@@ -322,13 +322,13 @@ public class Scorer {
 	 * @param conn database access
 	 * @param runs number of subsets to be sampled
 	 * @return stats mean value and standard deviation
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static double[] averageDMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {	
+	public static double[] averageDMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {	
 		double[] list = new double[runs];
 		double average = 0.0;
 		boolean bool = true;
@@ -349,13 +349,13 @@ public class Scorer {
 	 * @param conn
 	 * @param runs
 	 * @return stats
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static double[] averageCMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public static double[] averageCMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 		boolean bool = true;
 		double[] list = new double[runs];
 		double average = 0.0;
@@ -390,13 +390,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static void outputDMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public static void outputDMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 		boolean bool = false;
 		double value = getDMError(test, pdbaseDb, conn, bool);
 		double[] values = averageDMRandom(test, pdbaseDb, conn, runs);
@@ -414,13 +414,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws GraphFileFormatError
+	 * @throws FileFormatError
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundError
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public static void outputCMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws GraphFileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public static void outputCMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 		boolean bool = false;
 		double value = getCMError(test, pdbaseDb, conn, bool);
 		double[] values = new double[averageCMRandom(test, pdbaseDb, conn, runs).length];

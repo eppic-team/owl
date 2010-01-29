@@ -1480,7 +1480,7 @@ public class TinkerRunner {
 			} catch (PdbLoadError e) {
 				throw new TinkerError(e);
 			} 
-			ensemble.addRIG(pdb.get_graph(graph.getContactType(), graph.getCutoff()));
+			ensemble.addRIG(pdb.getRIGraph(graph.getContactType(), graph.getCutoff()));
 
 		}
 		

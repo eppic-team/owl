@@ -29,7 +29,7 @@ import proteinstructure.AlignmentConstructionError;
 import proteinstructure.Atom;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
-import proteinstructure.GraphFileFormatError;
+import proteinstructure.FileFormatError;
 import proteinstructure.Interval;
 import proteinstructure.IntervalSet;
 import proteinstructure.MaxClusterRunner;
@@ -107,7 +107,7 @@ public class PdbTest {
 			Assert.assertEquals(scAsa, pdb.getScRsaFromResSerial(resser), 0);
 		}
 		br.close();
-		Assert.assertEquals(resser,pdb.get_length());
+		Assert.assertEquals(resser,pdb.getObsLength());
 		
 		
 	}
@@ -157,7 +157,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetGraph() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, GraphFileFormatError {
+	public void testGetGraph() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, FileFormatError {
 		// NOTE: to test we compare to previously calculated graphs with an older version of our software
 		//		In principle edges should coincide 100%. However there can be rounding problems that make one
 		//		version consider a border-case to be an edge or not. Indeed I've seen there is a difference 
@@ -197,7 +197,7 @@ public class PdbTest {
 			
 			for (int i=0;i<cts.length;i++) {
 				System.out.print(cts[i]+"\t"+cutoffs[i]+"\t");
-				RIGraph graph = pdb.get_graph(cts[i], cutoffs[i]);
+				RIGraph graph = pdb.getRIGraph(cts[i], cutoffs[i]);
 				
 				// getting the refGraph from pre-read reference files
 				RIGraph refGraph = refGraphs.get(pdbId+cts[i]+cutoffs[i]);
@@ -258,7 +258,7 @@ public class PdbTest {
 	public void testConstructors() throws PdbLoadError, ConformationsNotSameSizeError {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
-		Vector3d[] conformation = new Vector3d[pdb.get_length()];
+		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
 		int i=0;
 		for (int resser:pdb.getAllSortedResSerials()) {
 			Atom atom = pdb.getResidue(resser).getAtom("CA");
@@ -270,8 +270,8 @@ public class PdbTest {
 		Assert.assertEquals(Pdb.NO_PDB_CODE, model.getPdbCode());
 		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getChainCode());
 		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getPdbChainCode());
-		Assert.assertEquals(pdb.get_length(), model.get_length());
-		Assert.assertEquals(model.get_length(),model.getNumAtoms());
+		Assert.assertEquals(pdb.getObsLength(), model.getObsLength());
+		Assert.assertEquals(model.getObsLength(),model.getNumAtoms());
 		Assert.assertEquals(pdb.getFullLength(), model.getFullLength());
 		Assert.assertEquals(pdb.getSequence(), model.getSequence());
 		for (int resser:model.getAllSortedResSerials()) {
@@ -307,9 +307,9 @@ public class PdbTest {
 		Assert.assertNotNull(pdb2);
 		
 		System.out.println("Calculating distance maps...");
-		HashMap<Pair<Integer>,Double> distMap1 = pdb1.calculate_dist_matrix("Ca");
+		HashMap<Pair<Integer>,Double> distMap1 = pdb1.calcDistMatrix("Ca");
 		Assert.assertNotNull(distMap1);
-		HashMap<Pair<Integer>,Double> distMap2 = pdb2.calculate_dist_matrix("Ca");
+		HashMap<Pair<Integer>,Double> distMap2 = pdb2.calcDistMatrix("Ca");
 		Assert.assertNotNull(distMap2);
 		
 		// create an alignment
@@ -354,7 +354,7 @@ public class PdbTest {
 		System.out.println(mis);
 		
 		// assuming trivial alignment
-		int expMissing = pdb1.getFullLength()*(pdb1.getFullLength()-1)/2 - pdb1.get_length()*(pdb1.get_length()-1)/2;
+		int expMissing = pdb1.getFullLength()*(pdb1.getFullLength()-1)/2 - pdb1.getObsLength()*(pdb1.getObsLength()-1)/2;
 		Assert.assertEquals(expMissing, mis);
 		
 		double min = Collections.min(diffDistMap.values());
@@ -378,7 +378,7 @@ public class PdbTest {
 			pdb.load(pdbChainCode);
 			
 			TreeMap<Integer,double[]> phipsi = pdb.getAllPhiPsi();
-			Assert.assertEquals(pdb.get_length(), phipsi.size());
+			Assert.assertEquals(pdb.getObsLength(), phipsi.size());
 			// Can't do much asserting here, ideas?
 			// At least we check if there aren't exceptions in running getAllPhiPsi, which 
 			// in turn is a good test for hasCoordinates(int,String)

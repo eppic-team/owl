@@ -131,7 +131,7 @@ public class superimposeMult {
 			 try {
 				 System.out.println("Writing file " + outFile.getAbsolutePath());
 				 PrintStream out = new PrintStream(new FileOutputStream(outFile));
-				 pdb.writeAtomLines(out, true);
+				 pdb.writeAtomLines(out);
 				 out.close();
 			 } catch(IOException e) {
 				 System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
