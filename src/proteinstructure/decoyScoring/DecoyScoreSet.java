@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.regex.Matcher;
@@ -40,6 +41,8 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	private int numStructsTrainingSet;
 	
 	private HashMap<String,DecoyScore> set; // decoy file name (no path) to DecoyScore
+	
+	private ArrayList<DecoyScore> sortedDecoyScores; // list of DecoyScores sorted 
 
 	/**
 	 * Constructs an empty DecoyScoreSet 
@@ -175,13 +178,15 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	}
 
 	/**
-	 * Gets the sorted list of decoys (based on score) as a new ArrayList 
+	 * Sorts the list of DecoyScores and stores the sorted list in the cached variable {@link #sortedDecoyScores} 
+	 * If the cached variable has already the sorted list it won't do anything. 
 	 * @return
 	 */
-	private ArrayList<DecoyScore> getSortedList() {
-		ArrayList<DecoyScore> allScores = new ArrayList<DecoyScore>(set.values());
-		Collections.sort(allScores);
-		return allScores;
+	private void getSortedList() {
+		if (sortedDecoyScores==null) {
+			sortedDecoyScores = new ArrayList<DecoyScore>(set.values());
+		} 
+		Collections.sort(sortedDecoyScores);
 	}
 	
 	/**
@@ -191,7 +196,7 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 */
 	public void writeToFile(File file) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(file);
-		ArrayList<DecoyScore> allScores = this.getSortedList();
+		this.getSortedList();
 		
 		pw.println("# SCORE METHOD: "+this.scoringMethod.getDescription());
 		pw.println("# contact type: "+this.ct);
@@ -201,8 +206,8 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		pw.println("# list: "+this.trainingSetFile.toString());
 
 		pw.printf("#%s\t%s\t%s\n","file","score","rmsd");
-		for (DecoyScore fs:allScores) {
-			pw.printf("%s\t%7.2f\t%6.3f\n",fs.file.getName(), fs.score, fs.rmsd);
+		for (DecoyScore fs:sortedDecoyScores) {
+			pw.printf("%s\t%7.3f\t%6.3f\n",fs.file.getName(), fs.score, fs.rmsd);
 		}
 		pw.close();
 
@@ -324,6 +329,31 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	public double getNativeZscore() {
 		return getZscore(nativeFileName);
 	}
+
+	/**
+	 * Returns the rank (based on sorting through score) for the given structure (as a file 
+	 * name)
+	 * @param decoyFileName the file name without the path
+	 * @return the rank of the given decoy file name or -1 if the file name is not present 
+	 * in this set
+	 */
+	public int getRank(String decoyFileName) {
+		this.getSortedList();
+		for (int i=0;i<sortedDecoyScores.size();i++){
+			if (sortedDecoyScores.get(i).file.getName().equals(decoyFileName)) {
+				return sortedDecoyScores.size()-i;
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * Gets the rank of the native structure
+	 * @return the rank of the native or -1 if native not present in this set
+	 */
+	public int getNativeRank() {
+		return getRank(nativeFileName);
+	}
 	
 	/**
 	 * Tells whether given structure (as a file name) is ranked 1 (maximum score) in this set.
@@ -332,8 +362,8 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 * file name not present in set
 	 */
 	public boolean isRank1(String decoyFileName) {
-		ArrayList<DecoyScore> sorted = getSortedList();
-		if (sorted.get(sorted.size()-1).file.getName().equals(decoyFileName)) {
+		this.getSortedList();
+		if (sortedDecoyScores.get(sortedDecoyScores.size()-1).file.getName().equals(decoyFileName)) {
 			return true;
 		} else {
 			return false;
@@ -347,6 +377,117 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 */
 	public boolean isNativeRank1() {
 		return isRank1(nativeFileName);
+	}
+
+	/**
+	 * Returns the best decoy (excluding native) as judged by rmsd.
+	 * @return
+	 */
+	private DecoyScore getBestDecoy() {
+		ArrayList<DecoyScore> allDecoys = new ArrayList<DecoyScore>(set.values());
+		Collections.sort(allDecoys, new Comparator<DecoyScore>(){
+			public int compare(DecoyScore o1, DecoyScore o2) {
+				return Double.compare(o1.rmsd, o2.rmsd);
+			}
+		});
+		if (containsNative()) {
+			if (allDecoys.get(0).rmsd>0.0) {
+				System.err.println("Warning! Native file "+nativeFileName+" of decoy set "+decoyName+", "+decoyGroup+" doesn't have 0 rmsd!");
+			}
+			return allDecoys.get(1);
+		} else {
+			return allDecoys.get(0);
+		}
+	}
+	
+	/**
+	 * Returns the best decoy (excluding native) as judge by the score.
+	 * @return
+	 */
+	private DecoyScore getBestScoreDecoy() {
+		this.getSortedList();
+		if (isNativeRank1()) {
+			return sortedDecoyScores.get(sortedDecoyScores.size()-2);
+		} else {
+			return sortedDecoyScores.get(sortedDecoyScores.size()-1);
+		}
+	}
+	
+	/**
+	 * Gets the n% best decoys (excluding native), as judged by rmsd
+	 * @param n
+	 * @return
+	 */
+	private HashMap<String,DecoyScore> getNpercentBestDecoys(int n) {
+		HashMap<String,DecoyScore> bestN = new HashMap<String,DecoyScore>();
+		ArrayList<DecoyScore> allDecoys = new ArrayList<DecoyScore>(set.values());
+		Collections.sort(allDecoys, new Comparator<DecoyScore>(){
+			public int compare(DecoyScore o1, DecoyScore o2) {
+				return Double.compare(o1.rmsd, o2.rmsd);
+			}
+		});
+		if (!containsNative()) 
+			System.err.println("Warning! This decoy set "+decoyName+", "+decoyGroup+" doesn't contain a native!");
+		int totalNumDecoys = this.size()-1; // we discount the native
+		int numDecoys = (int)(((double)n/100.0)*(double)totalNumDecoys);
+		for (int i=0;i<numDecoys;i++){
+			if (!allDecoys.get(i).file.getName().equals(nativeFileName)) {
+				bestN.put(allDecoys.get(i).file.getName(),allDecoys.get(i));
+			}
+		}
+		return bestN;
+	}
+	
+	/**
+	 * Gets the n percent best scoring decoys (excluding native)
+	 * @param n
+	 * @return
+	 */
+	private HashMap<String,DecoyScore> getNpercentBestScoreDecoys(int n) {
+		this.getSortedList();
+		HashMap<String,DecoyScore> bestN = new HashMap<String,DecoyScore>();
+		if (!containsNative()) 
+			System.err.println("Warning! This decoy set "+decoyName+", "+decoyGroup+" doesn't contain a native!");
+		int totalNumDecoys = this.size()-1; // we discount the native
+		int numDecoys = (int)(((double)n/100.0)*(double)totalNumDecoys);
+		for (int i=0;i<numDecoys;i++){
+			DecoyScore decoy = sortedDecoyScores.get(sortedDecoyScores.size()-1-i);
+			if (!decoy.file.getName().equals(nativeFileName)) {
+				bestN.put(decoy.file.getName(),decoy);
+			}
+		}
+		return bestN;
+	}
+	
+	/**
+	 * Returs the n% enrichment value as defined by Shen and Sali, 2006, Protein Science
+	 * The n% enrichment value is defined as the relative occurrence of the most accurate (rmsd-wise) 
+	 * n% decoys among the n% best scoring decoys compared to that of the entire decoy set.
+	 * @param n
+	 * @return
+	 */
+	public double getNpercentEnrichment(int n) {
+		HashMap<String,DecoyScore> bestNScoring = getNpercentBestScoreDecoys(n);
+		HashMap<String,DecoyScore> bestN = getNpercentBestDecoys(n);
+		int count = 0;
+		for (DecoyScore decoy:bestN.values()) {
+			if (bestNScoring.containsKey(decoy.file.getName())) {
+				count++;
+			}
+		}
+		double enrichment = ((double)count/(double)bestN.size())/((double)n/100.0);
+		return enrichment;
+	}
+	
+	/**
+	 * Gets the delta rmsd measure as used by Shen and Sali, 2006, Protein Science
+	 * It is defined as the difference in rmsd between the best scored model and the best model.
+	 * Ideally it should be 0, i.e. we could recognize what is the best model of the set with 
+	 * the scoring measure. 
+	 * @return
+	 */
+	public double getDeltaRmsd() {
+		return getBestScoreDecoy().rmsd-getBestDecoy().rmsd;
 	}
 	
 	/**
