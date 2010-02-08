@@ -281,7 +281,7 @@ public class genDbGraph {
 								}
 							}
 							//graph.writeToDb(conn,outputDb);
-							graph.write_graph_to_db_fast(conn,outputDb);
+							graph.writeToDbFast(conn,outputDb);
 							
 							System.out.println();							
 							numPdbs++;
@@ -390,7 +390,7 @@ public class genDbGraph {
 							}
 						}
 						//graph.writeToDb(conn,outputDb);
-						graph.write_graph_to_db_fast(conn,outputDb);
+						graph.writeToDbFast(conn,outputDb);
 						
 						System.out.println();						
 						numGraphs++;

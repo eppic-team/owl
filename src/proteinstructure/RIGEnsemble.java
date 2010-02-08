@@ -386,9 +386,9 @@ public class RIGEnsemble {
 		RIGraph weightedGraph = ga.getAverageGraph();
 		RIGraph consGraph = ga.getConsensusGraph(0.1);
 		System.out.println("Writing average graph to file "+outFileName);
-		weightedGraph.write_graph_to_file(outFileName);
+		weightedGraph.writeToFile(outFileName);
 		System.out.println("Writing consensus graph to file "+outFileName2);
-		consGraph.write_graph_to_file(outFileName2);
+		consGraph.writeToFile(outFileName2);
 		
 	}
 }

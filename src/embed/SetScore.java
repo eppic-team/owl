@@ -136,6 +136,6 @@ public class SetScore implements Comparable<SetScore>{
 		String fileName = pdbCode+pdbChainCode+"_ensemble_"+numBestSets+".cm";
 		
 		RIGraph graph = readEnsembleFromDB(db, scoresTable, subsetsTable, numBestSets, sequence, contactType, cutoff);
-		graph.write_graph_to_file(new File(outDir,fileName).getAbsolutePath());
+		graph.writeToFile(new File(outDir,fileName).getAbsolutePath());
 	}
 }

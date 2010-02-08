@@ -430,14 +430,14 @@ public class averageGraph {
 			
 			RIGraph averagedGraph = ga.getAverageGraph();
 			//System.out.println("Writing average graph to " + avrgdGraphFile + " and average graph with voters to " + avrgdVotersGraphFile);
-			averagedGraph.write_graph_to_file(avrgdGraphFile.getAbsolutePath());
+			averagedGraph.writeToFile(avrgdGraphFile.getAbsolutePath());
 			ga.writeAverageGraphWithVoters(avrgdVotersGraphFile.getAbsolutePath());
 
 			for (double consensusThreshold: consensusThresholds) {
 				File consGraphFile = new File(outDir,basename+"."+ctStr+"_"+cutoffs[ctIdx]+".CCT"+(String.format("%2.0f",consensusThreshold*100))+".cm");
 				RIGraph consensusGraph = ga.getConsensusGraph(consensusThreshold);
 				//System.out.printf("Writing consensus graph at CCT %2.0f to %s \n",consensusThreshold*100,consGraphFile);
-				consensusGraph.write_graph_to_file(consGraphFile.getAbsolutePath());
+				consensusGraph.writeToFile(consGraphFile.getAbsolutePath());
 
 				if (mode==Modes.BENCHMARK) {
 					PredEval eval = consensusGraph.evaluatePrediction(originalGraph);

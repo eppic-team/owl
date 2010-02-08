@@ -315,15 +315,16 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
-	 * Write graph to given db, using our db graph aglappe format, 
+	 * Write graph to given db, using our db graph format, 
 	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
 	 * @param conn
 	 * @param db
+	 * @param weighted whether atom weights will be used or not
 	 * @throws SQLException
 	 */
-	//TODO we might want to move this to a graph i/o class
-	//TODO refactor to writeToDb. Get rid of this and only keep fast one??
-	public void write_graph_to_db(MySQLConnection conn, String db, boolean weighted) throws SQLException{
+	public void writeToDb(MySQLConnection conn, String db, boolean weighted) throws SQLException{
+		//TODO we might want to move this to a graph i/o class
+		//TODO Get rid of this and only keep fast one??
 		
 		HashMap<Integer,Integer> resser2nodeid = new HashMap<Integer,Integer>();
 		
@@ -547,20 +548,30 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 
 	}
 	
-	public void write_graph_to_db(MySQLConnection conn, String db) throws SQLException {
-		write_graph_to_db(conn, db, true);
-	}
-	
 	/**
-	 * Write graph to given db, using our db graph aglappe format, 
+	 * Writes graph to given db, using our db graph format,
 	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * Atom weights are used. If not desired, use {@link #writeToDb(MySQLConnection, String, boolean)}
 	 * @param conn
 	 * @param db
 	 * @throws SQLException
 	 */
-	//TODO we might want to move this to a graph i/o class
-	//TODO refactor to writeToDbFast
-	public void write_graph_to_db_fast(MySQLConnection conn, String db, boolean weighted) throws SQLException, IOException {
+	public void writeToDb(MySQLConnection conn, String db) throws SQLException {
+		writeToDb(conn, db, true);
+	}
+	
+	/**
+	 * Write graph to given db, using our db graph format, 
+	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * Uses faster writing through files and LOAD DATA INFILE commands
+	 * @param conn
+	 * @param db
+	 * @param weighted whether atom weights will be used or not
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public void writeToDbFast(MySQLConnection conn, String db, boolean weighted) throws SQLException, IOException {
+		//TODO we might want to move this to a graph i/o class
 		
 		HashMap<Integer,Integer> resser2nodeid = new HashMap<Integer,Integer>();
 		
@@ -795,18 +806,28 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return ("'"+s+"'");
 	}
 	
-	public void write_graph_to_db_fast(MySQLConnection conn, String db) throws SQLException, IOException {
-		write_graph_to_db(conn, db, true);
+	/**
+	 * Write graph to given db, using our db graph format, 
+	 * i.e. tables: chain_graph, single_model_graph, single_model_node, single_model_edge
+	 * Uses faster writing through files and LOAD DATA INFILE commands
+	 * Atom weights will be used.
+	 * @param conn
+	 * @param db
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public void writeToDbFast(MySQLConnection conn, String db) throws SQLException, IOException {
+		writeToDb(conn, db, true);
 	}
 	
 	/**
-	 * Write graph to given outfile in aglappe format
+	 * Write graph to given outfile in CMView format
 	 * @param outfile
 	 * @throws IOException
 	 */
-	//TODO we might want to move this to a graph i/o class
-	//TODO refactor to writeToFile
-	public void write_graph_to_file (String outfile) throws IOException {
+	public void writeToFile (String outfile) throws IOException {
+		//TODO we might want to move this to a graph i/o class
+		
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		Out.println("#CMVIEW GRAPH FILE ver: "+GRAPHFILEFORMATVERSION);
 		Out.println("#SEQUENCE: "+sequence);
@@ -835,11 +856,11 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 
 	/**
-	 * Write graph to given outfile in format appropriate for the mfinder
+	 * Write graph to given outfile in format appropriate for the mfinder program
 	 * @param outfile
 	 * @throws IOException
 	 */
-	public void write_graph_to_motiffile (String outfile) throws IOException {
+	public void writeToMotifFile (String outfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
 		
 		HashMap<Integer,Integer> resser2nodeser = new HashMap<Integer,Integer>();
@@ -1194,15 +1215,4 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		}
 	}
 
-	/**
-	 * 
-	 * @param serial
-	 * @return a neighborrhood String in the "LKxTV" format
-	 */
-	
-	public String getNeighborhoodString(int serial) {
-		RIGNode node = getNodeFromSerial(serial);
-		
-		return null;
-	}
 }

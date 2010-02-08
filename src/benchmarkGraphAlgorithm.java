@@ -84,7 +84,7 @@ public class benchmarkGraphAlgorithm {
 					RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 					long end = System.currentTimeMillis();
 
-					graph.write_graph_to_file(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);
+					graph.writeToFile(pdbCode+chainCode+"_"+edgeType+"_"+cutoff);
 					
 					System.out.print(pdbCode+"_"+chainCode);
 					System.out.print("\t"+length+"\t"+atoms);

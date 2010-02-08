@@ -37,9 +37,9 @@ public class compareCMs {
 		RIGraph common = comparison.get("common");
 		
 		System.out.println("writing output files "+onlyIn1File+", "+onlyIn2File+", "+commonFile);
-		onlyIn1.write_graph_to_file(onlyIn1File);
-		onlyIn2.write_graph_to_file(onlyIn2File);
-		common.write_graph_to_file(commonFile);
+		onlyIn1.writeToFile(onlyIn1File);
+		onlyIn2.writeToFile(onlyIn2File);
+		common.writeToFile(commonFile);
 		
 		
 

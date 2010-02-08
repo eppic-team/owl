@@ -28,7 +28,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		RIGraph graph = pdbFromPdbase.getRIGraph("ALL", 4.1);
 		System.out.println("writing graph to file");
-		graph.write_graph_to_file("test_from_pdbase.cm");
+		graph.writeToFile("test_from_pdbase.cm");
 		
 		// getting edges and some information from the end nodes
 		System.out.println("i\ti_res\tj\tj_res\tdistance");
@@ -46,7 +46,7 @@ public class testPdb {
 		System.out.println("getting graph");
 		RIGraph graph2 = pdbFromFile.getRIGraph("ALL", 4.1);
 		System.out.println("writing graph to file");
-		graph2.write_graph_to_file("test_pdb_from_file.cm");
+		graph2.writeToFile("test_pdb_from_file.cm");
 	}
 
 }

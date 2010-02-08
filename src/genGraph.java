@@ -151,7 +151,7 @@ public class genGraph {
 					
 					File outputFile = new File(outputDir,pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".cm");
 					switch(outFormat) {
-					case CMVIEW: graph.write_graph_to_file(outputFile.getAbsolutePath()); break;
+					case CMVIEW: graph.writeToFile(outputFile.getAbsolutePath()); break;
 					case PAUL: graph.writeToPaulFile(outputFile.getAbsolutePath()); break;
 					case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 					}
@@ -194,7 +194,7 @@ public class genGraph {
 				String filename = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf("."));
 				File outputFile = new File(outputDir,filename+"_"+edgeTypeStr+"_"+cutoff+".cm");
 				switch(outFormat) {
-				case CMVIEW: graph.write_graph_to_file(outputFile.getAbsolutePath()); break;
+				case CMVIEW: graph.writeToFile(outputFile.getAbsolutePath()); break;
 				case PAUL: graph.writeToPaulFile(outputFile.getAbsolutePath()); break;
 				case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 				}

@@ -114,15 +114,15 @@ public class testDbRIGraph {
 			if (pdbCode != null && pdbChainCode != null) {
 				graph = new DbRIGraph(fromDb, conn, pdbCode, pdbChainCode, cutoff, edgeType, directed, weighted);
 				graph.setSingleModelsDb(fromDb);
-				graph.write_graph_to_db_fast(conn,toDb, weighted);
+				graph.writeToDbFast(conn,toDb, weighted);
 			} else if (sid != null) {
 				graph = new DbRIGraph(fromDb, conn, sid, cutoff, edgeType, directed, weighted);
 				graph.setSingleModelsDb(fromDb);
-				graph.write_graph_to_db_fast(conn,toDb, weighted);
+				graph.writeToDbFast(conn,toDb, weighted);
 			} else if (graphId != 0) {
 				graph = new DbRIGraph(fromDb, conn, graphId);
 				graph.setSingleModelsDb(fromDb);
-				graph.write_graph_to_db_fast(conn,toDb);
+				graph.writeToDbFast(conn,toDb);
 			}		
 		} catch (GraphIdNotFoundError e) {
 			System.err.println("Couldn't find such graph!");
