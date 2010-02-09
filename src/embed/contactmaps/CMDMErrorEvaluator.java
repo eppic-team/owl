@@ -122,7 +122,7 @@ public class CMDMErrorEvaluator implements Runnable {
 		if(argument_length > 0){
 			for(int i = 0; i < argument_length; i++){
 				if(isdirectory[i]){
-					CMDMErrorEvaluator cmdm  = new CMDMErrorEvaluator(args[i],20);
+					//CMDMErrorEvaluator cmdm  = new CMDMErrorEvaluator(args[i],20);
 				}
 			}
 		}

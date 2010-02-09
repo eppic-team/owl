@@ -276,10 +276,10 @@ public class NeighbourhoodString {
 	
 	public static void main (String[] args) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
 		String dir = "/project/StruPPi/gabriel/Arbeiten/1sha/1sha/deme0/evo2/1shademe0gen12-34.cmap"; //Starter/";
-		String helper = "starter", helper2 = "1sha";
+		//String helper = "starter", helper2 = "1sha";
 		for(int i = 0; i < 1; i++){
-			int value1 = i%20;
-			int value2 = (int) (((double) i)/((double) 20));
+			//int value1 = i%20;
+			//int value2 = (int) (((double) i)/((double) 20));
 			NeighbourhoodString nbhstr = new NeighbourhoodString(dir);// + helper + value2 + helper2 + value1 + "-34.indi");
 			nbhstr.writeToFile();
 		}
