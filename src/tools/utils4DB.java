@@ -103,21 +103,23 @@ public class utils4DB {
     
     public static void getDbSizeInfo(String connFile, String DB) {
 
-		Connection myConnection;
-		mySQLConnect SQLC;
-	
+    	MySQLConnection conn = null;
+    	
+    	try {
+    		conn = new MySQLConnection();
+    	} catch (SQLException e) {
+    		System.err.println("Couldn't connect to db. Error: "+e.getMessage());
+    		System.exit(1);
+    	}
+    	
 		double data = 0, index = 0, table_data = 0, table_index = 0, GB = Math.pow(2, 30);
 		String Query = null, table = null;
 		Statement Stmt = null;
 		ResultSet RS = null;
-	
-		SQLC = new mySQLConnect();
-		SQLC.readConnectionFile(connFile);
-		myConnection = SQLC.openConnection();
-	
+		
 		try {
 		    Query = "SHOW TABLE STATUS FROM "+DB;
-		    Stmt = myConnection.createStatement();
+		    Stmt = conn.createStatement();
 		    RS = Stmt.executeQuery(Query);
 		    while (RS.next()) {
 				table = RS.getString("Name");
@@ -139,7 +141,7 @@ public class utils4DB {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end try/catch connection
 	
-		SQLC.closeConnection(myConnection);
+		conn.close();
 
     }
     

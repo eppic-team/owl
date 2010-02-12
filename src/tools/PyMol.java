@@ -103,9 +103,13 @@ public class PyMol {
 		    "(pdb_group = \"A\") "+
 		    "ORDER BY chain_code, residue_serial, serial;";
 	
-		mySQLConnect SQLC = new mySQLConnect();
-		SQLC.readConnectionFile(connFile);
-		Connection conn = SQLC.openConnection();
+		MySQLConnection conn = null;
+		try {
+			conn = new MySQLConnection();
+		} catch (SQLException e) {
+			System.err.println("Couldn't connect to db. Error: "+e.getMessage());
+			System.exit(1);
+		}
 	
 		Statement S;
 		ResultSet R;
@@ -127,7 +131,7 @@ public class PyMol {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
 		
-		SQLC.closeConnection(conn);
+		conn.close();
 	
 		Out.println("END\"\"\", \""+accessionCode+"_"+assemblyId+"_"+modelId+"\")");
 
@@ -177,9 +181,13 @@ public class PyMol {
 		    "(pdb_group = \"A\") "+
 		    "ORDER BY chain_code, residue_serial, serial;";
 	
-		mySQLConnect SQLC = new mySQLConnect();
-		SQLC.readConnectionFile(connFile);
-		Connection conn = SQLC.openConnection();
+		MySQLConnection conn = null;
+		try {
+			conn = new MySQLConnection();
+		} catch (SQLException e) {
+			System.err.println("Couldn't connect to db. Error: "+e.getMessage());
+			System.exit(1);
+		}
 	
 		Statement S;
 		ResultSet R;
@@ -201,7 +209,7 @@ public class PyMol {
 		    System.out.println("VendorError:  " + E.getErrorCode());
 		} // end catch 
 		
-		SQLC.closeConnection(conn);
+		conn.close();
 	
 		Out.println("END\"\"\", \""+accessionCode+"_"+assemblyId+"_"+modelId+"\")");
 

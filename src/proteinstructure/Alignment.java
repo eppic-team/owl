@@ -18,14 +18,11 @@ import tools.MySQLConnection;
 
 
 /**
- * Package:		proteinstructure
- * Class: 		Alignment
- * Author:		Henning Stehr, Jose Duarte, Lars Petzold
- * 
  * A multiple protein sequence alignment. This class represents a set of
  * protein sequences which are globally aligned and provides functions
  * to map between the original and the aligned sequences.
  * 
+ * @author		Henning Stehr, Jose Duarte, Lars Petzold
  */
 public class Alignment {
 	
