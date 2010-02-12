@@ -1,4 +1,4 @@
-package tests.proteinstructure;
+package tests.tools;
 
 import static org.junit.Assert.*;
 
