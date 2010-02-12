@@ -14,6 +14,8 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import tools.Interval;
+import tools.IntervalSet;
 import tools.MySQLConnection;
 
 

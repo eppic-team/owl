@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import tools.Interval;
+
 /**
  * A particular region of a scop domain within a protein structure
  */

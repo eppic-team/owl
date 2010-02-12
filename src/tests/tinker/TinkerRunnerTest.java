@@ -16,7 +16,6 @@ import org.junit.runner.JUnitCore;
 
 import proteinstructure.Atom;
 import proteinstructure.ConformationsNotSameSizeError;
-import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
@@ -27,6 +26,7 @@ import proteinstructure.Residue;
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;
+import tools.IntPairSet;
 import tools.MySQLConnection;
 
 public class TinkerRunnerTest {

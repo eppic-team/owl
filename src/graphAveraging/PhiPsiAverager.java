@@ -10,8 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
 import proteinstructure.Alignment;
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.Pdb;
 import proteinstructure.PdbfilePdb;
@@ -21,6 +19,8 @@ import proteinstructure.Template;
 import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import tools.Goodies;
+import tools.Interval;
+import tools.IntervalSet;
 import tools.MySQLConnection;
 
 public class PhiPsiAverager {

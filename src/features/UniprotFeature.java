@@ -1,7 +1,7 @@
 package features;
 
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
+import tools.Interval;
+import tools.IntervalSet;
 
 /**
  * A feature based on a Uniprot annotation.

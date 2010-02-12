@@ -7,7 +7,6 @@ import java.util.*;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
-import proteinstructure.IntPairComparator;
 import proteinstructure.PairwiseSequenceAlignment;
 import proteinstructure.RIGEdge;
 import proteinstructure.RIGEnsemble;
@@ -16,6 +15,7 @@ import proteinstructure.RIGraph;
 import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import tools.Goodies;
+import tools.IntPairComparator;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;

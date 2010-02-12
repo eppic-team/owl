@@ -3,7 +3,7 @@ package graphAveraging;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import proteinstructure.Interval;
+import tools.Interval;
 
 /**
  * A class to represent a consensus phi/psi angle interval.

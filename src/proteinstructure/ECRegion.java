@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import tools.Interval;
+
 /**
  * A particular EC region within a protein structure
  */

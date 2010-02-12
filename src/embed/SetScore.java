@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.GraphAverager;
 import graphAveraging.GraphAveragerError;
-import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbasePdb;
 import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGraph;
+import tools.IntPairSet;
 import tools.MySQLConnection;
 
 /**

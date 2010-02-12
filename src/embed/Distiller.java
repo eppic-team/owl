@@ -15,7 +15,6 @@ import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.GraphAverager;
 import graphAveraging.GraphAveragerError;
 
-import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
@@ -23,6 +22,7 @@ import proteinstructure.PdbasePdb;
 import proteinstructure.RIGEdge;
 import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGraph;
+import tools.IntPairSet;
 
 public class Distiller {
 	

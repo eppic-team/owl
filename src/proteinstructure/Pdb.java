@@ -38,6 +38,8 @@ import edu.uci.ics.jung.graph.util.Pair;
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 
+import tools.Interval;
+import tools.IntervalSet;
 import tools.MySQLConnection;
 
 import java.sql.SQLException;

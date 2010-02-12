@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Vector;
 
+import tools.Interval;
+
 /** This class encapsulates the EC annotation of a single protein chain. */
 public class EC {
 

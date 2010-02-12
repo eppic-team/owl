@@ -3,8 +3,8 @@ package features;
 import java.util.TreeSet;
 
 import proteinstructure.CatalyticSite;
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
+import tools.Interval;
+import tools.IntervalSet;
 
 /**
  * A catalytic site from the Catalytic Site Atlas.

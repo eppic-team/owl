@@ -1,4 +1,4 @@
-package proteinstructure;
+package tools;
 
 import java.util.HashSet;
 import java.util.TreeSet;

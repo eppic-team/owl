@@ -1,8 +1,8 @@
 package features;
 
 import proteinstructure.AminoAcid;
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
+import tools.Interval;
+import tools.IntervalSet;
 
 /**
  * A feature based on a modification site annotation from the PhosphoSitePlus database.

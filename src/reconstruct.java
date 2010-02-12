@@ -19,8 +19,6 @@ import proteinstructure.AAinfo;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.FileFormatError;
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.RIGraph;
@@ -30,6 +28,8 @@ import proteinstructure.PdbasePdb;
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;
+import tools.Interval;
+import tools.IntervalSet;
 import tools.MySQLConnection;
 
 

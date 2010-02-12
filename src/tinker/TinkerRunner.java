@@ -36,7 +36,6 @@ import org.ggf.drmaa.SessionFactory;
 import actionTools.TinkerStatusNotifier;
 
 import proteinstructure.AAinfo;
-import proteinstructure.IntPairSet;
 import proteinstructure.Pdb;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbfilePdb;
@@ -45,6 +44,7 @@ import proteinstructure.RIGEdge;
 import proteinstructure.RIGEnsemble;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
+import tools.IntPairSet;
 
 public class TinkerRunner {
 	

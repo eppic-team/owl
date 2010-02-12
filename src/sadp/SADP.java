@@ -12,8 +12,8 @@ import actionTools.Retriever;
 
 import proteinstructure.Alignment;
 import proteinstructure.AlignmentConstructionError;
-import proteinstructure.IntPairComparator;
 import proteinstructure.PairwiseAlignmentConverter;
+import tools.IntPairComparator;
 
 
 /**

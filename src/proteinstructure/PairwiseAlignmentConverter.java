@@ -3,6 +3,8 @@ package proteinstructure;
 import java.util.Iterator;
 import java.util.TreeSet;
 
+import tools.IntPairComparator;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**

@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
 
+import tools.Interval;
+
 /** 
  * This class encapsulates the scop annotation of a single protein chain. 
  */

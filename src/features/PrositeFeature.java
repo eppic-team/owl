@@ -1,9 +1,9 @@
 package features;
 
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
 import proteinstructure.PrositeHit;
 import proteinstructure.PrositeScanner;
+import tools.Interval;
+import tools.IntervalSet;
 
 /**
  * A feature based on a matching ProSite motif.

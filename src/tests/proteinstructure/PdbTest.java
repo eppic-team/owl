@@ -30,8 +30,6 @@ import proteinstructure.Atom;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.FileFormatError;
-import proteinstructure.Interval;
-import proteinstructure.IntervalSet;
 import proteinstructure.MaxClusterRunner;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
@@ -43,6 +41,8 @@ import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.Residue;
 import proteinstructure.TemplateList;
+import tools.Interval;
+import tools.IntervalSet;
 import tools.MySQLConnection;
 import tools.RegexFileFilter;
 

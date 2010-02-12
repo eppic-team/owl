@@ -1,6 +1,6 @@
 package features;
 
-import proteinstructure.IntervalSet;
+import tools.IntervalSet;
 
 /**
  * A feature in a sequence or structure.

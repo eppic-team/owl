@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import tools.IntPairComparator;
 import tools.MySQLConnection;
 
 import edu.uci.ics.jung.graph.util.EdgeType;

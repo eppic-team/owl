@@ -1,5 +1,7 @@
 package proteinstructure;
 
+import tools.Interval;
+
 /**
  * A particular secondary structure element within a protein structure
  */

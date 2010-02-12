@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
 
+import tools.Interval;
+
 /** This class encapsulates the secondary structure annotation of a single protein chain.
  * TODO eventually we should make this implement Iterable<SecStrucElement> (so then one can 
  * use foreach loops). The problem is we'd need to refactor getIterator() to iterator() and

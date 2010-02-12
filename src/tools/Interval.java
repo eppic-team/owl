@@ -1,4 +1,4 @@
-package proteinstructure;
+package tools;
 import java.lang.Comparable;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
