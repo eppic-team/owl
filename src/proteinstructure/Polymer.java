@@ -390,4 +390,77 @@ public class Polymer implements Iterable<PolResidue> {
 		return mol;
 	}
 	
+	
+	
+	
+	/*---------------------   Testing the class    ---------------------------*/
+	
+	public static void main(String[] args) throws Exception {
+
+		File outPdb = new File("/project/StruPPi/jose/histone/diskMolecule.pdb");
+		
+		Point3d center = new Point3d(2,2,2);
+		double r = 30;
+		double zmax = 25;
+		double zmin = 12.5;
+		//Point3d[] pointsUp = circleCoords(center,r,2);
+		//Point3d[] pointsDown = circleCoords(center,r,-2);
+		
+		Point3d[] pointsCenter = circleCoords(center,r,0);
+		Point3d[] pointsUp = histoneShape(center,r,zmax,zmin);
+		Point3d[] pointsDown = histoneShape(center,r,-zmax,-zmin);
+		
+		Polymer mol = new Polymer();
+		int resSer=1;
+		for (int i=0;i<pointsCenter.length;i++) {
+			mol.addResidue(new PolResidue("ALA",resSer,"A","A","CA",pointsCenter[i]));
+			resSer++;
+		}
+		for (int i=0;i<pointsUp.length;i++) {
+			mol.addResidue(new PolResidue("ALA",resSer,"A","A","CA",pointsUp[i]));
+			resSer++;
+		}
+		for (int i=0;i<pointsDown.length;i++) {
+			mol.addResidue(new PolResidue("ALA",resSer,"A","A","CA",pointsDown[i]));
+			resSer++;
+		}
+
+		mol.getPrincipalMomentsInertia(mol.getCenterOfMass());
+		
+		mol.writeToPdbFile(outPdb);
+	}
+
+	
+	private static Point3d[] circleCoords(Point3d center, double r, double z) {
+		int totalPoints = 16;
+		Point3d[] points = new Point3d[totalPoints];
+		double thetaStep = (2*Math.PI)/(double)totalPoints;
+		int i=0;
+		for (double theta=0;theta<2.0*Math.PI;theta+=thetaStep) {
+			points[i] = new Point3d(center.x+r*Math.cos(theta),center.y+r*Math.sin(theta),center.z+z);
+			i++;
+		}
+		return points;
+	}
+	
+	private static Point3d[] histoneShape(Point3d center, double r, double zmax, double zmin) {
+		int totalPoints = 16;
+		Point3d[] points = new Point3d[totalPoints];
+		double thetaStep = (2*Math.PI)/(double)totalPoints;
+		int i=0;
+		for (double theta=0;theta<2.0*Math.PI;theta+=thetaStep) {
+			double z = 0.0;
+			if (theta<Math.PI) {
+				z = (theta/Math.PI)*zmax+zmin;
+			}
+			if (theta>Math.PI) {
+				z = ((2*Math.PI-theta)/Math.PI)*zmax+zmin;
+			}
+			points[i] = new Point3d(center.x+r*Math.cos(theta),center.y+r*Math.sin(theta),center.z+z);
+			i++;
+		}
+		return points;		
+	}
+
+	
 }
