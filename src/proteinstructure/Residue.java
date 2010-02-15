@@ -168,6 +168,10 @@ public class Residue implements Iterable<Atom> {
 	public String getChainCode() {
 		return parentPdb.getChainCode();
 	}
+	
+	public String getPdbChainCode() {
+		return parentPdb.getPdbChainCode();
+	}
 
 	public Pdb getParentPdb() {
 		return parentPdb;

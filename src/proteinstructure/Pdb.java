@@ -27,6 +27,7 @@ import java.util.Vector;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 
+import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
@@ -296,6 +297,21 @@ public class Pdb {
 	 */
 	public boolean containsResidue(int resSerial) {
 		return residues.containsKey(resSerial);
+	}
+	
+	/**
+	 * Gets all residues of specified type in a List
+	 * @param aa the amino acid type (see AminoAcid class)
+	 * @return
+	 */
+	public ArrayList<Residue> getResiduesOfType(AminoAcid aa) {
+		ArrayList<Residue> list = new ArrayList<Residue>();
+		for (Residue residue:residues.values()) {
+			if (residue.getAaType().equals(aa)) {
+				list.add(residue);
+			}
+		}
+		return list;
 	}
 	
 	/**
@@ -2847,6 +2863,7 @@ public class Pdb {
 
 	/**
 	 * Rotates or translates this structure.
+	 * @param m the rotation/translation matrix
 	 */
 	public void transform(Matrix4d m) {
 		for(int atomserial:getAllAtomSerials()) {
@@ -2854,6 +2871,49 @@ public class Pdb {
 			m.transform(coords);
 		}
 	}
+	
+	/**
+	 * Transform the coordinates of this structure translating them to the given center
+	 * and rotating them so that the given axis aligns with the z-axis
+	 * @param center
+	 * @param axis
+	 */
+	public void transformToCenterAndAxis(Point3d center, Vector3d axis) {
+		// finding the rotation matrix to align z axis to the given inertia axis
+		Vector3d r = new Vector3d();
+		Vector3d k = new Vector3d(0,0,1);
+		r.cross(axis, k); // this is the axis of rotation
+		double alpha = axis.angle(k); // this is the angle to rotate
+		AxisAngle4d axisAngle = new AxisAngle4d(r, alpha);
+		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
+		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
+		rot.setRotation(axisAngle);
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			// translate to new origin
+			coords.sub(center);
+			// rotate so that z axis is the given axis
+			rot.transform(coords);
+		}
+	}
+	
+	/**
+	 * Rotates this structure around rotAxis with the given rotAngle 
+	 * @param rotAxis the vector around which the rotation will be performed
+	 * @param rotAngle the rotation angle in radians
+	 */
+	public void rotate(Vector3d rotAxis, double rotAngle) {
+		AxisAngle4d axisAngle = new AxisAngle4d(rotAxis, rotAngle);
+		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
+		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
+		rot.setRotation(axisAngle);
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			// rotate
+			rot.transform(coords);			
+		}			
+	}
+
 	
 	/**
 	 * Moves this structure such that the center of mass is at the origin using all atoms
