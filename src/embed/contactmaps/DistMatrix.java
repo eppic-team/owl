@@ -36,7 +36,7 @@ public class DistMatrix {
 	 * 
 	 */
 	public DistMatrix(String path) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setDistMat(path, 3);
+		setDistMat(path, 3);
 		//calling the initial setter
 		
 	}
@@ -129,29 +129,29 @@ public class DistMatrix {
         double[][] mats = generateContactMatrix(in);
         //generating the contact map matrix as a double instance
         
-        this.max_power = maxpotence;
+        max_power = maxpotence;
         //maximal power minus one of the matrix power sequence
         
         int i = mats.length;
-        this.dim = i;
+        dim = i;
         //dimension of the squared matrix
         
-        this.mat = new Matrix(mats);
+        mat = new Matrix(mats);
         //the actual contact map matrix
         
-        this.name = "A";
+        name = "A";
         //chain code, only default permitted
         
-        this.setEigVals();
+        setEigVals();
         //instantiating the eigenvalue fields
         
-        this.setTrans();
+        setTrans();
         //instantiating the transformation matrix
         
         setUnity(i);
         //setting the unity and zero matrix
         
-        this.setPotenceSequence();
+        setPotenceSequence();
         //instantiating the power sequence
 
     }
@@ -163,11 +163,11 @@ public class DistMatrix {
      * standard methods of the <code>{@link Matrix}</code> class
      */
     public void setEigVals(){
-        if(this.mat != null){
+        if(mat != null){
         	//only if the field 'mat' was initialized before calling this method, it will proceeds
         	
-            int dims = this.getDim();
-            this.eigmats = new EigenvalueDecomposition(this.getMat());
+            int dims = getDim();
+            eigmats = new EigenvalueDecomposition(getMat());
             //getting the eigenvalue decomposition of the contact map matrix
             
             Matrix eigs1 = new Matrix(eigmats.getD().getArray());
@@ -182,8 +182,8 @@ public class DistMatrix {
                 //copying the eigenvalues
                 
             }
-            this.eigenvalues = new double[dims];
-            System.arraycopy(eigvals,0,this.eigenvalues,0,dims);
+            eigenvalues = new double[dims];
+            System.arraycopy(eigvals,0,eigenvalues,0,dims);
             //initializing the field "eigenvalues'
             
         }
@@ -203,7 +203,7 @@ public class DistMatrix {
      */
     public void setTrans(){
     	try{
-    		this.transformer = new Matrix(this.eigmats.getV().getArray());
+    		transformer = new Matrix(eigmats.getV().getArray());
     		//transformation matrix, if field 'eigmats' is not initialized
     		//an NullPointerException may occur
     	}
@@ -226,14 +226,14 @@ public class DistMatrix {
      * the first key value, the second key value is the rank of the matrix. 
      */
     public void setPotenceSequence(){
-    	if(this.mat != null){
+    	if(mat != null){
     		//check for initialization
     		
     		int counter = 1;
-    		int max_pow = this.max_power;
+    		int max_pow = max_power;
     		//maximal power minus one occurring in the power sequence
     		
-    		this.potence_sequence = new HashMap<Integer,HashMap<Integer,Matrix>> (2 * max_pow);
+    		potence_sequence = new HashMap<Integer,HashMap<Integer,Matrix>> (2 * max_pow);
     		HashMap<Integer,Matrix> submap = new HashMap<Integer,Matrix> ();
     		Matrix ma = new Matrix (unity.getArray());
     		//starting with the unity matrix
@@ -242,7 +242,7 @@ public class DistMatrix {
     		while(counter < max_pow && tester){
     			//iterating over the powers
     			
-    			ma = ma.times(this.mat);
+    			ma = ma.times(mat);
     			int rank = ma.rank();
     			if(rank == 0){
     				//check, whether the rank is zero
@@ -253,7 +253,7 @@ public class DistMatrix {
     			submap.put(rankd, ma);
     			//adding the rank and the matrix to a submap
     			
-    			this.potence_sequence.put(potence, submap);
+    			potence_sequence.put(potence, submap);
     			//adding it to the field, where
     			
     			counter++;
@@ -266,26 +266,26 @@ public class DistMatrix {
      * auxiliary setter: initializes the field <code>{@link #minpoly}</code>
      */
     public void minPoly(){
-    	this.minpoly = "";
+    	minpoly = "";
     	//try{
-    	int dim1 = this.dim;
+    	int dim1 = dim;
     	Matrix min = new Matrix(dim1, dim1);
     	double[] eigvec = new double[dim1];
-    	System.arraycopy(this.eigenvalues, 0, eigvec, 0, dim1);
+    	System.arraycopy(eigenvalues, 0, eigvec, 0, dim1);
     	for(int i = 0; i < dim1; i++){
     		if(i > 0){
-    			min = new Matrix((min.times(this.getMat().minus(getUntiy().times(eigvec[i])))).getArray());
+    			min = new Matrix((min.times(getMat().minus(getUntiy().times(eigvec[i])))).getArray());
     			if(!isEqualTo(min,zero)){
     				if(eigvec[i] >= 0.0){
-    					this.minpoly += "(" + this.getName() + " - " + eigvec[i] + " I_" + dim1 +")";
+    					minpoly += "(" + getName() + " - " + eigvec[i] + " I_" + dim1 +")";
     				}
     				else{
-    					this.minpoly += "(" + this.getName() + " + " + Math.abs(eigvec[i]) + " I_" + dim1 +")";
+    					minpoly += "(" + getName() + " + " + Math.abs(eigvec[i]) + " I_" + dim1 +")";
     				}
     			}
     		}
     		else{
-    			min = new Matrix((this.getMat().minus(getUntiy().times(eigvec[i]))).getArray());
+    			min = new Matrix((getMat().minus(getUntiy().times(eigvec[i]))).getArray());
     		}
     	}
     }
@@ -295,26 +295,26 @@ public class DistMatrix {
     
 
     public int getDim(){
-        return this.dim;
+        return dim;
     }
 
     public Matrix getMat(){
-        return new Matrix (this.mat.getArray());
+        return new Matrix (mat.getArray());
     }
     
     public EigenvalueDecomposition getEigDecomp(){
-    	return this.eigmats;
+    	return eigmats;
     }
     
     public double[] getEigvals(){
-    	int dim1 = this.getDim();
+    	int dim1 = getDim();
     	double[] eigs = new double[dim1];
-    	System.arraycopy(this.eigenvalues, 0, eigs, 0, dim1);
+    	System.arraycopy(eigenvalues, 0, eigs, 0, dim1);
     	return eigs;
     }
     
     public double getEigvals(int i){
-    	return this.getEigvals()[i];
+    	return getEigvals()[i];
     }
     
     public static Matrix getUntiy(){
@@ -322,11 +322,11 @@ public class DistMatrix {
     }
     
     public String getName(){
-    	return this.name;
+    	return name;
     }
     
     public double[][] genMat(int index1, int index2, int value) {
-    	int dim = this.getDim();
+    	int dim = getDim();
     	double[][] array = new double[dim][dim];
     	boolean tester = index1 < 0 || index1 < 0;
     	if(index1 < dim && index2 < dim && !tester){
@@ -349,12 +349,12 @@ public class DistMatrix {
     }
     
     public double[] get3GreatestEigs(){
-    	int dim1 = this.getDim();
+    	int dim1 = getDim();
     	int[] comparer = new int[dim];
     	for(int i = 0; i < dim1 - 1; i++){
     		for(int j = i + 1; j < dim1; j++){
-    			double val1 = Math.abs(this.getEigvals(i));
-    			double val2 = Math.abs(this.getEigvals(j));
+    			double val1 = Math.abs(getEigvals(i));
+    			double val2 = Math.abs(getEigvals(j));
     			if(val1 < val2){
     				comparer[j]++;
     			}
@@ -366,35 +366,35 @@ public class DistMatrix {
     	double[] greatest = new double[3];
     	for(int i = 0; i < dim1; i++){
     		if(comparer[i] == dim1 - 1){
-    			greatest[0] = this.getEigvals(i);
+    			greatest[0] = getEigvals(i);
     		}
     		if(comparer[i] == dim1 - 2){
-    			greatest[1] = this.getEigvals(i);
+    			greatest[1] = getEigvals(i);
     		}
     		if(comparer[i] == dim1 - 3){
-    			greatest[2] = this.getEigvals(i);
+    			greatest[2] = getEigvals(i);
     		}
     	}
     	return greatest;
     }
     
     public Matrix getTransformer (){
-    	return new Matrix (this.transformer.getArray());
+    	return new Matrix (transformer.getArray());
     }
     
     public String toString(){
-    	int dim1 = this.dim;
+    	int dim1 = dim;
     	String matstring = "";
     	for(int i = 0; i < dim1; i++){
     		for(int j = 0; j < dim1; j++){
     			if(j == 0){
-    				matstring = matstring + this.getMat().getArray()[i][j];
+    				matstring = matstring + getMat().getArray()[i][j];
     			}
     			if(j < dim1 - 1 && j > 0){
-    				matstring = matstring + "\t" + this.getMat().getArray()[i][j]; 
+    				matstring = matstring + "\t" + getMat().getArray()[i][j]; 
     			}
     			if(j == dim1 - 1){
-    				matstring = matstring + "\t" + this.getMat().getArray()[i][j] + "\n";
+    				matstring = matstring + "\t" + getMat().getArray()[i][j] + "\n";
     			}
     		}
     	}

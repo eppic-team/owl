@@ -21,48 +21,48 @@ public class CMDMErrorEvaluator implements Runnable {
 	public Species[] population;
 	
 	public CMDMErrorEvaluator (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setCMDMErrorEval(dir,20,30,0.0003);	
+		setCMDMErrorEval(dir,20,30,0.0003);	
 	}
 	
 	public CMDMErrorEvaluator (String dir, int size) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setCMDMErrorEval (dir,size,30,0.0003);
+		setCMDMErrorEval (dir,size,30,0.0003);
 	}
 	public void setCMDMErrorEval (String dir, int size, int evosteps, double threshold) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.path = new String (dir);
+		path = new String (dir);
 		File dirs = new File (dir);
 		File[] cmap_list = dirs.listFiles(new RegexFileFilter (".*.cmap"));
 		File[] graph_list = dirs.listFiles(new RegexFileFilter (".*.graph"));
 		int dim_cmap = cmap_list.length, dim_graph = graph_list.length, dim_sum = dim_cmap + dim_graph;
-		this.file_listing = new String[dim_sum];
-		this.starter = new Individuals[dim_sum];
-		this.population = new Species [dim_sum];
+		file_listing = new String[dim_sum];
+		starter = new Individuals[dim_sum];
+		population = new Species [dim_sum];
 		for(int i = 0; i < dim_sum; i++){
 			if(i < dim_cmap){
-				this.file_listing[i] = new String (cmap_list[i].getAbsolutePath());
-				this.starter[i] = new Individuals(this.file_listing[i]);
+				file_listing[i] = new String (cmap_list[i].getAbsolutePath());
+				starter[i] = new Individuals(file_listing[i]);
 				Demes[] spec = new Demes[size];
 				for(int j = 0; j < size; j++){
-					spec[j] = new Demes (this.starter[i],size);
+					spec[j] = new Demes (starter[i],size);
 				}
-				this.population[i] = new Species (spec,30,this.path,this.path,0.0003);
+				population[i] = new Species (spec,30,path,path,0.0003);
 			}
 			else{
-				this.file_listing[i] = new String (graph_list[i].getAbsolutePath());
-				this.starter[i] = new Individuals(this.file_listing[i]);
+				file_listing[i] = new String (graph_list[i].getAbsolutePath());
+				starter[i] = new Individuals(file_listing[i]);
 				Demes[] spec = new Demes[size];
 				for(int j = 0; j < size; j++){
-					spec[j] = new Demes (this.starter[i],size);
+					spec[j] = new Demes (starter[i],size);
 				}
-				this.population[i] = new Species (spec,30,this.path,this.path,0.0003);
+				population[i] = new Species (spec,30,path,path,0.0003);
 			}
 		}
 	}
 	
 	public void run() {
-		int length = this.population.length, final_generation = this.evosteps;
+		int length = population.length, final_generation = evosteps;
 		for(int i = 0; i < length; i++){
 			try {
-				this.population[i].evolve("dummy");
+				population[i].evolve("dummy");
 			} catch (FileNotFoundException e) {
 				//e.printStackTrace();
 				System.err.println("Some severe file error occurred during evolution...");
@@ -82,7 +82,7 @@ public class CMDMErrorEvaluator implements Runnable {
 				System.exit(1);
 			}
 			try {
-				this.population[i].evolve2(final_generation);
+				population[i].evolve2(final_generation);
 			} catch (FileNotFoundException e) {
 				//e.printStackTrace();
 				System.err.println("Some severe file error occurred during evolution...");

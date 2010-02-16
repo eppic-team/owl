@@ -66,7 +66,7 @@ public class ConvertErrorsToTextFile {
 	 * directory <code>dir_path</code>.
 	 */
 	public ConvertErrorsToTextFile(String dir_path) throws FileNotFoundException, IOException{
-		this.setFiles(dir_path);
+		setFiles(dir_path);
 	}
 	
 	/*--------------------------------------------setter--------------------------------------------*/
@@ -77,13 +77,13 @@ public class ConvertErrorsToTextFile {
 	 * error values are extracted from them. 
 	 */
 	public void setFiles (String dir_path) throws FileNotFoundException, IOException{
-		this.setDirectory(dir_path);
+		setDirectory(dir_path);
 		path = new String (dir_path);
-		this.file_list = this.dir.listFiles(new RegexFileFilter (file_type));
-		int length = this.file_list.length;
-		this.file_content = "";
+		file_list = dir.listFiles(new RegexFileFilter (file_type));
+		int length = file_list.length;
+		file_content = "";
 		for(int i = 0; i < length; i++){
-			this.file_content += this.fileReader(i);
+			file_content += fileReader(i);
 		}
 	}
 	
@@ -117,7 +117,7 @@ public class ConvertErrorsToTextFile {
 	public void setDirectory (String dir_path) throws IllegalArgumentException {
 		File dirs = new File (dir_path);
 		if(containsReadableFiles(dirs)){
-			this.dir = new File (dir_path);
+			dir = new File (dir_path);
 		}
 		else{
 			throw new IllegalArgumentException ("The String dir_path = '"+ dir_path+"', denoting a directory, does not contain any readable file...");
@@ -131,7 +131,7 @@ public class ConvertErrorsToTextFile {
 	 * is by default: <code>{@link #path} + Error/</code>
 	 */
 	public void writeToFile () throws IOException{
-		if(this.file_content != null){
+		if(file_content != null){
 			String output_dir = path+"/Error_file/";
 			File output = new File (output_dir);
 			if(!output.exists()){
@@ -140,7 +140,7 @@ public class ConvertErrorsToTextFile {
 			output_dir += pdb_code+".txt";
 			FileOutputStream str = new FileOutputStream (output_dir);
 			PrintStream printa = new PrintStream (str);
-			printa.print(this.file_content);
+			printa.print(file_content);
 			printa.close();
 			str.close();
 			System.out.println(output_dir + " written to file...");
@@ -153,7 +153,7 @@ public class ConvertErrorsToTextFile {
 	 */
 	public void writeToFile (String dir_, int i) throws IOException{
 		String dir = new String (dir_);
-		if(this.file_content != null && dir != null){
+		if(file_content != null && dir != null){
 			dir += "/Error_file/";
 			File output = new File (dir);
 			if(!output.exists()){
@@ -162,7 +162,7 @@ public class ConvertErrorsToTextFile {
 			dir += pdb_code+i+".txt";
 			FileOutputStream str = new FileOutputStream (dir);
 			PrintStream printa = new PrintStream (str);
-			printa.print(this.file_content);
+			printa.print(file_content);
 			printa.close();
 			str.close();
 			System.out.println(dir + " written to file...");
@@ -179,7 +179,7 @@ public class ConvertErrorsToTextFile {
 	 * @return a String representation containing the the number, CMError and DMError
 	 */
 	public String fileReader (int i) throws FileNotFoundException, IOException {
-		if(this.file_list[i] != null){
+		if(file_list[i] != null){
 			BufferedReader reader = new BufferedReader (new FileReader(file_list[i]));
 			String linereader = "", content = "";
 			boolean tester = false;

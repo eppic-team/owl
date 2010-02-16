@@ -107,14 +107,14 @@ public class Demes {
 	 * zero parameter constructor, sets all fields to their default values
 	 */
 	public Demes() {
-		this.size = 0;
-		this.pop = new Individuals[1];
-		this.pop[0] = new Individuals();
-		this.CMError = 0.0;
-		this.DMError = 0.0;
-		this.CMstdev = 0.0;
-		this.DMstdev = 0.0;
-		this.fiftyfifty = new boolean[1];
+		size = 0;
+		pop = new Individuals[1];
+		pop[0] = new Individuals();
+		CMError = 0.0;
+		DMError = 0.0;
+		CMstdev = 0.0;
+		DMstdev = 0.0;
+		fiftyfifty = new boolean[1];
 	}
 	
 	/**
@@ -123,17 +123,17 @@ public class Demes {
 	 * @param i an Integer, setting the size of this instance
 	 */
 	public Demes(int i) {
-		this.setSize(i);
-		this.pop = new Individuals[i];
-		this.subhash = new HashSet<Pair<Integer>>();
+		setSize(i);
+		pop = new Individuals[i];
+		subhash = new HashSet<Pair<Integer>>();
 		for(int j = 0; j < i; j++){
-			this.pop[i] = new Individuals();
+			pop[i] = new Individuals();
 		}
-		this.CMError = 0.0;
-		this.DMError = 0.0;
-		this.CMstdev = 0.0;
-		this.DMstdev = 0.0;
-		this.fiftyfifty = new boolean[i];
+		CMError = 0.0;
+		DMError = 0.0;
+		CMstdev = 0.0;
+		DMstdev = 0.0;
+		fiftyfifty = new boolean[i];
 	}
 	
 	/**
@@ -141,17 +141,17 @@ public class Demes {
 	 * @param p
 	 */
 	public Demes (Individuals[] p) {
-		this.setPop(p);
-		this.setSize(p.length);
-		this.setCMErrorStats(p);
-		this.setDMErrorStats(p);
-		this.setPopName(p[0].getName());
-		this.fiftyfifty = new boolean[p.length];
-		this.setSubHash(p);
-		this.setWHash();
-		this.setWHasher();
-		this.setMetrics();
-		this.setIndexer();
+		setPop(p);
+		setSize(p.length);
+		setCMErrorStats(p);
+		setDMErrorStats(p);
+		setPopName(p[0].getName());
+		fiftyfifty = new boolean[p.length];
+		setSubHash(p);
+		setWHash();
+		setWHasher();
+		setMetrics();
+		setIndexer();
 	}
 	
 	/**]
@@ -160,19 +160,19 @@ public class Demes {
 	 */
 	public Demes (Demes pop) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		int dim = pop.getSize();
-		this.setSize(dim);
+		setSize(dim);
 		this.pop = new Individuals[dim];
-		this.setPop(pop.getPop());
+		setPop(pop.getPop());
 		//setFullContactMap(pop);
-		this.setCMErrorStats(pop.getPop());
-		this.setDMErrorStats(pop.getPop());
-		this.fiftyfifty = new boolean[dim];
-		this.setPopName(pop.getName());
-		this.setSubHash(pop.getPop());
-		this.setWHash();
-		this.setWHasher();
-		this.setMetrics();
-		this.setIndexer();
+		setCMErrorStats(pop.getPop());
+		setDMErrorStats(pop.getPop());
+		fiftyfifty = new boolean[dim];
+		setPopName(pop.getName());
+		setSubHash(pop.getPop());
+		setWHash();
+		setWHasher();
+		setMetrics();
+		setIndexer();
 		}
 	
 	public Demes (Individuals starter, int size) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -180,11 +180,11 @@ public class Demes {
 		Pdb pdb = new PdbasePdb(starter.getName(), pdbaseDb, conn);
 		pdb.load(starter.getChainCode());
 		RIGraph rig = pdb.getRIGraph("Ca", 9.0);
-		this.pop = new Individuals[size];
+		pop = new Individuals[size];
 		for(int i = 0; i < size; i++){
-			this.pop[i] = new Individuals(rig,conn,true,starter.getNumOfContacts());
+			pop[i] = new Individuals(rig,conn,true,starter.getNumOfContacts());
 		}
-		this.setIndexer();
+		setIndexer();
 	}
 
 	/**
@@ -192,22 +192,22 @@ public class Demes {
 	 * @param p 
 	 */
 	public Demes (Individuals[] p, int generation) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setPop(p);
-		this.setSize(p.length);
+		setPop(p);
+		setSize(p.length);
 		//setFullContactMap(p[0]);
-		this.setCMErrorStats(p);
-		this.setDMErrorStats(p);
-		this.setPopName(p[0].getName());
+		setCMErrorStats(p);
+		setDMErrorStats(p);
+		setPopName(p[0].getName());
 		if(generation >= 8){
 			System.out.println("test");
 		}
-		this.fiftyfifty = new boolean[p.length];
-		this.setSubHash(p);
-		this.setWHash();
-		this.setWHasher();
-		this.setGen(generation);
-		this.setMetrics();
-		this.setIndexer();
+		fiftyfifty = new boolean[p.length];
+		setSubHash(p);
+		setWHash();
+		setWHasher();
+		setGen(generation);
+		setMetrics();
+		setIndexer();
 	}
 	
 	/**
@@ -216,23 +216,23 @@ public class Demes {
 	 */
 	public Demes (Demes pop, int generation){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		int dim = pop.getSize();
-		this.setSize(dim);
+		setSize(dim);
 		this.pop = new Individuals[dim];
-		this.setPop(pop.getPop());
+		setPop(pop.getPop());
 		//setFullContactMap(pop);
-		this.setCMErrorStats(pop.getPop());
-		this.setDMErrorStats(pop.getPop());
+		setCMErrorStats(pop.getPop());
+		setDMErrorStats(pop.getPop());
 		if(generation >= 8){
 			System.out.println("test");
 		}
-		this.fiftyfifty = new boolean[dim];
-		this.setPopName(pop.getName());
-		this.setSubHash(pop.getPop());
-		this.setWHash();
-		this.setWHasher();
-		this.setGen(generation);
-		this.setMetrics();
-		this.setIndexer();
+		fiftyfifty = new boolean[dim];
+		setPopName(pop.getName());
+		setSubHash(pop.getPop());
+		setWHash();
+		setWHasher();
+		setGen(generation);
+		setMetrics();
+		setIndexer();
 		}
 	
 	
@@ -249,19 +249,19 @@ public class Demes {
 	 * @throws PdbLoadError
 	 */
 	public Demes (int popsize, int startfiles, int numofCons, int generation, String addname) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
-		this.setSize(popsize);
-		this.sathyasSet(popsize, startfiles, numofCons);
-		this.setPopName(this.getPop(0).getName() + addname);
-		//setFullContactMap(this.pop[0]);
-		this.setCMErrorStats(this.pop);
-		this.setDMErrorStats(this.pop);
-		this.fiftyfifty = new boolean[popsize];
-		this.setWHash();
-		this.setGen(generation);
-		this.setWHasher();
-		this.setMetrics();
-		this.setSubHash(this.pop);
-		this.setIndexer();
+		setSize(popsize);
+		sathyasSet(popsize, startfiles, numofCons);
+		setPopName(getPop(0).getName() + addname);
+		//setFullContactMap(pop[0]);
+		setCMErrorStats(pop);
+		setDMErrorStats(pop);
+		fiftyfifty = new boolean[popsize];
+		setWHash();
+		setGen(generation);
+		setWHasher();
+		setMetrics();
+		setSubHash(pop);
+		setIndexer();
 	}
 	
 	/*-------------------------------------Setters------------------------------------------*/
@@ -275,12 +275,12 @@ public class Demes {
 	public void setPop(Individuals[] pop){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		if(!hasNull(pop)){
 			int dim = pop.length;
-			this.pop = new Individuals[dim];
+			pop = new Individuals[dim];
 			//Individuals.fullcontactmap = Species.fullcontactmap;
 			for(int i = 0; i < dim; i++){
-				this.pop[i] = new Individuals(pop[i]);
+				pop[i] = new Individuals(pop[i]);
 			}
-			if(!this.samePDBCode()){
+			if(!samePDBCode()){
 				System.err.println("The input array of Individuals instances do not have a common PDB code, causing abrupt termination...");
 				System.exit(1);
 			}
@@ -295,23 +295,23 @@ public class Demes {
 	 * setter, sets this Species instance's name, usually the pdb code
 	 */
 	public void setPopName (String na){
-		this.name = na;
+		name = na;
 	}
 	
 	/**
 	 * setter, sets this average CMError and DMError
 	 */
 	public void setCMErrorStats (Individuals[] pop) {
-		this.CMError = getAverageCMError(pop);
-		this.CMstdev = getCMStDeviation(pop);
+		CMError = getAverageCMError(pop);
+		CMstdev = getCMStDeviation(pop);
 	}
 	
 	/**
 	 * setter, sets this standard deviation
 	 */
 	public void setDMErrorStats (Individuals[] pop) {
-		this.DMError = getAverageDMError(pop);
-		this.DMstdev = getDMStDeviation(pop);
+		DMError = getAverageDMError(pop);
+		DMstdev = getDMStDeviation(pop);
 	}
 	
 	/**
@@ -319,7 +319,7 @@ public class Demes {
 	 */
 	public void setSize(int i){
 		//if(i >= 14){
-			this.size = i;
+			size = i;
 		/*}
 		else{
 			System.err.println("The population size must always be greater or equal to 14.");
@@ -336,14 +336,14 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void bestFifty (boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		if(CMDM){
-			System.arraycopy(Individuals.getCM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
 		}
 		else{
-			System.arraycopy(Individuals.getDM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getDM(getPop()),0,error,0,dim);
 		}
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
@@ -358,15 +358,15 @@ public class Demes {
 		int k = 0;
 		for(int i = 0; i < dim; i++){
 			if(better[i] >= (int) (((double) dim) - 1)/2.0){
-				this.fiftyfifty[i] = true;
+				fiftyfifty[i] = true;
 				k++;
 			}
 		}
-		this.ranked = new int[k];
+		ranked = new int[k];
 		int counter = 0;
 		for(int i = 0; i < dim; i++){
-			if(this.fiftyfifty[i]){
-				this.ranked[counter] = i;
+			if(fiftyfifty[i]){
+				ranked[counter] = i;
 				counter++;
 			}
 		}
@@ -384,17 +384,17 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void bestFifty (String dummy, boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		double[] avmetrics = new double[dim];
-		System.arraycopy(this.getAvMetrics(), 0, avmetrics, 0, dim);
+		System.arraycopy(getAvMetrics(), 0, avmetrics, 0, dim);
 		double metrixsum = entrySum(avmetrics);
 		if(CMDM){
-			System.arraycopy(Individuals.getCM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
 		}
 		else{
-			System.arraycopy(Individuals.getDM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getDM(getPop()),0,error,0,dim);
 		}
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
@@ -409,15 +409,15 @@ public class Demes {
 		int k = 0;
 		for(int i = 0; i < dim; i++){
 			if(better[i] >= (int) (((double) dim) - 1)/(2.0)){
-				this.fiftyfifty[i] = true;
+				fiftyfifty[i] = true;
 				k++;
 			}
 		}
-		this.ranked = new int[k];
+		ranked = new int[k];
 		int counter = 0;
 		for(int i = 0; i < dim; i++){
-			if(this.fiftyfifty[i]){
-				this.ranked[counter] =  i;
+			if(fiftyfifty[i]){
+				ranked[counter] =  i;
 				counter++;
 			}
 		}
@@ -429,17 +429,17 @@ public class Demes {
 	 * @param dummy
 	 */
 	public void bestFifty (boolean CMDM, String dummy) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		double[] avmetrics = new double[dim];
-		System.arraycopy(this.getAvMetrics(), 0, avmetrics, 0, dim);
+		System.arraycopy(getAvMetrics(), 0, avmetrics, 0, dim);
 		double metrixsum = entrySum(avmetrics);
 		if(CMDM){
-			System.arraycopy(Individuals.getCM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
 		}
 		else{
-			System.arraycopy(Individuals.getDM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getDM(getPop()),0,error,0,dim);
 		}
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
@@ -456,15 +456,15 @@ public class Demes {
 		int k = 0;
 		for(int i = 0; i < dim; i++){
 			if(better[i] >= (int) (((double) dim) - 1)/(2.0)){
-				this.fiftyfifty[i] = true;
+				fiftyfifty[i] = true;
 				k++;
 			}
 		}
-		this.ranked = new int[k];
+		ranked = new int[k];
 		int counter = 0;
 		for(int i = 0; i < dim; i++){
-			if(this.fiftyfifty[i]){
-				this.ranked[counter] =  i;
+			if(fiftyfifty[i]){
+				ranked[counter] =  i;
 				counter++;
 			}
 		}
@@ -477,14 +477,14 @@ public class Demes {
 	 * @param dummy - a dummy parameter, to distinguish this method from similarly named methods
 	 */
 	public void bestFifty (String dummy){
-		if(this.pop != null){
-			int pop_size = this.size, counter = 0, counter1 = 0;
+		if(pop != null){
+			int pop_size = size, counter = 0, counter1 = 0;
 			int[] comp_array = new int[pop_size];
 			for(int i = 0; i < pop_size - 1; i++){
 				for(int j = i + 1; j < pop_size; j++){
-					double sum_of_error = this.getAvCMError() * ((double) pop_size);
-					double frac1 = this.getPop(i).getCM()/sum_of_error, frac2 = this.getPop(j).getCM()/sum_of_error; 
-					double error1 = frac1*this.getPop(i).getDM(), error2 = frac2*this.getPop(j).getDM();
+					double sum_of_error = getAvCMError() * ((double) pop_size);
+					double frac1 = getPop(i).getCM()/sum_of_error, frac2 = getPop(j).getCM()/sum_of_error; 
+					double error1 = frac1*getPop(i).getDM(), error2 = frac2*getPop(j).getDM();
 					if(error1 >= error2){
 						comp_array[i] += 1;
 					}
@@ -495,14 +495,14 @@ public class Demes {
 			}
 			for(int i = 0; i < pop_size; i++){
 				if(comp_array[i] >= (int)((double) pop_size - 1)/2.0){
-					this.fiftyfifty[i] = true;
+					fiftyfifty[i] = true;
 					counter++;
 				}
 			}
-			this.ranked = new int[counter];
+			ranked = new int[counter];
 			for(int i = 0; i < pop_size; i++){
-				if(this.fiftyfifty[i]){
-					this.ranked[counter1] = i;
+				if(fiftyfifty[i]){
+					ranked[counter1] = i;
 					counter1++;
 				}
 			}
@@ -514,7 +514,7 @@ public class Demes {
 	 * @param m
 	 */
 	public void setGen(int m) {
-		this.gen = m;
+		gen = m;
 	}
 	
 	/**
@@ -526,20 +526,20 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void compareToAverage(boolean CMDM) {// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		double avError = 0.0;
 		double[] Errors = new double[dim];
 		if(CMDM){
-			avError = this.getAvCMError();
-			System.arraycopy(this.getErrorArray(true), 0, Errors, 0, dim);
+			avError = getAvCMError();
+			System.arraycopy(getErrorArray(true), 0, Errors, 0, dim);
 		}
 		else{
-			avError = this.getAvDMError();
-			System.arraycopy(this.getErrorArray(false), 0, Errors, 0, dim);
+			avError = getAvDMError();
+			System.arraycopy(getErrorArray(false), 0, Errors, 0, dim);
 		}
 		for(int i = 0; i < dim; i++){
 			if(Errors[i] <= avError){
-				this.fiftyfifty[i] = true;
+				fiftyfifty[i] = true;
 			}
 		}
 	}
@@ -550,9 +550,9 @@ public class Demes {
 	 */
 	public void setSubHash(Individuals[] p){
 		int dim = p.length;
-		this.subhash = new HashSet<Pair<Integer>>(p[0].getHashSet()); 
+		subhash = new HashSet<Pair<Integer>>(p[0].getHashSet()); 
 		for(int i = 1; i < dim; i++){
-			this.subhash.retainAll(p[i].getHashSet());
+			subhash.retainAll(p[i].getHashSet());
 		}
 	}
 	
@@ -563,12 +563,12 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void setWHash (){// throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		int counter = 0, numConts = this.getNumOfContacts();
-		int dim = this.getSize(), dim2 = dim*numConts;
+		int counter = 0, numConts = getNumOfContacts();
+		int dim = getSize(), dim2 = dim*numConts;
 		int[][] weighter = new int[dim2][3];
 		HashSet<Pair<Integer>> hashs = new HashSet<Pair<Integer>>();
 		for(int i = 0; i < dim; i++){																//looping through the HashSet field 'store'
-			HashSet<Pair<Integer>> hash = new HashSet<Pair<Integer>>(this.getPop(i).getHashSet());	//a new HashSet to check for contacts already present
+			HashSet<Pair<Integer>> hash = new HashSet<Pair<Integer>>(getPop(i).getHashSet());	//a new HashSet to check for contacts already present
 			Iterator<Pair<Integer>> it = hash.iterator();
 			while(it.hasNext()){
 				Pair<Integer> pa = new Pair<Integer>(it.next());
@@ -588,13 +588,13 @@ public class Demes {
 				}
 			}
 		}
-		this.weighted = new int[counter][3];
+		weighted = new int[counter][3];
 		for(int i = 0; i < counter; i++){															//initializing the field 'weighted'
-			this.weighted[i][0] = weighter[i][0];
-			this.weighted[i][1] = weighter[i][1];
-			this.weighted[i][2] = weighter[i][2];
+			weighted[i][0] = weighter[i][0];
+			weighted[i][1] = weighter[i][1];
+			weighted[i][2] = weighter[i][2];
 		}
-		//this.sortWeighted();
+		//sortWeighted();
 	}
 	
 	/**
@@ -606,10 +606,10 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void setWHasher (){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize(), compare = dim * this.getPop(0).getNumOfContacts();
-		this.weighteed = new HashMap<Pair<Integer>, Integer> (compare);					//initializing the field 'weighteed'
+		int dim = getSize(), compare = dim * getPop(0).getNumOfContacts();
+		weighteed = new HashMap<Pair<Integer>, Integer> (compare);					//initializing the field 'weighteed'
 		for(int i = 0; i < dim; i++){
-			HashSet<Pair<Integer>> hash1 = this.getPop(i).getHashSet();					//HashSet of the i-th Individual
+			HashSet<Pair<Integer>> hash1 = getPop(i).getHashSet();					//HashSet of the i-th Individual
 			
 			Iterator<Pair<Integer>> it = hash1.iterator();								//Iterator over this HashSet
 			
@@ -618,14 +618,14 @@ public class Demes {
 				int counter = 1;														//default value, each contact is at least once present
 				
 				Pair<Integer> pair = it.next();
-				if(this.weighteed.containsKey(pair)){									//if the Pair of Integers is already present in the HashMap
+				if(weighteed.containsKey(pair)){									//if the Pair of Integers is already present in the HashMap
 																						//the value is incremented according to the times of occurrence
 					
-					counter = this.weighteed.get(pair).intValue() + 1;					
-					this.weighteed.put(pair, new Integer(counter));
+					counter = weighteed.get(pair).intValue() + 1;					
+					weighteed.put(pair, new Integer(counter));
 				}
 				else{
-					this.weighteed.put(pair, new Integer(counter));						//if the Pair of Integers is not present in the HashMap the default
+					weighteed.put(pair, new Integer(counter));						//if the Pair of Integers is not present in the HashMap the default
 																						//occurrence value (1) is used
 				}
 			}
@@ -672,12 +672,12 @@ public class Demes {
 			}
 		}
 		fileIn.close();
-		this.pop = new Individuals[popsize];													//initialize an array of Individuals with 'popsize' entries
+		pop = new Individuals[popsize];													//initialize an array of Individuals with 'popsize' entries
 		if(startfiles >= 0){																	//tests, if the parameters 'startfiles' and 'endfiles' generate
 																								//any exceptions
 			Individuals.setFullContactMap(fullCM);
 			for(int i = 0; i < popsize; i++){
-				this.pop[i] = new Individuals(Individuals.fullcontactmap, conn, true, numofCons);
+				pop[i] = new Individuals(Individuals.fullcontactmap, conn, true, numofCons);
 			}
 		}		
 		else{
@@ -702,14 +702,14 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void setMetrics() {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		int compare = (int) ((double) (dim*(dim - 1))*2.0/3.0);
-		this.metric = new HashMap<Pair<Integer>, Double>(compare);
+		metric = new HashMap<Pair<Integer>, Double>(compare);
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
-				HashSet<Pair<Integer>> hash1 = this.getPop(i).getHashSet();						//HashSet instance of the i-th Individual
+				HashSet<Pair<Integer>> hash1 = getPop(i).getHashSet();						//HashSet instance of the i-th Individual
 				
-				HashSet<Pair<Integer>> hash2 = this.getPop(j).getHashSet();						//HashSet instance of the j-th Individual
+				HashSet<Pair<Integer>> hash2 = getPop(j).getHashSet();						//HashSet instance of the j-th Individual
 				int counter = 0, hashsize = hash1.size();
 				
 				if(hash2.retainAll(hash1)){														//all common contacts are retained in 'hash2'
@@ -724,10 +724,10 @@ public class Demes {
 																								//are devided by the number of all contacts and substracted
 																								//from one
 				
-				this.metric.put(pair, metrics);													//initializing the field 'metric'
+				metric.put(pair, metrics);													//initializing the field 'metric'
 			}
 		}
-		this.metric2 = new Metric(this);
+		metric2 = new Metric(this);
 	}
 	
 	/**
@@ -755,12 +755,12 @@ public class Demes {
 		if(!dirtest.exists()){
 			dirtest.mkdirs();
 		}
-		FileOutputStream file = new FileOutputStream(path+name+"-"+this.getNumOfContacts()+".cmap");
+		FileOutputStream file = new FileOutputStream(path+name+"-"+getNumOfContacts()+".cmap");
 		PrintStream printa = new PrintStream(file);
-		printa.print(this.toString());
+		printa.print(toString());
 		printa.close();
 		file.close();
-		System.out.println(this.getName()+" at generation "+this.gen+" written to file...");
+		System.out.println(getName()+" at generation "+gen+" written to file...");
 	}
 	
 	/**
@@ -773,22 +773,22 @@ public class Demes {
 	 * @throws FileNotFoundException
 	 */
 	public void printMetric (String path, String filename, int k) throws IOException, FileNotFoundException {
-		String cont = "#Metric File " + this.getName() + "\n";
-		HashMap<Pair<Integer>, Double> hashmap1 = this.getMet();
-		HashMap<Pair<Integer>, Integer> hashmap2 = this.getMet2();
-		HashSet<Pair<Integer>> hashset = this.getMetKey();
+		String cont = "#Metric File " + getName() + "\n";
+		HashMap<Pair<Integer>, Double> hashmap1 = getMet();
+		HashMap<Pair<Integer>, Integer> hashmap2 = getMet2();
+		HashSet<Pair<Integer>> hashset = getMetKey();
 		Iterator<Pair<Integer>> it = hashset.iterator();
 		cont = cont + "\n";
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
 			cont = cont + pair.getFirst().intValue() + "\t" + pair.getSecond().intValue() + "\t" + hashmap1.get(pair).doubleValue() + "\t" + hashmap2.get(pair) + "\n"; 
 		}
-		FileOutputStream file = new FileOutputStream(path + filename + "-"+this.getNumOfContacts()+".met");
+		FileOutputStream file = new FileOutputStream(path + filename + "-"+getNumOfContacts()+".met");
 		PrintStream printa = new PrintStream(file);
 		printa.print(cont);
 		printa.close();
 		file.close();
-		System.out.println(this.getName()+" at generation "+this.gen+" written to file...");
+		System.out.println(getName()+" at generation "+gen+" written to file...");
 	}
 	
 	/**
@@ -800,10 +800,10 @@ public class Demes {
 	 * @throws IOException
 	 */
 	public void printAllIndisToTempDir (String dir, String addname) throws FileNotFoundException, IOException{
-		int length = this.getSize();
+		int length = getSize();
 		for(int i = 0; i < length; i++){
 			Integer index = new Integer (i); 
-			this.getPop(i).printToFile(dir, addname, index.toString());
+			getPop(i).printToFile(dir, addname, index.toString());
 		}
 	}
 	
@@ -813,23 +813,23 @@ public class Demes {
 	 * has a table with all contacts and the corresponding Individuals array index.
 	 */
 	public void setIndexer (){
-		if(this.pop != null && this.pop.length > 0){
-			this.indexer = new HashMap<Pair<Integer>,HashSet<Integer>> ();
-			for(int i = 0; i < this.size; i++){
-				HashSet<Pair<Integer>> in_set = this.getPop(i).getHashSet();
+		if(pop != null && pop.length > 0){
+			indexer = new HashMap<Pair<Integer>,HashSet<Integer>> ();
+			for(int i = 0; i < size; i++){
+				HashSet<Pair<Integer>> in_set = getPop(i).getHashSet();
 				Iterator<Pair<Integer>> it = in_set.iterator();
 				Integer index = new Integer (i);				
 				while(it.hasNext()){
 					Pair<Integer> pair = it.next();
-					if(this.indexer.containsKey(pair)){
-						HashSet<Integer> subset = this.indexer.get(pair);
+					if(indexer.containsKey(pair)){
+						HashSet<Integer> subset = indexer.get(pair);
 						subset.add(index);
-						this.indexer.put(pair, subset);
+						indexer.put(pair, subset);
 					}
 					else{
 						HashSet<Integer> subset = new HashSet<Integer> ();
 						subset.add(index);
-						this.indexer.put(pair, subset);
+						indexer.put(pair, subset);
 					}
 				}
 			}
@@ -844,10 +844,10 @@ public class Demes {
 	 * @return p - an array of Individuals
 	 */
 	public Individuals[] getPop () {
-		int dim = this.getSize();
+		int dim = getSize();
 		Individuals[] p = new Individuals[dim];
 		for(int i = 0; i < dim; i++){
-			p[i] = new Individuals(this.pop[i]); 
+			p[i] = new Individuals(pop[i]); 
 		}
 		return p;
 	}
@@ -858,7 +858,7 @@ public class Demes {
 	 * @return p - instance of 'Individuals'
 	 */
 	public Individuals getPop (int i) {
-		Individuals p = new Individuals(this.pop[i]);
+		Individuals p = new Individuals(pop[i]);
 		return p;
 	}
 	
@@ -867,7 +867,7 @@ public class Demes {
 	 * @return
 	 */
 	public String getName() {
-		return this.name;
+		return name;
 	}
 	
 	/**
@@ -875,7 +875,7 @@ public class Demes {
 	 * @return
 	 */
 	public double getAvCMError () {
-		return this.CMError;
+		return CMError;
 	}
 	
 	/**
@@ -883,7 +883,7 @@ public class Demes {
 	 * @return
 	 */
 	public double getAvDMError () {
-		return this.DMError;
+		return DMError;
 	}
 	
 	/**
@@ -891,7 +891,7 @@ public class Demes {
 	 * @return
 	 */
 	public double getCMstdev () {
-		return this.CMstdev;
+		return CMstdev;
 	}
 	
 	/**
@@ -899,7 +899,7 @@ public class Demes {
 	 * @return
 	 */
 	public double getDMstdev () {
-		return this.DMstdev;
+		return DMstdev;
 	}
 	
 	/**
@@ -907,7 +907,7 @@ public class Demes {
 	 * @return
 	 */
 	public int getSize(){
-		return this.size;
+		return size;
 	}
 	
 	/**
@@ -916,7 +916,7 @@ public class Demes {
 	 * @return
 	 */
 	public boolean getFifty(int i){
-		return this.fiftyfifty[i];
+		return fiftyfifty[i];
 	}
 	
 	/**
@@ -924,9 +924,9 @@ public class Demes {
 	 * @return fifty
 	 */
 	public boolean[] getFifty(){
-		int dim = this.getSize();
+		int dim = getSize();
 		boolean[] fifty = new boolean[dim];
-		System.arraycopy(this.fiftyfifty, 0, fifty, 0, dim);
+		System.arraycopy(fiftyfifty, 0, fifty, 0, dim);
 		return fifty;
 	}
 	
@@ -935,16 +935,16 @@ public class Demes {
 	 * @return
 	 */
 	public int[] getFiftyArray () {
-		int counter = 0, dim1 = this.getSize();
+		int counter = 0, dim1 = getSize();
 		for(int i = 0; i < dim1; i++){
-			if(this.getFifty(i)){
+			if(getFifty(i)){
 				counter++;
 			}
 		}
 		int[] array = new int[counter];
 		int j = 0;
 		for(int i = 0; i < dim1; i++){
-			if(this.getFifty(i)){
+			if(getFifty(i)){
 				array[j] = i; 
 			}
 		}
@@ -956,7 +956,7 @@ public class Demes {
 	 * @return
 	 */
 	public int getNumOfContacts(){
-		return this.pop[0].getNumOfContacts();
+		return pop[0].getNumOfContacts();
 	}
 	
 	/**
@@ -964,7 +964,7 @@ public class Demes {
 	 * @return 'gen'
 	 */
 	public int getGen() {
-		return this.gen;
+		return gen;
 	}
 	
 	/**
@@ -977,16 +977,16 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public double[] getErrorArray(boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getSize();
+		int dim = getSize();
 		double[] Errors = new double[dim];
 		if(CMDM){
 			for(int i = 0; i < dim; i++){
-				Errors[i] = this.getPop(i).getCM();
+				Errors[i] = getPop(i).getCM();
 			}
 		}
 		else{
 			for(int i = 0; i < dim; i++){
-				Errors[i] = this.getPop(i).getDM();
+				Errors[i] = getPop(i).getDM();
 			}
 		}
 		return Errors;
@@ -999,10 +999,10 @@ public class Demes {
 	 * @return
 	 */
 	public int[] getCompIndis(boolean CMDM){
-		int dim = this.getSize(), counter = 0;
+		int dim = getSize(), counter = 0;
 		int[] comps1 = new int[dim];
 		for(int i = 0; i < dim; i++){
-			if(this.getFifty(i)){
+			if(getFifty(i)){
 				comps1[counter] = i;
 				counter++;
 			}
@@ -1017,7 +1017,7 @@ public class Demes {
 	 * @return
 	 */
 	public int[] getRank(){
-		return this.ranked;
+		return ranked;
 	}
 	
 	/**
@@ -1026,7 +1026,7 @@ public class Demes {
 	 * @return
 	 */
 	public int getRank (int i){
-		return this.ranked[i];
+		return ranked[i];
 	}
 	
 	/**
@@ -1035,22 +1035,22 @@ public class Demes {
 	 * a table with all contct pairs.
 	 */
 	public String toString (){
-		Individuals ne = new Individuals(this.getPop(0));
+		Individuals ne = new Individuals(getPop(0));
 		String cont = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+ne.getSequence()+"\n"+
 		"#PDB: "+ne.getName()+ "\n#PDB CHAIN CODE: "+ne.getChainCode()+"\n#CT: "+Individuals.getContactT()+ "\n#CUTOFF: "+Individuals.getContactDist()+"\n"+ 
-		"#GENERATION: "+this.getGen() + "\n#Species SIZE: " + this.getSize() + "\n#CMError: "+ this.getAvCMError() + "\n#CMstDev: " + this.getCMstdev() + "\n#DMError: "+ this.getAvDMError() + 
-		"\n#DMstDev: " + this.getDMstdev() + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n#NUMB. OF CONTS. IN POP: " + this.weighteed.size() + "\n";
-		int[][] index_array = this.sortWeighted2();
+		"#GENERATION: "+getGen() + "\n#Species SIZE: " + getSize() + "\n#CMError: "+ getAvCMError() + "\n#CMstDev: " + getCMstdev() + "\n#DMError: "+ getAvDMError() + 
+		"\n#DMstDev: " + getDMstdev() + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n#NUMB. OF CONTS. IN POP: " + weighteed.size() + "\n";
+		int[][] index_array = sortWeighted2();
 		int length = index_array[0].length;
-		HashMap<Pair<Integer>, Integer> hashmap = this.getMap();
+		HashMap<Pair<Integer>, Integer> hashmap = getMap();
 		cont = cont + "\n";
 		for(int i = 0; i < length; i++){
 			int index1 = index_array[0][i], index2 = index_array[1][i];
 			Pair<Integer> pair = new Pair<Integer> (new Integer(index1),new Integer (index2));
-			Integer[] ar = this.getIndexer(pair);
+			Integer[] ar = getIndexer(pair);
 			int length2 = ar.length;
 			for(int j = 0; j < length2; j++){
-				cont += index1 + "\t" + index2 + "\t" + ((double) hashmap.get(new Pair<Integer>(new Integer(index1),new Integer(index2))))/((double) this.getSize()) + "\t" + ar[j] + "\n"; 
+				cont += index1 + "\t" + index2 + "\t" + ((double) hashmap.get(new Pair<Integer>(new Integer(index1),new Integer(index2))))/((double) getSize()) + "\t" + ar[j] + "\n"; 
 			}
 		}
 		return cont;
@@ -1061,7 +1061,7 @@ public class Demes {
 	 * @return a HashMap of all contact pairs mapped onto their frequency
 	 */
 	public HashMap<Pair<Integer>, Integer> getMap(){
-		return new HashMap<Pair<Integer>, Integer> (this.weighteed); 
+		return new HashMap<Pair<Integer>, Integer> (weighteed); 
 	}
 	
 	/**
@@ -1069,7 +1069,7 @@ public class Demes {
 	 * @return a HashSet of all contact pairs
 	 */
 	public HashSet<Pair<Integer>> getKey(){
-		return new HashSet<Pair<Integer>> (this.weighteed.keySet());
+		return new HashSet<Pair<Integer>> (weighteed.keySet());
 	}
 	
 	/**
@@ -1078,7 +1078,7 @@ public class Demes {
 	 * @return a HashMap of all Individuals <tt>i</tt> and <tt>j</tt> mapped onto their distance
 	 */
 	public HashMap<Pair<Integer>, Double> getMet(){
-		return new HashMap<Pair<Integer>, Double> (this.metric);
+		return new HashMap<Pair<Integer>, Double> (metric);
 	}
 	
 	/**
@@ -1087,7 +1087,7 @@ public class Demes {
 	 * @return a HashSet of Pairs of all Individuals indices
 	 */
 	public HashSet<Pair<Integer>> getMetKey(){
-		return new HashSet<Pair<Integer>> (this.metric.keySet());
+		return new HashSet<Pair<Integer>> (metric.keySet());
 	}
 	
 	/**
@@ -1095,7 +1095,7 @@ public class Demes {
 	 * @return
 	 */
 	public HashMap<Pair<Integer>, Integer> getMet2(){
-		return new HashMap<Pair<Integer>, Integer> (this.metric2.getMetMap());
+		return new HashMap<Pair<Integer>, Integer> (metric2.getMetMap());
 	}
 	
 	/**
@@ -1103,7 +1103,7 @@ public class Demes {
 	 * @return
 	 */
 	public HashSet<Pair<Integer>> getMet2Key(){
-		return new HashSet<Pair<Integer>> (this.metric2.getMetMap().keySet());
+		return new HashSet<Pair<Integer>> (metric2.getMetMap().keySet());
 	}
 	
 	/**
@@ -1112,9 +1112,9 @@ public class Demes {
 	 * @return a double array representing the average distance
 	 */
 	public double[] getAvMetrics(){
-		int dim = this.getSize(), counter = 0;
+		int dim = getSize(), counter = 0;
 		double[] array = new double[dim];
-		HashSet<Pair<Integer>> hash = this.getMetKey();
+		HashSet<Pair<Integer>> hash = getMetKey();
 		Iterator<Pair<Integer>> it1 = hash.iterator();
 		Iterator<Pair<Integer>> it2 = hash.iterator();
 		while(it1.hasNext()){
@@ -1124,22 +1124,22 @@ public class Demes {
 				if(pair1 != pair2){
 					if(pair1.getFirst().intValue() == pair2.getFirst().intValue()){
 						counter = pair1.getFirst().intValue();
-						array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+						array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 					}
 					else{
 						if(pair1.getSecond().intValue() == pair2.getSecond().intValue()){
 							counter = pair1.getSecond().intValue();
-							array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+							array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 						}
 						else{
 							if(pair1.getFirst().intValue() == pair2.getSecond().intValue()){
 								counter = pair1.getFirst().intValue();
-								array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+								array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 							}
 							else{
 								if(pair1.getSecond().intValue() == pair2.getFirst().intValue()){
 									counter = pair1.getSecond().intValue();
-									array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+									array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 								}
 							}
 						}
@@ -1161,9 +1161,9 @@ public class Demes {
 	 * @return a double array representing the average distance
 	 */
 	public double[] getAvMetrics2(){
-		int dim = this.getSize(), counter = 0;
+		int dim = getSize(), counter = 0;
 		double[] array = new double[dim];
-		HashSet<Pair<Integer>> hash = this.getMet2Key();
+		HashSet<Pair<Integer>> hash = getMet2Key();
 		Iterator<Pair<Integer>> it1 = hash.iterator();
 		Iterator<Pair<Integer>> it2 = hash.iterator();
 		while(it1.hasNext()){
@@ -1173,22 +1173,22 @@ public class Demes {
 				if(pair1 != pair2){
 					if(pair1.getFirst().intValue() == pair2.getFirst().intValue()){
 						counter = pair1.getFirst().intValue();
-						array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+						array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 					}
 					else{
 						if(pair1.getSecond().intValue() == pair2.getSecond().intValue()){
 							counter = pair1.getSecond().intValue();
-							array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+							array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 						}
 						else{
 							if(pair1.getFirst().intValue() == pair2.getSecond().intValue()){
 								counter = pair1.getFirst().intValue();
-								array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+								array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 							}
 							else{
 								if(pair1.getSecond().intValue() == pair2.getFirst().intValue()){
 									counter = pair1.getSecond().intValue();
-									array[counter] = array[counter] + this.getMet().get(pair1).doubleValue() + this.getMet().get(pair2).doubleValue();
+									array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
 								}
 							}
 						}
@@ -1211,7 +1211,7 @@ public class Demes {
 	 * @return a sorted integer matrix 
 	 */
 	public int[][] sortWeighted2(){
-		HashSet<Pair<Integer>> set = this.getKey();
+		HashSet<Pair<Integer>> set = getKey();
 		int[][] sorted_array = SortIntArray.converter(set);
 		return sorted_array;
 	}
@@ -1223,11 +1223,11 @@ public class Demes {
 	 * @return a HashMap with the contacts and their corresponding frequency
 	 */
 	public HashMap<Pair<Integer>,Double> contactsWithHighestFrequency (double threshold){
-		HashMap<Pair<Integer>,Integer> map = new HashMap<Pair<Integer>,Integer> (this.weighteed);
+		HashMap<Pair<Integer>,Integer> map = new HashMap<Pair<Integer>,Integer> (weighteed);
 		HashMap<Pair<Integer>,Double> subhash = new HashMap<Pair<Integer>,Double> ();
 		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (map.keySet());
 		Iterator<Pair<Integer>> it = keyset.iterator();
-		double num_of_conts = (double) this.getPop(0).getNumOfContacts();
+		double num_of_conts = (double) getPop(0).getNumOfContacts();
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
 			double percent = ((double) (map.get(pair)).doubleValue())/num_of_conts;
@@ -1244,7 +1244,7 @@ public class Demes {
 	 * @return a double value representing the average distance of all Individuals in this instance
 	 */
 	public double getAverageMetric (){
-		HashMap<Pair<Integer>,Double> met_hash = this.getMet();
+		HashMap<Pair<Integer>,Double> met_hash = getMet();
 		Set<Pair<Integer>> keyset = met_hash.keySet();
 		Iterator<Pair<Integer>> it = keyset.iterator();
 		double avmetrics = 0.0;
@@ -1261,7 +1261,7 @@ public class Demes {
 	 * @return a double value representing the average distance of all Individuals in this instance
 	 */
 	public double getAverageMetric2 (){
-		HashMap<Pair<Integer>, Integer> met_hash = this.getMet2();
+		HashMap<Pair<Integer>, Integer> met_hash = getMet2();
 		Set<Pair<Integer>> keyset = met_hash.keySet();
 		Iterator<Pair<Integer>> it = keyset.iterator();
 		int size = met_hash.size();
@@ -1281,10 +1281,10 @@ public class Demes {
 	public boolean samePDBCode (){
 		boolean tester = true;
 		String pdbcode = "";
-		for(int i = 0; i < this.size; i++){
-			pdbcode = new String (this.getPop(i).getName());
+		for(int i = 0; i < size; i++){
+			pdbcode = new String (getPop(i).getName());
 			if(i > 0){
-				if(!pdbcode.matches(this.getPop(i - 1).getName())){
+				if(!pdbcode.matches(getPop(i - 1).getName())){
 					tester = false;
 					break;
 				}
@@ -1298,7 +1298,7 @@ public class Demes {
 	 * @return a HashSet of all common contacts
 	 */
 	public HashSet<Pair<Integer>> getSubHash (){
-		return new HashSet<Pair<Integer>> (this.subhash);
+		return new HashSet<Pair<Integer>> (subhash);
 	}
 	
 	/**
@@ -1309,7 +1309,7 @@ public class Demes {
 	 * the Individuals
 	 */
 	public HashMap<Pair<Integer>,HashSet<Integer>> getIndexer (){
-		return new HashMap<Pair<Integer>,HashSet<Integer>> (this.indexer);
+		return new HashMap<Pair<Integer>,HashSet<Integer>> (indexer);
 	}
 	
 	/**
@@ -1319,7 +1319,7 @@ public class Demes {
 	 * @return
 	 */
 	public Integer[] getIndexer (Pair<Integer> pair){
-		HashSet<Integer> index_set = this.indexer.get(pair);
+		HashSet<Integer> index_set = indexer.get(pair);
 		Integer[] ar = new Integer [index_set.size()];
 		ar = index_set.toArray(ar);
 		Arrays.sort(ar);
@@ -1347,10 +1347,10 @@ public class Demes {
 	 * @throws PdbLoadError
 	 */			
 	public Individuals[] evolve (boolean CMDM, String dummy) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		this.bestFifty(CMDM);
+		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
 		
-		int dim = this.getRank().length, counter = 0, length = this.getSize(), square = nSquaredMinusNHalf(dim);
+		int dim = getRank().length, counter = 0, length = getSize(), square = nSquaredMinusNHalf(dim);
 		Individuals[] off = new Individuals[square + dim];
 		//intermediate offspring, all bred Individuals plus the best ranked parental Individuals a placed in this 
 		//array of Individuals
@@ -1359,8 +1359,8 @@ public class Demes {
 			//looping over all best ranked Individuals in the field 'pop'
 			
 			for(int j = i + 1; j < dim; j++){
-				int index1 = this.getRank(i), index2 = this.getRank(j);
-				off[counter] = new Individuals(Individuals.breedIndis(this.getPop(index1),this.getPop(index2)));
+				int index1 = getRank(i), index2 = getRank(j);
+				off[counter] = new Individuals(Individuals.breedIndis(getPop(index1),getPop(index2)));
 				//breeding the offspring by calling the method 'breedIndis' from the class Individuals
 				
 				counter++;
@@ -1371,7 +1371,7 @@ public class Demes {
 			
 			int i = 0;
 			while(counter < square + dim && i < dim){
-				off[counter] = this.getPop(this.getRank(i));
+				off[counter] = getPop(getRank(i));
 				//filling the null entries with the best ranked parental Individuals
 				
 				counter++; i++;
@@ -1432,10 +1432,10 @@ public class Demes {
 	 * @throws PdbLoadError
 	 */
 	public Individuals[] evolve (String dummy, boolean CMDM) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		this.bestFifty(CMDM);
+		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
 		
-		int dim = this.getRank().length, counter = 0, length = this.getSize(), square = nSquaredMinusNHalf(dim);
+		int dim = getRank().length, counter = 0, length = getSize(), square = nSquaredMinusNHalf(dim);
 		Individuals[] off = new Individuals[square + dim];
 		//intermediate offspring, all bred Individuals plus the best ranked parental Individuals a placed in this 
 		//array of Individuals
@@ -1444,8 +1444,8 @@ public class Demes {
 			//looping over all best ranked Individuals in the field 'pop'
 			
 			for(int j = i + 1; j < dim; j++){
-				int index1 = this.getRank(i), index2 = this.getRank(j);
-				off[counter] = new Individuals(Individuals.breedIndis(this.getPop(index1),this.getPop(index2)));
+				int index1 = getRank(i), index2 = getRank(j);
+				off[counter] = new Individuals(Individuals.breedIndis(getPop(index1),getPop(index2)));
 				//breeding the offspring by calling the method 'breedIndis' from the class Individuals
 				
 				counter++;
@@ -1456,7 +1456,7 @@ public class Demes {
 			
 			int i = 0;
 			while(counter < square + dim && i < dim){
-				off[counter] = this.getPop(this.getRank(i));
+				off[counter] = getPop(getRank(i));
 				//filling the null entries with the best ranked parental Individuals
 				
 				counter++; i++;
@@ -1798,7 +1798,7 @@ public class Demes {
 		 * @param pop
 		 */
 		public Metric (Demes pop) {
-			this.setMetricMap(pop);
+			setMetricMap(pop);
 		}
 
 		/**
@@ -1814,7 +1814,7 @@ public class Demes {
 		public void setMetricMap(Demes pop) {
 			Individuals[] array = pop.getPop();
 			int length = array.length, counter1 = 0;//, counter2 = 0;
-			this.metricmap = new HashMap<Pair<Integer>,Integer> ();
+			metricmap = new HashMap<Pair<Integer>,Integer> ();
 			HashMap<Integer,Integer> helpmap = new HashMap<Integer,Integer> ();
 			for(int i = 0; i < length - 1; i++){
 				for(int j = i + 1; j < length; j++){
@@ -1857,7 +1857,7 @@ public class Demes {
 					}
 					counter1 = 0; //counter2 = 0;
 					Pair<Integer> pair = new Pair<Integer>(new Integer(i), new Integer(j));
-					this.metricmap.put(pair, new Integer(this.calcSum(helpmap)));
+					metricmap.put(pair, new Integer(calcSum(helpmap)));
 				}
 			}
 		}
@@ -1867,7 +1867,7 @@ public class Demes {
 		 * @return a HashMap of index pairs and the metric (as value)
 		 */
 		public HashMap<Pair<Integer>,Integer> getMetMap(){
-			return new HashMap<Pair<Integer>,Integer> (this.metricmap);
+			return new HashMap<Pair<Integer>,Integer> (metricmap);
 		}
 
 		/**
@@ -1890,12 +1890,12 @@ public class Demes {
 		 * returns the field <tt>metricmap</tt> as a String
 		 */
 		public String toString(){
-			HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (this.metricmap.keySet());
+			HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (metricmap.keySet());
 			Iterator<Pair<Integer>> it = keyset.iterator();
 			String output = "";
 			while(it.hasNext()){
 				Pair<Integer> pair = it.next();
-				output = output + pair.getFirst().intValue() + "\t" + pair.getSecond() + "\t" + this.metricmap.get(pair) + "\n";
+				output = output + pair.getFirst().intValue() + "\t" + pair.getSecond() + "\t" + metricmap.get(pair) + "\n";
 			}
 			return output;
 		}
@@ -1907,7 +1907,7 @@ public class Demes {
 		public void printToFile() throws IOException{
 			FileOutputStream output = new FileOutputStream(path + "metrix.met");
 			PrintStream printer = new PrintStream(output);
-			printer.print(this.toString());
+			printer.print(toString());
 			output.close();
 			printer.close();
 		}

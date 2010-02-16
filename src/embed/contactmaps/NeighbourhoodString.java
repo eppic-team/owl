@@ -40,7 +40,7 @@ public class NeighbourhoodString {
 	/*---------------------------------------constructors-------------------------------------------------------*/
 	
 	public NeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setNeighbourhoodString(dir);
+		setNeighbourhoodString(dir);
 	}
 	
 	
@@ -52,19 +52,19 @@ public class NeighbourhoodString {
 	public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
 		File is_f = new File(dir);
 		if(is_f.exists()){
-			this.path = new String(dir);
-			this.file_name = is_f.getName();
+			path = new String(dir);
+			file_name = is_f.getName();
 			if(Individuals.isReadableFileFormat(is_f)){
 				Individuals individual = new Individuals(is_f.getAbsolutePath());
-				this.extractContactMap(individual.getHashSet());
-				//this.setIndexMapFull(individual.getHashSet());
-				this.chain_code = new String (individual.getChainCode());
-				this.pdb_code = new String (individual.getName());
-				this.setSequence(individual.getSequence());
-				this.setContent();
+				extractContactMap(individual.getHashSet());
+				//setIndexMapFull(individual.getHashSet());
+				chain_code = new String (individual.getChainCode());
+				pdb_code = new String (individual.getName());
+				setSequence(individual.getSequence());
+				setContent();
 			}
 			else{
-				throw new IllegalArgumentException ("The path '"+this.path+"' does not denote a readable file.");
+				throw new IllegalArgumentException ("The path '"+path+"' does not denote a readable file.");
 			}
 		}
 		else{
@@ -81,11 +81,11 @@ public class NeighbourhoodString {
 	 */
 	public void setSequence(String seq){
 		if(seq != null){
-			this.sequence = new HashMap<Integer,String> (); 
+			sequence = new HashMap<Integer,String> (); 
 			for(int i = 0; i <seq.length(); i++){
 				Integer index = new Integer (i + 1);
 				String substr = seq.substring(i, i + 1);
-				this.sequence.put(index, substr);
+				sequence.put(index, substr);
 			}
 		}
 		else{
@@ -94,17 +94,17 @@ public class NeighbourhoodString {
 	}
 	
 	public void setContent (){
-		if(this.index_map_sparse != null && this.sequence != null){
-			HashMap<Integer,String> seq_map = this.getSequence();
-			HashMap<Integer,HashSet<Integer>> ind_map1 = this.getIndexMap();
+		if(index_map_sparse != null && sequence != null){
+			HashMap<Integer,String> seq_map = getSequence();
+			HashMap<Integer,HashSet<Integer>> ind_map1 = getIndexMap();
 			Set<Integer> keyset = ind_map1.keySet();
 			Iterator<Integer> it = keyset.iterator();
-			this.content = "";
+			content = "";
 			while(it.hasNext()){
 				Integer index = it.next();
 				int[] subset = convertHashSetToIntArray(ind_map1.get(index));
 				int length = subset.length;
-				String neighbours_left1 = this.getPDBCode() + "\t" + this.getChainCode() + "\t" + index.toString() + "\t" + seq_map.get(index) + "\t";
+				String neighbours_left1 = getPDBCode() + "\t" + getChainCode() + "\t" + index.toString() + "\t" + seq_map.get(index) + "\t";
 				String neighbour_right1 = "";
 				for(int i = 0; i  < length; i++){
 					if(subset[i] < index.intValue()){
@@ -115,7 +115,7 @@ public class NeighbourhoodString {
 					}
 				}
 				neighbour_right1 += "%\n";
-				this.content += neighbours_left1 + separator + neighbour_right1;
+				content += neighbours_left1 + separator + neighbour_right1;
 			}
 		}
 		else{
@@ -130,10 +130,10 @@ public class NeighbourhoodString {
 	 * @param contactset
 	 */
 	public void extractContactMap (HashSet<Pair<Integer>> contactset){
-		this.index_map_sparse = new HashMap<Integer,HashSet<Integer>> ();
+		index_map_sparse = new HashMap<Integer,HashSet<Integer>> ();
 		//HashMap containing all indices contained in the 'contactset' parameter
 		
-		this.index_counter = new HashMap<Integer,Integer>();
+		index_counter = new HashMap<Integer,Integer>();
 		//HashMap counting the frequencies of each index in the 'contactset' parameter
 		
 		Iterator<Pair<Integer>> it = contactset.iterator();
@@ -145,53 +145,53 @@ public class NeighbourhoodString {
 			HashSet<Integer> indeces = new HashSet<Integer> ();
 			//a HashSet counting the frequencies of each index
 			
-			if(this.index_map_sparse.containsKey(f_val)){
+			if(index_map_sparse.containsKey(f_val)){
 				//check whether the first value is already present in the HashMap
 				
-				indeces = new HashSet<Integer> (this.index_map_sparse.get(f_val));
+				indeces = new HashSet<Integer> (index_map_sparse.get(f_val));
 				indeces.add(s_val);
-				this.index_map_sparse.put(f_val, indeces);
-				int counter1 = this.index_counter.get(f_val).intValue() + 1;
-				this.index_counter.put(f_val, new Integer(counter1));
+				index_map_sparse.put(f_val, indeces);
+				int counter1 = index_counter.get(f_val).intValue() + 1;
+				index_counter.put(f_val, new Integer(counter1));
 			}
 			else{
 				//if the first value is not present yet
 				indeces.add(s_val);
-				this.index_map_sparse.put(f_val, indeces);
-				this.index_counter.put(f_val, new Integer(1));
+				index_map_sparse.put(f_val, indeces);
+				index_counter.put(f_val, new Integer(1));
 			}
 			indeces = new HashSet<Integer> ();
-			if(this.index_map_sparse.containsKey(s_val)){
+			if(index_map_sparse.containsKey(s_val)){
 				//check whether the second value is already present in the HashMap
 				
-				indeces = new HashSet<Integer> (this.index_map_sparse.get(s_val));
+				indeces = new HashSet<Integer> (index_map_sparse.get(s_val));
 				indeces.add(f_val);
-				this.index_map_sparse.put(s_val,indeces);
-				int counter1 = this.index_counter.get(s_val).intValue() + 1;
-				this.index_counter.put(s_val, new Integer(counter1));
+				index_map_sparse.put(s_val,indeces);
+				int counter1 = index_counter.get(s_val).intValue() + 1;
+				index_counter.put(s_val, new Integer(counter1));
 			}
 			else{
 				//if the second value is not present yet
 				
 				indeces.add(f_val);
-				this.index_map_sparse.put(s_val, indeces);
-				this.index_counter.put(s_val, new Integer(1));
+				index_map_sparse.put(s_val, indeces);
+				index_counter.put(s_val, new Integer(1));
 			}
 		}
 	}
 	
 	public void writeToFile () throws IOException{
-		if(this.content != null){
-			String dir = (new String (this.path)).replaceAll(this.file_name,"nbhstrings/");
-			String name = (new String (this.file_name)).split("\\.")[0];
-			this.output = name;
+		if(content != null){
+			String dir = (new String (path)).replaceAll(file_name,"nbhstrings/");
+			String name = (new String (file_name)).split("\\.")[0];
+			output = name;
 			File outputdir = new File(dir);
 			if(!outputdir.exists()){
 				outputdir.mkdirs();
 			}
 			FileOutputStream output = new FileOutputStream (dir+name+".out");
 			PrintStream printa = new PrintStream(output);
-			printa.print(this.toString());
+			printa.print(toString());
 			System.out.println(name + " written to file...");
 			printa.close();
 			output.close();
@@ -199,30 +199,30 @@ public class NeighbourhoodString {
 	}
 	
 	public HashMap<Integer,HashSet<Integer>> getIndexMap (){
-		return new HashMap<Integer,HashSet<Integer>>(this.index_map_sparse);
+		return new HashMap<Integer,HashSet<Integer>>(index_map_sparse);
 	}
 	
 	public String getChainCode(){
-		return new String (this.chain_code);
+		return new String (chain_code);
 	}
 	public String getPDBCode (){
-		return new String (this.pdb_code);
+		return new String (pdb_code);
 	}
 	
 	public HashMap<Integer,String> getSequence (){
-		return new HashMap<Integer,String>(this.sequence);
+		return new HashMap<Integer,String>(sequence);
 	}
 	
 	public String getFileName (){
-		return new String (this.file_name);
+		return new String (file_name);
 	}
 	
 	public String getOutput (){
-		return new String (this.output);
+		return new String (output);
 	}
 	
 	public String toString(){
-		return new String (this.content);
+		return new String (content);
 	}
 	
 	public static Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{

@@ -34,17 +34,17 @@ public class Stripper {
 	private HashMap<Integer,Individuals> unstrip_array;
 	
 	public Stripper (){
-		this.protein = new Pdb();
-		this.prot_graph = new RIGraph ();
-		this.unstrip_array = new HashMap<Integer,Individuals> ();
+		protein = new Pdb();
+		prot_graph = new RIGraph ();
+		unstrip_array = new HashMap<Integer,Individuals> ();
 	}
 	
 	public Stripper (String pdb_code) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setUnStripper(pdb_code, 100);
+		setUnStripper(pdb_code, 100);
 	}
 	
 	public Stripper (String pdb_code, int num_of_runs) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setUnStripper(pdb_code, num_of_runs);
+		setUnStripper(pdb_code, num_of_runs);
 	}
 	
 	/*-----------------------------------------void-------------------------------------------*/
@@ -52,26 +52,26 @@ public class Stripper {
 	
 	public void setUnStripper (String protein_PDB_code, int num_of_runs) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		MySQLConnection conn = new MySQLConnection ();
-		this.protein = new PdbasePdb (protein_PDB_code, database, conn);
-		this.protein.load("A");
-		this.prot_graph = new RIGraph ();
-		this.prot_graph = this.protein.getRIGraph("Ca", 9.0);
-		this.unstrip_array = new HashMap<Integer,Individuals> (num_of_runs * 2);
-		Individuals.setFullContactMap(this.prot_graph);
-		Individuals ind = new Individuals (this.prot_graph);
+		protein = new PdbasePdb (protein_PDB_code, database, conn);
+		protein.load("A");
+		prot_graph = new RIGraph ();
+		prot_graph = protein.getRIGraph("Ca", 9.0);
+		unstrip_array = new HashMap<Integer,Individuals> (num_of_runs * 2);
+		Individuals.setFullContactMap(prot_graph);
+		Individuals ind = new Individuals (prot_graph);
 		Integer index1 = new Integer (0);
-		this.unstrip_array.put(index1,ind);
-		this.num_of_cycles = num_of_runs;
-		this.deselectContacts();
+		unstrip_array.put(index1,ind);
+		num_of_cycles = num_of_runs;
+		deselectContacts();
 		conn.close();
 	}
 	
 	public void deselectContacts () throws PdbCodeNotFoundError, SQLException, PdbLoadError{
-		if(this.unstrip_array != null){
-			int cycles = this.num_of_cycles;
+		if(unstrip_array != null){
+			int cycles = num_of_cycles;
 			for(int i = 1; i <= cycles; i++){
 				System.out.println("Unstripping: cycle "+i+"...");
-				Individuals in = this.getIndi(i-1);
+				Individuals in = getIndi(i-1);
 				HashSet<Pair<Integer>> contactset1 = in.getHashSet();
 				HashSet<Pair<Integer>> contactset2 = new HashSet<Pair<Integer>>(contactset1);
 				Iterator<Pair<Integer>> it = contactset1.iterator();
@@ -80,8 +80,8 @@ public class Stripper {
 					contactset2.remove(pair);
 					Individuals newindi = new Individuals (in,contactset2);
 					Integer first_index = new Integer(i);
-					if(this.smallerError(newindi, first_index)){
-						this.unstrip_array.put(first_index,newindi);
+					if(smallerError(newindi, first_index)){
+						unstrip_array.put(first_index,newindi);
 						//counter++;
 					}
 					contactset2 = new HashSet<Pair<Integer>> (contactset1);
@@ -95,13 +95,13 @@ public class Stripper {
 			String path = "/project/StruPPi/gabriel/Arbeiten/greedy/";
 			File dir = new File (path);
 			if(!dir.exists()) dir.mkdirs();
-			File subdir = new File (dir.getAbsolutePath() + "/" + this.prot_graph.getPdbCode()+"/run_131009/");
+			File subdir = new File (dir.getAbsolutePath() + "/" + prot_graph.getPdbCode()+"/run_131009/");
 			if(!subdir.exists()) subdir.mkdirs();
-			int size = this.unstrip_array.size();
+			int size = unstrip_array.size();
 			for(int i = 0; i < size; i++){
 				FileOutputStream out = new FileOutputStream (subdir.getAbsolutePath() +"/"+ i+".ust");
 				PrintStream printa = new PrintStream (out);
-				printa.print(this.toString(i));
+				printa.print(toString(i));
 				printa.close();
 				out.close();
 				System.out.println(i+"-th file written...");
@@ -112,16 +112,16 @@ public class Stripper {
 	/*---------------------------------------helper methods---------------------------------*/
 	
 	public HashMap<Integer,Individuals> getUnstripArray (){
-		return new HashMap<Integer,Individuals> (this.unstrip_array);
+		return new HashMap<Integer,Individuals> (unstrip_array);
 	}
 		
 	public Individuals getIndi (int index){
-		return new Individuals (this.unstrip_array.get(new Integer (index)));
+		return new Individuals (unstrip_array.get(new Integer (index)));
 	}
 	
 	public boolean haveSameContactMap (Integer index1, Integer index2){
-		Individuals indi1 = this.getIndi(index1);
-		Individuals indi2 = this.getIndi(index2);
+		Individuals indi1 = getIndi(index1);
+		Individuals indi2 = getIndi(index2);
 		HashSet<Pair<Integer>> set1 = indi1.getHashSet(), set2 = indi2.getHashSet();
 		set1.retainAll(set2);
 		if(set1.size() < set2.size()){
@@ -133,8 +133,8 @@ public class Stripper {
 	}
 	
 	public boolean smallerError (Individuals in, Integer index){
-		if(this.unstrip_array.containsKey(index)){
-			double CM = this.unstrip_array.get(index).getCM(), DM = this.unstrip_array.get(index).getDM();
+		if(unstrip_array.containsKey(index)){
+			double CM = unstrip_array.get(index).getCM(), DM = unstrip_array.get(index).getDM();
 			if(in.getCM() < CM && in.getDM() < DM){
 				return true;
 			}
@@ -148,11 +148,11 @@ public class Stripper {
 	}
 	
 	public String toString (){
-		if(this.unstrip_array != null){
+		if(unstrip_array != null){
 			String container = "";
-			int size = this.unstrip_array.size();
+			int size = unstrip_array.size();
 			for(int i = 0; i < size; i++){
-				container += this.getIndi(i).toString();
+				container += getIndi(i).toString();
 			}
 			return container;
 		}
@@ -162,8 +162,8 @@ public class Stripper {
 	}
 	
 	public String toString (int i){
-		if(this.unstrip_array != null){
-			String container = this.getIndi(i).toString();
+		if(unstrip_array != null){
+			String container = getIndi(i).toString();
 			return container;
 		}
 		else{

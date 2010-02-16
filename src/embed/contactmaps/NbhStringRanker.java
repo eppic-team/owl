@@ -134,7 +134,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 */
 	public NbhStringRanker (String file_name) throws FileNotFoundException, IOException, SQLException, IllegalArgumentException {
 		super();
-		this.setNbhStringMaps(file_name);
+		setNbhStringMaps(file_name);
 	}
 	
 	/**
@@ -155,9 +155,9 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		if(file.exists()){
 			//check, whether the directory exists
 			
-			this.aa_map = new TreeMap<Integer,String> ();
+			aa_map = new TreeMap<Integer,String> ();
 			
-			this.setAANbhStringMaps(file);
+			setAANbhStringMaps(file);
 			
 		}
 		else{
@@ -195,10 +195,10 @@ public class NbhStringRanker extends tools.MySQLConnection {
 			//splitting the line reader, first column: pdb code, second column: chain code, third column: position,
 			//fourth column: neighborhood String
 			
-			if(this.pdb_code == null){
+			if(pdb_code == null){
 				//check, whether the field 'pdb_code' was not initialized, yet
 				
-				this.pdb_code = new String (str_array[0]);
+				pdb_code = new String (str_array[0]);
 				String f_val = str_array[3] + str_array[2];
 				//first value = key: amino acid code + position
 				
@@ -218,13 +218,13 @@ public class NbhStringRanker extends tools.MySQLConnection {
 				//place both key and value in the HashMap
 				
 				Integer aa_index = new Integer ((int) Double.parseDouble(str_array[2]));
-				this.aa_map.put(aa_index, str_array[3]);
+				aa_map.put(aa_index, str_array[3]);
 				
 			}
 			else{
 				//if the field 'pdb_code' was initialized before
 				
-				if(str_array[0].matches(this.pdb_code)){
+				if(str_array[0].matches(pdb_code)){
 					//check, whether both pdb code match, if not an IllegalArgumentException is
 					//thrown
 					
@@ -246,7 +246,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 					}
 					
 					Integer aa_index = new Integer ((int) Double.parseDouble(str_array[2]));
-					this.aa_map.put(aa_index, str_array[3]);
+					aa_map.put(aa_index, str_array[3]);
 					
 				}
 				else{
@@ -254,7 +254,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 				}
 			}
 		}
-		this.aa_nbh_map = new HashMap<String,HashSet<String>> (str_map);
+		aa_nbh_map = new HashMap<String,HashSet<String>> (str_map);
 	}
 	
 	/**
@@ -272,10 +272,10 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 * @throws SQLException
 	 */
 	public void setNbhRanker (NhbString nbh_str){
-		this.pdb_code = nbh_str.getPDBCode();
-		this.aa_nbh_map = nbh_str.getContToNbh();
-		this.setAaMap(nbh_str);
-		this.content = nbh_str.toString();
+		pdb_code = nbh_str.getPDBCode();
+		aa_nbh_map = nbh_str.getContToNbh();
+		setAaMap(nbh_str);
+		content = nbh_str.toString();
 	}
 	
 	/**
@@ -284,15 +284,15 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 * @throws SQLException
 	 */
 	public void runQueries () throws SQLException{
-		HashMap<Integer,String> aa_mapping	= this.getAaMap();
-		HashMap<String,HashSet<String>> nbh_map 		= this.getAaNbhStringMapRandom();
+		HashMap<Integer,String> aa_mapping	= getAaMap();
+		HashMap<String,HashSet<String>> nbh_map 		= getAaNbhStringMapRandom();
 		//getting the neighborhood String maps
 		
 		Set<Integer> keyset = aa_mapping.keySet();
 		Integer[] index_array = new Integer[keyset.size()];
 		keyset.toArray(index_array);
 		Arrays.sort(index_array);
-		this.content    = "pdb code \t aa \t nbhstring \t occurrance \t rank of 20\n";
+		content    = "pdb code \t aa \t nbhstring \t occurrance \t rank of 20\n";
 		for(int i = 0; i < index_array.length; i++){
 			//iterating over all entries
 			
@@ -318,7 +318,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 							if(aa.contains(str)){
 								//does the entry match the amino acid key?
 
-								this.content += this.pdb_code + "\t" + (aa + key) + "\t"  + nbh_str + "\t" + rs.getString("c") + "\t" + rs.getRow() + "\n";
+								content += pdb_code + "\t" + (aa + key) + "\t"  + nbh_str + "\t" + rs.getString("c") + "\t" + rs.getRow() + "\n";
 								//creating the field 'content'
 
 								oc_tester = true;
@@ -330,7 +330,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 							//single aa letter code, the occurrence is set to zero and the rank to 21, mean 
 							//no such entry
 							
-							this.content += this.pdb_code + "\t" + (aa + key) + "\t"  + nbh_str + "\t" + 0 + "\t" + 21 + "\n";
+							content += pdb_code + "\t" + (aa + key) + "\t"  + nbh_str + "\t" + 0 + "\t" + 21 + "\n";
 						}				
 						rs.close();
 						stmt.close();
@@ -362,7 +362,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		}
 		FileOutputStream output = new FileOutputStream (file + "/" + file_name + ".nbh");
 		PrintStream printer     = new PrintStream    (output);
-		printer.print(this.toString());
+		printer.print(toString());
 		System.out.println("Content of " + file_name + " written to file...");
 		printer.close();
 		output.close();
@@ -374,7 +374,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 * @param nbh_str
 	 */
 	public void setAaMap (NhbString nbh_str){
-		this.aa_map = new TreeMap<Integer,String> (nbh_str.getSequence());
+		aa_map = new TreeMap<Integer,String> (nbh_str.getSequence());
 	}
 	
 	
@@ -386,7 +386,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 * @return the amino acid sequence as a HashMap
 	 */
 	protected HashMap<Integer,String> getAaMap (){
-		return new HashMap<Integer,String> (this.aa_map);
+		return new HashMap<Integer,String> (aa_map);
 	}
 	
 	/**
@@ -394,14 +394,14 @@ public class NbhStringRanker extends tools.MySQLConnection {
 	 * @return a new HashMap of the neighborhood Strings of the random set
 	 */
 	protected HashMap<String,HashSet<String>> getAaNbhStringMapRandom (){
-		return new HashMap<String,HashSet<String>> (this.aa_nbh_map);
+		return new HashMap<String,HashSet<String>> (aa_nbh_map);
 	}
 	
 	/**
 	 * method that returns the field <code>{@link #content}</code> as a new String instance
 	 */
 	public String toString (){
-		return new String (this.content);
+		return new String (content);
 	}
 	
 	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -499,7 +499,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		 * @param dir a String instance denoting a directory
 		 */
 		public NhbString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
-			this.setNeighbourhoodString(dir);
+			setNeighbourhoodString(dir);
 		}
 		
 		
@@ -520,9 +520,9 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
 			File is_f = new File(dir);
 			if(is_f.exists()){
-				this.path = new String(dir);
-				this.setFileSys(dir);
-				this.setContactToNbhString();
+				path = new String(dir);
+				setFileSys(dir);
+				setContactToNbhString();
 			}
 			else{
 				throw new IllegalArgumentException("The path '"+dir+"' does not exist.");
@@ -537,12 +537,12 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		 * and the entries are single character Strings (i.e. the corresponding single code amino acid at position i). 
 		 */
 		public void setSequence(String seq){
-			if(seq != null && this.sequence == null){
-				this.sequence = new HashMap<Integer,String> (); 
+			if(seq != null && sequence == null){
+				sequence = new HashMap<Integer,String> (); 
 				for(int i = 0; i <seq.length(); i++){
 					Integer index = new Integer (i + 1);
 					String substr = seq.substring(i, i + 1);
-					this.sequence.put(index, substr);
+					sequence.put(index, substr);
 				}
 			}
 			else{
@@ -561,14 +561,14 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		 * 'x', indicating no specific amino acid was chosen.
 		 */
 		public void setContent (){
-			if(this.index_map_sparse != null && this.sequence != null){
-				HashMap<Integer,String> seq_map = this.getSequence();
-				HashMap<Pair<Integer>,HashSet<Integer>> ind_map1 = this.convertToPairHashMap();
+			if(index_map_sparse != null && sequence != null){
+				HashMap<Integer,String> seq_map = getSequence();
+				HashMap<Pair<Integer>,HashSet<Integer>> ind_map1 = convertToPairHashMap();
 				Set<Pair<Integer>> keyset = ind_map1.keySet();
 				int[][] index_ar = SortIntArray.converter(keyset);
 				int length = index_ar[0].length;
-				if(this.content == null){
-					this.content = "";
+				if(content == null){
+					content = "";
 				}
 				for(int i = 0; i < length; i++){
 					Integer index  = new Integer (index_ar[0][i]);
@@ -577,7 +577,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 					HashSet<Integer> subset = ind_map1.get(pair);
 					
 					Iterator<Integer> it = subset.iterator();
-					String neighbours_left1 = this.getPDBCode() + "\t" + this.getChainCode() + "\t" + index.toString() + "\t" + seq_map.get(index) + "\t";
+					String neighbours_left1 = getPDBCode() + "\t" + getChainCode() + "\t" + index.toString() + "\t" + seq_map.get(index) + "\t";
 					String neighbour_right1 = "";
 					while(it.hasNext()){
 						
@@ -592,7 +592,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 						}
 					}
 					neighbour_right1 += "%\n";
-					this.content += neighbours_left1 + separator + neighbour_right1;
+					content += neighbours_left1 + separator + neighbour_right1;
 				}
 			}
 			else{
@@ -630,26 +630,26 @@ public class NbhStringRanker extends tools.MySQLConnection {
 				for(int i = 0; i < length; i++){
 					if(Individuals.isReadableFileFormat(file_list[i])){
 						Individuals in = new Individuals (file_list[i].getAbsolutePath());
-						if(this.chain_code == null){
-							this.chain_code = new String (in.getChainCode());
+						if(chain_code == null){
+							chain_code = new String (in.getChainCode());
 						}
 						else{
-							if(!this.chain_code.matches(in.getChainCode())){
+							if(!chain_code.matches(in.getChainCode())){
 								throw new IllegalArgumentException ("The protein chain codes of the files listed in the denoted directory do not match!");
 							}
 						}
-						if(this.pdb_code == null){
-							this.pdb_code = new String (in.getName());
+						if(pdb_code == null){
+							pdb_code = new String (in.getName());
 						}
 						else{
-							if(!this.pdb_code.matches(in.getName()))
+							if(!pdb_code.matches(in.getName()))
 							throw new IllegalArgumentException ("The pdb codes of the files listed in the denoted directory do not match!");
 						}
-						this.extractContactMap(in.getHashSet());
-						this.setSequence(in.getSequence());
+						extractContactMap(in.getHashSet());
+						setSequence(in.getSequence());
 					}
 				}
-				this.setContent();
+				setContent();
 			}
 		}
 		
@@ -662,18 +662,18 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		public void extractContactMap (HashSet<Pair<Integer>> contactset){
 			HashMap<Integer,HashSet<Integer>> inner_map = new HashMap<Integer,HashSet<Integer>> ();
 			Integer initial = null;
-			if(this.index_map_sparse == null && this.index_counter == null){
-				this.index_map_sparse = new HashMap<Integer,HashMap<Integer,HashSet<Integer>>> ();
+			if(index_map_sparse == null && index_counter == null){
+				index_map_sparse = new HashMap<Integer,HashMap<Integer,HashSet<Integer>>> ();
 				//HashMap containing all indices contained in the 'contactset' parameter
 			
-				this.index_counter = new HashMap<Integer,Integer>();
+				index_counter = new HashMap<Integer,Integer>();
 				//HashMap counting the frequencies of each index in the 'contactset' parameter
 				
 				initial = new Integer (1);
 				
 			}
 			else{
-				Set<Integer> keys = this.index_map_sparse.keySet();
+				Set<Integer> keys = index_map_sparse.keySet();
 				Integer[] ar = keys.toArray(new Integer[1]);
 				Arrays.sort(ar);
 				initial = new Integer (ar[ar.length - 1].intValue() + 1);
@@ -694,14 +694,14 @@ public class NbhStringRanker extends tools.MySQLConnection {
 					indeces = new HashSet<Integer> (inner_map.get(f_val));
 					indeces.add(s_val);
 					inner_map.put(f_val, indeces);
-					int counter1 = this.index_counter.get(f_val).intValue() + 1;
-					this.index_counter.put(f_val, new Integer(counter1));
+					int counter1 = index_counter.get(f_val).intValue() + 1;
+					index_counter.put(f_val, new Integer(counter1));
 				}
 				else{
 					//if the first value is not present yet
 					indeces.add(s_val);
 					inner_map.put(f_val, indeces);
-					this.index_counter.put(f_val, new Integer(1));
+					index_counter.put(f_val, new Integer(1));
 				}
 				indeces = new HashSet<Integer> ();
 				if(inner_map.containsKey(s_val)){
@@ -710,17 +710,17 @@ public class NbhStringRanker extends tools.MySQLConnection {
 					indeces = new HashSet<Integer> (inner_map.get(s_val));
 					indeces.add(f_val);
 					inner_map.put(s_val,indeces);
-					int counter1 = this.index_counter.get(s_val).intValue() + 1;
-					this.index_counter.put(s_val, new Integer(counter1));
+					int counter1 = index_counter.get(s_val).intValue() + 1;
+					index_counter.put(s_val, new Integer(counter1));
 				}
 				else{
 					//if the second value is not present yet
 					
 					indeces.add(f_val);
 					inner_map.put(s_val, indeces);
-					this.index_counter.put(s_val, new Integer(1));
+					index_counter.put(s_val, new Integer(1));
 				}
-				this.index_map_sparse.put(initial, inner_map);
+				index_map_sparse.put(initial, inner_map);
 			}
 		}
 		
@@ -728,53 +728,53 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		 * 
 		 */
 		public void setContactToNbhString (){
-			if(this.content != null){
-				String[] str_array = this.content.split("\n");
+			if(content != null){
+				String[] str_array = content.split("\n");
 				int length = str_array.length;
-				this.contact_to_nbhstring = new HashMap<String,HashSet<String>> (2 * length);
+				contact_to_nbhstring = new HashMap<String,HashSet<String>> (2 * length);
 				for(int i = 0; i < length; i++){
 					String[] substr = str_array[i].split("\t");
 					String f_val = substr[3] + substr[2];
 					String s_val = substr[4];
-					if(this.contact_to_nbhstring.containsKey(f_val)){
-						HashSet<String> subset = this.getSubSet(f_val);
+					if(contact_to_nbhstring.containsKey(f_val)){
+						HashSet<String> subset = getSubSet(f_val);
 						subset.add(s_val);
-						this.contact_to_nbhstring.put(f_val, subset);
+						contact_to_nbhstring.put(f_val, subset);
 					}
 					else{
 						HashSet<String> subset = new HashSet<String> ();
 						subset.add(s_val);
-						this.contact_to_nbhstring.put(f_val, subset);
+						contact_to_nbhstring.put(f_val, subset);
 					}
 				}
 			}
 		}
 		
 		public HashMap<Integer,HashMap<Integer,HashSet<Integer>>> getIndexMap (){
-			return new HashMap<Integer,HashMap<Integer,HashSet<Integer>>>(this.index_map_sparse);
+			return new HashMap<Integer,HashMap<Integer,HashSet<Integer>>>(index_map_sparse);
 		}
 		
 		public String getChainCode(){
-			return new String (this.chain_code);
+			return new String (chain_code);
 		}
 		public String getPDBCode (){
-			return new String (this.pdb_code);
+			return new String (pdb_code);
 		}
 		
 		public HashMap<Integer,String> getSequence (){
-			return new HashMap<Integer,String>(this.sequence);
+			return new HashMap<Integer,String>(sequence);
 		}
 		
 		public HashSet<String> getSubSet (String key){
-			return new HashSet<String> (this.contact_to_nbhstring.get(key));
+			return new HashSet<String> (contact_to_nbhstring.get(key));
 		}
 		
 		public HashMap<String,HashSet<String>> getContToNbh (){
-			return new HashMap<String,HashSet<String>> (this.contact_to_nbhstring);
+			return new HashMap<String,HashSet<String>> (contact_to_nbhstring);
 		}
 		
 		public String toString(){
-			return new String (this.content);
+			return new String (content);
 		}
 		
 		public Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -827,7 +827,7 @@ public class NbhStringRanker extends tools.MySQLConnection {
 		}
 		
 		public HashMap<Pair<Integer>,HashSet<Integer>> convertToPairHashMap (){
-			HashMap<Integer,HashMap<Integer,HashSet<Integer>>> map = this.getIndexMap();
+			HashMap<Integer,HashMap<Integer,HashSet<Integer>>> map = getIndexMap();
 			HashMap<Pair<Integer>,HashSet<Integer>> fused_map = new HashMap<Pair<Integer>,HashSet<Integer>> ();
 			Set<Integer> key1 = map.keySet();
 			Iterator<Integer> it1 = key1.iterator();

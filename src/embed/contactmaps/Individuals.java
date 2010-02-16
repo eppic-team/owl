@@ -120,14 +120,14 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * zero parameter constructor, defines the default values of all non final fields
 	 */
 	public Individuals () {
-		this.chainCode = " ";
-		this.CMError = 0.0;
-		this.DMError = 0.0;
-		this.entries = new int[1][2];
-		this.name = " ";
-		this.sequence = " ";
-		this.storer();
-		this.numOfContacts = 0;
+		chainCode = " ";
+		CMError = 0.0;
+		DMError = 0.0;
+		entries = new int[1][2];
+		name = " ";
+		sequence = " ";
+		storer();
+		numOfContacts = 0;
 	}
 	
 	/**
@@ -138,12 +138,12 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws SQLException 
 	 */
 	public Individuals (Individuals in) {
-		this.setIndis(in);
+		setIndis(in);
 		//setFullContactMap(in);
 	}
 	
 	public Individuals (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundError, SQLException, PdbLoadError{
-		this.setIndis(in, contactset);
+		setIndis(in, contactset);
 	}
 		
 	/**
@@ -155,7 +155,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws Exception
 	 */
 	public Individuals (RIGraph rig) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		this.setIndis(rig);
+		setIndis(rig);
 	}
 	
 	/**
@@ -172,7 +172,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError
 	 */
 	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, int val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
-		this.setIndis(rig, conn, rand, val);
+		setIndis(rig, conn, rand, val);
 		//conn.close();
 	}
 	
@@ -190,7 +190,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError
 	 */
 	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, double val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
-		this.setIndis(rig, conn, rand, val);
+		setIndis(rig, conn, rand, val);
 		//conn.close();
 	}
 	
@@ -202,7 +202,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param dm
 	 */
 	public Individuals (Bound[][] bound, String i, double[][] dm) {
-		this.setIndis(bound, i, dm);
+		setIndis(bound, i, dm);
 	}
 	
 	/**
@@ -219,7 +219,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	public Individuals (String file) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
 		File testfile = new File (file);
 		if(testfile.exists()){
-			this.setIndis(file);
+			setIndis(file);
 		}
 		else{
 			System.err.println("The denoted file '"+file+"' does not exist.");
@@ -233,18 +233,18 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * setter, copies all instance variables of input parameter 'in'.
 	 */
 	public void setIndis (Individuals in) {
-		this.setName(in.getName());
-		this.pdbCodeChecker(in.getName());
+		setName(in.getName());
+		pdbCodeChecker(in.getName());
 		//check, whether the two pdb codes match
 		
-		this.setIndis(in.getEntries());
-		this.store = new HashSet<Pair<Integer>> (in.getHashSet());
-		this.CMError = in.getCM();
-		this.DMError = in.getDM();
-		this.numOfContacts = in.getNumOfContacts();
-		this.sequence = in.getSequence();
-		this.chainCode = in.getChainCode();
-		this.fullContacts = in.fullContacts;
+		setIndis(in.getEntries());
+		store = new HashSet<Pair<Integer>> (in.getHashSet());
+		CMError = in.getCM();
+		DMError = in.getDM();
+		numOfContacts = in.getNumOfContacts();
+		sequence = in.getSequence();
+		chainCode = in.getChainCode();
+		fullContacts = in.fullContacts;
 	}
 	
 	/**
@@ -257,19 +257,19 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError
 	 */
 	public void setIndis (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundError, SQLException, PdbLoadError{
-		this.setName(in.getName());
-		this.pdbCodeChecker(in.getName());
+		setName(in.getName());
+		pdbCodeChecker(in.getName());
 		//check, whether the two pdb codes match
 		
-		this.setChainCode(in.getChainCode());
-		this.setSequence(in.getSequence());
-		this.store = new HashSet<Pair<Integer>> (contactset);
-		this.setEntries(contactset);
-		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(this.getSubRIGraph());
-		this.setCMError(bound, fullcontactmap);
-		this.setDMError(bound,fulldistancematrix);
-		this.setNumOfContact(contactset.size());
-		this.setFullContact(fullcontactmap.getEdgeCount());
+		setChainCode(in.getChainCode());
+		setSequence(in.getSequence());
+		store = new HashSet<Pair<Integer>> (contactset);
+		setEntries(contactset);
+		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(getSubRIGraph());
+		setCMError(bound, fullcontactmap);
+		setDMError(bound,fulldistancematrix);
+		setNumOfContact(contactset.size());
+		setFullContact(fullcontactmap.getEdgeCount());
 	}
 	
 	/**
@@ -284,14 +284,14 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		//}
 		//TODO excluded since this code may cause an IllegalArgumentException, needs to be checked why this was put here
 		
-		this.entries = new int[dim][2];
+		entries = new int[dim][2];
 		int counter1 = 0;
 		int counter2 = 0;
 		for(int i = 0; i < dim; i++){
 			//for(int j = i + 1; j < dim; j++){
 				if(indices[i][0] != indices[i][1] - 1){
-					this.entries[counter1][0] = indices[i][0];
-					this.entries[counter1][1] = indices[i][1];
+					entries[counter1][0] = indices[i][0];
+					entries[counter1][1] = indices[i][1];
 					counter1++;
 					counter2++;
 				
@@ -308,7 +308,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void setEntries(Bound[][] input, int length, int numconts){
 		int counter = 0;
-		this.entries = new int[numconts][2];
+		entries = new int[numconts][2];
 				//initializing the field entries, the first dimension containing the first contact partner
 				//the second dimension containing the second contact partner
 		
@@ -325,8 +325,8 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 					if(j - i > 1){									//check point to make sure no next neighbour contacts
 																	//are taken
 						
-						this.entries[counter][0] = i;
-						this.entries[counter][1] = j;
+						entries[counter][0] = i;
+						entries[counter][1] = j;
 						counter++;
 					}
 				}
@@ -357,7 +357,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void setEntries(int length, Bound[][] input, int numconts){
 		int counter = 0;
-		this.entries = new int[numconts][2];
+		entries = new int[numconts][2];
 		//initializing the field entries, the first dimension containing the first contact partner
 		//the second dimension containing the second contact partner
 
@@ -371,8 +371,8 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 				if(input[i][j] != null && counter < numconts){		//check point to make sure no null contacts are
 																	//taken and the number of contacts is not exceeded
 					//if(i != j - 1){
-						this.entries[counter][0] = i;
-						this.entries[counter][1] = j;
+						entries[counter][0] = i;
+						entries[counter][1] = j;
 						counter++;
 					//}
 				}
@@ -397,7 +397,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	public void setEntries (HashSet<Pair<Integer>> hash) {
 		int dim = hash.size();
 		Iterator<Pair<Integer>> i = hash.iterator();
-		this.entries = new int[dim][2];
+		entries = new int[dim][2];
 		int j = 0;
 		while(i.hasNext()) {
 			Pair<Integer> pair = new Pair<Integer>(i.next());
@@ -418,24 +418,24 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError 
 	 */
 	public void setIndis (RIGraph rig) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
-		this.areFullCMandDMinit(rig);
+		areFullCMandDMinit(rig);
 
-		this.setName(rig.getPdbCode());
-		this.pdbCodeChecker(rig.getPdbCode());
+		setName(rig.getPdbCode());
+		pdbCodeChecker(rig.getPdbCode());
 		//PDB code is used as the 'name' of this instance
 		
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		int lengt = rig.getVertexCount();
 		int numconts = rig.getEdgeCount();
-		this.setEntries(lengt, bound, numconts);
-		this.numOfContacts = rig.getEdgeCount();
-		this.storer();
-		this.setCMError(bound,fullcontactmap);
-		this.setName(fullcontactmap.getPdbCode());
-		this.setChainCode(fullcontactmap.getChainCode());
-		this.setDMError(bound, fulldistancematrix);
-		this.fullContacts = fullcontactmap.getEdgeCount();
-		this.setSequence(rig.getSequence());
+		setEntries(lengt, bound, numconts);
+		numOfContacts = rig.getEdgeCount();
+		storer();
+		setCMError(bound,fullcontactmap);
+		setName(fullcontactmap.getPdbCode());
+		setChainCode(fullcontactmap.getChainCode());
+		setDMError(bound, fulldistancematrix);
+		fullContacts = fullcontactmap.getEdgeCount();
+		setSequence(rig.getSequence());
 	}
 	
 	/**
@@ -452,9 +452,9 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError
 	 */
 	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, int NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
-		this.areFullCMandDMinit(rig);
-		this.setName(rig.getPdbCode());
-		this.pdbCodeChecker(rig.getPdbCode());
+		areFullCMandDMinit(rig);
+		setName(rig.getPdbCode());
+		pdbCodeChecker(rig.getPdbCode());
 		//setFullContactMap(rig);
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		int lengt = bound.length;
@@ -462,22 +462,22 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		//int edgepercent = (int) ((double) NumCont/100.0*(double) edgec);
 		if(randomize){
 			bound = randomSet(rig,conn,NumCont);//edgepercent);
-			this.setEntries(bound, lengt, NumCont);//edgepercent);
-			//this.entries = new int[edgepercent][2];
+			setEntries(bound, lengt, NumCont);//edgepercent);
+			//entries = new int[edgepercent][2];
 		}
 		else{
-			this.setEntries(bound, lengt, rig.getEdgeCount());
-			//this.entries = new int[rig.getEdgeCount()][2];
+			setEntries(bound, lengt, rig.getEdgeCount());
+			//entries = new int[rig.getEdgeCount()][2];
 		}
-		this.setCMError(bound, fullcontactmap);
-		this.setDMError(bound, fulldistancematrix);
+		setCMError(bound, fullcontactmap);
+		setDMError(bound, fulldistancematrix);
 		/*for(int i = 0; i < lengt; i++){
 			boolean tester = false;
 			for(int j = i + 1; j < lengt; j++){
 				if((bound[i][j] != null)&&(l < edgepercent)){
 					if(i != j - 1){
-						this.entries[l][0] = i;
-						this.entries[l][1] = j;
+						entries[l][0] = i;
+						entries[l][1] = j;
 						l++;
 					}
 				}
@@ -490,11 +490,11 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 				break;
 			}
 		}*/
-		this.fullContacts = edgec;
-		this.storer();
-		this.setNumOfContacts(this.getHashSet());
-		this.setSequence(rig.getSequence());
-		this.setChainCode(rig.getPdbChainCode());
+		fullContacts = edgec;
+		storer();
+		setNumOfContacts(getHashSet());
+		setSequence(rig.getSequence());
+		setChainCode(rig.getPdbChainCode());
 		//conn.close();
 	}
 	
@@ -512,9 +512,9 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws PdbLoadError
 	 */
 	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, double NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundError, SQLException, PdbLoadError  {
-		this.areFullCMandDMinit(rig);
-		this.setName(rig.getPdbCode());
-		this.pdbCodeChecker(rig.getPdbCode());
+		areFullCMandDMinit(rig);
+		setName(rig.getPdbCode());
+		pdbCodeChecker(rig.getPdbCode());
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		double cut = rig.getCutoff();
 		String ct = rig.getContactType();
@@ -526,30 +526,30 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		double[][] dm = distMap(n);
 		if(randomize){
 			bound = randomSet(rig,conn,edgepercent);
-			this.entries = new int[edgepercent][2];
+			entries = new int[edgepercent][2];
 		}
 		else{
-			this.entries = new int[rig.getEdgeCount()][2];
+			entries = new int[rig.getEdgeCount()][2];
 		}
-		this.setCMError(bound, r);
-		this.setDMError(bound, dm);
-		this.setEntries(bound, lengt, edgepercent);
+		setCMError(bound, r);
+		setDMError(bound, dm);
+		setEntries(bound, lengt, edgepercent);
 		/*for(int i = 0; i < lengt; i++){
 			for(int j = i + 1; j < lengt; j++){
 				if((bound[i][j] != null)&&(l < edgepercent)){
 					if(i != j - 1){
-						this.entries[l][0] = i;
-						this.entries[l][1] = j;
+						entries[l][0] = i;
+						entries[l][1] = j;
 						l++;
 					}
 				}
 			}
 		}*/
-		this.fullContacts = edgec;
-		this.storer();
-		this.setNumOfContacts(this.getHashSet());
-		this.setSequence(rig.getSequence());
-		this.setChainCode(rig.getPdbChainCode());
+		fullContacts = edgec;
+		storer();
+		setNumOfContacts(getHashSet());
+		setSequence(rig.getSequence());
+		setChainCode(rig.getPdbChainCode());
 		//conn.close();
 	}
 	
@@ -561,20 +561,20 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void setIndis (Bound[][] bound, String n, double[][] dm) {
 		int lengt = bound.length, l = 0;
-		this.entries = new int[lengt][2];
+		entries = new int[lengt][2];
 		for(int i = 0; i < lengt; i++){
 			for(int j = i + 1; j < lengt; j++){
 				if((bound[i][j] != null)&&(l < lengt)){
 					if(i != j - 1){
-						this.entries[l][0] = i;
-						this.entries[l][1] = j;
+						entries[l][0] = i;
+						entries[l][1] = j;
 						l++;
 					}
 				}
 			}
 		}
-		this.setName(n);
-		this.setDMError(bound, dm);
+		setName(n);
+		setDMError(bound, dm);
 	}
 	
 	/**
@@ -620,7 +620,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 				String filetype = getFileFormat(file);
 				BufferedReader reader = new BufferedReader (new FileReader(file));
 				String linereader = "";
-				this.store = new HashSet<Pair<Integer>> ();
+				store = new HashSet<Pair<Integer>> ();
 				while((linereader = reader.readLine()) != null){
 					//loop, to initialize all fields of the Individuals class
 					
@@ -628,25 +628,25 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 						//the header starting with '#' contains important info as PDB code, chain code and sequence
 						
 						if(linereader.contains("PDB") && !linereader.contains("CHAIN")){
-							this.name = linereader.split(": ")[1];
+							name = linereader.split(": ")[1];
 						}
 						if(linereader.contains("PDB CHAIN")){
-							this.chainCode = linereader.split(": ")[1];
+							chainCode = linereader.split(": ")[1];
 						}
 						if(linereader.contains("SEQUENCE")){
-							this.sequence = linereader.split(": ")[1];
+							sequence = linereader.split(": ")[1];
 						}
 						if(linereader.contains("CMError")){
-							this.setCMError(linereader.split(": ")[1]);
+							setCMError(linereader.split(": ")[1]);
 						}
 						if(linereader.contains("DMError")){
-							this.setDMError(linereader.split(": ")[1]);
+							setDMError(linereader.split(": ")[1]);
 						}
 						if(linereader.contains("NUMB. CONTACTS")){
-							this.numOfContacts = (int) Double.parseDouble(linereader.split(": ")[1]);
+							numOfContacts = (int) Double.parseDouble(linereader.split(": ")[1]);
 						}
 						if(linereader.contains("NUMB. OF ALL CONTACTS")){
-							this.fullContacts = (int) Double.parseDouble(linereader.split(": ")[1]);
+							fullContacts = (int) Double.parseDouble(linereader.split(": ")[1]);
 						}
 					}
 					else{
@@ -654,70 +654,70 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 							//the contact table is
 							int fval = (int) Double.parseDouble(linereader.split("\t")[0]);
 							int sval = (int) Double.parseDouble(linereader.split("\t")[1]);
-							int seqlength = this.sequence.length();
+							int seqlength = sequence.length();
 							if(fval - 1 < seqlength && sval - 1 <= seqlength){
 								//check, if each contact pair is within the range of the amino acid sequence length
 								
 								Integer first_val = new Integer (fval), sec_val = new Integer (sval);
 								Pair<Integer> pair = new Pair<Integer> (first_val,sec_val);
-								this.store.add(pair);
+								store.add(pair);
 							}
 							else{
 								//exits, if at least one contact pair exceeds the sequence length, with the appropriate error message
 								
 								System.err.print("The pair '("+fval+","+sval+")' exceeded the length of this" +
-										" protein "+this.name+", with "+seqlength+" amino acids!");
+										" protein "+name+", with "+seqlength+" amino acids!");
 								System.exit(1);
 							}
 						}
 					}
 				}
-				if(this.name == null){
+				if(name == null){
 					//exits, if the file did not contain any PDB code, causing a fatal error
 					
 					System.err.println("This '"+filetype+"' file in the directory '"+file_path+"' did not contain" +
 							" any PDB code, causing an initialization problem.");
 					System.exit(1);
 				}
-				if(this.store.size() == 0){
+				if(store.size() == 0){
 					//exits, if no contact was read from the file, causing a fatal error
 					
 					System.err.println("This '"+filetype+"' file in the directory '"+file_path+"' did not contain"+
 							" any contacts as an array spaced by tabs.");
 					System.exit(1);
 				}
-				if(this.sequence == null){
+				if(sequence == null){
 					//if no sequence was found
 					
 					MySQLConnection conn = new MySQLConnection ();
-					Pdb pdb = new PdbasePdb (this.name, "pdbase_20090728", conn);
-					this.setSequence(pdb.getSequence());
+					Pdb pdb = new PdbasePdb (name, "pdbase_20090728", conn);
+					setSequence(pdb.getSequence());
 				}
 				if(fullcontactmap == null && fulldistancematrix == null){
 					MySQLConnection conn = new MySQLConnection ();
-					Pdb pdb = new PdbasePdb(this.name, "pdbase_20090728", conn);
-					pdb.load(this.chainCode);
+					Pdb pdb = new PdbasePdb(name, "pdbase_20090728", conn);
+					pdb.load(chainCode);
 					RIGraph fullCM = pdb.getRIGraph("Ca", 9);
 					setFullContactMap(fullCM);
 				}
-				if(this.CMError == 0.0 || this.DMError == 0.0){					
-					RIGraph subgraph = this.getSubRIGraph();
+				if(CMError == 0.0 || DMError == 0.0){					
+					RIGraph subgraph = getSubRIGraph();
 					Bound[][] sparse = Reconstructer.convertRIGraphToBoundsMatrix(subgraph);
-					if(this.CMError == 0.0){
-						this.setCMError(sparse,fullcontactmap);
+					if(CMError == 0.0){
+						setCMError(sparse,fullcontactmap);
 					}
-					if(this.DMError == 0.0){
-						this.setDMError(sparse, fulldistancematrix);
+					if(DMError == 0.0){
+						setDMError(sparse, fulldistancematrix);
 					}
 				}
-				if(this.numOfContacts == 0){
-					this.numOfContacts = this.store.size();
+				if(numOfContacts == 0){
+					numOfContacts = store.size();
 				}
-				if(this.fullContacts == 0){
-					this.fullContacts = fullcontactmap.getEdgeCount();
+				if(fullContacts == 0){
+					fullContacts = fullcontactmap.getEdgeCount();
 				}
-				if(this.entries == null){
-					this.setEntries(this.store);
+				if(entries == null){
+					setEntries(store);
 				}
 			}
 			else{
@@ -740,7 +740,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param str
 	 */
 	public void setName (String str) {
-		this.name = str;
+		name = str;
 	}
 	
 	/**
@@ -753,7 +753,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws Exception
 	 */
 	public void setCMError (Bound[][] bound, RIGraph rig) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
-		this.CMError = getCMError(bound,rig);
+		CMError = getCMError(bound,rig);
 	}
 	
 	/**
@@ -761,7 +761,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param errorstring a String representing the 'CMError'
 	 */
 	public void setCMError (String errorstring){
-		this.CMError = Double.parseDouble(errorstring);
+		CMError = Double.parseDouble(errorstring);
 	}
 	
 	/**
@@ -770,7 +770,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param dm
 	 */
 	public void setDMError (Bound[][] bound, double[][] dm) {
-		this.DMError = getDMError(bound, dm);
+		DMError = getDMError(bound, dm);
 	}
 	
 	/**
@@ -778,7 +778,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param errorstring a String representing the 'DMError'
 	 */
 	public void setDMError (String errorstring){
-		this.DMError = Double.parseDouble(errorstring);
+		DMError = Double.parseDouble(errorstring);
 	}
 	
 	/**
@@ -791,8 +791,8 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	public void setErrorValues () throws PdbCodeNotFoundError, SQLException, PdbLoadError{
 		RIGraph rig = reconstructGraph(this);
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
-		this.setCMError(bound, fullcontactmap);
-		this.setDMError(bound, fulldistancematrix);
+		setCMError(bound, fullcontactmap);
+		setDMError(bound, fulldistancematrix);
 	}
 	
 	/**
@@ -800,7 +800,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param rig
 	 */
 	public void setNumOfContacts (RIGraph rig) {
-		this.numOfContacts = rig.getEdgeCount();
+		numOfContacts = rig.getEdgeCount();
 	}
 	
 	/**
@@ -808,7 +808,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param number the maximal number of contacts
 	 */
 	public void setNumOfContact (int number){
-		this.numOfContacts = number;
+		numOfContacts = number;
 	}
 	
 	/**
@@ -816,7 +816,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param in
 	 */
 	public void setNumOfContacts (Individuals in) {
-		this.numOfContacts = in.getHashSet().size();
+		numOfContacts = in.getHashSet().size();
 	}
 
 	/**
@@ -824,7 +824,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param hash
 	 */
 	public void setNumOfContacts (HashSet<Pair<Integer>> hash) {
-		this.numOfContacts = hash.size();
+		numOfContacts = hash.size();
 	}
 	
 	/**
@@ -833,7 +833,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param contacts
 	 */
 	public void setFullContact (int contacts){
-		this.fullContacts = contacts;
+		fullContacts = contacts;
 	}
 	
 	/**
@@ -841,13 +841,13 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void storer () {
 		store = new HashSet<Pair<Integer>>();
-		if(this.entries != null){
-		int leng = (this.entries).length;
+		if(entries != null){
+		int leng = (entries).length;
 		//Integer[] inds = new Integer[leng];
 		
 		for(int i = 0; i < leng; i++){
-			Integer in1 = new Integer(this.getNumbers(i, 0) + 1);
-			Integer in2 = new Integer(this.getNumbers(i, 1) + 1);
+			Integer in1 = new Integer(getNumbers(i, 0) + 1);
+			Integer in2 = new Integer(getNumbers(i, 1) + 1);
 				Pair<Integer> in = new Pair<Integer>(in1, in2);
 				store.add(in);
 		}
@@ -864,18 +864,18 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param set
 	 */
 	public void storer (HashSet<Pair<Integer>> set){
-		if(this.getSequence() != null){
-			//if(set.size() == this.getSequence().length()){
-				this.store = new HashSet<Pair<Integer>> (set);
-				this.setEntries(set);
+		if(getSequence() != null){
+			//if(set.size() == getSequence().length()){
+				store = new HashSet<Pair<Integer>> (set);
+				setEntries(set);
 			/*}
 			else{
 				throw new IllegalArgumentException ("The number of entries in this HashSet exceeds the number of amino acids in this sequence.");
 			}*/
 		}
 		else{
-			this.store = new HashSet<Pair<Integer>> (set);
-			this.setEntries(set);
+			store = new HashSet<Pair<Integer>> (set);
+			setEntries(set);
 		}
 	}
 	
@@ -884,7 +884,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param seq
 	 */
 	public void setSequence(String seq) {
-		this.sequence = seq;
+		sequence = seq;
 	}
 	
 	/**
@@ -892,7 +892,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @param chain
 	 */
 	public void setChainCode (String chain) {
-		this.chainCode = chain;
+		chainCode = chain;
 	}
 	
 	/**
@@ -904,7 +904,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void pdbCodeChecker (String pdb_code) throws IllegalArgumentException {
 		if(fullcontactmap != null){
-			if(!pdb_code.matches(this.getName())){
+			if(!pdb_code.matches(getName())){
 				throw new IllegalArgumentException ("Make sure, that only instances with matching pdb codes are treated at the same time.");
 			}
 		}
@@ -939,14 +939,14 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 */
 	public void displayIndis (){
 		System.out.print("{");
-		int ind = (this.getEntries()).length - 1;
-		System.out.print("# of contacts :"+this.getEntries().length+" and contacts of "+this.name+": ");
+		int ind = (getEntries()).length - 1;
+		System.out.print("# of contacts :"+getEntries().length+" and contacts of "+name+": ");
 		for(int i = 0; i < ind; i++){
-			System.out.print("{ "+this.getNumbers(i, 0)+", ");
-			System.out.print(this.getNumbers(i, 1)+"},");//}
+			System.out.print("{ "+getNumbers(i, 0)+", ");
+			System.out.print(getNumbers(i, 1)+"},");//}
 		}
-		System.out.print("{ "+this.getNumbers(ind,0)+", "+this.getNumbers(ind,1)+"}");//}
-		System.out.println("}, with CMError:"+this.getCM()+" and DMError: "+this.getDM());
+		System.out.print("{ "+getNumbers(ind,0)+", "+getNumbers(ind,1)+"}");//}
+		System.out.println("}, with CMError:"+getCM()+" and DMError: "+getDM());
 	}
 	
 	/**
@@ -955,12 +955,12 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @throws FileNotFoundException
 	 */
 	public void printToFile() throws IOException, FileNotFoundException {
-		FileOutputStream file = new FileOutputStream(path+name+"-"+this.getNumOfContacts()+file_extension);
+		FileOutputStream file = new FileOutputStream(path+name+"-"+getNumOfContacts()+file_extension);
 		PrintStream printa = new PrintStream(file);
-		printa.print(this.toString());
+		printa.print(toString());
 		printa.close();
 		file.close();
-		System.out.println(this.getName()+" written to file...");
+		System.out.println(getName()+" written to file...");
 		
 	}
 	
@@ -980,12 +980,12 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		if(!dirfile.exists()){
 			dirfile.mkdirs();
 		}
-		FileOutputStream file = new FileOutputStream(dir + "/" + addname1 + "/" + this.name + addname2 + "-"+this.getNumOfContacts()+".indi");
+		FileOutputStream file = new FileOutputStream(dir + "/" + addname1 + "/" + name + addname2 + "-"+getNumOfContacts()+".indi");
 		PrintStream printa = new PrintStream(file);
-		printa.print(this.toString());
+		printa.print(toString());
 		printa.close();
 		file.close();
-		System.out.println(this.getName()+" written to file...");
+		System.out.println(getName()+" written to file...");
 	}
 	
 	/*----------------------getters----------------------------------------------*/
@@ -995,7 +995,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'chainCode'
 	 */
 	public String getChainCode () {
-		return new String (this.chainCode);
+		return new String (chainCode);
 	}
 	
 	/**
@@ -1005,7 +1005,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'entries[i][j]'
 	 */
 	public int getNumbers (int i, int j) {
-		return this.entries[i][j];
+		return entries[i][j];
 	}
 
 	/**
@@ -1013,7 +1013,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'entries'
 	 */
 	public int[][] getEntries () {
-		return this.entries;
+		return entries;
 	}
 	
 	/**
@@ -1021,7 +1021,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'name'
 	 */
 	public String getName () {
-		return new String (this.name);
+		return new String (name);
 	}
 	
 	/**
@@ -1029,7 +1029,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'CMError'
 	 */
 	public double getCM () {
-		return this.CMError;
+		return CMError;
 	}
 	
 	/**
@@ -1037,7 +1037,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'DMError
 	 */
 	public double getDM () {
-		return this.DMError;
+		return DMError;
 	}
 	
 	/**
@@ -1045,9 +1045,9 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return
 	 */
 	public Bound[][] convertDistanceMatrixToBounds (){
-		int protsize = this.sequence.length();
+		int protsize = sequence.length();
 		Bound[][] bounds = new Bound[protsize][protsize];
-		HashSet<Pair<Integer>> contactset = this.getHashSet();
+		HashSet<Pair<Integer>> contactset = getHashSet();
 		Iterator<Pair<Integer>> it = contactset.iterator();
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
@@ -1062,7 +1062,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'numOfContacts'
 	 */
 	public int getNumOfContacts () {
-		return this.numOfContacts;
+		return numOfContacts;
 	}
 	
 	/**
@@ -1070,7 +1070,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'sequence'
 	 */
 	public String getSequence () {
-		return new String (this.sequence);
+		return new String (sequence);
 	}
 	
 	/**
@@ -1078,7 +1078,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'store'
 	 */
 	public HashSet<Pair<Integer>> getHashSet () {
-		return new HashSet<Pair<Integer>> (this.store);
+		return new HashSet<Pair<Integer>> (store);
 	}
 		
 	/**
@@ -1086,7 +1086,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'fifty'
 	 */
 	public boolean getFifty() {
-		return this.fifty;
+		return fifty;
 	}
 	
 	/**
@@ -1095,7 +1095,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return 'hash1' - a Hashset where all entries are the same
 	 */
 	public HashSet<Pair<Integer>> comPareIndis(Individuals in) {
-		HashSet<Pair<Integer>> hash1 = new HashSet<Pair<Integer>> (this.getHashSet());
+		HashSet<Pair<Integer>> hash1 = new HashSet<Pair<Integer>> (getHashSet());
 		HashSet<Pair<Integer>> hash2 = new HashSet<Pair<Integer>> (in.getHashSet());
 		hash1.retainAll(hash2);
 		return new HashSet<Pair<Integer>> (hash1);
@@ -1106,7 +1106,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * @return
 	 */
 	public int getFullContact() {
-		return this.fullContacts;
+		return fullContacts;
 	}
 	
 	/**
@@ -1121,14 +1121,14 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 		RIGraph rig = new RIGraph ();
 		//zero parameter constructor
 		
-		String seq = new String (this.sequence);
+		String seq = new String (sequence);
 		rig.setSequence(seq);
 		//setting the sequence field
 		
-		rig.setPdbCode(this.name);
+		rig.setPdbCode(name);
 		//setting the PDB code
 		
-		rig.setChainCode(this.chainCode);
+		rig.setChainCode(chainCode);
 		//setting the chain code
 		
 		rig.setContactType(ct);
@@ -1145,7 +1145,7 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 			
 		}
 
-		HashSet<Pair<Integer>> pairset = this.getHashSet();
+		HashSet<Pair<Integer>> pairset = getHashSet();
 		//copy of the contact map
 		
 		Iterator<Pair<Integer>> it = pairset.iterator();
@@ -1171,17 +1171,17 @@ public class Individuals {//extends HashSet<Pair<Integer>> {
 	 * <tt>j</tt>, by definition always greater than <tt>i</tt> and the frequency (for instances of this class, frequency is set to <tt>1.0</tt>.
 	 */
 	public String toString (){
-		String str = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+this.getSequence()+"\n"+
-		"#PDB: "+this.getName()+ "\n#PDB CHAIN CODE: "+this.getChainCode()+"\n#CT: "+getContactT()+ "\n#CUTOFF: "+getContactDist()+ "\n#CMError: "+ this.getCM() +  "\n#DMError: "+ this.getDM() + 
-		 "\n#NUMB. CONTACTS: " + this.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + this.getFullContact() + "\n";
+		String str = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+getSequence()+"\n"+
+		"#PDB: "+getName()+ "\n#PDB CHAIN CODE: "+getChainCode()+"\n#CT: "+getContactT()+ "\n#CUTOFF: "+getContactDist()+ "\n#CMError: "+ getCM() +  "\n#DMError: "+ getDM() + 
+		 "\n#NUMB. CONTACTS: " + getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + getFullContact() + "\n";
 		int dim = 0;
-		if(this.entries != null){
-			dim = this.entries.length;
+		if(entries != null){
+			dim = entries.length;
 		}
 		else{
-			dim = this.store.size();
+			dim = store.size();
 		}
-		int[][] contact_array = SortIntArray.converter(this.store);
+		int[][] contact_array = SortIntArray.converter(store);
 		for(int i = 0; i < dim; i++){
 			str += + contact_array[0][i] + "\t" + contact_array[1][i] + "\t" + 1.0 + "\n";
 		}

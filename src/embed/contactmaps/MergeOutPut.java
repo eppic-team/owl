@@ -63,7 +63,7 @@ public class MergeOutPut {
 	 * @param dir_str: a String denoting the absolute path of a directory containing the 'out' files to be processed 
 	 */
 	public MergeOutPut (String dir_str) throws FileNotFoundException, IOException{
-		this.setMergeOutPut(dir_str);
+		setMergeOutPut(dir_str);
 	}
 	/*-------------------------------------------------setter---------------------------------------*/
 	
@@ -89,28 +89,28 @@ public class MergeOutPut {
 			if(length > 0){
 				//only if the number of 'out' files is greater than zero, the method proceeds
 				
-				this.path = new String (dir.getAbsolutePath());
+				path = new String (dir.getAbsolutePath());
 				//the path field initialized
 				
-				this.file_sys = new File[length];
+				file_sys = new File[length];
 				//file system initialized
 				
 				System.arraycopy(list, 0, file_sys, 0, length);
 				//copying all files from the list
 				
-				this.readFileSys();
+				readFileSys();
 				//reading the 'out' files
 				
-				this.mergeContent();
+				mergeContent();
 				//merging content
 			}
 			else{
-				throw new IllegalArgumentException ("The denoted path = '"+this.path+"' does not contain any readable files.");
+				throw new IllegalArgumentException ("The denoted path = '"+path+"' does not contain any readable files.");
 				//if the directory does not contain any 'out' files
 			}
 		}
 		else{
-			throw new IllegalArgumentException ("The denoted path = '"+this.path+"' does not exist.");
+			throw new IllegalArgumentException ("The denoted path = '"+path+"' does not exist.");
 			//if the directory does not exist
 		}
 	}
@@ -122,13 +122,13 @@ public class MergeOutPut {
 	 * @throws NullPointerException if the field <code>{@link #content_map}</code> was not initialized before calling this method
 	 */
 	private void mergeContent (){
-		if(this.content_map != null){
+		if(content_map != null){
 			//check, whether the field content_map was initialized
 			
-			HashMap<Pair<Integer>,String> copy = this.getContentMap();
+			HashMap<Pair<Integer>,String> copy = getContentMap();
 			//a copy of the content_map field
 			
-			this.content = "";
+			content = "";
 			//initializing the field content
 			
 			Set<Pair<Integer>> keyset = copy.keySet();
@@ -146,7 +146,7 @@ public class MergeOutPut {
 				Pair<Integer> pair = new Pair<Integer> (new Integer(f_val),new Integer (s_val));
 				//converting it to a Pair instance
 				
-				this.content += copy.get(pair) + "\n";
+				content += copy.get(pair) + "\n";
 				//store it in copy
 			}
 		}
@@ -164,49 +164,49 @@ public class MergeOutPut {
 	 * @throws NullPointerException if the field <code>{@link #file_sys}</code> was not initialized before calling this method
 	 */
 	private void readFileSys () throws FileNotFoundException, IOException, IllegalArgumentException, NullPointerException {
-		if(this.file_sys != null && this.file_sys.length > 0){
+		if(file_sys != null && file_sys.length > 0){
 			//check, whether both fields were initialized before calling this method
 			
-			int length = this.file_sys.length, counter = 1, counterb = 1;
+			int length = file_sys.length, counter = 1, counterb = 1;
 			//number of files listed in file_sys
 			
-			this.content_map = new HashMap<Pair<Integer>,String> ();
-			this.cont_surv = new HashMap<Integer,Pair<Integer>> ();
+			content_map = new HashMap<Pair<Integer>,String> ();
+			cont_surv = new HashMap<Integer,Pair<Integer>> ();
 			//initializing both fields
 			
 			for(int i = 0; i < length; i++){
 				//iterating over all file_sys entries
 				
-				BufferedReader reader = new BufferedReader (new FileReader (this.file_sys[i]));
+				BufferedReader reader = new BufferedReader (new FileReader (file_sys[i]));
 				String linereader = "";
 				while((linereader = reader.readLine()) != null){
 					//reading the files until the String instance 'linereader' is null (equivalently the end of the file)
 					
-					if(!this.content_map.containsValue(linereader)){
+					if(!content_map.containsValue(linereader)){
 						//if the content is not present yet, proceed
 						
 						int index_val = (int) (Double.parseDouble(linereader.split("\t")[2]));
 						//third column contains the residue number
 						
 						Integer int_val = new Integer (index_val), one = new Integer (1);
-						if(!this.content_map.containsKey(new Pair<Integer>(int_val,one))){
+						if(!content_map.containsKey(new Pair<Integer>(int_val,one))){
 							//check, whether the contact is not already present, if so meaning the neigbourhood string is not present, yet,
 							//then the contact gets an id, which is composed of the residue number and the number of occurrence in all contact map
 							//represented by the whole population. in this case, of course: residue id, 1!
 							
 							Pair<Integer> pair = new Pair<Integer> (int_val,new Integer(1));
-							this.content_map.put(pair, linereader);
-							this.cont_surv.put(new Integer(counterb), pair);
+							content_map.put(pair, linereader);
+							cont_surv.put(new Integer(counterb), pair);
 							counterb++;
 						}
 						else{
 							Pair<Integer> pair = new Pair<Integer>(int_val,new Integer(counter));
-							while(this.cont_surv.containsValue(pair)){
+							while(cont_surv.containsValue(pair)){
 								counter++;
 								pair = new Pair<Integer> (int_val,new Integer (counter));
 							}
-							this.content_map.put(pair, linereader);
-							this.cont_surv.put(new Integer (counterb), pair);
+							content_map.put(pair, linereader);
+							cont_surv.put(new Integer (counterb), pair);
 							counterb++;
 						}
 					}
@@ -214,7 +214,7 @@ public class MergeOutPut {
 			}
 		}
 		else{
-			if(this.file_sys.length > 0){
+			if(file_sys.length > 0){
 				throw new IllegalArgumentException ("The denoted path did not contain any files with extension '.out'");
 			}
 			else{
@@ -231,16 +231,16 @@ public class MergeOutPut {
 	 * @throws IOException
 	 */
 	protected void writeToFile (String sub_dir, String output_name) throws IOException{
-		File dir = new File (this.path + sub_dir);
+		File dir = new File (path + sub_dir);
 		if(!dir.exists()){
 			//check, whether the denoted directory exists, if not, the method mkdirs() of the File class
 			//is called to create a new directory
 			
 			dir.mkdirs();
 		}
-		FileOutputStream out = new FileOutputStream (this.path + sub_dir + output_name);
+		FileOutputStream out = new FileOutputStream (path + sub_dir + output_name);
 		PrintStream printa = new PrintStream (out);
-		printa.print(this.toString());
+		printa.print(toString());
 		//writing the content to a single file
 		
 		System.out.println("Content written to file...");
@@ -253,14 +253,14 @@ public class MergeOutPut {
 	 * @return
 	 */
 	private HashMap<Pair<Integer>,String> getContentMap (){
-		return new HashMap<Pair<Integer>,String> (this.content_map);
+		return new HashMap<Pair<Integer>,String> (content_map);
 	}
 	
 	/**
 	 * method, returning the field <code>{@link #content}</code> as a String.
 	 */
 	public String toString (){
-		return new String (this.content);
+		return new String (content);
 	}
 	
 	public static void main (String[] args) throws FileNotFoundException, IOException{

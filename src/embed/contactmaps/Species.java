@@ -74,7 +74,7 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public Species () throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
-		this.setPop(0,5,15,20,0,true);
+		setPop(0,5,15,20,0,true);
 	}
 	
 	/**
@@ -101,7 +101,7 @@ public class Species {
 		
 		if(tester1){												//test
 			
-			this.setPop(0,1,20,20,protentry,true);						//initializing the Population instance
+			setPop(0,1,20,20,protentry,true);						//initializing the Population instance
 			
 		}
 		else{														//if the parameter does not match the requirements
@@ -122,18 +122,18 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public Species (Species spe) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.demenumb = spe.demenumb;								//copies the field demenumb
+		demenumb = spe.demenumb;								//copies the field demenumb
 		
-		this.evosteps = spe.evosteps;								//copies the field evosteps
+		evosteps = spe.evosteps;								//copies the field evosteps
 		
 		int dim1 = spe.deme.length, dim2 = spe.deme.length;			//the dimensions of the Species matrix are copied
 		
-		this.deme = new Demes[dim1][dim2];						//instantiate the matrix
+		deme = new Demes[dim1][dim2];						//instantiate the matrix
 		
 		for(int i = 0; i < dim1; i++){								//loop to initilize all Species present in the spe.deme field
 			
 			for(int j = 0; j < dim2; j++){
-				this.deme[i][j] = new Demes(spe.deme[i][j]);
+				deme[i][j] = new Demes(spe.deme[i][j]);
 			}
 		}
 	}
@@ -151,7 +151,7 @@ public class Species {
 	 */
 	public Species (int protentry, String dummy) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
 		threshold = 0.0003;
-		this.setDeme2(5, protentry, 14, 5, dummy,true);
+		setDeme2(5, protentry, 14, 5, dummy,true);
 	}
 	
 	/**
@@ -167,8 +167,8 @@ public class Species {
 	 */
 	public Species (int protentry, int numofconts, double threshold_val, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
 		threshold = threshold_val;
-		this.evosteps = 30;
-		this.setDeme2(5, protentry, 20, numofconts, "dummy",evo);
+		evosteps = 30;
+		setDeme2(5, protentry, 20, numofconts, "dummy",evo);
 	}
 	
 	/**
@@ -185,7 +185,7 @@ public class Species {
 	 */
 	public Species (int protentry, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
 		threshold = 0.0003;
-		this.setDeme2(5,protentry, 20, num_of_conts, dummy,evo);
+		setDeme2(5,protentry, 20, num_of_conts, dummy,evo);
 	}
 	
 	/**
@@ -203,7 +203,7 @@ public class Species {
 		
 		if(tester1 && tester2){																//test
 			
-			this.setPop(0, demesize, 1, 500,protentry,evo);									//initializing the Population instance
+			setPop(0, demesize, 1, 500,protentry,evo);									//initializing the Population instance
 			
 		}
 		else{																				//if at least one requirements are not fullfilled
@@ -239,7 +239,7 @@ public class Species {
 		
 		if(tester1 && tester2 && tester3){													//test
 			
-			this.setPop(0, demesize, 20, popsize,protentry,evo);								//initializing the Population instance
+			setPop(0, demesize, 20, popsize,protentry,evo);								//initializing the Population instance
 			
 		}
 		else{																				//if at least one requirements are not fullfilled
@@ -260,15 +260,15 @@ public class Species {
 	}
 	
 	public Species (String dir) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.readStarterFromFile(dir);
+		readStarterFromFile(dir);
 	}
 	
 	public Species (Demes[] spec, int evstep,String dir, String temp_dir, double thres_val){
-		this.setPop(spec, evstep, dir, temp_dir, thres_val);
+		setPop(spec, evstep, dir, temp_dir, thres_val);
 	}
 	
 	public Species (Individuals in){
-		this.setPop(in,2,2);
+		setPop(in,2,2);
 	}
 	
 	/*------------------------------------------------------setter--------------------------------------------------------------*/
@@ -287,24 +287,24 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public void setPop(int generation, int demes, int evsteps, int popsize, int protentry, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
-		this.demenumb = demes;											//setting the number of demes in this Species
+		demenumb = demes;											//setting the number of demes in this Species
 		
-		this.evosteps = evsteps;										//setting the number of evolution steps
+		evosteps = evsteps;										//setting the number of evolution steps
 		
-		this.gen = generation;											//setting the generation
+		gen = generation;											//setting the generation
 		
-		this.evoType = evo;											//setting the field 'evoType' to false (meaning only DMError used)
+		evoType = evo;											//setting the field 'evoType' to false (meaning only DMError used)
 		
-		this.deme = new Demes[demes][evsteps];						//initializzing the field 'deme'
+		deme = new Demes[demes][evsteps];						//initializzing the field 'deme'
 		
-		this.pop_size = popsize;
+		pop_size = popsize;
 		
-		for(int i = 0; i < this.demenumb; i++){
-			this.deme[i][generation] = new Demes(popsize,protentry,5,this.gen, "deme" + i);
-			System.out.println(this.deme[i][0].getName() + " initialized...");					//output indicating the initialization of the parental Species
+		for(int i = 0; i < demenumb; i++){
+			deme[i][generation] = new Demes(popsize,protentry,5,gen, "deme" + i);
+			System.out.println(deme[i][0].getName() + " initialized...");					//output indicating the initialization of the parental Species
 			
 		}
-		this.numofConts = this.deme[0][0].getNumOfContacts();
+		numofConts = deme[0][0].getNumOfContacts();
 	}
 	
 	/**
@@ -343,7 +343,7 @@ public class Species {
 		int dim = pop[0].length;
 		for(int i = start; i < end; i++){
 			for(int j = 0; j < dim; j++){
-				this.deme[i][j] = new Demes(pop[i][j]);
+				deme[i][j] = new Demes(pop[i][j]);
 			}
 		}
 	}
@@ -351,35 +351,35 @@ public class Species {
 	public void setDemes (int pos, Demes[] input) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		int dim1 = input.length;
 		for(int i = 0; i < dim1; i++){
-			this.deme[pos][i] = new Demes(input[i]);
+			deme[pos][i] = new Demes(input[i]);
 		}
 	}
 	
 	public void setDeme (int deme_num, int gen_num, Demes input) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
-		this.deme[deme_num][gen_num] = new Demes(input);
+		deme[deme_num][gen_num] = new Demes(input);
 	}
 	
 	public void setContactFrq (double threshold, int start) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim1 = this.demenumb, dim2 = this.evosteps;
+		int dim1 = demenumb, dim2 = evosteps;
 		HashMap<Pair<Integer>,Double> subset = new HashMap<Pair<Integer>,Double> (); 
 		for(int i = start; i < dim1 - start; i++){
 			for(int j = 0; j < dim2; j++){
-				subset.putAll(this.deme[i][j].contactsWithHighestFrequency(threshold));
+				subset.putAll(deme[i][j].contactsWithHighestFrequency(threshold));
 			}
 		}
-		this.contacts_hfreq = new HashMap<Pair<Integer>,Double> (subset);
-		this.printToFile(path, "1bkr");
+		contacts_hfreq = new HashMap<Pair<Integer>,Double> (subset);
+		printToFile(path, "1bkr");
 	}
 	
 	public void setContactFrq (int start, double threshold) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = this.getDemeSize();
+		int dim = getDemeSize();
 		HashMap<Pair<Integer>,Double> subset = new HashMap<Pair<Integer>,Double> ();
 		try{
 			for(int j = 0; j < dim; j++){
-				subset.putAll(this.deme[j][start].contactsWithHighestFrequency(threshold));
+				subset.putAll(deme[j][start].contactsWithHighestFrequency(threshold));
 			}
-			this.contacts_hfreq = new HashMap<Pair<Integer>,Double> (subset);
-			this.printToFile(path, "1bkr");
+			contacts_hfreq = new HashMap<Pair<Integer>,Double> (subset);
+			printToFile(path, "1bkr");
 		}
 		catch (NullPointerException e){
 			System.out.println("Field 'contact_hfreq' was not initialized.");
@@ -399,7 +399,7 @@ public class Species {
 	public void setDeme2 (int demesize, int protentry, int popsize, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
 		if((0 <= protentry) && (protentry < 15) && (demesize > 0)){
 			int deme_size_mult = demesize*2;
-			this.deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (deme_size_mult);
+			deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (deme_size_mult);
 			Demes[] starter_pop = new Demes[demesize];
 			for(int i = 0; i < demesize; i++){
 				HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> ();
@@ -408,14 +408,14 @@ public class Species {
 				starter_pop[i] = new Demes(popsize, protentry, num_of_conts, 0, "deme" + i);
 				//Pair<Integer> pair = new Pair<Integer> (deme_index, gen_index);
 				submap.put(gen_index, starter_pop[i]);
-				this.deme2.put(deme_index, submap);
+				deme2.put(deme_index, submap);
 				System.out.println(starter_pop[i].getPop(0).getName() + ", deme " + i + " initialized...");
 			}
-			this.gen = 0;
-			this.pop_size = popsize;
-			this.demenumb = demesize;
-			this.numofConts = starter_pop[0].getNumOfContacts();
-			this.evoType = evo;
+			gen = 0;
+			pop_size = popsize;
+			demenumb = demesize;
+			numofConts = starter_pop[0].getNumOfContacts();
+			evoType = evo;
 		}
 		else{
 			if(protentry < 0){
@@ -448,19 +448,19 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public void setDeme2 (int demesize, int protentry, int popsize, int evsteps) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
-		this.demenumb = demesize;
-		this.evosteps = evsteps;
-		this.deme = new Demes[demesize][evsteps];
-		this.deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (2*demesize);
+		demenumb = demesize;
+		evosteps = evsteps;
+		deme = new Demes[demesize][evsteps];
+		deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (2*demesize);
 		for(int i = 0; i < demesize; i++){
 			HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> (2*evsteps);
 			Integer gen_index  = new Integer (0);
 			Integer deme_index = new Integer (i);
-			this.deme[i][0] = new Demes (popsize, protentry, 5, 0, "deme" + i);
-			submap.put(gen_index, this.deme[i][0]);
-			this.deme2.put(deme_index, submap);
+			deme[i][0] = new Demes (popsize, protentry, 5, 0, "deme" + i);
+			submap.put(gen_index, deme[i][0]);
+			deme2.put(deme_index, submap);
 		}
-		this.pop_size = popsize;
+		pop_size = popsize;
 	}
 	
 	/**
@@ -488,8 +488,8 @@ public class Species {
 
 			
 			int length = filelist.length;
-			this.evosteps = 20 - this.gen;															//number of evolution steps are set to default: 20 - gen (generation, where stopped)
-			this.deme = new Demes[length][this.evosteps];
+			evosteps = 20 - gen;															//number of evolution steps are set to default: 20 - gen (generation, where stopped)
+			deme = new Demes[length][evosteps];
 			if(length > 0){																						//tests whether this directory contains any cmap files
 																												//if not: IllegalArgumentException thrown
 				
@@ -585,7 +585,7 @@ public class Species {
 								if(linereader.contains("GENERATION")){
 									String num = linereader.replace("#GENERATION: ", "");
 									double dnum = Double.parseDouble(num);
-									this.gen = (int) dnum;															//field: gen - number of generation at which the evolution
+									gen = (int) dnum;															//field: gen - number of generation at which the evolution
 									//was somehow interrupted
 									break;
 								}
@@ -609,10 +609,10 @@ public class Species {
 					}
 					//starter = new Species(starterindis,0);
 
-					this.deme[k][0] = new Demes(starterindis,0);															//starter are initialized
+					deme[k][0] = new Demes(starterindis,0);															//starter are initialized
 
 				}
-				this.numofConts = this.deme[0][0].getPop(0).getNumOfContacts();
+				numofConts = deme[0][0].getPop(0).getNumOfContacts();
 			}
 			else{																								//if the denoted directory does not contain any contact map files
 
@@ -634,27 +634,27 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public void copyParentalDemes () {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme != null){
-			this.deme2 = new HashMap<Integer,HashMap<Integer,Demes>> ();
-			HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> (2*this.evosteps);
+		if(deme != null){
+			deme2 = new HashMap<Integer,HashMap<Integer,Demes>> ();
+			HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> (2*evosteps);
 			Integer gen_index = new Integer (0);
-			for(int i = 0; i < this.demenumb; i++){
+			for(int i = 0; i < demenumb; i++){
 				Integer deme_index = new Integer(i);				
-				Demes spec = new Demes (this.deme[i][0],0);
+				Demes spec = new Demes (deme[i][0],0);
 				submap.put(gen_index, spec);
-				this.deme2.put(deme_index, submap);
+				deme2.put(deme_index, submap);
 			}
 		}
 		else{
-			if(this.deme2 != null){
-				HashMap<Integer,Demes> deme_map = this.getDemesOfSameGen(0);
+			if(deme2 != null){
+				HashMap<Integer,Demes> deme_map = getDemesOfSameGen(0);
 				Set<Integer> keyset = deme_map.keySet();
 				Iterator<Integer> it = keyset.iterator();
-				this.deme = new Demes[this.demenumb][this.evosteps];
+				deme = new Demes[demenumb][evosteps];
 				while(it.hasNext()){
 					Integer deme_index = it.next();
 					int deme_val = deme_index.intValue();
-					this.deme[deme_val][0] = new Demes(this.getDeme2(deme_val, 0),0);
+					deme[deme_val][0] = new Demes(getDeme2(deme_val, 0),0);
 				}
 			}
 		}
@@ -671,20 +671,20 @@ public class Species {
 	 */
 	public void setPop (Demes[] spec, int evo_steps, String dir, String temp_dir, double thres_val){
 		threshold = thres_val;
-		this.temp_path = new String (temp_dir); path = new String (dir);
-		this.pop_size = spec[0].getSize();
-		this.gen = 0;
-		this.numofConts = spec[0].getNumOfContacts();
-		this.demenumb = spec.length;
-		this.evosteps = evo_steps;
-		this.deme = new Demes [this.demenumb][evo_steps];
-		this.deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (this.demenumb *2);
-		for(int i = 0; i < this.demenumb; i++){
+		temp_path = new String (temp_dir); path = new String (dir);
+		pop_size = spec[0].getSize();
+		gen = 0;
+		numofConts = spec[0].getNumOfContacts();
+		demenumb = spec.length;
+		evosteps = evo_steps;
+		deme = new Demes [demenumb][evo_steps];
+		deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (demenumb *2);
+		for(int i = 0; i < demenumb; i++){
 			HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> (evo_steps*2);
-			this.deme[i][0] = new Demes (spec[i],0);
+			deme[i][0] = new Demes (spec[i],0);
 			Integer null_val = new Integer (0), deme_index = new Integer (i);
 			submap.put(null_val, spec[i]);
-			this.deme2.put(deme_index, submap);
+			deme2.put(deme_index, submap);
 		}
 	}
 	
@@ -706,13 +706,13 @@ public class Species {
 	 */
 	@Deprecated
 	public void evolve () throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
-		int dim1 = this.getDemeSize();				//number of demes in this Species
+		int dim1 = getDemeSize();				//number of demes in this Species
 		
 		for(int i = 0; i < dim1; i++){				//loop over all demes in this Species
 			
-			this.evolve(i);							//the actual evolution using the
+			evolve(i);							//the actual evolution using the
 		}
-		this.setContactFrq(0.7,15);
+		setContactFrq(0.7,15);
 	}
 
 	/**
@@ -730,25 +730,25 @@ public class Species {
 	 * @throws IOException
 	 */
 	public void evolve (String dummy) throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
-		int dim1 = this.getDemeSize();				//number of demes in this Species
+		int dim1 = getDemeSize();				//number of demes in this Species
 
-		int dim2 = this.getEvoSteps();				//number of evolution steps
+		int dim2 = getEvoSteps();				//number of evolution steps
 
 		for(int j = 0; j < dim2-1; j++){
 
 			if(j >= 10){	//after 5 generations all demes are checked for homogeneity
 				
-				boolean homo_tester = this.isGenXHomogenous(j);
+				boolean homo_tester = isGenXHomogenous(j);
 				if(homo_tester){
-					this.swapSpecies(j);
+					swapSpecies(j);
 				}
 			}
 			for(int i = 0; i < dim1; i++){				//loop over all demes in this Species
 
-				this.evolve(i,j);				//the actual evolution using the
+				evolve(i,j);				//the actual evolution using the
 
 			}
-			this.gen = j;
+			gen = j;
 		}
 		System.out.println("Evolution of type 1 terminated..");
 	}
@@ -766,10 +766,10 @@ public class Species {
 	 */
 	@Deprecated
 	public Demes[] evolve (int k) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
-		int generations = this.gen;
-		int steps = this.evosteps;												//number of evolution steps
+		int generations = gen;
+		int steps = evosteps;												//number of evolution steps
 		
-		Demes pop = new Demes(this.getDeme(k,generations));					//starter species at k-th generation
+		Demes pop = new Demes(getDeme(k,generations));					//starter species at k-th generation
 		
 		//String name = pop.getName() + "gen" + pop.getGen();						//a string to specify the output file name
 		String name = String.format("%sgen%02d", pop.getName(), pop.getGen());
@@ -779,7 +779,7 @@ public class Species {
 		Demes[] off = new Demes[steps];										// a new array of Species instances, with
 																				//as many entries as specified by the field evosteps
 		
-		off[0] = new Demes(pop,this.gen);										//initializing the parental Species
+		off[0] = new Demes(pop,gen);										//initializing the parental Species
 		
 		off[0].printToFile(path + printname + "/", name);						//writing the parental Species to the specified file
 																				//as a contact map file
@@ -802,7 +802,7 @@ public class Species {
 			
 			String name1 = String.format("%sgen%02d", pop.getName(), i);;							//a helper string for the contact map files
 			
-			off[i] = new Demes(this.getDeme(k,i).evolve(false,"dummy"),i);	//the actual evolution step using the specific
+			off[i] = new Demes(getDeme(k,i).evolve(false,"dummy"),i);	//the actual evolution step using the specific
 																										//evolution method of the Species class
 
 									
@@ -810,8 +810,8 @@ public class Species {
 			
 			off[i].printMetric(path + printname + "/", off[i].getName(),k);		//writing the metric file of the i-th generation
 			
-			this.setDeme(k, i, off[i]);
-			this.printDemesToTempFiles(k,i);
+			setDeme(k, i, off[i]);
+			printDemesToTempFiles(k,i);
 		}
 		return off;																//returning the Species array of this evolution run
 	}
@@ -829,9 +829,9 @@ public class Species {
 	 */
 	public void evolve (int k, int genindex) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
 		int generations = genindex;
-		//int steps = this.evosteps;												//number of evolution steps
+		//int steps = evosteps;												//number of evolution steps
 		
-		Demes pop = new Demes(this.getDeme(k,generations));					//starter species at k-th generation
+		Demes pop = new Demes(getDeme(k,generations));					//starter species at k-th generation
 		
 		String name = pop.getPop(0).getName();						//a string to specify the output file name
 		
@@ -840,7 +840,7 @@ public class Species {
 		//Species off = new Species();											// a new array of Species instances, with
 																				//as many entries as specified by the field evosteps
 		
-		//off = new Species(pop,this.gen);										//initializing the parental Species
+		//off = new Species(pop,gen);										//initializing the parental Species
 		
 		//off.printToFile(path + printname + "/", name);						//writing the parental Species to the specified file
 																				//as a contact map file
@@ -861,16 +861,16 @@ public class Species {
 		}			
 		String name1 = String.format(name+"deme%sgen%02d",k,generations+1);					//a helper string for the contact map files
 		
-		boolean evo = this.evoType;
+		boolean evo = evoType;
 		
-		Demes offi = new Demes(this.getDeme(k,genindex).evolve(evo, "dummy"),genindex+1);
+		Demes offi = new Demes(getDeme(k,genindex).evolve(evo, "dummy"),genindex+1);
 		//the actual evolution step using the specific evolution method of the Species class
 		
-			this.setDeme(k, genindex+1, offi);
+			setDeme(k, genindex+1, offi);
 			offi.printAllIndisToTempDir(path,name+"/deme"+k+"/temp1/");
 			
 			
-				//this.setContactFrq(genindex,0.5);
+				//setContactFrq(genindex,0.5);
 									
 			offi.printToFile(path + printname + "/", name1);					//writing the contact map file of the i-th generation
 			
@@ -891,27 +891,27 @@ public class Species {
 	 * @throws IOException
 	 */
 	public void evolve2 () throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
-		HashMap<Integer,HashMap<Integer,Demes>> map = this.getDeme2();
+		HashMap<Integer,HashMap<Integer,Demes>> map = getDeme2();
 		Set<Integer> demeset = map.keySet();
 		Iterator<Integer> it = demeset.iterator();
 		if(threshold == 0.0){
 			threshold = 0.003;
 		}
-		int gennum = this.getGen();
+		int gennum = getGen();
 		//if(gennum >= 10){
-			boolean isless = this.isGenXHomogenous(gennum);//isLessThanThreshold(gennum, false, threshold);
+			boolean isless = isGenXHomogenous(gennum);//isLessThanThreshold(gennum, false, threshold);
 			if(isless){
-				this.swapSpecies(gennum);
-				map = this.getDeme2();
+				swapSpecies(gennum);
+				map = getDeme2();
 				demeset = map.keySet();
 				it = demeset.iterator();
 			}
 		//}
 		while(it.hasNext()){
 			Integer deme_index = it.next();
-			this.evolve2(deme_index.intValue(),gennum);
+			evolve2(deme_index.intValue(),gennum);
 		}
-		this.gen += 1;
+		gen += 1;
 	}
 	
 	/**
@@ -927,25 +927,25 @@ public class Species {
 	 * @throws IOException
 	 */
 	public void evolve2 (int final_generation) throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
-		int currentgen = this.gen;
-		this.evosteps = final_generation + 1;
+		int currentgen = gen;
+		evosteps = final_generation + 1;
 		//boolean homogenity = false;
 		//if(currentgen >= 20){
-			//homogenity = this.isGenXHomogenous(currentgen);
+			//homogenity = isGenXHomogenous(currentgen);
 		//}
-		boolean homogeneity = this.isGenXHomogenous(currentgen);
+		boolean homogeneity = isGenXHomogenous(currentgen);
 		if(currentgen >= 10){
 			while(currentgen < final_generation && !homogeneity){
-				homogeneity = this.isGenXHomogenous(currentgen);
-				this.evolve2();
-				currentgen = this.gen;
+				homogeneity = isGenXHomogenous(currentgen);
+				evolve2();
+				currentgen = gen;
 			}
 		}
 		else{
 			if(!homogeneity){
 				if(currentgen == 0){
-					for(int i = 0; i < this.demenumb; i++){
-						Demes spec = this.getDeme2(i, 0);
+					for(int i = 0; i < demenumb; i++){
+						Demes spec = getDeme2(i, 0);
 						String name = spec.getName().replace("deme" + i, "");
 						File dirs = new File (path + name + "/deme" + i + "/evo2/");
 						if(!dirs.exists()){
@@ -960,14 +960,14 @@ public class Species {
 					System.out.println("Help line");
 				}
 				while(currentgen < final_generation){
-					this.checkForHomogeneity(currentgen,0.8);
-					if(this.homogenous){
+					checkForHomogeneity(currentgen,0.8);
+					if(homogenous){
 						break;
 					}
-					this.evolve2();
-					currentgen = this.gen;
+					evolve2();
+					currentgen = gen;
 				}
-				if(this.homogenous){
+				if(homogenous){
 					System.out.println("Evolution was stopped due to the lack of variability within the population at generation " + currentgen + ".");
 				}
 				else{
@@ -998,10 +998,10 @@ public class Species {
 		//current generation index as an Integer instance		
 		
 		Integer gen_plus_one  = new Integer(current_gen + 1);
-		HashMap<Integer,Demes> submap    = this.getDeme2(deme_index.intValue());
+		HashMap<Integer,Demes> submap    = getDeme2(deme_index.intValue());
 		if(!submap.containsKey(gen_plus_one)){
-			boolean evo = this.evoType;
-			Demes off = new Demes (this.getDeme2(i,current_gen).evolve(evo, "dummy"), gen_plus_one);
+			boolean evo = evoType;
+			Demes off = new Demes (getDeme2(i,current_gen).evolve(evo, "dummy"), gen_plus_one);
 			String name = off.getName();
 			String dir_name = path + "/" + name;
 			File dir = new File (dir_name + "/deme"+ i + "/evo2/");
@@ -1018,8 +1018,8 @@ public class Species {
 			off.printToFile(path, name + "/deme" + i + "/evo2/" + name + helpstr);
 			//Pair<Integer> pair = new Pair<Integer> (deme_index, gen_plus_one);
 			submap.put(gen_plus_one, off);
-			this.deme2.put(deme_index, submap);
-			//this.gen = current_gen + 1;
+			deme2.put(deme_index, submap);
+			//gen = current_gen + 1;
 		}
 	}
 	
@@ -1030,7 +1030,7 @@ public class Species {
 	 */
 	public void checkForHomogeneity(int gen_index, double threshold_val){
 		if(deme2 != null){
-			HashMap<Integer,Demes> submap = this.getDemesOfSameGen(gen_index);
+			HashMap<Integer,Demes> submap = getDemesOfSameGen(gen_index);
 			Integer zero = new Integer (0);
 			HashSet<Pair<Integer>> common_contacts = new HashSet<Pair<Integer>> (submap.get(zero).getSubHash());
 			submap.remove(zero);
@@ -1041,27 +1041,27 @@ public class Species {
 				common_contacts.retainAll(submap.get(deme_index).getSubHash());
 			}
 			int frequency = (int) (((double) common_contacts.size())/threshold_val);
-			if(frequency >= this.numofConts){
-				this.homogenous = true;
+			if(frequency >= numofConts){
+				homogenous = true;
 			}
 		}
 		else{
-			if(this.deme != null){
-				HashSet<Pair<Integer>> common_contacts = new HashSet<Pair<Integer>> (this.deme[0][gen_index].getSubHash());
-				for(int i = 1; i< this.demenumb;i++){
-					common_contacts.retainAll(this.deme[i][gen_index].getSubHash());
+			if(deme != null){
+				HashSet<Pair<Integer>> common_contacts = new HashSet<Pair<Integer>> (deme[0][gen_index].getSubHash());
+				for(int i = 1; i< demenumb;i++){
+					common_contacts.retainAll(deme[i][gen_index].getSubHash());
 				}
 				int frequency = (int) (((double) common_contacts.size())/threshold_val);
-				if(frequency >= this.numofConts){
-					this.homogenous = true;
+				if(frequency >= numofConts){
+					homogenous = true;
 				}
 			}
 		}
 	}
 	
 	public void printStarterGenerationToFile (String dir, String addname) throws FileNotFoundException, IOException{
-		if(this.deme2 != null){
-			HashMap<Integer,Demes> starterset = this.getDemesOfSameGen(0);
+		if(deme2 != null){
+			HashMap<Integer,Demes> starterset = getDemesOfSameGen(0);
 			Set<Integer> keyset = starterset.keySet();
 			Iterator<Integer> it = keyset.iterator();
 			int counter = 0;
@@ -1073,9 +1073,9 @@ public class Species {
 			}
 		}
 		else{
-			if(this.deme != null){
-				for(int i = 0; i < this.getDemeSize(); i++){
-					Demes spec = new Demes (this.deme[i][0]);
+			if(deme != null){
+				for(int i = 0; i < getDemeSize(); i++){
+					Demes spec = new Demes (deme[i][0]);
 					spec.printAllIndisToTempDir(dir, addname + 1);
 				}
 			}
@@ -1104,17 +1104,17 @@ public class Species {
 	 * @param name a String specifying the output file name
 	 */
 	public void printToFile(String path, String name) throws IOException, FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError {
-		Individuals ne = new Individuals(this.getDeme(0,0).getPop(0));
+		Individuals ne = new Individuals(getDeme(0,0).getPop(0));
 		String cont = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+ne.getSequence()+"\n"+
 		"#PDB: "+ne.getName()+ "\n#PDB CHAIN CODE: "+ne.getChainCode()+"\n#CT: "+Individuals.getContactT()+ "\n#CUTOFF: "+Individuals.getContactDist()+"\n"+ 
-		"#GENERATION: "+0 + "\n#Species SIZE: " + this.getDeme(0,0).getSize() + "\n#CMError: "+ 0 + "\n#CMstDev: " + 0 + "\n#DMError: "+ 0 + 
+		"#GENERATION: "+0 + "\n#Species SIZE: " + getDeme(0,0).getSize() + "\n#CMError: "+ 0 + "\n#CMstDev: " + 0 + "\n#DMError: "+ 0 + 
 		"\n#DMstDev: " + 0 + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n";
-		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (this.contacts_hfreq.keySet());
+		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (contacts_hfreq.keySet());
 		int[][] index_array = SortIntArray.converter(keyset);
 		int length = index_array[0].length;
 		//TreeSet<CompPair> trset = new TreeSet<CompPair> (trmap.keySet());
-		HashMap<Pair<Integer>,Double> hashmap = new HashMap<Pair<Integer>,Double> (this.contacts_hfreq);
-		//HashSet<Pair<Integer>> hashset = this.getKey();
+		HashMap<Pair<Integer>,Double> hashmap = new HashMap<Pair<Integer>,Double> (contacts_hfreq);
+		//HashSet<Pair<Integer>> hashset = getKey();
 		//Iterator<CompPair> it = trset.iterator();
 		cont = cont + "\n";
 		//while(it.hasNext()){
@@ -1122,12 +1122,12 @@ public class Species {
 			int index1 = index_array[0][i], index2 = index_array[1][i];
 			cont = cont + index1 + "\t" + index2 + "\t" + hashmap.get(new Pair<Integer>(new Integer(index1),new Integer(index2))) + "\n"; 
 		}
-		FileOutputStream file = new FileOutputStream(path+name+"-cons"+this.getDeme(0,0).getNumOfContacts()+".cmap");
+		FileOutputStream file = new FileOutputStream(path+name+"-cons"+getDeme(0,0).getNumOfContacts()+".cmap");
 		PrintStream printa = new PrintStream(file);
 		printa.print(cont);
 		printa.close();
 		file.close();
-		System.out.println(ne.getName()+" at generation "+this.gen+" written to file...");
+		System.out.println(ne.getName()+" at generation "+gen+" written to file...");
 	}
 	
 	public Demes[] copyPops(Demes[] input) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -1141,39 +1141,39 @@ public class Species {
 	
 		
 	public void writeDemeToDeme2 () throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme != null){
-			int deme_size = this.deme.length;
+		if(deme != null){
+			int deme_size = deme.length;
 			HashMap<Integer, HashMap<Integer, Demes>> map = new HashMap<Integer,HashMap<Integer,Demes>> (deme_size*2);
 			for(int i = 0; i < deme_size; i++){
-				int gen_size = this.deme[i].length;
+				int gen_size = deme[i].length;
 				Integer deme_index = new Integer (i);
 				HashMap<Integer,Demes> submap = new HashMap<Integer,Demes> (gen_size);
 				for(int j = 0; j < gen_size; j++){
 					Integer gen_index = new Integer (j);
-					Demes spec = new Demes (this.deme[i][j],j);
+					Demes spec = new Demes (deme[i][j],j);
 					submap.put(gen_index, spec);
 				}
 				map.put(deme_index, submap);
 			}
-			this.deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (map);
+			deme2 = new HashMap<Integer,HashMap<Integer,Demes>> (map);
 		}
 	}
 	
 	public void writeDeme2ToDeme () throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme2 != null){
-			int deme_size = this.demenumb;
-			int gen_size = this.gen;
-			this.deme = new Demes [deme_size][gen_size];
+		if(deme2 != null){
+			int deme_size = demenumb;
+			int gen_size = gen;
+			deme = new Demes [deme_size][gen_size];
             for(int i = 0; i < deme_size; i++){
             	for(int j = 0; j < gen_size; j++){
-            		this.deme[i][j] = this.getDeme2(i, j);
+            		deme[i][j] = getDeme2(i, j);
             	}
             }
 		}
 	}
 	
 	public int getLargestSubHashMap (){
-		HashMap<Integer,HashMap<Integer,Demes>> map = this.getDeme2();
+		HashMap<Integer,HashMap<Integer,Demes>> map = getDeme2();
 		Set<Integer> keyset = map.keySet();
 		Iterator<Integer> it = keyset.iterator();
 		int size = 0;
@@ -1187,20 +1187,20 @@ public class Species {
 	}
 	
 	public HashMap<Integer,Demes> getDemesOfSameGen (int gen_index) {//throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		HashMap<Integer,HashMap<Integer,Demes>> deme_map = this.getDeme2();
+		HashMap<Integer,HashMap<Integer,Demes>> deme_map = getDeme2();
 		HashMap<Integer,Demes> map = new HashMap<Integer,Demes> ();
 		Set<Integer> keyset = deme_map.keySet();
 		Iterator<Integer> it = keyset.iterator();
 		while(it.hasNext()){
 			Integer deme_index = it.next();
-			Demes spec = this.getDeme2(deme_index.intValue(), gen_index);
+			Demes spec = getDeme2(deme_index.intValue(), gen_index);
 			map.put(deme_index, spec);
 		}
 		return map;
 	}
 	
 	public double[] getErrorDev (int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		HashMap<Integer,Demes> map = this.getDemesOfSameGen(gen_index);
+		HashMap<Integer,Demes> map = getDemesOfSameGen(gen_index);
 		Set<Integer> keyset = map.keySet();
 		double[] stdev_array = new double[keyset.size()];
 		Iterator<Integer> it = keyset.iterator();
@@ -1220,7 +1220,7 @@ public class Species {
 	}
 	
 	public double getMeanStDev(int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		double[] st_dev = this.getErrorDev(gen_index, CMDM);
+		double[] st_dev = getErrorDev(gen_index, CMDM);
 		int dim =  st_dev.length;
 		double sum = 0.0;
 		for(int i = 0; i < dim; i++){
@@ -1230,7 +1230,7 @@ public class Species {
 	}
 	
 	public boolean isLessThanThreshold (int gen_index, boolean CMDM, double threshold) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		double average = this.getMeanStDev(gen_index, CMDM);
+		double average = getMeanStDev(gen_index, CMDM);
 		if(average <= threshold){
 			return true;
 		}
@@ -1240,10 +1240,10 @@ public class Species {
 	}
 	
 	/*public void isPopHomogenous (int gen) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		HashMap<Integer,Species> pop_map = this.getDemesOfSameGen(gen);
+		HashMap<Integer,Species> pop_map = getDemesOfSameGen(gen);
 		Set<Integer> keyset = pop_map.keySet();
-		if(this.is_homogen == null){
-			this.is_homogen = new HashMap<Integer,Integer> ();
+		if(is_homogen == null){
+			is_homogen = new HashMap<Integer,Integer> ();
 		}
 		Iterator<Integer> it = keyset.iterator();
 		Integer gen_index = new Integer (gen);
@@ -1254,18 +1254,18 @@ public class Species {
 			metric2+= pop_map.get(deme_ind).getAverageMetric2();
 		}
 		if(metric == 0.0 || metric2 == 0.0){
-			this.is_homogen.put(gen_index,new Integer (1));
+			is_homogen.put(gen_index,new Integer (1));
 		}
 		else{
-			this.is_homogen.put(gen_index, new Integer (0));
+			is_homogen.put(gen_index, new Integer (0));
 		}
 	}*/
 	
 	
 	
 	public boolean isGenXHomogenous (int gen) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme2 != null){
-			HashMap<Integer,Demes> deme_map = this.getDemesOfSameGen(gen);
+		if(deme2 != null){
+			HashMap<Integer,Demes> deme_map = getDemesOfSameGen(gen);
 			Integer deme0 = new Integer (0);
 			HashSet<Pair<Integer>> pairs = new HashSet<Pair<Integer>> (deme_map.get(deme0).getSubHash());
 			int sum = pairs.size();
@@ -1279,8 +1279,8 @@ public class Species {
 					sum += subhash.size();
 				}
 			}
-			int benchmark = (int) (((double) this.numofConts)*0.8);
-			int av_frequency = (int) (((double) sum)/((double) this.demenumb));
+			int benchmark = (int) (((double) numofConts)*0.8);
+			int av_frequency = (int) (((double) sum)/((double) demenumb));
 			if(av_frequency >= benchmark){
 				System.out.println("Population is homogenous...");
 				return true;
@@ -1291,17 +1291,17 @@ public class Species {
 			}
 		}
 		else{
-			if(this.deme != null){
-				HashSet<Pair<Integer>> pairs = new HashSet<Pair<Integer>> (this.deme[0][gen].getSubHash());
+			if(deme != null){
+				HashSet<Pair<Integer>> pairs = new HashSet<Pair<Integer>> (deme[0][gen].getSubHash());
 				int sum_size_of_common_contacts = pairs.size();
-				for(int i = 1; i < this.demenumb; i++){
-					sum_size_of_common_contacts += this.deme[i][gen].getSubHash().size();
+				for(int i = 1; i < demenumb; i++){
+					sum_size_of_common_contacts += deme[i][gen].getSubHash().size();
 					if(pairs.size() == 0){
 						break;
 					}
 				}
-				double ratio = (double)sum_size_of_common_contacts/((double) this.demenumb); 
-				int benchmark = (int) (((double) this.numofConts)*0.8);
+				double ratio = (double)sum_size_of_common_contacts/((double) demenumb); 
+				int benchmark = (int) (((double) numofConts)*0.8);
 				if(ratio >= benchmark){
 					System.out.println("Population is homogenous...");
 					return true;
@@ -1318,21 +1318,21 @@ public class Species {
 	}
 	
 	public void swapSpecies (int gen_index) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme2 != null){
-		HashMap<Integer,HashMap<Integer,Demes>> population = this.getDeme2();			//getting the whole population
+		if(deme2 != null){
+		HashMap<Integer,HashMap<Integer,Demes>> population = getDeme2();			//getting the whole population
 		
 		Integer gen_num = new Integer (gen_index);										//generation index
 		
-		HashMap<Integer,Demes> submap1 = this.getDemesOfSameGen(gen_index);			//getting the all species at the specified generation
+		HashMap<Integer,Demes> submap1 = getDemesOfSameGen(gen_index);			//getting the all species at the specified generation
 		
 		HashSet<Integer> surveillieur = new HashSet<Integer> ();						//checker, checks that no index is taken twice
 		
 		Set<Integer> keyset = submap1.keySet();											//keyset to iterate over the species of the specified generation
 		
 		Iterator<Integer> it = keyset.iterator();
-		Individuals[] array = convertHashMapToIndiArray(submap1, this.pop_size);		//converting the species hashmap to an individuals array
+		Individuals[] array = convertHashMapToIndiArray(submap1, pop_size);		//converting the species hashmap to an individuals array
 		
-		int size = array.length;//, deme_size = this.demenumb;
+		int size = array.length;//, deme_size = demenumb;
 		/*int[] deme_index = new int[size];
 		for(int i = 0; i < size; i++){
 			Random rand = new Random ();
@@ -1341,7 +1341,7 @@ public class Species {
 		for(int i = 0; i < deme_size; i++){
 			Integer deme_val = new Integer (i);
 			HashMap<Integer,Species> submap = population.get(deme_val);
-			Individuals[] subpop = new Individuals[this.pop_size];
+			Individuals[] subpop = new Individuals[pop_size];
 			int counter = 0;
 			for(int j = 0; j < size; j++){
 				if(deme_index[j] == i){
@@ -1359,10 +1359,10 @@ public class Species {
 			
 			HashMap<Integer,Demes> submap2 = population.get(deme_num);				//getting the deme specified by the deme index
 			
-			Individuals[] subarray = new Individuals[this.pop_size];					//a subarray used to stored transferred individuals
+			Individuals[] subarray = new Individuals[pop_size];					//a subarray used to stored transferred individuals
 			
 			int counter = 0;
-			while(counter < this.pop_size){												//
+			while(counter < pop_size){												//
 				Random rand = new Random ();
 				int int_val = rand.nextInt(size);
 				Integer i_val = new Integer (int_val);
@@ -1376,7 +1376,7 @@ public class Species {
 			submap2.put(gen_num, deme);
 			population.put(deme_num, submap2);
 		}
-		this.deme2.putAll(population);
+		deme2.putAll(population);
 		System.out.println("All Individuals of generation " + gen_index + " were successfully transferred to new demes.");
 		//}
 		//else{
@@ -1384,8 +1384,8 @@ public class Species {
 		//}
 		}
 		else{
-			if(this.deme != null){
-				int deme_size=this.demenumb, popsize = this.pop_size, generation = this.gen;				
+			if(deme != null){
+				int deme_size=demenumb, popsize = pop_size, generation = gen;				
 				Individuals[] indiarray = new Individuals[deme_size * popsize];
 				for(int i = 0; i < deme_size; i++){
 					for(int j = 0; j < popsize; j++){
@@ -1405,7 +1405,7 @@ public class Species {
 						surveilleur = removeEntrie(surveilleur,rand_val);
 						counter++;
 					}
-					this.setDeme(deme_num, gen_index, new Demes (newarray,gen_index));
+					setDeme(deme_num, gen_index, new Demes (newarray,gen_index));
 					deme_num++;
 					
 				}
@@ -1442,11 +1442,11 @@ public class Species {
 	 * @throws SQLException 
 	 */
 	public Demes[][] getDeme() throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim1 = this.deme.length, dim2 = this.deme[0].length;
+		int dim1 = deme.length, dim2 = deme[0].length;
 		Demes[][] thisdemes = new Demes[dim1][dim2];
 		for(int i = 0; i < dim1; i++){
 			for(int j = 0; j < dim2; j++){
-				thisdemes[i][j] = new Demes(this.deme[i][j]);
+				thisdemes[i][j] = new Demes(deme[i][j]);
 			}
 		}
 		return thisdemes;
@@ -1462,8 +1462,8 @@ public class Species {
 	 * @throws PdbLoadError
 	 */
 	public Demes getDeme(int i, int j) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		if(this.deme[i][j] != null){
-			return new Demes(this.deme[i][j]);
+		if(deme[i][j] != null){
+			return new Demes(deme[i][j]);
 		}
 		else{
 			String nullp = "The Species at position i = " + i + ", j = " + j + " was not initialized.";
@@ -1472,14 +1472,14 @@ public class Species {
 	}
 	
 	public HashMap<Integer,HashMap<Integer,Demes>> getDeme2 (){
-		return new HashMap<Integer,HashMap<Integer,Demes>> (this.deme2);
+		return new HashMap<Integer,HashMap<Integer,Demes>> (deme2);
 	}
 	
 	public HashMap<Integer,Demes> getDeme2 (int i) throws ArrayIndexOutOfBoundsException {
-		int deme_size = this.deme2.size();
+		int deme_size = deme2.size();
 		if(i <  deme_size && 0 <= i){
 			Integer deme_index = new Integer (i);
-			return new HashMap<Integer,Demes> (this.deme2.get(deme_index));
+			return new HashMap<Integer,Demes> (deme2.get(deme_index));
 		}
 		else{
 			if(i >= deme_size){
@@ -1504,10 +1504,10 @@ public class Species {
 	 * @throws ArrayIndexOutOfBoundsException
 	 */
 	public Demes getDeme2 (int i, int j) {// throws SQLException, PdbCodeNotFoundError, PdbLoadError, ArrayIndexOutOfBoundsException {
-		int deme_size = this.deme2.size();
+		int deme_size = deme2.size();
 		if((0 <= i) && (i < deme_size)){
 			Integer deme_index = new Integer (i);
-			HashMap<Integer,Demes> subset = this.getDeme2(deme_index);
+			HashMap<Integer,Demes> subset = getDeme2(deme_index);
 			int gen_size = subset.size();
 			if((0 <= j) && (j <= gen_size)){
 				Integer gen_index  = new Integer (j);
@@ -1543,7 +1543,7 @@ public class Species {
 	 * @return
 	 */
 	public int getGen(){
-		return this.gen;
+		return gen;
 	}
 	
 	/**
@@ -1551,7 +1551,7 @@ public class Species {
 	 * @return
 	 */
 	public int getDemeSize(){
-		return this.demenumb;
+		return demenumb;
 	}
 	
 	/**
@@ -1559,7 +1559,7 @@ public class Species {
 	 * @return
 	 */
 	public int getEvoSteps(){
-		return this.evosteps;
+		return evosteps;
 	}
 	
 	/**
@@ -1567,7 +1567,7 @@ public class Species {
 	 * @return
 	 */
 	public boolean getEvoType(){
-		return this.evoType;
+		return evoType;
 	}
 	
 	/**
@@ -1582,24 +1582,24 @@ public class Species {
 	 */
 	public void printDemesToTempFiles (int deme_num, int gen_num) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
 		String pdbcode = "";
-		if(this.deme[deme_num][gen_num] != null){
-			pdbcode = pdbcode + this.deme[deme_num][gen_num].getPop(0).getName();
+		if(deme[deme_num][gen_num] != null){
+			pdbcode = pdbcode + deme[deme_num][gen_num].getPop(0).getName();
 			File dir_test = new File(path + pdbcode + "/tempfiles/temp" + deme_num +"/");
 			if(!dir_test.exists()){
 				dir_test.mkdirs();
 			}
-			Demes buffer = new Demes(this.deme[deme_num][gen_num],gen_num);
+			Demes buffer = new Demes(deme[deme_num][gen_num],gen_num);
 			buffer.printAllIndisToTempDir(path,pdbcode + "/tempfiles/temp" + deme_num +"/");
 			buffer.printToFile(path,pdbcode + "/temp" + deme_num +"/" + pdbcode + "deme" + deme_num);
 		}
 		else{
-			if(this.getDeme2(deme_num,gen_num) != null){
-				pdbcode = pdbcode + this.deme[deme_num][gen_num].getPop(0).getName();
+			if(getDeme2(deme_num,gen_num) != null){
+				pdbcode = pdbcode + deme[deme_num][gen_num].getPop(0).getName();
 				File dir_test = new File(path + pdbcode + "/tempfiles/temp" + deme_num +"/");
 				if(!dir_test.exists()){
 					dir_test.mkdirs();
 				}
-				Demes buffer = new Demes(this.deme[deme_num][gen_num],gen_num);
+				Demes buffer = new Demes(deme[deme_num][gen_num],gen_num);
 				buffer.printAllIndisToTempDir(path,pdbcode + "/tempfiles/temp" + deme_num +"/");
 				buffer.printToFile(path,pdbcode + "/temp" + deme_num +"/" + pdbcode + "deme" + deme_num);
 			}

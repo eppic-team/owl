@@ -50,14 +50,14 @@ public class Population1 {
 	 * zero parameter constructer, sets all fields to their default values
 	 */
 	public Population1() {
-		this.size = 0;
-		this.pop = new Individuals[1];
-		this.pop[0] = new Individuals();
-		this.CMError = 0.0;
-		this.DMError = 0.0;
-		this.CMstdev = 0.0;
-		this.DMstdev = 0.0;
-		this.fiftyfifty = new boolean[1];
+		size = 0;
+		pop = new Individuals[1];
+		pop[0] = new Individuals();
+		CMError = 0.0;
+		DMError = 0.0;
+		CMstdev = 0.0;
+		DMstdev = 0.0;
+		fiftyfifty = new boolean[1];
 	}
 	
 	/**
@@ -66,16 +66,16 @@ public class Population1 {
 	 * @param i
 	 */
 	public Population1(int i) {
-		this.setSize(i);
-		this.pop = new Individuals[i];
+		setSize(i);
+		pop = new Individuals[i];
 		for(int j = 0; j < i; j++){
-			this.pop[i] = new Individuals();
+			pop[i] = new Individuals();
 		}
-		this.CMError = 0.0;
-		this.DMError = 0.0;
-		this.CMstdev = 0.0;
-		this.DMstdev = 0.0;
-		this.fiftyfifty = new boolean[i];
+		CMError = 0.0;
+		DMError = 0.0;
+		CMstdev = 0.0;
+		DMstdev = 0.0;
+		fiftyfifty = new boolean[i];
 	}
 	
 	/**
@@ -83,12 +83,12 @@ public class Population1 {
 	 * @param p
 	 */
 	public Population1 (Individuals[] p){
-		this.setPop(p);
-		this.setSize(p.length);
-		this.setCMErrorStats(p);
-		this.setDMErrorStats(p);
-		this.setPopName(p[0].getName());
-		this.fiftyfifty = new boolean[p.length];
+		setPop(p);
+		setSize(p.length);
+		setCMErrorStats(p);
+		setDMErrorStats(p);
+		setPopName(p[0].getName());
+		fiftyfifty = new boolean[p.length];
 	}
 	
 	/**]
@@ -97,13 +97,13 @@ public class Population1 {
 	 */
 	public Population1 (Population1 pop){
 		int dim = pop.getSize();
-		this.setSize(dim);
+		setSize(dim);
 		this.pop = new Individuals[dim];
-		this.setPop(pop.getPop());
-		this.setCMErrorStats(pop.getPop());
-		this.setDMErrorStats(pop.getPop());
-		this.fiftyfifty = new boolean[dim];
-		this.setPopName(pop.getName());
+		setPop(pop.getPop());
+		setCMErrorStats(pop.getPop());
+		setDMErrorStats(pop.getPop());
+		fiftyfifty = new boolean[dim];
+		setPopName(pop.getName());
 		}
 	
 	/*-------------------------------------Setters------------------------------------------*/
@@ -113,9 +113,9 @@ public class Population1 {
 	 */
 	public void setPop(Individuals[] pop){
 		int dim = pop.length;
-		this.pop = new Individuals[dim];
+		pop = new Individuals[dim];
 		for(int i = 0; i < dim; i++){
-			this.pop[i] = new Individuals(pop[i]);
+			pop[i] = new Individuals(pop[i]);
 		}
 	}
 	
@@ -123,30 +123,30 @@ public class Population1 {
 	 * setter, sets this Population instance's name, usually the pdb code
 	 */
 	public void setPopName (String na){
-		this.name = na;
+		name = na;
 	}
 	
 	/**
 	 * setter, sets this average CMError and DMError
 	 */
 	public void setCMErrorStats (Individuals[] pop) {
-		this.CMError = getAverageCMError(pop);
-		this.CMstdev = getCMStDeviation(pop);
+		CMError = getAverageCMError(pop);
+		CMstdev = getCMStDeviation(pop);
 	}
 	
 	/**
 	 * setter, sets this standard deviation
 	 */
 	public void setDMErrorStats (Individuals[] pop) {
-		this.DMError = getAverageDMError(pop);
-		this.DMstdev = getDMStDeviation(pop);
+		DMError = getAverageDMError(pop);
+		DMstdev = getDMStDeviation(pop);
 	}
 	
 	/**
 	 * setter, sets this Population size, i.e. length of the Individuals array
 	 */
 	public void setSize(int i){
-		this.size = i;
+		size = i;
 	}
 	
 	/**
@@ -155,14 +155,14 @@ public class Population1 {
 	 * @param CMDM
 	 */
 	public void bestFifty (boolean CMDM){
-		int dim = this.getSize();
+		int dim = getSize();
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		if(CMDM){
-			System.arraycopy(Individuals.getCM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
 		}
 		else{
-			System.arraycopy(Individuals.getDM(this.getPop()),0,error,0,dim);
+			System.arraycopy(Individuals.getDM(getPop()),0,error,0,dim);
 		}
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
@@ -176,7 +176,7 @@ public class Population1 {
 			}
 		for(int i = 0; i < dim; i++){
 			if(better[i] >= (int) ((double) dim - 1)/2.0){
-				this.fiftyfifty[i] = true;
+				fiftyfifty[i] = true;
 			}
 		}
 	}
@@ -188,10 +188,10 @@ public class Population1 {
 	 * @return p - array of Individuals
 	 */
 	public Individuals[] getPop () {
-		int dim = this.getSize();
+		int dim = getSize();
 		Individuals[] p = new Individuals[dim];
 		for(int i = 0; i < dim; i++){
-			p[i] = new Individuals(this.pop[i]); 
+			p[i] = new Individuals(pop[i]); 
 		}
 		return p;
 	}
@@ -202,7 +202,7 @@ public class Population1 {
 	 * @return p - instance of 'Individuals'
 	 */
 	public Individuals getPop (int i){
-		Individuals p = new Individuals(this.pop[i]);
+		Individuals p = new Individuals(pop[i]);
 		return p;
 	}
 	
@@ -211,7 +211,7 @@ public class Population1 {
 	 * @return
 	 */
 	public String getName() {
-		return this.name;
+		return name;
 	}
 	
 	/**
@@ -219,7 +219,7 @@ public class Population1 {
 	 * @return
 	 */
 	public double getAvCMError () {
-		return this.CMError;
+		return CMError;
 	}
 	
 	/**
@@ -227,7 +227,7 @@ public class Population1 {
 	 * @return
 	 */
 	public double getAvDMError () {
-		return this.DMError;
+		return DMError;
 	}
 	
 	/**
@@ -235,7 +235,7 @@ public class Population1 {
 	 * @return
 	 */
 	public double getCMstdev () {
-		return this.CMstdev;
+		return CMstdev;
 	}
 	
 	/**
@@ -243,7 +243,7 @@ public class Population1 {
 	 * @return
 	 */
 	public double getDMstdev () {
-		return this.DMstdev;
+		return DMstdev;
 	}
 	
 	/**
@@ -251,7 +251,7 @@ public class Population1 {
 	 * @return
 	 */
 	public int getSize(){
-		return this.size;
+		return size;
 	}
 	
 	/**
@@ -260,7 +260,7 @@ public class Population1 {
 	 * @return
 	 */
 	public boolean getFifty(int i){
-		return this.fiftyfifty[i];
+		return fiftyfifty[i];
 	}
 	
 	/**
@@ -268,7 +268,7 @@ public class Population1 {
 	 * @return
 	 */
 	public int getNumOfContacts(){
-		return this.pop[0].getNumOfContacts();
+		return pop[0].getNumOfContacts();
 	}
 	
 	/*--------------------------------------statics--------------------------------------------*/

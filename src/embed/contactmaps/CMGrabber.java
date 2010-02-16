@@ -75,7 +75,7 @@ public class CMGrabber {
 	//model will be fully rotated,
 	
 	private int[] generation_indeces;//if the '.cmap', '.indi' and '.ust' file contains info of the generation number it will be saved in
-	//this array, so the i-th file will only appear in the this.generation_indeces[i] frame range,
+	//this array, so the i-th file will only appear in the generation_indeces[i] frame range,
 	
 	private int frame_number;		//the number of frames to which each generation is assigned
 	
@@ -103,7 +103,7 @@ public class CMGrabber {
 	 * @throws IOException
 	 */
 	public CMGrabber (String dir) throws FileNotFoundException, IllegalArgumentException, IOException{
-		this.setCMGrabber(dir,60);
+		setCMGrabber(dir,60);
 	}
 	
 	/**
@@ -117,7 +117,7 @@ public class CMGrabber {
 	 * @throws IOException
 	 */
 	public CMGrabber (String dir, int framenum) throws FileNotFoundException, IllegalArgumentException, IOException{
-		this.setCMGrabber(dir, framenum);
+		setCMGrabber(dir, framenum);
 	}
 	
 	/**
@@ -130,7 +130,7 @@ public class CMGrabber {
 	 */
 	public CMGrabber (File dir) throws FileNotFoundException, IllegalArgumentException, IOException{
 		String dirname = dir.getAbsolutePath();
-		this.setCMGrabber(dirname,60);
+		setCMGrabber(dirname,60);
 	}
 	
 	/**
@@ -145,7 +145,7 @@ public class CMGrabber {
 	 */
 	public CMGrabber (File dir, int framenum) throws FileNotFoundException, IllegalArgumentException, IOException{
 		String dirname = dir.getAbsolutePath();
-		this.setCMGrabber(dirname,framenum);
+		setCMGrabber(dirname,framenum);
 	}
 	
 	/*--------------------------------------------------void-------------------------------------------------*/
@@ -161,7 +161,7 @@ public class CMGrabber {
 	 * @throws IOException 
 	 */
 	public void setCMGrabber (String dir, int frame_num) throws FileNotFoundException, IllegalArgumentException, IOException {
-		this.path = new String (dir+"/");							//field 'path' initialized
+		path = new String (dir+"/");							//field 'path' initialized
 		
 		File dirtest = new File (dir);
 		if(dirtest.exists()){									//check, whether the denoted File instance exists
@@ -170,23 +170,23 @@ public class CMGrabber {
 				
 				if(containsCMapFiles(dirtest)){					//check, whether the directory contains any '.cmap', '.indi' or 'ust' files
 					
-					this.frame_number = frame_num;				//the number of frames assigned to each rotation
+					frame_number = frame_num;				//the number of frames assigned to each rotation
 					
-					this.dirlist = new File (dirtest.getAbsolutePath());		//if all check points passed, the field 'dirlist' is initialized
+					dirlist = new File (dirtest.getAbsolutePath());		//if all check points passed, the field 'dirlist' is initialized
 					
-					this.filelist = this.dirlist.listFiles(new RegexFileFilter (file_type));		//the field 'filelist' is 
+					filelist = dirlist.listFiles(new RegexFileFilter (file_type));		//the field 'filelist' is 
 					//initialized using the listFiles(FileFilter) method, considering only those files, with the substring '.cmap'
 					
-					Arrays.sort(this.filelist);					//sorting the file list lexicographically
+					Arrays.sort(filelist);					//sorting the file list lexicographically
 					
-					int length = this.filelist.length;
-					this.filecontent = ""; this.setGenerationIndeces(length);	//initializing the field 'filecontent' and 'generation_indeces'
+					int length = filelist.length;
+					filecontent = ""; setGenerationIndeces(length);	//initializing the field 'filecontent' and 'generation_indeces'
 					
-					this.frameindices = new int[length];
-					this.pdb_dir = this.path;
+					frameindices = new int[length];
+					pdb_dir = path;
 					for(int i = 0; i < length; i++){			//looping over the File array, to read the content of each '.cmap' file
 						
-						this.filecontent += this.readFiles(i,"dummy");			//reading the File by using the readFile(int,String) method
+						filecontent += readFiles(i,"dummy");			//reading the File by using the readFile(int,String) method
 						
 					}
 					
@@ -227,9 +227,9 @@ public class CMGrabber {
 	 */
 	public void setGenerationIndeces (int length) throws IllegalArgumentException {
 		if(length > 0){
-			this.generation_indeces = new int[length];
+			generation_indeces = new int[length];
 			for(int i = 0; i < length; i++){
-				this.generation_indeces[i] = -1;
+				generation_indeces[i] = -1;
 			}
 		}
 		else{
@@ -245,22 +245,22 @@ public class CMGrabber {
 	 * executed from command line or directly in PyMol.
 	 */
 	public void printToFile () throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		File test = new File (this.path + "PML/");
+		File test = new File (path + "PML/");
 		if(!test.exists()){					//check, whether the denoted directory exists
 			
 			test.mkdirs();
 		}
-		if(this.name != null){				//check, if the field 'name' was initialized
+		if(name != null){				//check, if the field 'name' was initialized
 			
-			this.dumpToPDBFile();			//creating a PDB file in the directory denoted by the field 'path'
+			dumpToPDBFile();			//creating a PDB file in the directory denoted by the field 'path'
 			
-			FileOutputStream out = new FileOutputStream (this.path + "PML/" + this.name+".pml");
+			FileOutputStream out = new FileOutputStream (path + "PML/" + name+".pml");
 			PrintStream printa = new PrintStream (out);
-			this.addTrailer();				//calling the auxiliary method, which is need to group all distances to their frames
+			addTrailer();				//calling the auxiliary method, which is need to group all distances to their frames
 			
-			if(this.filecontent != null){	//check, if the field 'filecontent' was initialized
+			if(filecontent != null){	//check, if the field 'filecontent' was initialized
 				
-				printa.print(this.filecontent);
+				printa.print(filecontent);
 				
 			}
 			else{
@@ -270,7 +270,7 @@ public class CMGrabber {
 			}
 			printa.close();
 			out.close();
-			System.out.println("Contact Maps in "+this.path+" successfully written to file...");
+			System.out.println("Contact Maps in "+path+" successfully written to file...");
 		}
 		else{
 			throw new NullPointerException("The field 'name' was not initialized");
@@ -286,7 +286,7 @@ public class CMGrabber {
 	 * is added to the field <code>filecontent</code>.
 	 */
 	public void grouping (){
-		HashMap<String,HashSet<String>> movieframes = this.getMovieFrameKeeper();		//getting the map of all distance selections
+		HashMap<String,HashSet<String>> movieframes = getMovieFrameKeeper();		//getting the map of all distance selections
 		//and their corresponding generation number
 		
 		Set<String> keyset = movieframes.keySet();
@@ -308,7 +308,7 @@ public class CMGrabber {
 			groups += "\n";													//ending the line
 			
 		}
-		this.grouping = new String (groups);								//initializing the field 'group'
+		grouping = new String (groups);								//initializing the field 'group'
 	}
 	
 	/**
@@ -317,15 +317,15 @@ public class CMGrabber {
 	 * method and the commands assigning each frame of a rotating protein to a set of distance selections.
 	 */
 	public void addTrailer (){
-		int framenumber = this.frame_number;		//number of frames assigned to each generation/rotation
+		int framenumber = frame_number;		//number of frames assigned to each generation/rotation
 		
-		this.grouping();							//calling the grouping method
+		grouping();							//calling the grouping method
 		
-		//String[] grouparray = this.getGrouping().split("\n");	//splitting the grouping string by their line terminators
+		//String[] grouparray = getGrouping().split("\n");	//splitting the grouping string by their line terminators
 		
 		String helper = "";
 		//int length = grouparray.length;
-		Set<String> selector_set = this.getMovieFrameKeeper().keySet();
+		Set<String> selector_set = getMovieFrameKeeper().keySet();
 		Iterator<String> it = selector_set.iterator();
 		while(it.hasNext()){									//iterating over all groups
 			
@@ -336,9 +336,9 @@ public class CMGrabber {
 				helper += "mdo " + (j + framenumber*i) + ": util.mroll(" + (j + framenumber * i) + "," + ((i + 1)*framenumber) + ",1); hide dashes; show dashes, " + selectorelement + "\n";
 			}
 		}
-		int allframe_number = framenumber*this.filelist.length;	//number of all frames equals generations times number of frames per generation
+		int allframe_number = framenumber*filelist.length;	//number of all frames equals generations times number of frames per generation
 		
-		this.filecontent += this.getGrouping() +"mset 1 x"+allframe_number+"\nutil.mroll(1,"+allframe_number+",1)\n" + helper;
+		filecontent += getGrouping() +"mset 1 x"+allframe_number+"\nutil.mroll(1,"+allframe_number+",1)\n" + helper;
 		//completing the field 'filecontent'
 	}
 	
@@ -351,11 +351,11 @@ public class CMGrabber {
 	 * @throws IOException
 	 */
 	public void dumpToPDBFile () throws SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
-		String title = new String (this.pdb_dir + this.name + ".pdb");
+		String title = new String (pdb_dir + name + ".pdb");
 		File pdbfile = new File (title);
 		if(!pdbfile.exists()){
 			MySQLConnection conn = new MySQLConnection ();
-			Pdb pdb = new PdbasePdb(this.name, "pdbase_20090728", conn);
+			Pdb pdb = new PdbasePdb(name, "pdbase_20090728", conn);
 			pdb.load("A");
 			pdb.writeToPDBFile(title);
 		}
@@ -370,8 +370,8 @@ public class CMGrabber {
 	 * @return
 	 */
 	public HashMap<String,HashSet<String>> getMovieFrameKeeper (){
-		if(this.movieframekeeper != null){
-			return new HashMap<String,HashSet<String>> (this.movieframekeeper);
+		if(movieframekeeper != null){
+			return new HashMap<String,HashSet<String>> (movieframekeeper);
 		}
 		else{
 			throw new NullPointerException ("The field 'movieframekeeper was not initialized!");
@@ -390,17 +390,17 @@ public class CMGrabber {
 	 */
 	@Deprecated
 	public String readFiles (int i) throws FileNotFoundException, IOException {
-		if(this.filelist[i].isFile() && this.filelist[i].getName().contains(".cmap")){
+		if(filelist[i].isFile() && filelist[i].getName().contains(".cmap")){
 			String lines = "", linereader = "", selector = "Sel", pdbcode = "";
-			String filename = this.filelist[i].getName(), dir = this.filelist[i].getAbsolutePath();
+			String filename = filelist[i].getName(), dir = filelist[i].getAbsolutePath();
 			int counter = 0, contactcounter = 0;
-			BufferedReader reader = new BufferedReader (new FileReader (this.filelist[i]));
+			BufferedReader reader = new BufferedReader (new FileReader (filelist[i]));
 			HashSet<Pair<Integer>> set = new HashSet<Pair<Integer>> ();
 			while((linereader = reader.readLine()) != null){
 				if(linereader.contains("#")){
 					if(linereader.contains("PDB") && !linereader.contains("CHAIN")){
 						pdbcode = linereader.split(": ")[1];
-						this.name = pdbcode;
+						name = pdbcode;
 						lines = "load " + dir.replace(filename, "") + pdbcode + ".pdb\n";
 					}
 					if(linereader.contains("NUMB. OF CONTS. IN POP")){
@@ -444,19 +444,19 @@ public class CMGrabber {
 	 * @throws IOException
 	 */
 	public String readFiles (int i, String dummy) throws FileNotFoundException, IOException {
-		if(this.movieframekeeper == null){
+		if(movieframekeeper == null){
 			//check, whether this field is initialized
 			
-			this.movieframekeeper = new HashMap<String,HashSet<String>> ();
+			movieframekeeper = new HashMap<String,HashSet<String>> ();
 		}
 		String lines = "", linereader = "", selector = "Sel", pdbcode = "";
 		int counter = 0, helpcounter = 0;
 		if(i > 0){
 			//the field 'frameindices', counting all frames belonging to one generation
 			
-			helpcounter = this.frameindices[i - 1];
+			helpcounter = frameindices[i - 1];
 		}
-		BufferedReader reader = new BufferedReader (new FileReader (this.filelist[i]));
+		BufferedReader reader = new BufferedReader (new FileReader (filelist[i]));
 		HashSet<Pair<Integer>> set = new HashSet<Pair<Integer>> ();
 		HashSet<String> movieframes = new HashSet<String> ();
 		//a HashSet containing all distance slection expressions of this readable file
@@ -472,24 +472,24 @@ public class CMGrabber {
 					
 					if(linereader.contains("PDB") && !linereader.contains("CHAIN")){
 						pdbcode = linereader.split(": ")[1];
-						this.name = pdbcode;
+						name = pdbcode;
 						//initializing the field 'name' representing the PDB code of the protein,
 						
-						lines = "load " + this.pdb_dir + pdbcode + ".pdb\n";
+						lines = "load " + pdb_dir + pdbcode + ".pdb\n";
 					}
 				}
 				else{
-					if(this.name != null && pdbcode.isEmpty()){
+					if(name != null && pdbcode.isEmpty()){
 						//after the first run, the field 'name' is used
 						
-						pdbcode = this.name;
+						pdbcode = name;
 					}
 				}
 				if(linereader.contains("GENERATION")){
 					//in case the the files contain any information about the generation
 					
 					int gen_num = (int) Double.parseDouble(linereader.split(": ")[1]);
-					this.generation_indeces[i] = gen_num;
+					generation_indeces[i] = gen_num;
 				}
 			}
 			else{
@@ -556,14 +556,14 @@ public class CMGrabber {
 		}
 		Integer value = new Integer (0);
 		String sel = "Sel";
-		if(this.generation_indeces[i] != -1){
-			value = new Integer (this.generation_indeces[i]);
+		if(generation_indeces[i] != -1){
+			value = new Integer (generation_indeces[i]);
 		}
 		else{
 			value = new Integer (i);
 		}
 		sel += value;
-		this.movieframekeeper.put(sel, movieframes);
+		movieframekeeper.put(sel, movieframes);
 		//all distance selection expressions were stored in the local variable 'movieframes', which in turn is used to group together all selection expressions
 		//and are placed in the field 'movieframekeeper'
 		
@@ -574,7 +574,7 @@ public class CMGrabber {
 			deselector = "Sel" + (helpcounter + j) + "_" + pdbcode;
 			lines += "hide dashes, " + deselector + "\n";
 		}
-		this.frameindices[i] = helpcounter + counter;
+		frameindices[i] = helpcounter + counter;
 		//lines += "# "+(helpcounter + contactcounter)+"\n";//"hide labels, "+selector+"\ncolor magenta, "+selector+"\nhide lines, "+selector+"\nselect Sel" + pdbcode + "_Nodes, "+deleteNonContacts (set) + "\ngroup Sel1, "+selector+" Sel"+pdbcode+"_Nodes\n" +
 		//"mset "+ (i + 1) +" x60\nutil.mroll(1,60,1)\n# "+(helpcounter + contactcounter)+"\n";
 		return lines;
@@ -586,8 +586,8 @@ public class CMGrabber {
 	 * @throws NullPointerException
 	 */
 	public String getGrouping () throws NullPointerException {
-		if(this.grouping != null){
-			return new String (this.grouping);
+		if(grouping != null){
+			return new String (grouping);
 		}
 		else{
 			throw new NullPointerException ("The field 'grouping was not initialized!");
@@ -595,11 +595,11 @@ public class CMGrabber {
 	}
 	
 	/*public String[] getGroupingAsStringArray(){
-		if(this.grouping != null){
-			int length = this.grouping.split(",").length;
+		if(grouping != null){
+			int length = grouping.split(",").length;
 			String[] array = new String[length];
 			for(int i = 0; i < array.length; i++){
-				array[i] = new String(this.grouping.split(",")[0]);
+				array[i] = new String(grouping.split(",")[0]);
 				array[i].replaceAll("group ")
 			}
 		}

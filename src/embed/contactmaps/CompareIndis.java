@@ -30,10 +30,10 @@ public class CompareIndis extends Demes {
 
 	public CompareIndis (String dir) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
 		super();
-		this.conn = new MySQLConnection ();
-		this.setContactSet(dir);
-		this.generateIndis();
-		this.conn.close();
+		conn = new MySQLConnection ();
+		setContactSet(dir);
+		generateIndis();
+		conn.close();
 	}
 	
 	public void setContactSet (String dir) throws SQLException, FileNotFoundException, IOException {
@@ -42,7 +42,7 @@ public class CompareIndis extends Demes {
 			File[] list = file.listFiles(new RegexFileFilter (".*.indi"));
 			int length = list.length;
 			if(length > 0){
-				this.contact_sets = new HashMap<Integer,HashSet<Pair<Integer>>> ();
+				contact_sets = new HashMap<Integer,HashSet<Pair<Integer>>> ();
 				for(int i = 0; i < length; i++){
 					BufferedReader reader = new BufferedReader (new FileReader (list[i]));
 					String linereader = null;
@@ -59,20 +59,20 @@ public class CompareIndis extends Demes {
 						counter++;
 					}
 					Integer index = new Integer (i + 1);
-					this.contact_sets.put(index, set);
+					contact_sets.put(index, set);
 				}
 			}
 		}
 	}
 	
 	public void generateIndis () throws PdbCodeNotFoundError, SQLException, PdbLoadError{
-		if(this.contact_sets !=null && this.contact_sets.size() > 0){
-			HashMap<Integer,HashSet<Pair<Integer>>> copy = this.getContactSet();
+		if(contact_sets !=null && contact_sets.size() > 0){
+			HashMap<Integer,HashSet<Pair<Integer>>> copy = getContactSet();
 			int size = copy.size();
 			Individuals[] ar = new Individuals[size];
 			Set<Integer> keys = copy.keySet();
 			Iterator<Integer> it = keys.iterator();
-			Pdb pr = new PdbasePdb(pdb,"pdbase_20090728",this.conn);
+			Pdb pr = new PdbasePdb(pdb,"pdbase_20090728",conn);
 			pr.load("A");
 			RIGraph rig = pr.getRIGraph("Ca", 9.0);
 			Individuals.setFullContactMap(rig);
@@ -100,7 +100,7 @@ public class CompareIndis extends Demes {
 	}
 	
 	public HashMap<Integer,HashSet<Pair<Integer>>> getContactSet (){
-		return new HashMap<Integer,HashSet<Pair<Integer>>> (this.contact_sets);
+		return new HashMap<Integer,HashSet<Pair<Integer>>> (contact_sets);
 	}
 	
 	public String toString (){

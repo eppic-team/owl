@@ -15,13 +15,13 @@ public class Metric2 {
 	public HashMap<Pair<Integer>,Integer> metricmap;
 	
 	public Metric2 (Demes pop) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		this.setMetricMap(pop);
+		setMetricMap(pop);
 	}
 
 	public void setMetricMap(Demes pop) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		Individuals[] array = pop.getPop();
 		int length = array.length, counter1 = 0;//, counter2 = 0;
-		this.metricmap = new HashMap<Pair<Integer>,Integer> ();
+		metricmap = new HashMap<Pair<Integer>,Integer> ();
 		HashMap<Integer,Integer> helpmap = new HashMap<Integer,Integer> ();
 		for(int i = 0; i < length - 1; i++){
 			for(int j = i + 1; j < length; j++){
@@ -64,13 +64,13 @@ public class Metric2 {
 				}
 				counter1 = 0; //counter2 = 0;
 				Pair<Integer> pair = new Pair<Integer>(new Integer(i), new Integer(j));
-				this.metricmap.put(pair, new Integer(calcSum(helpmap)));
+				metricmap.put(pair, new Integer(calcSum(helpmap)));
 			}
 		}
 	}
 	
 	public HashMap<Pair<Integer>,Integer> getMetMap(){
-		return new HashMap<Pair<Integer>,Integer> (this.metricmap);
+		return new HashMap<Pair<Integer>,Integer> (metricmap);
 	}
 	
 	public static int calcSum (HashMap<Integer, Integer> map){
@@ -85,12 +85,12 @@ public class Metric2 {
 	}
 	
 	public String toString(){
-		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (this.metricmap.keySet());
+		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (metricmap.keySet());
 		Iterator<Pair<Integer>> it = keyset.iterator();
 		String output = "";
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
-			output = output + pair.getFirst().intValue() + "\t" + pair.getSecond() + "\t" + this.metricmap.get(pair) + "\n";
+			output = output + pair.getFirst().intValue() + "\t" + pair.getSecond() + "\t" + metricmap.get(pair) + "\n";
 		}
 		return output;
 	}
@@ -98,7 +98,7 @@ public class Metric2 {
 	public void printToFile() throws IOException{
 		FileOutputStream output = new FileOutputStream(path + "metrix.met");
 		PrintStream printer = new PrintStream(output);
-		printer.print(this.toString());
+		printer.print(toString());
 		output.close();
 		printer.close();
 	}
