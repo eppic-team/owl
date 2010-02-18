@@ -48,14 +48,14 @@ import tools.RegexFileFilter;
 
 public class PdbTest {
 
-	private static final String TESTDATADIR = "tests/proteinstructure/data";
-	private static final String TEST_PDB_FILE_1 = "tests/proteinstructure/data/1tdrA.pdb";
-	private static final String TEST_PDB_FILE_2 = "tests/proteinstructure/data/1tdrB.pdb";
+	private static final String TESTDATADIR = "src/tests/proteinstructure/data";
+	private static final String TEST_PDB_FILE_1 = TESTDATADIR+"/1tdrA.pdb";
+	private static final String TEST_PDB_FILE_2 = TESTDATADIR+"/1tdrB.pdb";
 	private static final String TEST_CHAIN_1 = "A";
 	private static final String TEST_CHAIN_2 = "B";
 	private static final String NACCESS_EXEC = "/project/StruPPi/Software/naccess2.1.1/naccess";
-	private static final String NACCESS_OUTPUT_REF = "tests/proteinstructure/data/1tdrA.rsa";
-	private static final String TESTSET10_LIST = "tests/proteinstructure/data/testset10.list";
+	private static final String NACCESS_OUTPUT_REF = TESTDATADIR+"/1tdrA.rsa";
+	private static final String TESTSET10_LIST = TESTDATADIR+"/testset10.list";
 	
 	private static final String TEST_PDB_3 = "12as";
 	private static final String TEST_CHAIN_3 = "A";

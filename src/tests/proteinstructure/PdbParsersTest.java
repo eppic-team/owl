@@ -36,7 +36,7 @@ public class PdbParsersTest {
 	
 	private static final String CIFDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
 	private static final String PDBDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
-	private static final String LISTFILE = "tests/proteinstructure/data/cullpdb_20";
+	private static final String LISTFILE = "src/tests/proteinstructure/data/cullpdb_20";
 	private static final String PDBASE_DB = "pdbase";
 	private static final String MYSQLSERVER = "talyn";
 	
