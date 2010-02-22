@@ -15,7 +15,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 /**
  * A RIGraph derived from a single chain pdb protein structure loaded from a 
- * graph file in aglappe's format
+ * graph file in OWL format
  * 
  */
 public class FileRIGraph extends RIGraph {
@@ -27,7 +27,7 @@ public class FileRIGraph extends RIGraph {
 	private boolean simple;
 	
 	/**
-	 * Constructs RIGraph object by reading a file with contacts in aglappe format
+	 * Constructs RIGraph object by reading a file with contacts in OWL format
 	 * If the contacts file doesn't have the sequence then the RIGraph object won't have sequence or residue types in RIGNodes
 	 * @param contactsfile
 	 * @throws IOException
@@ -41,7 +41,7 @@ public class FileRIGraph extends RIGraph {
 	 * Constructs RIGraph object by reading a file with contacts
 	 * If the contacts file doesn't have the sequence then the RIGraph object won't have sequence or residue types in RIGNodes
 	 * @param contactsfile
-	 * @param simple true if we want to read file in "simple" format, i.e. only a list of edges, false if file in aglappe format
+	 * @param simple true if we want to read file in "simple" format, i.e. only a list of edges, false if file in OWL format
 	 * @throws IOException
 	 * @throws FileFormatError
 	 */
@@ -63,7 +63,7 @@ public class FileRIGraph extends RIGraph {
 	 * Parses the graph file reading identifiers, sequence and edges
 	 * @param contactsfile
 	 * @throws IOException
-	 * @throws FileFormatError if file does not start with #AGLAPPE or #CMVIEW 
+	 * @throws FileFormatError if file does not start with #AGLAPPE or #CMVIEW or #OWL 
 	 * if file format not the right version, if sequence is not present
 	 */
 	private void readFromFile (String contactsfile) throws IOException, FileFormatError {
@@ -75,13 +75,13 @@ public class FileRIGraph extends RIGraph {
 		while ((line = fcont.readLine() ) != null ) {
 			linecount++;
 			if (!simple) {
-				Pattern p = Pattern.compile("^#(?:AGLAPPE|CMVIEW).*ver: (\\d\\.\\d)");
+				Pattern p = Pattern.compile("^#(?:AGLAPPE|CMVIEW|OWL).*ver: (\\d\\.\\d)");
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
 						throw new FileFormatError("Contact map file "+contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 					}
-				} else if (linecount==1){ // #AGLAPPE/#CMVIEW not found in first line
+				} else if (linecount==1){ // #AGLAPPE/#CMVIEW/#OWL not found in first line
 					throw new FileFormatError(contactsfile+" is not a valid contact map file");
 				}
 				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");

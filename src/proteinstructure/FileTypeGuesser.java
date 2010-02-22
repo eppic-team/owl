@@ -24,7 +24,7 @@ public class FileTypeGuesser {
 	public static final int RAW_PDB_FILE = 2;		// file with pdb atom lines
 	public static final int CASP_TS_FILE = 3;		// casp 3d prediction file
 	public static final int CASP_RR_FILE = 4;		// casp contact prediction file
-	public static final int AGLAPPE_CM_FILE = 5;	// contact map file
+	public static final int OWL_CM_FILE = 5;			// contact map file
 	public static final int CIF_FILE = 6;			// mmCIF file from PDB	
 	
 	// names of the file types as above
@@ -44,7 +44,7 @@ public class FileTypeGuesser {
 		"ATOM\\s+.*",
 		"PFRMAT\\s+TS.*",
 		"PFRMAT\\s+RR.*",
-		"#(?:AGLAPPE|CMVIEW) GRAPH FILE.*",
+		"#(?:AGLAPPE|CMVIEW|OWL) GRAPH FILE.*",
 		"data_\\d\\w\\w\\w"
 	};
 	

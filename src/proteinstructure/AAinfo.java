@@ -31,10 +31,10 @@ import java.util.regex.Pattern;
 public class AAinfo {
 
 	/*--------------------------- constants ------------------------------*/
-	// file with contact type definitions (refers to root of the aglappe package)
+	// file with contact type definitions (refers to root of the OWL library)
 	private static final String RESOURCES_DIR = "/proteinstructure/"; // path to data files to be retrieved with getResourceAsStream
 	private static final String CT_DEFS_FILE = "contactTypes.dat";
-	// file with aminoacid pairs distance bounds definitions (refers to root of aglappe package)
+	// file with aminoacid pairs distance bounds definitions (refers to root of OWL library)
 	private static final String AAPAIRSBOUNDS_FILE = "aapairsBounds.dat";
 		
 	// lower bound distances used for our ConstraintsMaker class

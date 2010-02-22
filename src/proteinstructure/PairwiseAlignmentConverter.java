@@ -15,7 +15,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  * Execute method {@link main(String)} to get an impression of the functionality of this class. 
  * 
  * @author Lars Petzold
- * @see aglappe.sadp.SADP
+ * @see sadp.SADP
  * */
 public class PairwiseAlignmentConverter {
 

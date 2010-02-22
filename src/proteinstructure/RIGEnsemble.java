@@ -163,7 +163,7 @@ public class RIGEnsemble {
 							//System.exit(1);
 						}
 						break;
-					case(FileTypeGuesser.AGLAPPE_CM_FILE):
+					case(FileTypeGuesser.OWL_CM_FILE):
 						try {
 							graph = new FileRIGraph(file.getAbsolutePath());
 							this.addRIG(graph);

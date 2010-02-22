@@ -554,7 +554,7 @@ public class GraphAverager {
 	 * @param outfile
 	 */
 	public void writeAverageGraphWithVoters(String outfile) throws IOException {
-		//TODO  We might want in the future to allow this format (with list of voters for each edge) as our aglappe format. 
+		//TODO  We might want in the future to allow this format (with list of voters for each edge) as our OWL format. 
 		// 		At the moment we write it to a file without headers because they are not compatible (although would be 
 		// 		quite simple to make them compatible)
 		

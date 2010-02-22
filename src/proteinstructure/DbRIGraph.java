@@ -13,7 +13,8 @@ import edu.uci.ics.jung.graph.util.EdgeType;
 import tools.MySQLConnection;
 
 /**
- * A residue interaction graph derived from a single chain pdb or scop protein structure loaded from a graph database in aglappe's format 
+ * A residue interaction graph derived from a single chain pdb or scop protein structure
+ * loaded from a graph database OWL format 
  * 
  * NOTE: If someone wants to load graphs with contact range != "(true)", 
  * 		then the constructor with the graph id should be used.
@@ -23,10 +24,6 @@ import tools.MySQLConnection;
 public class DbRIGraph extends RIGraph {
 
 	private static final long serialVersionUID = 1L;
-
-	private final static String MYSQLSERVER="talyn";
-	private final static String MYSQLUSER=System.getProperty("user.name");
-	private final static String MYSQLPWD="nieve";
 	
 	private final static String DEFAULT_CR ="(true)"; 	// default contact range (CR field in graph db)
 	private final static String DEFAULT_CW ="1";      	// default contact weight (CW field in graph db)
@@ -82,7 +79,7 @@ public class DbRIGraph extends RIGraph {
 	 * @throws SQLException
 	 */
 	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException{ 
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,model);
+		this(dbname,new MySQLConnection(),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,model);
 	}
 	
 	public DbRIGraph(String dbname, MySQLConnection conn, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
@@ -90,7 +87,7 @@ public class DbRIGraph extends RIGraph {
 	}
 	
 	public DbRIGraph(String dbname, String pdbCode, String pdbChainCode, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,DEFAULT_MODEL);
+		this(dbname,new MySQLConnection(),pdbCode,pdbChainCode,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
 	/**
@@ -133,7 +130,7 @@ public class DbRIGraph extends RIGraph {
 	 * @throws SQLException
 	 */
 	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, boolean weighted, int model) throws GraphIdNotFoundError, SQLException{ 
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,weighted, model);
+		this(dbname,new MySQLConnection(),sid,cutoff,ct,directed,weighted, model);
 	}
 	
 	public DbRIGraph(String dbname, MySQLConnection conn, String sid, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
@@ -141,7 +138,7 @@ public class DbRIGraph extends RIGraph {
 	}
 	
 	public DbRIGraph(String dbname, String sid, double cutoff, String ct, boolean directed, boolean weighted) throws GraphIdNotFoundError, SQLException {
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD),sid,cutoff,ct,directed,weighted,DEFAULT_MODEL);
+		this(dbname,new MySQLConnection(),sid,cutoff,ct,directed,weighted,DEFAULT_MODEL);
 	}
 	
 	/**
@@ -172,7 +169,7 @@ public class DbRIGraph extends RIGraph {
 	 * @throws SQLException
 	 */
 	public DbRIGraph(String dbname, int graphid) throws GraphIdNotFoundError, SQLException{
-		this(dbname,new MySQLConnection(MYSQLSERVER,MYSQLUSER,MYSQLPWD), graphid);
+		this(dbname,new MySQLConnection(), graphid);
 	}
 	
 	/**

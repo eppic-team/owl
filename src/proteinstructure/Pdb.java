@@ -2502,7 +2502,7 @@ public class Pdb {
 	}
 
 	/**
-	 * Write residue info to given db, using our db graph aglappe format, 
+	 * Write residue info to given db, using our db graph OWL format, 
 	 * i.e. tables: residue_info
 	 * @param conn
 	 * @param db
@@ -2580,7 +2580,7 @@ public class Pdb {
 	}
 
 	/**
-	 * Write residue info to given db, using our db graph aglappe format, 
+	 * Write residue info to given db, using our db graph OWL format, 
 	 * i.e. tables: residue_info
 	 * @param conn
 	 * @param db
