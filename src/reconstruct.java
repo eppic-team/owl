@@ -17,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import proteinstructure.AAinfo;
+import proteinstructure.CiffilePdb;
 import proteinstructure.ConformationsNotSameSizeError;
 import proteinstructure.FileRIGraph;
 import proteinstructure.FileFormatError;
@@ -37,7 +38,6 @@ import tools.MySQLConnection;
 public class reconstruct {
 
 	private static final String CONFIG_FILE_NAME = "reconstruct.cfg";
-	private static final String PDBASEDB = "pdbase";
 
 	private static final double DEFAULT_FORCECONSTANT_DISTANCE = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE;
 	private static final int MARGIN_PHIPSI = 3;
@@ -49,6 +49,9 @@ public class reconstruct {
 	
 	private static String TINKER_BIN_DIR = "/usr/local/bin";
 	private static String PRM_FILE = "amber99.prm";
+	private static String PDBASE_DB = null; // this is for internal use only: if a PDBASE_DB is specified in config file then a local db installation of pdbase will be used
+											// otherwise the PDB data will be taken from the PDB's ftp
+	private static String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
 
 	
 	private static final void readTinkerCfgFile(File file) throws IOException {
@@ -80,6 +83,17 @@ public class reconstruct {
 					//System.exit(1);
 				}
 			}
+			p = Pattern.compile("^PDBASE_DB=(.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {		
+				// this option is for internal use only (undocumented)
+				PDBASE_DB = m.group(1).trim(); 
+			}
+			p = Pattern.compile("^PDB_FTP_URL=(.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {				
+				PDB_FTP_URL = m.group(1).trim(); 
+			}			
 		}
 		br.close();
 		
@@ -97,9 +111,10 @@ public class reconstruct {
 			"                   type and cutoff will be taken from the file\n" +
 			"  b) benchmarking: specify a pdb code + pdb chain code or a pdb file(-p) and \n" +
 			"                   optionally contact type (-t) and cutoff (-d)\n" +
-			"Usage:\n" +
-			PROG_NAME+" [options] [contact_map_file_1 [contact_map_file_2] [...]] \n"+
-			"  -p <string>     : pdb code + pdb chain code, e.g. 1abcA or a pdb file (benchmarking)\n" +
+			"Usage:\n\n" +
+			" "+PROG_NAME+" [options] [contact_map_file_1 [contact_map_file_2] [...]] \n\n"+
+			"  -p <string>     : pdb code + pdb chain code, e.g. 1abcA or a pdb file (benchmarking).\n" +
+			"                    The PDB data will be downloaded from the PDB's ftp server.\n" +
 			"                    If in a) i.e. reconstructing from contact map files then the \n" +
 			"                    given pdb id/pdb file will be used for rmsd reporting \n" +
 			" [-t <string>]    : one or more contact types comma separated (benchmarking). Default: "+DEFAULT_CONTACT_TYPE+" \n" +
@@ -340,13 +355,22 @@ public class reconstruct {
 					mPdb.load(pdb.getChains()[0]);
 					mPdb.mirror();
 				} else {
-
-					MySQLConnection conn = new MySQLConnection();
-					pdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
-					pdb.load(pdbChainCode);
-					mPdb = new PdbasePdb(pdbCode, PDBASEDB, conn);
-					mPdb.load(pdbChainCode);
-					mPdb.mirror();
+					if (PDBASE_DB!=null) {
+						MySQLConnection conn = new MySQLConnection();
+						pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
+						pdb.load(pdbChainCode);
+						mPdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
+						mPdb.load(pdbChainCode);
+						mPdb.mirror();
+					} else {
+						System.out.println("Downloading PDB entry "+pdbCode+" from PDB's ftp");
+						pdb = new CiffilePdb(pdbCode,PDB_FTP_URL);
+						pdb.load(pdbChainCode);
+						mPdb = new CiffilePdb(pdbCode,PDB_FTP_URL);
+						mPdb.load(pdbChainCode);
+						mPdb.mirror();
+						System.out.println("Done");
+					}
 					// we also write the file to the out dir so it can be used later for clustering rmsds etc.
 					origPdbFile = new File (outputDir,baseName+".native.pdb");
 					try {
@@ -366,6 +390,9 @@ public class reconstruct {
 			} catch (SQLException e) {
 				System.err.println("Problems connecting to database for getting pdb data. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
+			} catch (IOException e) {
+				System.err.println("Problems getting pdb data from PDB's ftp. Error: "+e.getMessage()+"\nExiting");
+				System.exit(1);				
 			}
 
 			sequence = pdb.getSequence();
