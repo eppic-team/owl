@@ -26,9 +26,9 @@ mkdir $tmpdir
 
 svn export $svnurl/LICENSE $tmpdir/LICENSE
 svn export $svnurl/gpl.txt $tmpdir/gpl.txt
-svn export $svnurl/scripts/reconstruct $tmpdir/reconstruct
+svn export $svnurl/scripts/reconstruct.sh $tmpdir/reconstruct
 #svn export  $svnurl/scripts/reconstruct.bat $tmpdir/reconstruct.bat
-svn export $svnurl/scripts/reconstruct.cfg $tmpdr/reconstruct.cfg
+svn export $svnurl/scripts/reconstruct.cfg $tmpdir/reconstruct.cfg
 
 # jars
 svn export $svnurl/jars $tmpdir/jars
