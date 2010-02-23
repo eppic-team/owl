@@ -478,7 +478,7 @@ public class reconstruct {
 		try {
 			tr = new TinkerRunner(TINKER_BIN_DIR, PRM_FILE); 
 		} catch (FileNotFoundException e3) {
-			System.err.println(e3.getMessage()+". Exiting");
+			System.err.println(e3.getMessage()+". Are the tinker paths set up in the config file?\nExiting");
 			System.exit(1);
 		}
 		
