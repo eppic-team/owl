@@ -17,7 +17,11 @@ ver=$3
 
 scriptdir=`dirname $0`
 
-
+if [ ! -e "$roottmpdir" ]
+then
+	echo "Directory $roottmpdir doesn't exist"
+	exit 1
+fi
 
 # files
 tmpdir=$roottmpdir/reconstruct-$ver

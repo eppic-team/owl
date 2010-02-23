@@ -2,7 +2,7 @@ reconstruct
 
 Protein contact map reconstruction using the TINKER package
 
-http://molgen.mpg.de/~lappe/reconstruct
+http://www.molgen.mpg.de/~lappe/reconstruct
 
 INSTALLATION
 
