@@ -26,16 +26,18 @@ mkdir $tmpdir
 
 svn export $svnurl/LICENSE $tmpdir/LICENSE
 svn export $svnurl/gpl.txt $tmpdir/gpl.txt
-svn export $svnurl/scripts/reconstruct.sh $tmpdir/reconstruct
-#svn export  $svnurl/scripts/reconstruct.bat $tmpdir/reconstruct.bat
-svn export $svnurl/scripts/reconstruct.cfg $tmpdir/reconstruct.cfg
+svn export $svnurl/reconstruct/reconstruct.sh $tmpdir/reconstruct
+#svn export  $svnurl/reconstruct/reconstruct.bat $tmpdir/reconstruct.bat
+svn export $svnurl/reconstruct/reconstruct.cfg $tmpdir/reconstruct.cfg
+svn export $svnurl/reconstruct/README-reconstruct.txt $tmpdir/README.txt
+svn export $svnurl/reconstruct/sample.cm $tmpdir/sample.cm
 
 # jars
 svn export $svnurl/jars $tmpdir/jars
 cp $thejar $tmpdir/jars/owl.jar
 
 # the owl jar
-$scriptdir/make-owl.sh $svnurl $tmpdir
+$scriptdir/../scripts/make-owl.sh $svnurl $tmpdir
 mv $tmpdir/*.jar $tmpdir/jars/owl.jar
 
 
