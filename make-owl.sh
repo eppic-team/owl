@@ -52,4 +52,4 @@ jar -cfm ../../$tag.jar ../Manifest.txt .
 
 # removing $tag temp directory
 cd ../..
-#rm -rf $tag
+rm -rf $tag
