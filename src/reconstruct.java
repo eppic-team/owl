@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -35,9 +36,7 @@ import tools.MySQLConnection;
 
 public class reconstruct {
 
-	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
-	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
-	
+	private static final String CONFIG_FILE_NAME = "reconstruct.cfg";
 	private static final String PDBASEDB = "pdbase";
 
 	private static final double DEFAULT_FORCECONSTANT_DISTANCE = TinkerRunner.DEFAULT_FORCECONSTANT_DISTANCE;
@@ -48,10 +47,51 @@ public class reconstruct {
 	
 	private static final String PROG_NAME = "reconstruct";
 	
+	private static String TINKER_BIN_DIR = "/usr/local/bin";
+	private static String PRM_FILE = "amber99.prm";
+
+	
+	private static final void readTinkerCfgFile(File file) throws IOException {
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		String line;
+		Pattern p;
+		Matcher m;
+		while ((line=br.readLine())!=null) {
+			if (line.startsWith("#")) continue;
+			p = Pattern.compile("^TINKER_BIN_DIR=(.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {
+				if (new File(m.group(1).trim()).exists()){
+					TINKER_BIN_DIR = m.group(1).trim(); 
+				} else {
+					throw new FileNotFoundException("TINKER_BIN_DIR directory '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
+					//System.err.println("TINKER_BIN_DIR directory '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
+					//System.exit(1);
+				}
+			}
+			p = Pattern.compile("^PRM_FILE=(.*)$");
+			m = p.matcher(line);
+			if (m.matches()) {
+				if (new File(m.group(1).trim()).exists()){
+					PRM_FILE = m.group(1).trim(); 
+				} else {
+					throw new FileNotFoundException("PRM_FILE file '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
+					//System.err.println("PRM_FILE file '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
+					//System.exit(1);
+				}
+			}
+		}
+		br.close();
+		
+	}
+	
 	public static void main(String[] args) {
 		
 
-		String help = "\nReconstructs a protein structure from a contact map using tinker's distgeom.\n" +
+		String help = "\nReconstructs a protein structure from a contact map using TINKER's distgeom.\n\n" +
+			"This program requires a local installation of the TINKER package. The bin directory and\n" +
+			"PRM file used can be specified in the "+CONFIG_FILE_NAME+" file in the current directory\n" +
+			"or user's home directory\n\n" +
 			" Two modes of operation:\n" +
 			"  a) normal      : specify one or more contact map files. The sequence, contact \n" +
 			"                   type and cutoff will be taken from the file\n" +
@@ -73,7 +113,10 @@ public class reconstruct {
 			" [-e]             : restrain omega torsion angles to trans conformation\n" +
 			"\n"+
 			" [-b <string>]    : base name of output files. Default: "+DEFAULT_BASENAME+" or pdbId given in -p\n" +
-			" [-o <dir>]       : output dir. Default: current \n" +
+			" [-o <dir>]       : output dir. If option -A (parallel) is used then this directory MUST \n" +
+			"                    be a globally accessible one (all nodes in cluster must be able to \n" +
+			"                    read/write to it).\n" +
+			"                    Default: current \n" +
 			" [-n <int>]       : number of models to generate. Default: 1 \n" +
 			" [-m <int>]       : filter contacts to min range. Default: no filtering \n" +
 			" [-M <int>]       : filter contacts to max range. Default: no filtering \n" +
@@ -81,7 +124,8 @@ public class reconstruct {
 			" [-F]             : fast mode: refinement will be done via minimization (faster but \n" +
 			"                    worse quality model). Default: slow (refinement via simulate\n" +
 			"                    annealing) \n" +
-			" [-A]             : if specified reconstruction will be run in parallel (EXPERIMENTAL)\n" +
+			" [-A]             : if specified reconstruction will be run in parallel using the \n" +
+			"                    Sun Grid Engine job scheduler (EXPERIMENTAL)\n" +
 			" [-g]             : debug mode, prints some debug info\n\n";
 
 		boolean benchmark = true;
@@ -222,6 +266,33 @@ public class reconstruct {
 				System.exit(1);
 			}		
 		}		
+		
+		// reading config file
+		boolean cfgFileFound = false;
+		File cfgFile = new File(CONFIG_FILE_NAME);
+		if (cfgFile.exists()) {
+			try {
+				readTinkerCfgFile(cfgFile);
+				cfgFileFound = true;
+			} catch(IOException e) {
+				System.err.println("Error while reading config file "+cfgFile+": "+e.getMessage());
+			}
+		}
+		cfgFile = new File(System.getProperty("user.home"),CONFIG_FILE_NAME);
+		if (cfgFile.exists()) {
+			try {
+				readTinkerCfgFile(cfgFile);
+				cfgFileFound = true;
+			} catch(IOException e) {
+				System.err.println("Error while reading config file "+cfgFile+": "+e.getMessage());
+			}
+		}
+		if (!cfgFileFound) {
+			System.err.println("Could not find a config file. Using default values:");
+			System.err.println("  TINKER_BIN_DIR="+TINKER_BIN_DIR);
+			System.err.println("  PRM_FILE="+PRM_FILE);
+		}
+		
 		
 		// setting a default for baseName if it wasn't specified and checking basename
 		if (baseName==null) {
@@ -378,9 +449,9 @@ public class reconstruct {
 		// creating TinkerRunner object		
 		TinkerRunner tr = null;
 		try {
-			tr = new TinkerRunner(TINKERBINDIR, PRMFILE); 
+			tr = new TinkerRunner(TINKER_BIN_DIR, PRM_FILE); 
 		} catch (FileNotFoundException e3) {
-			System.err.println("Couldn't find tinker bin dir "+TINKERBINDIR+". Exiting");
+			System.err.println(e3.getMessage()+". Exiting");
 			System.exit(1);
 		}
 		
