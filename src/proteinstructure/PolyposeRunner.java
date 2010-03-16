@@ -25,7 +25,8 @@ public class PolyposeRunner {
 
 	/*------------------------------ constants ------------------------------*/
 	private static final String CCP4_SETUP_SCRIPT_NAME = "/include/ccp4.setup";	// appended to ccp4_dir
-	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose15";       // appended to ccp4_dir
+	//private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose15";       // appended to ccp4_dir
+	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose50";       // appended to ccp4_dir
 	private static final int    POLYPOSE_MAXCYCLE      = 10;
 	
 	// TODO: This is very dangerous! If multiple instances of this are running on the same machine the temp files will conflict!
