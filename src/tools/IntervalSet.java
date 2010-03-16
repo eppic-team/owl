@@ -14,6 +14,14 @@ public class IntervalSet extends TreeSet<Interval> implements Comparable<Interva
 	/*---------------------------- public methods ---------------------------*/
 	
 	/**
+	 * Convenience method to add an interval to this set without having to explicitly instantiate an interval object
+	 */
+	public void addInterval(int start, int end) {
+		Interval newInterval = new Interval(start, end);
+		this.add(newInterval);
+	}
+		
+	/**
 	 * Returns an ordered set of integers resulting from the intersection of all Intervals in this set
 	 * @return
 	 */
@@ -25,6 +33,14 @@ public class IntervalSet extends TreeSet<Interval> implements Comparable<Interva
 			}
 		}
 		return set; 
+	}
+	
+	/**
+	 * Intersect the intervals in this set such that non-consecutive, non-overlapping intervals remain.
+	 * @return 
+	 */
+	public IntervalSet getMergedIntervalSet() {
+		return IntervalSet.createFromIntSet(this.getIntegerSet());
 	}
 	
 	/*-------------------------- implemented methods ------------------------*/
@@ -52,6 +68,26 @@ public class IntervalSet extends TreeSet<Interval> implements Comparable<Interva
 		if(!thisIt.hasNext() && otherIt.hasNext()) return -1;	// this ends, other is longer
 		// if none of the above checks could break the tie, then we are equal
 		return 0;
+	}
+	
+	/*---------------------------- static methods ---------------------------*/
+	
+	/**
+	 * Returns an IntervalSet created from a set of integers.
+	 */
+	public static IntervalSet createFromIntSet(TreeSet<Integer> intSet) {
+		return Interval.getIntervals(intSet);
+	}
+	
+	/**
+	 * Convenience method to create a new interval set containing a single interval.
+	 * @param intv the initial interval
+	 * @return a new interval set containing a single interval
+	 */
+	public static IntervalSet createFromInterval(Interval intv) {
+		IntervalSet newSet = new IntervalSet();
+		newSet.add(intv);
+		return newSet;
 	}
 	
 }

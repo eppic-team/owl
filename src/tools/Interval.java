@@ -6,8 +6,7 @@ import java.util.regex.Pattern;
 
 /**
  * Class representing an integer interval with a beginning 
- * and an end integers
- * 
+ * and an end integer
  */
 public class Interval implements Comparable<Interval> {
 	
@@ -98,15 +97,13 @@ public class Interval implements Comparable<Interval> {
 	 * @return  selection string for PyMol, e.g. 
 	 *  <code>intSet=[1 2 4 5 6 9]</code> yields <code>1-2,4-6,9,</code>
 	 */
-	public static String createSelectionString(TreeSet<Integer> intSet) {
-		
+	public static String createSelectionString(TreeSet<Integer> intSet) {		
 		switch(intSet.size()) {
 		case 0:
 			return "";
 		case 1:
 			return intSet.first().toString();
-		}
-		
+		}		
 		int last = intSet.first();
 		int start = last;
 		String resString = "";
@@ -124,10 +121,7 @@ public class Interval implements Comparable<Interval> {
 						last = i;
 					}
 		}
-		
-		resString += (last-start == 0?last:(start + "-" + last));
-		
-		
+		resString += (last-start == 0?last:(start + "-" + last));		
 		return resString;
 	}
 	
