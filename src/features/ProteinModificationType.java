@@ -5,7 +5,7 @@ import java.util.Map;
 
 /**
  * The type of a post-translational protein modification.
- * Used by PhosphoSitePlusFeature.
+ * Used by {@link PhosphoSitePlusFeature}.
  */
 public enum ProteinModificationType {
 	

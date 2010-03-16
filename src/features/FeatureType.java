@@ -13,7 +13,8 @@ public enum FeatureType {
 	CSA,			// A catalytic site from Catalytic Site Atlas
 	UNIPROT,		// A feature based on a Uniprot annotation
 	PROSITE,		// A feature based on a matching Prosite motif
-	PHOSPHOSITE;	// A feature based on a modification site from PhoshoSitePlus  
+	PHOSPHOSITE,	// A feature based on a modification site from PhoshoSitePlus
+	SDOMAIN;		// A structurally defined domain (based on the pDomains service) 
 	//SCOP,			// A Scop domain annotation
 	//EC;			// A catalytic domain as defined by EC
 }
