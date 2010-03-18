@@ -1,0 +1,3 @@
+# paths needed for tests in owl.tests
+MAX_CLUSTER_EXEC=/usr/bin/maxcluster
+NACCESS_EXEC=/usr/bin/naccess

@@ -7,6 +7,7 @@ import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbLoadError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfilePdb;
+import runners.NaccessRunner;
 
 /**
  * Loads a structure from a file or from PDBase and saves it as a pdb file where the b-factor column is the
@@ -24,7 +25,6 @@ public class writeSASAtoBFactor {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		if(args.length < 2) {
 			System.out.println(writeSASAtoBFactor.class.getName() + " <pdbcode or filename> <outfile> [<cutoff for buried/exposed>]");
 			System.exit(1);
@@ -40,7 +40,8 @@ public class writeSASAtoBFactor {
 				
 		// now we have a pdb structure
 		try {
-			pdb.runNaccess(NACCESS_EXECUTABLE, "");
+			NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXECUTABLE), "");
+			naccRunner.runNaccess(pdb);
 			HashMap<Integer, Double> sasas = pdb.getSurfaceAccessibilities();
 			if(sasas == null) {
 				System.err.println("Error: no surface accessibility values found.");

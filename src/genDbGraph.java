@@ -1,9 +1,12 @@
 import gnu.getopt.Getopt;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
+
+import connections.ConsurfConnection;
 
 
 //import proteinstructure.CiffilePdb;
@@ -14,6 +17,7 @@ import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.SecStrucElement;
+import runners.NaccessRunner;
 import tools.MySQLConnection;
 
 
@@ -229,7 +233,8 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}
 						try {
-							int mistakes = pdb.checkConsurfHssp(false);
+							ConsurfConnection consurfConn = new ConsurfConnection();
+							int mistakes = consurfConn.getConsurfDataLocal(pdb, null);
 							System.out.println("ConsurfHssp Mistakes:"+mistakes);
 							if (mistakes == 0) consurf = true;
 						} catch (Exception e) {
@@ -257,7 +262,8 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}*/					
 						try {
-							pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+							NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXE), NACCESS_PARAMS);
+							naccRunner.runNaccess(pdb);
 							naccess = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
@@ -338,7 +344,8 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						int mistakes = pdb.checkConsurfHssp(false);
+						ConsurfConnection consurfConn = new ConsurfConnection();
+						int mistakes = consurfConn.getConsurfDataLocal(pdb, null);
 						System.out.println("ConsurfHssp Mistakes:"+mistakes);
 						if (mistakes == 0) consurf = true;
 					} catch (Exception e) {
@@ -366,7 +373,8 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}*/					
 					try {
-						pdb.runNaccess(NACCESS_EXE, NACCESS_PARAMS);
+						NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXE), NACCESS_PARAMS);
+						naccRunner.runNaccess(pdb);
 						naccess = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());

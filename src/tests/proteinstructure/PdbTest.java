@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,6 +22,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import connections.ConsurfConnection;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -41,6 +44,8 @@ import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.Residue;
 import proteinstructure.TemplateList;
+import runners.NaccessRunner;
+import tests.TestsSetup;
 import tools.Interval;
 import tools.IntervalSet;
 import tools.MySQLConnection;
@@ -48,13 +53,16 @@ import tools.RegexFileFilter;
 
 public class PdbTest {
 
+	private static String MAX_CLUSTER_EXEC; 
+	private static String NACCESS_EXEC; 
+	
 	private static final String TESTDATADIR = "src/tests/proteinstructure/data";
 	private static final String TEST_PDB_FILE_1 = TESTDATADIR+"/1tdrA.pdb";
 	private static final String TEST_PDB_FILE_2 = TESTDATADIR+"/1tdrB.pdb";
 	private static final String TEST_CHAIN_1 = "A";
 	private static final String TEST_CHAIN_2 = "B";
-	private static final String NACCESS_EXEC = "/project/StruPPi/Software/naccess2.1.1/naccess";
 	private static final String NACCESS_OUTPUT_REF = TESTDATADIR+"/1tdrA.rsa";
+	private static final String CONSURF_DIR = "src/tests/proteinstructure/data";
 	private static final String TESTSET10_LIST = TESTDATADIR+"/testset10.list";
 	
 	private static final String TEST_PDB_3 = "12as";
@@ -62,14 +70,14 @@ public class PdbTest {
 	private static final String TEST_PDB_4 = "12as";
 	private static final String TEST_CHAIN_4 = "B";
 
-	
-	private static final String MAX_CLUSTER_EXE = "/project/StruPPi/bin/maxcluster";
 	private static final String PDBASE_DB = "pdbase";
-	private static final String MYSQLSERVER = "talyn";
 
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		Properties p = TestsSetup.readPaths();
+		NACCESS_EXEC = p.getProperty("NACCESS_EXEC");
+		MAX_CLUSTER_EXEC = p.getProperty("MAX_CLUSTER_EXEC");
 	}
 
 	@AfterClass
@@ -90,7 +98,8 @@ public class PdbTest {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		Assert.assertFalse(pdb.hasASA());
-		pdb.runNaccess(NACCESS_EXEC, "");
+		NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC), "");
+		naccRunner.runNaccess(pdb);
 		Assert.assertTrue(pdb.hasASA());
 		
 		// open our naccess reference result (rsa) file
@@ -116,7 +125,9 @@ public class PdbTest {
 	public void testCheckConsurfHssp() throws IOException, PdbLoadError {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
-		pdb.checkConsurfHssp(false);
+		ConsurfConnection consurfConn = new ConsurfConnection();
+		consurfConn.getConsurfDataLocal(pdb, CONSURF_DIR);
+
 		for (int resser:pdb.getAllSortedResSerials()){
 			// very basic test, not sure how to test this better 
 			Assert.assertNotNull(pdb.getConsurfhsspColorFromResSerial(resser));
@@ -148,7 +159,7 @@ public class PdbTest {
 			Assert.assertEquals(0.0,pdb1p.rmsd(pdb1, ct, intervSet),0.0001);			
 		}
 
-		MaxClusterRunner mcr = new MaxClusterRunner(MAX_CLUSTER_EXE);
+		MaxClusterRunner mcr = new MaxClusterRunner(MAX_CLUSTER_EXEC);
 		double mcrmsd = mcr.calculatePairwiseScore(TEST_PDB_FILE_1, TEST_PDB_FILE_2, MaxClusterRunner.ScoreType.RMSD);
 		double ourrmsd = pdb1.rmsd(pdb2, "Ca");
 		Assert.assertEquals(mcrmsd, ourrmsd, 0.001);
@@ -185,7 +196,7 @@ public class PdbTest {
 		}
 		
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
-		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,PDBASE_DB);
+		MySQLConnection conn = new MySQLConnection();
 		for (String pdbId:pdbIds) {
 			System.out.print(pdbId+"\t");
 			String pdbCode = pdbId.substring(0,4);
@@ -296,7 +307,7 @@ public class PdbTest {
 	@Test
 	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundError, PdbLoadError, AlignmentConstructionError {
 		
-		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,PDBASE_DB);
+		MySQLConnection conn = new MySQLConnection();
 		
 		System.out.println("Loading pdb objects...");
 		Pdb pdb1 = new PdbasePdb(TEST_PDB_3,PDBASE_DB,conn);
@@ -368,7 +379,7 @@ public class PdbTest {
 	@Test
 	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
-		MySQLConnection conn = new MySQLConnection(MYSQLSERVER,PDBASE_DB);
+		MySQLConnection conn = new MySQLConnection();
 		for (String pdbId:pdbIds) {
 			System.out.print(pdbId+"\t");
 			String pdbCode = pdbId.substring(0,4);

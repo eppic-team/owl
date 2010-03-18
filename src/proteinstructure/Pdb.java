@@ -74,8 +74,6 @@ public class Pdb {
 	private static final String CSA_URL_PREFIX = "http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/";
 	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
 	private static final String PDB2EC_MAPPING_FILE = "/project/StruPPi/Databases/PDBSProtEC/mapping.txt";
-	private static final String CONSURF_URL_PREFIX = "http://consurf.tau.ac.il/results/";
-	private static final String CONSURF_DIR = "/project/StruPPi/Databases/ConSurf-HSSP/ConservationGrades";
 	private static final String SCOP_URL_PREFIX = "http://scop.mrc-lmb.cam.ac.uk/scop/parse/";
 	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
 	
@@ -570,78 +568,6 @@ public class Pdb {
 		in.close();
 
 	}
-
-	/**
-	 * Parses consurf data from remote/local file assigning values to 
-	 * member variables <code>resser2consurfhsspcore</code>, <code>resser2consurfhsspcolor</code>
-	 * @param online if true will grab consurf data from web, if false will use local file
-	 * @return
-	 * @throws IOException
-	 */
-	public int checkConsurfHssp(boolean online) throws IOException {
-
-		BufferedReader in;
-		if (online) {
-			// TODO: Check if url exists and if not do the same as for the offline case 
-			// NOTE: the URL doesn't seem to work anymore - Jose 21.07.2009
-			URL consurfhssp = new URL(CONSURF_URL_PREFIX+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
-			URLConnection ch = consurfhssp.openConnection();
-			in = new BufferedReader(new InputStreamReader(ch.getInputStream()));
-		} else {
-			File consurfhssp = new File(CONSURF_DIR,pdbCode+(pdbChainCode.equals(NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
-			if (!consurfhssp.exists() && pdbChainCode.equals("A")) {
-				System.out.println("consurf");
-				consurfhssp = new File(CONSURF_DIR,pdbCode+"_.grades");
-			}
-			in = new BufferedReader(new FileReader(consurfhssp));
-		}
-		String inputLine;
-		Pattern p = Pattern.compile("^\\s+\\d+");
-		int lineCount = 0;
-		int consurfHsspMistakes = 0;
-			
-		Integer[] ressers = new Integer[this.getObsLength()];
-		getAllSortedResSerials().toArray(ressers);
-
-		while ((inputLine = in.readLine()) != null) { 
-			Matcher m = p.matcher(inputLine);
-			if (m.find()) {
-				lineCount++;
-				int resser = ressers[lineCount-1];
-				String[] fields = inputLine.split("\\s+");
-				String pdbresser = fields[3].equals("-")?"-":fields[3].substring(3, fields[3].indexOf(':'));
-				if (fields[2].equals(String.valueOf(getResidue(resser).getAaType().getOneLetterCode())) &
-						(pdbresser.equals("-") | pdbresser.equals(getPdbResSerFromResSer(resser)))) {
-					if (this.containsResidue(resser)) {
-						Residue residue = this.getResidue(resser);
-						residue.setConsurfScore(Double.valueOf(fields[4]));
-						residue.setConsurfColor(Integer.valueOf(fields[5]));
-					} else {
-						consurfHsspMistakes++;
-					}
-				} else {
-					consurfHsspMistakes++;
-				}
-			}
-		}
-		in.close();
-
-		// checking how many were actually assigned
-		int assigned = 0;
-		for (Residue residue:residues.values()) {
-    		if (residue.getConsurfScore()!=null)	assigned++;
-		}
-        consurfHsspMistakes += Math.abs(this.getObsLength() - assigned);
-        if (consurfHsspMistakes > 0) {
-        	for (Residue residue:residues.values()) {
-        		residue.setConsurfScore(null);
-        		residue.setConsurfColor(null);
-        	}
-		}
-
-		return consurfHsspMistakes;
-
-	}
 	
 	/*
 	 * NR Voss, MB Gerstein. Calculation of standard atomic volumes for RNA and comparison with proteins: RNA is packed more tightly. J Mol. Biol. v346(2): 2005, pp 477-492.
@@ -717,84 +643,9 @@ public class Pdb {
 	}
 	
 	/**
-	 * Runs naccess and parses output into member variables resser2allrsa and resser2scrsa,
-	 * removing all temporary files.
-	 * Use {@link #getAllRsaFromResSerial(int)} and {@link #getScRsaFromResSerial(int)} to get ASA values
-	 * @param naccessExecutable
-	 * @param naccessParameters
-	 * @throws IOException if I/O problems running naccess or if it finishes with an error exit status
-	 */
-	public void runNaccess(String naccessExecutable, String naccessParameters) throws IOException {
-		boolean debug = false; // set to true to keep output files and write out naccess command line
-		String tempDir = "."; // temp dir has to be current dir because naccess always writes output to current dir
-		String prefix = ((pdbCode+chainCode).length() < 3)?"1xxx":(pdbCode+chainCode);
-		File pdbFile = File.createTempFile(prefix, ".pdb",new File(tempDir));
-		String pdbFileName = pdbFile.getCanonicalPath(); // we use getCanonicalPath to get rid of the '.', otherwise naccess doesn't work
-		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
-
-		writeToPDBFile(pdbFileName);
-		String line;
-		int errorLineCount = 0;
-
-		File test = new File(naccessExecutable);
-		if(!test.canRead()) throw new IOException("Naccess Executable is not readable");
-
-		String cmd = naccessExecutable + " " + pdbFileName + " " + naccessParameters;
-		if (debug) System.out.println(cmd);
-		Process myNaccess = Runtime.getRuntime().exec(cmd);
-		BufferedReader naccessOutput = new BufferedReader(new InputStreamReader(myNaccess.getInputStream()));
-		BufferedReader naccessError = new BufferedReader(new InputStreamReader(myNaccess.getErrorStream()));
-		while((line = naccessOutput.readLine()) != null) {
-		}
-		while((line = naccessError.readLine()) != null) {
-			errorLineCount++;
-		}
-		naccessOutput.close();
-		naccessError.close();
-		int exitVal = 1;
-		try {
-			exitVal = myNaccess.waitFor();
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while waiting for naccess to finish");
-		}
-		if ((exitVal == 1) || (errorLineCount > 0)) {
-			throw new IOException("Naccess error: wrong arguments or pdb file format!");
-		}
-
-		File rsa = new File(tempDir,baseName+".rsa");
-		if (rsa.exists()) {
-			BufferedReader rsaInput = new BufferedReader(new FileReader(rsa));
-			while ((line = rsaInput.readLine()) != null) {
-				if (line.startsWith("RES")) {
-					int resser = Integer.valueOf(line.substring(9,13).trim());
-					double allrsa = Double.valueOf(line.substring(22,28).trim());
-					double scrsa = Double.valueOf(line.substring(35,41).trim());
-					if (this.containsResidue(resser)) {
-						Residue residue = this.getResidue(resser);
-						residue.setRsa(allrsa);
-						residue.setScRsa(scrsa);
-					}
-				}
-			}
-			rsaInput.close();
-		} else {
-			throw new IOException("Naccess output file "+rsa+" wasn't found");
-		}
-		if (!debug) {
-			String[] filesToDelete = {".pdb", ".rsa", ".asa", ".log" };
-			for (int i=0; i < filesToDelete.length; i++) {
-				File fileToDelete = new File(baseName+filesToDelete[i]);
-				if (fileToDelete.exists()) {
-					fileToDelete.deleteOnExit();
-				}
-			}
-		}
-		hasASA = true;
-	}
-	
-	/**
-	 * Returns the per-residue relative solvent accessible surface areas (SASA) as calculated by NACCESS.
-	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
+	 * Returns the per-residue relative solvent accessible surface areas (SASA) as 
+	 * calculated by NACCESS.
+	 * Returns null if SASA has not previously been calculated with {@link runner.NaccessRunner}.
 	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
 	public HashMap<Integer, Double> getSurfaceAccessibilities() {
@@ -810,8 +661,9 @@ public class Pdb {
 	}
 
 	/**
-	 * Returns the per-residue side-chain relative solvent accessible surface areas (SASA) as calculated by NACCESS.
-	 * Returns null if SASA has not previously been calculated with {@link #runNaccess(String,String)}.
+	 * Returns the per-residue side-chain relative solvent accessible surface areas (SASA)
+	 * as calculated by NACCESS.
+	 * Returns null if SASA has not previously been calculated with {@link runner.NaccessRunner}.
 	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
 	public HashMap<Integer, Double> getSideChainSurfaceAccessibilities() {
@@ -2222,6 +2074,15 @@ public class Pdb {
 		return hasASA;
 	}
 
+	/**
+	 * Sets the hasASA flag. To be used when running Naccess and setting the ASA values 
+	 * of residues.
+	 * @param hasASA
+	 */
+	public void setHasASA(boolean hasASA) {
+		this.hasASA = hasASA;
+	}
+	
 	// csa related methods
 
 	/** 

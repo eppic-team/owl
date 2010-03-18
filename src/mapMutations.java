@@ -19,6 +19,7 @@ import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.SecStrucElement;
+import runners.NaccessRunner;
 
 /**
  * Given a structure and a list of mutations, visualize the mutated sites on the structure
@@ -67,7 +68,8 @@ public class mapMutations {
 		
 		// calculate surface accessibilites
 		try {
-			pdb.runNaccess(NACCESS_EXECUTABLE, NACCESS_PARAMETERS);
+			NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXECUTABLE), NACCESS_PARAMETERS);
+			naccRunner.runNaccess(pdb);
 		} catch (IOException e) {
 			System.err.println("Error running NACCESS: " + e.getMessage());
 			System.exit(1);
