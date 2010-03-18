@@ -19,6 +19,7 @@ import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.SecStrucElement;
+import runners.DsspRunner;
 import runners.NaccessRunner;
 
 /**
@@ -77,7 +78,8 @@ public class mapMutations {
 		
 		// calculate secondary structure
 		try {
-			pdb.runDssp(DSSP_EXECUTABLE, DSSP_PARAMETERS);
+			DsspRunner dsspRunner = new DsspRunner();
+			pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXECUTABLE, DSSP_PARAMETERS));
 		} catch (IOException e) {
 			System.err.println("Error running DSSP: " + e.getMessage());
 			System.exit(1);

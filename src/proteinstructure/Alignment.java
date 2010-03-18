@@ -14,6 +14,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import runners.DsspRunner;
 import tools.Interval;
 import tools.IntervalSet;
 import tools.MySQLConnection;
@@ -997,7 +998,8 @@ public class Alignment {
 				try {
 					pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
 					pdb.load(m.group(2));
-					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+					DsspRunner dsspRunner = new DsspRunner();
+					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadError e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
@@ -1030,7 +1032,8 @@ public class Alignment {
     			if (templates.getTemplate(tag).hasPdbData()) {
     				Pdb pdb =templates.getTemplate(tag).getPdb();
     				try {
-    					pdb.runDssp(dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
+    					DsspRunner dsspRunner = new DsspRunner();
+    					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
     				} catch (IOException e) {
     					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
     				}

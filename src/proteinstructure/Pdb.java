@@ -740,121 +740,6 @@ public class Pdb {
 		scop.setVersion(version);
 	}	
 
-	/** 
-	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
-	 * Existing secondary structure information will be overwritten.
-	 * The resulting secondary structure information will have 4 states.
-	 * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
-	 * after filling out a license agreement. 
-	 * @param dsspExecutable
-	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
-	 */
-	public void runDssp(String dsspExecutable, String dsspParameters) throws IOException {
-		runDssp(dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
-	}
-
-	/** 
-	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
-	 * Existing secondary structure information will be overwritten.
-	 * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
-	 * after filling out a license agreement. 
-	 * @param dsspExecutable
-	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
-	 * @param state4Type
-	 * @param state4Id
-	 */
-	public void runDssp(String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
-		String startLine = "  #  RESIDUE AA STRUCTURE BP1 BP2  ACC";
-		String line;
-		int lineCount = 0;
-		char ssType, sheetLabel;
-		TreeMap<Integer, Character> ssTypes;
-		TreeMap<Integer, Character> sheetLabels;
-		int resNum;
-		String resNumStr;
-		File test = new File(dsspExecutable);
-		if(!test.canRead()) throw new IOException("DSSP Executable is not readable");
-		Process myDssp = Runtime.getRuntime().exec(dsspExecutable + " " + dsspParameters);
-		PrintStream dsspInput = new PrintStream(myDssp.getOutputStream());
-		BufferedReader dsspOutput = new BufferedReader(new InputStreamReader(myDssp.getInputStream()));
-		BufferedReader dsspError = new BufferedReader(new InputStreamReader(myDssp.getErrorStream()));
-		writeAtomLines(dsspInput);	// pipe atom lines to dssp
-		dsspInput.close();
-		ssTypes = new TreeMap<Integer,Character>();
-		sheetLabels = new TreeMap<Integer,Character>();
-		while((line = dsspOutput.readLine()) != null) {
-			lineCount++;
-			if(line.startsWith(startLine)) {
-				//System.out.println("Dssp Output: ");
-				break;
-			}
-		}
-		while((line = dsspOutput.readLine()) != null) {
-			lineCount++;
-			resNumStr = line.substring(5,10).trim();
-			ssType = line.charAt(16);			
-			sheetLabel = line.charAt(33);
-			if (state4Id == SecStrucElement.ReducedState.FOURSTATE && SecStrucElement.getReducedStateTypeFromDsspType(ssType, state4Id) == SecStrucElement.OTHER) {
-				sheetLabel = ' ';
-			}
-			if(!resNumStr.equals("")) {		// this should only happen if dssp inserts a line indicating a chain break
-				try {
-					resNum = Integer.valueOf(resNumStr);
-					ssTypes.put(resNum, ssType);
-					sheetLabels.put(resNum, sheetLabel);
-				} catch (NumberFormatException e) {
-					System.err.println("Error while parsing DSSP output for "+pdbCode+"_"+chainCode+". Expected residue number, found '" + resNumStr + "' in line " + lineCount);
-				}
-			}
-		}
-		//for(char c:ssTypes) {System.out.print(c);}; System.out.println(".");
-		dsspOutput.close();
-		dsspError.close();
-
-		if(ssTypes.size() == 0) {
-			throw new IOException("No DSSP output found.");
-		}
-
-		if(ssTypes.size() != getObsLength()) {	// compare with number of observed residues
-			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + getObsLength() + ").");
-		}
-
-		// assign secondary structure
-		this.secondaryStructure = new SecondaryStructure(this.sequence);	// forget the old annotation
-		char lastType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()), state4Id);
-		int lastResSer = ssTypes.firstKey();
-		char lastSheet = sheetLabels.get(lastResSer);
-		char thisType, thisSheet, reducedType;
-		int start = 1;
-		int elementCount = 0;
-		SecStrucElement ssElem;
-		String ssId;
-		for(int resSer:ssTypes.keySet()) {
-			thisType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(resSer), state4Id);
-			thisSheet = sheetLabels.get(resSer);
-			if(thisType != lastType || thisSheet != lastSheet || resSer > lastResSer+1) {
-				// finish previous element, start new one
-				elementCount++;
-				reducedType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(lastResSer), state4Type);
-				ssId = new Character(lastType).toString() + (lastSheet==' '?"":String.valueOf(lastSheet)) + new Integer(elementCount).toString();
-				ssElem = new SecStrucElement(reducedType,start,lastResSer,ssId);
-				secondaryStructure.add(ssElem);
-				start = resSer;
-				lastType = thisType;
-				lastSheet = thisSheet;
-			}
-			lastResSer = resSer;
-		}
-		// finish last element
-		elementCount++;
-		reducedType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.lastKey()), state4Type);
-		ssId = new Character(lastType).toString() + (lastSheet==' '?"":String.valueOf(lastSheet)) + new Integer(elementCount).toString();
-		ssElem = new SecStrucElement(reducedType, start,ssTypes.lastKey(),ssId);
-		secondaryStructure.add(ssElem);
-
-		secondaryStructure.setComment("DSSP");
-		this.initialiseResiduesSecStruct();
-	}
 
 	/**
 	 * Assigns b-factor values to the atoms of this structure. If structure is written to pdb file,
@@ -2165,7 +2050,7 @@ public class Pdb {
 		return scop;
 	}
 
-	// end of secop related methods
+	// end of scop related methods
 
 	// secondary structure related methods
 
@@ -2178,11 +2063,20 @@ public class Pdb {
 	}
 
 	/**
-	 * Returns the secondary structure annotation object of this graph.
+	 * Returns the secondary structure annotation object of this Pdb.
 	 * @return
 	 */
 	public SecondaryStructure getSecondaryStructure() {
 		return this.secondaryStructure;
+	}
+	
+	/**
+	 * Sets the secondary structure annotation for this Pdb, overwriting the existing one. 
+	 * @param secondaryStructure
+	 */
+	public void setSecondaryStructure(SecondaryStructure secondaryStructure) {
+		this.secondaryStructure = secondaryStructure;
+		initialiseResiduesSecStruct();
 	}
 
 	// end of secondary structure related methods

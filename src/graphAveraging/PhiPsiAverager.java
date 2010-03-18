@@ -18,6 +18,7 @@ import proteinstructure.SecondaryStructure;
 import proteinstructure.Template;
 import proteinstructure.TemplateList;
 import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import runners.DsspRunner;
 import tools.Goodies;
 import tools.Interval;
 import tools.IntervalSet;
@@ -470,7 +471,8 @@ public class PhiPsiAverager {
 			System.out.println("TARGET from pdb file "+targetPdbfile);
 			Pdb pdb = new PdbfilePdb(targetPdbfile.getAbsolutePath());
 			pdb.load("A");
-			pdb.runDssp("/project/StruPPi/bin/dssp", "--");
+			DsspRunner dsspRunner = new DsspRunner();
+			pdb.setSecondaryStructure(dsspRunner.runDssp(pdb, "/project/StruPPi/bin/dssp", "--"));
 			SecondaryStructure secStruct = pdb.getSecondaryStructure();
 			TreeMap<Integer,double[]> phipsiTarget = pdb.getAllPhiPsi();
 			// printing alignment positions 

@@ -17,6 +17,7 @@ import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbasePdb;
 import proteinstructure.PdbfilePdb;
 import proteinstructure.SecStrucElement;
+import runners.DsspRunner;
 import runners.NaccessRunner;
 import tools.MySQLConnection;
 
@@ -219,8 +220,8 @@ public class genDbGraph {
 					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
 					pdb.load(pdbChainCode);					
 					try {
-						pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
-						//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						DsspRunner dsspRunner = new DsspRunner();
+						pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 						dssp = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
@@ -326,13 +327,13 @@ public class genDbGraph {
 				Pdb pdb = new PdbfilePdb(pdbfile);
 				pdb.load(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
-					pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
-					//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+					DsspRunner dsspRunner = new DsspRunner();
+					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 				}
 				if (!mode.equals("GRAPH")) {
 					try {
-						pdb.runDssp(DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE);
-						//pdb.runDssp(DSSP_EXE, DSSP_PARAMS);
+						DsspRunner dsspRunner = new DsspRunner();
+						pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 						dssp = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());

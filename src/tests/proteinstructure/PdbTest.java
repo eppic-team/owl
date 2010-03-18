@@ -43,7 +43,9 @@ import proteinstructure.RIGEdge;
 import proteinstructure.RIGNode;
 import proteinstructure.RIGraph;
 import proteinstructure.Residue;
+import proteinstructure.SecondaryStructure;
 import proteinstructure.TemplateList;
+import runners.DsspRunner;
 import runners.NaccessRunner;
 import tests.TestsSetup;
 import tools.Interval;
@@ -55,6 +57,7 @@ public class PdbTest {
 
 	private static String MAX_CLUSTER_EXEC; 
 	private static String NACCESS_EXEC; 
+	private static String DSSP_EXEC;
 	
 	private static final String TESTDATADIR = "src/tests/proteinstructure/data";
 	private static final String TEST_PDB_FILE_1 = TESTDATADIR+"/1tdrA.pdb";
@@ -78,6 +81,7 @@ public class PdbTest {
 		Properties p = TestsSetup.readPaths();
 		NACCESS_EXEC = p.getProperty("NACCESS_EXEC");
 		MAX_CLUSTER_EXEC = p.getProperty("MAX_CLUSTER_EXEC");
+		DSSP_EXEC = p.getProperty("DSSP_EXEC");
 	}
 
 	@AfterClass
@@ -122,7 +126,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testCheckConsurfHssp() throws IOException, PdbLoadError {
+	public void testConsurfConnection() throws IOException, PdbLoadError {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		ConsurfConnection consurfConn = new ConsurfConnection();
@@ -134,6 +138,28 @@ public class PdbTest {
 			Assert.assertNotNull(pdb.getConsurfhsspScoreFromResSerial(resser));
 		}
  
+	}
+	
+	@Test
+	public void testRunDssp() throws PdbLoadError, IOException {
+		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
+		pdb.load(TEST_CHAIN_1);
+		Pdb pdbDsspAssigned = new PdbfilePdb(TEST_PDB_FILE_1);
+		pdbDsspAssigned.load(TEST_CHAIN_1);
+
+		DsspRunner dsspRunner = new DsspRunner();
+		SecondaryStructure secondaryStructure = dsspRunner.runDssp(pdb, DSSP_EXEC, "--");
+		pdbDsspAssigned.setSecondaryStructure(secondaryStructure);
+		
+		// TODO the TEST_PDB_FILE_1 should contain the secondary structure so that we could perform this comparison 
+		//for (int resser:pdb.getAllSortedResSerials()) {
+		//	Assert.assertEquals(pdb.getResidue(resser).getSsElem(),pdbDsspAssigned.getResidue(resser).getSsElem());
+		//}
+		// all we can do right now is check for nulls
+		Assert.assertNotNull(pdbDsspAssigned.getSecondaryStructure());
+		for (int resser:pdb.getAllSortedResSerials()) {
+			Assert.assertNotNull(pdbDsspAssigned.getResidue(resser).getSsElem());
+		}
 	}
 	
 	@Test
