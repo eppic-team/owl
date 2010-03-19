@@ -8,7 +8,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -112,6 +115,23 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 */
 	public int getObsLength() {
 		return this.getVertexCount();
+	}
+	
+	/**
+	 * Returns the neighbors of the given node ordered by residueSerial.
+	 * This is sometimes needed because the order in which neighbors are returned by getNeighbors() is undefined.
+	 * @param node
+	 * @return
+	 */
+	public Collection<RIGNode> getOrderedNeighbors(RIGNode node) {
+		LinkedList<RIGNode> orderedNeighbours = new LinkedList<RIGNode>();
+		orderedNeighbours.addAll(this.getNeighbors(node));
+		Collections.sort(orderedNeighbours, new Comparator<RIGNode>() {
+			public int compare(RIGNode n1, RIGNode n2) {
+				return (new Integer(n1.getResidueSerial()).compareTo(new Integer(n2.getResidueSerial())));
+			}
+		});	
+		return orderedNeighbours;
 	}
 	
 	/**
