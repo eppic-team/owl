@@ -9,10 +9,10 @@ sgeroot=/usr/local/sge
 exedir=`dirname $0`
 
 jarfiles=`ls $exedir/jars/*.jar`
-CLASSPATH="."
+classpath="."
 for jarfile in $jarfiles
 do
-	CLASSPATH="$jarfile:$CLASSPATH"
+	classpath="$jarfile:$classpath"
 done
 
 
@@ -25,4 +25,4 @@ else
 	libstr=""
 fi
 
-java $libstr reconstruct $@
+java -cp $classpath $libstr reconstruct $@
