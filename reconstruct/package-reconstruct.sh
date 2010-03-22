@@ -38,7 +38,6 @@ svn export $svnurl/reconstruct/sample.cm $tmpdir/sample.cm
 
 # jars
 svn export $svnurl/jars $tmpdir/jars
-cp $thejar $tmpdir/jars/owl.jar
 
 # the owl jar
 $scriptdir/../scripts/make-owl.sh $svnurl $tmpdir
