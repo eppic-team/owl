@@ -1,5 +1,6 @@
 package proteinstructure;
 
+import java.util.Comparator;
 import java.util.HashMap;
 
 /**
@@ -173,6 +174,22 @@ public enum AminoAcid {
 	 */
 	public static AminoAcid getByThreeLetterCode(String three) {
 		return three2aa.get(three.toUpperCase());
+	}
+	
+	/**
+	 * Get amino acids in ascending order of hydrophobicity.
+	 * @return an array containing the amino acids in order of hydrophobicity
+	 */
+	public static AminoAcid[] valuesInOrderOfHydrophobicity() {
+		AminoAcid[] values = AminoAcid.values();
+		AminoAcid[] newValues = new AminoAcid[values.length];
+		System.arraycopy(values, 0, newValues, 0, values.length);
+		java.util.Arrays.sort(newValues, new Comparator<AminoAcid>() {
+			public int compare(AminoAcid a, AminoAcid b) {
+				return new Double(a.hydrophobicity).compareTo(new Double(b.hydrophobicity));
+			}
+		});		
+		return newValues;
 	}
 	
 	// conversion methods
@@ -401,7 +418,7 @@ public enum AminoAcid {
 		
 		if(allright) System.out.println("All tests passed.");
 		else System.out.println("Some tests failed.");
-    
+		
     }
 	
 }
