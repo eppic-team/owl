@@ -45,7 +45,7 @@ public class DsspRunner {
 	 * @return the secondary structure annotation object 
 	 * @return
 	 */
-	public SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
+	public static SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
 		String pdbCode = pdb.getPdbCode();
 		String chainCode = pdb.getChainCode();
 		

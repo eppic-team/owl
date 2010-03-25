@@ -316,4 +316,5 @@ public class ConstraintsMaker {
 					OMEGA_LOWER_BOUND, OMEGA_UPPER_BOUND);
 		}
 	}
+	
 }

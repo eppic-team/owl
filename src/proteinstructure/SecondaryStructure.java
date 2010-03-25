@@ -1,11 +1,15 @@
 package proteinstructure;
 
+import graphAveraging.ConsensusInterval;
+import graphAveraging.ConsensusSquare;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.TreeMap;
 import java.util.Vector;
 
 import tools.Interval;
@@ -238,5 +242,16 @@ public class SecondaryStructure {
 		return this.resser2predConfidence.get(resser);
 	}
 	
+	public TreeMap<Integer,ConsensusSquare> getPhiPsiConstraints() {
+		TreeMap<Integer, ConsensusSquare> bounds = new TreeMap<Integer, ConsensusSquare>();
+		for (int i=1; i <= sequence.length();i++) {
+			if (resser2secstruct.get(i).getType() == SecStrucElement.HELIX) {
+				bounds.put(i, new ConsensusSquare(new ConsensusInterval(-65,-55),new ConsensusInterval(-50,-40)));
+			} else if (resser2secstruct.get(i).getType() == SecStrucElement.STRAND) {
+				bounds.put(i, new ConsensusSquare(new ConsensusInterval(-135,-100),new ConsensusInterval(160,90)));
+			}
+		}
+		return bounds;
+	}
 
 }

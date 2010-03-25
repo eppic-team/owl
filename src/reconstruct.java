@@ -27,6 +27,7 @@ import proteinstructure.RIGraph;
 import proteinstructure.Pdb;
 import proteinstructure.PdbCodeNotFoundError;
 import proteinstructure.PdbasePdb;
+import proteinstructure.SecondaryStructure;
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;
@@ -52,7 +53,6 @@ public class reconstruct {
 	private static String PDBASE_DB = null; // this is for internal use only: if a PDBASE_DB is specified in config file then a local db installation of pdbase will be used
 											// otherwise the PDB data will be taken from the PDB's ftp
 	private static String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
-
 	
 	private static final void readTinkerCfgFile(File file) throws IOException {
 		BufferedReader br = new BufferedReader(new FileReader(file));
@@ -125,6 +125,8 @@ public class reconstruct {
 			" [-i <intervals>] : use phi/psi restraints from given structure (needs -p). Specify a\n" +
 			"                    set of intervals from the given structure from which the phi/psi\n" +
 			"                    values will be taken, e.g.: 3-23,30-35,40-50\n" +
+			" [-c <string>]    : name of a psipred horizontal file containing secondary structure prediction used to create additional phi/psi constraints. \n" +
+			"                    Contraints are NOT applied in fast mode (-F) \n" +
 			" [-e]             : restrain omega torsion angles to trans conformation\n" +
 			"\n"+
 			" [-b <string>]    : base name of output files. Default: "+DEFAULT_BASENAME+" or pdbId given in -p\n" +
@@ -162,8 +164,9 @@ public class reconstruct {
 		boolean parallel = false;
 		boolean refPdbFromFile = false;
 		boolean debug = false;
+		String secondaryStructureFile = null;
 		
-		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:i:en:m:M:f:FAgh?");
+		Getopt g = new Getopt(PROG_NAME, args, "p:b:t:d:o:i:c:en:m:M:f:FAgh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -184,6 +187,9 @@ public class reconstruct {
 				break;
 			case 'o':
 				outputDir = g.getOptarg();
+				break;
+			case 'c':
+				secondaryStructureFile = g.getOptarg();
 				break;
 			case 'i':
 				tokens = g.getOptarg().split(",");
@@ -264,6 +270,8 @@ public class reconstruct {
 					cutoffs[i] = cutoff;
 			}
 		}
+		
+		
 		if (pdbId!=null) {
 			// pdb code and chain code
 			Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
@@ -469,7 +477,16 @@ public class reconstruct {
 			if (maxRange>0) graph.restrictContactsToMaxRange(maxRange);
 			if (minRange>0) graph.restrictContactsToMinRange(minRange);			
 		}
-
+		// loading secondary structure prediction
+		SecondaryStructure sec = null;
+		if (secondaryStructureFile != null) {
+			try {
+				sec = new SecondaryStructure(new File(secondaryStructureFile));
+			} catch (IOException e) {
+				System.err.println("Error reading secondary structure prediction. Make sure it's a valid psipred horizontal (.horiz) file. Exiting.");
+				System.exit(1);
+			}
+		}
 		// defining report file
 		File reportFile = new File(outputDir,baseName+".report");
 		
@@ -488,12 +505,16 @@ public class reconstruct {
 			if (pdbId!=null && intervals!=null) {
 				phiPsiConstraints = PhiPsiAverager.getPhiPsiForInterval(pdb, MARGIN_PHIPSI, intervals);
 			}
+			
+			if (sec != null) {
+				phiPsiConstraints = sec.getPhiPsiConstraints();
+			}
 			if (fast) {
 				// as this is at the moment just a reconstruction benchmarking script it doesn't make sense 
 				// at all to use a phi/psi consensus (which would come from templates): we use null and 0 for the 2 phi/psi parameters
 				tr.reconstructFast(sequence, graphs, phiPsiConstraints, forceTransOmega, n, forceConstant, 0, outputDir, baseName, false, parallel);
 			} else {
-				tr.reconstruct(sequence, graphs, phiPsiConstraints, forceTransOmega, n, forceConstant, 0, outputDir, baseName, false, parallel);
+				tr.reconstruct(sequence, graphs, phiPsiConstraints, forceTransOmega, n, forceConstant, 1, outputDir, baseName, false, parallel);
 			}
 			
 		} catch (IOException e) {

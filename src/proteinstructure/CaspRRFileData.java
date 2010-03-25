@@ -71,7 +71,7 @@ public class CaspRRFileData {
 		}
 		
 		public String toString() {
-			return String.format(new Locale("en"),OUT_CONTACT, i, j, minDist, maxDist, weight);
+			return String.format(Locale.US,OUT_CONTACT, i, j, minDist, maxDist, weight);
 		}
 		
 		public boolean equals(RRContact c2) {

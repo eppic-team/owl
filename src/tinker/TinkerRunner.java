@@ -400,7 +400,7 @@ public class TinkerRunner {
 	/**
 	 * Runs distgeom by submitting it to a DRMAA system. Only SGE (qsub) supported at the moment
 	 * @param xyzFile
-	 * @param outPath
+	 * @xparam outPath
 	 * @param outBasename
 	 * @param n
 	 * @return
