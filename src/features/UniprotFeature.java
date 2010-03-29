@@ -20,7 +20,7 @@ public class UniprotFeature implements Feature {
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Createas a UniprotFeature based on a Feature object from the Uniprot Remote API.
+	 * Creates a UniprotFeature based on a Feature object from the Uniprot Remote API.
 	 */
 	public UniprotFeature(int begRes, int endRes, String uniprotTypeName, String description) {
 		this.type = FeatureType.UNIPROT;

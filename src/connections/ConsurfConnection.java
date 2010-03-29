@@ -53,7 +53,7 @@ public class ConsurfConnection {
 		// TODO: Check if url exists and if not do the same as for the offline case 
 		URL consurfhssp = new URL(consurfURLPrefix+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 		URLConnection ch = consurfhssp.openConnection();
-		return getConsurfData(pdb, new BufferedReader(new InputStreamReader(ch.getInputStream())));
+		return parseConsurfData(pdb, new BufferedReader(new InputStreamReader(ch.getInputStream())));
 	}
 	
 	/**
@@ -76,7 +76,7 @@ public class ConsurfConnection {
 			System.out.println("consurf");
 			consurfhssp = new File(consurfDir,pdbCode+"_.grades");
 		}
-		return getConsurfData(pdb,new BufferedReader(new FileReader(consurfhssp)));		
+		return parseConsurfData(pdb,new BufferedReader(new FileReader(consurfhssp)));		
 	}
 	
 	/**
@@ -85,7 +85,7 @@ public class ConsurfConnection {
 	 * @return the number of mistakes found while parsing consurf results
 	 * @throws IOException when something goes wrong with parsing the BufferedReader
 	 */
-	private int getConsurfData(Pdb pdb, BufferedReader in) throws IOException {
+	private int parseConsurfData(Pdb pdb, BufferedReader in) throws IOException {
 		
 		String inputLine;
 		Pattern p = Pattern.compile("^\\s+\\d+");

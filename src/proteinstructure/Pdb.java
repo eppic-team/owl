@@ -85,7 +85,7 @@ public class Pdb {
 	protected TreeMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	protected TreeMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
 	protected int fullLength; 							// length of full sequence as it appears in SEQRES field 
-														// to get observed length use method get_length()
+														// to get observed length use method getObsLength()
 	
 	// sequence features (annotations)
 	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
