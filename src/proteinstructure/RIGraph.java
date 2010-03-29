@@ -16,6 +16,8 @@ import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import javax.vecmath.GMatrix;
+
 import tools.IntPairComparator;
 import tools.MySQLConnection;
 
@@ -1191,6 +1193,36 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return complGraph;
 	}
 	
+	/**
+	 * Turns the RIGraph into the GMatrix 
+	 * @return the complement graph of this RIGraph
+	 */
+	public void convert2GMatrix( GMatrix A) { // Attn : Matrix starts from 0,0 as first entry 
+		A.setSize( fullLength, fullLength); 
+		A.setIdentity(); 	
+		if (!isDirected()) { // undirected Graph 
+			for (int i = 1; i < fullLength; i++) {
+				for (int j = (i+1); j <= fullLength; j++) {
+					if (this.getEdgeFromSerials(i, j) != null) {
+						A.setElement( i-1,j-1, 1.0);
+						A.setElement( j-1,i-1, 1.0);
+					} // end if i,j / j,i is an edge  
+				} // next j 
+			}	// next i 	
+		} else { // directed Graph 
+			for (int i = 1; i <= fullLength; i++) {
+				for (int j = 1; j <= fullLength; j++) {
+					if (i == j) {
+						continue;
+					}
+					if (this.getEdgeFromSerials(i, j) != null) {
+						A.setElement( i-1,j-1, 1.0);  
+					} // end if i,j is an edge  
+				} // next j 
+			}	// next i 		
+		} // end if directed Graph 
+	} // end convert2GMatrix
+
 	
 	/**
 	 * Removes a vertex from this graph.
