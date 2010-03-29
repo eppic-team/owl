@@ -21,9 +21,6 @@ import proteinstructure.SecondaryStructure;
  */
 public class DsspRunner {
 	
-	public DsspRunner() {
-		
-	}
 
 	/** 
 	 * Runs an external DSSP executable and (re)assigns the secondary structure annotation from the parsed output.
@@ -32,7 +29,7 @@ public class DsspRunner {
 	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
 	 * @return the secondary structure annotation object
 	 */
-	public SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters) throws IOException {
+	public static SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters) throws IOException {
 		return runDssp(pdb, dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
 	}
 

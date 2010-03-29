@@ -471,8 +471,7 @@ public class PhiPsiAverager {
 			System.out.println("TARGET from pdb file "+targetPdbfile);
 			Pdb pdb = new PdbfilePdb(targetPdbfile.getAbsolutePath());
 			pdb.load("A");
-			DsspRunner dsspRunner = new DsspRunner();
-			pdb.setSecondaryStructure(dsspRunner.runDssp(pdb, "/project/StruPPi/bin/dssp", "--"));
+			pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, "/project/StruPPi/bin/dssp", "--"));
 			SecondaryStructure secStruct = pdb.getSecondaryStructure();
 			TreeMap<Integer,double[]> phipsiTarget = pdb.getAllPhiPsi();
 			// printing alignment positions 

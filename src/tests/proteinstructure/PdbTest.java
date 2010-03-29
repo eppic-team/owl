@@ -147,8 +147,7 @@ public class PdbTest {
 		Pdb pdbDsspAssigned = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdbDsspAssigned.load(TEST_CHAIN_1);
 
-		DsspRunner dsspRunner = new DsspRunner();
-		SecondaryStructure secondaryStructure = dsspRunner.runDssp(pdb, DSSP_EXEC, "--");
+		SecondaryStructure secondaryStructure = DsspRunner.runDssp(pdb, DSSP_EXEC, "--");
 		pdbDsspAssigned.setSecondaryStructure(secondaryStructure);
 		
 		// TODO the TEST_PDB_FILE_1 should contain the secondary structure so that we could perform this comparison 

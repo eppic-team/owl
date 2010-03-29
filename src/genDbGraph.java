@@ -220,8 +220,7 @@ public class genDbGraph {
 					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
 					pdb.load(pdbChainCode);					
 					try {
-						DsspRunner dsspRunner = new DsspRunner();
-						pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+						pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 						dssp = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
@@ -327,13 +326,11 @@ public class genDbGraph {
 				Pdb pdb = new PdbfilePdb(pdbfile);
 				pdb.load(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
-					DsspRunner dsspRunner = new DsspRunner();
-					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 				}
 				if (!mode.equals("GRAPH")) {
 					try {
-						DsspRunner dsspRunner = new DsspRunner();
-						pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+						pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 						dssp = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
