@@ -998,8 +998,7 @@ public class Alignment {
 				try {
 					pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
 					pdb.load(m.group(2));
-					DsspRunner dsspRunner = new DsspRunner();
-					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadError e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
@@ -1032,8 +1031,7 @@ public class Alignment {
     			if (templates.getTemplate(tag).hasPdbData()) {
     				Pdb pdb =templates.getTemplate(tag).getPdb();
     				try {
-    					DsspRunner dsspRunner = new DsspRunner();
-    					pdb.setSecondaryStructure(dsspRunner.runDssp(pdb,dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+    					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
     				} catch (IOException e) {
     					System.err.println("Couldn't run dssp for sequence "+tag+". Secondary structure will be the author's assignment for this sequence. Error: "+e.getMessage());
     				}
