@@ -134,7 +134,7 @@ public class CMGrabber {
 	}
 	
 	/**
-	 * Tow-parameter constructor: initializes a <code>CMGrabber</code> instance as implemented in the <code>{@link #setCMGrabber(String)}</code>
+	 * Two-parameter constructor: initializes a <code>CMGrabber</code> instance as implemented in the <code>{@link #setCMGrabber(String)}</code>
 	 * setter method. This constructor additionally offers the possibility to specify the number of frames assigned to each 
 	 * generation.
 	 * @param dir - a File instances representing the directory to process
@@ -821,12 +821,34 @@ public class CMGrabber {
 			}
 		}*/
 	}
+	public static File[] multiRun (String superdir){
+		File file = new File(superdir);
+		if(file.exists()&&file.isDirectory()){
+			File[] demelist = file.listFiles(new RegexFileFilter("deme.*"));
+			int length = demelist.length;
+			File[] dirlist = new File[length];
+			for(int i = 0; i < length; i++){
+				dirlist[i] = new File(demelist[i].getAbsolutePath()+"/evo2/");
+			}
+			return dirlist;
+		}
+		else throw new IllegalArgumentException ("No such directory!");
+	}
 	
 	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
-		String dir = "/project/StruPPi/gabriel/Arbeiten/greedy/1e0l/run_131009/";//"/project/StruPPi/gabriel/Arbeiten/1bkr/1bkr/deme0/";
-		File dirs = new File(dir);
-		CMGrabber cm = new CMGrabber (dirs,120);
-		cm.printToFile();
+		String[] pdbs = {"1bkr","1e0l","1e6k","1o8w","1odd","1onl","1pzc","1r9h","1sha","1ugm"};
+		String dir    = "/project/StruPPi/gabriel/Arbeiten/180310/run0";
+		for(int i = 0; i < 5; i++){
+			for(int j = 0; j < pdbs.length; j++){
+				File[] list = multiRun(dir+i+"/"+pdbs[j]+"/");
+				int length = list.length;
+				CMGrabber[] cm = new CMGrabber[length];
+				for(int k = 0; k<length;k++){
+					cm[k] = new CMGrabber(list[k],120);
+					cm[k].printToFile();
+				}
+			}
+		}
 		/*File[] list = dirListing(dirs);
 		int length = list.length;
 		CMGrabber[] array = new CMGrabber[length];

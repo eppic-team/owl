@@ -430,7 +430,7 @@ public class Population1 {
 				//if(parents[i].getCM() <= CMav && parents[j].getCM() <= CMav){
 				if(parents[i] != null && parents[j] != null){
 					if(tester1[i] && tester1[j] && counter < dim){
-						offspring[counter] = new Individuals(Individuals.breedIndis(parents[i], parents[j]));
+						offspring[counter] = new Individuals(parents[i].breedIndis(parents[j]));
 						counter++;
 					}
 				}
@@ -467,7 +467,7 @@ public class Population1 {
 		for(int i = 0; i < dim - 1; i++){
 			for(int j = i + 1; j < dim; j++){
 			if(pop.getFifty(i) && pop.getFifty(j) && counter < dim){
-				off[counter] = new Individuals(Individuals.breedIndis(pop.getPop(i),pop.getPop(j)));
+				off[counter] = new Individuals(pop.getPop(i).breedIndis(pop.getPop(j)));
 				counter++;
 			}
 		}
@@ -525,7 +525,7 @@ public class Population1 {
 			for(int k = 0; k < dim - 1; k++){
 				for(int l = k + 1; l < dim; l++){
 					if(tester[k] && tester[l] && counter < dim){
-						offspring[counter] = new Individuals(Individuals.breedIndis(pop[k],pop[l]));
+						offspring[counter] = new Individuals(pop[k].breedIndis(pop[l]));
 						counter++;
 					}
 				}

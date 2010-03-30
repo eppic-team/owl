@@ -179,7 +179,7 @@ public class Stripper {
 		newindi.storer(set);
 		newindi.setEntries(set);
 		newindi.setNumOfContact(in.getNumOfContacts());
-		RIGraph rig = Individuals.reconstructGraph (in);
+		RIGraph rig = in.reconstructGraph ();
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		newindi.setCMError(bound, Individuals.fullcontactmap);
 		newindi.setDMError(bound,Individuals.fulldistancematrix);

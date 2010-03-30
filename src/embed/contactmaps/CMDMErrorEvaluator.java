@@ -62,7 +62,7 @@ public class CMDMErrorEvaluator implements Runnable {
 		int length = population.length, final_generation = evosteps;
 		for(int i = 0; i < length; i++){
 			try {
-				population[i].evolve("dummy");
+				population[i].evolve2(20);
 			} catch (FileNotFoundException e) {
 				//e.printStackTrace();
 				System.err.println("Some severe file error occurred during evolution...");

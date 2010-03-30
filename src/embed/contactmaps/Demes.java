@@ -27,7 +27,7 @@ import tools.RegexFileFilter;
  * </p>
  * <p>
  * The first step is always the initialization of an array of <tt>Individuals<tt>, as a random sampling over all contact maps. The random distribution of the
- * initial generation can be surveyed by the method <code>{@link #getMet2()}</code>. This method returns an index table, representing a pairwise alignment with each <tt>Individuals</tt>.
+ * initial generation can be surveyed by the method <code>{@link #getMet()}</code>. This method returns an index table, representing a pairwise alignment with each <tt>Individuals</tt>.
  * The metric used is defined as follows:
  * </p>
  * <p>
@@ -40,7 +40,8 @@ import tools.RegexFileFilter;
  * <p>
  * </p>
  * <p>
- * 
+ * Note, that multiple runs of instances with non-matching pdb-codes must call the method <code>{@link Individuals#clearFullCMandDM()}</code> prior to initialization,
+ * otherwise severe Exception and/or Errors may occur. 
  * @author gmueller
  *
  */
@@ -80,24 +81,21 @@ public class Demes {
 	 */
 	private HashSet<Pair<Integer>> subhash;
 	
-	private HashMap<Pair<Integer>, Double> metric;
+	//private HashMap<Pair<Integer>, Double> metric;
 	
 	private HashMap<Pair<Integer>,HashSet<Integer>> indexer;
 	
 	private Metric metric2;
 	
-	private HashMap<Pair<Integer>, Integer> weighteed;
+	private HashMap<Pair<Integer>, Integer> weighted;
 	
 	/**
 	 * field: returning an array of indices of the best ranked Individuals
 	 */
 	private int[] ranked;
 	
-	/**
-	 * field: counting the contacts all Individuals have in common, if contact is only present once,
-	 * the count is set to one
-	 */
-	private int[][] weighted;
+	
+	//private int[][] weighted;
 	
 	private static final String pdbaseDb = "pdbase_20090728";
 	
@@ -148,7 +146,7 @@ public class Demes {
 		setPopName(p[0].getName());
 		fiftyfifty = new boolean[p.length];
 		setSubHash(p);
-		setWHash();
+		//setWHash();
 		setWHasher();
 		setMetrics();
 		setIndexer();
@@ -169,12 +167,21 @@ public class Demes {
 		fiftyfifty = new boolean[dim];
 		setPopName(pop.getName());
 		setSubHash(pop.getPop());
-		setWHash();
+		//setWHash();
 		setWHasher();
 		setMetrics();
 		setIndexer();
 		}
 	
+	/**
+	 * Two parameter constructor: uses an starter <tt>Individuals</tt> and creates a
+	 * random starter sub population (deme).
+	 * @param starter
+	 * @param size
+	 * @throws SQLException
+	 * @throws PdbCodeNotFoundError
+	 * @throws PdbLoadError
+	 */
 	public Demes (Individuals starter, int size) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(starter.getName(), pdbaseDb, conn);
@@ -184,6 +191,7 @@ public class Demes {
 		for(int i = 0; i < size; i++){
 			pop[i] = new Individuals(rig,conn,true,starter.getNumOfContacts());
 		}
+		fiftyfifty = new boolean[size];
 		setIndexer();
 	}
 
@@ -203,7 +211,7 @@ public class Demes {
 		}
 		fiftyfifty = new boolean[p.length];
 		setSubHash(p);
-		setWHash();
+		//setWHash();
 		setWHasher();
 		setGen(generation);
 		setMetrics();
@@ -228,7 +236,7 @@ public class Demes {
 		fiftyfifty = new boolean[dim];
 		setPopName(pop.getName());
 		setSubHash(pop.getPop());
-		setWHash();
+		//setWHash();
 		setWHasher();
 		setGen(generation);
 		setMetrics();
@@ -256,12 +264,69 @@ public class Demes {
 		setCMErrorStats(pop);
 		setDMErrorStats(pop);
 		fiftyfifty = new boolean[popsize];
-		setWHash();
+		//setWHash();
 		setGen(generation);
 		setWHasher();
 		setMetrics();
 		setSubHash(pop);
 		setIndexer();
+	}
+	
+	/**
+	 * One parameter constructor: takes a String denoting a contact map file and converts the 'cmap' file to <code>{@link Demes}</code> instance.
+	 * Note, that any processed file must have 'cmap' extension, otherwise an <tt>IllegalArgumentException</tt> is thrown. Additionally, any initialization
+	 * of multiple instances via file reading, this constructor must be called for every single initialization.  
+	 * @param file_name a String denoting the 'cmap' file
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 * @throws IllegalArgumentException if the denoted file is neither a file nor is not in the required format
+	 */
+	public Demes (String file_name) throws FileNotFoundException, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, IllegalArgumentException {
+		File file = new File (file_name);
+		if(file.exists()){
+			readFile(file);
+		}
+		else throw new IllegalArgumentException ("The denoted directory does not exist.");
+	}
+	
+	/**
+	 * Three parameter constructor: initializes an instance of this class. The first parameter <tt>pdb_code</tt> is the
+	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundError}</code>
+	 * is issued. Note, that only the default database is used, in order to change the database, please use the four parameter
+	 * constructor <code>{@link #Demes(String, String, int, double)}</code>. Additionally, this constructor does only random
+	 * samples.
+	 * @param pdb_code a String denoting the pdb code
+	 * @param size the number of entries in the Individuals array
+	 * @param percent_cont the number of contacts each Individuals has, must hold <tt> 0.0 < percent <= 100.0</tt>
+	 * @throws SQLException
+	 * @throws PdbCodeNotFoundError if an unknown pdb code is used
+	 * @throws PdbLoadError
+	 * @throws IllegalArgumentException if 'size <= 0' or 'percent not in (0.0,100.0]' 
+	 */
+	public Demes (String pdb_code, int size, double percent_cont) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
+		setDemes(pdb_code, pdbaseDb, size, percent_cont);
+	}
+	
+	/**
+	 * Four parameter constructor: initializes an instance of this class. The first parameter <tt>pdb_code</tt> is the
+	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundError}</code>
+	 * is issued. Note, that database used must be specified. If the default database shall be used, please use the three parameter constructor
+	 * <code>{@link #Demes(String, int, double)}</code>. Additionally, this constructor does only random
+	 * samples.
+	 * @param pdb_code a String denoting the pdb code
+	 * @param db the database
+	 * @param size the number of entries in the Individuals array
+	 * @param percent the number of contacts each Individuals has, must hold <tt> 0.0 < percent <= 100.0</tt>
+	 * @throws IllegalArgumentException  if 'size <= 0' or 'percent not in (0.0,100.0]'
+	 * @throws SQLException
+	 * @throws PdbCodeNotFoundError if an unknown pdb code is used
+	 * @throws PdbLoadError
+	 */
+	public Demes (String pdb_code, String db, int size, double percent) throws IllegalArgumentException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+		setDemes(pdb_code, db, size, percent);
 	}
 	
 	/*-------------------------------------Setters------------------------------------------*/
@@ -275,10 +340,10 @@ public class Demes {
 	public void setPop(Individuals[] pop){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		if(!hasNull(pop)){
 			int dim = pop.length;
-			pop = new Individuals[dim];
+			this.pop = new Individuals[dim];
 			//Individuals.fullcontactmap = Species.fullcontactmap;
 			for(int i = 0; i < dim; i++){
-				pop[i] = new Individuals(pop[i]);
+				this.pop[i] = new Individuals(pop[i]);
 			}
 			if(!samePDBCode()){
 				System.err.println("The input array of Individuals instances do not have a common PDB code, causing abrupt termination...");
@@ -325,6 +390,16 @@ public class Demes {
 			System.err.println("The population size must always be greater or equal to 14.");
 			System.exit(1);
 		}*/
+	}
+	
+	public void setSize2(int i){
+		if(i >= 14){
+			size = i;
+		}
+		else{
+			System.err.println("The population size must always be greater or equal to 14.");
+			System.exit(1);
+		}
 	}
 	
 	/**
@@ -388,7 +463,7 @@ public class Demes {
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		double[] avmetrics = new double[dim];
-		System.arraycopy(getAvMetrics(), 0, avmetrics, 0, dim);
+		System.arraycopy(getAvMetrics2(), 0, avmetrics, 0, dim);
 		double metrixsum = entrySum(avmetrics);
 		if(CMDM){
 			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
@@ -433,7 +508,7 @@ public class Demes {
 		double[] error = new double[dim];
 		int[] better = new int[dim];
 		double[] avmetrics = new double[dim];
-		System.arraycopy(getAvMetrics(), 0, avmetrics, 0, dim);
+		System.arraycopy(getAvMetrics2(), 0, avmetrics, 0, dim);
 		double metrixsum = entrySum(avmetrics);
 		if(CMDM){
 			System.arraycopy(Individuals.getCM(getPop()),0,error,0,dim);
@@ -556,12 +631,12 @@ public class Demes {
 		}
 	}
 	
-	/**
+	/*
 	 * setter, counting the frequency of all contacts in this Species by instantiating the field 'weighted'
 	 * @throws PdbLoadError 
 	 * @throws PdbCodeNotFoundError 
 	 * @throws SQLException 
-	 */
+	 
 	public void setWHash (){// throws SQLException, PdbCodeNotFoundError, PdbLoadError {
 		int counter = 0, numConts = getNumOfContacts();
 		int dim = getSize(), dim2 = dim*numConts;
@@ -595,7 +670,7 @@ public class Demes {
 			weighted[i][2] = weighter[i][2];
 		}
 		//sortWeighted();
-	}
+	}*/
 	
 	/**
 	 * setter, setting the field 'weighteed'. Since both, 'weighted' and 'weighteed' are doing
@@ -607,7 +682,7 @@ public class Demes {
 	 */
 	public void setWHasher (){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
 		int dim = getSize(), compare = dim * getPop(0).getNumOfContacts();
-		weighteed = new HashMap<Pair<Integer>, Integer> (compare);					//initializing the field 'weighteed'
+		weighted = new HashMap<Pair<Integer>, Integer> (compare);					//initializing the field 'weighteed'
 		for(int i = 0; i < dim; i++){
 			HashSet<Pair<Integer>> hash1 = getPop(i).getHashSet();					//HashSet of the i-th Individual
 			
@@ -618,14 +693,14 @@ public class Demes {
 				int counter = 1;														//default value, each contact is at least once present
 				
 				Pair<Integer> pair = it.next();
-				if(weighteed.containsKey(pair)){									//if the Pair of Integers is already present in the HashMap
+				if(weighted.containsKey(pair)){									//if the Pair of Integers is already present in the HashMap
 																						//the value is incremented according to the times of occurrence
 					
-					counter = weighteed.get(pair).intValue() + 1;					
-					weighteed.put(pair, new Integer(counter));
+					counter = weighted.get(pair).intValue() + 1;					
+					weighted.put(pair, new Integer(counter));
 				}
 				else{
-					weighteed.put(pair, new Integer(counter));						//if the Pair of Integers is not present in the HashMap the default
+					weighted.put(pair, new Integer(counter));						//if the Pair of Integers is not present in the HashMap the default
 																						//occurrence value (1) is used
 				}
 			}
@@ -702,7 +777,7 @@ public class Demes {
 	 * @throws SQLException 
 	 */
 	public void setMetrics() {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
-		int dim = getSize();
+		/*int dim = getSize();
 		int compare = (int) ((double) (dim*(dim - 1))*2.0/3.0);
 		metric = new HashMap<Pair<Integer>, Double>(compare);
 		for(int i = 0; i < dim - 1; i++){
@@ -726,7 +801,7 @@ public class Demes {
 				
 				metric.put(pair, metrics);													//initializing the field 'metric'
 			}
-		}
+		}*/
 		metric2 = new Metric(this);
 	}
 	
@@ -764,6 +839,28 @@ public class Demes {
 	}
 	
 	/**
+	 * Writes an instance of this class to a 'cmap' file. The major difference of this method compared to <code>{@link #printToFile(String, String)}</code>
+	 * is, that the indexing column is obsolete, which is necessary for usage of this file in 'cmview'.
+	 * @param path
+	 * @param name
+	 * @param dummy
+	 * @throws IOException
+	 * @throws FileNotFoundException
+	 */
+	public void printToFile(String path, String name, String dummy) throws IOException, FileNotFoundException {//SQLException, PdbCodeNotFoundError, PdbLoadError {
+		File dirtest = new File(path);
+		if(!dirtest.exists()){
+			dirtest.mkdirs();
+		}
+		FileOutputStream file = new FileOutputStream(path+name+"-"+getNumOfContacts()+".cmap");
+		PrintStream printa = new PrintStream(file);
+		printa.print(toString(dummy));
+		printa.close();
+		file.close();
+		System.out.println(getName()+" at generation "+gen+" written to file...");
+	}
+	
+	/**
 	 * additional printer method: writes the field <code>{@link #metric}</code> and <code>{@link #metric2}</code> to a
 	 * predefined file.
 	 * @param path
@@ -774,16 +871,15 @@ public class Demes {
 	 */
 	public void printMetric (String path, String filename, int k) throws IOException, FileNotFoundException {
 		String cont = "#Metric File " + getName() + "\n";
-		HashMap<Pair<Integer>, Double> hashmap1 = getMet();
-		HashMap<Pair<Integer>, Integer> hashmap2 = getMet2();
+		HashMap<Pair<Integer>, Integer> hashmap2 = getMet();
 		HashSet<Pair<Integer>> hashset = getMetKey();
 		Iterator<Pair<Integer>> it = hashset.iterator();
 		cont = cont + "\n";
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
-			cont = cont + pair.getFirst().intValue() + "\t" + pair.getSecond().intValue() + "\t" + hashmap1.get(pair).doubleValue() + "\t" + hashmap2.get(pair) + "\n"; 
+			cont = cont + pair.getFirst().intValue() + "\t" + pair.getSecond().intValue() + "\t" + hashmap2.get(pair) + "\n"; 
 		}
-		FileOutputStream file = new FileOutputStream(path + filename + "-"+getNumOfContacts()+".met");
+		FileOutputStream file = new FileOutputStream(path + filename + "-"+k+getNumOfContacts()+".met");
 		PrintStream printa = new PrintStream(file);
 		printa.print(cont);
 		printa.close();
@@ -836,6 +932,174 @@ public class Demes {
 		}
 	}
 	
+	/**
+	 * Setter: reads a standard output file of this class and instantiates an object
+	 * of this class by taking all information contained in the file.
+	 * @param file
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws PdbCodeNotFoundError
+	 * @throws SQLException
+	 * @throws PdbLoadError
+	 * @throws IllegalArgumentException
+	 */
+	public void readFile (File file) throws FileNotFoundException, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, IllegalArgumentException {
+		if(file.exists() && file.getAbsolutePath().contains(".cmap")){
+			BufferedReader reader = new BufferedReader (new FileReader (file));
+			String linereader = null, chain_code = null, seq = null;
+			HashMap<Integer,HashSet<Pair<Integer>>> contact_map = new HashMap<Integer,HashSet<Pair<Integer>>>();
+			while((linereader = reader.readLine()) != null){ 
+				if(linereader.contains("#")){
+					if(linereader.contains("SEQUENCE")){
+						seq = linereader.split(": ")[1];
+					}
+					if(linereader.contains("PDB") && !linereader.contains("CHAIN CODE")){
+						setPopName(linereader.split(": ")[1]);
+					}
+					if(linereader.contains("PDB CHAIN CODE")){
+						chain_code = linereader.split(": ")[1];
+					}
+					if(linereader.contains("GENERATION")){
+						int m = (int) Double.parseDouble(linereader.split(": ")[1]);
+						setGen(m);
+					}
+					if(linereader.contains("Species SIZE")){
+						int size = (int) Double.parseDouble(linereader.split(": ")[1]);
+						pop = new Individuals[size];
+						this.size = size;
+					}
+					if(linereader.contains("CMError")){
+						CMError = Double.parseDouble(linereader.split(": ")[1]);
+					}
+					if(linereader.contains("CMstDev")){
+						CMstdev = Double.parseDouble(linereader.split(": ")[1]);
+					}
+					if(linereader.contains("DMError")){
+						DMError = Double.parseDouble(linereader.split(": ")[1]);
+					}
+					if(linereader.contains("DMstDev")){
+						DMstdev = Double.parseDouble(linereader.split(": ")[1]);
+					}
+				}
+				else{
+					if(linereader.contains("\t")){
+						String[] ar = linereader.split("\t");
+						Integer f_val = new Integer ((int) Double.parseDouble(ar[0]));
+						Integer s_val = new Integer ((int) Double.parseDouble(ar[1]));
+						Pair<Integer> pair = new Pair<Integer> (f_val,s_val);
+						Integer index = new Integer((int) Double.parseDouble(ar[3]));
+						if(contact_map.containsKey(index)){
+							HashSet<Pair<Integer>> subset = contact_map.get(index);
+							subset.add(pair);
+							contact_map.put(index, subset);
+						}
+						else{
+							HashSet<Pair<Integer>> subset = new HashSet<Pair<Integer>> ();
+							subset.add(pair);
+							contact_map.put(index, subset);
+						}
+					}
+				}
+			}
+			Set<Integer> keys = contact_map.keySet();
+			Iterator<Integer> it = keys.iterator();
+			
+			while(it.hasNext()){
+				Integer index = it.next();
+				HashSet<Pair<Integer>> cm = contact_map.get(index);
+				int i = index.intValue();
+				pop[i] = new Individuals ();
+				pop[i].setName(getName());
+				pop[i].storer(cm);
+				pop[i].setChainCode(chain_code);
+				pop[i].setSequence(seq);
+				if(Individuals.fullcontactmap == null){
+					Individuals.setFullContactMap(pop[i].reconstructGraph());
+				}
+				pop[i].setEntries(cm);
+				pop[i].setErrorValues();
+				pop[i].setFullContact(Individuals.fullcontactmap.getEdgeCount());
+				pop[i].setNumOfContacts(cm);
+				
+			}
+			fiftyfifty = new boolean [keys.size()];
+			setMetrics();
+			setIndexer();
+			setSize(pop.length);
+			setWHasher();
+		}
+		else{
+			if(!file.exists()){
+				throw new FileNotFoundException ("The denoted file does not exist.");
+			}
+			else{
+				throw new IllegalArgumentException ("The only file type, accepted by this method, must have '.cmap' extension.");
+			}
+		}
+	}
+	
+	/**
+	 * <p>
+	 * a method checking whether the size of this instance is greater or equal to 14. This is important since any
+	 * evolution run will cause a NullPointerException, if the size is below 14. That is because of the following:
+	 * </p>
+	 * <p>
+	 * </p>
+	 * <p>
+	 * any of the methods <code>{@link #bestFifty(...)}</code> will only use the best 50 % of the Individuals, so the maximal number
+	 * of bred Individuals <tt>n</tt> will be <tt>n (n - 1)/2</tt>. Since this number is added, later, one gets: 
+	 * </p>
+	 * <p>
+	 * <tt>n (n - 1)/2 + n = n (n + 1)/2</tt> as intermediate offspring. The intermediate offspring is ranked again and only the best fifty percent
+	 * is taken as next generation, so one gets:
+	 * </p>
+	 * <p>
+	 * <tt>
+	 */
+	public void checkSize (){
+		if(size < 14){
+			System.err.println("For any evolutionary run, the size of the deme must be greater than 14, but was set to" + size + "!");
+			System.exit(1);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param pdb_code
+	 * @param pdb_db
+	 * @param size
+	 * @param percent
+	 * @throws SQLException
+	 * @throws PdbCodeNotFoundError
+	 * @throws PdbLoadError
+	 * @throws IllegalArgumentException
+	 */
+	public void setDemes (String pdb_code, String pdb_db, int size, double percent) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
+		if(size > 0 && (percent <= 100.0 && percent > 0.0) ){
+			MySQLConnection conn = new MySQLConnection ();
+			Pdb pdb = new PdbasePdb(pdb_code, pdb_db, conn);
+			pdb.load("A");
+			RIGraph rig = pdb.getRIGraph("Ca", 9.0);
+			pop = new Individuals [size];
+			for(int i = 0; i < size; i++){
+				pop[i] = new Individuals (rig, conn, true, percent);
+			}
+			fiftyfifty = new boolean[size];
+			conn.close();
+			setCMErrorStats(pop);
+			setDMErrorStats(pop);
+			setMetrics();
+			setSize2(size);
+			setWHasher();
+			setIndexer();
+			setSubHash(pop);
+			setPopName(rig.getPdbCode());
+		}
+		else {
+			if(size <= 0) throw new IllegalArgumentException ("The size must never be less than or equal to zero.");
+			else if (percent > 100.0 || percent <= 0.0) throw new IllegalArgumentException ("Parameter 'percent' must be greater than zero and less than or equal to 100.0.");
+		}
+	}
 	
 	/*--------------------------------------Getters-------------------------------------------*/
 	
@@ -858,21 +1122,20 @@ public class Demes {
 	 * @return p - instance of 'Individuals'
 	 */
 	public Individuals getPop (int i) {
-		Individuals p = new Individuals(pop[i]);
-		return p;
+		return new Individuals(pop[i]);
 	}
 	
 	/**
 	 * getter returns this name
-	 * @return
+	 * @return a String representing the pdb code
 	 */
 	public String getName() {
-		return name;
+		return new String (name);
 	}
 	
 	/**
 	 * getter, returns this average CMError
-	 * @return
+	 * @return the CMError
 	 */
 	public double getAvCMError () {
 		return CMError;
@@ -880,7 +1143,7 @@ public class Demes {
 	
 	/**
 	 * getter, returns this average DMError
-	 * @return
+	 * @return the DMError
 	 */
 	public double getAvDMError () {
 		return DMError;
@@ -888,7 +1151,7 @@ public class Demes {
 	
 	/**
 	 * getter, returns this standard deviation of CMError
-	 * @return
+	 * @return the CMError standard deviation
 	 */
 	public double getCMstdev () {
 		return CMstdev;
@@ -896,14 +1159,14 @@ public class Demes {
 	
 	/**
 	 * getter, returns this standard deviation of DMError
-	 * @return
+	 * @return the DMError standard deviation
 	 */
 	public double getDMstdev () {
 		return DMstdev;
 	}
 	
 	/**
-	 * getter, returns this Species size
+	 * getter, returns this Demes size
 	 * @return
 	 */
 	public int getSize(){
@@ -920,7 +1183,7 @@ public class Demes {
 	}
 	
 	/**
-	 * getter, returns this Popualtion instances field 'fiftyfifty' as an array of boolean
+	 * getter, returns this instances field 'fiftyfifty' as an array of boolean
 	 * @return fifty
 	 */
 	public boolean[] getFifty(){
@@ -1032,14 +1295,14 @@ public class Demes {
 	/**
 	 * canonical <code>toString()</code>. Converts an instance of this class to the standard CMView output
 	 * format. That is, a header with all essential information of the protein as pdb code, sequence etc. and
-	 * a table with all contct pairs.
+	 * a table with all contact pairs.
 	 */
 	public String toString (){
 		Individuals ne = new Individuals(getPop(0));
 		String cont = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+ne.getSequence()+"\n"+
 		"#PDB: "+ne.getName()+ "\n#PDB CHAIN CODE: "+ne.getChainCode()+"\n#CT: "+Individuals.getContactT()+ "\n#CUTOFF: "+Individuals.getContactDist()+"\n"+ 
 		"#GENERATION: "+getGen() + "\n#Species SIZE: " + getSize() + "\n#CMError: "+ getAvCMError() + "\n#CMstDev: " + getCMstdev() + "\n#DMError: "+ getAvDMError() + 
-		"\n#DMstDev: " + getDMstdev() + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n#NUMB. OF CONTS. IN POP: " + weighteed.size() + "\n";
+		"\n#DMstDev: " + getDMstdev() + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n#NUMB. OF CONTS. IN POP: " + weighted.size() + "\n";
 		int[][] index_array = sortWeighted2();
 		int length = index_array[0].length;
 		HashMap<Pair<Integer>, Integer> hashmap = getMap();
@@ -1055,13 +1318,34 @@ public class Demes {
 		}
 		return cont;
 	}
-	
+
+	public String toString (String dummy){
+		Individuals ne = new Individuals(getPop(0));
+		String cont = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+ne.getSequence()+"\n"+
+		"#PDB: "+ne.getName()+ "\n#PDB CHAIN CODE: "+ne.getChainCode()+"\n#CT: "+Individuals.getContactT()+ "\n#CUTOFF: "+Individuals.getContactDist()+"\n"+ 
+		"#GENERATION: "+getGen() + "\n#Species SIZE: " + getSize() + "\n#CMError: "+ getAvCMError() + "\n#CMstDev: " + getCMstdev() + "\n#DMError: "+ getAvDMError() + 
+		"\n#DMstDev: " + getDMstdev() + "\n#NUMB. CONTACTS: " + ne.getNumOfContacts() +"\n" + "#NUMB. OF ALL CONTACTS: " + ne.getFullContact() + "\n#NUMB. OF CONTS. IN POP: " + weighted.size() + "\n";
+		int[][] index_array = sortWeighted2();
+		int length = index_array[0].length;
+		HashMap<Pair<Integer>, Integer> hashmap = getMap();
+		cont = cont + "\n";
+		for(int i = 0; i < length; i++){
+			int index1 = index_array[0][i], index2 = index_array[1][i];
+			Pair<Integer> pair = new Pair<Integer> (new Integer(index1),new Integer (index2));
+			Integer[] ar = getIndexer(pair);
+			int length2 = ar.length;
+			for(int j = 0; j < length2; j++){
+				cont += index1 + "\t" + index2 + "\t" + ((double) hashmap.get(new Pair<Integer>(new Integer(index1),new Integer(index2))))/((double) getSize()) +"\n"; 
+			}
+		}
+		return cont;
+	}
 	/**
 	 * returns a HashMap with all contacts and their corresponding frequency in this deme.
 	 * @return a HashMap of all contact pairs mapped onto their frequency
 	 */
 	public HashMap<Pair<Integer>, Integer> getMap(){
-		return new HashMap<Pair<Integer>, Integer> (weighteed); 
+		return new HashMap<Pair<Integer>, Integer> (weighted); 
 	}
 	
 	/**
@@ -1069,32 +1353,32 @@ public class Demes {
 	 * @return a HashSet of all contact pairs
 	 */
 	public HashSet<Pair<Integer>> getKey(){
-		return new HashSet<Pair<Integer>> (weighteed.keySet());
+		return new HashSet<Pair<Integer>> (weighted.keySet());
 	}
 	
-	/**
+	/*
 	 * returning the metric instance, which corresponds to a table of all Individuals where
 	 * a pairwise comparison is made 
 	 * @return a HashMap of all Individuals <tt>i</tt> and <tt>j</tt> mapped onto their distance
-	 */
+	 
 	public HashMap<Pair<Integer>, Double> getMet(){
 		return new HashMap<Pair<Integer>, Double> (metric);
-	}
+	}*/
 	
-	/**
+	/*
 	 * returning a HashSet of all Individuals in the field <code>{@link #pop}</code>, which were
 	 * compared in order to generate a metric
 	 * @return a HashSet of Pairs of all Individuals indices
-	 */
+	 
 	public HashSet<Pair<Integer>> getMetKey(){
 		return new HashSet<Pair<Integer>> (metric.keySet());
-	}
+	}*/
 	
 	/**
 	 * returns the field <code>{@link #metric2}</code> as a HashMap
 	 * @return
 	 */
-	public HashMap<Pair<Integer>, Integer> getMet2(){
+	public HashMap<Pair<Integer>, Integer> getMet(){
 		return new HashMap<Pair<Integer>, Integer> (metric2.getMetMap());
 	}
 	
@@ -1102,15 +1386,15 @@ public class Demes {
 	 * returns the key of the field <code>{@link #matric2}</code>
 	 * @return
 	 */
-	public HashSet<Pair<Integer>> getMet2Key(){
+	public HashSet<Pair<Integer>> getMetKey(){
 		return new HashSet<Pair<Integer>> (metric2.getMetMap().keySet());
 	}
 	
-	/**
+	/*
 	 * compares the pairwise distances given by the field <code>{@link #metric}</code>
 	 * and computes an average distance value for each entry. 
 	 * @return a double array representing the average distance
-	 */
+	 
 	public double[] getAvMetrics(){
 		int dim = getSize(), counter = 0;
 		double[] array = new double[dim];
@@ -1153,7 +1437,7 @@ public class Demes {
 			array1[i] = array[i]/((double) dim - 1); 
 		}
 		return array1;
-	}
+	}*/
 	
 	/**
 	 * compares the pairwise distances given by the field <code>{@link #metric2}</code>
@@ -1163,7 +1447,7 @@ public class Demes {
 	public double[] getAvMetrics2(){
 		int dim = getSize(), counter = 0;
 		double[] array = new double[dim];
-		HashSet<Pair<Integer>> hash = getMet2Key();
+		HashSet<Pair<Integer>> hash = getMetKey();
 		Iterator<Pair<Integer>> it1 = hash.iterator();
 		Iterator<Pair<Integer>> it2 = hash.iterator();
 		while(it1.hasNext()){
@@ -1173,22 +1457,22 @@ public class Demes {
 				if(pair1 != pair2){
 					if(pair1.getFirst().intValue() == pair2.getFirst().intValue()){
 						counter = pair1.getFirst().intValue();
-						array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
+						array[counter] = array[counter] + getMet().get(pair1).intValue() + getMet().get(pair2).intValue();
 					}
 					else{
 						if(pair1.getSecond().intValue() == pair2.getSecond().intValue()){
 							counter = pair1.getSecond().intValue();
-							array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
+							array[counter] = array[counter] + getMet().get(pair1).intValue() + getMet().get(pair2).intValue();
 						}
 						else{
 							if(pair1.getFirst().intValue() == pair2.getSecond().intValue()){
 								counter = pair1.getFirst().intValue();
-								array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
+								array[counter] = array[counter] + getMet().get(pair1).intValue() + getMet().get(pair2).intValue();
 							}
 							else{
 								if(pair1.getSecond().intValue() == pair2.getFirst().intValue()){
 									counter = pair1.getSecond().intValue();
-									array[counter] = array[counter] + getMet().get(pair1).doubleValue() + getMet().get(pair2).doubleValue();
+									array[counter] = array[counter] + getMet().get(pair1).intValue() + getMet().get(pair2).intValue();
 								}
 							}
 						}
@@ -1205,7 +1489,7 @@ public class Demes {
 	}
 	
 	/**
-	 * converts the key set of the field <code>{@link #weighteed}</code> into a
+	 * converts the key set of the field <code>{@link #weighted}</code> into a
 	 * sorted integer matrix. The first value corresponds to the first contact index
 	 * and the second one to the second contact index.
 	 * @return a sorted integer matrix 
@@ -1223,7 +1507,7 @@ public class Demes {
 	 * @return a HashMap with the contacts and their corresponding frequency
 	 */
 	public HashMap<Pair<Integer>,Double> contactsWithHighestFrequency (double threshold){
-		HashMap<Pair<Integer>,Integer> map = new HashMap<Pair<Integer>,Integer> (weighteed);
+		HashMap<Pair<Integer>,Integer> map = new HashMap<Pair<Integer>,Integer> (weighted);
 		HashMap<Pair<Integer>,Double> subhash = new HashMap<Pair<Integer>,Double> ();
 		HashSet<Pair<Integer>> keyset = new HashSet<Pair<Integer>> (map.keySet());
 		Iterator<Pair<Integer>> it = keyset.iterator();
@@ -1243,25 +1527,8 @@ public class Demes {
 	 * computes the average distance in this <code>{@link Demes}</code>
 	 * @return a double value representing the average distance of all Individuals in this instance
 	 */
-	public double getAverageMetric (){
-		HashMap<Pair<Integer>,Double> met_hash = getMet();
-		Set<Pair<Integer>> keyset = met_hash.keySet();
-		Iterator<Pair<Integer>> it = keyset.iterator();
-		double avmetrics = 0.0;
-		int size = met_hash.size();
-		while(it.hasNext()){
-			Pair<Integer> pair = it.next();
-			avmetrics += met_hash.get(pair).doubleValue();
-		}
-		return avmetrics/size;
-	}
-	
-	/**
-	 * computes the average distance in this <code>{@link Demes}</code>
-	 * @return a double value representing the average distance of all Individuals in this instance
-	 */
 	public double getAverageMetric2 (){
-		HashMap<Pair<Integer>, Integer> met_hash = getMet2();
+		HashMap<Pair<Integer>, Integer> met_hash = getMet();
 		Set<Pair<Integer>> keyset = met_hash.keySet();
 		Iterator<Pair<Integer>> it = keyset.iterator();
 		int size = met_hash.size();
@@ -1347,6 +1614,7 @@ public class Demes {
 	 * @throws PdbLoadError
 	 */			
 	public Individuals[] evolve (boolean CMDM, String dummy) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+		checkSize();
 		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
 		
@@ -1360,7 +1628,7 @@ public class Demes {
 			
 			for(int j = i + 1; j < dim; j++){
 				int index1 = getRank(i), index2 = getRank(j);
-				off[counter] = new Individuals(Individuals.breedIndis(getPop(index1),getPop(index2)));
+				off[counter] = getPop(index1).breedIndis(getPop(index2));
 				//breeding the offspring by calling the method 'breedIndis' from the class Individuals
 				
 				counter++;
@@ -1432,6 +1700,7 @@ public class Demes {
 	 * @throws PdbLoadError
 	 */
 	public Individuals[] evolve (String dummy, boolean CMDM) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+		checkSize();
 		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
 		
@@ -1445,7 +1714,7 @@ public class Demes {
 			
 			for(int j = i + 1; j < dim; j++){
 				int index1 = getRank(i), index2 = getRank(j);
-				off[counter] = new Individuals(Individuals.breedIndis(getPop(index1),getPop(index2)));
+				off[counter] = new Individuals(getPop(index1).breedIndis(getPop(index2)));
 				//breeding the offspring by calling the method 'breedIndis' from the class Individuals
 				
 				counter++;
@@ -1759,13 +2028,17 @@ public class Demes {
 		}
 		return newset;
 	}
+	
+	public static String getDefaultDatabase (){
+		return new String (pdbaseDb);
+	}
 
 	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
 		/*Demes pop = new Demes(14,0,5,0,"run");
 		String path = "/home/gmueller/workspace/aglappe/embed/teststructures/";
 		pop.printToFile(path, pop.getName());
 		//Individuals*/
-		String dir = "/project/StruPPi/ga_dan/";
+		/*String dir = "/project/StruPPi/ga_dan/";
 		File dr = new File(dir);
 		File[] list =  dr.listFiles(new RegexFileFilter(".*.cm"));
 		int length = list.length;
@@ -1773,7 +2046,10 @@ public class Demes {
 			Individuals in = new Individuals(list[i].getAbsolutePath());
 			in.printToFile(dir, "dan", in.getName());
 			Individuals.clearFullCMandDM();
-		}
+		}*/
+		String pdb = "2jo7";
+		Demes dm = new Demes (pdb,20,10.0);
+		System.out.println(dm.toString());
 	}
 
 	/**
