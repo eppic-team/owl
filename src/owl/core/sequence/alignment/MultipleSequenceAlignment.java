@@ -22,7 +22,6 @@ import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
-import owl.core.structure.features.SecStrucElement.ReducedState;
 import owl.core.util.FileFormatError;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
