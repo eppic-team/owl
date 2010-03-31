@@ -18,11 +18,11 @@ import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.util.MySQLConnection;
+import owl.graphAveraging.ConsensusSquare;
+import owl.graphAveraging.GraphAverager;
+import owl.graphAveraging.PhiPsiAverager;
 
 import gnu.getopt.Getopt;
-import graphAveraging.ConsensusSquare;
-import graphAveraging.GraphAverager;
-import graphAveraging.PhiPsiAverager;
 
 
 public class averageGraph {

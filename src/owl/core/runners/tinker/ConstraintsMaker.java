@@ -19,9 +19,9 @@ import owl.core.structure.PdbfilePdb;
 import owl.core.structure.RIGEdge;
 import owl.core.structure.RIGNode;
 import owl.core.structure.RIGraph;
+import owl.graphAveraging.ConsensusSquare;
 
 import edu.uci.ics.jung.graph.util.Pair;
-import graphAveraging.ConsensusSquare;
 
 
 /**

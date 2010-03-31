@@ -1,9 +1,6 @@
 package owl.core.runners.tinker;
 
 import edu.uci.ics.jung.graph.util.Pair;
-import graphAveraging.ConsensusSquare;
-import graphAveraging.GraphAverager;
-import graphAveraging.GraphAveragerError;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,6 +41,9 @@ import owl.core.structure.RIGNode;
 import owl.core.structure.RIGraph;
 import owl.core.util.IntPairSet;
 import owl.core.util.actionTools.TinkerStatusNotifier;
+import owl.graphAveraging.ConsensusSquare;
+import owl.graphAveraging.GraphAverager;
+import owl.graphAveraging.GraphAveragerError;
 
 
 

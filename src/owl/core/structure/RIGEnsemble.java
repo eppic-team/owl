@@ -1,11 +1,11 @@
 package owl.core.structure;
 
-import graphAveraging.GraphAverager;
 
 import java.io.*;
 import java.util.*;
 
 import owl.core.sequence.Sequence;
+import owl.graphAveraging.GraphAverager;
 
 
 /**

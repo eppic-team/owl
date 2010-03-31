@@ -1,7 +1,5 @@
 package owl.core.structure;
 
-import graphAveraging.ConsensusInterval;
-import graphAveraging.ConsensusSquare;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,6 +11,8 @@ import java.util.TreeMap;
 import java.util.Vector;
 
 import owl.core.util.Interval;
+import owl.graphAveraging.ConsensusInterval;
+import owl.graphAveraging.ConsensusSquare;
 
 
 /** This class encapsulates the secondary structure annotation of a single protein chain.

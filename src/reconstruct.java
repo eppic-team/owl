@@ -1,6 +1,4 @@
 import gnu.getopt.Getopt;
-import graphAveraging.ConsensusSquare;
-import graphAveraging.PhiPsiAverager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,6 +31,8 @@ import owl.core.structure.SecondaryStructure;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
+import owl.graphAveraging.ConsensusSquare;
+import owl.graphAveraging.PhiPsiAverager;
 
 
 
