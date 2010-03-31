@@ -11,22 +11,22 @@ import java.util.TreeMap;
 
 import org.xml.sax.SAXException;
 
+import owl.core.runners.TcoffeeError;
+import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastHit;
+import owl.core.runners.blast.BlastHitList;
+import owl.core.runners.blast.BlastXMLParser;
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
-import owl.core.sequence.BlastError;
-import owl.core.sequence.BlastHit;
-import owl.core.sequence.BlastHitList;
-import owl.core.sequence.BlastXMLParser;
 import owl.core.sequence.Sequence;
-import owl.core.sequence.TcoffeeError;
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.FileFormatError;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
-import owl.core.structure.RIGraph;
-import owl.core.structure.StructAlignmentError;
 import owl.core.structure.TemplateList;
+import owl.core.structure.alignment.StructAlignmentError;
+import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
@@ -248,8 +248,8 @@ public class RunAll {
 		MySQLConnection conn = connectToDb();
 
 		TemplateList templates = null;	
-		Alignment target2templatesAln = null;
-		Alignment templatesAln = null;
+		MultipleSequenceAlignment target2templatesAln = null;
+		MultipleSequenceAlignment templatesAln = null;
 		Sequence inputSeq = null;
 		
 		// STEP 1: template selection
@@ -374,7 +374,7 @@ public class RunAll {
 		} else {
 			try {
 				// we load from file and don't check its contents yet, the GraphAverager will do that later
-				target2templatesAln = new Alignment(target2templatesFile.getAbsolutePath(),"FASTA");
+				target2templatesAln = new MultipleSequenceAlignment(target2templatesFile.getAbsolutePath(),"FASTA");
 			} catch (AlignmentConstructionError e) {
 				System.err.println("Couldn't construct the alignment from given file "+target2templatesFile+". Error: "+e.getMessage());
 				System.exit(1);
@@ -478,7 +478,7 @@ public class RunAll {
 		return conn;
 	}
 	
-	private static Alignment getAlignment(TemplateList templates, File outDir, String baseName, String fullQuerySeq) {
+	private static MultipleSequenceAlignment getAlignment(TemplateList templates, File outDir, String baseName, String fullQuerySeq) {
 		BlastHit hit = null;
 		if (!templates.getSource().equals(TemplateList.SRC_OTHER)) {
 			System.out.println("Target to template alignment from "+templates.getSource());
@@ -526,12 +526,12 @@ public class RunAll {
 		return null;
 	}
 		
-	private static Alignment getTrivialAlignment(TemplateList templates) {
+	private static MultipleSequenceAlignment getTrivialAlignment(TemplateList templates) {
 		String[] tags = {templates.getTemplate(0).getId()};
 		String[] seqs = {templates.getTemplate(0).getPdb().getSequence()};
-		Alignment al;
+		MultipleSequenceAlignment al;
 		try {
-			al = new Alignment(tags, seqs);
+			al = new MultipleSequenceAlignment(tags, seqs);
 		} catch (AlignmentConstructionError e) {
 			// this shouldn't happen
 			al = null;
@@ -542,7 +542,7 @@ public class RunAll {
 		
 	}
 	
-	private static void	writeSecStructMatching(TemplateList templates, Alignment target2templatesAln, File outDir, String baseName, String targetTag) {;
+	private static void	writeSecStructMatching(TemplateList templates, MultipleSequenceAlignment target2templatesAln, File outDir, String baseName, String targetTag) {;
 		target2templatesAln.addSecStructAnnotation(templates, DSSP_EXE);
 		PrintStream out;
 		try {

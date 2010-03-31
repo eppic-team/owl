@@ -8,15 +8,15 @@ import java.util.regex.Pattern;
 
 import owl.core.runners.tinker.TinkerRunner;
 import owl.core.sequence.Sequence;
-import owl.core.structure.Alignment;
-import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.PredEval;
-import owl.core.structure.RIGraph;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.graphs.GraphComparisonResult;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
@@ -106,7 +106,7 @@ public class averageGraph {
 		return methodStr;
 	}
 
-	private static void checkSequences(Alignment ali, String targetTag, String targetSeq, Modes mode, File seqFile, String pdbCodeTarget, String pdbChainCodeTarget) {
+	private static void checkSequences(MultipleSequenceAlignment ali, String targetTag, String targetSeq, Modes mode, File seqFile, String pdbCodeTarget, String pdbChainCodeTarget) {
 		if(!ali.getSequenceNoGaps(targetTag).equals(targetSeq)) {
 			if (mode==Modes.PREDICT) {
 				System.err.println("Target sequence in alignment does not match target sequence from file "+seqFile);
@@ -389,7 +389,7 @@ public class averageGraph {
 
 		// read the alignment from file
 		System.out.println("Reading alignment from "+aliFile);
-		Alignment ali = new Alignment(aliFile.getCanonicalPath(), "FASTA");
+		MultipleSequenceAlignment ali = new MultipleSequenceAlignment(aliFile.getCanonicalPath(), "FASTA");
 		
 		// checking that targetSeq and sequence from alignment match, we exit if not 
 		if (mode==Modes.BENCHMARK || mode==Modes.PREDICT) { // in ALIGN mode targetTag and targetSeq are not defined, so we can't check
@@ -402,7 +402,7 @@ public class averageGraph {
 		if (mode==Modes.BENCHMARK) {
 			// printing headers for table of statistics
 			System.out.printf("%10s\t","ct_cutoff"); 
-			PredEval.printHeaders();
+			GraphComparisonResult.printHeaders();
 		}
 		
 		// array to store the consensus graphs (one per contact type/cutoff) for later use them in the reconstruction section
@@ -441,7 +441,7 @@ public class averageGraph {
 				consensusGraph.writeToFile(consGraphFile.getAbsolutePath());
 
 				if (mode==Modes.BENCHMARK) {
-					PredEval eval = consensusGraph.evaluatePrediction(originalGraph);
+					GraphComparisonResult eval = consensusGraph.evaluatePrediction(originalGraph);
 					System.out.printf("%6s_%3.1f\t%3.1f",cts[ctIdx],cutoffs[ctIdx],consensusThreshold);
 					eval.printRow();
 					//eval.printSummary();

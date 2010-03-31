@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.io.*;
 
+import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.util.MySQLConnection;
 
 

@@ -13,7 +13,7 @@ import java.util.Properties;
  */
 public class TestsSetup {
 
-	public static final File DEFAULT_PATHS_FILE = new File("src/tests/owl_test_paths.dat");
+	public static final File DEFAULT_PATHS_FILE = new File("src/owl/tests/owl_test_paths.dat");
 	public static final File HOME_PATHS_FILE = new File(System.getProperty("user.home"),"owl_test_paths.dat") ; 
 	
 	/**

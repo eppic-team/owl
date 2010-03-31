@@ -18,6 +18,10 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Point3d;
 
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
+import owl.core.util.FileFormatError;
+
 
 /**
  * A single chain pdb protein structure loaded from an mmCIF file or downloaded from the PDB FTP site 

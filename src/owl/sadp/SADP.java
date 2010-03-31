@@ -6,9 +6,9 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.PairwiseAlignmentConverter;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseAlignmentConverter;
 import owl.core.util.IntPairComparator;
 import owl.core.util.actionTools.Retriever;
 
@@ -686,7 +686,7 @@ public class SADP {
 	 * @param tag1  name of the first contact map to be taken as the sequence name tag resulting Alignment object
 	 * @param tag2  name of the second contact map 
 	 */
-	public Alignment getAlignment( String tag1, String tag2 ) 
+	public MultipleSequenceAlignment getAlignment( String tag1, String tag2 ) 
 	throws AlignmentConstructionError {
 
 		ContactMap[] cm = new ContactMap[2];
@@ -853,7 +853,7 @@ public class SADP {
 			sadp.show();
 
 			// prints pseudo sequence alignment
-			Alignment ali = sadp.getAlignment(args[0], args[1]);
+			MultipleSequenceAlignment ali = sadp.getAlignment(args[0], args[1]);
 			Collection<String> tags = ali.getTags();
 			Iterator<String> it = tags.iterator();
 			while( it.hasNext() ) {

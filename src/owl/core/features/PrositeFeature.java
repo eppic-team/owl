@@ -1,7 +1,7 @@
 package owl.core.features;
 
-import owl.core.structure.PrositeHit;
-import owl.core.structure.PrositeScanner;
+import owl.core.connections.PrositeHit;
+import owl.core.connections.PrositeScanner;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 

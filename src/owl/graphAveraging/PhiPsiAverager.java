@@ -10,15 +10,15 @@ import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
 import owl.core.runners.DsspRunner;
-import owl.core.structure.Alignment;
-import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbfilePdb;
-import owl.core.structure.SecStrucElement;
-import owl.core.structure.SecondaryStructure;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
@@ -27,14 +27,14 @@ import owl.core.util.MySQLConnection;
 
 public class PhiPsiAverager {
 
-	private Alignment al;
+	private MultipleSequenceAlignment al;
 	private ArrayList<TemplateWithPhiPsi> templates;
 	
 	// these 2 are set when either getConsensusPhiPsiOnTarget or getConsensusPhiPsi are called.
 	private double threshold;
 	private int angleInterval;
 
-	public PhiPsiAverager(TemplateList templates, Alignment aln) {
+	public PhiPsiAverager(TemplateList templates, MultipleSequenceAlignment aln) {
 
 		this.al = aln;
 		if (!templates.isPdbDataLoaded()) {
@@ -460,7 +460,7 @@ public class PhiPsiAverager {
 		TemplateList templates = new TemplateList(templatesFile);
 		templates.loadPdbData(conn, pdbaseDb);
 		
-		Alignment aln = new Alignment(alnFile.getAbsolutePath(),"FASTA");
+		MultipleSequenceAlignment aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(),"FASTA");
 		System.out.println("Secondary structure matching: ");
 		aln.addSecStructAnnotation(templates, "/project/StruPPi/bin/dssp");
 		aln.writeWithSecStruct(System.out, targetTag, psipredFile , true); 

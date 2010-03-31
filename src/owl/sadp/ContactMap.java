@@ -1,9 +1,9 @@
 package owl.sadp;
 import java.util.StringTokenizer;
 
-import owl.core.structure.RIGEdge;
-import owl.core.structure.RIGNode;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 
 import edu.uci.ics.jung.graph.util.Pair;
 

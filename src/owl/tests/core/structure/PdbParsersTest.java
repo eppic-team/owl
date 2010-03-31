@@ -21,14 +21,14 @@ import org.junit.Test;
 
 import owl.core.structure.AAinfo;
 import owl.core.structure.CiffilePdb;
-import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbaseInconsistencyError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
-import owl.core.structure.SecondaryStructure;
+import owl.core.structure.features.SecondaryStructure;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 
 

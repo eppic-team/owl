@@ -3,8 +3,8 @@ import gnu.getopt.Getopt;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import owl.core.structure.DbRIGraph;
-import owl.core.structure.GraphIdNotFoundError;
+import owl.core.structure.graphs.DbRIGraph;
+import owl.core.structure.graphs.GraphIdNotFoundError;
 import owl.core.util.MySQLConnection;
 
 //import proteinstructure.CiffilePdb;

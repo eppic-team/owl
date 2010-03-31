@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
+import owl.core.runners.MaxClusterRunner;
+import owl.core.runners.MaxClusterRunner.ScoreType;
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
-import owl.core.structure.MaxClusterRunner;
-import owl.core.structure.MaxClusterRunner.ScoreType;
 
 
 

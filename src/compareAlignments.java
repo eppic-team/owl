@@ -2,22 +2,22 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.FileFormatError;
-import owl.core.structure.PairwiseSequenceAlignment;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.util.FileFormatError;
 
 
 
 public class compareAlignments {
 
 	public static int doCompare(File al1File, File al2File, PrintStream out) {
-		Alignment al1 = null;
-		Alignment al2 = null;
+		MultipleSequenceAlignment al1 = null;
+		MultipleSequenceAlignment al2 = null;
 		try {
-			al1 = new Alignment(al1File.getAbsolutePath(), Alignment.FASTAFORMAT);
-			al2 = new Alignment(al2File.getAbsolutePath(), Alignment.FASTAFORMAT);
+			al1 = new MultipleSequenceAlignment(al1File.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
+			al2 = new MultipleSequenceAlignment(al2File.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
 			
 			for(String tag:al1.getTags()) {
 				//out.println(tag);

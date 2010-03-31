@@ -5,6 +5,7 @@ import java.util.*;
 import java.io.*;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 

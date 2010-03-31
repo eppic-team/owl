@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.embed.Bound;
 import owl.embed.Reconstructer;

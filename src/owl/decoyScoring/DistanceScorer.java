@@ -16,15 +16,15 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.AIGEdge;
-import owl.core.structure.AIGNode;
-import owl.core.structure.AIGraph;
-import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
+import owl.core.structure.graphs.AIGEdge;
+import owl.core.structure.graphs.AIGNode;
+import owl.core.structure.graphs.AIGraph;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 
 

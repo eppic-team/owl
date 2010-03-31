@@ -6,12 +6,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import owl.core.runners.TcoffeeError;
+import owl.core.runners.TcoffeeRunner;
 import owl.core.sequence.Sequence;
-import owl.core.sequence.TcoffeeError;
-import owl.core.sequence.TcoffeeRunner;
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.FileFormatError;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.util.FileFormatError;
 
 
 public class TargetToTemplatesAlignment {
@@ -24,28 +24,28 @@ public class TargetToTemplatesAlignment {
 	
 	// members
 	private Sequence seq;
-	private Alignment templatesAln;
+	private MultipleSequenceAlignment templatesAln;
 	private String baseName;
 	private File outDir;
 	
 	
-	public TargetToTemplatesAlignment(Sequence seq, Alignment templatesAln,String baseName, File outDir) {
+	public TargetToTemplatesAlignment(Sequence seq, MultipleSequenceAlignment templatesAln,String baseName, File outDir) {
 		this.seq = seq;
 		this.templatesAln = templatesAln;
 		this.baseName = baseName;
 		this.outDir = outDir;
 	}
 
-	public Alignment run() throws TcoffeeError, IOException {
+	public MultipleSequenceAlignment run() throws TcoffeeError, IOException {
 		File tcofLogFile = new File(outDir, baseName+".tcof.log");
 		
 		TcoffeeRunner tcr = new TcoffeeRunner(TCOFPROG,tcofLogFile);
-		Alignment al = tcr.alignSequence2Profile(seq, templatesAln);
+		MultipleSequenceAlignment al = tcr.alignSequence2Profile(seq, templatesAln);
 
 		return al;
 	}
 	
-	public static void writeTargetToTemplAl(File outDir, String baseName, Alignment al) throws IOException {
+	public static void writeTargetToTemplAl(File outDir, String baseName, MultipleSequenceAlignment al) throws IOException {
 		File alOutFile = new File(outDir, baseName+TARGET2TEMPL_SUFFIX);
 		PrintStream alOut = new PrintStream(alOutFile);
 		al.writeFasta(alOut, 80, true);
@@ -111,9 +111,9 @@ public class TargetToTemplatesAlignment {
 			System.exit(1);
 		}
 		
-		Alignment templatesAln = null;
+		MultipleSequenceAlignment templatesAln = null;
 		try {
-			templatesAln = new Alignment(tempsAlnFile.getAbsolutePath(),Alignment.FASTAFORMAT);
+			templatesAln = new MultipleSequenceAlignment(tempsAlnFile.getAbsolutePath(),MultipleSequenceAlignment.FASTAFORMAT);
 		} catch (IOException e) {
 			System.err.println("Problem while reading templates alignment file "+tempsAlnFile+". Error: "+e.getMessage());
 			System.exit(1);
@@ -126,7 +126,7 @@ public class TargetToTemplatesAlignment {
 		}
 		TargetToTemplatesAlignment ttAln = new TargetToTemplatesAlignment(seq,templatesAln,baseName,outDir);
 		try {
-			Alignment al = ttAln.run();
+			MultipleSequenceAlignment al = ttAln.run();
 			writeTargetToTemplAl(outDir, baseName, al);
 		} catch (TcoffeeError e) {
 			System.err.println("Problem while performing target to templates alignment. Error: "+e.getMessage());

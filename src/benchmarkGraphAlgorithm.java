@@ -7,7 +7,7 @@ import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
 

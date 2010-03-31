@@ -2,9 +2,9 @@ import java.io.File;
 import java.io.IOException;
 
 import owl.core.sequence.Sequence;
-import owl.core.structure.FileFormatError;
-import owl.core.structure.PairwiseSequenceAlignment;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.util.FileFormatError;
 
 
 

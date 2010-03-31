@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.MySQLConnection;
 
 

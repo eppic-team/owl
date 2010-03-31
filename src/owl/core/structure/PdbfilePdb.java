@@ -12,6 +12,10 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Point3d;
 
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
+import owl.core.util.FileFormatError;
+
 /**
  * A single chain PDB protein structure read from a PDB file or CASP TS file
  * We are not tolerant to errors in PDB files, we don't accept PDB files if:

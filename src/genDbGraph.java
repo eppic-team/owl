@@ -14,8 +14,8 @@ import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
-import owl.core.structure.RIGraph;
-import owl.core.structure.SecStrucElement;
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
 

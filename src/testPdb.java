@@ -2,6 +2,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 
 import edu.uci.ics.jung.graph.util.Pair;
 

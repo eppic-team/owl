@@ -5,15 +5,15 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.PairwiseSequenceAlignment;
-import owl.core.structure.RIGEdge;
-import owl.core.structure.RIGEnsemble;
-import owl.core.structure.RIGNode;
-import owl.core.structure.RIGraph;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.TemplateList;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGEnsemble;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.Goodies;
 import owl.core.util.IntPairComparator;
 
@@ -32,7 +32,7 @@ public class GraphAverager {
 
 	/*--------------------------- member variables --------------------------*/
 	
-	private Alignment al;			// alignment containing the graphs below
+	private MultipleSequenceAlignment al;			// alignment containing the graphs below
 	private TreeMap<String,RIGraph> templateGraphs;	// template graphs identified by tag-string
 	private String targetTag;		// id of target sequence in alignment, or null if no target specified
 	private String sequence;		// sequence of the final consensus graph, dummy sequence if targetTag=null
@@ -116,7 +116,7 @@ public class GraphAverager {
 		}
 		// create trivial alignment
 		try {
-			this.al = new Alignment(sequences);
+			this.al = new MultipleSequenceAlignment(sequences);
 		} catch (AlignmentConstructionError e) {
 			System.err.println("Could not create alignment: " + e.getMessage());
 		}
@@ -134,7 +134,7 @@ public class GraphAverager {
 	 * and thus contain only a partial target sequence)
 	 * @throws GraphAveragerError if sequences in alignment and templates don't match
 	 */
-	public GraphAverager(Alignment al, TemplateList templates, String targetTag, String targetSeq) throws GraphAveragerError {
+	public GraphAverager(MultipleSequenceAlignment al, TemplateList templates, String targetTag, String targetSeq) throws GraphAveragerError {
 		this.al = al;
 		this.templateGraphs = templates.getRIGraphs();
 		this.targetTag = targetTag;
@@ -156,7 +156,7 @@ public class GraphAverager {
 	 * @throws GraphAveragerError if sequences in alignment and templates don't match or if 
 	 * problems occur while adding dummy sequence to given alignment
 	 */
-	public GraphAverager(Alignment al, TemplateList templates) throws GraphAveragerError {
+	public GraphAverager(MultipleSequenceAlignment al, TemplateList templates) throws GraphAveragerError {
 		this.sequence = makeDummySequence(al.getAlignmentLength());
 		this.targetTag = makeDummyTag();
 		try {

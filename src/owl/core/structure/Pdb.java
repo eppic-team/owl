@@ -33,6 +33,21 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.structure.features.CatalSiteSet;
+import owl.core.structure.features.CatalyticSite;
+import owl.core.structure.features.EC;
+import owl.core.structure.features.ECRegion;
+import owl.core.structure.features.Scop;
+import owl.core.structure.features.ScopRegion;
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.graphs.AIGEdge;
+import owl.core.structure.graphs.AIGNode;
+import owl.core.structure.graphs.AIGraph;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
+import owl.core.util.Box;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -1470,7 +1485,7 @@ public class Pdb {
 	 * @param name2  sequence tag og the second structure in the alignment
 	 * @return the difference distance map
 	 */
-	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, Alignment ali, String name1, String name2) {
+	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, MultipleSequenceAlignment ali, String name1, String name2) {
 
 		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calcDistMatrix(contactType2);
 		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calcDistMatrix(contactType1);

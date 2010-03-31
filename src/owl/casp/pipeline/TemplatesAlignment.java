@@ -7,11 +7,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.PaulStructAligner;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.PdbLoadError;
-import owl.core.structure.StructAlignmentError;
 import owl.core.structure.TemplateList;
+import owl.core.structure.alignment.PaulStructAligner;
+import owl.core.structure.alignment.StructAlignmentError;
 import owl.core.util.MySQLConnection;
 
 
@@ -60,14 +60,14 @@ public class TemplatesAlignment {
 	 *  final alignment 
 	 * @throws StructAlignmentError if the structural aligner fails to run
 	 */	
-	public Alignment run() throws IOException, StructAlignmentError {
+	public MultipleSequenceAlignment run() throws IOException, StructAlignmentError {
 		
 		File paulLogFile = new File(outDir,baseName+".paul.log");
 		File alOutFile = new File(outDir,baseName+".templates_aln.fasta"); 
 		
 		PaulStructAligner paulSA = new PaulStructAligner(PAUL_PROG, paulMode, paulLogFile);
 		
-		Alignment al = paulSA.alignStructures(templates);
+		MultipleSequenceAlignment al = paulSA.alignStructures(templates);
 		PrintStream alOut = new PrintStream(alOutFile);
 		al.writeFasta(alOut, 80, true);
 		

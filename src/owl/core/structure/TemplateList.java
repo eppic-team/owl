@@ -14,10 +14,11 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.sequence.BlastHit;
-import owl.core.sequence.BlastHitList;
-import owl.core.sequence.GTGHit;
-import owl.core.sequence.GTGHitList;
+import owl.core.connections.GTGHit;
+import owl.core.connections.GTGHitList;
+import owl.core.runners.blast.BlastHit;
+import owl.core.runners.blast.BlastHitList;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
 

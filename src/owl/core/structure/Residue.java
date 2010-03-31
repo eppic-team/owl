@@ -8,6 +8,8 @@ import java.util.TreeMap;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 
+import owl.core.structure.features.SecStrucElement;
+
 /**
  * A class representing a residue as part of a PDB protein structure 
  * @author duarte

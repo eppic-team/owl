@@ -8,8 +8,8 @@ import java.io.PrintStream;
 import java.util.TreeMap;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.SecStrucElement;
-import owl.core.structure.SecondaryStructure;
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
 
 
 /**

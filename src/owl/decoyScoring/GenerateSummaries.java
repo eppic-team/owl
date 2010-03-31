@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeMap;
 
-import owl.core.structure.FileFormatError;
+import owl.core.util.FileFormatError;
 import owl.core.util.RegexFileFilter;
 
 

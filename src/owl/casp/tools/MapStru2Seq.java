@@ -9,14 +9,14 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 
 import owl.core.sequence.Sequence;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.CiffilePdb;
-import owl.core.structure.FileFormatError;
-import owl.core.structure.PairwiseSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.util.FileFormatError;
 
 
 /**

@@ -6,12 +6,14 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.embed.SparseMatrix;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-public class ContactMatrix extends owl.core.structure.RIGraph {
+public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 	
 	/**
 	 * 

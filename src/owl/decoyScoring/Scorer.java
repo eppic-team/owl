@@ -10,8 +10,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.AAinfo;
-import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 
 

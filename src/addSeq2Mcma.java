@@ -1,8 +1,8 @@
 import java.io.*;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.FileFormatError;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.util.FileFormatError;
 
 
 /**
@@ -12,11 +12,11 @@ import owl.core.structure.FileFormatError;
 public class addSeq2Mcma {
 
 	public static int addSequence(File alFile, File seqFile, PrintStream out) {
-		Alignment al = null;
-		Alignment seqs = null;
+		MultipleSequenceAlignment al = null;
+		MultipleSequenceAlignment seqs = null;
 		try {
-			al = new Alignment(alFile.getAbsolutePath(), Alignment.FASTAFORMAT);
-			seqs = new Alignment(seqFile.getAbsolutePath(), Alignment.FASTAFORMAT);
+			al = new MultipleSequenceAlignment(alFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
+			seqs = new MultipleSequenceAlignment(seqFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
 			
 			for(String tag:al.getTags()) {
 				out.println(">" + tag);

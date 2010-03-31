@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.FileFormatError;
+import owl.core.util.FileFormatError;
 
 
 

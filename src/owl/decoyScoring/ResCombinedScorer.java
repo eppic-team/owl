@@ -3,9 +3,9 @@ package owl.decoyScoring;
 import java.io.File;
 import java.io.IOException;
 
-import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatError;
 
 
 public class ResCombinedScorer extends Scorer {

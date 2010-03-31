@@ -3,13 +3,13 @@ package owl.casp.benchmarking;
 import java.util.*;
 import java.io.*;
 
-import owl.core.structure.MaxClusterRunner;
+import owl.core.runners.MaxClusterRunner;
+import owl.core.runners.MaxClusterRunner.MaxClusterRow;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
-import owl.core.structure.PredEval;
-import owl.core.structure.RIGraph;
-import owl.core.structure.MaxClusterRunner.MaxClusterRow;
+import owl.core.structure.graphs.GraphComparisonResult;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.StreamGobbler;
 
 
@@ -209,7 +209,7 @@ public class Benchmarking {
 						// generate graph
 						RIGraph rig = pdb.getRIGraph("Cb", 8.0);
 						// compare graph to answer
-						PredEval eval = rig.evaluatePrediction(answerGraph);
+						GraphComparisonResult eval = rig.evaluatePrediction(answerGraph);
 						double score = 100.0 * (eval.accuracy + eval.coverage) / 2;
 						// generate maxClusterRow
 						MaxClusterRunner.MaxClusterRow resultRow = (new MaxClusterRunner(maxClusterExecutable)).new MaxClusterRow(fileName, idx, score);

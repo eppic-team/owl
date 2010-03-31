@@ -2,7 +2,7 @@ package owl.core.features;
 
 import java.util.TreeSet;
 
-import owl.core.structure.CatalyticSite;
+import owl.core.structure.features.CatalyticSite;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 

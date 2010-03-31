@@ -2,11 +2,11 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import owl.core.structure.FileFormatError;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.decoyScoring.AtomTypeScorer;
 import owl.decoyScoring.ResTypeScorer;

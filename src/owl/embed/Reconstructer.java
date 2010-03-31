@@ -7,9 +7,9 @@ import javax.vecmath.Vector3d;
 import owl.core.structure.AAinfo;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.RIGEdge;
-import owl.core.structure.RIGNode;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 
 import Jama.Matrix;
 

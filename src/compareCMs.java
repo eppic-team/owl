@@ -1,6 +1,7 @@
 import java.util.HashMap;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.RIGraph;
 
 
 public class compareCMs {

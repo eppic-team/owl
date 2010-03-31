@@ -4,9 +4,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Locale;
 
-import owl.core.runners.tinker.GromacsError;
-import owl.core.runners.tinker.GromacsMDP;
-import owl.core.runners.tinker.GromacsRunner;
+import owl.core.runners.gromacs.GromacsError;
+import owl.core.runners.gromacs.GromacsMDP;
+import owl.core.runners.gromacs.GromacsRunner;
 
 
 

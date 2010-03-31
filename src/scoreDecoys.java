@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 import owl.decoyScoring.DecoyScore;

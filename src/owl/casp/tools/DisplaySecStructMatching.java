@@ -6,7 +6,7 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Alignment;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.util.MySQLConnection;
 
 
@@ -62,7 +62,7 @@ public class DisplaySecStructMatching {
 		
 		MySQLConnection conn = new MySQLConnection();
 		
-		Alignment aln = new Alignment(alnFile.getAbsolutePath(),"FASTA");
+		MultipleSequenceAlignment aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(),"FASTA");
 
 		String targetTag = "";
 		Pattern p = Pattern.compile("(\\w+)\\..*"); // i.e. we take the basename of the file (everything before the first dot)

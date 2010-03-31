@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Iterator;
 
-import owl.core.sequence.BlastHit;
-import owl.core.sequence.GTGHit;
+import owl.core.connections.GTGHit;
+import owl.core.runners.blast.BlastHit;
+import owl.core.structure.features.ScopRegion;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
 
@@ -130,7 +132,7 @@ public class Template {
 			Iterator<ScopRegion> it = pdb.getScop().getIterator();
 			scopSccsString = "";
 			while (it.hasNext()) {
-				scopSccsString += it.next().sccs +", ";
+				scopSccsString += it.next().getSccs() +", ";
 			}
 			if (scopSccsString.contains(",")) // choping off the last comma if the string is not empty
 				scopSccsString = scopSccsString.substring(0, scopSccsString.length()-2); 

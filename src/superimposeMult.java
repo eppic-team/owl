@@ -7,13 +7,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.TreeMap;
 
-import owl.core.structure.Alignment;
-import owl.core.structure.AlignmentConstructionError;
-import owl.core.structure.AlignmentEvaluator;
-import owl.core.structure.FileFormatError;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.alignment.StructureAlignmentEvaluator;
+import owl.core.util.FileFormatError;
 
 
 /**
@@ -81,9 +81,9 @@ public class superimposeMult {
 		 } 
 
 		 // load alignment
-		 Alignment al = null;
+		 MultipleSequenceAlignment al = null;
 		 try {
-			 al = new Alignment(alignmentFileName, Alignment.FASTAFORMAT);
+			 al = new MultipleSequenceAlignment(alignmentFileName, MultipleSequenceAlignment.FASTAFORMAT);
 		 } catch (FileFormatError e) {
 			 System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			 System.exit(1);
@@ -113,9 +113,9 @@ public class superimposeMult {
 		 System.out.println("end = " + end);
 		 
 		 // create Evaluator
-		 AlignmentEvaluator alEv = null;
+		 StructureAlignmentEvaluator alEv = null;
 		 try {
-			 alEv = new AlignmentEvaluator(al, tag2pdb);
+			 alEv = new StructureAlignmentEvaluator(al, tag2pdb);
 		 } catch (IOException e) {
 			 System.err.println("Error creating PolyposeRunner: " + e.getMessage());
 			 System.exit(1);

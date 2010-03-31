@@ -4,6 +4,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 import owl.core.structure.*;
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.graphs.GraphComparisonResult;
+import owl.core.structure.graphs.RIGCommonNbhood;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGNbhood;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatError;
 
 
 import edu.uci.ics.jung.graph.util.EdgeType;
@@ -78,7 +86,7 @@ public class testJUNGframework {
 
 		// TEST of evaluate prediction
 		System.out.println("TEST eval prediction");
-		PredEval pev = graph.evaluatePrediction(graph2);
+		GraphComparisonResult pev = graph.evaluatePrediction(graph2);
 		pev.print();
 		
 		// TEST of isDirected()

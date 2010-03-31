@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-import owl.core.structure.FileFormatError;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 

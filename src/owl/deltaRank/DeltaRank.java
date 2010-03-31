@@ -6,9 +6,9 @@ import java.sql.Statement;
 import java.util.Collection;
 
 import owl.core.structure.AAinfo;
-import owl.core.structure.RIGNbhood;
-import owl.core.structure.RIGNode;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGNbhood;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
 import edu.uci.ics.jung.graph.util.Pair;

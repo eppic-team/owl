@@ -8,8 +8,8 @@ import java.util.ArrayList;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.RIGEnsemble;
-import owl.core.structure.RIGraph;
+import owl.core.structure.graphs.RIGEnsemble;
+import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.GraphAverager;

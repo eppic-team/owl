@@ -6,6 +6,11 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.*;
+import owl.core.structure.graphs.FileRIGraph;
+import owl.core.structure.graphs.RIGEdge;
+import owl.core.structure.graphs.RIGNode;
+import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 

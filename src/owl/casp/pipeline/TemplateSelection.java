@@ -18,21 +18,21 @@ import java.util.regex.Pattern;
 
 import org.xml.sax.SAXException;
 
-import owl.core.sequence.BlastError;
-import owl.core.sequence.BlastHitList;
-import owl.core.sequence.BlastRunner;
-import owl.core.sequence.BlastUtils;
-import owl.core.sequence.BlastXMLParser;
-import owl.core.sequence.GTGHitList;
-import owl.core.sequence.GTGParser;
-import owl.core.sequence.PsipredError;
-import owl.core.sequence.PsipredRunner;
+import owl.core.connections.GTGHitList;
+import owl.core.connections.GTGParser;
+import owl.core.runners.PsipredError;
+import owl.core.runners.PsipredRunner;
+import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastHitList;
+import owl.core.runners.blast.BlastRunner;
+import owl.core.runners.blast.BlastUtils;
+import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.Sequence;
-import owl.core.structure.FileFormatError;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
+import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 
 
