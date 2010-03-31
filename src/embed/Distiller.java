@@ -11,18 +11,19 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.TreeSet;
 
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGEnsemble;
+import owl.core.structure.RIGraph;
+import owl.core.util.IntPairSet;
+
 import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.GraphAverager;
 import graphAveraging.GraphAveragerError;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGEnsemble;
-import proteinstructure.RIGraph;
-import tools.IntPairSet;
 
 public class Distiller {
 	

@@ -9,10 +9,11 @@ import java.util.TreeMap;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.util.Goodies;
 
-import tools.Goodies;
+
 
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;

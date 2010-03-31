@@ -8,15 +8,16 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 
-import proteinstructure.CiffilePdb;
-import proteinstructure.FileFormatError;
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import sequence.Sequence;
+import owl.core.sequence.Sequence;
+import owl.core.structure.CiffilePdb;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+
 
 /**
  * This class is used to map Casp answers from the PDB to the original target sequences,

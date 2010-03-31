@@ -1,11 +1,13 @@
 package embed.contactmaps;
 
 
-import proteinstructure.*;
 
 import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
+
+import owl.core.structure.*;
+import owl.core.util.*;
 
 //import edu.uci.ics.jung.*;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -19,8 +21,6 @@ import Jama.*;
 
 /*import embed.BoundsSmoother.BoundsDigraphNode;
 import embed.BoundsSmoother.SimpleEdge;*/
-import tools.*;
-//import org.jgap.Chromosome;
 
 /**
  * This class is intended to deal with contact maps of a given protein. These contact maps contain information about the

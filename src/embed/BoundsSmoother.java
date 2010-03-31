@@ -7,13 +7,14 @@ import java.util.Random;
 
 import org.apache.commons.collections15.Transformer;
 
+import owl.core.structure.AAinfo;
+
 import Jama.Matrix;
 
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraDistance;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
-import proteinstructure.AAinfo;
 
 /**
  * Implementation of the bounds smoothing part of the EMBED algorithm of Crippen and Havel

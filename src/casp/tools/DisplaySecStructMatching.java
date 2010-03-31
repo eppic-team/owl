@@ -6,8 +6,9 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import proteinstructure.Alignment;
-import tools.MySQLConnection;
+import owl.core.structure.Alignment;
+import owl.core.util.MySQLConnection;
+
 
 public class DisplaySecStructMatching {
 	

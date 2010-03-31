@@ -3,14 +3,15 @@ package casp.benchmarking;
 import java.util.*;
 import java.io.*;
 
-import proteinstructure.MaxClusterRunner;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.PredEval;
-import proteinstructure.RIGraph;
-import proteinstructure.MaxClusterRunner.MaxClusterRow;
-import tools.StreamGobbler;
+import owl.core.structure.MaxClusterRunner;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PredEval;
+import owl.core.structure.RIGraph;
+import owl.core.structure.MaxClusterRunner.MaxClusterRow;
+import owl.core.util.StreamGobbler;
+
 
 public class Benchmarking {
 	

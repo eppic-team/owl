@@ -11,17 +11,18 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
 
+import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+
 import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.ConsensusSquare;
 
-import proteinstructure.AAinfo;
-import proteinstructure.AminoAcid;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
 
 /**
  * Reads tinker's xyz file and pdb file (result of converting the xyz file using xyzpdb program) and

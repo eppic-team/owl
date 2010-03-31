@@ -23,35 +23,36 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import connections.ConsurfConnection;
+import owl.core.connections.ConsurfConnection;
+import owl.core.runners.DsspRunner;
+import owl.core.runners.NaccessRunner;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.Atom;
+import owl.core.structure.ConformationsNotSameSizeError;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.FileRIGraph;
+import owl.core.structure.MaxClusterRunner;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+import owl.core.structure.Residue;
+import owl.core.structure.SecondaryStructure;
+import owl.core.structure.TemplateList;
+import owl.core.util.Interval;
+import owl.core.util.IntervalSet;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.Atom;
-import proteinstructure.ConformationsNotSameSizeError;
-import proteinstructure.FileRIGraph;
-import proteinstructure.FileFormatError;
-import proteinstructure.MaxClusterRunner;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
-import proteinstructure.Residue;
-import proteinstructure.SecondaryStructure;
-import proteinstructure.TemplateList;
-import runners.DsspRunner;
-import runners.NaccessRunner;
 import tests.TestsSetup;
-import tools.Interval;
-import tools.IntervalSet;
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
 
 public class PdbTest {
 

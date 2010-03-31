@@ -6,20 +6,21 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import connections.ConsurfConnection;
+import owl.core.connections.ConsurfConnection;
+import owl.core.runners.DsspRunner;
+import owl.core.runners.NaccessRunner;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGraph;
+import owl.core.structure.SecStrucElement;
+import owl.core.util.MySQLConnection;
+
 
 
 //import proteinstructure.CiffilePdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.RIGraph;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.SecStrucElement;
-import runners.DsspRunner;
-import runners.NaccessRunner;
-import tools.MySQLConnection;
 
 
 public class genDbGraph {

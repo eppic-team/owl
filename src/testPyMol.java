@@ -3,9 +3,10 @@ import java.io.PrintWriter;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 
-import tools.PyMol;
-import tools.PymolServerOutputStream;
-import tools.MultiOutputStream;
+import owl.core.util.MultiOutputStream;
+import owl.core.util.PyMol;
+import owl.core.util.PymolServerOutputStream;
+
 
 public class testPyMol {
 

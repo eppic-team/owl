@@ -16,24 +16,25 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import proteinstructure.AAinfo;
-import proteinstructure.CiffilePdb;
-import proteinstructure.ConformationsNotSameSizeError;
-import proteinstructure.FileRIGraph;
-import proteinstructure.FileFormatError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGraph;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.SecondaryStructure;
+import owl.core.structure.AAinfo;
+import owl.core.structure.CiffilePdb;
+import owl.core.structure.ConformationsNotSameSizeError;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.FileRIGraph;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGraph;
+import owl.core.structure.SecondaryStructure;
+import owl.core.util.Interval;
+import owl.core.util.IntervalSet;
+import owl.core.util.MySQLConnection;
+
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;
-import tools.Interval;
-import tools.IntervalSet;
-import tools.MySQLConnection;
 
 
 public class reconstruct {

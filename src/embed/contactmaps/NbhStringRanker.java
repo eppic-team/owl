@@ -4,11 +4,12 @@ import java.sql.*;
 import java.util.*;
 import java.io.*;
 
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.util.RegexFileFilter;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import tools.RegexFileFilter;
 
 //import tools.*;
 
@@ -70,7 +71,7 @@ import tools.RegexFileFilter;
  * standard contact map file format
  *
  */
-public class NbhStringRanker extends tools.MySQLConnection {
+public class NbhStringRanker extends owl.core.util.MySQLConnection {
 	
 	/*---------------------------------------------------members-----------------------------------------------------*/
 	

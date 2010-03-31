@@ -5,9 +5,10 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import owl.core.util.PymolServerOutputStream;
+
 //import org.junit.Test;
 
-import tools.PymolServerOutputStream;
 
 import static org.junit.Assert.*;
 

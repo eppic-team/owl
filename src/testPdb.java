@@ -1,9 +1,10 @@
 import java.io.IOException;
 import java.sql.SQLException;
 
+import owl.core.structure.*;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
-import proteinstructure.*;
 
 /**
  * An example program for some of the classes in the proteinstructure package (Pdb, RIGraph, ...) 

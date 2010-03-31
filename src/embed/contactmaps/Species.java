@@ -4,9 +4,10 @@ import java.sql.SQLException;
 import java.util.*;
 import java.io.*;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import tools.RegexFileFilter;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.util.RegexFileFilter;
+
 import edu.uci.ics.jung.graph.util.*;
 
 /**

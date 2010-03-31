@@ -1,8 +1,9 @@
 import java.io.File;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.Residue;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.Residue;
+
 
 /**
  * Executable class to check the chirality of amino acids of a given PDB file

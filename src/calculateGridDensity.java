@@ -1,8 +1,9 @@
 import java.io.*;
 import java.sql.*;
 import java.util.*;
-import proteinstructure.*;
-import tools.MySQLConnection;
+
+import owl.core.structure.*;
+import owl.core.util.MySQLConnection;
 
 // TODO:
 // - how will the distribution look like for randomly drawing from the unit square? (use Ioannis' random graphs?)

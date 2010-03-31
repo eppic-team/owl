@@ -2,11 +2,8 @@ package tests.tools;
 
 import org.junit.Test;
 
-import tools.ColoredStrings;
-//import tools.ColoredStrings.AnsiBackground;
-//import tools.ColoredStrings.AnsiDecoration;
-//import tools.ColoredStrings.AnsiForeground;
-//import tools.ColoredStrings.AnsiIntensity;
+import owl.core.util.ColoredStrings;
+
 
 public class ColoredStringsTest {
 	

@@ -7,16 +7,17 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import proteinstructure.FileFormatError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.decoyScoring.DecoyScore;
-import proteinstructure.decoyScoring.DecoyScoreSet;
-import proteinstructure.decoyScoring.DecoyScoreSetsGroup;
-import proteinstructure.decoyScoring.Scorer;
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.decoyScoring.DecoyScore;
+import owl.core.structure.decoyScoring.DecoyScoreSet;
+import owl.core.structure.decoyScoring.DecoyScoreSetsGroup;
+import owl.core.structure.decoyScoring.Scorer;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 
 
 public class scoreDecoys {

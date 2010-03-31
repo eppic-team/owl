@@ -6,8 +6,9 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.*;
 
+import owl.core.util.MySQLConnection;
+
 import edu.uci.ics.jung.graph.SparseGraph;
-import tools.MySQLConnection;
 
 public class PPIGraph extends SparseGraph<PPINode, PPIEdge> {
 	

@@ -1,11 +1,12 @@
 import java.io.File;
 import java.io.IOException;
 
-import proteinstructure.FileFormatError;
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.sequence.Sequence;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 
-import sequence.Sequence;
+
 
 
 public class alignSeq {

@@ -4,10 +4,11 @@ import java.sql.SQLException;
 import java.util.*;
 import java.io.*;
 
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+
 //import embed.SparseMatrix;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
 
 public class ContactMapEvolver {
 	

@@ -7,7 +7,8 @@ import java.io.PrintWriter;
 import java.sql.*;
 import java.util.*;
 
-import tools.MySQLConnection;
+import owl.core.util.MySQLConnection;
+
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 
 public class LiteratureGraph extends DirectedSparseGraph<Article, Reference> {	

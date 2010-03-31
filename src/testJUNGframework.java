@@ -3,11 +3,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import owl.core.structure.*;
+
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
 
-import proteinstructure.*;
 
 
 public class testJUNGframework {

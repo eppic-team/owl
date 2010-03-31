@@ -6,8 +6,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+
 import edu.uci.ics.jung.graph.util.*;
 
 /**

@@ -7,13 +7,14 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.TreeMap;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.AlignmentEvaluator;
-import proteinstructure.FileFormatError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.AlignmentEvaluator;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbfilePdb;
+
 
 /**
  * Executable for superimposing multiple PDB structures given a multiple alignment

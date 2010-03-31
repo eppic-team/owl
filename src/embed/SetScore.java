@@ -6,15 +6,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGEnsemble;
+import owl.core.structure.RIGraph;
+import owl.core.util.IntPairSet;
+import owl.core.util.MySQLConnection;
+
 import edu.uci.ics.jung.graph.util.Pair;
 import graphAveraging.GraphAverager;
 import graphAveraging.GraphAveragerError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGEnsemble;
-import proteinstructure.RIGraph;
-import tools.IntPairSet;
-import tools.MySQLConnection;
 
 /**
  * Class to store a IntPairSet (set of contacts) together with its score.

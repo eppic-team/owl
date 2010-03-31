@@ -9,20 +9,21 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
-import proteinstructure.Alignment;
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.Pdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.SecStrucElement;
-import proteinstructure.SecondaryStructure;
-import proteinstructure.Template;
-import proteinstructure.TemplateList;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import runners.DsspRunner;
-import tools.Goodies;
-import tools.Interval;
-import tools.IntervalSet;
-import tools.MySQLConnection;
+import owl.core.runners.DsspRunner;
+import owl.core.structure.Alignment;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.SecStrucElement;
+import owl.core.structure.SecondaryStructure;
+import owl.core.structure.Template;
+import owl.core.structure.TemplateList;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.util.Goodies;
+import owl.core.util.Interval;
+import owl.core.util.IntervalSet;
+import owl.core.util.MySQLConnection;
+
 
 public class PhiPsiAverager {
 

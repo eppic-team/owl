@@ -18,23 +18,24 @@ import java.util.regex.Pattern;
 
 import org.xml.sax.SAXException;
 
-import proteinstructure.FileFormatError;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.Template;
-import proteinstructure.TemplateList;
+import owl.core.sequence.BlastError;
+import owl.core.sequence.BlastHitList;
+import owl.core.sequence.BlastRunner;
+import owl.core.sequence.BlastUtils;
+import owl.core.sequence.BlastXMLParser;
+import owl.core.sequence.GTGHitList;
+import owl.core.sequence.GTGParser;
+import owl.core.sequence.PsipredError;
+import owl.core.sequence.PsipredRunner;
+import owl.core.sequence.Sequence;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.Template;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
 
-import sequence.BlastError;
-import sequence.BlastHitList;
-import sequence.BlastRunner;
-import sequence.BlastUtils;
-import sequence.BlastXMLParser;
-import sequence.GTGHitList;
-import sequence.GTGParser;
-import sequence.PsipredError;
-import sequence.PsipredRunner;
-import sequence.Sequence;
-import tools.MySQLConnection;
+
 
 /**
  * First step of our homology modelling pipeline

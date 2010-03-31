@@ -6,12 +6,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.FileFormatError;
-import sequence.Sequence;
-import sequence.TcoffeeError;
-import sequence.TcoffeeRunner;
+import owl.core.sequence.Sequence;
+import owl.core.sequence.TcoffeeError;
+import owl.core.sequence.TcoffeeRunner;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.FileFormatError;
+
 
 public class TargetToTemplatesAlignment {
 

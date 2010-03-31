@@ -1,6 +1,7 @@
 import java.sql.*;
 
-import tools.ClusterConnection;
+import owl.core.util.ClusterConnection;
+
 
 public class testClusterConnection {
 

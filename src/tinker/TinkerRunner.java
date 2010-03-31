@@ -33,18 +33,19 @@ import org.ggf.drmaa.JobTemplate;
 import org.ggf.drmaa.Session;
 import org.ggf.drmaa.SessionFactory;
 
+import owl.core.structure.AAinfo;
+import owl.core.structure.MaxClusterRunner;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGEnsemble;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+import owl.core.util.IntPairSet;
+
 import actionTools.TinkerStatusNotifier;
 
-import proteinstructure.AAinfo;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.MaxClusterRunner;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGEnsemble;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
-import tools.IntPairSet;
 
 public class TinkerRunner {
 	

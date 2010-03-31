@@ -5,6 +5,10 @@ import java.sql.SQLException;
 //import java.util.ArrayList;
 import java.util.*;
 
+import owl.core.structure.*;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 import edu.uci.ics.jung.graph.util.Pair;
 //import java.util.HashMap;
 //import java.util.HashSet;
@@ -14,10 +18,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import Jama.Matrix;
 
-import proteinstructure.*;
 
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
 
 /**
  * Class containing static methods to score contact map subsets.

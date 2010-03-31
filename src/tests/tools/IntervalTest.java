@@ -12,7 +12,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import tools.Interval;
+import owl.core.util.Interval;
+
 
 public class IntervalTest {
 

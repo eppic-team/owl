@@ -19,17 +19,18 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import proteinstructure.AAinfo;
-import proteinstructure.FileFormatError;
-import proteinstructure.CiffilePdb;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbaseInconsistencyError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.SecondaryStructure;
-import tools.MySQLConnection;
+import owl.core.structure.AAinfo;
+import owl.core.structure.CiffilePdb;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbaseInconsistencyError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.SecondaryStructure;
+import owl.core.util.MySQLConnection;
+
 
 public class PdbParsersTest {
 	

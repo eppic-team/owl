@@ -1,5 +1,6 @@
-import proteinstructure.*;
 import java.util.HashMap;
+
+import owl.core.structure.*;
 
 
 public class compareCMs {

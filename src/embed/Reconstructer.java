@@ -4,14 +4,15 @@ import java.io.File;
 
 import javax.vecmath.Vector3d;
 
+import owl.core.structure.AAinfo;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+
 import Jama.Matrix;
 
-import proteinstructure.AAinfo;
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**

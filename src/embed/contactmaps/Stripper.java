@@ -1,7 +1,5 @@
 package embed.contactmaps;
 
-import proteinstructure.*;
-import tools.MySQLConnection;
 import edu.uci.ics.jung.graph.util.*;
 import embed.Bound;
 import embed.Reconstructer;
@@ -12,6 +10,9 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.*;
+
+import owl.core.structure.*;
+import owl.core.util.MySQLConnection;
 
 /**
  * A class stripping contact maps, starting from a full contact map. All contacts are removed, ranked according to

@@ -3,7 +3,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeSet;
 
-import proteinstructure.Pdb;
+import owl.core.structure.Pdb;
+
 
 
 public class writePerAtomDistancesToBFactor {

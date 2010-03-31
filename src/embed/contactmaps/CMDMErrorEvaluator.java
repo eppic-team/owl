@@ -3,10 +3,11 @@ package embed.contactmaps;
 import java.io.*;
 import java.sql.SQLException;
 
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.util.RegexFileFilter;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import tools.RegexFileFilter;
+
 
 public class CMDMErrorEvaluator implements Runnable {
 	

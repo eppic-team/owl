@@ -4,15 +4,16 @@ import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import tools.MySQLConnection;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import tools.RegexFileFilter;
 
 /**
  * This class is an interface class, that converts all contact map files with extensions '.cmap', '.indi' or '.ust' to one PyMol log files (with extension '.pml').

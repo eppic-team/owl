@@ -1,8 +1,9 @@
-import tools.MySQLConnection;
 
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
+
+import owl.core.util.MySQLConnection;
 
 /**
  * "Hello World" for a MySQLConnection to our MySQL server (talyn)

@@ -1,11 +1,12 @@
 package sadp;
 import java.util.StringTokenizer;
 
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
 
 /**
  * This class contains methods and fields to represent contact maps.  

@@ -2,7 +2,8 @@ package embed.contactmaps;
 
 import java.io.*;
 
-import tools.RegexFileFilter;
+import owl.core.util.RegexFileFilter;
+
 
 /**
  * Helper class, reads all kind of text files, to extract both the CMError and DMError and converts it

@@ -3,8 +3,9 @@ import java.util.LinkedHashMap;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+
 
 
 /**

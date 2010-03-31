@@ -4,10 +4,11 @@ import java.sql.*;
 import java.util.*;
 import java.io.*;
 
-import proteinstructure.*;
+import owl.core.structure.*;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 import edu.uci.ics.jung.graph.util.*;
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
 
 public class CompareIndis extends Demes {
 	

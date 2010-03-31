@@ -1,9 +1,10 @@
 import java.io.File;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
-import proteinstructure.TemplateList;
-import tools.MySQLConnection;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
+
 
 /**
  * Executable class to calculate volumes and surfaces for a list of pdb codes 

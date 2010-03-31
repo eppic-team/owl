@@ -3,9 +3,10 @@ package embed.contactmaps;
 import java.sql.SQLException;
 import java.util.Random;
 
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
 
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
+
 
 /**
  * This class deals with arrays of 'Individuals' instances. It compares two array entries, determines the entry with smaller error

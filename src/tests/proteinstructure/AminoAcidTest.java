@@ -9,8 +9,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import proteinstructure.AAinfo;
-import proteinstructure.AminoAcid;
+import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
+
 
 public class AminoAcidTest {
 

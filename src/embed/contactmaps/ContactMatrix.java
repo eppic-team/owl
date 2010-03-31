@@ -5,12 +5,13 @@ package embed.contactmaps;
 import java.sql.SQLException;
 import java.util.*;
 
+import owl.core.structure.*;
+import owl.core.util.MySQLConnection;
+
 import edu.uci.ics.jung.graph.util.Pair;
 import embed.SparseMatrix;
-import proteinstructure.*;
-import tools.MySQLConnection;
 
-public class ContactMatrix extends proteinstructure.RIGraph {
+public class ContactMatrix extends owl.core.structure.RIGraph {
 	
 	/**
 	 * 

@@ -7,8 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-import proteinstructure.MaxClusterRunner;
-import proteinstructure.MaxClusterRunner.ScoreType;
+import owl.core.structure.MaxClusterRunner;
+import owl.core.structure.MaxClusterRunner.ScoreType;
+
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;

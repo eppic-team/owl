@@ -4,14 +4,15 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGraph;
-import proteinstructure.TemplateList;
-import tools.MySQLConnection;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGraph;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
+
 
 
 public class genGraph {

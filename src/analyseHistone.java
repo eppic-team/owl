@@ -9,15 +9,16 @@ import java.util.TreeSet;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
-import proteinstructure.AminoAcid;
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
+import owl.core.structure.AminoAcid;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PolResidue;
+import owl.core.structure.Polymer;
+import owl.core.structure.Residue;
+import owl.core.util.Interval;
+import owl.core.util.IntervalSet;
+
 //import proteinstructure.PdbfilePdb;
-import proteinstructure.Polymer;
-import proteinstructure.PolResidue;
-import proteinstructure.Residue;
-import tools.Interval;
-import tools.IntervalSet;
 
 /**
  * Class to read a Histone molecule from a PDB file and output the coordinates 

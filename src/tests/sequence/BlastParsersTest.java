@@ -11,11 +11,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import sequence.BlastHit;
-import sequence.BlastHitList;
-import sequence.BlastRunner;
-import sequence.BlastTabularParser;
-import sequence.BlastXMLParser;
+import owl.core.sequence.BlastHit;
+import owl.core.sequence.BlastHitList;
+import owl.core.sequence.BlastRunner;
+import owl.core.sequence.BlastTabularParser;
+import owl.core.sequence.BlastXMLParser;
+
 
 
 /**

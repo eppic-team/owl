@@ -7,8 +7,9 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import proteinstructure.AAinfo;
-import proteinstructure.AminoAcid;
+import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
+
 
 /**
  * Class containing information (atom identities) parsed from 

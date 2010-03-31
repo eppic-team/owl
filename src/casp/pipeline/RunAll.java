@@ -15,23 +15,24 @@ import java.util.TreeMap;
 
 import org.xml.sax.SAXException;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.FileFormatError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbLoadError;
-import proteinstructure.RIGraph;
-import proteinstructure.StructAlignmentError;
-import proteinstructure.TemplateList;
-import sequence.BlastError;
-import sequence.BlastHit;
-import sequence.BlastHitList;
-import sequence.BlastXMLParser;
-import sequence.Sequence;
-import sequence.TcoffeeError;
+import owl.core.sequence.BlastError;
+import owl.core.sequence.BlastHit;
+import owl.core.sequence.BlastHitList;
+import owl.core.sequence.BlastXMLParser;
+import owl.core.sequence.Sequence;
+import owl.core.sequence.TcoffeeError;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.RIGraph;
+import owl.core.structure.StructAlignmentError;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
+
 import tinker.TinkerError;
 import tinker.TinkerRunner;
-import tools.MySQLConnection;
 
 
 public class RunAll {

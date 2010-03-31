@@ -4,23 +4,24 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.*;
 
+import owl.core.runners.DsspRunner;
+import owl.core.runners.NaccessRunner;
+import owl.core.structure.AminoAcid;
+import owl.core.structure.CatalSiteSet;
+import owl.core.structure.CatalyticSite;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+import owl.core.structure.SecStrucElement;
+
 import edu.uci.ics.jung.algorithms.shortestpath.Distance;
 import edu.uci.ics.jung.algorithms.shortestpath.UnweightedShortestPath;
 
-import proteinstructure.AminoAcid;
-import proteinstructure.CatalSiteSet;
-import proteinstructure.CatalyticSite;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
-import proteinstructure.SecStrucElement;
-import runners.DsspRunner;
-import runners.NaccessRunner;
 
 /**
  * Given a structure and a list of mutations, visualize the mutated sites on the structure

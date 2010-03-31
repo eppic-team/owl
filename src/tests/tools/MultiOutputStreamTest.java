@@ -10,8 +10,9 @@ import java.net.UnknownHostException;
 
 import org.junit.Test;
 
-import tools.MultiOutputStream;
-import tools.PymolServerOutputStream;
+import owl.core.util.MultiOutputStream;
+import owl.core.util.PymolServerOutputStream;
+
 
 public class MultiOutputStreamTest {
 

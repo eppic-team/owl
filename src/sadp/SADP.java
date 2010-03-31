@@ -6,14 +6,15 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.PairwiseAlignmentConverter;
+import owl.core.util.IntPairComparator;
+
 import edu.uci.ics.jung.graph.util.Pair;
 
 import actionTools.Retriever;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.PairwiseAlignmentConverter;
-import tools.IntPairComparator;
 
 
 /**

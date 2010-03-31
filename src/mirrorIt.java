@@ -2,9 +2,10 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+
 
 
 public class mirrorIt {

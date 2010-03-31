@@ -3,7 +3,8 @@ package graphAveraging;
 import java.util.ArrayList;
 import java.util.Collections;
 
-import tools.Interval;
+import owl.core.util.Interval;
+
 
 /**
  * A class to represent a consensus phi/psi angle interval.

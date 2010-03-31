@@ -14,20 +14,21 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.JUnitCore;
 
-import proteinstructure.Atom;
-import proteinstructure.ConformationsNotSameSizeError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.PdbfilePdb;
-import proteinstructure.RIGraph;
-import proteinstructure.Residue;
+import owl.core.structure.Atom;
+import owl.core.structure.ConformationsNotSameSizeError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbfilePdb;
+import owl.core.structure.RIGraph;
+import owl.core.structure.Residue;
+import owl.core.util.IntPairSet;
+import owl.core.util.MySQLConnection;
+
 
 import tinker.TinkerError;
 import tinker.TinkerRunner;
-import tools.IntPairSet;
-import tools.MySQLConnection;
 
 public class TinkerRunnerTest {
 

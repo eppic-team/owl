@@ -2,15 +2,16 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import proteinstructure.FileFormatError;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.TemplateList;
-import proteinstructure.decoyScoring.AtomTypeScorer;
-import proteinstructure.decoyScoring.ResTypeScorer;
-import proteinstructure.decoyScoring.Scorer;
-import tools.MySQLConnection;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.TemplateList;
+import owl.core.structure.decoyScoring.AtomTypeScorer;
+import owl.core.structure.decoyScoring.ResTypeScorer;
+import owl.core.structure.decoyScoring.Scorer;
+import owl.core.util.MySQLConnection;
+
 
 /**
  * Executable class to score a given list of PDB codes in a list file (first argument passed)

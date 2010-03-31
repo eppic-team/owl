@@ -10,15 +10,16 @@ import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.Arrays;
 
+import owl.core.structure.FileFormatError;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGraph;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
 
-import proteinstructure.FileFormatError;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGraph;
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
+
 
 /**
  * class to get the correlation function for the given error estimation method

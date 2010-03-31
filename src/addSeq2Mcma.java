@@ -1,8 +1,9 @@
 import java.io.*;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.FileFormatError;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.FileFormatError;
+
 
 /**
  * A script to add sequences to a raw MCMA alignment (which contains only the aligned positions

@@ -6,12 +6,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
 
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.TemplateList;
-import tools.MySQLConnection;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
+
 
 
 public class dumpseq {

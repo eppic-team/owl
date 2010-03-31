@@ -7,12 +7,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
 
-import proteinstructure.Alignment;
-import proteinstructure.PaulStructAligner;
-import proteinstructure.PdbLoadError;
-import proteinstructure.StructAlignmentError;
-import proteinstructure.TemplateList;
-import tools.MySQLConnection;
+import owl.core.structure.Alignment;
+import owl.core.structure.PaulStructAligner;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.StructAlignmentError;
+import owl.core.structure.TemplateList;
+import owl.core.util.MySQLConnection;
+
 
 public class TemplatesAlignment {
 	

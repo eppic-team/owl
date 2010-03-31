@@ -5,17 +5,18 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.*;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.RIGEdge;
-import proteinstructure.RIGEnsemble;
-import proteinstructure.RIGNode;
-import proteinstructure.RIGraph;
-import proteinstructure.TemplateList;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import tools.Goodies;
-import tools.IntPairComparator;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.RIGEdge;
+import owl.core.structure.RIGEnsemble;
+import owl.core.structure.RIGNode;
+import owl.core.structure.RIGraph;
+import owl.core.structure.TemplateList;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.util.Goodies;
+import owl.core.util.IntPairComparator;
+
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;

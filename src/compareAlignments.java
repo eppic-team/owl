@@ -2,11 +2,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import proteinstructure.Alignment;
-import proteinstructure.AlignmentConstructionError;
-import proteinstructure.FileFormatError;
-import proteinstructure.PairwiseSequenceAlignment;
-import proteinstructure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.Alignment;
+import owl.core.structure.AlignmentConstructionError;
+import owl.core.structure.FileFormatError;
+import owl.core.structure.PairwiseSequenceAlignment;
+import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+
 
 
 public class compareAlignments {

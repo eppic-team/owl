@@ -5,16 +5,17 @@ import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGraph;
+import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
+
 //import Jama.Matrix;
 import edu.uci.ics.jung.graph.util.Pair;
 //import tools.*;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbLoadError;
-import proteinstructure.PdbasePdb;
-import proteinstructure.RIGraph;
-import tools.MySQLConnection;
-import tools.RegexFileFilter;
 
 /**
  * <p>

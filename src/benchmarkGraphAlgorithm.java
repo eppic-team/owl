@@ -3,12 +3,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import proteinstructure.PdbLoadError;
-import proteinstructure.RIGraph;
-import proteinstructure.Pdb;
-import proteinstructure.PdbCodeNotFoundError;
-import proteinstructure.PdbasePdb;
-import tools.MySQLConnection;
+import owl.core.structure.Pdb;
+import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbasePdb;
+import owl.core.structure.RIGraph;
+import owl.core.util.MySQLConnection;
+
 
 
 public class benchmarkGraphAlgorithm {
