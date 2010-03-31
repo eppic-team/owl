@@ -11,12 +11,12 @@ import owl.core.structure.FileFormatError;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
-import owl.core.structure.decoyScoring.DecoyScore;
-import owl.core.structure.decoyScoring.DecoyScoreSet;
-import owl.core.structure.decoyScoring.DecoyScoreSetsGroup;
-import owl.core.structure.decoyScoring.Scorer;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
+import owl.decoyScoring.DecoyScore;
+import owl.decoyScoring.DecoyScoreSet;
+import owl.decoyScoring.DecoyScoreSetsGroup;
+import owl.decoyScoring.Scorer;
 
 
 

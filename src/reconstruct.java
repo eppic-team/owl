@@ -16,6 +16,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.runners.tinker.TinkerError;
+import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.AAinfo;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.ConformationsNotSameSizeError;
@@ -33,8 +35,6 @@ import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
 
 
-import tinker.TinkerError;
-import tinker.TinkerRunner;
 
 
 public class reconstruct {

@@ -15,6 +15,8 @@ import java.util.TreeMap;
 
 import org.xml.sax.SAXException;
 
+import owl.core.runners.tinker.TinkerError;
+import owl.core.runners.tinker.TinkerRunner;
 import owl.core.sequence.BlastError;
 import owl.core.sequence.BlastHit;
 import owl.core.sequence.BlastHitList;
@@ -31,8 +33,6 @@ import owl.core.structure.StructAlignmentError;
 import owl.core.structure.TemplateList;
 import owl.core.util.MySQLConnection;
 
-import tinker.TinkerError;
-import tinker.TinkerRunner;
 
 
 public class RunAll {

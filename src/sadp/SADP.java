@@ -10,10 +10,10 @@ import owl.core.structure.Alignment;
 import owl.core.structure.AlignmentConstructionError;
 import owl.core.structure.PairwiseAlignmentConverter;
 import owl.core.util.IntPairComparator;
+import owl.core.util.actionTools.Retriever;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import actionTools.Retriever;
 
 
 

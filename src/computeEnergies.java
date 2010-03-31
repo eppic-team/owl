@@ -7,12 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
+import owl.core.runners.tinker.TinkerError;
+import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.MaxClusterRunner;
 import owl.core.structure.MaxClusterRunner.ScoreType;
 
 
-import tinker.TinkerError;
-import tinker.TinkerRunner;
 
 /**
  * Script to calculate energies of a set of decoys by using tinker minimize program.

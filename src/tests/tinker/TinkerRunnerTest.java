@@ -14,6 +14,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.JUnitCore;
 
+import owl.core.runners.tinker.TinkerError;
+import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeError;
 import owl.core.structure.Pdb;
@@ -27,8 +29,6 @@ import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 
 
-import tinker.TinkerError;
-import tinker.TinkerRunner;
 
 public class TinkerRunnerTest {
 

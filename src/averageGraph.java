@@ -6,6 +6,7 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.runners.tinker.TinkerRunner;
 import owl.core.sequence.Sequence;
 import owl.core.structure.Alignment;
 import owl.core.structure.PairwiseSequenceAlignment;
@@ -18,7 +19,6 @@ import owl.core.structure.TemplateList;
 import owl.core.structure.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.util.MySQLConnection;
 
-import tinker.TinkerRunner;
 import gnu.getopt.Getopt;
 import graphAveraging.ConsensusSquare;
 import graphAveraging.GraphAverager;

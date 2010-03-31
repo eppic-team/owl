@@ -7,10 +7,10 @@ import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
-import owl.core.structure.decoyScoring.AtomTypeScorer;
-import owl.core.structure.decoyScoring.ResTypeScorer;
-import owl.core.structure.decoyScoring.Scorer;
 import owl.core.util.MySQLConnection;
+import owl.decoyScoring.AtomTypeScorer;
+import owl.decoyScoring.ResTypeScorer;
+import owl.decoyScoring.Scorer;
 
 
 /**
