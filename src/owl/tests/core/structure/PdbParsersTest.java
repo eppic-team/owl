@@ -1,4 +1,4 @@
-package tests.proteinstructure;
+package owl.tests.core.structure;
 
 
 import java.io.BufferedReader;

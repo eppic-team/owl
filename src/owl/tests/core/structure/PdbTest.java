@@ -1,4 +1,4 @@
-package tests.proteinstructure;
+package owl.tests.core.structure;
 
 
 import java.io.BufferedReader;
@@ -48,11 +48,11 @@ import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
+import owl.tests.TestsSetup;
 
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import tests.TestsSetup;
 
 public class PdbTest {
 

@@ -1,4 +1,4 @@
-package tests.tools;
+package owl.tests.core.util;
 
 import static org.junit.Assert.*;
 

@@ -1,4 +1,4 @@
-package tests.sequence;
+package owl.tests.core.sequence;
 
 
 import java.io.File;

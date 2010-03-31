@@ -1,4 +1,4 @@
-package tests.tinker;
+package owl.tests.core.runners.tinker;
 
 
 import static org.junit.Assert.*;

@@ -1,4 +1,4 @@
-package tests;
+package owl.tests;
 
 import java.io.File;
 import java.io.FileInputStream;
