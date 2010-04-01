@@ -1,7 +1,8 @@
-# Contact types definitions: 
+# Contact type definitions: 
 #   contact types names in lines starting with '>', then the contact type name and last the type: either "multi" or "single"
 #   then list of space separated atom names after each three letter aminoacid code
 #   lines starting with # are comments
+#   this file is read by owl.core.structure.AAinfo and required for generating protein structure graphs
 > ALL multi
 TRP: CE2 CA C O CB CG CD1 CD2 CH2 CZ3 CZ2 CE3 NE1 N
 CYS: SG CB O CA C N

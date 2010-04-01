@@ -1,3 +1,9 @@
+# Amino acid pair bounds:
+#   These bounds for pairs of amino acids are used to define constraints
+#   for distance geometry calculations on residue contact maps. They were determined
+#   from contacts in native PDB files.
+#   lines starting with '#' are comments
+#   This file is read by owl.core.structure.AAinfo and reqired by classes in owl.core.structure.graphs
 ALA_ALA	3.3	0
 ALA_ARG	2.94	5.16
 ALA_ASN	3.12	2.27

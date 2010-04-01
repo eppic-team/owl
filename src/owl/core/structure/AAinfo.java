@@ -201,7 +201,12 @@ public class AAinfo {
 	private static Map<String,ContactType> initialiseCTsFromFile() {
 		Map<String,ContactType> cts = new TreeMap<String,ContactType>();
 		
-		InputStream inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+CT_DEFS_FILE);
+		InputStream inp = null;
+		inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+CT_DEFS_FILE);
+		if(inp == null) {
+			System.err.println("Severe Error: Resource " + RESOURCES_DIR+CT_DEFS_FILE + " not found. Could not initialize contact types. Exiting.");
+			System.exit(1);
+		}
 		BufferedReader br = new BufferedReader(new InputStreamReader(inp));
 		String line;
 		try {
@@ -254,11 +259,19 @@ public class AAinfo {
 	
 	private static Map<String,double[]> initialiseAapairs2BoundsFromFile (){
 		Map<String,double[]> aapairs2bounds = new TreeMap<String,double[]>();
-		InputStream inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+AAPAIRSBOUNDS_FILE);
+		InputStream inp = null;
+		inp = AAinfo.class.getResourceAsStream(RESOURCES_DIR+AAPAIRSBOUNDS_FILE);
+		if(inp == null) {
+			System.err.println("Severe Error: Resource " + RESOURCES_DIR+AAPAIRSBOUNDS_FILE + " not found. Could not initialize AA pair bounds. Exiting.");
+			System.exit(1);
+		}
 		BufferedReader br = new BufferedReader(new InputStreamReader(inp));
 		String line;
 		try {
 			while ((line = br.readLine())!= null) {
+				// skip comments and empty lines
+				if (line.startsWith("#")) continue;
+				if (line.trim().equals("")) continue;
 				String[] tokens = line.split("\\s+");
 				String pair = tokens[0];
 				double min = Double.parseDouble(tokens[1]);
