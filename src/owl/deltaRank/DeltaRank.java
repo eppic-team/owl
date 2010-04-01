@@ -163,7 +163,7 @@ public class DeltaRank {
 				if (node != null) {
 				
 					nbhood = graph.getNbhood(node);
-					String sql = "SELECT (L+A+G+V+E+D+S+K+T+I+R+P+N+F+Q+Y+H+M+W+C),L,A,G,V,E,D,S,K,T,I,R,P,N,F,Q,Y,H,M,W,C from mw.avectors where str='"+nbhood.getNbString()+"';";
+					String sql = "SELECT (G+A+K+E+S+D+N+T+Q+R+V+L+H+I+P+M+F+Y+C+W),G,A,K,E,S,D,N,T,Q,R,V,L,H,I,P,M,F,Y,C,W from mw.avectors where str='"+nbhood.getNbString()+"';";
 					stm = conn.createStatement();
 					res = stm.executeQuery(sql);
 					if (res.next()) {
