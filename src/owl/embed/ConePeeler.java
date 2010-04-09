@@ -11,7 +11,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import edu.uci.ics.jung.graph.util.Pair;
-import embed.contactmaps.Individuals;
+import owl.embed.contactmaps.Individuals;
 
 import owl.core.structure.AAinfo;
 import owl.core.structure.Pdb;
@@ -411,6 +411,7 @@ public class ConePeeler extends RIGraph {
 		RIGraph subset = getMinSubset("1bkr","A","pdbase_20090728",8.0,1);
 		String output = "/project/StruPPi/gabriel/Arbeiten/ConePeeler/1bkr1bkr-31.indi";
 		Individuals in2 = new Individuals (output);
+		@SuppressWarnings("unused")
 		RIGraph rig = getMinSubset((RIGraph) in2);
 		subset.writeToFile(output);
 		Individuals in = new Individuals(output);
