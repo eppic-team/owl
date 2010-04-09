@@ -2181,7 +2181,6 @@ public class Demes {
 		 * method, writing the metric tables to a file 
 		 * @throws IOException
 		 */
-		@SuppressWarnings("unused")
 		public void printToFile() throws IOException{
 			FileOutputStream output = new FileOutputStream(path + "metrix.met");
 			PrintStream printer = new PrintStream(output);
