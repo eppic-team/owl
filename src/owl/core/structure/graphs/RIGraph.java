@@ -11,8 +11,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Locale;
+import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -23,6 +25,7 @@ import owl.core.structure.Pdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.IntPairComparator;
+import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 
 
@@ -237,15 +240,17 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * If i or j don't map to RIGNodes in this graph nothing will be added
 	 * @param i
 	 * @param j
+	 * @return true if an edge was added, false otherwise
 	 */
-	public void addEdgeIJ(int i, int j) {
+	public boolean addEdgeIJ(int i, int j) {
 		EdgeType et = EdgeType.UNDIRECTED;
 		if (isDirected()) {
 			et = EdgeType.DIRECTED;
 		}
 		if (getNodeFromSerial(i)!=null && getNodeFromSerial(j)!=null) {
-			this.addEdge(new RIGEdge(), getNodeFromSerial(i), getNodeFromSerial(j), et);
-		} 
+			return this.addEdge(new RIGEdge(), getNodeFromSerial(i), getNodeFromSerial(j), et);
+		}
+		return false;
 	}
 	
 	/**
@@ -1272,5 +1277,107 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			serials2nodes.put(node.getResidueSerial(),node);
 		}
 	}
+	
+	/**
+	 * Returns a new RIGraph that contains a subset of edges of the given size of this RIGraph.  
+	 * @param toSample the fraction of edges to sample  
+	 * @return
+	 */
+	public RIGraph getRandomSubset(double toSample) {
+		int numSampledContacts = (int) ((double)(this.getEdgeCount())*toSample);
+		return getRandomSubset(numSampledContacts);
+	}
 
+	/**
+	 * Returns a new RIGraph that contains a subset of edges of the given size of this RIGraph.
+	 * @param numSampledContacts the number of edges to sample
+	 * @return
+	 */
+	private RIGraph getRandomSubset(int numSampledContacts) {
+		Random rand = new Random();
+		
+		IntPairSet allcmpairs = new IntPairSet();
+		for (RIGEdge edge:getEdges()) {
+			Pair<RIGNode> nodePair = this.getEndpoints(edge);
+			Pair<Integer> pair = new Pair<Integer>(nodePair.getFirst().getResidueSerial(),nodePair.getSecond().getResidueSerial());
+			allcmpairs.add(pair);
+		}
+		
+		TreeSet<Integer> sampledIndices = new TreeSet<Integer>();
+		for (int i=0;i<numSampledContacts;i++) {
+			// the TreeSet takes care of not having duplicates indices
+			// add() returns false if the value is a duplicate, so if it returns false 
+			// we loop until the return value is true, i.e. we have a new index
+			while (!sampledIndices.add(rand.nextInt(allcmpairs.size())));
+		}
+		
+		RIGraph subsetGraph = this.copy();
+		subsetGraph.removeAllEdges();
+		
+		// the iterator returns the indices in order since it is from a TreeSet
+		Iterator<Integer> indexIterator = sampledIndices.iterator();
+		int index = 0;
+		int sampledIndex = indexIterator.next();
+		for (Pair<Integer> pair:allcmpairs) {
+			if (index==sampledIndex) {
+				subsetGraph.addEdgeIJ(pair.getFirst(), pair.getSecond());
+				if (indexIterator.hasNext()) {
+					sampledIndex = indexIterator.next();
+				} else {
+					break;
+				}
+			}
+			index++;
+		}
+		if (subsetGraph.getEdgeCount()!=numSampledContacts) {
+			System.err.println("Error: sampled number of edges does not coincide with required number to sample. Please report the bug.");
+		}
+		return subsetGraph;
+	}
+
+	/**
+	 * Returns a new RIGraph that contains this RIGraph's edges plus a number of random 
+	 * added edges 
+	 * @param noiseToAdd the fraction of edges to add (with respect to the total number of 
+	 * edges in this RIGraph)
+	 * @return
+	 */
+	public RIGraph getRandomNoiseMap(double noiseToAdd) {
+		int numContactsToAdd = (int) ((double)(this.getEdgeCount())*noiseToAdd);
+		return getRandomNoiseMap(numContactsToAdd);
+	}
+	
+	/**
+	 * Returns a new RIGraph that contains this RIGraph's edges plus a number of random 
+	 * added edges
+	 * @param numContactsToAdd the number of edges to add
+	 * @return
+	 */
+	private RIGraph getRandomNoiseMap(int numContactsToAdd) {
+		Random rand = new Random();
+		RIGraph noiseGraph = this.copy();
+		int n = 0;
+		while (n<numContactsToAdd) {
+			int i = rand.nextInt(this.getVertexCount())+1;
+			int j = rand.nextInt(this.getVertexCount())+1;
+			if (i==j) continue;
+			if (i>j) {
+				int t = i;
+				i = j;
+				j = t;
+			}
+			if (!noiseGraph.containsEdgeIJ(i, j) && 
+					noiseGraph.getNodeFromSerial(i)!=null && // we have to check that the sampled i,j doesn't fall on unobserved residues  
+					noiseGraph.getNodeFromSerial(j)!=null) {
+				noiseGraph.addEdgeIJ(i, j);
+				n++;
+				continue;
+			}
+		}
+		
+		if (noiseGraph.getEdgeCount()!=this.getEdgeCount()+numContactsToAdd) {
+			System.err.println("Error: number of added noise edges do not coincide with required number to add. Please report the bug.");
+		}
+		return noiseGraph;
+	}
 }
