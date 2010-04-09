@@ -37,7 +37,7 @@ public class CMPdb_sphoxel {
 		this.db = db;
 		this.iRes = iRes;
 		this.jRes = jRes;
-		conn = new MySQLConnection(this.host,this.username,this.password,this.getDb());
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public void runBayes() throws SQLException {
@@ -141,6 +141,12 @@ public class CMPdb_sphoxel {
 		} //--end for theta
 //		System.out.println(); 
 	}		
+	
+	public void writeSphoxelOutput(String filename){
+		String[] names = {"log(ratio)","Obs","Exp"};
+		CSVhandler csv = new CSVhandler();
+		csv.generateCsvFile(this.bayesRatios, names, filename);
+	}
 
 	public void setHost(String host) {
 		this.host = host;
