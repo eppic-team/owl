@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -121,10 +122,20 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	
 	/**
 	 * Gets the number of observed residues for this RIGraph
-	 * @return
+	 * See also: getFullLength()
+	 * @return the observed length of this graph
 	 */
 	public int getObsLength() {
 		return this.getVertexCount();
+	}
+	
+	/**
+	 * Gets the full length of this graph
+	 * See also: getObsLength()
+	 * @return the full (sequence) length of this graph
+	 */
+	public int getFullLength() {
+		return this.fullLength;
 	}
 	
 	/**
@@ -259,10 +270,60 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 */
 	public void filterByMinWeight(double minWeight) {
 		for (RIGEdge edge:this.getEdges()) {
-			if (edge.getWeight()<=minWeight) {
+			if (edge.getWeight() < minWeight) {
 				this.removeEdge(edge);
 			}
 		}
+	}
+	
+	/**
+	 * Discretize this graph such that all edges with weight >= weightCutoff are set to weight 1
+	 * and all other edges are discarded. The different to filterByMinWeight is that all edges
+	 * which are kept are set to weight 1.
+	 * @param weightCutoff the minimum weight to keep the contact
+	 */
+	public void discretizeByWeightCutoff(double weightCutoff) {
+		for (RIGEdge edge:this.getEdges()) {
+			if (edge.getWeight() < weightCutoff) {
+				this.removeEdge(edge);
+			} else {
+				edge.setWeight(1);
+			}
+		}		
+	}
+	
+	/**
+	 * Discretize this graph such that the 'top' contacts with highest weight are kept and set
+	 * to weight 1 and all other edges are discarded. When edges have equal weight, the order
+	 * is undefined.
+	 * @param num the number of contacts to keep 
+	 */
+	public void discretizeByNumContacts(int top) {
+		int numEdges = this.getEdgeCount();
+		ArrayList<RIGEdge> edges = new ArrayList<RIGEdge>();
+		edges.addAll(this.getEdges());
+		Collections.sort(edges, new Comparator<RIGEdge>() {
+			public int compare(RIGEdge e1,RIGEdge e2) {
+				return Double.compare(e2.getWeight(), e1.getWeight());
+			}
+		});
+		for(int i = 0; i < top; i++) {
+			edges.get(i).setWeight(1);
+		}
+		for(int i = top; i < numEdges; i++) {
+			this.removeEdge(edges.get(i));
+		}
+	}
+	
+	/**
+	 * Returns true iff this graph has at least one edge in ]0;1[.
+	 * @return true if at least one edge is weighted
+	 */
+	public boolean hasWeightedEdges() {
+		for(RIGEdge e: this.getEdges()) {
+			if(e.getWeight() > 0 && e.getWeight() < 1) return true;
+		}
+		return false;
 	}
 	
 	//TODO evaluatePrediction methods should be in ProtStructGraph. 
