@@ -12,15 +12,18 @@ import owl.core.structure.PdbfilePdb;
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
 import owl.graphAveraging.GraphAverager;
+import owl.graphAveraging.GraphAveragerError;
 
 
 /**
  * An ensemble of residue interactions graphs (RIGs) for the same protein structure.
- * Examples: NMR ensembles, structure predictions, folding trajectories.
+ * Examples: NMR ensembles, structure predictions, folding trajectories. This class
+ * also provides methods for reading and writing such ensembles.
  * Currently it is assumed that all of these structures share the same underlying
  * sequence. This case would be something like a multi-model RIG, corresponding
  * to a multi-model PDB file. Alternatively, the restriction that all graphs are
- * based on the same structure could be lifted by adding an alignment.
+ * based on the same structure could be lifted by adding an alignment like in
+ * GraphAverager.
  * @author stehr
  * @date 2007-12-19
  */
@@ -206,12 +209,21 @@ public class RIGEnsemble {
 	 * @return the number of models read
 	 */
 	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadError {
+		return loadFromMultiModelFile(file, null);
+	}
+	
+	/**
+	 * Generate a RIGEnsemble from a multi-model PDB or mmCIF file. Only the given chain is read.
+	 * @param file the input file (PDB or mmCIF)
+	 * @param the chain to be read; if null, the first chain in the file
+	 * @return the number of models read
+	 */
+	public int loadFromMultiModelFile(File file, String chain) throws IOException, PdbLoadError {
 		// for each model in file, generate a graph
 		Pdb pdb;
 		RIGraph graph;
 		Integer[] models;
 		String[] chains;
-		String chain;
 		int mr = 0;
 		int fileType = FileTypeGuesser.guessFileType(file);
 		switch(fileType) {
@@ -220,7 +232,7 @@ public class RIGEnsemble {
 			pdb = new PdbfilePdb(file.getAbsolutePath());
 			models = pdb.getModels();
 			chains = pdb.getChains();
-			chain = chains[0];
+			if(chain==null) chain = chains[0];
 			for(int mod: models) {
 				//pdb = new PdbfilePdb(file.getAbsolutePath());
 				pdb.load(chain, mod);
@@ -305,7 +317,7 @@ public class RIGEnsemble {
 		return this.ensemble.toArray(graphs);
 	}
 
-	/*
+	/**
 	 * If the graphs in this ensemble were read from a list file or directory, this method
 	 * returns the filename of the i'th RIG in this ensemble.If the ensemble was created otherwise,
 	 * or RIGs have been added manually (using addRIG) the returned value is undefined and may be null.
@@ -314,7 +326,7 @@ public class RIGEnsemble {
 		return this.fileNames.get(i);
 	}
 	
-	/*
+	/**
 	 * If the graphs in this ensemble were read from a list file or directory, this method
 	 * returns these filenames as an array where the number corresponds to the numbering of
 	 * the RIGs. If the ensemble was created otherwise, or RIGs have been added manually
@@ -330,6 +342,36 @@ public class RIGEnsemble {
 	 */
 	public void loadOnlyFirstModels() {
 		this.loadOnlyFirstModels = true;
+	}
+	
+	/**
+	 * Get the average graph of this ensemble.
+	 * @return a weighted RIGraph where each edge holds the fraction of graphs this contact occurs in, or null on error
+	 */
+	public RIGraph getAverageGraph() {
+		GraphAverager ga;
+		try {
+			ga = new GraphAverager(this);
+			return ga.getAverageGraph();
+		} catch (GraphAveragerError e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * Get the consensus graph of this ensemble calculated from the average graph by applying the given cutoff.
+	 * @return a binary RIGraph containing those edges where the fraction of occurance is at or above the cutoff, or null on error
+	 */
+	public RIGraph getConsensusGraph(double weightCutoff) {
+		GraphAverager ga;
+		try {
+			ga = new GraphAverager(this);
+			return ga.getConsensusGraph(weightCutoff);
+		} catch (GraphAveragerError e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	/*--------------------------------- main --------------------------------*/
