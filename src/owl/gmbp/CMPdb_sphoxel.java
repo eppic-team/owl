@@ -25,7 +25,7 @@ public class CMPdb_sphoxel {
 	private double minRatio = 0;
 	private double maxRatio = 0;
 	
-	private double minr=0.0, maxr=9.2;
+	private float minr=0.0f, maxr=9.2f;
 	private final double mintheta=0.0, minphi=-Math.PI;
 	private double svoxelsize=(Math.PI)/numSteps; //, deltar=1.0 ;
 	private char iRes='A', jRes='A', ssType='O';
@@ -176,13 +176,13 @@ public class CMPdb_sphoxel {
 		return this.db;
 	}
 	
-	public void setMinr(double minr){
+	public void setMinr(float minr){
 		this.minr = minr;
 	}
 	public double getMinr(){
 		return this.minr;
 	}
-	public void setMaxr(double maxr){
+	public void setMaxr(float maxr){
 		this.maxr = maxr;
 	}
 	public double getMaxr(){
