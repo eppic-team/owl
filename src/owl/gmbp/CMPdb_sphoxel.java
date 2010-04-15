@@ -10,9 +10,6 @@ public class CMPdb_sphoxel {
 	
 	private MySQLConnection conn;
 	
-	private String host = "talyn";
-	private String username = "vehlow";
-	private String password = "nieve";
 	private String db = "bagler_all5p0";
 	
     private boolean diffSSType = false;
@@ -30,14 +27,11 @@ public class CMPdb_sphoxel {
 	private double svoxelsize=(Math.PI)/numSteps; //, deltar=1.0 ;
 	private char iRes='A', jRes='A', ssType='O';
 	
-	public CMPdb_sphoxel(char iRes, char jRes, String host, String username, String password, String db) throws SQLException {
-		this.host = host;
-		this.username = username;
-		this.password = password;
+	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
 		this.db = db;
 		this.iRes = iRes;
 		this.jRes = jRes;
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+		conn = new MySQLConnection();
 	}
 	
 	public void runBayes() throws SQLException {
@@ -146,27 +140,6 @@ public class CMPdb_sphoxel {
 		String[] names = {"log(ratio)","Obs","Exp"};
 		CSVhandler csv = new CSVhandler();
 		csv.generateCsvFile(this.bayesRatios, names, filename);
-	}
-
-	public void setHost(String host) {
-		this.host = host;
-	}
-	public String getHost() {
-		return this.host;
-	}
-
-	public void setUsername(String un) {
-		this.username = un;
-	}
-	public String getUsername() {
-		return this.username;
-	}
-	
-	public void setPassword(String pw) {
-		this.password = pw;
-	}
-	public String getPassword() {
-		return this.password;
 	}
 
 	public void setDb(String db) {

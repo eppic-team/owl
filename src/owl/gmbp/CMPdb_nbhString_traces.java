@@ -12,9 +12,6 @@ public class CMPdb_nbhString_traces {
     private MySQLConnection conn;
 	
     // variables for queries
-	private String host = "talyn";
-	private String username = "vehlow";
-	private String password = "nieve";
 	private String db = "bagler_all5p0";
 	
 	private String jatom = "CA";
@@ -32,14 +29,11 @@ public class CMPdb_nbhString_traces {
 	private static final char[] sstypes = new char[]{'H','S','O'};
 	private final String SSTStr = new String(sstypes);
 	
-	public CMPdb_nbhString_traces(String nbhs, String jatom, String host, String username, String password, String db) throws SQLException {
-		this.host = host;
-		this.username = username;
-		this.password = password;
+	public CMPdb_nbhString_traces(String nbhs, String jatom, String db) throws SQLException {
 		this.db = db;
 		this.jatom = jatom;
 		this.nbhs = nbhs;
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+		conn = new MySQLConnection();
 	}
 	
 	public void run() throws SQLException {
@@ -112,27 +106,6 @@ public class CMPdb_nbhString_traces {
 		csv.generateCSVFile(this.nbhsNodes, filename);
 	}
 	
-	public void setHost(String host) {
-		this.host = host;
-	}
-	public String getHost() {
-		return this.host;
-	}
-
-	public void setUsername(String un) {
-		this.username = un;
-	}
-	public String getUsername() {
-		return this.username;
-	}
-	
-	public void setPassword(String pw) {
-		this.password = pw;
-	}
-	public String getPassword() {
-		return this.password;
-	}
-
 	public void setDb(String db) {
 		this.db = db;
 	}
