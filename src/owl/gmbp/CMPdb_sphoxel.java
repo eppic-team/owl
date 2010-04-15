@@ -8,13 +8,17 @@ import owl.core.util.MySQLConnection;
 
 public class CMPdb_sphoxel {
 	
+	protected static final int defaultNumSteps = 4;
+	protected static final float defaultResol = 180/(float)defaultNumSteps; // in degrees
+	
+	/*--------------------------- member variables --------------------------*/		
 	private MySQLConnection conn;
 	
 	private String db = "bagler_all5p0";
 	
     private boolean diffSSType = false;
 	
-	private int numSteps = 12;
+	private int numSteps = defaultNumSteps;
 	private int numRatiosX = numSteps;
 	private int numRatiosY = 2*numSteps;
 	private double [][] ratios;
@@ -220,6 +224,12 @@ public class CMPdb_sphoxel {
 	}
 	public double[][][] getBayesRatios(){
 		return this.bayesRatios;
+	}
+	public int getDefaultNumSteps(){
+		return defaultNumSteps;
+	}
+	public float getDefaultResol(){
+		return defaultResol;
 	}
 
 
