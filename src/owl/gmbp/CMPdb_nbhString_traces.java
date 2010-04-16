@@ -12,7 +12,10 @@ public class CMPdb_nbhString_traces {
     private MySQLConnection conn;
 	
     // variables for queries
-	private String db = "bagler_all5p0";
+	private String host = "talyn";
+	private String username = "vehlow";
+	private String password = "nieve";
+	private String db = "bagler_all13p0_alledges";
 	
 	private String jatom = "CA";
 	private String nbhs = "%P%R%T%x%W%";
@@ -33,7 +36,8 @@ public class CMPdb_nbhString_traces {
 		this.db = db;
 		this.jatom = jatom;
 		this.nbhs = nbhs;
-		conn = new MySQLConnection();
+//		conn = new MySQLConnection();
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public void run() throws SQLException {
