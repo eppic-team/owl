@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.*;
 
+import owl.core.connections.CSAConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.AminoAcid;
@@ -87,7 +88,7 @@ public class mapMutations {
 		
 		// read catalytic site annotation
 		try {
-			pdb.checkCSA(CatalSiteSet.LATEST_VERSION, false);
+			CSAConnection.parseCSA(pdb,CatalSiteSet.LATEST_VERSION, false);
 		} catch (IOException e) {
 			System.err.println("Error acessing CSA: " + e.getMessage());
 			System.exit(1);

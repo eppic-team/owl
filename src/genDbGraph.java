@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
 
+import owl.core.connections.CSAConnection;
 import owl.core.connections.ConsurfConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
@@ -248,7 +249,7 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}
 						try {
-							int mistakes = pdb.checkCSA("2.2.7", false);
+							int mistakes = CSAConnection.parseCSA(pdb,"2.2.7", false);
 							System.out.println("CSA Mistakes:"+mistakes);
 							if (mistakes == 0) csa = true;
 						} catch (Exception e) {
@@ -357,7 +358,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						int mistakes = pdb.checkCSA("2.2.7", false);
+						int mistakes = CSAConnection.parseCSA(pdb,"2.2.7", false);
 						System.out.println("CSA Mistakes:"+mistakes);
 						if (mistakes == 0) csa = true;
 					} catch (Exception e) {

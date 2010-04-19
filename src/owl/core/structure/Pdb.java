@@ -1,16 +1,12 @@
 package owl.core.structure;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -24,8 +20,8 @@ import java.util.TreeMap;
 import java.util.ArrayList;
 import java.util.TreeSet;
 import java.util.Vector;
-import java.util.regex.*;
-import java.util.zip.GZIPInputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
@@ -35,7 +31,6 @@ import javax.vecmath.Vector3d;
 
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.features.CatalSiteSet;
-import owl.core.structure.features.CatalyticSite;
 import owl.core.structure.features.EC;
 import owl.core.structure.features.ECRegion;
 import owl.core.structure.features.Scop;
@@ -82,8 +77,6 @@ public class Pdb {
 	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue 
 																// corresponds to that of an all atoms protein. See isAllAtom()
 	
-	private static final String CSA_DIR = "/project/StruPPi/Databases/CSA";
-	private static final String CSA_URL_PREFIX = "http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/";
 	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
 	private static final String PDB2EC_MAPPING_FILE = "/project/StruPPi/Databases/PDBSProtEC/mapping.txt";
 	private static final String SCOP_URL_PREFIX = "http://scop.mrc-lmb.cam.ac.uk/scop/parse/";
@@ -395,101 +388,6 @@ public class Pdb {
 				}
 			}			
 		}
-	}
-	
-	/**
-	 * Queries the Catalytic Site Atlas (Porter et al. NAR 32: D129-D133, 2004) for the current
-	 * pdb code and fills the member variable 'catalSiteSet' with the results.
-	 * If no entry is found, 'catalSiteSet' is set to null.
-	 * @param version the CSA version to use (e.g. {@link CatalSiteSet.LATEST_VERSION})
-	 * @param online whether to access online version of CSA or use a local copy
-	 * @return number of errors (mismatching residues between this structure and the CSA annotation)
-	 * @throws IOException if local file or online database could not be read
-	 */
-	public int checkCSA(String version, boolean online) throws IOException {
-		BufferedReader in;
-		String inputLine;
-
-		if (online) {
-			URL csa = new URL(CSA_URL_PREFIX+"CSA_"+version.replaceAll("\\.","_")+".dat.gz");
-			URLConnection conn = csa.openConnection();
-			InputStream inURL = conn.getInputStream();
-			OutputStream out = new BufferedOutputStream(new FileOutputStream("CSA_"+version.replaceAll("\\.","_")+".dat.gz"));
-			byte[] buffer = new byte[1024];
-			int numRead;
-			long numWritten = 0;
-			while ((numRead = inURL.read(buffer)) != -1) {
-				out.write(buffer, 0, numRead);
-				numWritten += numRead;
-			}
-			inURL.close();
-			out.close();
-			in = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream("CSA_"+version.replaceAll(".","_")+".dat.gz"))));
-		} else {
-			File csaFile = new File(CSA_DIR,"CSA_"+version.replaceAll("\\.","_")+".dat");
-			in = new BufferedReader(new FileReader(csaFile));			
-		}
-
-		int csaMistakes = 0;
-		this.catalSiteSet = new CatalSiteSet();
-		String curPdbCode, curPdbChainCode, curPdbResSerial, curResType;
-		String prevPdbCode = "";
-		int curSiteId;
-		int prevSiteId = -1;
-		CatalyticSite cs = null;
-		while ((inputLine = in.readLine()) != null) { 
-			String[] fields = inputLine.split(",");
-			curPdbCode = fields[0]; 
-			curPdbChainCode = (fields[3].equals(""))?NULL_CHAIN_CODE:fields[3];
-			if (curPdbCode.equals(pdbCode)) {
-				if (curPdbChainCode.equals(pdbChainCode)) {
-					curPdbResSerial = fields[4];
-					curResType = fields[2];
-					curSiteId = Integer.valueOf(fields[1]);
-					// only if the pdb residue type is a standard AA
-					if (AminoAcid.isStandardAA(curResType)) {
-						// only if the pdb residue type agrees with our residue type
-						if (getResTypeFromResSerial(getResSerFromPdbResSer(curPdbResSerial)).equals(curResType)) {
-							// each time the site changes except for the first site of a chain,
-							// add the site to the set
-							if ((curSiteId != prevSiteId) & (prevSiteId != -1)) {
-								catalSiteSet.add(cs);
-							}
-							// each time the site changes or it is the first site of a chain,
-							// create a new site
-							if ((curSiteId != prevSiteId) | (prevSiteId == -1)) {
-								String littEntryPdbCode = fields[7].substring(0,4);
-								String littEntryPdbChainCode = fields[7].substring(4).equals("")?NULL_CHAIN_CODE:fields[7].substring(4);
-								cs = new CatalyticSite(curSiteId, fields[6], littEntryPdbCode, littEntryPdbChainCode); 
-							}
-							// add the res to the site
-							cs.addRes(getResSerFromPdbResSer(curPdbResSerial), fields[5]);
-							prevSiteId = curSiteId;
-						} else {
-							csaMistakes++;
-						}
-					}
-				}
-			} else if (prevPdbCode.equals(pdbCode)) {
-				if (prevSiteId != -1) {
-					catalSiteSet.add(cs);
-				}
-				break;
-			}
-			prevPdbCode = curPdbCode;
-		}
-
-		in.close();
-		if (online) {
-			File csaFile = new File("CSA_"+version.replaceAll(".","_")+".dat.gz");
-			csaFile.delete();
-		}
-
-		if ((csaMistakes > 0) | (prevSiteId == -1)) {
-			this.catalSiteSet = null;
-		}
-
-		return csaMistakes;
 	}
 
 	/**
@@ -1968,6 +1866,13 @@ public class Pdb {
 	}
 
 	// end of secondary structure related methods
+	
+	/**
+	 * Sets the catalitic site set annotation object of this Pdb
+	 */
+	public void setCatalSiteSet(CatalSiteSet catalSiteSet) {
+		this.catalSiteSet = catalSiteSet;
+	}
 
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
