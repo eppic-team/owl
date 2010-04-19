@@ -8,6 +8,7 @@ import java.sql.SQLException;
 
 import owl.core.connections.CSAConnection;
 import owl.core.connections.ConsurfConnection;
+import owl.core.connections.ECConnection;
 import owl.core.connections.ScopConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
@@ -244,7 +245,7 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}	
 						try {
-							pdb.checkEC(false);
+							ECConnection.parseEC(pdb,false);
 							ec = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
@@ -353,7 +354,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						pdb.checkEC(false);
+						ECConnection.parseEC(pdb,false);
 						ec = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());

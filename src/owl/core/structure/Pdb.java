@@ -1,15 +1,10 @@
 package owl.core.structure;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -32,7 +27,6 @@ import javax.vecmath.Vector3d;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.EC;
-import owl.core.structure.features.ECRegion;
 import owl.core.structure.features.Scop;
 import owl.core.structure.features.ScopRegion;
 import owl.core.structure.features.SecStrucElement;
@@ -58,7 +52,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * A single chain pdb protein structure
+ * A single chain PDB protein structure
  * 
  */
 public class Pdb {
@@ -76,10 +70,7 @@ public class Pdb {
 	
 	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue 
 																// corresponds to that of an all atoms protein. See isAllAtom()
-	
-	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
-	private static final String PDB2EC_MAPPING_FILE = "/project/StruPPi/Databases/PDBSProtEC/mapping.txt";
-	
+		
 	/*-------------------------------------  members ---------------------------------------------*/
 
 	// atom/residue data
@@ -386,50 +377,6 @@ public class Pdb {
 				}
 			}			
 		}
-	}
-
-	/**
-	 * Parses local/remote pdb to EC mapping and assigns the values to 
-	 * member variable <code>ec</code>.
-	 * @param online
-	 * @throws IOException
-	 */
-	public void checkEC(boolean online) throws IOException {
-
-		this.ec = new EC();	
-		ECRegion er = null;
-		String startPdbResSer = "", endPdbResSer = "";
-		BufferedReader in;
-		String inputLine;
-		Pattern p = Pattern.compile("^ \\d");
-
-		if (online) {
-			URL pdb2ecMapping = new URL(PDB2EC_MAPPING_URL);
-			URLConnection p2e= pdb2ecMapping.openConnection();
-			in = new BufferedReader(new InputStreamReader(p2e.getInputStream()));
-		} else {
-			File pdb2ecMapping = new File(PDB2EC_MAPPING_FILE);
-			in = new BufferedReader(new FileReader(pdb2ecMapping));
-		}
-
-		while ((inputLine = in.readLine()) != null) { 
-			Matcher m = p.matcher(inputLine);
-			if (m.find()) {
-				String curPdbCode = inputLine.substring(0,9).trim();
-				String curPdbChainCode = (inputLine.charAt(11) == ' ')?NULL_CHAIN_CODE:String.valueOf(inputLine.charAt(11));
-				if (curPdbCode.equals(pdbCode) && curPdbChainCode.equals(pdbChainCode)) {
-					startPdbResSer = inputLine.substring(20,26).trim();
-					endPdbResSer = inputLine.substring(27,33).trim();
-					String id = inputLine.substring(43).trim();
-					//System.out.println(curPdbCode+":"+curPdbChainCode+":"+startPdbResSer+"-"+endPdbResSer+":"+ec);
-					er = new ECRegion(id, startPdbResSer, endPdbResSer, getResSerFromPdbResSer(startPdbResSer), getResSerFromPdbResSer(endPdbResSer));
-					ec.add(er);
-				}
-			}
-		}
-
-		in.close();
-
 	}
 	
 	/**
@@ -1804,6 +1751,7 @@ public class Pdb {
 	
 	/**
 	 * Sets the catalitic site set annotation object of this Pdb
+	 * @param catalSiteSet
 	 */
 	public void setCatalSiteSet(CatalSiteSet catalSiteSet) {
 		this.catalSiteSet = catalSiteSet;
@@ -1811,9 +1759,18 @@ public class Pdb {
 
 	/**
 	 * Sets the scop annotation object of this Pdb
+	 * @param scop
 	 */
 	public void setScop(Scop scop) {
 		this.scop = scop;
+	}
+	
+	/**
+	 * Sets the EC annotation object of this Pdb
+	 * @param ec
+	 */
+	public void setEC(EC ec) {
+		this.ec = ec;
 	}
 	
 	/**
