@@ -60,13 +60,13 @@ public class PdbTest {
 	private static String NACCESS_EXEC; 
 	private static String DSSP_EXEC;
 	
-	private static final String TESTDATADIR = "src/tests/proteinstructure/data";
+	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String TEST_PDB_FILE_1 = TESTDATADIR+"/1tdrA.pdb";
 	private static final String TEST_PDB_FILE_2 = TESTDATADIR+"/1tdrB.pdb";
 	private static final String TEST_CHAIN_1 = "A";
 	private static final String TEST_CHAIN_2 = "B";
 	private static final String NACCESS_OUTPUT_REF = TESTDATADIR+"/1tdrA.rsa";
-	private static final String CONSURF_DIR = "src/tests/proteinstructure/data";
+	private static final String CONSURF_DIR = "src/owl/tests/core/structure/data";
 	private static final String TESTSET10_LIST = TESTDATADIR+"/testset10.list";
 	
 	private static final String TEST_PDB_3 = "12as";

@@ -37,9 +37,8 @@ public class PdbParsersTest {
 	
 	private static final String CIFDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
 	private static final String PDBDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
-	private static final String LISTFILE = "src/tests/proteinstructure/data/cullpdb_20";
+	private static final String LISTFILE = "src/owl/tests/core/structure/data/cullpdb_20";
 	private static final String PDBASE_DB = "pdbase";
-	private static final String MYSQLSERVER = "talyn";
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -60,7 +59,7 @@ public class PdbParsersTest {
 	@Test
 	public void testCIFagainstPDBASE() throws FileFormatError, PdbaseInconsistencyError, SQLException, IOException {
 
-		MySQLConnection conn = new MySQLConnection(MYSQLSERVER, PDBASE_DB);
+		MySQLConnection conn = new MySQLConnection();
 		
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
