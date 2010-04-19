@@ -2,3 +2,7 @@
 MAX_CLUSTER_EXEC=/usr/bin/maxcluster
 NACCESS_EXEC=/usr/bin/naccess
 DSSP_EXEC=/usr/bin/dssp
+BLAST_BIN_DIR=/etc/blast/bin
+BLAST_DB_DIR=/project/StruPPi/CASP8/blast_dbs
+BLAST_DB=seqs_pdbase_20080903.fix.reps.fa
+	

@@ -3,6 +3,7 @@ package owl.tests.core.runners.blast;
 
 import java.io.File;
 import java.util.Iterator;
+import java.util.Properties;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -16,6 +17,7 @@ import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastTabularParser;
 import owl.core.runners.blast.BlastXMLParser;
+import owl.tests.TestsSetup;
 
 
 
@@ -27,18 +29,27 @@ import owl.core.runners.blast.BlastXMLParser;
  */
 public class BlastParsersTest {
 
-	int numThreads = Runtime.getRuntime().availableProcessors(); // we run blast with as many CPUs we have available in executing host
+	private static final String[] testSetCasp7 = 
+	{"T0346", "T0290", "T0340", "T0345", "T0315", "T0305", "T0366", "T0295", "T0317", "T0288"};
+	private static final String CASP7_TARGETS_DIR = "src/owl/tests/core/structure/data/casp7";
 	
-	String[] testSetCasp7 = {"T0346", "T0290", "T0340", "T0345", "T0315", "T0305", "T0366", "T0295", "T0317", "T0288"};
-	String targetDir = "/project/StruPPi/CASP7/targets";
-	String outDir = "/scratch/local/temp";
-	String db = "seqs_pdbase_20080903.fix.reps.fa";
+	private static String BLAST_BIN_DIR;
+	private static String BLAST_DB_DIR;
+	private static String BLAST_DB;
+	
+	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	
+	int numThreads = Runtime.getRuntime().availableProcessors(); // we run blast with as many CPUs we have available in executing host
 	
 	File[] tabFiles;
 	File[] xmlFiles;
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		Properties p = TestsSetup.readPaths();
+		BLAST_BIN_DIR = p.getProperty("BLAST_BIN_DIR");
+		BLAST_DB_DIR = p.getProperty("BLAST_DB_DIR");
+		BLAST_DB = p.getProperty("BLAST_DB");
 	}
 
 	@AfterClass
@@ -52,14 +63,14 @@ public class BlastParsersTest {
 		xmlFiles = new File[testSetCasp7.length];
 		int i=0;
 		for (String target: testSetCasp7) {
-			File queryFile = new File(targetDir,target+".fa");
-			File outFileXML = new File(outDir,target+".blast.xml");
-			File outFileTAB = new File(outDir,target+".blast.tab");
+			File queryFile = new File(CASP7_TARGETS_DIR,target+".fa");
+			File outFileXML = new File(TMP_DIR,target+".blast.xml");
+			File outFileTAB = new File(TMP_DIR,target+".blast.tab");
 			tabFiles[i] = outFileTAB;
 			xmlFiles[i] = outFileXML;
-			BlastRunner br = new BlastRunner("/project/StruPPi/bin","/project/StruPPi/CASP8/blast_dbs");
-			br.runBlastp(queryFile, db, outFileXML, 7, true, numThreads);
-			br.runBlastp(queryFile, db, outFileTAB, 8, true, numThreads);
+			BlastRunner br = new BlastRunner(BLAST_BIN_DIR,BLAST_DB_DIR);
+			br.runBlastp(queryFile, BLAST_DB, outFileXML, 7, true, numThreads);
+			br.runBlastp(queryFile, BLAST_DB, outFileTAB, 8, true, numThreads);
 			i++;
 		}
 	}
