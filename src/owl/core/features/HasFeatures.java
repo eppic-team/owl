@@ -49,6 +49,7 @@ public interface HasFeatures {
 		/**
 		 * Attach the given feature to the implementing object.
 		 * @param feature
+		 * @return true if feature not present so it was added, false if feature already present
 		 */
-		public void addFeature(Feature feature) throws InvalidFeatureCoordinatesException, OverlappingFeatureException;
+		public boolean addFeature(Feature feature) throws InvalidFeatureCoordinatesException, OverlappingFeatureException;
 }
