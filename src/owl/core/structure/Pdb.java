@@ -79,8 +79,6 @@ public class Pdb {
 	
 	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
 	private static final String PDB2EC_MAPPING_FILE = "/project/StruPPi/Databases/PDBSProtEC/mapping.txt";
-	private static final String SCOP_URL_PREFIX = "http://scop.mrc-lmb.cam.ac.uk/scop/parse/";
-	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
 	
 	/*-------------------------------------  members ---------------------------------------------*/
 
@@ -481,69 +479,6 @@ public class Pdb {
 			return null;
 		}
 	}
-
-	
-	/**
-	 * Parses SCOP annotation populating the Scop object member with SCOP 
-	 * annotation for this protein chain
-	 * @param version the SCOP version that we want to parse
-	 * @param online if true SCOP annotation will be taken from web, if false 
-	 * from local file
-	 * @throws IOException	 * 
-	 */
-	public void checkScop(String version, boolean online) throws IOException {
-		if (pdbCode==null || pdbCode.equals(NO_PDB_CODE)) return; // if this is not a pdb entry with a pdb code there's no SCOP id to get
-		
-		this.scop = new Scop();	
-		ScopRegion sr = null;
-		String startPdbResSer = "", endPdbResSer = "";
-		BufferedReader in;
-		String inputLine;
-	
-		if (online) {
-			URL scop_cla = new URL(SCOP_URL_PREFIX+"dir.cla.scop.txt_"+version);
-			URLConnection sc = scop_cla.openConnection();
-			in = new BufferedReader(new InputStreamReader(sc.getInputStream()));
-		} else {
-			File scop_cla = new File(SCOP_DIR,"dir.cla.scop.txt_"+version);
-			in = new BufferedReader(new FileReader(scop_cla));
-		}
-
-		while ((inputLine = in.readLine()) != null) 
-			if (inputLine.startsWith(pdbCode,1)) {
-				String[] fields = inputLine.split("\\s+");
-				String[] regions = fields[2].split(",");
-				for (int j=0; j < regions.length; j++) {
-					Pattern p = Pattern.compile("^(-)|([a-zA-Z\\d]):(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|([a-zA-Z\\d]):");
-					Matcher m = p.matcher(regions[j]);
-					if (m.find()) {
-						if (((pdbChainCode.equals(NULL_CHAIN_CODE) && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
-								(m.group(2) != null && m.group(2).equals(pdbChainCode)) || 
-								(m.group(7) != null && m.group(7).equals(pdbChainCode)) ||
-								(m.group(2) != null && m.group(2).equals("A") && pdbChainCode.equals(NULL_CHAIN_CODE)) ||
-								(m.group(7) != null && m.group(7).equals("A") && pdbChainCode.equals(NULL_CHAIN_CODE))) {
-							if (m.group(3) != null) {
-								startPdbResSer = m.group(3);
-								endPdbResSer = m.group(4);
-							} else if (m.group(5) != null) {
-								startPdbResSer = m.group(5);
-								endPdbResSer = m.group(6);								
-							} else {
-								startPdbResSer = this.getPdbResSerFromResSer(this.getMinObsResSerial());
-								endPdbResSer = this.getPdbResSerFromResSer(this.getMaxObsResSerial());
-							}
-							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, getResSerFromPdbResSer(startPdbResSer), getResSerFromPdbResSer(endPdbResSer));
-							scop.add(sr);
-						}
-					}
-				}
-				//break; // we can't break: pdbCodes are not necessarily ordered in the scop annotation file: we need to parse to the end of the file
-			}
-		in.close();
-
-		scop.setVersion(version);
-	}	
-
 
 	/**
 	 * Assigns b-factor values to the atoms of this structure. If structure is written to pdb file,
@@ -1874,6 +1809,13 @@ public class Pdb {
 		this.catalSiteSet = catalSiteSet;
 	}
 
+	/**
+	 * Sets the scop annotation object of this Pdb
+	 */
+	public void setScop(Scop scop) {
+		this.scop = scop;
+	}
+	
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)

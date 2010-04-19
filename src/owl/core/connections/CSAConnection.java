@@ -34,6 +34,7 @@ public class CSAConnection {
 	 * Queries the Catalytic Site Atlas (Porter et al. NAR 32: D129-D133, 2004) for the 
 	 * PDB code of the given Pdb object and sets its member variable <code>catalSiteSet</code> with the results.
 	 * If no entry is found,<code>catalSiteSet</code> is set to null.
+	 * @param pdb
 	 * @param version the CSA version to use (e.g. {@link CatalSiteSet.LATEST_VERSION})
 	 * @param online whether to access online version of CSA or use a local copy
 	 * @return number of errors (mismatching residues between this structure and the CSA annotation)

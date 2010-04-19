@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.Iterator;
 
 import owl.core.connections.GTGHit;
+import owl.core.connections.ScopConnection;
 import owl.core.runners.blast.BlastHit;
 import owl.core.structure.features.ScopRegion;
 import owl.core.structure.graphs.RIGraph;
@@ -128,7 +129,7 @@ public class Template {
 	 */
 	private void getScopInfo() {
 		try {
-			pdb.checkScop(SCOP_VERSION, false);
+			ScopConnection.parseScop(pdb,SCOP_VERSION, false);
 			Iterator<ScopRegion> it = pdb.getScop().getIterator();
 			scopSccsString = "";
 			while (it.hasNext()) {

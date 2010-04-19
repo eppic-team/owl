@@ -8,6 +8,7 @@ import java.sql.SQLException;
 
 import owl.core.connections.CSAConnection;
 import owl.core.connections.ConsurfConnection;
+import owl.core.connections.ScopConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.Pdb;
@@ -229,7 +230,7 @@ public class genDbGraph {
 					}
 					if (!mode.equals("GRAPH")) {
 						try {
-							pdb.checkScop("1.73", false);
+							ScopConnection.parseScop(pdb,"1.73", false);
 							scop = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
@@ -338,7 +339,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						pdb.checkScop("1.73", false);
+						ScopConnection.parseScop(pdb,"1.73", false);
 						scop = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
