@@ -82,8 +82,6 @@ public class Pdb {
 	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue 
 																// corresponds to that of an all atoms protein. See isAllAtom()
 	
-	protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
-	
 	private static final String CSA_DIR = "/project/StruPPi/Databases/CSA";
 	private static final String CSA_URL_PREFIX = "http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/";
 	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
@@ -536,67 +534,6 @@ public class Pdb {
 
 		in.close();
 
-	}
-	
-	/*
-	 * NR Voss, MB Gerstein. Calculation of standard atomic volumes for RNA and comparison with proteins: RNA is packed more tightly. J Mol. Biol. v346(2): 2005, pp 477-492.
-	 * doi:10.1016/j.jmb.2004.11.072 
-	 * Software downloaded from http://geometry.molmovdb.org/
-	 */	
-	/** 
-	 * Runs an external calc-surface executable and returns the total ASA 
-	 * @param calcExecutable
-	 * @param calcParameters
-	 * @return
-	 */
-	public double calcSurface(String calcExecutable, String calcParameters) throws IOException {
-		String line;
-		double surface = 0;
-		
-		File test = new File(calcExecutable);
-		if(!test.canRead()) throw new IOException("calc-surface Executable is not readable");
-		Process myCalc = Runtime.getRuntime().exec(calcExecutable + " -i - " + calcParameters);
-		PrintStream calcInput = new PrintStream(myCalc.getOutputStream());
-		BufferedReader calcOutput = new BufferedReader(new InputStreamReader(myCalc.getInputStream()));
-		BufferedReader calcError = new BufferedReader(new InputStreamReader(myCalc.getErrorStream()));
-		writeAtomLines(calcInput);	// pipe atom lines to calc-surface
-		calcInput.close();
-		while((line = calcOutput.readLine()) != null) {
-			surface += Double.valueOf(line.substring(66,73).trim());
-		}
-		calcOutput.close();
-		calcError.close();
-		
-		return surface;
-	}
-
-	/** 
-	 * Runs an external calc-volume executable and returns the volume 
-	 * @param calcExecutable
-	 * @param calcParameters
-	 * @return
-	 */
-	public double calcVolume(String calcExecutable, String calcParameters) throws IOException {
-		String line;
-		double vol = 0;
-		String pdbFileName = new File(TMP_DIR,pdbCode+chainCode+"_"+System.currentTimeMillis()+".pdb").getAbsolutePath();
-		writeToPDBFile(pdbFileName);
-		
-		File test = new File(calcExecutable);
-		if(!test.canRead()) throw new IOException("calc-volume Executable is not readable");
-		Process myCalc = Runtime.getRuntime().exec(calcExecutable + " -i "+pdbFileName+" "+ calcParameters);
-		BufferedReader calcOutput = new BufferedReader(new InputStreamReader(myCalc.getInputStream()));
-		BufferedReader calcError = new BufferedReader(new InputStreamReader(myCalc.getErrorStream()));
-		while((line = calcOutput.readLine()) != null) {
-			if (line.substring(80,82).trim().equals("0")) {
-				vol += Double.valueOf(line.substring(66,79).trim());
-			}
-		}
-		calcOutput.close();
-		calcError.close();
-		new File(pdbFileName).delete();
-		
-		return vol;
 	}
 	
 	/**

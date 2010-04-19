@@ -1,5 +1,6 @@
 import java.io.File;
 
+import owl.core.runners.CalcSurfVolRunner;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
@@ -31,8 +32,8 @@ public class calcVolsAndSurfs {
 			String pdbChainCode = pdbId.substring(4,5);
 			Pdb pdb = new PdbasePdb(pdbCode, "pdbase", conn);
 			pdb.load(pdbChainCode);
-			System.out.printf("%10.3f\t",pdb.calcVolume(CALCVOL_EXE, ""));
-			System.out.printf("%10.3f\n",pdb.calcSurface(CALCSURF_EXE, ""));
+			System.out.printf("%10.3f\t",CalcSurfVolRunner.calcVolume(pdb,CALCVOL_EXE, ""));
+			System.out.printf("%10.3f\n",CalcSurfVolRunner.calcSurface(pdb,CALCSURF_EXE, ""));
 		}
 			
 

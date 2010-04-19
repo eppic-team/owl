@@ -34,6 +34,8 @@ public class CiffilePdb extends Pdb {
 	public static final String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
 	public static final String CIF_FILE_EXTENSION = ".cif.gz";
 	
+	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	
 	/*--------------------------- member variables --------------------------*/
 	
 	// input file
