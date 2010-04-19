@@ -79,13 +79,11 @@ public class Pdb {
 	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
 	
-	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue corresponds to  
-															// that of an all atoms protein. See isAllAtom()
+	private static final double MIN_AVRG_NUM_ATOMS_RES = 6.5;	// the cutoff to consider that the average number of atoms per residue 
+																// corresponds to that of an all atoms protein. See isAllAtom()
 	
 	protected static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
-	private static final String PQS_FILE = "/project/StruPPi/Databases/PQS/pqs.txt";
-	private static final String PISA_FILE = "/project/StruPPi/Databases/PISA/pisa.txt";
 	private static final String CSA_DIR = "/project/StruPPi/Databases/CSA";
 	private static final String CSA_URL_PREFIX = "http://www.ebi.ac.uk/thornton-srv/databases/CSA/archive/";
 	private static final String PDB2EC_MAPPING_URL = "http://www.bioinf.org.uk/pdbsprotec/mapping.txt";
@@ -108,7 +106,6 @@ public class Pdb {
 	protected Scop scop;								// the scop annotation for this pdb object
 	protected EC ec;									// the ec annotation for this pdb object
 	protected CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
-	protected OligomericState oligomeric;				// the oligomeric state for this pdb object
 	
 	// identifiers
 	protected String sequence; 			// full sequence as it appears in SEQRES field
@@ -116,7 +113,7 @@ public class Pdb {
 	protected String pdbChainCode;		// Given "external" pdb chain code, i.e. the classic (author's) pdb code 
 										// If it is blank in original PDB file then it is: Pdb.NULL_CHAIN_CODE
 	protected String chainCode;			// Our internal chain identifier:
-										// - in reading from pdbase it will be set to the internal chain id (asym_id field)
+										// - in reading from pdbase/cif file it will be set to the cif chain id (asym_id field)
 										// - in reading from PDB file it coincides with pdbChainCode except for 
 										//   Pdb.NULL_CHAIN_CODE where we use "A"
 	protected int model;  				// the model serial for NMR structures
@@ -400,50 +397,6 @@ public class Pdb {
 				}
 			}			
 		}
-	}
-	
-	/**
-	 * Queries local copies of PQS and PISA data for the current PDB code and
-	 * returns the reported oligomeric state or null if pdb code was not found.
-	 * The member variable 'oligomeric' will be set to the result.
-	 * @return the presumed oligomeric state or null if no data found
-	 * @throws IOException if data files are not readable
-	 */
-	public int checkOligomeric() throws IOException {
-		BufferedReader in;
-		String inputLine;
-
-		this.oligomeric = new OligomericState();
-		
-		// parse PQS
-		File pqsFile = new File(PQS_FILE);
-		in = new BufferedReader(new FileReader(pqsFile));
-
-		while ((inputLine = in.readLine()) != null) {
-			if (inputLine.startsWith(pdbCode)) {
-				String[] fields = inputLine.split("\\t");
-				oligomeric.setPqs(fields[1].equals("\\N")?null:fields[1], fields[2].equals("\\N")?null:fields[2]);
-				break;
-			}
-		}
-
-		in.close();		
-
-		// parse PISA
-		File pisaFile = new File(PISA_FILE);
-		in = new BufferedReader(new FileReader(pisaFile));
-
-		while ((inputLine = in.readLine()) != null) {
-			if (inputLine.startsWith(pdbCode)) {
-				String[] fields = inputLine.split("\\t");
-				oligomeric.setPisa(Integer.valueOf(fields[1]));
-				break;
-			}
-		}
-
-		in.close();
-		
-		return oligomeric.getState();		
 	}
 	
 	/**
@@ -1984,8 +1937,6 @@ public class Pdb {
 		this.hasASA = hasASA;
 	}
 	
-	// csa related methods
-
 	/** 
 	 * Returns true if csa information is available, false otherwise. 
 	 * @return
@@ -2001,22 +1952,12 @@ public class Pdb {
 	}
 	
 	/**
-	 * Returns the oligomeric state object of this graph.
-	 * @return
-	 */
-	public OligomericState getOligomericState() {
-		return oligomeric;
-	}
-	
-	/**
-	 * Returns the csa annotation object of this graph.
+	 * Returns the csa annotation object of this Pdb.
 	 * @return
 	 */
 	public CatalSiteSet getCSA() {
 		return catalSiteSet;
 	}
-
-	// ec related methods
 
 	/** 
 	 * Returns true if ec information is available, false otherwise. 
@@ -2040,10 +1981,6 @@ public class Pdb {
 		return ec;
 	}
 
-	// end of secop related methods
-
-	// scop related methods
-
 	/** 
 	 * Returns true if scop information is available, false otherwise.
 	 * @return 
@@ -2065,8 +2002,6 @@ public class Pdb {
 	public Scop getScop() {
 		return scop;
 	}
-
-	// end of scop related methods
 
 	// secondary structure related methods
 
