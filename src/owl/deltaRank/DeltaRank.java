@@ -48,6 +48,40 @@ public class DeltaRank {
 		updateProbabilities();
 	}
 	
+	public Pair<Integer> lowestDRContact() {
+		Pair<Integer> low = new Pair<Integer>(0,0);
+		double min = 30;
+		for (int i = 1; i <= graph.getFullLength(); i++) {
+			for (int j=1;j<i;j++) {
+				if (!graph.containsEdgeIJ(i, j)) {
+					continue;
+				}
+				if (matrix[i-1][j-1] < min) {
+					min = matrix[i-1][j-1];
+					low = new Pair<Integer>(i,j);
+				}
+			}
+		}
+		return low;
+	}
+	
+	public Pair<Integer> highestDRNonContact() {
+		Pair<Integer> high = new Pair<Integer>(0,0);
+		double max = 0;
+		for (int i = 1; i <= graph.getFullLength(); i++) {
+			for (int j=1;j<i;j++) {
+				if (graph.containsEdgeIJ(i, j)) {
+					continue;
+				}
+				if (matrix[i-1][j-1] > max) {
+					max = matrix[i-1][j-1];
+					high = new Pair<Integer>(i,j);
+				}
+			}
+		}
+		return high;
+	}
+	
 	/**
 	 * Calculates the delta rank for one cell of a contact map matrix
 	 * @param i
