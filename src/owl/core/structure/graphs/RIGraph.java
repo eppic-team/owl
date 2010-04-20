@@ -204,6 +204,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return comNbhood;
 	}
 	
+
 	/**
 	 * Returns all common neighborhood sizes (if they are >0) for each cell of the contact map (contact or non-contact) 
 	 * @return
