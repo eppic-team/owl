@@ -8,8 +8,10 @@ import owl.core.util.MySQLConnection;
 
 public class CMPdb_sphoxel {
 	
-	protected static final int defaultNumSteps = 4;
-	protected static final float defaultResol = 180/(float)defaultNumSteps; // in degrees
+	public static final int defaultNumSteps = 4;
+	public static final float defaultResol = 180/(float)defaultNumSteps; // in degrees
+	protected static final String defaultDB = "bg";
+	public static final String[] radiusRanges = {"rSR","rMR","rLR"};
 	
 	/*--------------------------- member variables --------------------------*/		
 	private MySQLConnection conn;
@@ -35,9 +37,13 @@ public class CMPdb_sphoxel {
 	private double maxRatio = 0;
 	
 	private float minr=0.0f, maxr=9.2f;
+	private String radiusPrefix = "rSR"; // "rMR" or "rLR"
 	private final double mintheta=0.0, minphi=-Math.PI;
 	private double svoxelsize=(Math.PI)/numSteps; //, deltar=1.0 ;
-	private char iRes='A', jRes='A', ssType='O';
+	private char iRes='A', jRes='A';
+	private char issType='H', jssType='H';
+	private final char AnySStype = 'A';
+//	private final char[] sstype = {'H', 'S', 'O', 'A'};
 	
 	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
 		this.db = db;
@@ -45,6 +51,117 @@ public class CMPdb_sphoxel {
 		this.jRes = jRes;
 //		conn = new MySQLConnection();
 		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
+	public void runBayesPreComp() throws SQLException {
+		String query;
+		Statement stmt;
+		ResultSet result_angle, result_type, result_angle_type, result_all;
+		double theta=0.0, phi=0.0;
+		double countAll = 0, countAngle = 0, countType = 0, countAngleType = 0;
+		double countExp = 0;
+		double countObs = 0;
+
+		this.db = defaultDB;
+		String tn = "edges";
+		String tnRes = "";
+		String tnResR = "";
+		String tnR = "";
+		// initialize table names
+		tnR = tn+"_"+this.radiusPrefix;
+		if (diffSSType)
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.jssType).toLowerCase();
+		else
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.AnySStype).toLowerCase();
+		tnResR = tnRes + "_" + this.radiusPrefix;
+				
+		this.ratios = new double [this.numRatiosX][this.numRatiosY];
+		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
+		
+		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.issType+ " "+this.diffSSType);		
+		
+		stmt = conn.createStatement();
+		
+		// ---- count all
+		query = "SELECT count(*) from "+this.db+"."+tn+";";
+		result_all = stmt.executeQuery(query);
+		if(result_all.next()) {
+			countAll = result_all.getInt(1); // extract raw count 
+		}// and while next results			
+		result_all.close();
+		
+		// ---- count where type
+		query = "SELECT count(*) from "+this.db+"."+tnRes+";";
+		result_type = stmt.executeQuery(query);
+		if(result_type.next()) {
+			countType = result_type.getInt(1); // extract raw count 
+		}// and while next results	
+		result_type.close();
+		
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
+		stmt.execute(query);
+		
+		for (int i=0; i<this.ratios.length; i++){
+		    theta = this.mintheta + i*this.svoxelsize;
+		    
+			query = "CREATE table "+this.db+"."+this.tableNameRT+" (SELECT * from "+this.db+"."+tnR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			stmt.execute(query);		
+			query = "ALTER TABLE "+this.db+"."+this.tableNameRT+" add index p(phi);";
+			stmt.execute(query);
+			
+			query = "CREATE table "+this.db+"."+this.tableNameResRT+" (SELECT * from "+this.db+"."+tnResR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			stmt.execute(query);			
+			query = "ALTER TABLE "+this.db+"."+this.tableNameResRT+" add index p(phi);";
+			stmt.execute(query);
+
+		   	for (int j=0; j<this.ratios[i].length; j++){
+	    		phi = this.minphi + j*this.svoxelsize;
+				
+				// count where angle
+				query = "SELECT count(*) from "+db+"."+this.tableNameRT+" where phi>="+phi+" and phi<"+(phi+this.svoxelsize)+" ;";
+				result_angle = stmt.executeQuery(query);
+				if(result_angle.next()) {
+					countAngle = result_angle.getInt(1); // extract raw count 
+				}// and while next results	
+				result_angle.close();
+				
+				// count where angle and type
+				query = "SELECT count(*) from "+db+"."+this.tableNameResRT+" where phi>="+phi+" and phi<"+(phi+this.svoxelsize)+" ;";
+				result_angle_type = stmt.executeQuery(query);
+				if(result_angle_type.next()) {
+					countAngleType = result_angle_type.getInt(1); // extract raw count 
+				}// and while next results	
+				result_angle_type.close();	
+				
+				countAll++; countAngle++; countType++; countAngleType++;
+				
+				countObs = countAngleType;
+				countExp = (countAngle*countType)/countAll;
+				// -- +factor to avoid division by 0 --> equals countObs++ and countExp++
+				double ratio = countObs/countExp;
+				double ratio1 = Math.log (ratio);
+								
+				//---replace SoP with array entry
+				this.ratios[i][j] = ratio1;
+				this.bayesRatios[i][j][0] = ratio1;
+				this.bayesRatios[i][j][1] = countObs;
+				this.bayesRatios[i][j][2] = countExp;
+				if (ratio1<this.minRatio)
+					this.minRatio = ratio1;
+				if (ratio1>this.maxRatio)
+					this.maxRatio = ratio1;
+					
+			} //--end for phi
+			
+			query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
+			stmt.execute(query);
+			query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
+			stmt.execute(query);
+		} //--end for theta
+		stmt.close();
+		
 	}
 	
 	public void runBayes() throws SQLException {
@@ -56,10 +173,134 @@ public class CMPdb_sphoxel {
 		double countExp = 0;
 		double countObs = 0;
 		
+		this.db = defaultDB;
+		String tn = "edges";
+		String tnRes = "";
+//		String tnResR = "";
+//		String tnR = "";
+		// initialize table names
+//		tnR = tn+"_"+String.valueOf(this.minr)+"_"+String.valueOf(this.maxr);
+		if (diffSSType)
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.jssType).toLowerCase();
+		else
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.AnySStype).toLowerCase();
+//		tnResR = tnRes + "_" +String.valueOf(this.minr)+"_"+String.valueOf(this.maxr);
+		
 		this.ratios = new double [this.numRatiosX][this.numRatiosY];
 		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
 		
-		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.ssType+ " "+this.diffSSType);		
+		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.issType+ " "+this.diffSSType);		
+		
+		stmt = conn.createStatement();
+			
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResR+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameR+";";
+		stmt.execute(query);
+		
+		query = "CREATE table "+this.db+"."+this.tableNameR+" (SELECT * from "+this.db+"."+tn+" where r >= "+this.minr+" and r < "+this.maxr+");";
+		stmt.execute(query);		
+		query = "ALTER TABLE "+this.db+"."+this.tableNameR+" add index t(theta);";
+		stmt.execute(query);
+		
+		query = "CREATE table "+this.db+"."+this.tableNameResR+" (SELECT * from "+this.db+"."+tnRes+" where r >= "+this.minr+" and r < "+this.maxr+");";
+		stmt.execute(query);		
+		query = "ALTER TABLE "+this.db+"."+this.tableNameResR+" add index t(theta);";
+		stmt.execute(query);	
+		
+		// ---- count all
+		query = "SELECT count(*) from "+this.db+"."+tn+";";
+		result_all = stmt.executeQuery(query);
+		if(result_all.next()) {
+			countAll = result_all.getInt(1); // extract raw count 
+		}// and while next results			
+		result_all.close();
+		
+		// ---- count where type
+		query = "SELECT count(*) from "+this.db+"."+tnRes+";";
+		result_type = stmt.executeQuery(query);
+		if(result_type.next()) {
+			countType = result_type.getInt(1); // extract raw count 
+		}// and while next results	
+		result_type.close();
+		
+		for (int i=0; i<this.ratios.length; i++){
+		    theta = this.mintheta + i*this.svoxelsize;
+		    
+			query = "CREATE table "+this.db+"."+this.tableNameRT+" (SELECT * from "+this.db+"."+this.tableNameR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			stmt.execute(query);		
+			query = "ALTER TABLE "+this.db+"."+this.tableNameRT+" add index p(phi);";
+			stmt.execute(query);
+			
+			query = "CREATE table "+this.db+"."+this.tableNameResRT+" (SELECT * from "+this.db+"."+this.tableNameResR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			stmt.execute(query);			
+			query = "ALTER TABLE "+this.db+"."+this.tableNameResRT+" add index p(phi);";
+			stmt.execute(query);
+
+		   	for (int j=0; j<this.ratios[i].length; j++){
+	    		phi = this.minphi + j*this.svoxelsize;
+				
+				// count where angle
+				query = "SELECT count(*) from "+db+"."+this.tableNameRT+" where phi>="+phi+" and phi<"+(phi+this.svoxelsize)+" ;";
+				result_angle = stmt.executeQuery(query);
+				if(result_angle.next()) {
+					countAngle = result_angle.getInt(1); // extract raw count 
+				}// and while next results	
+				result_angle.close();
+				
+				// count where angle and type
+				query = "SELECT count(*) from "+db+"."+this.tableNameResRT+" where phi>="+phi+" and phi<"+(phi+this.svoxelsize)+" ;";
+				result_angle_type = stmt.executeQuery(query);
+				if(result_angle_type.next()) {
+					countAngleType = result_angle_type.getInt(1); // extract raw count 
+				}// and while next results	
+				result_angle_type.close();	
+				
+				countAll++; countAngle++; countType++; countAngleType++;
+				
+				countObs = countAngleType;
+				countExp = (countAngle*countType)/countAll;
+				// -- +factor to avoid division by 0 --> equals countObs++ and countExp++
+				double ratio = countObs/countExp;
+				double ratio1 = Math.log (ratio);
+								
+				//---replace SoP with array entry
+				this.ratios[i][j] = ratio1;
+				this.bayesRatios[i][j][0] = ratio1;
+				this.bayesRatios[i][j][1] = countObs;
+				this.bayesRatios[i][j][2] = countExp;
+				if (ratio1<this.minRatio)
+					this.minRatio = ratio1;
+				if (ratio1>this.maxRatio)
+					this.maxRatio = ratio1;
+					
+			} //--end for phi
+			
+			query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
+			stmt.execute(query);
+			query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
+			stmt.execute(query);
+		} //--end for theta
+		stmt.close();
+	}
+	
+	public void runBayesByCreateTables() throws SQLException {
+		String query;
+		Statement stmt;
+		ResultSet result_angle, result_type, result_angle_type, result_all;
+		double theta=0.0, phi=0.0;
+		double countAll = 0, countAngle = 0, countType = 0, countAngleType = 0;
+		double countExp = 0;
+		double countObs = 0;
+		
+		this.ratios = new double [this.numRatiosX][this.numRatiosY];
+		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
+		
+		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.issType+ " "+this.diffSSType);		
 		
 		stmt = conn.createStatement();
 		
@@ -76,7 +317,7 @@ public class CMPdb_sphoxel {
 				
 		if (diffSSType){
 			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+".edges where i_res='"+this.iRes+"' and i_sstype='"
-				+ssType+"' and j_res='"+this.jRes+"');";
+				+issType+"' and j_res='"+this.jRes+"');";
 		}
 		else{
 			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+".edges where i_res='"+this.iRes+"' and j_res='"
@@ -191,7 +432,7 @@ public class CMPdb_sphoxel {
 		this.ratios = new double [this.numRatiosX][this.numRatiosY];
 		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
 		
-		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.ssType+ " "+this.diffSSType);	
+		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.issType+ " "+this.diffSSType);	
 //		System.out.println("countAll: countAngle: countType: countAngleType:");	
 		
 		// ---- count all
@@ -207,7 +448,7 @@ public class CMPdb_sphoxel {
 		stmt = conn.createStatement();		
 		if (diffSSType){
 			query = "SELECT count(*) from "+db+".edges where i_res='"+this.iRes+"' and i_sstype='"
-			+ssType+"' and j_res='"+this.jRes+"';";					// System.out.println(query);
+			+issType+"' and j_res='"+this.jRes+"';";					// System.out.println(query);
 		}
 		else {
 			query = "SELECT count(*) from "+db+".edges where i_res='"+this.iRes+"' and j_res='"
@@ -241,7 +482,7 @@ public class CMPdb_sphoxel {
 				stmt = conn.createStatement();		
 				if (diffSSType){
 					query = "SELECT count(*) from "+db+".edges where r >= "+this.minr+" and r < "+this.maxr
-				    +" and i_res='"+this.iRes+"' and i_sstype='"+ssType+"' and j_res='"+this.jRes+"' and theta>"
+				    +" and i_res='"+this.iRes+"' and i_sstype='"+issType+"' and j_res='"+this.jRes+"' and theta>"
 				    +theta+" and theta<"+(theta+this.svoxelsize)+" and phi>"+phi+" and phi<"+(phi+this.svoxelsize)+" ;";					// System.out.println(query);
 				}
 				else {
@@ -315,13 +556,19 @@ public class CMPdb_sphoxel {
 	}
 	public char getJRes(){
 		return this.jRes;
+	}	
+
+	public void setISSType(char c){
+		this.issType = c;
 	}
-	
-	public void setSSType(char type){
-		this.ssType = type;
+	public char getISSType(){
+		return this.issType;
 	}
-	public char getSSType(){
-		return this.ssType;
+	public void setJSSType(char c){
+		this.jssType = c;
+	}
+	public char getJSSType(){
+		return this.jssType;
 	}
 	
 	public void setDiffSSType(boolean b){
@@ -366,6 +613,12 @@ public class CMPdb_sphoxel {
 	}
 	public float getDefaultResol(){
 		return defaultResol;
+	}
+	public String getRadiusPrefix() {
+		return radiusPrefix;
+	}
+	public void setRadiusPrefix(String radiusPrefix) {
+		this.radiusPrefix = radiusPrefix;
 	}
 
 
