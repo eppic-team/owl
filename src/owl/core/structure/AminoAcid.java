@@ -88,7 +88,7 @@ public enum AminoAcid {
 	/* ---------------------- constructors -----------------------------*/
 	
 	AminoAcid(int number, String name, char one, String three, int atoms,
-			  double hydrophobicity, // empirical hydrophibicity scale by Miller in kcal/mol
+			  double hydrophobicity, // empirical hydrophibicity scale by Miller in kcal/mol TODO: Use Kyte & Doolittle?
 			  boolean hydrophobic, boolean aromatic, boolean aliphatic,
 			  boolean polar,       boolean charged,  boolean positive,
 			  boolean negative,    boolean small,    boolean tiny) {

@@ -14,7 +14,8 @@ import owl.core.runners.blast.BlastError;
 import owl.core.runners.blast.BlastRunner;
 
 /**
- * A psipred runner, adapted from shell script provided by David Jones
+ * A psipred runner, adapted from shell script provided by David Jones.
+ * See also {@link JPredConnection}.
  *
  */
 public class PsipredRunner {
