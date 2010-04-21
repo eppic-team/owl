@@ -18,5 +18,14 @@
 	<classpathentry kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
 	<classpathentry kind="lib" path="jars/jung-api-2.0.1.jar"/>
 	<classpathentry kind="lib" path="jars/jung-graph-impl-2.0.1.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring-core.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/uniprotjapi.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring-aop.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring-beans.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring-remoting.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/commons-logging.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/aopalliance.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/commons-httpclient.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/log4j.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
