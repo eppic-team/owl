@@ -39,6 +39,18 @@ public class Interval implements Comparable<Interval> {
 	public int getLength(){
 		return (end - beg);
 	}
+	
+	/**
+	 * Whether this Interval overlaps the given interval
+	 * @param other
+	 * @return
+	 */
+	public boolean overlaps(Interval other) {
+		if (this.end>other.beg && this.beg<other.end) {
+			return true;
+		}
+		return false;
+	}
 
 	public boolean equals(Object o){
 		Interval other = (Interval) o;

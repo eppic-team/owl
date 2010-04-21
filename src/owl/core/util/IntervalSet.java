@@ -43,6 +43,21 @@ public class IntervalSet extends TreeSet<Interval> implements Comparable<Interva
 		return IntervalSet.createFromIntSet(this.getIntegerSet());
 	}
 	
+	/**
+	 * Whether this IntervalSet overlaps the given one
+	 * @param other
+	 * @return
+	 */
+	public boolean overlaps(IntervalSet other) {
+		// this can probably be implemented a lot more efficiently, now o(n2)
+		for (Interval thisInter:this) {
+			for (Interval otherInter:other) {
+				if (thisInter.overlaps(otherInter)) return true;
+			}
+		}
+		return false;
+	}
+	
 	/*-------------------------- implemented methods ------------------------*/
 	
 	/**
@@ -68,6 +83,18 @@ public class IntervalSet extends TreeSet<Interval> implements Comparable<Interva
 		if(!thisIt.hasNext() && otherIt.hasNext()) return -1;	// this ends, other is longer
 		// if none of the above checks could break the tie, then we are equal
 		return 0;
+	}
+	
+	public String toString() {
+		String str = "[";
+
+		for (Interval interv:this) {
+			str+=interv.toString();
+			if (interv!=this.last()) {
+				str+=",";
+			}
+		}
+		return str+"]";
 	}
 	
 	/*---------------------------- static methods ---------------------------*/

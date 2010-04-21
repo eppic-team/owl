@@ -14,7 +14,8 @@ public enum FeatureType {
 	UNIPROT,		// A feature based on a Uniprot annotation
 	PROSITE,		// A feature based on a matching Prosite motif
 	PHOSPHOSITE,	// A feature based on a modification site from PhoshoSitePlus
-	SDOMAIN;		// A structurally defined domain (based on the pDomains service) 
+	SDOMAIN,		// A structurally defined domain (based on the pDomains service)
+	SIFTS;			// A PDB to uniprot mapping from the SIFTS server
+	//EC,			// A catalytic domain as defined by EC
 	//SCOP,			// A Scop domain annotation
-	//EC;			// A catalytic domain as defined by EC
 }

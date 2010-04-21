@@ -5,9 +5,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +26,11 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import owl.core.features.Feature;
+import owl.core.features.FeatureType;
+import owl.core.features.HasFeatures;
+import owl.core.features.InvalidFeatureCoordinatesException;
+import owl.core.features.OverlappingFeatureException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.EC;
@@ -55,7 +62,7 @@ import java.sql.Statement;
  * A single chain PDB protein structure
  * 
  */
-public class Pdb {
+public class Pdb implements HasFeatures {
 
 	/*------------------------------------  constants ---------------------------------------------*/
 	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
@@ -86,6 +93,9 @@ public class Pdb {
 	protected Scop scop;								// the scop annotation for this pdb object
 	protected EC ec;									// the ec annotation for this pdb object
 	protected CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
+	
+	private Map<FeatureType, Collection<Feature>> features; // all other features. Eventually all features above should be implemented by using  
+															// this object and the HasFeature interface
 	
 	// identifiers
 	protected String sequence; 			// full sequence as it appears in SEQRES field
@@ -2118,7 +2128,7 @@ public class Pdb {
 	
 	/**
 	 * Restricts thisPdb object to residues that belong to the given sunid
-	 * Can only be used after calling checkScop()
+	 * Can only be used if SCOP annotation is loaded. Check it with {@link #hasScop()}
 	 * @param sunid
 	 */
 	public void restrictToScopDomain (int sunid) {
@@ -2141,7 +2151,7 @@ public class Pdb {
 	
 	/**
 	 * Restricts thisPdb object to residues that belong to the given sid
-	 * Can only be used after calling checkScop() 
+	 * Can only be used if SCOP annotation is loaded. Check it with {@link #hasScop()} 
 	 * @param sid
 	 */
 	public void restrictToScopDomain (String sid) {
@@ -2500,6 +2510,28 @@ public class Pdb {
 		}
 	}
 	
+	/**
+	 * Returns the number of unobserved residues
+	 * @return
+	 */
+	public int countUnobserved() {
+		return getFullLength()-getObsLength();
+	}
+	
+	public TreeMap<Integer,Character> getUnobservedResidues() {
+		TreeMap<Integer,Character> unobserved = new TreeMap<Integer,Character>();
+
+		// detect all unobserved residues
+		for(int i = 1; i <= fullLength; ++i) {
+			if(!residues.containsKey(i)) {
+				unobserved.put(i,sequence.charAt(i-1));
+			}
+		}
+		return unobserved;
+		
+	}
+
+	
 	/*---------------------------- static methods ---------------------------*/
 	
 	/**
@@ -2609,40 +2641,75 @@ public class Pdb {
 		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
 	
-	/**
-	 * Returns the number of unobserved residues
-	 * @return
-	 */
-	public int countUnobserved() {
-		return getFullLength()-getObsLength();
-	}
+	/*------------------------ HasFeature interface implementation -----------------------*/
 	
-	public TreeMap<Integer,Character> getUnobservedResidues() {
-		TreeMap<Integer,Character> unobserved = new TreeMap<Integer,Character>();
+	@Override
+	public boolean addFeature(Feature feature) throws InvalidFeatureCoordinatesException,
+														OverlappingFeatureException {
 
-		// detect all unobserved residues
-		for(int i = 1; i <= fullLength; ++i) {
-			if(!residues.containsKey(i)) {
-				unobserved.put(i,sequence.charAt(i-1));
+		boolean result = false;
+		FeatureType ft = feature.getType();	// will throw a null pointer exception if feature == null
+		if(this.features == null) {
+			this.features = new HashMap<FeatureType, Collection<Feature>>();
+		}
+		Collection<Feature> fc = this.features.get(ft);
+		if(fc==null) {
+			fc = new LinkedList<Feature>();
+			features.put(ft, fc);
+		}
+		IntervalSet intervSet = feature.getIntervalSet();
+		for (Interval interv:intervSet){
+			if (interv.beg<1 || interv.end>this.getFullLength())
+				throw new InvalidFeatureCoordinatesException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" contains invalid coordinates for this Pdb.\n"
+						+"Interval: "+interv+". Max residue serial for this Pdb: "+this.getFullLength());
+		}
+		for (Feature f:fc) {
+			if (intervSet.overlaps(f.getIntervalSet())) {
+				throw new OverlappingFeatureException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" overlaps existing feature "+f.getDescription()+" of type "+f.getType()+"\n" +
+						"New interval set: "+intervSet+". Existing interval set: "+f.getIntervalSet());
 			}
 		}
-		return unobserved;
-		
+		result = fc.add(feature);
+		return result;	
 	}
 
-	
-	
-	
-	/*--------------------------------- main --------------------------------*/
-	
-	// to test the class, see also PdbTest class in tests.proteinstructure package
-	public static void main(String[] args) throws Exception {
-		// tester for omega angles
-		Pdb pdb = new PdbfilePdb(args[0]);
-		pdb.load(pdb.getChains()[0]);
-		for (int resser:pdb.getAllSortedResSerials()) {
-			System.out.println(resser+" "+pdb.getOmegaAngle(resser));
+	@Override
+	public Collection<FeatureType> getFeatureTypes() {
+		return features.keySet();
+	}
+
+	@Override
+	public Collection<Feature> getFeatures() {
+		Collection<Feature> allfeatures = new LinkedList<Feature>();
+		for (Collection<Feature> coll:features.values()) {
+			allfeatures.addAll(coll);
 		}
+		return allfeatures;
+	}
+
+	@Override
+	public Collection<Feature> getFeaturesForPositon(int position) {
+		Collection<Feature> result = new LinkedList<Feature>(); 
+		for(Feature f:this.getFeatures()) {
+			if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
+		}
+		return result;		
+	}
+
+	@Override
+	public Collection<Feature> getFeaturesOfType(FeatureType featureType) {
+		return features.get(featureType);
+	}
+
+	@Override
+	public Collection<Feature> getFeaturesOfTypeForPosition(FeatureType featureType, int position) {
+		Collection<Feature> result = new LinkedList<Feature>(); 
+		if(this.features.get(featureType) != null) {
+			for(Feature f:this.features.get(featureType)) {
+				if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
+			}
+		}
+		return result;
 	}
 }
 
