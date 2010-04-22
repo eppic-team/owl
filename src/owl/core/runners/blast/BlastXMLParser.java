@@ -28,7 +28,7 @@ public class BlastXMLParser implements ContentHandler {
 	private static final String ITERATION_ITER_NUM_TAG = "Iteration_iter-num";
 	private static final String ITERATIONS_HITS_TAG = "Iteration_hits";
 	private static final String HIT_TAG = "Hit";
-	private static final String HIT_DEF_TAG = "Hit_def";
+	private static final String HIT_ID_TAG = "Hit_id";
 	private static final String HIT_LEN_TAG = "Hit_len";
 	private static final String HSP_TAG = "Hsp";
 	private static final String HSP_BIT_SCORE_TAG = "Hsp_bit-score";
@@ -147,7 +147,7 @@ public class BlastXMLParser implements ContentHandler {
 			inHit = true;
 		}
 		if (inIterationHits && inHit) {
-			if (name.equals(HIT_DEF_TAG)){
+			if (name.equals(HIT_ID_TAG)){
 				initValueReading();
 			} 
 			else if (name.equals(HIT_LEN_TAG)) {
@@ -225,7 +225,7 @@ public class BlastXMLParser implements ContentHandler {
 			inHit = false;
 		}
 		if (inIterationHits && inHit) {
-			if (name.equals(HIT_DEF_TAG)) {
+			if (name.equals(HIT_ID_TAG)) {
 				String val = flushValue();
 				Pattern p = Pattern.compile(ID_REGEX);
 				Matcher m = p.matcher(val);

@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.IOException;
 
 import owl.core.sequence.Sequence;
-import owl.core.structure.TemplateList;
-import owl.core.util.MySQLConnection;
 
 
 /**
@@ -230,10 +228,10 @@ public class BlastRunner {
 			hits2.applyCutoff(eValCutoff);
 			System.out.println("Number of hits: "+hits2.size());
 			hits2.printSome(5);
-			System.out.println("Generating cluster graph...");
-			String[] ids = hits2.getTemplateIds();
-			TemplateList templates = new TemplateList(ids);
-			BlastUtils.writeClusterGraph(templates, new MySQLConnection("talyn","duarte", "nieve"), "pdbase",new File("out.gdl"), new File("out.matrix"), 6.0);
+			//System.out.println("Generating cluster graph...");
+			//String[] ids = hits2.getTemplateIds();
+			//TemplateList templates = new TemplateList(ids);
+			//BlastUtils.writeClusterGraph(templates, new MySQLConnection(), "pdbase",new File("out.gdl"), new File("out.matrix"), 6.0);
 		}
 	}
 }

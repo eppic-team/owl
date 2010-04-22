@@ -1,9 +1,7 @@
 package owl.core.runners.blast;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -173,31 +171,17 @@ public class BlastHitList implements Iterable<BlastHit> {
 	}
 	
 	/**
-	 * Returns a list of template ids (pdb codes+chain codes)
+	 * Returns a list of all subject ids.
 	 * @return
 	 */
-	public String[] getTemplateIds() {
-		String[] ids = new String[this.size()];
-		for (int i=0;i<this.size();i++) {
-			ids[i]=hits.get(i).getTemplateId();
+	public Collection<String> getSubjectIds() {
+		ArrayList<String> sids = new ArrayList<String>();
+		for (BlastHit hit:hits) {
+			sids.add(hit.getSubjectId());
 		}
-		return ids;
+		return sids;
 	}
 	
-	/**
-	 * 
-	 * @param outFile
-	 * @throws IOException
-	 */
-	public void writeTemplateIdsToFile(File outFile) throws IOException {
-		PrintWriter Out = new PrintWriter(outFile);
-		String[] ids = getTemplateIds();
-		for (String id:ids) {
-			Out.println(id);
-		}
-		Out.close();
-	}
-
 	/**
 	 * Returns and iterator over this blast hits list
 	 * @return
