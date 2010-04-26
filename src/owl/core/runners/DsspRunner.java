@@ -15,7 +15,7 @@ import owl.core.structure.features.SecondaryStructure;
 /**
  * Class to run the DSSP program (assignment of secondary structure)
  * As of September 2007, a DSSP executable can be downloaded from http://swift.cmbi.ru.nl/gv/dssp/
- * after filling out a license agreement.
+ * after filling in a license agreement.
  * 
  * @author duarte_j
  *

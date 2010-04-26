@@ -15,7 +15,7 @@ import owl.core.runners.blast.BlastRunner;
 
 /**
  * A psipred runner, adapted from shell script provided by David Jones.
- * See also {@link JPredConnection}.
+ * See also {@link SecondaryStructure.readPsiPredHorizFile} and {@link JPredConnection}.
  *
  */
 public class PsipredRunner {

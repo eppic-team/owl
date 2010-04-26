@@ -9,8 +9,12 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import owl.core.structure.features.SecStrucElement;
+import owl.core.structure.features.SecondaryStructure;
 
 /**
  * Connection class to query the JPred server from the Barton group in Dundee for secondary structure-, burial-
@@ -37,6 +41,7 @@ public class JPredConnection {
 	static final File DEBUG_FILE_1    = new File(TEMP_DIR, "jpred_submit.log");	// file created during online query in debug mode
 	static final File DEBUG_FILE_2    = new File(TEMP_DIR, "jpred_status.log"); // file created during online query in debug mode
 	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // file created during online query in debug mode
+	static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
 	
 	static final int TIMEOUT = 60;		// waiting for results timeout in seconds
 	static final int INTERVAL = 10; 	// result checking interval in seconds
@@ -280,6 +285,59 @@ public class JPredConnection {
 	 */
 	public String getSecondaryStructurePrediction() {
 		return resultMap==null?null:compressString(resultMap.get("jnetpred"));
+	}
+	
+	/**
+	 * Returns a three state secondary structure object with the JNet prediction.
+	 * @return a secondary structure object or null if no results were loaded.
+	 */
+	public SecondaryStructure getSecondaryStructurePredictionObject() {
+		if(resultMap == null) return null;
+		TreeMap<Integer, Character> ssTypes = new TreeMap<Integer,Character>();;
+		TreeMap<Integer, Double> ssConfs = new TreeMap<Integer,Double>();;
+		String ssPred = this.getSecondaryStructurePrediction();
+		String ssConf = this.getSecondaryStructureConfidence();
+		for(int i = 0; i < ssPred.length(); i++) {
+			char ssType;
+			switch(ssPred.charAt(i)) {
+			case 'H' : ssType = SecStrucElement.HELIX; break;
+			case 'E' : ssType = SecStrucElement.EXTENDED; break;
+			default  : ssType = SecStrucElement.OTHER;
+			}
+			ssTypes.put(i+1, ssType);
+			double confidence = Double.parseDouble("0."+String.valueOf(ssConf.charAt(i)));
+			ssConfs.put(i,confidence);
+		}
+		SecondaryStructure secondaryStructure = new SecondaryStructure(this.getQuerySequence());
+		char lastType = ssTypes.get(ssTypes.firstKey());
+		int lastResSer = ssTypes.firstKey();
+		char thisType;
+		int start = 1;
+		int elementCount = 0;
+		SecStrucElement ssElem;
+		String ssId;
+		for(int resSer:ssTypes.keySet()) {
+			thisType = ssTypes.get(resSer);
+			if(thisType != lastType || resSer > lastResSer+1) {
+				// finish previous element, start new one
+				elementCount++;
+				ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+				ssElem = new SecStrucElement(lastType,start,lastResSer,ssId);
+				secondaryStructure.add(ssElem);
+				start = resSer;
+				lastType = thisType;
+			}
+			lastResSer = resSer;
+		}
+		// finish last element
+		elementCount++;
+		ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+		ssElem = new SecStrucElement(lastType, start,ssTypes.lastKey(),ssId);
+		secondaryStructure.add(ssElem);
+
+		secondaryStructure.setComment("JPred");
+		
+		return secondaryStructure;
 	}
 	
 	/**

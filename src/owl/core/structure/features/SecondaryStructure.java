@@ -15,11 +15,18 @@ import owl.graphAveraging.ConsensusInterval;
 import owl.graphAveraging.ConsensusSquare;
 
 
-/** This class encapsulates the secondary structure annotation of a single protein chain.
+/** 
+ * This class encapsulates the secondary structure annotation of a single protein chain.
+ * Adapters for the following sources of secondary structure annotation have been implemented:
+ * - PDB (see owl.core.structure.Pdb)
+ * - DSSP (see owl.core.runners.DsspRunner)
+ * - PsiPred (see owl.core.runners.PsipredRunner)
+ * - JPred (see owl.core.connections.JPredConnection)
+ * 
  * TODO eventually we should make this implement Iterable<SecStrucElement> (so then one can 
  * use foreach loops). The problem is we'd need to refactor getIterator() to iterator() and
  * it's difficult because there are many references all over the place some of them conflicting
- * with other local variable names 
+ * with other local variable names.
  */
 public class SecondaryStructure {
 
@@ -49,6 +56,7 @@ public class SecondaryStructure {
 		this.sequence = sequence; 
 		this.secStructElements = new Vector<SecStrucElement>();
 		this.resser2secstruct = new HashMap<Integer,SecStrucElement>();
+		this.resser2predConfidence = new HashMap<Integer, Double>();
 		this.comment = INITIAL_COMMENT;
 	}
 	
@@ -69,7 +77,8 @@ public class SecondaryStructure {
 	/*---------------------------- private methods ---------------------------*/
 	
 	/**
-	 * Parses a psipred prediction horizontal file
+	 * Parses a psipred prediction horizontal file.
+	 * TODO: This should be in PsipredRunner.
 	 * @param psipredHorizFile
 	 * @throws IOException
 	 */
@@ -140,6 +149,15 @@ public class SecondaryStructure {
 		for(int i = intv.beg; i <= intv.end; i++) {
 			this.resser2secstruct.put(i, e);
 		}
+	}
+	
+	/**
+	 * Sets the confidence value for the given residue.
+	 * @param resNum the residue number
+	 * @param conf the confidence value to assign
+	 */
+	public void setConfidence(int resNum, double conf) {
+		this.resser2predConfidence.put(resNum, conf);
 	}
 	
 	/**

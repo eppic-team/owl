@@ -21,6 +21,9 @@ import owl.core.structure.graphs.RIGraph;
  * object may not be null. The secondary structure object may be null, so implementations
  * may use secondary structure information if given but also need to work in the abscence of it.
  * 
+ * The contacts should be assumed to be C-beta atoms being not more than 8 Angstrom apart unless
+ * the implementeation specifically takes into account the contact type defined in the RIGraph.
+ * 
  * It is encouraged to return scores normalized to values between 0 and 1. We do not make this
  * a strict requirement yet because we need to gain more experience in how for this is a too severe
  * restriction (TODO).
