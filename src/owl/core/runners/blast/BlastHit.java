@@ -22,6 +22,7 @@ public class BlastHit {
 	private String queryId; // queryId and queryLength are redundant here (they belong in BlastHitList) but anyway useful to have copies here
 	private int queryLength;
 	private String subjectId;
+	private String subjectDef;
 	private double percentIdentity;
 	private int aliLength;
 	private int queryStart;
@@ -179,6 +180,14 @@ public class BlastHit {
 
 	public void setSubjectId(String subjectId) {
 		this.subjectId = subjectId;
+	}
+	
+	public String getSubjectDef() {
+		return subjectDef;
+	}
+	
+	public void setSubjectDef(String subjectDef) {
+		this.subjectDef = subjectDef;
 	}
 
 	public double getScore() {

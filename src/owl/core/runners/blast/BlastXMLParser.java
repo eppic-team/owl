@@ -29,6 +29,7 @@ public class BlastXMLParser implements ContentHandler {
 	private static final String ITERATIONS_HITS_TAG = "Iteration_hits";
 	private static final String HIT_TAG = "Hit";
 	private static final String HIT_ID_TAG = "Hit_id";
+	private static final String HIT_DEF_TAG = "Hit_def";
 	private static final String HIT_LEN_TAG = "Hit_len";
 	private static final String HSP_TAG = "Hsp";
 	private static final String HSP_BIT_SCORE_TAG = "Hsp_bit-score";
@@ -52,6 +53,7 @@ public class BlastXMLParser implements ContentHandler {
 	private String queryId;
 	private BlastHit currentHit;
 	private String currentSubjectId;
+	private String currentSubjectDef;
 	private int currentSubjectLength;
 	
 	private String currentQSeq;
@@ -150,6 +152,9 @@ public class BlastXMLParser implements ContentHandler {
 			if (name.equals(HIT_ID_TAG)){
 				initValueReading();
 			} 
+			else if (name.equals(HIT_DEF_TAG)){
+				initValueReading();
+			}
 			else if (name.equals(HIT_LEN_TAG)) {
 				initValueReading();
 			}
@@ -159,6 +164,7 @@ public class BlastXMLParser implements ContentHandler {
 				this.currentHit.setQueryId(queryId);
 				this.currentHit.setQueryLength(hitList.getQueryLength());
 				this.currentHit.setSubjectId(currentSubjectId);
+				this.currentHit.setSubjectDef(currentSubjectDef);
 				this.currentHit.setSubjectLength(currentSubjectLength);
 			}
 			if (inHsp) {
@@ -232,6 +238,9 @@ public class BlastXMLParser implements ContentHandler {
 				if (m.matches()) {
 					this.currentSubjectId = m.group(1);
 				}
+			}
+			else if (name.equals(HIT_DEF_TAG)) {
+				this.currentSubjectDef = flushValue();
 			}
 			else if (name.equals(HIT_LEN_TAG)){				
 				this.currentSubjectLength = Integer.parseInt(flushValue());

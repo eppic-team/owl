@@ -6,6 +6,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+
+import owl.core.sequence.Sequence;
 
 /**
  * Connection class with static methods to download EMBL data with EMBL's DB fetch
@@ -23,6 +27,7 @@ import java.net.URLConnection;
 public class EmblWSDBfetchConnection {
 	
 	private static final String BASE_URL = "http://www.ebi.ac.uk/Tools/webservices/rest/dbfetch";
+	private static final int MAX_ENTRIES_PER_REQUEST = 200; // see the embl ws dbfetch docs (url above) 
 	
 	public enum Db {
 		EMBLCDS("emblcds"),
@@ -50,61 +55,112 @@ public class EmblWSDBfetchConnection {
 	}
 	
 	/**
-	 * 
+	 * Fetches a list of entries from EMBL DB fetch web service of the given db type  
+	 * in FASTA format
 	 * @param db
-	 * @param id
-	 * @param format
+	 * @param ids
 	 * @return
 	 * @throws IOException
 	 * @throws NoMatchFoundException
 	 */
-	public static String fetch(Db db, String id, Format format) throws IOException, NoMatchFoundException {
-		URL url = new URL(BASE_URL+"/"+db.getDBfetchStr()+"/"+id+"/"+format.getDBfetchStr());
+	private static List<Sequence> fetch(Db db, List<String> ids) throws IOException, NoMatchFoundException {
+		List<Sequence> allSeqs = new ArrayList<Sequence>();
+		// we do batches of MAX_ENTRIES_PER_REQUEST as the EMBL web service has a limit of entries per request
+		for (int i=0;i<ids.size();i+=MAX_ENTRIES_PER_REQUEST) {
+			String commaSepList = "";
+			for (int c=i;c<i+MAX_ENTRIES_PER_REQUEST && c<ids.size();c++) {
+				if (c!=i) commaSepList+=",";
+				commaSepList+=ids.get(c);
+			}
+			allSeqs.addAll(fetch(db, commaSepList));
+		}
+		return allSeqs;
+	}
+	
+	/**
+	 * Retrieves the sequence data in FASTA format from EMBL DB fetch web service
+	 * given a comma separated list of entry identifiers.
+	 * @param db
+	 * @param commaSepList
+	 * @return
+	 * @throws IOException
+	 * @throws NoMatchFoundException
+	 */
+	private static List<Sequence> fetch(Db db, String commaSepList) throws IOException, NoMatchFoundException {
+		URL url = new URL(BASE_URL+"/"+db.getDBfetchStr()+"/"+commaSepList+"/"+Format.FASTA.getDBfetchStr());
 		URLConnection urlc = url.openConnection();
 		InputStream is = urlc.getInputStream();
-	    BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-	    StringBuilder sb = new StringBuilder();
-	    String line;
-	    while ((line = reader.readLine())!=null) {
-	      sb.append(line+"\n");
+	    BufferedReader reader = new BufferedReader(new InputStreamReader(is));    
+	    List<Sequence> out = new ArrayList<Sequence>();
+		String 	nextLine = "",
+		currentSeq = "",
+		lastSeqTag = "";
+	    while ((nextLine = reader.readLine())!=null) {
+		    if (nextLine.startsWith("No entries found")) 
+		    	throw new NoMatchFoundException("No "+db.getDBfetchStr()+" match found for ids "+commaSepList);
+			nextLine = nextLine.trim();					    // remove whitespace
+			if(nextLine.length() > 0) {						// ignore empty lines
+				if (nextLine.startsWith(">")){
+					if (!lastSeqTag.equals("")) {
+						out.add(new Sequence(lastSeqTag,currentSeq));
+						currentSeq = "";
+					}
+					lastSeqTag=nextLine.substring(1, nextLine.length()).trim();
+				} else {
+					currentSeq += nextLine;
+				}
+			}
+
 	    }
 	    is.close();
 	    reader.close();
-	    String out = sb.toString();
-	    if (out.startsWith("No entries found")) 
-	    	throw new NoMatchFoundException("No "+db.getDBfetchStr()+" match found for id "+id);
-	    return out;
+	    // adding last sequence (missed by loop above)
+	    out.add(new Sequence(lastSeqTag,currentSeq));
+	    
+	    return out;		
 	}
 	
 	/**
-	 * Fetches a EMBLCDS entry from EMBL DB fetch web service in FASTA format
-	 * @param emblcdsId
+	 * Fetches EMBLCDS entries from EMBL DB fetch web service in FASTA format
+	 * @param emblcdsIds
 	 * @return
 	 * @throws IOException
 	 * @throws NoMatchFoundException
 	 */
-	public static String fetchEMBLCDS(String emblcdsId) throws IOException, NoMatchFoundException {
-		return fetch(Db.EMBLCDS, emblcdsId, Format.FASTA);
+	public static List<Sequence> fetchEMBLCDS(List<String> emblcdsIds) throws IOException, NoMatchFoundException {
+		return fetch(Db.EMBLCDS, emblcdsIds);
 	}
 	
 	/**
-	 * Fetches a UNIPROT entry from EMBL DB fetch web service in FASTA format 
-	 * @param uniprotId
+	 * Fetches UNIPROT entries from EMBL DB fetch web service in FASTA format 
+	 * @param uniprotIds
 	 * @return
 	 * @throws IOException
 	 * @throws NoMatchFoundException
 	 */
-	public static String fetchUniprot(String uniprotId) throws IOException, NoMatchFoundException {
-		return fetch(Db.UNIPROTKB, uniprotId, Format.FASTA);
+	public static List<Sequence> fetchUniprot(List<String> uniprotIds) throws IOException, NoMatchFoundException {
+		return fetch(Db.UNIPROTKB, uniprotIds);
 	}
 
 	// testing
 	public static void main(String[] args) throws Exception {
-		System.out.println("Fetching an EMBLCDS:");
-		System.out.println(fetchEMBLCDS("CAA84586"));
+		System.out.println("Fetching EMBLCDS:");
+		List<String> emblcdsids = new ArrayList<String>();
+		emblcdsids.add("CAA84586");
+		emblcdsids.add("ACB36185");
+		List<Sequence> emblcdsSeqs = fetchEMBLCDS(emblcdsids);
+		for (Sequence seq:emblcdsSeqs) {
+			seq.writeToPrintStream(System.out);
+		}
 		System.out.println();
 		System.out.println("Fetching a Uniprot:");
-		System.out.println(fetchUniprot("P12830"));
+		List<String> uniIds = new ArrayList<String>();
+		uniIds.add("P12830");
+		List<Sequence> uniSeqs = fetchUniprot(uniIds);
+		for (Sequence seq:uniSeqs) {
+			seq.writeToPrintStream(System.out);
+		}
+
 	}
 	
 }

@@ -21,7 +21,15 @@ public class Sequence {
 
 	/*------------------------------ constants ------------------------------*/
 	
-	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)"; // see also the REGEX in Alignment class
+	// see also the REGEX in Alignment class
+	// TODO this is ignoring spaces, do we want to get them too and then  
+	// parse other info from the whole FASTA header? (see getPrimaryAccession() and getSecondaryAccession)
+	private static final Pattern FASTAHEADER_REGEX = Pattern.compile("^>\\s*([a-zA-Z0-9_|\\-.]+)");
+	
+	// in principle this works for emblcds and uniprot fasta headers (not tested anywhere else!) 
+	// it also removes the version (the .1 suffix at the end of the identifier that sometimes is used for instance in emblcds)
+	private static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:.\\d+)?\\|.*$");
+	private static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:.\\d+)?\\s.*$");
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -56,7 +64,39 @@ public class Sequence {
 	public String getName() {
 		return name;
 	}
+	
+	/**
+	 * Returns the sequence's primary accession id (the one after the first pipe) extracted 
+	 * from the name (FASTA header) of this Sequence if the FASTA header is from a Uniprot 
+	 * or EMBL entry complying the FASTA Defline format. 
+	 * See http://en.wikipedia.org/wiki/FASTA_format for Defline format 
+	 * @return the accession code or null if none could be found
+	 */
+	public String getPrimaryAccession() {
+		Matcher m = DEFLINE_PRIM_ACCESSION_REGEX.matcher(name);
+		String acc = null;
+		if (m.matches()) {
+			acc = m.group(1);
+		}
+		return acc;
+	}
 
+	/**
+	 * Returns the sequence's secondary accession id (the one after the second pipe) extracted 
+	 * from the name (FASTA header) of this Sequence if the FASTA header is from a Uniprot 
+	 * or EMBL entry complying the FASTA Defline format.
+	 * See http://en.wikipedia.org/wiki/FASTA_format for Defline format 
+	 * @return the accession code or null if none could be found
+	 */
+	public String getSecondaryAccession() {
+		Matcher m = DEFLINE_SEC_ACCESSION_REGEX.matcher(name);
+		String acc = null;
+		if (m.matches()) {
+			acc = m.group(1);
+		}
+		return acc;
+	}
+	
 	/**
 	 * @return the sequence
 	 */
@@ -106,8 +146,7 @@ public class Sequence {
 		String nextLine;
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
-			Pattern p = Pattern.compile(FASTAHEADER_REGEX);
-			Matcher m = p.matcher(nextLine);
+			Matcher m = FASTAHEADER_REGEX.matcher(nextLine);
 			if (m.find()) {
 				name = m.group(1).trim();
 			} else {

@@ -1,6 +1,7 @@
 package owl.core.connections;
 
 import java.util.Collection;
+import java.util.List;
 
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
@@ -11,8 +12,11 @@ import uk.ac.ebi.kraken.interfaces.uniprot.features.Feature;
 import uk.ac.ebi.kraken.interfaces.uniprot.features.FeatureType;
 import uk.ac.ebi.kraken.model.blast.JobStatus;
 import uk.ac.ebi.kraken.model.blast.parameters.DatabaseOptions;
+import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
 import uk.ac.ebi.kraken.uuw.services.remoting.EntryRetrievalService;
+import uk.ac.ebi.kraken.uuw.services.remoting.Query;
 import uk.ac.ebi.kraken.uuw.services.remoting.UniProtJAPI;
+import uk.ac.ebi.kraken.uuw.services.remoting.UniProtQueryBuilder;
 import uk.ac.ebi.kraken.uuw.services.remoting.UniProtQueryService;
 import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastData;
 import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastInput;
@@ -34,13 +38,34 @@ public class UniProtConnection {
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * Gets a single Uniprot entry given its Uniprot identifier. 
+	 * @param uniProtId
+	 * @return
+	 */
 	public UniProtEntry getEntry(String uniProtId) throws NoMatchFoundException {
 		UniProtEntry entry = (UniProtEntry) entryRetrievalService.getUniProtEntry(uniProtId);
 		if (entry==null) throw new NoMatchFoundException("No Uniprot entry found for uniprot id "+uniProtId);
 		return entry;
 	}
+
+	/**
+	 * Gets a list of Uniprot entries as an Iterator given a list of Uniprot identifiers.
+	 * @param idsList a list of uniprot ids
+	 * @return
+	 */
+	public EntryIterator<UniProtEntry> getMultipleEntries(List<String> idsList) {
+
+	    Query query = UniProtQueryBuilder.buildIDListQuery(idsList);
+
+	    return uniProtQueryService.getEntryIterator(query);
+	}
 	
-	// Return the UniProt version this connection is connected to
+	/**
+	 * Return the UniProt version this connection is connected to
+	 * @return
+	 */
 	public String getVersion() {
 		return UniProtJAPI.factory.getVersion();
 	}
