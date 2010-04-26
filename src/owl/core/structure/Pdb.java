@@ -374,7 +374,7 @@ public class Pdb implements HasFeatures {
 	 * Sets the secondary structure members of the Residue objects from the SecondaryStructure object
 	 */
 	protected void initialiseResiduesSecStruct() {
-		Iterator<SecStrucElement> it = this.getSecondaryStructure().getIterator();
+		Iterator<SecStrucElement> it = this.getSecondaryStructure().iterator();
 		while (it.hasNext()) {
 			SecStrucElement ssElem = it.next();
 			for (int resser=ssElem.getInterval().beg;resser<=ssElem.getInterval().end;resser++) {

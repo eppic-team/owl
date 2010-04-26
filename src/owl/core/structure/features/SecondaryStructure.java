@@ -23,12 +23,8 @@ import owl.graphAveraging.ConsensusSquare;
  * - PsiPred (see owl.core.runners.PsipredRunner)
  * - JPred (see owl.core.connections.JPredConnection)
  * 
- * TODO eventually we should make this implement Iterable<SecStrucElement> (so then one can 
- * use foreach loops). The problem is we'd need to refactor getIterator() to iterator() and
- * it's difficult because there are many references all over the place some of them conflicting
- * with other local variable names.
  */
-public class SecondaryStructure {
+public class SecondaryStructure implements Iterable<SecStrucElement> {
 
 	/*------------------------------ constants ------------------------------*/
 	
@@ -172,7 +168,7 @@ public class SecondaryStructure {
 	 * Returns an iterator over all assigned secondary structure elements in this object.
 	 * @return
 	 */
-	public Iterator<SecStrucElement> getIterator() {
+	public Iterator<SecStrucElement> iterator() {
 		return secStructElements.iterator();
 	}
 	

@@ -394,7 +394,7 @@ public class PhiPsiAverager {
 	 */
 	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForSS(Pdb pdb, int margin) {
 		IntervalSet intervals = new IntervalSet();
-		Iterator<SecStrucElement> itSecStr = pdb.getSecondaryStructure().getIterator();
+		Iterator<SecStrucElement> itSecStr = pdb.getSecondaryStructure().iterator();
 		while (itSecStr.hasNext()) {
 			SecStrucElement ss = itSecStr.next();
 			if (ss.getType()==SecStrucElement.HELIX || ss.getType()==SecStrucElement.STRAND) {
