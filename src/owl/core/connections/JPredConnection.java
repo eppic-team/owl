@@ -30,7 +30,7 @@ public class JPredConnection {
 	static final String SUBMIT_URL	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/jpred_form?seq=%s&input=seq&pdb=on"; //&queryName=%s";
 	static final String CHECK_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?%s";
 	static final String CHECK_URL2 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?keywords=%s";
-	static final String RESULT_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/results/jp_UX8aVue/jp_UX8aVue.concise";
+	static final String RESULT_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/results/%s/%s.concise";
 	static final String REGEX_ERROR   = "(Error - \\w+)";
 	static final String REGEX_STATUS  = "Job Status";
 	static final String REGEX_STAT_1  = "Your job is next to be submitted";
@@ -43,7 +43,7 @@ public class JPredConnection {
 	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // file created during online query in debug mode
 	static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
 	
-	static final int TIMEOUT = 60;		// waiting for results timeout in seconds
+	static final int TIMEOUT = 120;		// waiting for results timeout in seconds
 	static final int INTERVAL = 10; 	// result checking interval in seconds
 	
 	// members
