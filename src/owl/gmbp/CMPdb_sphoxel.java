@@ -12,6 +12,7 @@ public class CMPdb_sphoxel {
 	public static final float defaultResol = 180/(float)defaultNumSteps; // in degrees
 	protected static final String defaultDB = "bg";
 	public static final String[] radiusRanges = {"rSR","rMR","rLR"};
+	public static final char AnySStype = 'A';
 	
 	/*--------------------------- member variables --------------------------*/		
 	private MySQLConnection conn;
@@ -20,11 +21,13 @@ public class CMPdb_sphoxel {
 	private String username = "vehlow";
 	private String password = "nieve";
 	private String db = "bagler_all13p0_alledges";
-	private final String tableNameRes = "edgesCertainRes";
-	private final String tableNameResR = "edgesCertainResRRange";
-	private final String tableNameResRT = "edgesCertainResRTRange";
-	private final String tableNameR = "edgesRrange";
-	private final String tableNameRT = "edgesRTrange";
+	private String tableNameRes = "edgesCertainRes";
+	private String tableNameResR = "edgesCertainResRRange";
+	private String tableNameResRT = "edgesCertainResRTRange";
+	private String tableNameR = "edgesRrange";
+	private String tableNameRT = "edgesRTrange";
+	private final String tn = "edges";
+	private String tnRes = "";
 	
     private boolean diffSSType = false;
 	
@@ -42,7 +45,6 @@ public class CMPdb_sphoxel {
 	private double svoxelsize=(Math.PI)/numSteps; //, deltar=1.0 ;
 	private char iRes='A', jRes='A';
 	private char issType='H', jssType='H';
-	private final char AnySStype = 'A';
 //	private final char[] sstype = {'H', 'S', 'O', 'A'};
 	
 	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
@@ -63,24 +65,44 @@ public class CMPdb_sphoxel {
 		double countObs = 0;
 
 		this.db = defaultDB;
-		String tn = "edges";
-		String tnRes = "";
-		String tnResR = "";
-		String tnR = "";
-		// initialize table names
-		tnR = tn+"_"+this.radiusPrefix;
-		if (diffSSType)
-			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.jssType).toLowerCase();
-		else
-			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.AnySStype).toLowerCase();
-		tnResR = tnRes + "_" + this.radiusPrefix;
-				
+		this.tableNameR = this.tableNameR+this.issType+this.iRes+this.jRes;
+//		this.tableNameRes = this.tableNameRes+this.issType+this.iRes+this.jRes;
+		this.tableNameResR = this.tableNameResR+this.issType+this.iRes+this.jRes;
+		this.tableNameResRT = this.tableNameResRT+this.issType+this.iRes+this.jRes;
+		this.tableNameRT = this.tableNameRT+this.issType+this.iRes+this.jRes;
+						
 		this.ratios = new double [this.numRatiosX][this.numRatiosY];
 		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
 		
 		System.out.println("BayesRatios______extracting voxel density for: "+this.iRes+"_"+this.jRes+" sstype:"+this.issType+ " "+this.diffSSType);		
 		
+		if (diffSSType)
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(AnySStype).toLowerCase();
+		else
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(AnySStype).toLowerCase();	
+		
 		stmt = conn.createStatement();
+		
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResR+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameR+";";
+		stmt.execute(query);
+		
+		query = "CREATE table "+this.db+"."+this.tableNameR+" (SELECT * from "+this.db+"."+this.tn+" where r >= "+this.minr+" and r < "+this.maxr+");";
+		stmt.execute(query);				
+		query = "ALTER TABLE "+this.db+"."+this.tableNameR+" add index t(theta);";
+		stmt.execute(query);	
+//		System.out.println(this.tableNameR+" created");
+		
+		query = "CREATE table "+this.db+"."+this.tableNameResR+" (SELECT * from "+this.db+"."+this.tnRes+" where r >= "+this.minr+" and r < "+this.maxr+");";
+		stmt.execute(query);		
+		query = "ALTER TABLE "+this.db+"."+this.tableNameResR+" add index t(theta);";
+		stmt.execute(query);		
+//		System.out.println(this.tableNameResR+" created");
 		
 		// ---- count all
 		query = "SELECT count(*) from "+this.db+"."+tn+";";
@@ -97,21 +119,16 @@ public class CMPdb_sphoxel {
 			countType = result_type.getInt(1); // extract raw count 
 		}// and while next results	
 		result_type.close();
-		
-		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameRT+";";
-		stmt.execute(query);
-		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
-		stmt.execute(query);
-		
+				
 		for (int i=0; i<this.ratios.length; i++){
 		    theta = this.mintheta + i*this.svoxelsize;
 		    
-			query = "CREATE table "+this.db+"."+this.tableNameRT+" (SELECT * from "+this.db+"."+tnR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			query = "CREATE table "+this.db+"."+this.tableNameRT+" (SELECT * from "+this.db+"."+this.tableNameR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
 			stmt.execute(query);		
 			query = "ALTER TABLE "+this.db+"."+this.tableNameRT+" add index p(phi);";
 			stmt.execute(query);
 			
-			query = "CREATE table "+this.db+"."+this.tableNameResRT+" (SELECT * from "+this.db+"."+tnResR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
+			query = "CREATE table "+this.db+"."+this.tableNameResRT+" (SELECT * from "+this.db+"."+this.tableNameResR+" where theta>="+theta+" and theta<"+(theta+this.svoxelsize)+");";
 			stmt.execute(query);			
 			query = "ALTER TABLE "+this.db+"."+this.tableNameResRT+" add index p(phi);";
 			stmt.execute(query);
@@ -160,6 +177,11 @@ public class CMPdb_sphoxel {
 			query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResRT+";";
 			stmt.execute(query);
 		} //--end for theta
+
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameResR+";";
+		stmt.execute(query);
+		query = "DROP TABLE IF EXISTS "+db+"."+this.tableNameR+";";
+		stmt.execute(query);
 		stmt.close();
 		
 	}
@@ -183,7 +205,7 @@ public class CMPdb_sphoxel {
 		if (diffSSType)
 			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.jssType).toLowerCase();
 		else
-			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(this.AnySStype).toLowerCase();
+			tnRes = "edges_"+this.iRes+"_"+String.valueOf(AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(AnySStype).toLowerCase();
 //		tnResR = tnRes + "_" +String.valueOf(this.minr)+"_"+String.valueOf(this.maxr);
 		
 		this.ratios = new double [this.numRatiosX][this.numRatiosY];
@@ -297,6 +319,8 @@ public class CMPdb_sphoxel {
 		double countExp = 0;
 		double countObs = 0;
 		
+		this.db = defaultDB;
+		
 		this.ratios = new double [this.numRatiosX][this.numRatiosY];
 		this.bayesRatios = new double [this.numRatiosX][this.numRatiosY][3];
 		
@@ -316,18 +340,18 @@ public class CMPdb_sphoxel {
 		stmt.execute(query);
 				
 		if (diffSSType){
-			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+".edges where i_res='"+this.iRes+"' and i_sstype='"
+			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+"."+this.tn+" where i_res='"+this.iRes+"' and i_sstype='"
 				+issType+"' and j_res='"+this.jRes+"');";
 		}
 		else{
-			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+".edges where i_res='"+this.iRes+"' and j_res='"
+			query = "CREATE table "+this.db+"."+this.tableNameRes+" (SELECT * from "+this.db+"."+this.tn+" where i_res='"+this.iRes+"' and j_res='"
 				+this.jRes+"');";
 		}		
 		stmt.execute(query);		
 		query = "ALTER TABLE "+this.db+"."+this.tableNameRes+" add index r(r);";
 		stmt.execute(query);
 		
-		query = "CREATE table "+this.db+"."+this.tableNameR+" (SELECT * from "+this.db+".edges where r >= "+this.minr+" and r < "+this.maxr+");";
+		query = "CREATE table "+this.db+"."+this.tableNameR+" (SELECT * from "+this.db+"."+this.tn+" where r >= "+this.minr+" and r < "+this.maxr+");";
 		stmt.execute(query);		
 		query = "ALTER TABLE "+this.db+"."+this.tableNameR+" add index t(theta);";
 		stmt.execute(query);
@@ -338,7 +362,7 @@ public class CMPdb_sphoxel {
 		stmt.execute(query);	
 		
 		// ---- count all
-		query = "SELECT count(*) from "+this.db+".edges;";
+		query = "SELECT count(*) from "+this.db+"."+this.tn+";";
 		result_all = stmt.executeQuery(query);
 		if(result_all.next()) {
 			countAll = result_all.getInt(1); // extract raw count 

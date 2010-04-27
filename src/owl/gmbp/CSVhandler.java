@@ -447,7 +447,7 @@ public class CSVhandler {
 				token = st.nextToken();
 				token = st.nextToken();
 				numSlices = Integer.valueOf(token);
-				System.out.println("number of slices: " + numSlices);
+//				System.out.println("number of slices: " + numSlices);
 			}
 			// get dimension of array
 			// xDim = numLines, yDim = numTokens
@@ -464,7 +464,7 @@ public class CSVhandler {
 				else
 					xDimFound = true;
 			}
-			System.out.println("number of tokens: "+numTokens);
+//			System.out.println("number of tokens: "+numTokens);
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
