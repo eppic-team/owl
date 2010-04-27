@@ -28,8 +28,8 @@ public class Sequence {
 	
 	// in principle this works for emblcds and uniprot fasta headers (not tested anywhere else!) 
 	// it also removes the version (the .1 suffix at the end of the identifier that sometimes is used for instance in emblcds)
-	private static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:.\\d+)?\\|.*$");
-	private static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:.\\d+)?\\s.*$");
+	public static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:.\\d+)?\\|.*$");
+	public static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:.\\d+)?\\s.*$");
 	
 	/*--------------------------- member variables --------------------------*/
 	
