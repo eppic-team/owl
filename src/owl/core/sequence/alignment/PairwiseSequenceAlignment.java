@@ -8,14 +8,13 @@ import jaligner.matrix.*;
 import jaligner.util.*;
 	
 /**
- * Class: 		PairwiseSequenceAlignment
- * Authors:		Henning Stehr
- * Date:		12/Nov/2007
- * 
  * A pairwise protein sequence alignment. This class represents a pair of
  * protein sequences which are globally aligned. Currently it serves mainly
  * as a wrapper to conveniently create an alignment using the NeedlemanWunschGotoh
- * class from the JAligner package with standard parameters. 
+ * class from the JAligner package with standard parameters.
+ * 
+ * @author Henning Stehr
+ *
  */
 public class PairwiseSequenceAlignment {
 
