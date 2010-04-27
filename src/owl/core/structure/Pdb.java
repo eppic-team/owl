@@ -2643,7 +2643,6 @@ public class Pdb implements HasFeatures {
 	
 	/*------------------------ HasFeature interface implementation -----------------------*/
 	
-	@Override
 	public boolean addFeature(Feature feature) throws InvalidFeatureCoordinatesException,
 														OverlappingFeatureException {
 
@@ -2673,12 +2672,10 @@ public class Pdb implements HasFeatures {
 		return result;	
 	}
 
-	@Override
 	public Collection<FeatureType> getFeatureTypes() {
 		return features.keySet();
 	}
 
-	@Override
 	public Collection<Feature> getFeatures() {
 		Collection<Feature> allfeatures = new LinkedList<Feature>();
 		for (Collection<Feature> coll:features.values()) {
@@ -2687,7 +2684,6 @@ public class Pdb implements HasFeatures {
 		return allfeatures;
 	}
 
-	@Override
 	public Collection<Feature> getFeaturesForPositon(int position) {
 		Collection<Feature> result = new LinkedList<Feature>(); 
 		for(Feature f:this.getFeatures()) {
@@ -2696,12 +2692,10 @@ public class Pdb implements HasFeatures {
 		return result;		
 	}
 
-	@Override
 	public Collection<Feature> getFeaturesOfType(FeatureType featureType) {
 		return features.get(featureType);
 	}
 
-	@Override
 	public Collection<Feature> getFeaturesOfTypeForPosition(FeatureType featureType, int position) {
 		Collection<Feature> result = new LinkedList<Feature>(); 
 		if(this.features.get(featureType) != null) {

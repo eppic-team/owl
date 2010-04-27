@@ -24,17 +24,14 @@ public class SiftsFeature implements Feature {
 		this.uniprotId = uniprotId;
 	}
 
-	@Override
 	public String getDescription() {
 		return getUniprotId();
 	}
 
-	@Override
 	public IntervalSet getIntervalSet() {
 		return cifPosition;
 	}
 
-	@Override
 	public FeatureType getType() {
 		return type;
 	}

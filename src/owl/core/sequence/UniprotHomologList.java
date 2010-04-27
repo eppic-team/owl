@@ -205,7 +205,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return this.lookup.get(uniprotId);
 	}
 	
-	@Override
 	public Iterator<UniprotHomolog> iterator() {
 		return this.list.iterator();
 	}
