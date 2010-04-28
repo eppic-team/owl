@@ -173,20 +173,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			lookup.put(seq.getSecondaryAccession(), seq);
 		}
 		 
-		for (String id:lookup.keySet()) {
-			System.out.print(id+" ");
-		}
-		System.out.println();
-		System.out.println(lookup.size());
-		int count=0;
-		for (UniprotHomolog hom:this) {
-			for (String id:hom.getEmblCdsIds()) {
-				System.out.print(id+" ");
-				count++;
-			}
-		}
-		System.out.println();
-		System.out.println(count);
 		for (UniprotHomolog hom:this) {
 			List<Sequence> seqs = new ArrayList<Sequence>();
 			for (String emblCdsId:hom.getEmblCdsIds()) {
