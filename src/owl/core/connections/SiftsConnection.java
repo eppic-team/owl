@@ -117,4 +117,13 @@ public class SiftsConnection {
 	public Collection<ArrayList<SiftsFeature>> getAllMappings() {
 		return chain2uniprot.values();
 	}
+
+	/**
+	 * Gets the total number of available pdb to uniprot mappings available in the SIFTS 
+	 * database.
+	 * @return
+	 */
+	public int getMappingsCount() {
+		return chain2uniprot.size();
+	}
 }

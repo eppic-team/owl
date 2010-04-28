@@ -1,5 +1,7 @@
 package owl.core.sequence.alignment;
 
+import java.io.PrintStream;
+
 import jaligner.Alignment;
 import jaligner.Sequence;
 import jaligner.NeedlemanWunschGotoh;
@@ -182,11 +184,22 @@ public class PairwiseSequenceAlignment {
 		System.out.println ( new Pair().format(alignment) );
 	}
 
+	/**
+	 * Prints alignment to standard out.
+	 */
 	public void printAlignment() {
-		// actual alignment from JAligner
-		System.out.println ( new Pair().format(alignment) );		
+		writeAlignment(System.out);
 	}
 
+	/**
+	 * Writes alignment to given PrintStream.
+	 * @param ps
+	 */
+	public void writeAlignment(PrintStream ps) {
+		// actual alignment from JAligner
+		ps.println(new Pair().format(alignment));
+	}
+	
 	/**
 	 * Return the mapping of indices from sequence 1 to indices in sequence 2 based on the calculated alignment.
 	 * Indices are counted from 0 to sequence length - 1.
