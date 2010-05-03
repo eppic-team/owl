@@ -6,8 +6,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.StringTokenizer;
 import java.util.Vector;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileFilter;
@@ -479,6 +482,102 @@ public class CSVhandler {
 //			System.out.println("aas.length: "+aas.length);
 			try {
 				bufRdr = new BufferedReader(new FileReader(filename));
+				String line = null;
+				String token = null;
+				int row = 0;
+				int col = 0;	
+//				int aaindex = 0, phi=0, theta=0;
+//				System.out.println("aaindex: "+aaindex+" phi: "+phi+" theta: "+theta);
+				
+				//read each line of text file
+				while((line = bufRdr.readLine()) != null){
+					col = 0;
+					StringTokenizer st = new StringTokenizer(line,",");
+//					System.out.print("row: "+row+"\t");
+					if (st.countTokens()>2){
+						while (st.hasMoreTokens()){
+							//get next token and store it in the array
+							token = st.nextToken();
+							x = (row%((numLines)+1))-1;
+							y = col;
+//							System.out.print(theta+","+phi+","+aaindex+"\t");
+							array3d[x][y][z] = Double.valueOf(token);	
+//							System.out.print(Double.valueOf(token)+"\t");
+//							array3d[theta][phi][aas.length] += Double.valueOf(token);
+							col++;				
+						}
+					}
+					row++;
+					if (row % ((numLines)+1) == 0){
+						z++;
+					}	
+//					System.out.println();
+				}
+				
+				//close the file
+				bufRdr.close();
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}		
+		}
+		
+		return array3d;
+	}
+    
+    public double[][][] readCSVfile3Ddouble(ZipFile zipfile, ZipEntry zipentry) throws NumberFormatException, IOException{
+    	double [][][] array3d = null;
+		int numTokens = 0;
+		int numSlices = 0;
+		int numLines = 0;
+		int x=0, y=0, z=0;
+//		int xDim = 0, yDim = 0;
+		BufferedReader bufRdr;
+		try {
+//			bufRdr = new BufferedReader(new FileReader(filename));
+			bufRdr = new BufferedReader(new	InputStreamReader(zipfile.getInputStream(zipentry)));
+			String line = null;
+			String token = null;	
+			// get number of slices (arrays) from first line
+			line = bufRdr.readLine(); // just one token in first line
+			StringTokenizer st = new StringTokenizer(line,",");
+			if (st.countTokens()>1){
+				token = st.nextToken();
+				token = st.nextToken();
+				numSlices = Integer.valueOf(token);
+//				System.out.println("number of slices: " + numSlices);
+			}
+			// get dimension of array
+			// xDim = numLines, yDim = numTokens
+			boolean xDimFound = false;
+			while((line = bufRdr.readLine()) != null && !xDimFound)
+			{
+				st = new StringTokenizer(line,",");
+				if (st.countTokens()>2){
+					numLines++;
+//					xDim++;
+					numTokens = st.countTokens();
+//					yDim = st.countTokens();
+				}		
+				else
+					xDimFound = true;
+			}
+//			System.out.println("number of tokens: "+numTokens);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+//		if (numTokens%2!=0){
+//			System.out.print("Odd number of tokens in csv file! Can't read file.");
+//		}
+//		else 
+		{
+//			array3d = new double [numTokens/2][numTokens][numSlices]; //+1 to save #AAs of each vector
+			array3d = new double [numLines][numTokens][numSlices]; //+1 to save #AAs of each vector
+//			System.out.println("aas.length: "+aas.length);
+			try {
+//				bufRdr = new BufferedReader(new FileReader(filename));
+				bufRdr = new BufferedReader(new	InputStreamReader(zipfile.getInputStream(zipentry)));
 				String line = null;
 				String token = null;
 				int row = 0;
