@@ -53,10 +53,7 @@ public class DeltaRank {
 		double min = 30;
 		for (int i = 1; i <= graph.getFullLength(); i++) {
 			for (int j=1;j<i;j++) {
-				if (!graph.containsEdgeIJ(i, j)) {
-					continue;
-				}
-				if (matrix[i-1][j-1] < min) {
+				if (graph.containsEdgeIJ(i, j) && matrix[i-1][j-1] < min) {
 					min = matrix[i-1][j-1];
 					low = new Pair<Integer>(i,j);
 				}

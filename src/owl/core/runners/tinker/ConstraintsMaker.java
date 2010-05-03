@@ -16,6 +16,7 @@ import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
@@ -256,6 +257,8 @@ public class ConstraintsMaker {
 		}
 	}
 	
+	
+	
 	public void closeKeyFile() {
 		fkey.close();
 	}
@@ -292,6 +295,90 @@ public class ConstraintsMaker {
 		}
 	}
 	
+	
+	public void addConstraint(TinkerConstraint constraint,RIGraph graph) {
+		if (constraint.getType() == TinkerConstraint.CONSTRAINT.DISTANCE) {
+			this.addDistanceConstraint(constraint,graph);
+		} else if (constraint.getType() == TinkerConstraint.CONSTRAINT.GMBPTHETA) {
+			this.addGMBPThetaConstraint(constraint,graph);
+		} else if (constraint.getType() == TinkerConstraint.CONSTRAINT.GMBPPHI) {
+			this.addGMBPPhiConstraint(constraint,graph);
+		}
+	}
+	
+	
+	private void addDistanceConstraint(TinkerConstraint constraint, RIGraph graph) {
+		String ct = graph.getContactType();
+		String i_ct = ct;
+		String j_ct = ct;
+		if (ct.contains("/")){
+			i_ct = ct.split("/")[0];
+			j_ct = ct.split("/")[1];
+		}
+		
+		// ALL is not a valid contact type for creating constraints!
+		if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
+			throw new IllegalArgumentException("ALL is not a valid contact type for creating constraints.");
+		}
+		if (!AAinfo.isValidContactType(i_ct) || !AAinfo.isValidContactType(j_ct)) {
+			throw new IllegalArgumentException("Either "+i_ct+" or "+j_ct+" are not valid contact types");
+		}
+		
+		RIGNode i_node = graph.getNodeFromSerial(constraint.getI());
+		RIGNode j_node = graph.getNodeFromSerial(constraint.getJ());
+		
+		String i_res = i_node.getResidueType();
+		String j_res = j_node.getResidueType();
+		
+		if (!AminoAcid.isStandardAA(i_res) || !AminoAcid.isStandardAA(j_res)) {
+			// we have to skip contacts that involve non standard aminoacids
+			return;
+		}
+		
+		Set<String> i_atoms = AAinfo.getAtomsForCTAndRes(i_ct, i_res);
+		Set<String> j_atoms = AAinfo.getAtomsForCTAndRes(j_ct, j_res);
+
+		// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
+		double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+		// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
+		double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+graph.getCutoff();
+		
+		for (String i_atom:i_atoms) {
+			for (String j_atom:j_atoms) {
+				int i_pdb = pdb.getAtomSerFromResSerAndAtom(i_node.getResidueSerial(), i_atom);
+				int i_xyz = pdb2xyz.get(i_pdb);
+				int j_pdb = pdb.getAtomSerFromResSerAndAtom(j_node.getResidueSerial(), j_atom);
+				int j_xyz = pdb2xyz.get(j_pdb);
+				fkey.printf(Locale.US,"RESTRAIN-DISTANCE %s %s %5.1f %2.1f %2.1f\n",
+						i_xyz,j_xyz,constraint.getForceConstant(),dist_min,dist_max);
+			}
+		}
+		
+		
+	}
+	
+	private void addGMBPThetaConstraint(TinkerConstraint constraint, RIGraph graph) {
+		int CA = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getI(),"CA"));
+		int N = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getI(),"N"));
+		int Cj = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getJ(),"CA"));
+		double f = constraint.getForceConstant();
+		double min = constraint.getMin();
+		double max = constraint.getMax();
+		fkey.printf("RESTRAIN-ANGLE %d %d %d %5.1f %3.1f %3.1f\n",
+				N, CA, Cj, f, 
+				min,max);
+	}
+	
+
+	private void addGMBPPhiConstraint(TinkerConstraint constraint, RIGraph graph) {
+		int CA = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getI(),"CA"));
+		int C = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getI(),"C"));
+		int Cj = pdb2xyz.get(pdb.getAtomSerFromResSerAndAtom(constraint.getJ(),"CA"));
+		fkey.printf("RESTRAIN-ANGLE %d %d %d %5.1f %3.1f %3.1f\n",
+				C, CA, Cj, constraint.getForceConstant(), 
+				constraint.getMin(),constraint.getMax());
+	}
+	
 	public void createOmegaConstraints(double defaultForceConstantOmega) {
 		for (int resser:pdb.getAllSortedResSerials()) {
 			// we can't assign an omega angle for the last residue so we have to skip those
@@ -316,6 +403,11 @@ public class ConstraintsMaker {
 					CAi, Ci, Niplus1, CAiplus1, defaultForceConstantOmega, 
 					OMEGA_LOWER_BOUND, OMEGA_UPPER_BOUND);
 		}
+	}
+
+	public void addSSConstraints(SecondaryStructure ss) {
+		this.createPhiPsiConstraints(ss.getPhiPsiConstraints(), 1.0);
+		
 	}
 	
 }

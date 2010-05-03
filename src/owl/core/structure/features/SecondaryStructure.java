@@ -260,6 +260,10 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 	public TreeMap<Integer,ConsensusSquare> getPhiPsiConstraints() {
 		TreeMap<Integer, ConsensusSquare> bounds = new TreeMap<Integer, ConsensusSquare>();
 		for (int i=1; i <= sequence.length();i++) {
+			SecStrucElement a = resser2secstruct.get(i);
+			if (a == null) {
+				continue;
+			}
 			if (resser2secstruct.get(i).getType() == SecStrucElement.HELIX) {
 				bounds.put(i, new ConsensusSquare(new ConsensusInterval(-65,-55),new ConsensusInterval(-50,-40)));
 			} else if (resser2secstruct.get(i).getType() == SecStrucElement.STRAND) {

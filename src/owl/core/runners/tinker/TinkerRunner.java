@@ -35,6 +35,7 @@ import owl.core.structure.AAinfo;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGNode;
@@ -110,6 +111,10 @@ public class TinkerRunner {
 	
 	private String dgeomParams;
 	
+	private TinkerConstraint[] additionalConstraints;
+	private SecondaryStructure ss;
+	private boolean addSSConstraints = false;
+	
 	// derived parameters
 	private String proteinProg;
 	private String distgeomProg;
@@ -130,7 +135,7 @@ public class TinkerRunner {
 	private double[] maxUpperViol;
 	private double[] maxLowerViol;
 	private double[] rmsRestViol;
-
+	
 	// information about last reconstruct run
 	String lastOutputDir;       // output directory of last reconstruction run
 	String lastBaseName;		// basename of last reconstruction run
@@ -152,6 +157,7 @@ public class TinkerRunner {
 		this(tinkerBinDir, DISTGEOM_PROG, forceFieldFileName);
 	}
 	
+
 	/**
 	 * Constructs a TinkerRunner object passing initial parameters. 
 	 * @param tinkerBinDir The directory where the tinker executables are
@@ -183,6 +189,21 @@ public class TinkerRunner {
 		this.isDrmaaSessionOpen = false;
 		
 		this.tmpDir = System.getProperty("java.io.tmpdir");
+	}
+
+	/**
+	 * Sets additional constraints manually
+	 * @param constraints Array of TinkerConstraints
+	 */
+	
+	public void setAdditionalConstraints(TinkerConstraint[] constraints) {
+		this.additionalConstraints = constraints;
+	}
+	
+	public void addSSConstraints(SecondaryStructure secondaryStructure) {
+		this.ss = secondaryStructure;
+		this.addSSConstraints = true;
+		
 	}
 	
 	/**
@@ -1400,8 +1421,17 @@ public class TinkerRunner {
 			cm.createPhiPsiConstraints(phiPsiConsensus, forceConstantTorsion);
 		}
 		
+		if (this.addSSConstraints == true) {
+			cm.addSSConstraints(this.ss);
+		}
+		
 		if (forceTransOmega) {
 			cm.createOmegaConstraints(forceConstantTorsion);
+		}
+		if (this.additionalConstraints != null) {
+			for (int i = 0; i < additionalConstraints.length; i++) {
+				cm.addConstraint(additionalConstraints[i], graphs[0]);
+			}
 		}
 		
 		cm.closeKeyFile();
@@ -1744,6 +1774,9 @@ public class TinkerRunner {
 		}
 		return edgeSet;
 	}
+
+
+	
 
 	
 }
