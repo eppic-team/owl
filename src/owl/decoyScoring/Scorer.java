@@ -144,9 +144,8 @@ public abstract class Scorer {
 	}
 
 	/**
-	 * Returns a Scorer object of the appropriate type given a scoring matrix file.
-	 * It first detects the type of scoring matrix by reading its header and based on 
-	 * that returns the Scorer object of the appropriate subclass.
+	 * Returns a CombinedScorer object of the appropriate type given two scoring matrix files, 
+	 * one count-based and the other type-based.
 	 * @param scMatFileType
 	 * @param scMatFileCount
 	 * @param typeWeight
