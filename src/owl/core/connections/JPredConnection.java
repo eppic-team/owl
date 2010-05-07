@@ -45,7 +45,7 @@ public class JPredConnection {
 	static final File DEBUG_FILE_2    = new File(TEMP_DIR, "jpred_status.log"); // file created during online query in debug mode
 	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // file created during online query in debug mode
 	
-	static final int TIMEOUT = 120;		// waiting for results timeout in seconds
+	static final int TIMEOUT = 180;		// default waiting for results timeout in seconds
 	static final int INTERVAL = 10; 	// result checking interval in seconds
 	
 	// members
@@ -57,6 +57,7 @@ public class JPredConnection {
 												// to a cancel button being pressed and is queried by
 												// submitQuery in regular intervals to stop execuation if requested
 												// if this is null, it will be ignored
+	private int timeout;						// the timeout after which connection to the server will be closed
 	
 	/**
 	 * Create a new JPredConnection.
@@ -66,6 +67,7 @@ public class JPredConnection {
 		debug = false;
 		progressRetriever = null;
 		stopNotifier = null;
+		this.timeout = TIMEOUT;
 	}
 	
 	/**
@@ -76,6 +78,16 @@ public class JPredConnection {
 	 */
 	public void setDebugMode(boolean b) {
 		this.debug = b;
+	}
+	
+	/**
+	 * Sets the timeout after which connection to the server will be closed
+	 * if we are still waiting for results. In this case an IOException will
+	 * be thrown by submitQuery().
+	 * @param seconds the timeout in seonds
+	 */
+	public void setTimeout(int seconds) {
+		this.timeout = seconds;
 	}
 	
 	/**
@@ -277,7 +289,7 @@ public class JPredConnection {
 			}			
 			in2.close();
 			
-			timeout = System.currentTimeMillis() - startTime > 1000 * TIMEOUT; 
+			timeout = System.currentTimeMillis() - startTime > 1000 * this.timeout; 
 		}
 		if(debug) out.close();
 		
