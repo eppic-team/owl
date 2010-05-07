@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.connections.JPredProgressRetriever.Status;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 
@@ -27,6 +28,8 @@ import owl.core.structure.features.SecondaryStructure;
 public class JPredConnection {
 
 	// constants
+	public static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
+	
 	static final String SUBMIT_URL	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/jpred_form?seq=%s&input=seq&pdb=on"; //&queryName=%s";
 	static final String CHECK_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?%s";
 	static final String CHECK_URL2 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?keywords=%s";
@@ -41,14 +44,19 @@ public class JPredConnection {
 	static final File DEBUG_FILE_1    = new File(TEMP_DIR, "jpred_submit.log");	// file created during online query in debug mode
 	static final File DEBUG_FILE_2    = new File(TEMP_DIR, "jpred_status.log"); // file created during online query in debug mode
 	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // file created during online query in debug mode
-	static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
 	
 	static final int TIMEOUT = 120;		// waiting for results timeout in seconds
 	static final int INTERVAL = 10; 	// result checking interval in seconds
 	
 	// members
-	HashMap<String,String[]> resultMap;		// stores the results of the last query
-	boolean debug;						// if true, output debug information to stdout
+	HashMap<String,String[]> resultMap;			// stores the results of the last query
+	boolean debug;								// if true, output debug information to stdout
+	JPredProgressRetriever progressRetriever;	// retriever for progress updates, may also be null
+	JPredStopNotifier stopNotifier;				// holds a flag which indicates that executation should stop
+												// this flag can be set by another thread (e.g. in response
+												// to a cancel button being pressed and is queried by
+												// submitQuery in regular intervals to stop execuation if requested
+												// if this is null, it will be ignored
 	
 	/**
 	 * Create a new JPredConnection.
@@ -56,7 +64,8 @@ public class JPredConnection {
 	public JPredConnection() {
 		resultMap = null;
 		debug = false;
-		
+		progressRetriever = null;
+		stopNotifier = null;
 	}
 	
 	/**
@@ -67,6 +76,23 @@ public class JPredConnection {
 	 */
 	public void setDebugMode(boolean b) {
 		this.debug = b;
+	}
+	
+	/**
+	 * Registers the progress retriever which will be notified of the status while the submitQuery method is running.
+	 * @param r the progress retriever to register
+	 */
+	public void setProgressRetriever(JPredProgressRetriever r) {
+		this.progressRetriever = r;
+	}
+	
+	/**
+	 * Registers the stop notifier which contains a flag indicating whether execution of submitQuery
+	 * is supposed to stop.
+	 * @param s
+	 */
+	public void setStopNotifier(JPredStopNotifier s) {
+		this.stopNotifier = s;
 	}
 	
 	/**
@@ -154,6 +180,8 @@ public class JPredConnection {
 	 */
 	public void submitQuery(String seq) throws IOException {
 		
+		if(progressRetriever != null) progressRetriever.setStatus(Status.START);
+		
 		if(!debug) {
 			DEBUG_FILE_1.deleteOnExit();
 			DEBUG_FILE_2.deleteOnExit();
@@ -164,6 +192,7 @@ public class JPredConnection {
 		URL submitUrl;
 		submitUrl = new URL(String.format(SUBMIT_URL, seq));
 		if(debug) System.out.println("Sending query: " + submitUrl);
+		if(progressRetriever != null) progressRetriever.setStatus(Status.SENDING);
 		BufferedReader in = new BufferedReader(new InputStreamReader(submitUrl.openStream()));
 		FileWriter out = null;
 		if(debug) out = new FileWriter(DEBUG_FILE_1);
@@ -193,6 +222,7 @@ public class JPredConnection {
 			throw new IOException("JPred " + error);
 		} else
 		if(jobId != null) {
+			if(progressRetriever != null) progressRetriever.setStatus(Status.JOBID);
 			if(debug) System.out.println("JobId="+jobId);
 		} else {
 			if(debug) System.out.println("Unexpected output.");
@@ -206,6 +236,11 @@ public class JPredConnection {
 		if(debug) out =	new FileWriter(DEBUG_FILE_2);
 		while(!timeout && !result) {
 			
+			// check whether thread was notified to stop
+			if(stopNotifier != null && stopNotifier.getStop()) {
+				throw new IOException("Execution was interrupted");
+			}
+			
 			// wait a moment
 			try {
 				Thread.sleep(1000 * INTERVAL);
@@ -216,6 +251,7 @@ public class JPredConnection {
 			// check job status
 			URL checkUrl = new URL(String.format(CHECK_URL, jobId));
 			if(debug) System.out.println("Checking job status...");
+			if(progressRetriever != null) progressRetriever.setStatus(Status.CHECKING);
 			BufferedReader in2 = new BufferedReader(new InputStreamReader(checkUrl.openStream()));
 			String line2;
 			Pattern pStat1 = Pattern.compile(REGEX_STAT_1);
@@ -227,10 +263,12 @@ public class JPredConnection {
 				m2 = pStat1.matcher(line2);
 				if(m2.find()) {
 					if(debug) System.out.println("Job waiting");
+					if(progressRetriever != null) progressRetriever.setStatus(Status.WAITING);
 				}
 				m2 = pStat2.matcher(line2);
 				if(m2.find()) {
 					if(debug) System.out.println("Job running");
+					if(progressRetriever != null) progressRetriever.setStatus(Status.RUNNING);
 				}
 				m2 = pResult.matcher(line2);
 				if(m2.find()) {
@@ -249,6 +287,7 @@ public class JPredConnection {
 			throw new IOException("JPred connection timeout. Server is currently not available.");
 		} else {
 			if(debug) System.out.println("Job finished. Reading results...");
+			if(progressRetriever != null) progressRetriever.setStatus(Status.RESULT);
 			URL resultUrl = new URL(String.format(RESULT_URL, jobId, jobId));
 			BufferedReader in3 = new BufferedReader(new InputStreamReader(resultUrl.openStream()));
 			resultMap = new LinkedHashMap<String,String[]>();
@@ -266,6 +305,8 @@ public class JPredConnection {
 			in3.close();		
 			if(debug) out.close();
 			if(debug) System.out.println("Result file written to " + DEBUG_FILE_3);
+			if(progressRetriever != null) progressRetriever.setStatus(Status.DONE);
+			if(progressRetriever != null) progressRetriever.setResult(this.getSecondaryStructurePredictionObject());
 		}
 	}
 
