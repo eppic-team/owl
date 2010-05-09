@@ -346,8 +346,8 @@ public class JPredConnection {
 	 */
 	public SecondaryStructure getSecondaryStructurePredictionObject() {
 		if(resultMap == null) return null;
-		TreeMap<Integer, Character> ssTypes = new TreeMap<Integer,Character>();;
-		TreeMap<Integer, Double> ssConfs = new TreeMap<Integer,Double>();;
+		TreeMap<Integer, Character> ssTypes = new TreeMap<Integer,Character>();
+		TreeMap<Integer, Double> ssConfs = new TreeMap<Integer,Double>();
 		String ssPred = this.getSecondaryStructurePrediction();
 		String ssConf = this.getSecondaryStructureConfidence();
 		for(int i = 0; i < ssPred.length(); i++) {
@@ -359,7 +359,7 @@ public class JPredConnection {
 			}
 			ssTypes.put(i+1, ssType);
 			double confidence = Double.parseDouble("0."+String.valueOf(ssConf.charAt(i)));
-			ssConfs.put(i,confidence);
+			ssConfs.put(i+1, confidence);
 		}
 		SecondaryStructure secondaryStructure = new SecondaryStructure(this.getQuerySequence());
 		char lastType = ssTypes.get(ssTypes.firstKey());

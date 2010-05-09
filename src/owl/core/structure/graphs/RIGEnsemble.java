@@ -72,7 +72,7 @@ public class RIGEnsemble {
 	 * The directory may contain files of different types. If the file type can be recognized
 	 * the appropriate loading method will be called. Graphs are being generated from PDB files
 	 * using the global edgeType and distanceCutoff. For contact map files, the edgeType/cutoff
-	 * has to match the global one, otherwise an exception is thrown. Other erros are supressed
+	 * has to match the global one, otherwise an exception is thrown. Other errors are suppressed
 	 * so that if single files contain errors, others will be still loaded. If any file contains
 	 * multiple chains, the first one will be read.
 	 * @param directory
@@ -304,7 +304,7 @@ public class RIGEnsemble {
 		this.ensemble.add(g);
 	}
 	
-	private void addFileName(String filename) {
+	public void addFileName(String filename) {
 		this.fileNames.add(filename);
 	}
 	

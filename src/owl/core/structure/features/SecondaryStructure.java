@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -22,6 +23,7 @@ import owl.graphAveraging.ConsensusSquare;
  * - DSSP (see owl.core.runners.DsspRunner)
  * - PsiPred (see owl.core.runners.PsipredRunner)
  * - JPred (see owl.core.connections.JPredConnection)
+ * - Consensus (see getConsensusSecondaryStructure())
  * 
  */
 public class SecondaryStructure implements Iterable<SecStrucElement> {
@@ -257,6 +259,10 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 		return this.resser2predConfidence.get(resser);
 	}
 	
+	/**
+	 * Gets phi/psi constraints for each position, e.g. for distance geometry.
+	 * @return a map from position to ConsensusSquare with phi/psi constraints
+	 */
 	public TreeMap<Integer,ConsensusSquare> getPhiPsiConstraints() {
 		TreeMap<Integer, ConsensusSquare> bounds = new TreeMap<Integer, ConsensusSquare>();
 		for (int i=1; i <= sequence.length();i++) {
@@ -271,6 +277,87 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 			}
 		}
 		return bounds;
+	}
+
+	/**
+	 * Returns a new (three state) secondary structure object which represents the consensus of
+	 * the given collection of secondary structure objects. It is assumed that all the
+	 * objects in the list are three state and refer to the same sequence. For a given position
+	 * i, the consensus will be assigned e.g. a helix if the fraction of individuals where i
+	 * is in a helix is at least the threshold. Confidence values are currently ignored.
+	 * @param the common underlying sequence
+	 * @param ssList a collection of secondary structure objects
+	 * @param consensusSSthresh the consensus threshold
+	 * @return the consensus secondary structure object
+	 */
+	public static SecondaryStructure getConsensusSecondaryStructure(
+			String sequence, LinkedList<SecondaryStructure> ssList, double thresh) {
+		SecondaryStructure newSS = new SecondaryStructure(sequence);
+		newSS.setComment("Consensus");
+		int numRes = sequence.length();
+		int[] helix = new int[numRes];
+		int[] extended = new int[numRes];
+		int[] total = new int[numRes];
+		for(SecondaryStructure ss: ssList) {
+			for (int i = 0; i < numRes; i++) {
+				total[i]++;
+				SecStrucElement e = ss.getSecStrucElement(i+1);
+				if(e.isHelix()) helix[i]++;
+				if(e.isStrand()) extended[i]++;
+			}
+		}
+		StringBuilder s = new StringBuilder(numRes);
+		for (int i = 0; i < numRes; i++) {
+			char type = SecStrucElement.LOOP;
+			if(extended[i] > helix[i]) {
+				if(1.0 * extended[i] / total[i] >= thresh) {
+					type = SecStrucElement.EXTENDED;
+					newSS.resser2predConfidence.put(i+1, 1.0 * extended[i] / total[i]);
+				}
+			} else {
+				if(1.0 * helix[i] / total[i] >= thresh) {
+					type = SecStrucElement.HELIX;
+					newSS.resser2predConfidence.put(i+1, 1.0 * helix[i] / total[i]);
+				}
+			}
+			s.append(type);
+		}
+		parseSecondaryStructureString(newSS, s.toString());
+		return newSS;
+	}
+	
+	/**
+	 * Helper function to parse secondary structure elements from a simple
+	 * string representation.
+	 * @param mapping
+	 */
+	private static void parseSecondaryStructureString(SecondaryStructure ss, String ssString) {
+		int lastResSer = 1;
+		char lastType = ssString.charAt(0);
+		int start = 1;
+		char thisType;
+		int elementCount = 0;
+		SecStrucElement ssElem;
+		String ssId;
+		int resSer;
+		for (resSer = 1; resSer <= ssString.length(); resSer++) {
+			thisType = ssString.charAt(resSer-1);
+			if(thisType != lastType || resSer > lastResSer+1) {
+				// finish previous element, start new one
+				elementCount++;
+				ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+				ssElem = new SecStrucElement(lastType,start,lastResSer,ssId);
+				ss.add(ssElem);
+				start = resSer;
+				lastType = thisType;
+			}
+			lastResSer = resSer;
+		}
+		// finish last element
+		elementCount++;
+		ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
+		ssElem = new SecStrucElement(lastType, start,resSer,ssId);
+		ss.add(ssElem);
 	}
 
 }
