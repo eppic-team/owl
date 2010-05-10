@@ -135,8 +135,21 @@ public class GraphAverager {
 	 * @throws GraphAveragerError if sequences in alignment and templates don't match
 	 */
 	public GraphAverager(MultipleSequenceAlignment al, TemplateList templates, String targetTag, String targetSeq) throws GraphAveragerError {
+		this(al, templates.getRIGraphs(), targetTag, targetSeq);
+	}
+	
+	/**
+	 * Create a graph averager given a multiple alignment of the target sequence to the template graphs.
+	 * @param al a multiple alignment of the target sequence and the template graphs
+	 * @param templates a collection of templates to be averaged
+	 * @param targetTag the identifier of the target sequence in the alignment
+	 * @param targetSeq the target sequence (we must provide it here because the alignment can be local 
+	 * and thus contain only a partial target sequence)
+	 * @throws GraphAveragerError if sequences in alignment and templates don't match
+	 */
+	public GraphAverager(MultipleSequenceAlignment al, TreeMap<String,RIGraph> templateGraphs, String targetTag, String targetSeq) throws GraphAveragerError {
 		this.al = al;
-		this.templateGraphs = templates.getRIGraphs();
+		this.templateGraphs = templateGraphs;
 		this.targetTag = targetTag;
 		this.sequence = targetSeq;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
@@ -157,6 +170,19 @@ public class GraphAverager {
 	 * problems occur while adding dummy sequence to given alignment
 	 */
 	public GraphAverager(MultipleSequenceAlignment al, TemplateList templates) throws GraphAveragerError {
+		this(al, templates.getRIGraphs());
+	}
+	
+	/**
+	 * Create a graph averager for a set of templates with the given alignment. A dummy target sequence will
+	 * be created internally which has the length of the alignment. The resulting average or consensus graphs
+	 * will then have coordinates corresponding to the columns in the alignment.
+	 * @param al
+	 * @param templates
+	 * @throws GraphAveragerError if sequences in alignment and templates don't match or if 
+	 * problems occur while adding dummy sequence to given alignment
+	 */
+	public GraphAverager(MultipleSequenceAlignment al, TreeMap<String,RIGraph> templateGraphs) throws GraphAveragerError {
 		this.sequence = makeDummySequence(al.getAlignmentLength());
 		this.targetTag = makeDummyTag();
 		try {
@@ -164,7 +190,7 @@ public class GraphAverager {
 		} catch (AlignmentConstructionError e) {
 			throw new GraphAveragerError(e);
 		}
-		this.templateGraphs = templates.getRIGraphs();
+		this.templateGraphs = templateGraphs;
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
 		this.distCutoff = firstGraph.getCutoff();
