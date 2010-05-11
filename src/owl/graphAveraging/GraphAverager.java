@@ -199,7 +199,6 @@ public class GraphAverager {
 		countVotes(); // does the averaging by counting the votes and putting them into contactVotes
 	}
 
-	
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
@@ -560,15 +559,34 @@ public class GraphAverager {
 		});
 		
 		// create new graph
-		RIGraph graph = new RIGraph(this.sequence);
-		graph.setContactType(this.contactType);
-		graph.setCutoff(this.distCutoff);
+//		RIGraph graph = new RIGraph(this.sequence);
+//		graph.setContactType(this.contactType);
+//		graph.setCutoff(this.distCutoff);
 		
-		// add top edges to graph
-		for (int i = 0; i < Math.min(edgeList.size(), numContacts); i++) {
+		// add top edges to graph -> causing a null pointer exception in jung.SparseGraph.addEdge()
+//		int numEdges = Math.min(edgeList.size(), numContacts);
+//		for (int i = 0; i < numEdges; i++) {
+//			RIGEdge e = edgeList.get(i);
+//			e.setWeight(1.0);
+//			Pair<RIGNode> endpoints = av.getEndpoints(e);
+//			if(!graph.containsVertex(endpoints.getFirst())) graph.addVertex(endpoints.getFirst());
+//			if(!graph.containsVertex(endpoints.getSecond())) graph.addVertex(endpoints.getSecond());			
+//			graph.addEdge(e, endpoints);
+//		}
+		
+		// try alternative: copy graph and remove worst edges
+		RIGraph graph = av.copy();
+		int numEdges = Math.min(edgeList.size(), numContacts);
+		
+		// set edge weights to one (do we need this for Tinker?)
+		for (int i = 0; i < numEdges; i++) {
 			RIGEdge e = edgeList.get(i);
 			e.setWeight(1.0);
-			graph.addEdge(e, av.getEndpoints(e));
+		}
+		// remove rest
+		for(int i = numEdges; i < edgeList.size(); i++) {
+			RIGEdge e = edgeList.get(i);
+			graph.removeEdge(e);
 		}
 		
 		return graph;
@@ -692,6 +710,8 @@ public class GraphAverager {
 		// update contact votes
 		countVotes();
 	}
+	
+	/*---------------------------- static methods ---------------------------*/
 	
 	// Run graph averaging from the command line
 	public static void main(String[] args) {
