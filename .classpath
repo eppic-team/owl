@@ -17,7 +17,7 @@
 	<classpathentry kind="lib" path="jars/xmlrpc-common-3.1.jar"/>
 	<classpathentry kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
 	<classpathentry kind="lib" path="jars/jung-api-2.0.1.jar"/>
-	<classpathentry kind="lib" path="jars/jung-graph-impl-2.0.1.jar" sourcepath="/amd/moya/2/home/abt_owl/stehr/StruPPi/jars/jung/jung-2.0.1/jung-graph-impl-2.0.1-sources.jar"/>
+	<classpathentry kind="lib" path="jars/jung-graph-impl-2.0.1.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring-core.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/uniprotjapi.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring-aop.jar"/>
