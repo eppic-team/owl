@@ -156,6 +156,26 @@ public class SecStrucElement {
 		return inSameSheet;
 	}
 	
+	/*-------------------------- implemented methods ------------------------*/
+	
+	public String toString() {
+		return getId() + ": " + getInterval().toString(); 
+	}
+	
+	public boolean equals(Object o) {
+
+		if (o==null) return false;
+		if (!(o instanceof SecStrucElement)) return false;
+		SecStrucElement other = (SecStrucElement) o;
+		if (!this.interval.equals(other.interval)) 
+			return false;
+		if (!this.secStrucId.equals(other.secStrucId))
+			return false;
+		if (this.secStrucType!=other.secStrucType)
+			return false;
+		return true;
+	}
+	
 	/*---------------------------- static methods ---------------------------*/
 	
 	private static char getFourStateTypeFromDsspType(char dsspType) {
@@ -226,19 +246,5 @@ public class SecStrucElement {
 			return SecStrucElement.HELIX;
 		}
 		return 0; // if all fails we rather return nonsense
-	}
-
-	public boolean equals(Object o) {
-
-		if (o==null) return false;
-		if (!(o instanceof SecStrucElement)) return false;
-		SecStrucElement other = (SecStrucElement) o;
-		if (!this.interval.equals(other.interval)) 
-			return false;
-		if (!this.secStrucId.equals(other.secStrucId))
-			return false;
-		if (this.secStrucType!=other.secStrucType)
-			return false;
-		return true;
 	}
 }

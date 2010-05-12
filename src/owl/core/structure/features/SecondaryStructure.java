@@ -5,9 +5,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.Vector;
 
@@ -291,33 +291,37 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 	 * @return the consensus secondary structure object
 	 */
 	public static SecondaryStructure getConsensusSecondaryStructure(
-			String sequence, LinkedList<SecondaryStructure> ssList, double thresh) {
+			String sequence, Collection<SecondaryStructure> ssList, double thresh) {
 		SecondaryStructure newSS = new SecondaryStructure(sequence);
 		newSS.setComment("Consensus");
+		newSS.setSequence(sequence);
 		int numRes = sequence.length();
-		int[] helix = new int[numRes];
-		int[] extended = new int[numRes];
-		int[] total = new int[numRes];
+		int[] helix = new int[numRes+1];	// use sequence indices
+		int[] extended = new int[numRes+1];	
+		int[] total = new int[numRes+1];
 		for(SecondaryStructure ss: ssList) {
-			for (int i = 0; i < numRes; i++) {
-				total[i]++;
-				SecStrucElement e = ss.getSecStrucElement(i+1);
-				if(e.isHelix()) helix[i]++;
-				if(e.isStrand()) extended[i]++;
+			for (int i = 1; i <= numRes; i++) {
+				total[i]++;	// conservative approach: take all templates
+				SecStrucElement e = ss.getSecStrucElement(i);
+				if(e != null) {
+					//total[i]++ // alternative approach: only count templates where ss is at least 'loop' 
+					if(e.isHelix()) helix[i]++;
+					if(e.isStrand()) extended[i]++;
+				}
 			}
 		}
 		StringBuilder s = new StringBuilder(numRes);
-		for (int i = 0; i < numRes; i++) {
+		for (int i = 1; i <= numRes; i++) {
 			char type = SecStrucElement.LOOP;
 			if(extended[i] > helix[i]) {
 				if(1.0 * extended[i] / total[i] >= thresh) {
 					type = SecStrucElement.EXTENDED;
-					newSS.resser2predConfidence.put(i+1, 1.0 * extended[i] / total[i]);
+					newSS.resser2predConfidence.put(i, 1.0 * extended[i] / total[i]);
 				}
 			} else {
 				if(1.0 * helix[i] / total[i] >= thresh) {
 					type = SecStrucElement.HELIX;
-					newSS.resser2predConfidence.put(i+1, 1.0 * helix[i] / total[i]);
+					newSS.resser2predConfidence.put(i, 1.0 * helix[i] / total[i]);
 				}
 			}
 			s.append(type);
@@ -356,7 +360,7 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 		// finish last element
 		elementCount++;
 		ssId = new Character(lastType).toString() + new Integer(elementCount).toString();
-		ssElem = new SecStrucElement(lastType, start,resSer,ssId);
+		ssElem = new SecStrucElement(lastType, start,ssString.length(),ssId);
 		ss.add(ssElem);
 	}
 
@@ -367,14 +371,21 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 	public void print() {
 		String s = getSequence();
 		System.out.println(s);
-		for (int i = 0; i < s.length(); i++) {
+		for (int i = 1; i <= s.length(); i++) {
 			System.out.print(resser2secstruct.containsKey(i)?resser2secstruct.get(i).secStrucType:"-");
 		}
 		System.out.println();
 		if(resser2predConfidence != null) {
-			for (int i = 0; i < s.length(); i++) {
-				System.out.print(resser2predConfidence.containsKey(i)?resser2predConfidence.get(i):"-");
-			}			
+			for (int i = 1; i <= s.length(); i++) {
+				if(resser2predConfidence.containsKey(i)) {
+					double rawConf = resser2predConfidence.get(i);
+					int conf = (int) (9.9999 * rawConf);
+					System.out.print(conf);
+				} else {
+					System.out.print("-");
+				}
+			}
+			System.out.println();
 		}
 	}
 
