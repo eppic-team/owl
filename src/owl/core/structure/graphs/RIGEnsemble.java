@@ -80,10 +80,9 @@ public class RIGEnsemble {
 	 * @throws IOException
 	 * @return number of files read
 	 */
-	public int loadFromDirectory(File dir) throws FileNotFoundException, IOException {
+	public int loadFromDirectory(File dir, Sequence commonSequence) throws FileNotFoundException, IOException {
 		if(!dir.isDirectory()) throw new IOException(dir.getName() + " is not a directory.");
-		
-		return 0;
+		return loadFromFileList(dir, commonSequence);
 	}
 	
 	/**

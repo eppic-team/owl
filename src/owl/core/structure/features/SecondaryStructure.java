@@ -360,4 +360,22 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 		ss.add(ssElem);
 	}
 
+
+	/**
+	 * Prints the secondary structure annotation to stdout.
+	 */
+	public void print() {
+		String s = getSequence();
+		System.out.println(s);
+		for (int i = 0; i < s.length(); i++) {
+			System.out.print(resser2secstruct.containsKey(i)?resser2secstruct.get(i).secStrucType:"-");
+		}
+		System.out.println();
+		if(resser2predConfidence != null) {
+			for (int i = 0; i < s.length(); i++) {
+				System.out.print(resser2predConfidence.containsKey(i)?resser2predConfidence.get(i):"-");
+			}			
+		}
+	}
+
 }

@@ -713,6 +713,22 @@ public class GraphAverager {
 	
 	/*---------------------------- static methods ---------------------------*/
 	
+	/**
+	 * Add to a graph all currently not present edges with weight zero. This is
+	 * used for sumitting Casp RR files. Update: not needed anymore.
+	 */
+	public static void addZeroEdges(RIGraph graph) {
+		int size = graph.getFullLength();
+		for (int i = 1; i <= size; i++) {
+			for (int j = i+1; j <= size; j++) {
+				if(!graph.containsEdgeIJ(i, j)) {
+					boolean result = graph.addEdgeIJ(i, j, 0.0);	// add edge with zero weight
+					if(!result) System.err.printf("Could not add edge (%d,%d)\n", i, j);
+				}
+			}
+		}
+	}
+	
 	// Run graph averaging from the command line
 	public static void main(String[] args) {
 		// Take a list of pdb/cm files, calculate the average & evtl. reconstruct using Tinker

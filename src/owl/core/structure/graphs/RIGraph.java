@@ -269,6 +269,25 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
+	 * Adds an edge between residue serials i, j with the given weight.
+	 * Weight has to be between 0 and 1.
+	 * If i or j don't map to RIGNodes in this graph nothing will be added.
+	 * @param i
+	 * @param j
+	 * @return true if an edge was added, false otherwise
+	 */
+	public boolean addEdgeIJ(int i, int j, double weight) {
+		EdgeType et = EdgeType.UNDIRECTED;
+		if (isDirected()) {
+			et = EdgeType.DIRECTED;
+		}
+		if (getNodeFromSerial(i)!=null && getNodeFromSerial(j)!=null) {
+			return this.addEdge(new RIGEdge(weight), getNodeFromSerial(i), getNodeFromSerial(j), et);
+		}
+		return false;
+	}
+	
+	/**
 	 * Filter this RIGraph by removing the edges with weight below the given minWeight value.
 	 * @param minWeight
 	 */
