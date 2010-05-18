@@ -1,8 +1,18 @@
 package owl.core.sequence;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
+import owl.core.connections.EmblWSDBfetchConnection;
+import owl.core.connections.NoMatchFoundException;
+import owl.core.connections.UniProtConnection;
 import owl.core.runners.blast.BlastHit;
+import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
+import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
+import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
+import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 
 /**
  * Class to encapsulate a Uniprot blast hit representing a homolog to a certain
@@ -28,6 +38,11 @@ public class UniprotHomolog {
 	public UniprotHomolog(BlastHit blastHit, String uniId) {
 		this.blastHit = blastHit;
 		this.uniId = uniId;
+	}
+	
+	public UniprotHomolog(String uniId) {
+		this.uniId = uniId;
+		this.blastHit = null;
 	}
 
 	public BlastHit getBlastHit() {
@@ -74,4 +89,49 @@ public class UniprotHomolog {
 		return this.blastHit.getPercentIdentity();
 	}
 	
+	/**
+	 * Retrieves from UniprotKB the taxonomy and EMBL CDS ids data,
+	 * by using the remote Uniprot API
+	 */
+	public void retrieveUniprotKBData() {
+		this.taxIds = new ArrayList<String>();
+		this.emblCdsIds = new ArrayList<String>();
+		
+		UniProtConnection uniprotConn = new UniProtConnection();
+		UniProtEntry entry = null;
+		try {
+			entry = uniprotConn.getEntry(uniId);
+		} catch (NoMatchFoundException e) {
+			System.err.println("Warning: couldn't find uniprot id "+uniId+" through Uniprot JAPI");
+			return;
+		}
+		 
+		for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
+			taxIds.add(ncbiTaxId.getValue());
+		}
+		
+		Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
+		for(Embl ref:emblrefs) {
+			String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
+			String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
+			emblCdsIds.add(emblCdsId);
+		}
+	}
+	
+	/**
+	 * Retrieves from EMBL DB fetch web service the EMBL CDS sequences
+	 * @throws IOException
+	 */
+	public void retrieveEmblCdsSeqs() throws IOException {
+		this.emblCdsSeqs = new ArrayList<Sequence>();
+		
+		try {
+			this.emblCdsSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(this.emblCdsIds);
+		} catch (NoMatchFoundException e) {
+			// this is unlikely to happen here, that's why we don't write a better error message
+			System.err.println("Couldn't retrieve EMBL CDS sequences for EMBL cds ids"); 
+		}
+
+	}
+
 }
