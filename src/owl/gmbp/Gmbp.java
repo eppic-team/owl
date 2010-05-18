@@ -8,8 +8,8 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 public class Gmbp {
 	
-	private Vector<Pair<Float>> phiRanges;			// permanent list of currently selected phi ranges
-	private Vector<Pair<Float>> thetaRanges;       // permanent list of currently selected theta ranges
+	private Vector<Pair<Double>> phiRanges;			// permanent list of currently selected phi ranges
+	private Vector<Pair<Double>> thetaRanges;       // permanent list of currently selected theta ranges
 	private Vector<Pair<Integer>> selContacts;         // permanent list of currently selected and referred contacts
 	
 	public boolean hasConstraints() {
@@ -19,16 +19,16 @@ public class Gmbp {
 		return this.phiRanges.size() > 0 && this.thetaRanges.size() > 0;
 	}
 	
-	public void setPhiRanges(Vector<Pair<Float>> phiRanges) {
+	public void setPhiRanges(Vector<Pair<Double>> phiRanges) {
 		this.phiRanges = phiRanges;
 	}
-	public Vector<Pair<Float>> getPhiRanges() {
+	public Vector<Pair<Double>> getPhiRanges() {
 		return phiRanges;
 	}
-	public void setThetaRanges(Vector<Pair<Float>> thetaRanges) {
+	public void setThetaRanges(Vector<Pair<Double>> thetaRanges) {
 		this.thetaRanges = thetaRanges;
 	}
-	public Vector<Pair<Float>> getThetaRanges() {
+	public Vector<Pair<Double>> getThetaRanges() {
 		return thetaRanges;
 	}
 	public void setSelContacts(Vector<Pair<Integer>> selContacts) {
