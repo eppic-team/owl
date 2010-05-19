@@ -39,8 +39,8 @@ public class TargetToTemplatesAlignment {
 	public MultipleSequenceAlignment run() throws TcoffeeError, IOException {
 		File tcofLogFile = new File(outDir, baseName+".tcof.log");
 		
-		TcoffeeRunner tcr = new TcoffeeRunner(TCOFPROG,tcofLogFile);
-		MultipleSequenceAlignment al = tcr.alignSequence2Profile(seq, templatesAln);
+		TcoffeeRunner tcr = new TcoffeeRunner(TCOFPROG);
+		MultipleSequenceAlignment al = tcr.alignSequence2Profile(seq, templatesAln, tcofLogFile);
 
 		return al;
 	}

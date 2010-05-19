@@ -1,9 +1,7 @@
 package owl.core.runners;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
@@ -26,12 +24,10 @@ public class TcoffeeRunner {
 	
 	private static final boolean DEBUG = false;
 	private File tcofProg;
-	private File logFile;
 
 	
-	public TcoffeeRunner(File tcofProg, File logFile) {
+	public TcoffeeRunner(File tcofProg) {
 		this.tcofProg = tcofProg;
-		this.logFile = logFile;
 	}
 
 	/**
@@ -43,7 +39,7 @@ public class TcoffeeRunner {
 	 * @throws TcoffeeError if tcoffee fails to run
 	 * @throws IOException if problem while reading/writing temp files needed to run tcoffee
 	 */
-	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile) throws TcoffeeError, IOException {
+	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile, File logFile) throws TcoffeeError, IOException {
 		File inFile = File.createTempFile("tcof.", ".in");
 		if (!DEBUG) inFile.deleteOnExit();
 		seq.writeToFastaFile(inFile);
@@ -54,7 +50,7 @@ public class TcoffeeRunner {
 		PrintStream out = new PrintStream(profileFile);
 		profile.writeFasta(out, 80, true);
 		out.close();
-		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, profileFile);
+		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, profileFile, logFile);
 		
 		MultipleSequenceAlignment al =  null;
 		try {
@@ -68,38 +64,31 @@ public class TcoffeeRunner {
 		return al;
 	}
 	
-	private void runTcoffee(File inFile, File outFile, String outFormat, File profileFile) throws TcoffeeError {
+	/**
+	 * Runs t_coffee with default parameters (and optionally a profile)
+	 * @param inFile the file with the sequences to be aligned
+	 * @param outFile the output file that will contain the aligned sequences
+	 * @param outFormat the output format, valid values are: fasta, clustalw
+	 * @param profileFile the fasta file with a multiple sequence alignment representing 
+	 * the profile to align to, if null no profile will be used
+	 * @param logFile all stdout/stderr of t_coffee will be logged, if null no logging at all (quiet mode) 
+	 * @throws TcoffeeError if t_coffee exits with non 0 status or an IOException occurs
+	 */
+	public void runTcoffee(File inFile, File outFile, String outFormat, File profileFile, File logFile) throws TcoffeeError {
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
 		}
-		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile;
+		String quietStr = "-quiet";
+		if (logFile!=null) {
+			quietStr = "-quiet="+logFile;
+		}
+		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+quietStr;
 		
 		try {
 			PrintWriter tcofLog = new PrintWriter(logFile);
 			
 			Process proc = Runtime.getRuntime().exec(cmdLine);
-
-			// logging and capturing stdout/stderr
-			BufferedReader stdout = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-			BufferedReader stderr = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
-
-			String line;
-
-			tcofLog.println("#cmd: "+cmdLine);
-			tcofLog.println("#################");
-			tcofLog.println("# "+tcofProg+" stdout ");
-			tcofLog.println("#################");
-			while((line = stdout.readLine()) != null) {
-				tcofLog.println(line);
-			}
-			tcofLog.println("#################");
-			tcofLog.println("# "+tcofProg+" stderr ");
-			tcofLog.println("#################");
-			while((line = stderr.readLine()) != null) {
-				tcofLog.println(line);
-			}
-
 
 			try {
 				int exitValue = proc.waitFor();
@@ -125,13 +114,13 @@ public class TcoffeeRunner {
 	public static void main(String[] args) throws Exception {
 		File tcofProg = new File("/project/StruPPi/bin/t_coffee");
 		File logFile = new File("/tmp/tcoffee.log");
-		TcoffeeRunner tcr = new TcoffeeRunner(tcofProg, logFile);
+		TcoffeeRunner tcr = new TcoffeeRunner(tcofProg);
 		File seqFile = new File("/project/StruPPi/CASP7/targets/T0290.fa");
 		File alFile = new File("/project/StruPPi/CASP8/dryrun/casp7_bla_pb_gtg/bla_max10_e5_s1000_cct4/T0290/T0290.templates_aln.fasta");
 		Sequence seq = new Sequence();
 		seq.readFromFastaFile(seqFile);
 		MultipleSequenceAlignment al = new MultipleSequenceAlignment(alFile.getAbsolutePath(),MultipleSequenceAlignment.FASTAFORMAT);
-		MultipleSequenceAlignment outAl = tcr.alignSequence2Profile(seq, al);
+		MultipleSequenceAlignment outAl = tcr.alignSequence2Profile(seq, al, logFile);
 		outAl.writeFasta(System.out, 60, true);
 		
 	}
