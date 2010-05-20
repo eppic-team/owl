@@ -99,7 +99,7 @@ public class UniprotHomolog {
 	}
 	
 	/**
-	 * Retrieves from UniprotKB the taxonomy and EMBL CDS ids data,
+	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
 	 */
 	public void retrieveUniprotKBData() {
@@ -114,7 +114,9 @@ public class UniprotHomolog {
 			System.err.println("Warning: couldn't find uniprot id "+uniId+" through Uniprot JAPI");
 			return;
 		}
-		 
+		
+		this.setUniprotSeq(new Sequence(this.getUniId(),entry.getSequence().getValue()));
+		
 		for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
 			taxIds.add(ncbiTaxId.getValue());
 		}
