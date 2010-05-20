@@ -29,6 +29,7 @@ public class UniprotHomolog {
 	
 	private BlastHit blastHit;
 	private String uniId;
+	private Sequence uniproSeq;
 	private List<String> taxIds; // many taxonomy ids for a uniprot entry should be a very pathological case. Should be safe to use the first one always
 	private List<String> emblCdsIds;
 	private List<Sequence> emblCdsSeqs; 
@@ -59,6 +60,14 @@ public class UniprotHomolog {
 
 	public void setUniId(String uniId) {
 		this.uniId = uniId;
+	}
+	
+	public Sequence getUniprotSeq() {
+		return uniproSeq;
+	}
+	
+	public void setUniprotSeq(Sequence seq) {
+		this.uniproSeq = seq;
 	}
 	
 	public List<String> getTaxIds() {

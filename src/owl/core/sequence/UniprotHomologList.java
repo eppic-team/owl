@@ -1,7 +1,9 @@
 package owl.core.sequence;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -15,11 +17,16 @@ import org.xml.sax.SAXException;
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
+import owl.core.runners.TcoffeeError;
+import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastError;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastXMLParser;
+import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.util.FileFormatError;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
@@ -46,7 +53,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	private static final int 	BLAST_OUTPUT_TYPE = 7;  // xml output
 	private static final boolean BLAST_NO_FILTERING = true;
-
+	private static final String  TCOFFEE_ALN_OUTFORMAT = "fasta";
+	
 	private static final boolean DEBUG = false;
 	
 	/*-------------------------- members --------------------------*/
@@ -119,7 +127,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 	
 	/**
-	 * Retrieves from UniprotKB the taxonomy and EMBL CDS ids data,
+	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
 	 */
 	public void retrieveUniprotKBData() {
@@ -131,7 +139,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		EntryIterator<UniProtEntry> entries = uniprotConn.getMultipleEntries(uniprotIds);
 
 		for (UniProtEntry entry:entries) {
-			UniprotHomolog hom = this.getHomolog(entry.getPrimaryUniProtAccession().getValue()); 
+			UniprotHomolog hom = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
+			hom.setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
 			List<String> taxIds = new ArrayList<String>();
 			for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
 				taxIds.add(ncbiTaxId.getValue());
@@ -195,5 +204,70 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return this.list.iterator();
 	}
 
+	/**
+	 * Write to the given file the query sequence and all the homolog sequences (full 
+	 * uniprot sequences) in fasta format.
+	 * @param outFile
+	 * @throws FileNotFoundException
+	 */
+	public void writeToFasta(File outFile) throws FileNotFoundException {
+		PrintWriter pw = new PrintWriter(outFile);
+		
+		int len = 80;
+
+		pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + seq.getName());
+		for(int i=0; i<seq.getSeq().length(); i+=len) {
+			pw.println(seq.getSeq().substring(i, Math.min(i+len,seq.getSeq().length())));
+		}
+		
+		for(UniprotHomolog hom:this) {
+			
+			String sequence = hom.getUniprotSeq().getSeq();
+			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getBlastHit().getSubjectId());
+			for(int i=0; i<sequence.length(); i+=len) {
+				pw.println(sequence.substring(i, Math.min(i+len,sequence.length())));
+			}
+		}
+		pw.println();
+		pw.close();
+	}
+	
+	/**
+	 * Runs t_coffee to align all sequences of homologs and the query sequence
+	 * returning a MultipleSequenceAlignment object
+	 * @param tcoffeeBin
+	 * @return
+	 * @throws IOException
+	 * @throws TcoffeeError 
+	 */
+	public MultipleSequenceAlignment getTcoffeeAlignment(File tcoffeeBin) throws IOException, TcoffeeError {
+		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
+		File alnFile = File.createTempFile("homologs.",".aln");
+		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
+		if (!DEBUG) {
+			homologSeqsFile.deleteOnExit();
+			alnFile.deleteOnExit();
+			tcoffeeLogFile.deleteOnExit();
+		}
+		this.writeToFasta(homologSeqsFile);
+		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
+		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, null, tcoffeeLogFile);
+
+			MultipleSequenceAlignment aln = null;
+		
+		try {
+			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
+		} catch (FileFormatError e) {
+			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" does not seem to be in the right format.");
+			System.err.println("Error: "+e.getMessage());
+			System.exit(1);
+		} catch (AlignmentConstructionError e) {
+			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" seems to contain .");
+			System.err.println("Error: "+e.getMessage());
+			System.exit(1);
+		}
+		
+		return aln;
+	}
  
 }

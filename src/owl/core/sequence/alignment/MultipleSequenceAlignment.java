@@ -44,7 +44,7 @@ public class MultipleSequenceAlignment {
 	public static final String CLUSTALFORMAT = "CLUSTAL";
 	public static final char GAPCHARACTER = '-';
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
-	private static final String FASTAHEADER_CHAR = ">";
+	public static final String FASTAHEADER_CHAR = ">";
 	/*--------------------------- member variables --------------------------*/		
 	
 	private String[] sequences;
