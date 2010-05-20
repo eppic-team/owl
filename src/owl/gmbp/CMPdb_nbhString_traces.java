@@ -69,6 +69,7 @@ public class CMPdb_nbhString_traces {
 		stmt.close();
 		this.numNodesPerLine = new int[nodes.size()];
 		this.numLines = nodes.size();
+		
 		System.out.println("graphi_id + '\t' + i_num + '\t' + j_num + '\t' + theta + '\t' + phi");
 		for (int i=0; i<nodes.size(); i++){
 			stmt = conn.createStatement();
@@ -80,7 +81,7 @@ public class CMPdb_nbhString_traces {
 		         +" and j_atom='"+this.jatom+"' and i_sstype='"+this.sstype+"' order by j_num;";
 			else 
 				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-                +" and j_atom='"+this.jatom+"' order by j_num;";	
+                +" and j_atom='"+this.jatom+"' order by j_num;";
 			
 			result_nodes = stmt.executeQuery(query);
 			while(result_nodes.next()) {
@@ -103,6 +104,42 @@ public class CMPdb_nbhString_traces {
 			result_nodes.close();
 			stmt.close();
 	    }
+		
+		// ------ToDo
+		/* Count number of nodes for each sstype
+		 * evaluate if correct sstype was handed over (significant more modes than for set sstype)
+		 * change sstype in contactView
+		 * */
+//		Vector<float[]> nbhsNodesCA = new Vector<float[]>();
+//		Vector<float[]> nbhsNodesCB = new Vector<float[]>();
+//		Vector<float[]> nbhsNodesCG = new Vector<float[]>();
+//		Vector<float[]> nbhsNodesC  = new Vector<float[]>();
+		int[] numNodes = new int[sstypes.length];
+		System.out.println("Histogram Nodes for SSType");
+		for (int ssT=0; ssT<sstypes.length; ssT++){
+			char ssType = sstypes[ssT];
+			System.out.print(String.valueOf(ssType)+"\t");
+			for (int i=0; i<nodes.size(); i++){
+				this.numNodesPerLine[i] = 0;
+				stmt = conn.createStatement();
+				int[] val = (int[]) nodes.get(i);
+				gID = val[0];
+				num = val[1];
+				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+		         +" and j_atom='"+this.jatom+"' and i_sstype='"+ssType+"' order by j_num;";				
+				result_nodes = stmt.executeQuery(query);
+				while(result_nodes.next()) {
+					this.numNodesPerLine[i] += 1;
+					numNodes[ssT] += 1;
+				}		
+				System.out.print(String.valueOf(this.numNodesPerLine[i])+"\t");
+				result_nodes.close();
+				stmt.close();
+		    }
+			System.out.print("sum= "+String.valueOf(numNodes[ssT])+"\t");
+			System.out.println();
+		}
+		
 	}
 	
 	public void writeNbhsTracesOutput(String filename){
