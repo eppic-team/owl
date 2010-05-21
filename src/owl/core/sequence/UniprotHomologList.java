@@ -236,11 +236,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * Runs t_coffee to align all sequences of homologs and the query sequence
 	 * returning a MultipleSequenceAlignment object
 	 * @param tcoffeeBin
+	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
 	 * @return
 	 * @throws IOException
 	 * @throws TcoffeeError 
 	 */
-	public MultipleSequenceAlignment getTcoffeeAlignment(File tcoffeeBin) throws IOException, TcoffeeError {
+	public MultipleSequenceAlignment getTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeError {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 		File alnFile = File.createTempFile("homologs.",".aln");
 		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
@@ -251,7 +252,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		this.writeToFasta(homologSeqsFile);
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, null, tcoffeeLogFile);
+		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, null, tcoffeeLogFile, veryFast);
 
 			MultipleSequenceAlignment aln = null;
 		
@@ -270,4 +271,31 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return aln;
 	}
  
+	/**
+	 * Removes homologs below the given sequence identity value.
+	 * @param idCutoff
+	 */
+	public void restrictToMinId(double idCutoff) {
+		List<String> toRemove = new ArrayList<String>();
+		Iterator<UniprotHomolog> it = list.iterator();
+		while (it.hasNext()) {
+			UniprotHomolog hom = it.next();
+			if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff) {
+				it.remove();
+				toRemove.add(hom.getUniId());
+			}
+		}
+		for (String uniId:toRemove) {
+			lookup.remove(uniId);
+		}
+		
+	}
+	
+	/**
+	 * Returns the number of homologs in this list
+	 * @return
+	 */
+	public int size() {
+		return list.size();
+	}
 }

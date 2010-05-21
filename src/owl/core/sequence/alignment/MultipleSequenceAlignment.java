@@ -15,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.runners.DsspRunner;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
@@ -637,6 +638,75 @@ public class MultipleSequenceAlignment {
     		col+=seq.charAt(alignIndex-1);
     	}
     	return col;
+    }
+    
+    /**
+     * Calculate the entropy of column alignIndex of the alignment, assuming that this is
+     * a multiple protein sequence alignment (i.e. not a nucleotide alignment).
+     * Gaps are not considered in the entry summation, but the calculation of amino acid 
+     * column probabilities do take gaps into account.
+     * @param alignIndex the column of the alignment
+     * @return
+     */
+    public double getColumnEntropy(int alignIndex) {
+    	int[] counts = getColumnCounts(alignIndex);
+    	
+    	// important: we are considering also gaps when calculating probabilities
+    	double sumplogp=0.0;
+		for (int i=1;i<=20;i++){
+			double prob = (double)counts[i]/(double)this.getNumberOfSequences(); // i.e. we consider gaps!
+			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
+				sumplogp += prob*(Math.log(prob)/Math.log(2));
+			}
+		}
+		return (-1.0)*sumplogp;
+    }
+    
+    /**
+     * Gets the counts of aminoacids for the column alignIndex
+     * @param alignIndex the column of the alignment
+     * @return an array of size 21 with indices 1 to 20 containing the counts of 
+     * aminoacids, the indices correspond to those of the {@link AminoAcid} enum
+     */
+    public int[] getColumnCounts(int alignIndex) {
+    	String column = getColumn(alignIndex);
+    	int[] counts = new int[21]; // we don't use 0 (see number member of AminoAcid enum) 
+    	 
+    	for (int i=0;i<column.length();i++) {
+    		char letter = column.charAt(i);
+    		if (letter!=GAPCHARACTER) {
+    			counts[AminoAcid.getByOneLetterCode(letter).getNumber()]++;
+    		}
+    	}
+    	return counts;
+    }
+    
+    /**
+     * Prints to given PrintStream profile information for the given tag's sequence, assuming 
+     * it is a protein sequence (only aminoacids): aminoacid column counts and entropies
+     * @param ps
+     * @param tag the sequence tag for which the column counts will be computed and printed
+     */
+    public void printProfile(PrintStream ps, String tag) {
+    	String sequence = this.getSequenceNoGaps(tag);
+		ps.print("\t");
+		for (int j=1;j<=20;j++) {
+			ps.print("\t"+AminoAcid.getByNumber(j).getOneLetterCode());
+		}
+		ps.println();
+		for (int i=1;i<=sequence.length();i++){
+			// this is not very efficient, we are counting twice: when calling getColumnEntropy and getColumnCounts
+			// TODO rewrite if this becomes a bottleneck
+			double entropy = this.getColumnEntropy(this.seq2al(tag, i));
+			int[] counts = this.getColumnCounts(this.seq2al(tag, i));
+			ps.print(i+"\t"+sequence.charAt(i-1));
+			int sum = 0;
+			for (int j=1;j<=20;j++) {
+				ps.printf("\t%d",counts[j]);
+				sum+=counts[j];
+			}
+			ps.printf("\t%d\t%5.2f\n",sum,entropy);
+		}
     }
     
     /**
