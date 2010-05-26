@@ -13,8 +13,9 @@ CURRENT="$LOCALDIR/current"
 DOWNLOAD="$LOCALDIR/download"
 
 #SITE="ftp://ftp.uniprot.org/pub" # US main ftp
-#SITE="ftp://ftp.ebi.ac.uk/pub" # UK mirror
-SITE="ftp://ftp.expasy.org" # swiss mirror
+SITE="ftp://ftp.ebi.ac.uk/pub" # UK mirror
+# the swiss mirror doesn't seem to update properly, not using it anymore
+#SITE="ftp://ftp.expasy.org" # swiss mirror
  
 
 COMPLETEKBDIR="databases/uniprot/current_release/knowledgebase/complete"
