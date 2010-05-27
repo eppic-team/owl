@@ -80,7 +80,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	
 	/**
 	 * Returns the parsed interfaces data
-	 * @return
+	 * @return a map of pdb codes to lists of interfaces
 	 */
 	public Map<String,List<PisaInterface>> getAllInterfaces() {
 		return allInterfaces;
@@ -187,7 +187,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
-				currentPdbCode = flushValue();
+				currentPdbCode = flushValue().toLowerCase();
 			} else if (name.equals(INTERFACE_TAG)){
 				inInterface = false;
 				currentInterfaces.add(currentPisaInterface);

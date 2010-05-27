@@ -29,6 +29,50 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	}
 	
 	/**
+	 * Returns 2 lists of residues as a {@link PisaRimCore} object: core residues are those for 
+	 * which the bsa/asa ratio is above the given cut-off, rim those with bsa>0 and with 
+	 * bsa/asa below the cut-off.
+	 * @param bsaToAsaCutoff
+	 * @return
+	 */
+	public PisaRimCore getRimAndCore(double bsaToAsaCutoff) {
+		List<PisaResidue> core = new ArrayList<PisaResidue>();
+		List<PisaResidue> rim = new ArrayList<PisaResidue>();
+		for (PisaResidue residue:this) {
+			if (residue.getBsa()>0) {
+				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
+					rim.add(residue);
+				} else {
+					core.add(residue);
+				}
+			}
+		}
+		return new PisaRimCore(rim,core,bsaToAsaCutoff);
+	}
+	
+	/**
+	 * Returns 2 list of residues as a {@link PisaRimCore} object (see {@link #getRimAndCore(double)})
+	 * The core is required to have a minimum of minNumResidues. If the minimum is not 
+	 * reached with the bsaToAsaSoftCutoff, then the cutoff is relaxed in relaxationStep steps 
+	 * until reaching the bsaToAsaHardCutoff.
+	 * @param bsaToAsaSoftCutoff
+	 * @param bsaToAsaHardCutoff
+	 * @param relaxationStep
+	 * @param minNumResidues
+	 * @return
+	 */
+	public PisaRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>bsaToAsaHardCutoff;cutoff-=relaxationStep) {
+			PisaRimCore rimCore = getRimAndCore(cutoff);
+			//System.out.printf("cutoff %4.2f, core size: %d\n",cutoff,rimCore.getCoreSize());
+			if (rimCore.getCoreSize()>=minNumResidues) {
+				return rimCore;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * @return the id
 	 */
 	public int getId() {

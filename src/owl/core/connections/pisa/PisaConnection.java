@@ -36,6 +36,15 @@ public class PisaConnection {
 		//this.pdbAssembliesUrl = pdbAssembliesUrl;
 	}
 	
+	/**
+	 * Retrieves the XML PISA interface description from the PISA web server dividing the 
+	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST}, parses it and 
+	 * returns the result as a map of pdb codes to lists of PISA interfaces 
+	 * @param pdbCodesList
+	 * @return
+	 * @throws IOException
+	 * @throws SAXException
+	 */
 	public Map<String,List<PisaInterface>> getInterfacesDescription(List<String> pdbCodesList) throws IOException, SAXException {
 		Map<String,List<PisaInterface>> allInterfaces = new HashMap<String,List<PisaInterface>>();
 		// we do batches of MAX_ENTRIES_PER_REQUEST
@@ -50,6 +59,14 @@ public class PisaConnection {
 		return allInterfaces;
 	}
 	
+	/**
+	 * Retrieves the XML PISA interface description from the PISA web server, parses it and 
+	 * returns the result as a map of pdb codes to lists of PISA interfaces 
+	 * @param commaSepList
+	 * @return
+	 * @throws IOException
+	 * @throws SAXException
+	 */
 	private Map<String,List<PisaInterface>> getInterfacesDescription(String commaSepList) throws IOException, SAXException {
 		URL interfacesURL = new URL(interfacesUrl+commaSepList);
 		URLConnection conn = interfacesURL.openConnection();

@@ -20,6 +20,14 @@ public class PisaResidue {
 	}
 	
 	/**
+	 * Returns bsa/asa
+	 * @return
+	 */
+	public double getBsaToAsaRatio() {
+		return (double)this.bsa/ (double)this.asa;
+	}
+	
+	/**
 	 * @return the resSerial
 	 */
 	public int getResSerial() {
@@ -89,5 +97,7 @@ public class PisaResidue {
 		this.solvEnergy = solvEnergy;
 	}
 	
-	
+	public String toString() {
+		return resType+resSerial;
+	}
 }
