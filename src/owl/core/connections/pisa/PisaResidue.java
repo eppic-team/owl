@@ -6,6 +6,7 @@ import java.io.PrintStream;
 public class PisaResidue {
 	
 	private int resSerial;
+	private int pdbResSer;
 	private String resType;
 	private double asa;
 	private double bsa;
@@ -16,7 +17,7 @@ public class PisaResidue {
 	}
 
 	public void printTabular(PrintStream ps) {
-		ps.printf("%d\t%s\t%6.2f\t%6.2f\t%6.2f\n",resSerial,resType,asa,bsa,solvEnergy);
+		ps.printf("%d\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\n",resSerial,pdbResSer,resType,asa,bsa,solvEnergy);
 	}
 	
 	/**
@@ -39,6 +40,20 @@ public class PisaResidue {
 	 */
 	public void setResSerial(int resSerial) {
 		this.resSerial = resSerial;
+	}
+
+	/**
+	 * @return the pdbResSer
+	 */
+	public int getPdbResSer() {
+		return pdbResSer;
+	}
+
+	/**
+	 * @param pdbResSer the pdbResSer to set
+	 */
+	public void setPdbResSer(int pdbResSer) {
+		this.pdbResSer = pdbResSer;
 	}
 
 	/**

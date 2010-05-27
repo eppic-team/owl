@@ -40,6 +40,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String CLASS_TAG = "class";
 
 	private static final String SER_NO_TAG = "ser_no"; 
+	private static final String SEQ_NUM_TAG = "seq_num";
 	private static final String NAME_TAG = "name";
 	private static final String ASA_TAG = "asa";
 	private static final String BSA_TAG = "bsa";
@@ -163,6 +164,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
 						initValueReading();
+					} else if (name.equals(SEQ_NUM_TAG)) {
+						initValueReading();
 					} else if (name.equals(NAME_TAG)) {
 						initValueReading();
 					} else if (name.equals(ASA_TAG)) {
@@ -232,6 +235,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
 						currentResidue.setResSerial(Integer.parseInt(flushValue()));
+					} else if (name.equals(SEQ_NUM_TAG)) {
+						currentResidue.setPdbResSer(Integer.parseInt(flushValue()));
 					} else if (name.equals(NAME_TAG)) {
 						currentResidue.setResType(flushValue());
 					} else if (name.equals(ASA_TAG)) {
