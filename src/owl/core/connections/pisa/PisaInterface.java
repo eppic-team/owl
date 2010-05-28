@@ -42,7 +42,8 @@ public class PisaInterface {
 	 */
 	public Map<Integer,PisaRimCore> getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
 		Map<Integer,PisaRimCore> rimcores = new HashMap<Integer, PisaRimCore>();
-		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff;cutoff-=relaxationStep) {
+		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
 			PisaRimCore rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
 			PisaRimCore rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
 			rimcores.put(1,rimCore1);

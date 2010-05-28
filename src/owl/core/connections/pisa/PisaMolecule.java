@@ -65,7 +65,8 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 */
 	public PisaRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
 		PisaRimCore rimCore = null;
-		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff;cutoff-=relaxationStep) {
+		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
 			rimCore = getRimAndCore(cutoff);
 			//System.out.printf("cutoff %4.2f, core size: %d\n",cutoff,rimCore.getCoreSize());
 			if (rimCore.getCoreSize()>=minNumResidues) {
