@@ -124,8 +124,10 @@ public class UniprotHomolog {
 		Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
 		for(Embl ref:emblrefs) {
 			String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
-			String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-			emblCdsIds.add(emblCdsId);
+			if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
+				String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
+				emblCdsIds.add(emblCdsId);
+			}
 		}
 	}
 	

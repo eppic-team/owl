@@ -150,8 +150,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			List<String> emblCdsIds = new ArrayList<String>();
 			for(Embl ref:emblrefs) {
 				String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
-				String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-    			emblCdsIds.add(emblCdsId);
+				if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
+					String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
+					emblCdsIds.add(emblCdsId);
+				}
     		}
 			hom.setEmblCdsIds(emblCdsIds);
 		}
