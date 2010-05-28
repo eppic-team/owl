@@ -6,7 +6,7 @@ import java.io.PrintStream;
 public class PisaResidue {
 	
 	private int resSerial;
-	private int pdbResSer;
+	private String pdbResSer; // a String because it can have insertion codes
 	private String resType;
 	private double asa;
 	private double bsa;
@@ -45,14 +45,14 @@ public class PisaResidue {
 	/**
 	 * @return the pdbResSer
 	 */
-	public int getPdbResSer() {
+	public String getPdbResSer() {
 		return pdbResSer;
 	}
 
 	/**
 	 * @param pdbResSer the pdbResSer to set
 	 */
-	public void setPdbResSer(int pdbResSer) {
+	public void setPdbResSer(String pdbResSer) {
 		this.pdbResSer = pdbResSer;
 	}
 

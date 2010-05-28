@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.List;
 
 public class PisaMolecule implements Iterable<PisaResidue> {
+	
+	public static final String CLASS_PROTEIN = "Protein";
 
 	private int id;
 	private String chainId;
@@ -62,14 +64,15 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 * @return
 	 */
 	public PisaRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
-		for (double cutoff=bsaToAsaSoftCutoff;cutoff>bsaToAsaHardCutoff;cutoff-=relaxationStep) {
-			PisaRimCore rimCore = getRimAndCore(cutoff);
+		PisaRimCore rimCore = null;
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff;cutoff-=relaxationStep) {
+			rimCore = getRimAndCore(cutoff);
 			//System.out.printf("cutoff %4.2f, core size: %d\n",cutoff,rimCore.getCoreSize());
 			if (rimCore.getCoreSize()>=minNumResidues) {
-				return rimCore;
+				break;
 			}
 		}
-		return null;
+		return rimCore;
 	}
 
 	/**

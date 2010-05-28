@@ -19,6 +19,7 @@ public class genGraph {
 	/*------------------------------ constants ------------------------------*/
 	
 	public static final String			PDB_DB = "pdbase";
+	private static final int NUM_RANDOM_SUBSETS = 10;
 	
 	/*--------------------------- type definitions --------------------------*/
 	public enum OutputFormat {CMVIEW, PAUL, SADP};
@@ -31,13 +32,15 @@ public class genGraph {
 		String progName = "genGraph";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
-				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
-				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] \n\n" +
+				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] [-r <percent>] \n" +
+				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] [-r <percent>] \n" +
+				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] [-r <percent>] \n\n" +
 				"In case 2) also a list of comma separated pdb codes+chain codes can be specified, e.g. -p 1bxyA,1josA \n" +
 				"In case 3) if -c not specified then the first chain code in the pdb file will be taken\n" +
 				"If pdbase_db not specified, the default pdbase will be used\n" +
 				"If output dir not specified default is current\n" +
+				"\n" +
+				"Use -r <percent> to generate random subsets (of size percent) for each of the contact maps calculated.\n" +
 				"\n" +
 				"In all cases, the output format can be specified with one of the following options:\n" +
 				" -C CMView graph file format (default)\n" +
@@ -53,8 +56,9 @@ public class genGraph {
 		double cutoff = 0.0;
 		String outputDir = "."; // we set default to current directory
 		OutputFormat outFormat = OutputFormat.CMVIEW;	// output to cmview graph format by default
+		double randomSubset = 1;
 		
-		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:CPSh?");
+		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:CPSr:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -90,7 +94,10 @@ public class genGraph {
 				break;
 			case 'S':
 				outFormat = OutputFormat.SADP;
-				break;	
+				break;
+			case 'r':
+				randomSubset = Double.valueOf(g.getOptarg());
+				break;
 			case 'h':
 			case '?':
 				System.out.println(help);
@@ -148,6 +155,7 @@ public class genGraph {
 					// get graph
 					RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 					
+					
 					String edgeTypeStr = edgeType.replaceAll("/", ":");
 					
 					File outputFile = new File(outputDir,pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+".cm");
@@ -156,12 +164,32 @@ public class genGraph {
 					case PAUL: graph.writeToPaulFile(outputFile.getAbsolutePath()); break;
 					case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 					}
-
+				
 					//long end = System.currentTimeMillis();
 					//double time = (double) (end -start)/1000;
 
 					System.out.println("Wrote "+outputFile.getAbsolutePath());
 					//System.out.printf("%5.3f s\n",time);
+					
+					if (randomSubset<1) {
+						for (int n=1;n<=NUM_RANDOM_SUBSETS;n++) {
+							RIGraph subset = graph.getRandomSubset(randomSubset);
+							subset.writeToFile(new File(outputDir,
+									pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+
+									"_"+(int)(randomSubset*100.0)+
+									"_"+String.format("%03d", n)+".cm").getAbsolutePath());
+						}
+						System.out.println("Wrote "+NUM_RANDOM_SUBSETS+" subset graph files of "+(int)(randomSubset*100.0)+" percent size to "+outputDir);
+					} else if (randomSubset>1) {
+						for (int n=1;n<=NUM_RANDOM_SUBSETS;n++) {
+							RIGraph noisy = graph.getRandomNoiseMap(randomSubset-1);
+							noisy.writeToFile(new File(outputDir,
+									pdbCode+pdbChainCode+"_"+edgeTypeStr+"_"+cutoff+
+									"_"+(int)((randomSubset-1)*100.0)+
+									"_"+String.format("%03d", n)+".cm").getAbsolutePath());							
+						}
+						System.out.println("Wrote "+NUM_RANDOM_SUBSETS+" cm files with "+(int)((randomSubset-1)*100.0)+" percent noise contacts added to "+outputDir);
+					}
 					
 					numPdbs++;
 
@@ -200,6 +228,26 @@ public class genGraph {
 				case SADP: graph.writeToSADPFile(outputFile.getAbsolutePath()); break;
 				}
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbFile);
+				
+				if (randomSubset<1) {
+					for (int n=1;n<=NUM_RANDOM_SUBSETS;n++) {
+						RIGraph subset = graph.getRandomSubset(randomSubset);
+						subset.writeToFile(new File(outputDir,
+								filename+"_"+edgeTypeStr+"_"+cutoff+
+								"_"+(int)(randomSubset*100.0)+
+								"_"+String.format("%03d", n)+".cm").getAbsolutePath());
+					}
+					System.out.println("Wrote "+NUM_RANDOM_SUBSETS+" subset graph files of "+(int)(randomSubset*100.0)+" percent size to "+outputDir);
+				} else if (randomSubset>1) {
+					for (int n=1;n<=NUM_RANDOM_SUBSETS;n++) {
+						RIGraph noisy = graph.getRandomNoiseMap(randomSubset-1);
+						noisy.writeToFile(new File(outputDir,
+								filename+"_"+edgeTypeStr+"_"+cutoff+
+								"_"+(int)((randomSubset-1)*100.0)+
+								"_"+String.format("%03d", n)+".cm").getAbsolutePath());							
+					}
+					System.out.println("Wrote "+NUM_RANDOM_SUBSETS+" cm files with "+(int)((randomSubset-1)*100.0)+" percent noise contacts added to "+outputDir);
+				}
 				
 			} catch (PdbLoadError e) {
 				System.err.println("Error loading from pdb file "+pdbFile+", specific error: "+e.getMessage());

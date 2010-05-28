@@ -1,6 +1,8 @@
 package owl.core.connections.pisa;
 
 import java.io.PrintStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PisaInterface {
 
@@ -24,6 +26,34 @@ public class PisaInterface {
 		this.getFirstMolecule().printTabular(ps);
 		ps.print("## ");
 		this.getSecondMolecule().printTabular(ps);
+	}
+	
+	/**
+	 * Returns a map containing 2 {@link PisaRimCore} objects (see getRimAndCore in {@link PisaMolecule})
+	 * for each of the 2 members of the interface.
+	 * The sum of the residues of the 2 cores is required to be at least minNumResidues. 
+	 * If the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
+	 * relaxed in relaxationStep steps until reaching the bsaToAsaHardCutoff.
+	 * @param bsaToAsaSoftCutoff
+	 * @param bsaToAsaHardCutoff
+	 * @param relaxationStep
+	 * @param minNumResidues
+	 * @return
+	 */
+	public Map<Integer,PisaRimCore> getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		Map<Integer,PisaRimCore> rimcores = new HashMap<Integer, PisaRimCore>();
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff;cutoff-=relaxationStep) {
+			PisaRimCore rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
+			PisaRimCore rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
+			rimcores.put(1,rimCore1);
+			rimcores.put(2,rimCore2);
+			
+			if (rimCore1.getCoreSize()+rimCore2.getCoreSize()>=minNumResidues) {
+				break;
+			}
+		}
+		
+		return rimcores;
 	}
 	
 	/**

@@ -236,7 +236,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					if (name.equals(SER_NO_TAG)) {
 						currentResidue.setResSerial(Integer.parseInt(flushValue()));
 					} else if (name.equals(SEQ_NUM_TAG)) {
-						currentResidue.setPdbResSer(Integer.parseInt(flushValue()));
+						currentResidue.setPdbResSer(flushValue());
 					} else if (name.equals(NAME_TAG)) {
 						currentResidue.setResType(flushValue());
 					} else if (name.equals(ASA_TAG)) {
