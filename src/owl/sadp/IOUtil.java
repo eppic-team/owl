@@ -19,7 +19,7 @@ public class IOUtil {
 	 * Reads a contact maps given in the specified file of the specified format
 	 * and returns a contact map.
 	 */
-	public static ContactMap read(String f) {
+	public static SADPContactMap read(String f) {
 
 		try {
 			FileReader fr = new FileReader(f);
@@ -71,7 +71,7 @@ public class IOUtil {
 					}
 				}
 			}
-			ContactMap cm = new ContactMap(A);
+			SADPContactMap cm = new SADPContactMap(A);
 			cm.setFileName(f);
 			return cm;
 		} catch (IOException e) {

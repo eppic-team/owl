@@ -19,16 +19,16 @@ import owl.core.structure.graphs.RIGraph;
  * explicitly based on atomic coordinates or distances. In this case, the method
  * requiresCoordinates has to return true so that the calling application knows that the Pdb
  * object may not be null. The secondary structure object may be null, so implementations
- * may use secondary structure information if given but also need to work in the abscence of it.
+ * may use secondary structure information if given but also need to work in the absence of it.
  * 
  * The contacts should be assumed to be C-beta atoms being not more than 8 Angstrom apart unless
- * the implementeation specifically takes into account the contact type defined in the RIGraph.
+ * the implementation specifically takes into account the contact type defined in the RIGraph.
  * 
  * It is encouraged to return scores normalized to values between 0 and 1. We do not make this
  * a strict requirement yet because we need to gain more experience in how for this is a too severe
  * restriction (TODO).
  * 
- * For sets of contacts, the score can be a simple average of the pariwise scores or something
+ * For sets of contacts, the score can be a simple average of the pairwise scores or something
  * more complex. This makes it possible to implement multi-body scoring functions which are
  * not strictly additive, as long as they can also return scores for single contacts.
  * @author stehr

@@ -85,12 +85,12 @@ public class SADP {
 	/**
 	 * The reference protein represented as a graph to be matched.
 	 */
-	protected ContactMap X;
+	protected SADPContactMap X;
 
 	/**
 	 * The second protein represented as a graph to be matched.
 	 */
-	protected ContactMap Y;
+	protected SADPContactMap Y;
 
 	/**
 	 * True if the input order of contact maps is preserved in the internal use
@@ -185,8 +185,8 @@ public class SADP {
 	 */
 	public SADP(String fx, String fy) {
 
-		ContactMap x = IOUtil.read(fx);
-		ContactMap y = IOUtil.read(fy);
+		SADPContactMap x = IOUtil.read(fx);
+		SADPContactMap y = IOUtil.read(fy);
 
 		if (x.countNodes() < y.countNodes()) {
 			this.X = x;
@@ -209,7 +209,7 @@ public class SADP {
 	 * Constructs an object instance based on ContactMaps.
 	 * Please note that the order of contact maps as passed to this constructor is not necessarily preserved for the internal use. 
 	 */
-	public SADP(ContactMap x, ContactMap y) {
+	public SADP(SADPContactMap x, SADPContactMap y) {
 		if (x.countNodes() < y.countNodes()) {
 			this.X = x;
 			this.Y = y;
@@ -689,7 +689,7 @@ public class SADP {
 	public MultipleSequenceAlignment getAlignment( String tag1, String tag2 ) 
 	throws AlignmentConstructionError {
 
-		ContactMap[] cm = new ContactMap[2];
+		SADPContactMap[] cm = new SADPContactMap[2];
 
 		if( isInputOrderPreserved() ) {
 			cm[0] = X;

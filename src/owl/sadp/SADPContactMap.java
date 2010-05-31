@@ -11,7 +11,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 /**
  * This class contains methods and fields to represent contact maps.  
  */
-public class ContactMap {
+public class SADPContactMap {
 
 	/**
 	 * Adjacency matrix
@@ -48,7 +48,7 @@ public class ContactMap {
 	/**
 	 * Constructor.
 	 **/
-	public ContactMap(boolean[][] A) {
+	public SADPContactMap(boolean[][] A) {
 
 		this.A = A;
 		this.nNodes = A.length;
@@ -99,7 +99,7 @@ public class ContactMap {
 	 * <li>...</li>
 	 * </ul>  
 	 */
-	public ContactMap(RIGraph g) throws ContactMapConstructorError {
+	public SADPContactMap(RIGraph g) throws ContactMapConstructorError {
 		this.nNodes = g.getFullLength();//g.getNodes.size();
 		this.nEdges = g.getEdgeCount();
 		this.deg    = new int[nNodes];
