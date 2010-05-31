@@ -17,7 +17,7 @@ public class PisaResidue {
 	}
 
 	public void printTabular(PrintStream ps) {
-		ps.printf("%d\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\n",resSerial,pdbResSer,resType,asa,bsa,solvEnergy);
+		ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f\t%6.2f\n",resSerial,pdbResSer,resType,asa,bsa,solvEnergy);
 	}
 	
 	/**
