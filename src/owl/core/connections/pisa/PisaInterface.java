@@ -34,6 +34,9 @@ public class PisaInterface {
 	 * The sum of the residues of the 2 cores is required to be at least minNumResidues. 
 	 * If the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
 	 * relaxed in relaxationStep steps until reaching the bsaToAsaHardCutoff.
+	 * If either of the 2 molecules of this interface is not a protein, the its rimCore 
+	 * object in the output map object will be null. If both are not proteins then the map 
+	 * will contain null object references for both.
 	 * @param bsaToAsaSoftCutoff
 	 * @param bsaToAsaHardCutoff
 	 * @param relaxationStep
@@ -41,15 +44,27 @@ public class PisaInterface {
 	 * @return
 	 */
 	public Map<Integer,PisaRimCore> getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		
 		Map<Integer,PisaRimCore> rimcores = new HashMap<Integer, PisaRimCore>();
+		if (!firstMolecule.isProtein() && !secondMolecule.isProtein()) {
+			rimcores.put(1, null);
+			rimcores.put(2, null);
+			return rimcores;
+		}
+		
 		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
 		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
-			PisaRimCore rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
-			PisaRimCore rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
+			PisaRimCore rimCore1 = null;
+			PisaRimCore rimCore2 = null;
+			if (this.firstMolecule.isProtein()) rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
+			if (this.secondMolecule.isProtein()) rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
 			rimcores.put(1,rimCore1);
 			rimcores.put(2,rimCore2);
 			
-			if (rimCore1.getCoreSize()+rimCore2.getCoreSize()>=minNumResidues) {
+			int totalCoreResidues = 0;
+			if (firstMolecule.isProtein()) totalCoreResidues+=rimCore1.getCoreSize();
+			if (secondMolecule.isProtein()) totalCoreResidues+=rimCore2.getCoreSize();
+			if (totalCoreResidues>=minNumResidues) {
 				break;
 			}
 		}
