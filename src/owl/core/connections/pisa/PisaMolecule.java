@@ -75,6 +75,14 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 		}
 		return rimCore;
 	}
+	
+	/**
+	 * Returns true if this is a protein molecule, false otherwise
+	 * @return
+	 */
+	public boolean isProtein() {
+		return getMolClass().equals(CLASS_PROTEIN);	
+	}
 
 	/**
 	 * @return the id

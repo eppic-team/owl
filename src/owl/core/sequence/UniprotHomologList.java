@@ -62,14 +62,16 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	private Sequence seq; // the sequence to which the homologs refer
 	private List<UniprotHomolog> list; // the list of homologs
 	private Map<String,UniprotHomolog> lookup; // to speed up searches (uniprot ids to Homologs)
-	
+	private double idCutoff; // the identity cutoff (see restrictToMinId() )
 	
 	public UniprotHomologList(String tag, String sequence) {
-		seq = new Sequence(tag, sequence);
+		this.seq = new Sequence(tag, sequence);
+		this.idCutoff = 0.0; // i.e. no filter
 	}
 	
 	public UniprotHomologList(Sequence seq) {
 		this.seq = seq;
+		this.idCutoff = 0.0; // i.e. no filter
 	}
 	
 	/**
@@ -278,6 +280,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @param idCutoff
 	 */
 	public void restrictToMinId(double idCutoff) {
+		this.idCutoff = idCutoff;
 		List<String> toRemove = new ArrayList<String>();
 		Iterator<UniprotHomolog> it = list.iterator();
 		while (it.hasNext()) {
@@ -299,5 +302,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 */
 	public int size() {
 		return list.size();
+	}
+	
+	/**
+	 * Returns the sequence identity cutoff, see {@link #restrictToMinId(double)}
+	 * @return
+	 */
+	public double getIdCutoff() {
+		return idCutoff;
 	}
 }
