@@ -132,7 +132,7 @@ public class CMPdb_nbhString_traces {
 				if (iSSType == this.sstype || this.sstype == AnySStype ){
 					this.numNodesPerLine[i] += 1;
 					
-					System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
+//					System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
 					
 					float[] node = {gID, num, j_num, theta, phi, resID, ssTypeID};
 					this.nbhsNodes.add(node);					
