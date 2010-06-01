@@ -19,10 +19,10 @@ public class Gmbp {
 		return this.phiRanges.size() > 0 && this.thetaRanges.size() > 0;
 	}
 	
-	public void setLampdaRanges(Vector<Pair<Double>> phiRanges) {
+	public void setLambdaRanges(Vector<Pair<Double>> phiRanges) {
 		this.phiRanges = phiRanges;
 	}
-	public Vector<Pair<Double>> getLampdaRanges() {
+	public Vector<Pair<Double>> getLambdaRanges() {
 		return phiRanges;
 	}
 	public void setPhiRanges(Vector<Pair<Double>> thetaRanges) {

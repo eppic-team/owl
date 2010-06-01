@@ -32,6 +32,7 @@ public class CMPdb_nbhString_traces {
 	private final String AAStr = new String(aas); 
 	private static final char[] sstypes = new char[]{'H','S','O'};
 	private final String SSTStr = new String(sstypes);
+	public static final char AnySStype = 'A';
 	
 	public CMPdb_nbhString_traces(String nbhs, String jatom, String db) throws SQLException {
 		this.db = db;
@@ -110,7 +111,7 @@ public class CMPdb_nbhString_traces {
 				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
 		         +" and j_atom='"+this.jatom+"' order by j_num;";
 			else 
-				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
                 +" and j_atom='"+this.jatom+"' order by j_num;";
 			
 			result_nodes = stmt.executeQuery(query);
@@ -128,7 +129,7 @@ public class CMPdb_nbhString_traces {
 				numNodesSSType[index] += 1;
 				numNodesSSTypeLine[index][i] += 1;
 				
-				if (iSSType == this.sstype){
+				if (iSSType == this.sstype || this.sstype == AnySStype ){
 					this.numNodesPerLine[i] += 1;
 					
 					System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
