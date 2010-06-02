@@ -681,8 +681,9 @@ public class MultipleSequenceAlignment {
     	for (int i=0;i<column.length();i++) {
     		char letter = column.charAt(i);
     		if (letter!=GAPCHARACTER) {
-    			AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
-    			if (aa.isStandardAA()) {
+    			
+    			if (AminoAcid.isStandardAA(letter)) {
+    				AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
     				int index;
     				switch(numGroupsAlphabet) {
     				case 20:
