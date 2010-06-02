@@ -1,7 +1,9 @@
 package owl.core.structure;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Package:		proteinstructure
@@ -24,34 +26,36 @@ import java.util.HashMap;
  * 2006/02/06 first created by HS
  * 2009/01/05 moved to package proteinstructure
  * 2009/03/18 adding stop codon
+ * 2010/05/02 adding reduced alphabets (JD)
  */
 public enum AminoAcid {
 		
 	/*---------------------- member variables --------------------------*/
-
-	//                                         hydro  hydro  arom   aliph  polar  charg  pos    neg    small  tiny 
-	 ALA ( 1, "Alanine",       'A', "ALA",  1, -0.20, true,  false, false, false, false, false, false, true,  true ), 
-	 ARG ( 2, "Arginine",      'R', "ARG",  7,  1.43, false, false, false, true,  true,  true,  false, false, false), 
-	 ASN ( 3, "Asparagine",    'N', "ASN",  4,  0.69, false, false, false, true,  false, false, false, true,  false),
-	 ASP ( 4, "Aspartic acid", 'D', "ASP",  4,  0.72, false, false, false, true,  true,  false, true,  true,  false),
-	 CYS ( 5, "Cysteine",      'C', "CYS",  2, -0.67, true,  false, false, true,  false, false, false, true,  false),
-	 GLN ( 6, "Glutamine",     'Q', "GLN",  5,  0.74, false, false, false, true,  false, false, false, false, false),
-	 GLU ( 7, "Glutamic acid", 'E', "GLU",  5,  1.09, false, false, false, true,  true,  false, true,  false, false),
-	 GLY ( 8, "Glycine",       'G', "GLY",  0, -0.06, true,  false, false, false, false, false, false, true,  true ),
-	 HIS ( 9, "Histidine",     'H', "HIS",  6, -0.04, true,  true,  false, true,  true,  true,  false, false, false),
-	 ILE (10, "Isoleucine",    'I', "ILE",  4, -0.74, true,  false, true,  false, false, false, false, false, false),
-	 LEU (11, "Leucine",       'L', "LEU",  4, -0.65, true,  false, true,  false, false, false, false, false, false),
-	 LYS (12, "Lysine",        'K', "LYS",  5,  2.00, true,  false, false, true,  true,  true,  false, false, false),
-	 MET (13, "Methionine",    'M', "MET",  4, -0.71, true,  false, false, false, false, false, false, false, false),
-	 PHE (14, "Phenylalanine", 'F', "PHE",  7, -0.67, true,  true,  false, false, false, false, false, false, false),
-	 PRO (15, "Proline",       'P', "PRO",  3, -0.44, false, false, false, false, false, false, false, true , false),
-	 SER (16, "Serine",        'S', "SER",  2,  0.34, false, false, false, true,  false, false, false, true,  true ),
-	 THR (17, "Threonine",     'T', "THR",  3,  0.26, false, false, false, true,  false, false, false, true,  false),
-	 TRP (18, "Tryptophan",    'W', "TRP", 10, -0.45, true,  true,  false, true,  false, false, false, false, false),
-	 TYR (19, "Tyrosine",      'Y', "TYR",  8,  0.22, true,  true,  false, true,  false, false, false, false, false),
-	 VAL (20, "Valine",        'V', "VAL",  3, -0.61, true,  false, true,  false, false, false, false, true , false),
-	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false),
-	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false);	 
+	
+    //                                                                                                                  reduced alphabets
+	//                                         hydro  hydro  arom   aliph  polar  charg  pos    neg    small  tiny   15  10   8   6   4   2  
+	 ALA ( 1, "Alanine",       'A', "ALA",  1, -0.20, true,  false, false, false, false, false, false, true,  true ,  3,  3,  2,  1,  2,  1), 
+	 ARG ( 2, "Arginine",      'R', "ARG",  7,  1.43, false, false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2), 
+	 ASN ( 3, "Asparagine",    'N', "ASN",  4,  0.69, false, false, false, true,  false, false, false, true,  false, 12,  8,  6,  4,  4,  2),
+	 ASP ( 4, "Aspartic acid", 'D', "ASP",  4,  0.72, false, false, false, true,  true,  false, true,  true,  false, 11,  8,  6,  5,  4,  2),
+	 CYS ( 5, "Cysteine",      'C', "CYS",  2, -0.67, true,  false, false, true,  false, false, false, true,  false,  2,  2,  1,  1,  1,  1),
+	 GLN ( 6, "Glutamine",     'Q', "GLN",  5,  0.74, false, false, false, true,  false, false, false, false, false, 13,  8,  6,  4,  4,  2),
+	 GLU ( 7, "Glutamic acid", 'E', "GLU",  5,  1.09, false, false, false, true,  true,  false, true,  false, false, 10,  8,  6,  5,  4,  2),
+	 GLY ( 8, "Glycine",       'G', "GLY",  0, -0.06, true,  false, false, false, false, false, false, true,  true ,  4,  4,  2,  2,  2,  1),
+	 HIS ( 9, "Histidine",     'H', "HIS",  6, -0.04, true,  true,  false, true,  true,  true,  false, false, false, 15, 10,  8,  3,  4,  2),
+	 ILE (10, "Isoleucine",    'I', "ILE",  4, -0.74, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 LEU (11, "Leucine",       'L', "LEU",  4, -0.65, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 LYS (12, "Lysine",        'K', "LYS",  5,  2.00, true,  false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2),
+	 MET (13, "Methionine",    'M', "MET",  4, -0.71, true,  false, false, false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 PHE (14, "Phenylalanine", 'F', "PHE",  7, -0.67, true,  true,  false, false, false, false, false, false, false,  8,  7,  5,  3,  3,  1),
+	 PRO (15, "Proline",       'P', "PRO",  3, -0.44, false, false, false, false, false, false, false, true , false,  7,  6,  4,  2,  2,  1),
+	 SER (16, "Serine",        'S', "SER",  2,  0.34, false, false, false, true,  false, false, false, true,  true ,  5,  5,  3,  4,  2,  1),
+	 THR (17, "Threonine",     'T', "THR",  3,  0.26, false, false, false, true,  false, false, false, true,  false,  6,  5,  3,  4,  2,  1),
+	 TRP (18, "Tryptophan",    'W', "TRP", 10, -0.45, true,  true,  false, true,  false, false, false, false, false,  9,  7,  5,  3,  3,  1),
+	 TYR (19, "Tyrosine",      'Y', "TYR",  8,  0.22, true,  true,  false, true,  false, false, false, false, false,  8,  7,  5,  3,  3,  1),
+	 VAL (20, "Valine",        'V', "VAL",  3, -0.61, true,  false, true,  false, false, false, false, true , false,  1,  1,  1,  1,  1,  1),
+	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1),
+	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1);	 
 		
 	private int number;
 	private String name;			
@@ -69,6 +73,13 @@ public enum AminoAcid {
 	private boolean small;	
 	private boolean tiny;
 	
+	private int reduced15;
+	private int reduced10;
+	private int reduced8;
+	private int reduced6;
+	private int reduced4;
+	private int reduced2;
+	
 	/*------------------------- constants ------------------------------*/
 	public static final char 	INVALID_ONE_LETTER_CODE 	= '?';
 	public static final String 	INVALID_THREE_LETTER_CODE 	= null;
@@ -84,6 +95,12 @@ public enum AminoAcid {
 	private static HashMap<Character, AminoAcid> one2aa = initOne2aa();
 	private static HashMap<String, AminoAcid> three2aa = initThree2aa();
 	private static HashMap<Integer, AminoAcid> num2aa = initNum2aa();
+	private static HashMap<Integer, List<AminoAcid>> red15toaa = initRedAlphIdx2aalist(15);
+	private static HashMap<Integer, List<AminoAcid>> red10toaa = initRedAlphIdx2aalist(10);
+	private static HashMap<Integer, List<AminoAcid>> red8toaa = initRedAlphIdx2aalist(8);
+	private static HashMap<Integer, List<AminoAcid>> red6toaa = initRedAlphIdx2aalist(6);
+	private static HashMap<Integer, List<AminoAcid>> red4toaa = initRedAlphIdx2aalist(4);
+	private static HashMap<Integer, List<AminoAcid>> red2toaa = initRedAlphIdx2aalist(2);
 	
 	/* ---------------------- constructors -----------------------------*/
 	
@@ -91,7 +108,8 @@ public enum AminoAcid {
 			  double hydrophobicity, // empirical hydrophibicity scale by Miller in kcal/mol TODO: Use Kyte & Doolittle?
 			  boolean hydrophobic, boolean aromatic, boolean aliphatic,
 			  boolean polar,       boolean charged,  boolean positive,
-			  boolean negative,    boolean small,    boolean tiny) {
+			  boolean negative,    boolean small,    boolean tiny,
+			  int reduced15, int reduced10, int reduced8, int reduced6, int reduced4, int reduced2) {
 		
 		this.number = number;
 		this.name = name;
@@ -108,6 +126,12 @@ public enum AminoAcid {
 		this.polar = polar;
 		this.charged = charged;
 		this.negative = negative;
+		this.reduced15 = reduced15;
+		this.reduced10 = reduced10;
+		this.reduced8 = reduced8;
+		this.reduced6 = reduced6;
+		this.reduced4 = reduced4;
+		this.reduced2 = reduced2;
 	}
 	
 	/*---------------------- standard methods --------------------------*/
@@ -135,6 +159,73 @@ public enum AminoAcid {
 	public boolean isNegative() { return this.negative; }
 	
 	/**
+	 * Returns the index corresponding to grouping the amino-acids into a 15 groups 
+	 * reduced alphabet.
+	 * See Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
+	 * Indices start at 1 and are assigned in same order as Fig.1 of Murphy et al.
+	 * @return the reduced15 index
+	 */
+	public int getReduced15() {
+		return reduced15;
+	}
+
+	/**
+	 * Returns the index corresponding to grouping the amino-acids into a 10 groups 
+	 * reduced alphabet.
+	 * See Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
+	 * Indices start at 1 and are assigned in same order as Fig.1 of Murphy et al.  
+	 * @return the reduced10 index
+	 */
+	public int getReduced10() {
+		return reduced10;
+	}
+
+	/**
+ 	 * Returns the index corresponding to grouping the amino-acids into a 8 groups 
+	 * reduced alphabet.
+	 * See Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
+	 * Indices start at 1 and are assigned in same order as Fig.1 of Murphy et al. 
+	 * @return the reduced8 index 
+	 */
+	public int getReduced8() {
+		return reduced8;
+	}
+
+	/**
+	 * Returns the index corresponding to grouping the amino-acids into a 6 groups 
+	 * reduced alphabet.
+	 * See Mirny and Shakhnovich 1999 JMB.
+	 * Indices start at 1 and are assigned approximately matching the order of the 
+	 * Murphy et al ones.
+	 * @return the reduced6 index
+	 */
+	public int getReduced6() {
+		return reduced6;
+	}
+
+	/**
+	 * Returns the index corresponding to grouping the amino-acids into a 4 groups 
+	 * reduced alphabet.
+	 * See Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
+	 * Indices start at 1 and are assigned in same order as Fig.1 of Murphy et al.  
+	 * @return the reduced4 index
+	 */
+	public int getReduced4() {
+		return reduced4;
+	}
+
+	/**
+	 * Returns the index corresponding to grouping the amino-acids into a 2 groups 
+	 * reduced alphabet.
+	 * See Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
+	 * Indices start at 1 and are assigned in same order as Fig.1 of Murphy et al.  
+	 * @return the reduced2 index
+	 */
+	public int getReduced2() {
+		return reduced2;
+	}
+
+	/**
 	 * Returns true if this AminoAcid is one of the 20 standard amino acids
 	 * or false otherwise
 	 * @return true if this AminoAcid is one of the 20 standard amino acids
@@ -155,6 +246,36 @@ public enum AminoAcid {
 	public static AminoAcid getByNumber(int num) {
 		return num2aa.get(num);
 	}	
+	
+	/**
+	 * Get AminoAcid object by index of the given reduced alphabet.
+	 * Valid alphabets are 20, 15, 10, 8, 6, 4, 2.
+	 * @param index
+	 * @param reducedAlphabet one of 20, 15, 10, 8, 6, 4, 2
+	 * @return an amino acid object corresponding to the given index or null 
+	 * if index is invalid or reducedAlphabet is invalid
+	 */
+	public static List<AminoAcid> getByReducedAlphabetIndex(int index, int reducedAlphabet) {
+		List<AminoAcid> list = new ArrayList<AminoAcid>();
+		switch(reducedAlphabet) {
+		case 20:
+			// for completeness we also put 20 here
+			list.add(getByNumber(index));
+		case 15:
+			return red15toaa.get(index);
+		case 10:
+			return red10toaa.get(index);
+		case 8:
+			return red8toaa.get(index);
+		case 6:
+			return red6toaa.get(index);
+		case 4:
+			return red4toaa.get(index);
+		case 2:
+			return red2toaa.get(index);
+		}
+		return list;
+	}
 	
 	/**
 	 * Get amino acid object by one letter code
@@ -279,6 +400,18 @@ public enum AminoAcid {
 		return aa==null?false:aa.isStandardAA();		
 	}
 
+	/**
+	 * Returns true if given num is a valid number of groups of a reduced alphabet.
+	 * @param num
+	 * @return
+	 */
+	public static boolean isValidNumGroupsReducedAlphabet(int num) {
+		if (num==20 || num==15 || num==10 || num==8 || num==6 || num==4 || num==2) {
+			return true;
+		}
+		return false;
+	}
+	
 	/*----------------------- private methods --------------------------*/
 	/**
 	 * initialize static map to get amino acid by its ordinal number
@@ -291,6 +424,48 @@ public enum AminoAcid {
 		return num2aa;
 	}
 	
+	/**
+	 * initialize static map to get amino acid list by its reduced alphabet index
+	 */
+	private static HashMap<Integer, List<AminoAcid>> initRedAlphIdx2aalist(int reducedAlphabet) {
+		HashMap<Integer, List<AminoAcid>> num2list = new HashMap<Integer, List<AminoAcid>>();
+
+		for(AminoAcid aa:AminoAcid.values()) {
+			int index = -1;
+			switch(reducedAlphabet) {
+			case 20:
+				index = aa.getNumber();
+				break;
+			case 15:
+				index = aa.getReduced15();
+				break;
+			case 10:
+				index = aa.getReduced10();
+				break;
+			case 8:
+				index = aa.getReduced8();
+				break;
+			case 6:
+				index = aa.getReduced6();
+				break;
+			case 4:
+				index = aa.getReduced4();
+				break;
+			case 2:
+				index = aa.getReduced2();
+				break;
+			}
+			if (num2list.containsKey(index)) {
+				num2list.get(index).add(aa);
+			} else {
+				List<AminoAcid> list = new ArrayList<AminoAcid>();
+				list.add(aa);
+				num2list.put(index,list);
+			}
+		}
+		return num2list;
+	}
+
 	/**
 	 * initialize static map to get amino acid by its one letter code
 	 */
@@ -418,7 +593,20 @@ public enum AminoAcid {
 		
 		if(allright) System.out.println("All tests passed.");
 		else System.out.println("Some tests failed.");
-		
+	
+		int[] alphabets = {15, 10, 8, 6, 4, 2};
+		for (int numGroups:alphabets) {
+			System.out.println("Alphabet of "+numGroups+" groups");
+			for (int i=1;i<=numGroups;i++){
+				List<AminoAcid> list = AminoAcid.getByReducedAlphabetIndex(i, numGroups);
+				System.out.print(i+": ");
+				for (AminoAcid aa:list) {
+					System.out.print(aa.getOneLetterCode()+" ");
+				}
+				System.out.print("  ");
+			}
+			System.out.println();
+		}
     }
 	
 }

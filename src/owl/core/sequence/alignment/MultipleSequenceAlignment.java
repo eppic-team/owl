@@ -646,48 +646,85 @@ public class MultipleSequenceAlignment {
      * Gaps are not considered in the entry summation, but the calculation of amino acid 
      * column probabilities do take gaps into account.
      * @param alignIndex the column of the alignment
+     * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
+     * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum  
      * @return
      */
-    public double getColumnEntropy(int alignIndex) {
-    	int[] counts = getColumnCounts(alignIndex);
+    public double getColumnEntropy(int alignIndex, int numGroupsAlphabet) {
+    	int[] counts = getColumnCounts(alignIndex, numGroupsAlphabet);
     	
     	// important: we are considering also gaps when calculating probabilities
     	double sumplogp=0.0;
-		for (int i=1;i<=20;i++){
+		for (int i=1;i<=numGroupsAlphabet;i++){
 			double prob = (double)counts[i]/(double)this.getNumberOfSequences(); // i.e. we consider gaps!
 			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
 				sumplogp += prob*(Math.log(prob)/Math.log(2));
 			}
 		}
 		return (-1.0)*sumplogp;
-    }
+    }   
     
     /**
-     * Gets the counts of aminoacids for the column alignIndex
+     * Gets the counts of groups of aminoacids for the column alignIndex
      * @param alignIndex the column of the alignment
-     * @return an array of size 21 with indices 1 to 20 containing the counts of 
-     * aminoacids, the indices correspond to those of the {@link AminoAcid} enum
+     * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
+     * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum 
+     * @return an array of size numGroupsAlphabet+1 with indices containing the 
+     * counts of groups, the indices correspond to those of the {@link AminoAcid} enum
+     * @throws IllegalArgumentException if the numGroupsAlphabet given is not one of the
+     * valid ones
      */
-    public int[] getColumnCounts(int alignIndex) {
+    public int[] getColumnCounts(int alignIndex, int numGroupsAlphabet) {
     	String column = getColumn(alignIndex);
-    	int[] counts = new int[21]; // we don't use 0 (see number member of AminoAcid enum) 
+    	int[] counts = new int[numGroupsAlphabet+1]; // we don't use 0 (see AminoAcid enum) 
     	 
     	for (int i=0;i<column.length();i++) {
     		char letter = column.charAt(i);
     		if (letter!=GAPCHARACTER) {
-    			counts[AminoAcid.getByOneLetterCode(letter).getNumber()]++;
+    			AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
+    			if (aa.isStandardAA()) {
+    				int index;
+    				switch(numGroupsAlphabet) {
+    				case 20:
+    					index = aa.getNumber();
+    					break;
+    				case 15:
+    					index = aa.getReduced15();
+    					break;
+    				case 10:
+    					index = aa.getReduced10();
+    					break;
+    				case 8:
+    					index = aa.getReduced8();
+    					break;
+    				case 6:
+    					index = aa.getReduced6();
+    					break;
+    				case 4:
+    					index = aa.getReduced4();
+    					break;
+    				case 2:
+    					index = aa.getReduced2();
+    					break;
+    				default:
+    					throw new IllegalArgumentException("A "+numGroupsAlphabet+ " groups alphabet is an invalid alphabet");	
+    				}
+    				counts[index]++;
+    			}
     		}
     	}
     	return counts;
     }
-    
+
     /**
      * Prints to given PrintStream profile information for the given tag's sequence, assuming 
      * it is a protein sequence (only aminoacids): aminoacid column counts and entropies
      * @param ps
      * @param tag the sequence tag for which the column counts will be computed and printed
+     * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
+     * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum
      */
-    public void printProfile(PrintStream ps, String tag) {
+    public void printProfile(PrintStream ps, String tag, int numGroupsAlphabet) {
     	String sequence = this.getSequenceNoGaps(tag);
 		ps.print("\t");
 		for (int j=1;j<=20;j++) {
@@ -697,8 +734,8 @@ public class MultipleSequenceAlignment {
 		for (int i=1;i<=sequence.length();i++){
 			// this is not very efficient, we are counting twice: when calling getColumnEntropy and getColumnCounts
 			// TODO rewrite if this becomes a bottleneck
-			double entropy = this.getColumnEntropy(this.seq2al(tag, i));
-			int[] counts = this.getColumnCounts(this.seq2al(tag, i));
+			double entropy = this.getColumnEntropy(this.seq2al(tag, i), numGroupsAlphabet);
+			int[] counts = this.getColumnCounts(this.seq2al(tag, i), numGroupsAlphabet);
 			ps.print(i+"\t"+sequence.charAt(i-1));
 			int sum = 0;
 			for (int j=1;j<=20;j++) {
