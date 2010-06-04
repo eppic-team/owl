@@ -34,7 +34,7 @@ public class PisaInterface {
 	 * The sum of the residues of the 2 cores is required to be at least minNumResidues. 
 	 * If the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
 	 * relaxed in relaxationStep steps until reaching the bsaToAsaHardCutoff.
-	 * If either of the 2 molecules of this interface is not a protein, the its rimCore 
+	 * If either of the 2 molecules of this interface is not a protein, its rimCore 
 	 * object in the output map object will be null. If both are not proteins then the map 
 	 * will contain null object references for both.
 	 * @param bsaToAsaSoftCutoff
