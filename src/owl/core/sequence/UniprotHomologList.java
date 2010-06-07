@@ -247,16 +247,18 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 */
 	public MultipleSequenceAlignment getTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeError {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
+		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");
 		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
 		if (!DEBUG) {
 			homologSeqsFile.deleteOnExit();
 			alnFile.deleteOnExit();
 			tcoffeeLogFile.deleteOnExit();
+			outTreeFile.deleteOnExit(); 
 		}
 		this.writeToFasta(homologSeqsFile);
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, null, tcoffeeLogFile, veryFast);
+		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast);
 
 			MultipleSequenceAlignment aln = null;
 		

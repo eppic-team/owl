@@ -45,12 +45,14 @@ public class TcoffeeRunner {
 		seq.writeToFastaFile(inFile);
 		File outFile = File.createTempFile("tcof.", ".out");
 		if (!DEBUG) outFile.deleteOnExit();
+		File outTreeFile = File.createTempFile("tcof.", ".dnd");
+		if (!DEBUG) outTreeFile.deleteOnExit();
 		File profileFile = File.createTempFile("tcof", "profile");
 		if (!DEBUG) profileFile.deleteOnExit();
 		PrintStream out = new PrintStream(profileFile);
 		profile.writeFasta(out, 80, true);
 		out.close();
-		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, profileFile, logFile, false);
+		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, outTreeFile, profileFile, logFile, false);
 		
 		MultipleSequenceAlignment al =  null;
 		try {
@@ -69,13 +71,14 @@ public class TcoffeeRunner {
 	 * @param inFile the file with the sequences to be aligned
 	 * @param outFile the output file that will contain the aligned sequences
 	 * @param outFormat the output format, valid values are: fasta, clustalw
+	 * @param outTreeFile the .dnd file where the guide tree will be written to
 	 * @param profileFile the fasta file with a multiple sequence alignment representing 
 	 * the profile to align to, if null no profile will be used
 	 * @param logFile all stdout/stderr of t_coffee will be logged, if null no logging at all (quiet mode)
 	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate) 
 	 * @throws TcoffeeError if t_coffee exits with non 0 status or an IOException occurs
 	 */
-	public void runTcoffee(File inFile, File outFile, String outFormat, File profileFile, File logFile, boolean veryFast) throws TcoffeeError {
+	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeError {
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
@@ -88,7 +91,7 @@ public class TcoffeeRunner {
 		if (veryFast) {
 			veryFastStr = "-mode quickaln";
 		}
-		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+quietStr+" "+veryFastStr;
+		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+" -newtree="+outTreeFile+" "+quietStr+" "+veryFastStr;
 		
 		try {
 			PrintWriter tcofLog = new PrintWriter(logFile);
