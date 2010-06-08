@@ -126,7 +126,8 @@ public class reconstruct {
 			" [-i <intervals>] : use phi/psi restraints from given structure (needs -p). Specify a\n" +
 			"                    set of intervals from the given structure from which the phi/psi\n" +
 			"                    values will be taken, e.g.: 3-23,30-35,40-50\n" +
-			" [-c <string>]    : name of a psipred horizontal file containing secondary structure prediction used to create additional phi/psi constraints. \n" +
+			" [-c <file>]      : name of a psipred horizontal file containing secondary structure\n" +
+			"                    prediction used to create additional phi/psi constraints. \n" +
 			"                    Contraints are NOT applied in fast mode (-F) \n" +
 			" [-e]             : restrain omega torsion angles to trans conformation\n" +
 			"\n"+
