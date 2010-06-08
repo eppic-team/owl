@@ -47,7 +47,7 @@ public class OptimalSingleEnv {
 	    	if (isAinB(nbstring, fullnbs)) {
 		    	String[] string = {nbstring, rvector, support, loc};
 		    	this.optNBHStrings.add(string);
-	    		System.out.println(nbstring+"\t"+rvector+"\t"+support+"\t"+loc);  //( " !!!");
+//	    		System.out.println(nbstring+"\t"+rvector+"\t"+support+"\t"+loc);  //( " !!!");
 	    	} else {
 //	    		System.out.println( " -");
 	    	} // end if A is in B 

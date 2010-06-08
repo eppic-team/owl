@@ -66,7 +66,7 @@ public class CMPdb_nbhString_traces {
 			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
-		System.out.println("number of nbhsNodes: "+nodes.size());
+		System.out.println("number of nbhsTraces: "+nodes.size());
 		result_nbhs.close();
 		stmt.close();
 		this.numNodesPerLine = new int[nodes.size()];
