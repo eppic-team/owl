@@ -59,10 +59,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	/*-------------------------- members --------------------------*/
 	
-	private Sequence seq; // the sequence to which the homologs refer
-	private List<UniprotHomolog> list; // the list of homologs
-	private Map<String,UniprotHomolog> lookup; // to speed up searches (uniprot ids to Homologs)
-	private double idCutoff; // the identity cutoff (see restrictToMinId() )
+	private Sequence seq; 							 // the sequence to which the homologs refer
+	private List<UniprotHomolog> list; 				 // the list of homologs
+	private Map<String,List<UniprotHomolog>> lookup; // to speed up searches (uniprot ids to Homologs lists) 
+													 // it's a list because blast can hit a single uniprot in multiple regions (for us
+													 // that's multiple BlastHits)
+	private double idCutoff; 						 // the identity cutoff (see restrictToMinId() )
 	
 	public UniprotHomologList(String tag, String sequence) {
 		this.seq = new Sequence(tag, sequence);
@@ -122,9 +124,16 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	//TODO write a searchithPSIBlast method
 
 	private void initialiseMap() {
-		this.lookup = new HashMap<String, UniprotHomolog>();
+		this.lookup = new HashMap<String, List<UniprotHomolog>>();
 		for (UniprotHomolog hom:this) {
-			lookup.put(hom.getUniId(), hom);
+			if (lookup.containsKey(hom.getUniId())) {
+				lookup.get(hom.getUniId()).add(hom);	
+			} else {
+				List<UniprotHomolog> list = new ArrayList<UniprotHomolog>();
+				list.add(hom);
+				lookup.put(hom.getUniId(), list);
+			}
+			
 		}
 	}
 	
@@ -141,23 +150,25 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		EntryIterator<UniProtEntry> entries = uniprotConn.getMultipleEntries(uniprotIds);
 
 		for (UniProtEntry entry:entries) {
-			UniprotHomolog hom = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
-			hom.setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
-			List<String> taxIds = new ArrayList<String>();
-			for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
-				taxIds.add(ncbiTaxId.getValue());
-			}
-			hom.setTaxIds(taxIds);
-			Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
-			List<String> emblCdsIds = new ArrayList<String>();
-			for(Embl ref:emblrefs) {
-				String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
-				if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
-					String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-					emblCdsIds.add(emblCdsId);
+			List<UniprotHomolog> homs = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
+			for (UniprotHomolog hom:homs) {
+				hom.setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
+				List<String> taxIds = new ArrayList<String>();
+				for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
+					taxIds.add(ncbiTaxId.getValue());
 				}
-    		}
-			hom.setEmblCdsIds(emblCdsIds);
+				hom.setTaxIds(taxIds);
+				Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
+				List<String> emblCdsIds = new ArrayList<String>();
+				for(Embl ref:emblrefs) {
+					String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
+					if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
+						String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
+						emblCdsIds.add(emblCdsId);
+					}
+				}
+				hom.setEmblCdsIds(emblCdsIds);
+			}
 		}
 	}
 	
@@ -200,7 +211,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @param uniprotId
 	 * @return
 	 */
-	public UniprotHomolog getHomolog(String uniprotId) {
+	public List<UniprotHomolog> getHomolog(String uniprotId) {
 		return this.lookup.get(uniprotId);
 	}
 	
@@ -292,10 +303,28 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				toRemove.add(hom.getUniId());
 			}
 		}
+		// updating also lookup table
+		// 1st we go through toRemove uniIds and search each list for ids below cutoff
+		// thus it can happen that a uniId deletes all members of a list in its first appearance
 		for (String uniId:toRemove) {
-			lookup.remove(uniId);
+			List<UniprotHomolog> homs = lookup.get(uniId);
+			Iterator<UniprotHomolog> it2 = homs.iterator();
+			while (it2.hasNext()) {
+				UniprotHomolog hom = it2.next();
+				if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff) {
+					it2.remove();
+				}
+			}
 		}
-		
+		// after the purge, now we get rid of uniIds mapping to empty list
+		Iterator<List<UniprotHomolog>> it3 = lookup.values().iterator(); 
+		while (it3.hasNext()) {
+			List<UniprotHomolog> homs = it3.next();
+			if (homs.isEmpty()) {
+				it3.remove();
+			}
+		}
+
 	}
 	
 	/**
