@@ -15,13 +15,15 @@ public class NbhString_ClusterAnalysis {
 	// --- private members for cluster analysis
 	private boolean[] visistedN;
 	private int[] clusterN;      // contains clusterIDs: -1=noClusterAllocatedYet 0=Noise ID>0-->belongsToCluster
-	private Vector<int[]> edges; // contains array with index of start-node and end-node for each edge --> int[2]
-								 // index=start-node --> outgoing edge; index=end-node --> inbound edge
 	private int numFoundClusters;	
 	private double[][] clusterProp; // [][0]:minL, [][1]:averageL, [][2]:maxL, [][3]:minP, [][4]:averP, [][5]:maxP
 	private Vector<Integer>[] clusters; // clusters.length=numFoundClusters+1; 
 									//clusters contains a vector of all IDs for noise (background) and each found cluster
-	private Vector<Double> slopesOfE;	
+	private Vector<int[]> edges; // contains array with index of start-node and end-node for each edge --> int[2]
+	 							// index=start-node --> outgoing edge; index=end-node --> inbound edge
+	private Vector<Double> slopesOfE; // contains slope of each edge (of this.edges) from start-node to end-node
+	private double[][] clusterDirProp; // [][0]:minIncSlope, [][1]:averageIncSlope, [][2]:maxIncSlope, [][3]:minOutSlope, [][4]:averOutSlope, [][5]:maxOutSlope
+	private int[] nbCluster;    // holds ID of neighbouring cluster (at the other end of edge); if any neighbouring cluster exists, ID=0
 
 	private double rSphere;
 	
@@ -43,38 +45,8 @@ public class NbhString_ClusterAnalysis {
 		initialiseArguments();
 	}
 	
-	// public methods
-	public void runClusterAnalysis(){
-//		// test functionality of distance methods
-//		int steps = 20;
-//		double deltaRad = Math.PI/steps;
-//		double lC = Math.PI;
-//		double pC = Math.PI/2;
-//		System.out.println("Test euclidian distance");
-//		for (int i=0; i<2*steps; i++){
-//			double lambda = i*deltaRad;
-//			for (int j=0; j<steps; j++){
-//				double phi = j*deltaRad;
-//				double dist = getEuclideanDist(lC, pC, lambda, phi);
-//				dist = (double)(Math.round(dist*100))/100;
-//				System.out.print(dist+"\t");
-//			}
-//			System.out.println();
-//		}
-//		System.out.println("Test geodesic distance");
-//		for (int i=0; i<2*steps; i++){
-//			double lambda = i*deltaRad;
-//			for (int j=0; j<steps; j++){
-//				double phi = j*deltaRad;
-//				double dist = getGeodesicDist(lC, pC, lambda, phi);
-//				dist = (double)(Math.round(dist*100))/100;
-//				System.out.print(dist+"\t");
-//			}
-//			System.out.println();
-//		}
-//		System.out.println("End Test Distance");
-//		// end test
-		
+	// ______public methods
+	public void runClusterAnalysis(){		
 		int clusterID = 0;
 		int index;
 		for(int i=0; i<this.nbhsNodes.size(); i++){			
@@ -82,8 +54,8 @@ public class NbhString_ClusterAnalysis {
 			if (!this.visistedN[i]){ // not visited yet
 				this.visistedN[i] = true;
 				nbIndices = getAllDirectNeighbours(i);
-				int numNB = nbIndices.size();
-				float[] node = (float[]) this.nbhsNodes.get(i);
+//				int numNB = nbIndices.size();
+//				float[] node = (float[]) this.nbhsNodes.get(i);
 				if (nbIndices.size()<this.minNumNBs){
 					this.clusterN[i] = 0;
 					// Testoutput
@@ -109,8 +81,123 @@ public class NbhString_ClusterAnalysis {
 		System.out.println("number of extracted Clusters= "+this.numFoundClusters);
 	}
 	
+	public void analyseEdgeDirection(){
+		if (this.numFoundClusters<=0)
+			runClusterAnalysis();
+		if (this.numFoundClusters>0){
+			if (this.clusters==null)
+				analyseClusters();
+			float[] node, nbNode;
+			System.out.println("EdgeDirectionAnalysis");
+			// Compute min, max and average values of lambda and phi for each cluster (besides background)
+			// [][0]:minIncSlope, [][1]:averageIncSlope, [][2]:maxIncSlope, [][3]:minOutSlope, [][4]:averOutSlope, [][5]:maxOutSlope
+			clusterDirProp = new double[this.numFoundClusters][6];
+			// for each cluster; start at 1, because 0 hold IDs for noise nodes
+			for (int i=1; i<this.clusters.length; i++){ 
+				double minIncSlope=100, averIncSlope=0, maxIncSlope=0;
+				double minOutSlope=100, averOutSlope=0, maxOutSlope=0;
+				int cntInc=0, cntOut=0;
+				//for each node of cluster
+				for (int j=0; j<clusters[i].size(); j++){
+					double incSlope, outSlope;
+					int nodeID = clusters[i].get(j); // nodeID[0:nbhsNodes.size()-1]
+					// look for incoming and outgoing edges
+					// compute average slope and deviation of slope for both (incoming and outgoing)
+					node = (float[]) this.nbhsNodes.get(nodeID);	
+					if (nodeID>0){
+						nbNode = (float[]) this.nbhsNodes.get(nodeID-1);
+						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
+							incSlope = getSlope(node, nbNode);
+							averIncSlope += incSlope;
+							if (incSlope<minIncSlope)
+								minIncSlope = incSlope;
+							if (incSlope>maxIncSlope)
+								maxIncSlope = incSlope;
+							cntInc++;
+						}
+					}
+					if (nodeID<this.nbhsNodes.size()-1){
+						nbNode = (float[]) this.nbhsNodes.get(nodeID+1);
+						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
+							outSlope = getSlope(node, nbNode); //this.slopesOfE.get(nodeID);
+							averOutSlope += outSlope;
+							if (outSlope<minOutSlope)
+								minOutSlope = outSlope;
+							if (outSlope>maxOutSlope)
+								maxOutSlope = outSlope;
+							cntOut++;
+						}
+					}
+				}
+				averIncSlope = averIncSlope/cntInc; // /clusters[i].size();
+				averOutSlope = averOutSlope/cntOut; // /clusters[i].size();
+				double deltaIncSlope = Math.abs(maxIncSlope-minIncSlope);
+				double deltaOutSlope = Math.abs(maxOutSlope-minOutSlope);
+				clusterDirProp[i-1][0] = minIncSlope;
+				clusterDirProp[i-1][1] = averIncSlope; 
+				clusterDirProp[i-1][2] = maxIncSlope; 
+				clusterDirProp[i-1][3] = minOutSlope; 
+				clusterDirProp[i-1][4] = averOutSlope; 
+				clusterDirProp[i-1][5] = maxOutSlope;  
+				// --- Test output ---
+				System.out.println("C_ID="+i+"\t"+"Inc: "+minIncSlope+":"+averIncSlope+":"+maxIncSlope+"\t"
+						+"Out: "+minOutSlope+":"+averOutSlope+":"+maxOutSlope+"\t"+"deltaInc="+deltaIncSlope+" deltaOut="+deltaOutSlope);
+			}
+			
+			// for each cluster: is there another cluster, where the majority of edges runs to?
+			// for each node in Cluster C1
+			this.nbCluster = new int[this.numFoundClusters];
+			for (int i=1; i<this.clusters.length; i++){ 
+				// for each node in Cluster C1 find following node (nodeNB) in sequence
+				// determine which cluster (or noise) nodeNB belongs to
+				// if min% of nodeNBs element of same cluster C2 --> C2 is the following cluster of C1
+				// otherwise C1 has no following cluster
+				int[] countNBclusters = new int[this.clusters.length+1];
+				int cnt=0;
+				for (int j=0; j<this.clusters[i].size(); j++){
+					int nodeID = clusters[i].get(j); // nodeID[0:nbhsNodes.size()-1]
+					int nbNodeID = nodeID+1;
+					node = (float[]) this.nbhsNodes.get(nodeID);
+					if (nbNodeID<this.nbhsNodes.size()){
+						nbNode = (float[]) this.nbhsNodes.get(nbNodeID);
+						if (!(node[0]==nbNode[0] && node[1]==nbNode[1]))
+							nbNodeID = -1; // has no successor
+						if (nbNodeID>-1) { // has successor
+							int clusterID = this.clusterN[nbNodeID];
+							countNBclusters[clusterID]++;
+							cnt++;
+							// if centre inbetween
+							if ((int) node[1]>(int) node[2] && (int) node[1]<(int) nbNode[2]){
+								countNBclusters[countNBclusters.length-1]++;
+							}
+						}							
+					}
+				}
+				System.out.println(this.clusters[i].size()+"nodes of cluster "+i+" end up in: ");
+				int idSuccClus = 0;
+				boolean centralRes = false;
+				for (int j=0; j<countNBclusters.length; j++){
+					System.out.print(countNBclusters[j]+" "+(double)countNBclusters[j]/cnt+"\t");
+					if ((double)countNBclusters[j]/cnt > 0.5){
+						if (j<=numFoundClusters)
+							idSuccClus = j;
+						else
+							centralRes = true;
+					}
+				}
+//				if (idSuccClus>this.numFoundClusters)
+				if (centralRes)
+					idSuccClus *= -1;
+				System.out.println("Successor cluster="+idSuccClus);
+				this.nbCluster[i-1] = idSuccClus;
+			}
+		}
+	}
+	
 	@SuppressWarnings("unchecked")
 	public void analyseClusters(){
+		if (this.numFoundClusters<=0)
+			runClusterAnalysis();
 		if (this.numFoundClusters>0){
 //			int[] clusters = new int[this.numFoundClusters+1]; 
 			int clusterID;
@@ -166,11 +253,9 @@ public class NbhString_ClusterAnalysis {
 				System.out.println();
 			}
 		}
-		
 	}
 	
-	// private methods
-	
+	//  ________private methods	
 	private void initialiseArguments(){
 		this.visistedN = new boolean[this.nbhsNodes.size()];
 		this.clusterN = new int[this.nbhsNodes.size()];
@@ -199,6 +284,7 @@ public class NbhString_ClusterAnalysis {
 	private double getSlope(float[] node1, float[] node2){
 		double m;
 		m = (node2[3]-node1[3])/(node2[4]-node1[4]);
+//		m = (node2[4]-node1[4])/(node2[3]-node1[3]);
 		return m;
 	}
 	
@@ -310,6 +396,14 @@ public class NbhString_ClusterAnalysis {
 	
 	public double[][] getClusterProp() {
 		return clusterProp;
+	}
+	
+	public double[][] getClusterDirProp() {
+		return clusterDirProp;
+	}
+	
+	public int[] getNbCluster(){
+		return this.nbCluster;
 	}
 
 	public Vector<Integer>[] getClusters() {
