@@ -1,7 +1,9 @@
 package owl.core.sequence;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -11,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.xml.sax.SAXException;
 
@@ -53,6 +56,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	private static final int 	BLAST_OUTPUT_TYPE = 7;  // xml output
 	private static final boolean BLAST_NO_FILTERING = true;
+	private static final String UNIPROT_VER_FILE = "reldate.txt";
+	
 	private static final String  TCOFFEE_ALN_OUTFORMAT = "fasta";
 	
 	private static final boolean DEBUG = false;
@@ -65,6 +70,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 													 // it's a list because blast can hit a single uniprot in multiple regions (for us
 													 // that's multiple BlastHits)
 	private double idCutoff; 						 // the identity cutoff (see restrictToMinId() )
+	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
+	
+	
 	
 	public UniprotHomologList(String tag, String sequence) {
 		this.seq = new Sequence(tag, sequence);
@@ -107,6 +115,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			System.exit(1);
 		}
 
+		this.uniprotVer = readUniprotVer(blastDbDir);
+		
 		this.list = new ArrayList<UniprotHomolog>();
 		for (BlastHit hit:blastList) {
 			String sid = hit.getSubjectId();
@@ -137,12 +147,37 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 	}
 	
+	private String readUniprotVer(String blastDbDir) {
+		String ver = "unknown";
+		File uniprotVerFile = new File(blastDbDir,UNIPROT_VER_FILE);
+		try {
+			
+			BufferedReader br = new BufferedReader(new FileReader(uniprotVerFile));
+			String line;
+			Pattern p = Pattern.compile("^UniProt\\sKnowledgebase\\sRelease\\s([\\d._]+)\\s.*");
+			while ((line=br.readLine())!=null){
+				Matcher m = p.matcher(line);
+				if (m.matches()) {
+					ver = m.group(1);
+					break;
+				}
+			}
+			br.close();
+		} catch(IOException e) {
+			System.err.println("Warning: couldn't read uniprot version from file "+uniprotVerFile);
+		}
+		return ver;
+	}
+	
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
 	 */
 	public void retrieveUniprotKBData() {
 		UniProtConnection uniprotConn = new UniProtConnection();
+		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
+			System.err.println("Warning! Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+")don't match!");
+		}
 		List<String> uniprotIds = new ArrayList<String>();
 		for (UniprotHomolog hom:this) {
 			uniprotIds.add(hom.getUniId());
@@ -345,5 +380,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 */
 	public double getIdCutoff() {
 		return idCutoff;
+	}
+	
+	/**
+	 * Gets the uniprot version used for blasting
+	 * @return
+	 */
+	public String getUniprotVer() {
+		return uniprotVer;
 	}
 }
