@@ -1,8 +1,11 @@
 package owl.core.connections.pisa;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class PisaRimCore {
+public class PisaRimCore implements Serializable {
+
+	private static final long serialVersionUID = -1931015962640626829L;
 
 	private List<PisaResidue> rimResidues;
 	private List<PisaResidue> coreResidues;

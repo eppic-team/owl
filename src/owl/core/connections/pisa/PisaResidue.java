@@ -1,9 +1,12 @@
 package owl.core.connections.pisa;
 
 import java.io.PrintStream;
+import java.io.Serializable;
 
 
-public class PisaResidue {
+public class PisaResidue implements Serializable{
+	
+	private static final long serialVersionUID = -6171417132434795731L;
 	
 	private int resSerial;
 	private String pdbResSer; // a String because it can have insertion codes
