@@ -174,9 +174,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	/**
 	 * Retrieves from EMBL DB fetch web service the EMBL CDS sequences
+	 * @param cacheFile a FASTA file containing the sequences to retrieve. If present and if
+	 * it contains ALL required sequences then they are read from cacheFile. If null or file
+	 * does not exist or file older than {@value #EmblWSDBfetchConnect.MAX_CACHE_AGE} then the sequences are 
+	 * retrieved from EMBL DB fetch
 	 * @throws IOException
 	 */
-	public void retrieveEmblCdsSeqs() throws IOException {
+	public void retrieveEmblCdsSeqs(File cacheFile) throws IOException {
 		List<String> allIds = new ArrayList<String>();
 		
 		for (UniprotHomolog hom:this) {
@@ -184,7 +188,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		List<Sequence> allSeqs = null;
 		try {
-			allSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(allIds);
+			allSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(allIds, cacheFile);
 		} catch (NoMatchFoundException e) {
 			// this is unlikely to happen here, that's why we don't write a better error message
 			System.err.println("Couldn't retrieve EMBL CDS sequences for some EMBL cds ids"); 

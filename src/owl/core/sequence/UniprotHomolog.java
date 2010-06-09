@@ -1,5 +1,6 @@
 package owl.core.sequence;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -133,13 +134,17 @@ public class UniprotHomolog {
 	
 	/**
 	 * Retrieves from EMBL DB fetch web service the EMBL CDS sequences
+	 * @param cacheFile a FASTA file containing the sequences to retrieve. If present and if
+	 * it contains the required sequence then it is read from cacheFile. If null or file
+	 * does not exist or file older than {@link EmblWSDBfetchConnection.MAX_CACHE_AGE} then the sequences are 
+	 * retrieved from EMBL DB fetch 
 	 * @throws IOException
 	 */
-	public void retrieveEmblCdsSeqs() throws IOException {
+	public void retrieveEmblCdsSeqs(File cacheFile) throws IOException {
 		this.emblCdsSeqs = new ArrayList<Sequence>();
 		
 		try {
-			this.emblCdsSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(this.emblCdsIds);
+			this.emblCdsSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(this.emblCdsIds, cacheFile);
 		} catch (NoMatchFoundException e) {
 			// this is unlikely to happen here, that's why we don't write a better error message
 			System.err.println("Couldn't retrieve EMBL CDS sequences for EMBL cds ids"); 

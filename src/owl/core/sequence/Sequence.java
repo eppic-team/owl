@@ -7,6 +7,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,8 +30,8 @@ public class Sequence {
 	
 	// in principle this works for emblcds and uniprot fasta headers (not tested anywhere else!) 
 	// it also removes the version (the .1 suffix at the end of the identifier that sometimes is used for instance in emblcds)
-	public static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:.\\d+)?\\|.*$");
-	public static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:.\\d+)?\\s.*$");
+	public static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:\\.\\d+)?\\|.*$");
+	public static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:\\.\\d+)?.*$");
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -159,7 +161,7 @@ public class Sequence {
 	}
 	
 	/**
-	 * Writes this sequence to fasta file
+	 * Writes this sequence to given file in FASTA format
 	 * Output line length is fixed at 80
 	 * @param fastaFile
 	 * @throws IOException
@@ -171,7 +173,7 @@ public class Sequence {
 	}
 	
 	/**
-	 * Writes this sequence to the given PrintStream.
+	 * Writes this sequence to the given PrintStream in FASTA format.
 	 * Output line length is fixed at 80
 	 * @param fastaFile
 	 * @throws IOException
@@ -217,6 +219,22 @@ public class Sequence {
 	} 
 	
 	/**
+	 * Write given list of Sequence objects to given PrintStream in FASTA format
+	 * Output line length is fixed at 80 
+	 * @param ps
+	 * @param sequences
+	 */
+	public static void writeSeqs(PrintStream ps, List<Sequence> sequences) {
+		int len = 80;
+		for (Sequence sequence:sequences) { 
+			ps.println(">"+sequence.getName());
+			for(int i=0; i<sequence.getSeq().length(); i+=len) {
+				ps.println(sequence.getSeq().substring(i, Math.min(i+len,sequence.getSeq().length())));
+			}		
+		}		
+	}
+	
+	/**
 	 * Prints a ruler with column numbers in steps of 10 up to the given length.
 	 * @param length
 	 */
@@ -233,5 +251,46 @@ public class Sequence {
 		}
 		System.out.println(st);
 
+	}
+	
+	/**
+	 * Reads a fasta file containing multiple sequences returning a 
+	 * list of Sequence objects
+	 * @param seqsFile
+	 * @param fastaHeaderRegex a regex that specifies as its first capture group what
+	 * will be read from the FASTA header as a sequence tag. If null then {@link #FASTAHEADER_REGEX}
+	 * will be used
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Sequence> readSeqs(File seqsFile, Pattern fastaHeaderRegex) throws IOException, FileFormatError {
+		if (fastaHeaderRegex==null) fastaHeaderRegex = FASTAHEADER_REGEX;
+		List<Sequence> list = new ArrayList<Sequence>();
+		BufferedReader br = new BufferedReader(new FileReader(seqsFile));
+		String line;
+		String lastTag = null;
+		String currentTag = null;
+		StringBuffer seq = null;
+		while ((line=br.readLine())!=null){
+			if (line.isEmpty()) continue;
+			if (line.startsWith(">")) {
+				Matcher m = fastaHeaderRegex.matcher(line);
+				if (m.find()) {
+					currentTag = m.group(1);
+					if (lastTag!=null) {
+						list.add(new Sequence(lastTag, seq.toString()));
+					}
+					seq = new StringBuffer();
+					lastTag = currentTag;
+				} else {
+					throw new FileFormatError("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
+				}
+			} else {
+				seq.append(line.trim());
+			}
+		}
+		br.close();
+		list.add(new Sequence(lastTag, seq.toString())); // adding the last sequence
+		return list;
 	}
 }
