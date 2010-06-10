@@ -2531,6 +2531,63 @@ public class Pdb implements HasFeatures {
 		
 	}
 
+	/**
+	 * Deep copies this Pdb object
+	 * TODO write a test for this!! This is a very delicate piece of code, likely to contain bugs!
+	 * @return
+	 */
+	public Pdb copy() {
+		Pdb newPdb = new Pdb();
+		newPdb.pdbCode = this.pdbCode;
+		newPdb.pdbChainCode = this.pdbChainCode;
+		newPdb.chainCode = this.chainCode;
+		newPdb.model = this.model;
+		newPdb.title = this.title;
+		newPdb.sid = this.sid;
+		newPdb.targetNum = this.targetNum;
+		newPdb.caspModelNum = this.caspModelNum;
+		newPdb.caspAuthorStr = this.caspAuthorStr;
+		newPdb.caspMethodStr = this.caspMethodStr;
+		if (this.caspParents!=null) {
+			newPdb.caspParents = new String[this.caspParents.length];
+			for (int i=0;i<newPdb.caspParents.length;i++){
+				newPdb.caspParents[i] = this.caspParents[i];
+			}
+		}
+		newPdb.groupNum = this.groupNum;
+		newPdb.dataLoaded = this.dataLoaded;
+		newPdb.hasASA = this.hasASA;
+		newPdb.hasBfactors = this.hasBfactors;
+		
+		newPdb.sequence = this.sequence;
+		newPdb.fullLength = this.fullLength;
+		newPdb.secondaryStructure = this.secondaryStructure.copy();
+		if (this.scop!=null) newPdb.scop = this.scop.copy();
+		if (this.ec!=null) newPdb.ec = this.ec.copy();
+		if (this.catalSiteSet!=null) newPdb.catalSiteSet = this.catalSiteSet.copy();
+		// residues
+		newPdb.residues = new TreeMap<Integer, Residue>();
+		for (int resser:this.residues.keySet()) {
+			newPdb.residues.put(resser,this.residues.get(resser).copy(newPdb));
+		}
+		// atomser2atom
+		newPdb.atomser2atom = new TreeMap<Integer, Atom>();
+		for (Residue residue:newPdb.residues.values()) {
+			for (Atom atom:residue.getAtoms()) {
+				newPdb.atomser2atom.put(atom.getSerial(), atom);
+			}
+		}
+		// resser2pdbresser and pdbresser2resser
+		newPdb.resser2pdbresser = new TreeMap<Integer, String>();
+		newPdb.pdbresser2resser = new TreeMap<String, Integer>();
+		for (int resser:this.resser2pdbresser.keySet()) {
+			newPdb.resser2pdbresser.put(resser, this.resser2pdbresser.get(resser));
+		}
+		for (String pdbresser:this.pdbresser2resser.keySet()) {
+			newPdb.pdbresser2resser.put(pdbresser, this.pdbresser2resser.get(pdbresser));
+		}
+		return newPdb;
+	}
 	
 	/*---------------------------- static methods ---------------------------*/
 	

@@ -134,4 +134,16 @@ public class Atom {
 		return serial+code;
 	}
 	
+	/**
+	 * Deep copies this Atom object
+	 * @return
+	 */
+	public Atom copy(Residue parentResidue) {
+		Atom newAtom = new Atom(this.serial,this.code,new Point3d(this.coords),parentResidue);
+		newAtom.type = this.type;
+		newAtom.bfactor = this.bfactor;
+		newAtom.occupancy = this.occupancy;
+		return newAtom;
+	}
+	
 }

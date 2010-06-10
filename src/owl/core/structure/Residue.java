@@ -318,4 +318,24 @@ public class Residue implements Iterable<Atom> {
 		return atoms.values().iterator();
 	}
 	
+	/**
+	 * Returns a deep copy of this Residue
+	 * @return
+	 */
+	public Residue copy(Pdb parentPdb) {
+		Residue newResidue = new Residue(this.aaType, this.serial, parentPdb);
+		newResidue.pdbSerial = this.pdbSerial;
+		newResidue.consurfScore = this.consurfScore;
+		newResidue.consurfColor = this.consurfColor;
+		newResidue.rsa = this.rsa;
+		newResidue.scRsa = this.scRsa;
+		newResidue.ssElem = parentPdb.getSecondaryStructure().getSecStrucElement(serial);
+		newResidue.atoms = new TreeMap<String, Atom>();
+		for (String code:this.atoms.keySet()) {
+			newResidue.atoms.put(code,this.atoms.get(code).copy(newResidue));
+		}
+ 
+		return newResidue;
+	}
+	
 }
