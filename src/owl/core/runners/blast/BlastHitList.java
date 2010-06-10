@@ -15,6 +15,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 	private int queryLength;				// needed by print() and printSome()
 	private String queryId;
 	private HashMap<String,BlastHit> lookup; // a lookup table to be able to have an efficient getHit(subjectId)
+	private String db;						// the db used for blasting (a path to a fasta file with corresponding index files in same dir)
 	
 	public BlastHitList() {
 		this.hits = new ArrayList<BlastHit>();
@@ -56,6 +57,21 @@ public class BlastHitList implements Iterable<BlastHit> {
 		return this.queryLength;
 	}
 	
+	/**
+	 * Gets the blast db used (a path to a fasta file with index files in same dir) 
+	 * @return
+	 */
+	public String getDb() {
+		return db;
+	}
+	
+	/**
+	 * Sets the blast db (a path to a fasta file with index files in same dir)
+	 * @param db
+	 */
+	public void setDb(String db) {
+		this.db = db;
+	}
 	
 	/**
 	 * Applies an e-value cutoff trimming out of this list all hits with e-value 

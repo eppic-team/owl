@@ -30,6 +30,7 @@ import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.alignment.AlignmentConstructionError;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.util.FileFormatError;
+import owl.core.util.Goodies;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
@@ -91,31 +92,61 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @param blastDbDir
 	 * @param blastDb
 	 * @param blastNumThreads
+	 * @param cacheFile a file with the cached xml blast output file, if null blast will be always run
 	 * @throws IOException
 	 * @throws BlastError
 	 */
-	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads) throws IOException, BlastError {
-		File outBlast = File.createTempFile(BLAST_BASENAME,BLASTOUT_SUFFIX);
-		File inputSeqFile = File.createTempFile(BLAST_BASENAME,FASTA_SUFFIX);
-		if (!DEBUG) {
-			outBlast.deleteOnExit();
-			inputSeqFile.deleteOnExit();
+	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastError {
+		File outBlast = null;
+		boolean fromCache = false;
+		if (cacheFile!=null && cacheFile.exists()) {
+			outBlast = cacheFile;
+			fromCache = true;
+			System.out.println("Reading blast results from cache file "+cacheFile);
+		} else {
+			outBlast = File.createTempFile(BLAST_BASENAME,BLASTOUT_SUFFIX);
+			File inputSeqFile = File.createTempFile(BLAST_BASENAME,FASTA_SUFFIX);
+			if (!DEBUG) {
+				outBlast.deleteOnExit();
+				inputSeqFile.deleteOnExit();
+			}
+			seq.writeToFastaFile(inputSeqFile);
+			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
+			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
+			this.uniprotVer = readUniprotVer(blastDbDir);
+			try {
+				Goodies.copyFile(outBlast, cacheFile);
+			} catch (IOException e) {
+				System.err.println("Couldn't write the blast cache file "+cacheFile);
+				System.err.println(e.getMessage());
+			}
 		}
-		seq.writeToFastaFile(inputSeqFile);
-		BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
-		blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
 		
 		BlastHitList blastList = null;
 		try {
 			BlastXMLParser blastParser = new BlastXMLParser(outBlast);
 			blastList = blastParser.getHits();
 		} catch (SAXException e) {
-			// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug
-			System.err.println("Unexpected error: "+e.getMessage());
-			System.exit(1);
+			if (fromCache) {
+				throw new IOException("Cache file "+cacheFile+" does not comply with blast XML format.");
+			} else {
+				// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug
+				System.err.println("Unexpected error: "+e.getMessage());
+				System.exit(1);
+			}
 		}
 
-		this.uniprotVer = readUniprotVer(blastDbDir);
+		if (fromCache) {
+			if (!blastList.getQueryId().equals(seq.getName())) {
+				throw new IOException("Query id from cache file "+cacheFile+" does not match the id from the sequence: "+seq.getName());
+			}
+			this.uniprotVer = readUniprotVer(cacheFile.getParent());
+			String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
+			if (!uniprotVerFromBlastDbDir.equals(uniprotVer)) {
+				throw new IOException("Uniprot version from blast db dir "+blastDbDir+" does not match version in cache dir "+cacheFile.getParent());
+			}
+		}
+
 		
 		this.list = new ArrayList<UniprotHomolog>();
 		for (BlastHit hit:blastList) {

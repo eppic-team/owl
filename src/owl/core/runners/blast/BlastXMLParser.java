@@ -23,6 +23,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 public class BlastXMLParser implements ContentHandler {
 
 	// xml tags
+	private static final String DB_TAG = "BlastOutput_db";
 	private static final String QUERY_LENGTH_TAG = "BlastOutput_query-len";
 	private static final String QUERY_DEF_TAG = "BlastOutput_query-def";
 	private static final String ITERATION_ITER_NUM_TAG = "Iteration_iter-num";
@@ -133,7 +134,10 @@ public class BlastXMLParser implements ContentHandler {
 	public void startElement(String uri, String localName, String name,
 			Attributes atts) throws SAXException {
 
-		if (name.equals(QUERY_LENGTH_TAG)) {
+		if (name.equals(DB_TAG)) {
+			initValueReading();
+		}
+		else if (name.equals(QUERY_LENGTH_TAG)) {
 			initValueReading();
 		}
 		else if (name.equals(QUERY_DEF_TAG)) {
@@ -207,6 +211,9 @@ public class BlastXMLParser implements ContentHandler {
 	public void endElement(String uri, String localName, String name)
 			throws SAXException {
 
+		if (name.equals(DB_TAG)){
+			this.hitList.setDb(flushValue());
+		}
 		if (name.equals(QUERY_LENGTH_TAG)){
 			this.hitList.setQueryLength(Integer.parseInt(flushValue()));
 		}
