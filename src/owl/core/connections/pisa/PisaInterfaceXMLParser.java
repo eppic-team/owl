@@ -38,6 +38,19 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String	PVALUE_TAG = "pvalue";
 	private static final String CHAIN_ID_TAG = "chain_id";
 	private static final String CLASS_TAG = "class";
+	
+	private static final String RXX_TAG = "rxx";
+	private static final String RXY_TAG = "rxy";
+	private static final String RXZ_TAG = "rxz";
+	private static final String RYX_TAG = "ryx";
+	private static final String RYY_TAG = "ryy";
+	private static final String RYZ_TAG = "ryz";
+	private static final String RZX_TAG = "rzx";
+	private static final String RZY_TAG = "rzy";
+	private static final String RZZ_TAG = "rzz";
+	private static final String TX_TAG  = "tx";
+	private static final String TY_TAG  = "ty";
+	private static final String TZ_TAG  = "tz";
 
 	private static final String SER_NO_TAG = "ser_no"; 
 	private static final String SEQ_NUM_TAG = "seq_num";
@@ -157,10 +170,34 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(CLASS_TAG)) {
 					initValueReading();
+				} else if (name.equals(RXX_TAG)) {
+					initValueReading();
+				} else if (name.equals(RXY_TAG)) {
+					initValueReading();
+				} else if (name.equals(RXZ_TAG)) {
+					initValueReading();
+				} else if (name.equals(RYX_TAG)) {
+					initValueReading();
+				} else if (name.equals(RYY_TAG)) {
+					initValueReading();
+				} else if (name.equals(RYZ_TAG)) {
+					initValueReading();
+				} else if (name.equals(RZX_TAG)) {
+					initValueReading();
+				} else if (name.equals(RZY_TAG)) {
+					initValueReading();
+				} else if (name.equals(RZZ_TAG)) {
+					initValueReading();
+				} else if (name.equals(TX_TAG)) {
+					initValueReading();
+				} else if (name.equals(TY_TAG)) {
+					initValueReading();
+				} else if (name.equals(TZ_TAG)) {
+					initValueReading();
 				} else if (name.equals(RESIDUE_TAG)){
 					inResidue = true;
 					currentResidue = new PisaResidue();
-				}
+				} 
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
 						initValueReading();
@@ -228,6 +265,30 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					currentPisaMolecule.setChainId(flushValue());
 				} else if (name.equals(CLASS_TAG)) {
 					currentPisaMolecule.setMolClass(flushValue());
+				} else if (name.equals(RXX_TAG)) {
+					currentPisaMolecule.setRxx(Double.parseDouble(flushValue()));
+				} else if (name.equals(RXY_TAG)) {
+					currentPisaMolecule.setRxy(Double.parseDouble(flushValue()));
+				} else if (name.equals(RXZ_TAG)) {
+					currentPisaMolecule.setRxz(Double.parseDouble(flushValue()));
+				} else if (name.equals(RYX_TAG)) {
+					currentPisaMolecule.setRyx(Double.parseDouble(flushValue()));
+				} else if (name.equals(RYY_TAG)) {
+					currentPisaMolecule.setRyy(Double.parseDouble(flushValue()));
+				} else if (name.equals(RYZ_TAG)) {
+					currentPisaMolecule.setRyz(Double.parseDouble(flushValue()));
+				} else if (name.equals(RZX_TAG)) {
+					currentPisaMolecule.setRzx(Double.parseDouble(flushValue()));
+				} else if (name.equals(RZY_TAG)) {
+					currentPisaMolecule.setRzy(Double.parseDouble(flushValue()));
+				} else if (name.equals(RZZ_TAG)) {
+					currentPisaMolecule.setRzz(Double.parseDouble(flushValue()));
+				} else if (name.equals(TX_TAG)) {
+					currentPisaMolecule.setTx(Double.parseDouble(flushValue()));
+				} else if (name.equals(TY_TAG)) {
+					currentPisaMolecule.setTy(Double.parseDouble(flushValue()));
+				} else if (name.equals(TZ_TAG)) {
+					currentPisaMolecule.setTz(Double.parseDouble(flushValue()));
 				} else if (name.equals(RESIDUE_TAG)) {
 					inResidue = false;
 					currentPisaMolecule.addResidue(currentResidue);

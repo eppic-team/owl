@@ -5,6 +5,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.vecmath.Matrix3d;
+import javax.vecmath.Matrix4d;
+import javax.vecmath.Vector3d;
+
 public class PisaMolecule implements Iterable<PisaResidue> {
 	
 	public static final String CLASS_PROTEIN = "Protein";
@@ -12,6 +16,20 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	private int id;
 	private String chainId;
 	private String molClass;
+	
+	private double rxx;
+	private double rxy;
+	private double rxz;
+	private double ryx;
+	private double ryy;
+	private double ryz;
+	private double rzx;
+	private double rzy;
+	private double rzz;
+	private double tx;
+	private double ty;
+	private double tz;
+	
 	
 	private List<PisaResidue> residues;
 	
@@ -124,6 +142,98 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 */
 	public void setMolClass(String molClass) {
 		this.molClass = molClass;
+	}
+
+	/**
+	 * Gets the symmetry operator needed to generate this molecule. 
+	 * @return
+	 */
+	public Matrix4d getSymOp() {
+		return new Matrix4d(new Matrix3d(rxx,rxy,rxz,ryx,ryy,ryz,rzx,rzy,rzz),new Vector3d(tx,ty,tz),1.0);
+	}
+	
+	/**
+	 * @param rxx the rxx to set
+	 */
+	public void setRxx(double rxx) {
+		this.rxx = rxx;
+	}
+
+	/**
+	 * @param rxy the rxy to set
+	 */
+	public void setRxy(double rxy) {
+		this.rxy = rxy;
+	}
+
+	/**
+	 * @param rxz the rxz to set
+	 */
+	public void setRxz(double rxz) {
+		this.rxz = rxz;
+	}
+
+	/**
+	 * @param ryx the ryx to set
+	 */
+	public void setRyx(double ryx) {
+		this.ryx = ryx;
+	}
+
+	/**
+	 * @param ryy the ryy to set
+	 */
+	public void setRyy(double ryy) {
+		this.ryy = ryy;
+	}
+
+	/**
+	 * @param ryz the ryz to set
+	 */
+	public void setRyz(double ryz) {
+		this.ryz = ryz;
+	}
+
+	/**
+	 * @param rzx the rzx to set
+	 */
+	public void setRzx(double rzx) {
+		this.rzx = rzx;
+	}
+
+	/**
+	 * @param rzy the rzy to set
+	 */
+	public void setRzy(double rzy) {
+		this.rzy = rzy;
+	}
+
+	/**
+	 * @param rzz the rzz to set
+	 */
+	public void setRzz(double rzz) {
+		this.rzz = rzz;
+	}
+
+	/**
+	 * @param tx the tx to set
+	 */
+	public void setTx(double tx) {
+		this.tx = tx;
+	}
+
+	/**
+	 * @param ty the ty to set
+	 */
+	public void setTy(double ty) {
+		this.ty = ty;
+	}
+
+	/**
+	 * @param tz the tz to set
+	 */
+	public void setTz(double tz) {
+		this.tz = tz;
 	}
 
 	/**
