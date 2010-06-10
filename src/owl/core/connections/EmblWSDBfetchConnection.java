@@ -312,7 +312,9 @@ public class EmblWSDBfetchConnection {
 			}
 		}
 		br.close();
-		list.add(new Sequence(lastTag, seq.toString())); // adding the last sequence
+		if (lastTag!=null) { // this happens if the file is empty
+			list.add(new Sequence(lastTag, seq.toString())); // adding the last sequence
+		}
 		return new EmblWSDBfetchConnection().new SequenceCache(list, notFoundIds);
 	}
 
