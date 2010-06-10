@@ -1,4 +1,10 @@
 package owl.core.util;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.*;
 
 /**
@@ -41,5 +47,29 @@ public class Goodies {
 		return result;
 	}
 	
+	/**
+	 * Copies a file, does not copy the metadata (file permissions etc)
+	 * Java does not have a method for this in the File (or any other) class. There is
+	 * only a File.renameTo() which is very flaky (does not work across file systems and
+	 * so on). Java 7 (finally!) will probably come with a copyTo method in the 
+	 * java.nio.file.Path class.
+	 * See http://today.java.net/pub/a/today/2008/07/03/jsr-203-new-file-apis.html
+	 * @param srcFile
+	 * @param destFile
+	 * @throws IOException
+	 */
+	public static void copyFile(File srcFile, File destFile) throws IOException {
+		InputStream in = new FileInputStream(srcFile);
+		OutputStream out = new FileOutputStream(destFile);
+
+		byte[] buf = new byte[1024];
+		int len;
+		while ((len = in.read(buf)) > 0){
+			out.write(buf, 0, len);
+		}
+		in.close();
+		out.close();
+
+	}
 		
 }
