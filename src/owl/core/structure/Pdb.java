@@ -1299,19 +1299,27 @@ public class Pdb implements HasFeatures {
 	/**
 	 * Gets the internal residue serial (cif) given a pdb residue serial (author assignment)
 	 * @param pdbresser
-	 * @return
+	 * @return the residue serial or -1 if no mapping exists
 	 */
-	public int getResSerFromPdbResSer (String pdbresser){
-		return pdbresser2resser.get(pdbresser);
+	public int getResSerFromPdbResSer (String pdbresser){ 
+		if (pdbresser2resser.containsKey(pdbresser)) {
+			return pdbresser2resser.get(pdbresser);
+		} else {
+			return -1;
+		}
 	}
 
 	/**
 	 * Gets the pdb residue serial (author assignment) given an internal residue serial (cif)
 	 * @param resser
-	 * @return 
+	 * @return the pdb residue serial or null if no mapping exists
 	 */
 	public String getPdbResSerFromResSer (int resser){
-		return this.resser2pdbresser.get(resser);
+		if (resser2pdbresser.containsKey(resser)) {
+			return this.resser2pdbresser.get(resser);
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -1401,7 +1409,7 @@ public class Pdb implements HasFeatures {
 			return false;
 		}
 	}
-
+	
 	/**
 	 * Checks whether the given atom type for the given residue serial has any associated coordinates
 	 * @param resser the residue serial
