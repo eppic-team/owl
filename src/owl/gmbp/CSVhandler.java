@@ -277,6 +277,71 @@ public class CSVhandler {
     	
     }
     
+    public void generateFile(Vector<String[]> vector, String sFileName){
+    	String[] line;
+    	String s;
+    	if (vector.size()>0){
+    		FileWriter writer = null;
+			System.out.println(sFileName);
+			try	{
+			    writer = new FileWriter(sFileName);	
+			    for(int i=0; i<vector.size(); i++){
+	    			line = (String[]) vector.get(i);
+	    			for (int j=0; j<line.length; j++){
+	    				s = line[j];
+				    	writer.append(s);
+				    	if (j<line.length-1)
+				    		writer.append(','); 
+	    			}
+			    	writer.append('\n');
+	    		}		    	 
+				writer.flush();
+				writer.close();
+			}
+			catch(IOException e) {
+				e.printStackTrace();
+				System.err.println("Didn't manage to create file.");
+			}	    		
+    	}
+    	else {
+			System.out.println("Vector is empty. No csv-file created.");
+		}	
+    	
+    }
+    
+    public Vector<String[]> readCsvFile(String filename) throws NumberFormatException, IOException{
+    	Vector<String[]> vector = new Vector<String[]>();
+    	String[] row;
+    	int numTokens = 0;
+		BufferedReader bufRdr;
+		try {
+			bufRdr = new BufferedReader(new FileReader(filename));
+			String line = null;
+			String token = null;	 
+			//read each line of text file
+			while((line = bufRdr.readLine()) != null){
+				int index =0;
+				StringTokenizer st = new StringTokenizer(line,",");
+				numTokens = st.countTokens();
+				row = new String[numTokens];
+				while (st.hasMoreTokens()){
+					token = st.nextToken();
+					//get next token and store it in the array
+					row[index] = token;
+					index++;
+				}
+				vector.add(row);
+			}
+			//close the file
+			bufRdr.close();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}		
+		
+    	return vector;
+    }
+    
     public Vector<float[]> readCSVfileVector(String filename) throws NumberFormatException, IOException{
     	Vector<float[]> vector = new Vector<float[]>();;
     	float[] node; // = new float[5];// {gID, num, j_num, theta, phi};
@@ -285,13 +350,9 @@ public class CSVhandler {
 		try {
 			bufRdr = new BufferedReader(new FileReader(filename));
 			String line = null;			 
-			//read each line of text file
-//			while((line = bufRdr.readLine()) != null)
-			{
-				line = bufRdr.readLine();
-				StringTokenizer st = new StringTokenizer(line,",");
-				numTokens = st.countTokens();
-			}
+			line = bufRdr.readLine();
+			StringTokenizer st = new StringTokenizer(line,",");
+			numTokens = st.countTokens();
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

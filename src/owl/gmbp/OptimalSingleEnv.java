@@ -52,7 +52,8 @@ public class OptimalSingleEnv {
 //	    		System.out.println( " -");
 	    	} // end if A is in B 
 	    } // end while nbstring 
-		conn.close(); // closing the Database connection
+	    nbstrings.close();
+		stmt.close(); // closing the Database connection
 		
 	}
 
@@ -73,6 +74,14 @@ public class OptimalSingleEnv {
 	
 	public Vector<String[]> getOptNBHStrings(){
 		return this.optNBHStrings;
+	}	
+
+	public void setFullNBHString(String fullnbs) {
+		this.fullnbs = fullnbs;
+	}
+
+	public void setiRes(char iRes) {
+		this.iRes = iRes;
 	}
 	
 }
