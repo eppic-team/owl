@@ -33,6 +33,7 @@ import owl.core.util.FileFormatError;
 import owl.core.util.Goodies;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
+import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
@@ -234,6 +235,18 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					}
 				}
 				hom.setEmblCdsIds(emblCdsIds);
+				
+				List<Organelle> orglls = entry.getOrganelles();
+				if (orglls.size()>0) {
+					hom.setGeneEncodingOrganelle(orglls.get(0).getType());
+					if (orglls.size()>1) {
+						for (Organelle orgll:orglls){ 
+							if (!orgll.getType().equals(hom.getGeneEncodingOrganelle())) {
+								System.err.println("Warning! Different gene encoding organelles for Uniprot "+hom.getUniId());
+							}
+						}
+					}
+				}
 			}
 		}
 	}

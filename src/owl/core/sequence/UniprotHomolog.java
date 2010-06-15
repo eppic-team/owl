@@ -11,7 +11,9 @@ import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
 import owl.core.runners.blast.BlastHit;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
+import uk.ac.ebi.kraken.interfaces.uniprot.GeneEncodingType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
+import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 
@@ -34,7 +36,7 @@ public class UniprotHomolog {
 	private List<String> taxIds; // many taxonomy ids for a uniprot entry should be a very pathological case. Should be safe to use the first one always
 	private List<String> emblCdsIds;
 	private List<Sequence> emblCdsSeqs; 
-	
+	private GeneEncodingType geneEncodingOrganelle; // the organelle where this gene is encoded (important for genetic code): if gene encoded in nucleus this is null
 	
 	
 	public UniprotHomolog(BlastHit blastHit, String uniId) {
@@ -99,6 +101,14 @@ public class UniprotHomolog {
 		return this.blastHit.getPercentIdentity();
 	}
 	
+	public GeneEncodingType getGeneEncodingOrganelle() {
+		return this.geneEncodingOrganelle;
+	}
+	
+	public void setGeneEncodingOrganelle(GeneEncodingType geneEncodingOrganelle){
+		this.geneEncodingOrganelle = geneEncodingOrganelle;
+	}
+	
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
@@ -128,6 +138,17 @@ public class UniprotHomolog {
 			if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
 				String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
 				emblCdsIds.add(emblCdsId);
+			}
+		}
+		List<Organelle> orglls = entry.getOrganelles();
+		if (orglls.size()>0) {
+			this.geneEncodingOrganelle = orglls.get(0).getType();
+			if (orglls.size()>1) {
+				for (Organelle orgll:orglls){ 
+					if (!orgll.getType().equals(this.geneEncodingOrganelle)) {
+						System.err.println("Warning! Different gene encoding organelles for Uniprot "+this.uniId);
+					}
+				}
 			}
 		}
 	}
