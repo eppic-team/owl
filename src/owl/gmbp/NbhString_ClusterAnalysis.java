@@ -24,6 +24,7 @@ public class NbhString_ClusterAnalysis {
 	private Vector<Double> slopesOfE; // contains slope of each edge (of this.edges) from start-node to end-node
 	private double[][] clusterDirProp; // [][0]:minIncSlope, [][1]:averageIncSlope, [][2]:maxIncSlope, [][3]:minOutSlope, [][4]:averOutSlope, [][5]:maxOutSlope
 	private int[] nbCluster;    // holds ID of neighbouring cluster (at the other end of edge); if any neighbouring cluster exists, ID=0
+	private Vector<double[]> clusterAverDirec;   // holds direction (vector saved as array) for each cluster
 
 	private double rSphere;
 	
@@ -107,7 +108,7 @@ public class NbhString_ClusterAnalysis {
 					if (nodeID>0){
 						nbNode = (float[]) this.nbhsNodes.get(nodeID-1);
 						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
-							incSlope = getSlope(node, nbNode);
+							incSlope = getSlope(nbNode, node);
 							averIncSlope += incSlope;
 							if (incSlope<minIncSlope)
 								minIncSlope = incSlope;
@@ -142,6 +143,73 @@ public class NbhString_ClusterAnalysis {
 				// --- Test output ---
 				System.out.println("C_ID="+i+"\t"+"Inc: "+minIncSlope+":"+averIncSlope+":"+maxIncSlope+"\t"
 						+"Out: "+minOutSlope+":"+averOutSlope+":"+maxOutSlope+"\t"+"deltaInc="+deltaIncSlope+" deltaOut="+deltaOutSlope);
+			}
+			
+			// for each cluster: average direction (vectors)
+			// use average lambda and phi as centroid
+			this.clusterAverDirec = new Vector<double[]>();
+			for (int i=1; i<this.clusters.length; i++){ 
+				System.out.println("C_ID="+i);
+				double[] averDir = new double[2];
+//				double[] dir1 = new double[2];
+				double[] dir2 = new double[2];
+				// --- histogram of quadrants
+				int[] histQuad = new int[4];
+				for (int j=0; j<clusters[i].size(); j++){
+					int nodeID = clusters[i].get(j);
+					node = (float[]) this.nbhsNodes.get(nodeID);
+					nodeID = nodeID+1;
+					if (nodeID<this.nbhsNodes.size()){
+						nbNode = (float[]) this.nbhsNodes.get(nodeID);
+						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
+							// node[4]:lambda node[3]:phi
+							dir2[0] = nbNode[4]-node[4];
+							dir2[1] = nbNode[3]-node[3];
+							dir2 = normaliseVector(dir2);
+							int quad = getQuadrant4Vector(dir2);
+							histQuad[quad]++;
+						}
+					}
+				}
+				System.out.println("Quadrants occupied: "+histQuad[0]+" - "+histQuad[1]+" - "+histQuad[2]+" - "+histQuad[3]);
+				int quad2use = 0;
+				for (int k=1; k<4; k++)
+					if (histQuad[k]>histQuad[quad2use])
+						quad2use = k;
+				System.out.println("Quadrant2Use = "+quad2use);
+				//for each node of cluster
+				int startNode = 0;
+				for (int j=0; j<clusters[i].size(); j++){
+					int nodeID = clusters[i].get(j);
+					node = (float[]) this.nbhsNodes.get(nodeID);
+					nodeID = nodeID+1;
+					if (nodeID<this.nbhsNodes.size()){
+						nbNode = (float[]) this.nbhsNodes.get(nodeID);
+						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
+							// node[4]:lambda node[3]:phi
+							dir2[0] = nbNode[4]-node[4];
+							dir2[1] = nbNode[3]-node[3];
+							dir2 = normaliseVector(dir2);
+							int quad = getQuadrant4Vector(dir2);
+							if (quad==quad2use){
+								if (j==startNode)
+									averDir = dir2;
+								else{
+									averDir[0] = averDir[0]+dir2[0];
+									averDir[1] = averDir[1]+dir2[1];
+									averDir = normaliseVector(averDir);
+								}								
+							}
+							else{
+								if (j==startNode)
+									startNode++;
+							}
+							System.out.println(quad+" dir2="+String.valueOf(dir2[0])+" , "+String.valueOf(dir2[1])+" --> averDir="+String.valueOf(averDir[0])+" , "+String.valueOf(averDir[1]));													
+						}						
+					}
+				}
+				this.clusterAverDirec.add(averDir);
+				System.out.println("C_ID="+i+"  averDir="+String.valueOf(averDir[0])+" , "+String.valueOf(averDir[1]));
 			}
 			
 			// for each cluster: is there another cluster, where the majority of edges runs to?
@@ -192,6 +260,33 @@ public class NbhString_ClusterAnalysis {
 				this.nbCluster[i-1] = idSuccClus;
 			}
 		}
+	}
+	
+	/**
+	 returns the quadrant for vector
+	 0:NorthEast, 1:SouthEast, 2:SouthWest, 3:NorthWest
+	 @param vector of direction
+	 @return quadrant id
+	 */		  
+	private int getQuadrant4Vector(double[] vec){
+		int quad = 0;
+		if (vec[0]>=0 && vec[1]<0)
+			quad = 0;
+		else if (vec[0]>=0 && vec[1]>0)
+			quad = 1;
+		else if (vec[0]<0 && vec[1]>0)
+			quad = 2;
+		else //if (vec[0]<0 && vec[1]<0)
+			quad = 3;
+		return quad;
+	}
+	
+	private double[] normaliseVector(double[] vec){
+		double[] nVec = new double[2];
+		double absVec = Math.sqrt((vec[0]*vec[0])+(vec[1]*vec[1]));
+		nVec[0] = vec[0]/absVec;
+		nVec[1] = vec[1]/absVec;
+		return nVec;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -396,6 +491,10 @@ public class NbhString_ClusterAnalysis {
 	
 	public double[][] getClusterProp() {
 		return clusterProp;
+	}
+	
+	public Vector<double[]> getClusterAverDirec(){
+		return clusterAverDirec;
 	}
 	
 	public double[][] getClusterDirProp() {
