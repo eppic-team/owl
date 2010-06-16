@@ -10,6 +10,8 @@ import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
 import owl.core.runners.blast.BlastHit;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.GeneEncodingType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
@@ -173,4 +175,25 @@ public class UniprotHomolog {
 
 	}
 
+	public void checkEmblCDSMatching() {
+		for (Sequence cds:emblCdsSeqs) {
+			if (this.geneEncodingOrganelle!=null) {
+				System.err.println("Warning! The cds sequence "+cds.getSecondaryAccession()+" is not encoded in nucleus!");
+			}
+			Sequence translated = Translator.translate(GeneticCodeType.STANDARD, cds, ReadingFrame.RTHREE);
+			translated.chopStopCodon();
+			if (!translated.getSeq().equals(this.uniproSeq.getSeq())) {
+				System.err.println("Missmatch of CDS "+cds.getSecondaryAccession()+" (length "+translated.getLength()+") to its uniprot parent "+this.getUniId()+" ("+this.uniproSeq.getLength()+")");
+				try {
+					PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(
+							translated.getSeq(),this.uniproSeq.getSeq(),
+							translated.getName(),this.uniproSeq.getName());
+					psa.printAlignment();
+				} catch (PairwiseSequenceAlignmentException e) {
+					System.err.println("Couldn't print the alignment of the missmatching sequences.");
+					System.err.println(e.getMessage());
+				}
+			}
+		}		
+	}
 }

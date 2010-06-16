@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.structure.AminoAcid;
 import owl.core.util.FileFormatError;
 
 
@@ -184,6 +185,12 @@ public class Sequence {
 		writeSeqs(out, seqs, tags);
 	}
 
+	public void chopStopCodon() {
+		if (this.seq.charAt(this.seq.length()-1)==(AminoAcid.STP.getOneLetterCode())) {
+			this.seq = this.seq.substring(0, this.seq.length()-1);
+		}
+	}
+	
 	/*---------------------------- static methods ---------------------------*/
 	
 	/**

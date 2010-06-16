@@ -433,4 +433,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	public String getUniprotVer() {
 		return uniprotVer;
 	}
+	
+	public void checkEmblCDSMatching() {
+		for (UniprotHomolog hom:this) {
+			hom.checkEmblCDSMatching();
+		}		
+	}
 }
