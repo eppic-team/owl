@@ -113,8 +113,12 @@ public class Translator {
 	 * @param gcType
 	 * @param codon
 	 * @return
+	 * @throws IllegalArgumentException if codon length is not 3
 	 */
 	public static AminoAcid translate(GeneticCodeType gcType, String codon) {
+		if (codon.length()!=3) {
+			throw new IllegalArgumentException("Codon length is not 3! Codon: "+codon);
+		}
 		return gcmaps.get(gcType.getId()).get(codon.toUpperCase());
 	}
 	
