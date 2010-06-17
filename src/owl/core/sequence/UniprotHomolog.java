@@ -5,13 +5,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
 import owl.core.runners.blast.BlastHit;
-import owl.core.sequence.alignment.PairwiseSequenceAlignment;
-import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.GeneEncodingType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
@@ -30,7 +30,7 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  *
  */
 public class UniprotHomolog {
-
+	
 	
 	private BlastHit blastHit;
 	private String uniId;
@@ -118,6 +118,7 @@ public class UniprotHomolog {
 	public void retrieveUniprotKBData() {
 		this.taxIds = new ArrayList<String>();
 		this.emblCdsIds = new ArrayList<String>();
+		Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
 		
 		UniProtConnection uniprotConn = new UniProtConnection();
 		UniProtEntry entry = null;
@@ -139,9 +140,12 @@ public class UniprotHomolog {
 			String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
 			if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
 				String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-				emblCdsIds.add(emblCdsId);
+				//emblCdsIds.add(emblCdsId);
+				// to ensure there are no duplicate ids (it happens sometimes) we use a set
+				tmpEmblCdsIdsSet.add(emblCdsId);
 			}
 		}
+		this.emblCdsIds.addAll(tmpEmblCdsIdsSet);
 		List<Organelle> orglls = entry.getOrganelles();
 		if (orglls.size()>0) {
 			this.geneEncodingOrganelle = orglls.get(0).getType();
@@ -180,20 +184,9 @@ public class UniprotHomolog {
 			if (this.geneEncodingOrganelle!=null) {
 				System.err.println("Warning! The cds sequence "+cds.getSecondaryAccession()+" is not encoded in nucleus!");
 			}
-			Sequence translated = Translator.translate(GeneticCodeType.STANDARD, cds, ReadingFrame.RTHREE);
-			translated.chopStopCodon();
-			if (!translated.getSeq().equals(this.uniproSeq.getSeq())) {
-				System.err.println("Missmatch of CDS "+cds.getSecondaryAccession()+" (length "+translated.getLength()+") to its uniprot parent "+this.getUniId()+" ("+this.uniproSeq.getLength()+")");
-				try {
-					PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(
-							translated.getSeq(),this.uniproSeq.getSeq(),
-							translated.getName(),this.uniproSeq.getName());
-					psa.printAlignment();
-				} catch (PairwiseSequenceAlignmentException e) {
-					System.err.println("Couldn't print the alignment of the missmatching sequences.");
-					System.err.println(e.getMessage());
-				}
-			}
+			ProteinToCDSMatch matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
+			matching.printSummary(99.9999f);
+			
 		}		
 	}
 }

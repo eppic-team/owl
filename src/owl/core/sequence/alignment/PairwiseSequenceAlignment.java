@@ -53,6 +53,19 @@ public class PairwiseSequenceAlignment {
 
 	/*----------------------------- constructors ----------------------------*/
 
+
+	/**
+	 * Construct a new pairwise alignment using the Needleman-Wunsch
+	 * alignment algorithm with standard parameters. 
+	 * @param sequence1
+	 * @param sequence2
+	 * @throws PairwiseSequenceAlignmentException if problem occurs in parsing the 
+	 * sequences or reading the BLOSUM matrix
+	 */
+	public PairwiseSequenceAlignment(owl.core.sequence.Sequence sequence1, owl.core.sequence.Sequence sequence2) throws PairwiseSequenceAlignmentException {
+		this(sequence1.getSeq(),sequence2.getSeq(),sequence1.getName(),sequence2.getName());
+	}
+	
 	/**
 	 * Construct a new pairwise alignment using the Needleman-Wunsch
 	 * alignment algorithm with standard parameters.
@@ -60,6 +73,8 @@ public class PairwiseSequenceAlignment {
 	 * @param seq2 A string containing the second sequence to be aligned
 	 * @param name1
 	 * @param name2
+	 * @throws PairwiseSequenceAlignmentException if problem occurs in parsing the 
+	 * sequences or reading the BLOSUM matrix
 	 */
 	public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2) throws PairwiseSequenceAlignmentException {
 		this(seq1, seq2, name1, name2, DEFAULT_GAP_OPEN_SCORE, DEFAULT_GAP_EXTEND_SCORE);
@@ -74,6 +89,8 @@ public class PairwiseSequenceAlignment {
 	 * @param name2
 	 * @param openScore Gap open score
 	 * @param extendScore Gap extend score
+	 * @throws PairwiseSequenceAlignmentException if problem occurs in parsing the 
+	 * sequences or reading the BLOSUM matrix
 	 */
 	public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2, float openScore, float extendScore) throws PairwiseSequenceAlignmentException {
 
@@ -154,6 +171,9 @@ public class PairwiseSequenceAlignment {
 	public String[] getAlignedSequences() {
 		String[] alignedSeqs = {alignedSeq1, alignedSeq2};
 		return alignedSeqs;
+	}
+	public char[] getMarkupLine() {
+		return this.alignment.getMarkupLine();
 	}
 
 	public void printSummary() {

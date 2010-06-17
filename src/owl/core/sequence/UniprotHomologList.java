@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -227,13 +229,16 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				hom.setTaxIds(taxIds);
 				Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
 				List<String> emblCdsIds = new ArrayList<String>();
+				Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
 				for(Embl ref:emblrefs) {
 					String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
 					if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
 						String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-						emblCdsIds.add(emblCdsId);
+						//emblCdsIds.add(emblCdsId);
+						tmpEmblCdsIdsSet.add(emblCdsId);
 					}
 				}
+				emblCdsIds.addAll(tmpEmblCdsIdsSet); // we use the set to be sure there are no duplicates (it does happen sometimes)
 				hom.setEmblCdsIds(emblCdsIds);
 				
 				List<Organelle> orglls = entry.getOrganelles();

@@ -11,7 +11,15 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
 
-
+/**
+ * Class containing static methods to translate DNA nucleotide sequences
+ * to protein sequences.
+ * Using the translation tables from NCBI found at:
+ * http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi
+ * 
+ * @author duarte_j
+ *
+ */
 public class Translator {
 
 
@@ -20,7 +28,10 @@ public class Translator {
 	
 	private static final Map<Integer,Map<String,AminoAcid>> gcmaps = parseNCBIGenCodeFile(); 
 	
-	
+	/**
+	 * Parses NCBI genetic codes file
+	 * @return
+	 */
 	private static Map<Integer,Map<String,AminoAcid>> parseNCBIGenCodeFile() {
 		
 		Map<Integer,Map<String,AminoAcid>> allmaps= new HashMap<Integer,Map<String,AminoAcid>>();
@@ -97,16 +108,28 @@ public class Translator {
 		return map;
 	}
 	
+	/**
+	 * Translate given codon to its corresponding AminoAcid based on given GeneticCodeType
+	 * @param gcType
+	 * @param codon
+	 * @return
+	 */
 	public static AminoAcid translate(GeneticCodeType gcType, String codon) {
 		return gcmaps.get(gcType.getId()).get(codon.toUpperCase());
 	}
 	
+	/**
+	 * Translate given DNA nucleotide sequence on given reading frame to a protein sequence 
+	 * based on given GeneticCodeType 
+	 * @param gcType
+	 * @param sequence
+	 * @param rf
+	 * @return
+	 */
 	public static Sequence translate(GeneticCodeType gcType, Sequence sequence, ReadingFrame rf) {
 		String seq = sequence.getSeq();
 		StringBuffer sb = new StringBuffer();
-		if (seq.length()%3!=0) {
-			System.err.println("Warning! Nucleotide sequence length is not multiple of 3 for sequence "+sequence.getName());
-		}
+		
 		String scanningSeq = seq;
 		if (rf.isReverse()) {
 			scanningSeq = new StringBuffer(seq).reverse().toString();
