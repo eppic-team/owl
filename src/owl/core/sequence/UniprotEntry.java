@@ -6,13 +6,22 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
+import owl.core.features.Feature;
+import owl.core.features.FeatureType;
+import owl.core.features.HasFeatures;
+import owl.core.features.InvalidFeatureCoordinatesException;
+import owl.core.features.OverlappingFeatureException;
+import owl.core.util.Interval;
+import owl.core.util.IntervalSet;
 
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.GeneEncodingType;
@@ -28,7 +37,7 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  * @author duarte_j
  *
  */
-public class UniprotEntry {
+public class UniprotEntry implements HasFeatures {
 
 	private String uniId;
 	private Sequence uniprotSeq;
@@ -40,6 +49,7 @@ public class UniprotEntry {
 	private boolean  repCDScached;
 	private Sequence representativeCDS; // cached after running getRepresentativeCDS()
 
+	private Map<FeatureType, Collection<Feature>> features;
 	
 	public UniprotEntry(String uniprotId){
 		this.uniId = uniprotId;
@@ -129,6 +139,13 @@ public class UniprotEntry {
 		this.geneEncodingOrganelle = geneEncodingOrganelle;
 	}
 
+	/**
+	 * Return the sequence length of this uniprot entry.
+	 * @return
+	 */
+	public int getLength() {
+		return this.getUniprotSeq().getLength();
+	}
 	
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
@@ -264,7 +281,7 @@ public class UniprotEntry {
 		} else if (nonFullMatchingCDSs.size()>=1) {
 			TranslatedSequence best = Collections.max(nonFullMatchingCDSs);
 			int mismatches = best.getAln().getLength()-best.getAln().getIdentity();
-			System.err.println("Warning! No perfect CDS matches for uniprot entry "+this.getUniId()+". Using the best match with "+mismatches+" mismatches.");
+			System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+best.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");
 			best.getAln().printAlignment();
 			//TODO decide what are tolerable mismatching sequences. If tolerable return it, if not return null
 			representativeCDS = best.getSequence();
@@ -299,6 +316,71 @@ public class UniprotEntry {
 		if (countFullMatches>1) {
 			System.out.println(this.getUniId()+": "+countFullMatches+" perfect CDS matches");
 		}
+	}
+
+	/*------------------------ HasFeature interface implementation -----------------------*/
+	
+	public boolean addFeature(Feature feature) throws InvalidFeatureCoordinatesException,
+														OverlappingFeatureException {
+
+		boolean result = false;
+		FeatureType ft = feature.getType();	// will throw a null pointer exception if feature == null
+		if(this.features == null) {
+			this.features = new HashMap<FeatureType, Collection<Feature>>();
+		}
+		Collection<Feature> fc = this.features.get(ft);
+		if(fc==null) {
+			fc = new LinkedList<Feature>();
+			features.put(ft, fc);
+		}
+		IntervalSet intervSet = feature.getIntervalSet();
+		for (Interval interv:intervSet){
+			if (interv.beg<1 || interv.end>this.getLength())
+				throw new InvalidFeatureCoordinatesException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" contains invalid coordinates for this UniprotEntry.\n"
+						+"Interval: "+interv+". Length of this UniprotEntry: "+this.getLength());
+		}
+		for (Feature f:fc) {
+			if (intervSet.overlaps(f.getIntervalSet())) {
+				throw new OverlappingFeatureException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" overlaps existing feature "+f.getDescription()+" of type "+f.getType()+"\n" +
+						"New interval set: "+intervSet+". Existing interval set: "+f.getIntervalSet());
+			}
+		}
+		result = fc.add(feature);
+		return result;	
+	}
+
+	public Collection<FeatureType> getFeatureTypes() {
+		return features.keySet();
+	}
+
+	public Collection<Feature> getFeatures() {
+		Collection<Feature> allfeatures = new LinkedList<Feature>();
+		for (Collection<Feature> coll:features.values()) {
+			allfeatures.addAll(coll);
+		}
+		return allfeatures;
+	}
+
+	public Collection<Feature> getFeaturesForPositon(int position) {
+		Collection<Feature> result = new LinkedList<Feature>(); 
+		for(Feature f:this.getFeatures()) {
+			if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
+		}
+		return result;		
+	}
+
+	public Collection<Feature> getFeaturesOfType(FeatureType featureType) {
+		return features.get(featureType);
+	}
+
+	public Collection<Feature> getFeaturesOfTypeForPosition(FeatureType featureType, int position) {
+		Collection<Feature> result = new LinkedList<Feature>(); 
+		if(this.features.get(featureType) != null) {
+			for(Feature f:this.features.get(featureType)) {
+				if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
+			}
+		}
+		return result;
 	}
 
 
