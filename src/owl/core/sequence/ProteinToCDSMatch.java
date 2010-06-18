@@ -9,40 +9,15 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAli
 
 public class ProteinToCDSMatch {
 
+	private static final float PERFECT_MATCH_THRESHOLD = 99.99999f;
 	
-	
-	private class TranslatedSequence implements Comparable<TranslatedSequence> {
-		Sequence sequence;
-		PairwiseSequenceAlignment psa;
-		ReadingFrame rf;
-		public TranslatedSequence(Sequence sequence, ReadingFrame rf) {
-			this.sequence = sequence;
-			this.rf = rf;
-		}
-		public void setAln(PairwiseSequenceAlignment psa){
-			this.psa = psa;
-		}
-		public float getPercentIdentity() {
-			return psa.getPercentIdentity();
-		}
-		public int getMismatches() {
-			return psa.getLength()-psa.getIdentity();
-		}
-		public PairwiseSequenceAlignment getAln(){
-			return psa;
-		}
-		@Override
-		public int compareTo(TranslatedSequence o) {
-			return Float.compare(this.getPercentIdentity(), o.getPercentIdentity());
-		}
-	}
 	
 	private Sequence protein;
 	private Sequence cds;
 	private GeneticCodeType gct;
 	private Map<ReadingFrame, TranslatedSequence> translations;
 	
-	public ProteinToCDSMatch(Sequence protein, Sequence cds,GeneticCodeType gct){
+	public ProteinToCDSMatch(Sequence protein, Sequence cds,GeneticCodeType gct) throws TranslationException {
 		this.protein = protein;
 		this.cds = cds;
 		this.gct = gct;
@@ -55,7 +30,7 @@ public class ProteinToCDSMatch {
 		this.align();
 	}
 	
-	private Map<ReadingFrame,TranslatedSequence> get6FramesTranslations() {
+	private Map<ReadingFrame,TranslatedSequence> get6FramesTranslations() throws TranslationException {
 		Map<ReadingFrame,TranslatedSequence> map = new HashMap<ReadingFrame, TranslatedSequence>();
 		for (ReadingFrame rf:ReadingFrame.values()) {
 			Sequence translated = Translator.translate(this.gct, this.cds, rf);
@@ -69,7 +44,7 @@ public class ProteinToCDSMatch {
 		for (ReadingFrame rf:translations.keySet()) {
 			try {
 				TranslatedSequence translated = translations.get(rf);
-				PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(this.protein,translated.sequence);
+				PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(this.protein,translated.getSequence());
 				translated.setAln(psa);
 			} catch (PairwiseSequenceAlignmentException e) {
 				System.err.println("Problem aligning the mismatching sequences.");
@@ -82,11 +57,19 @@ public class ProteinToCDSMatch {
 		return Collections.max(translations.values());
 	}
 	
+	public boolean hasFullMatch() {
+		if (getBestTranslation().getPercentIdentity()>PERFECT_MATCH_THRESHOLD) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
 	public void printSummary(float cutoff) {
 		TranslatedSequence best = getBestTranslation();
 		//if (!best.rf.equals(ReadingFrame.ONE) || best.percentIdentity<cutoff) {
 		if (best.getPercentIdentity()<cutoff) {
-			System.out.printf("%s\t%s\tframe %2d\t%5.1f\t%d\n",protein.getName(),best.sequence.getSecondaryAccession(),best.rf.getNumber(),best.getPercentIdentity(),best.getMismatches());
+			System.out.printf("%s\t%s\tframe %2d\t%5.1f\t%d\n",protein.getName(),best.getSequence().getSecondaryAccession(),best.getReadingFrame().getNumber(),best.getPercentIdentity(),best.getMismatches());
 			//best.getAln().printAlignment();
 			printMatching(best);
 		}
@@ -113,12 +96,12 @@ public class ProteinToCDSMatch {
 		}
 		
 		// translated line
-		for (int i=0;i<translated.sequence.getLength();i++) { 
-			tranLine.append("  "+translated.sequence.getSeq().charAt(i)+"  ");
+		for (int i=0;i<translated.getSequence().getLength();i++) { 
+			tranLine.append("  "+translated.getSequence().getSeq().charAt(i)+"  ");
 		}
 		
 		// codons 
-		ReadingFrame rf = translated.rf;
+		ReadingFrame rf = translated.getReadingFrame();
 		String scanningSeq = cds.getSeq();
 		if (rf.isReverse()) {
 			scanningSeq = new StringBuffer(cds.getSeq()).reverse().toString();
@@ -145,6 +128,6 @@ public class ProteinToCDSMatch {
 	}
 	
 	public ReadingFrame getBestTranslationFrame() {
-		return getBestTranslation().rf;
+		return getBestTranslation().getReadingFrame();
 	}
 }

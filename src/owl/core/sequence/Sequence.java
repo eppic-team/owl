@@ -185,10 +185,19 @@ public class Sequence {
 		writeSeqs(out, seqs, tags);
 	}
 
-	public void chopStopCodon() {
+	/**
+	 * Chops off the STOP symbol '*' from the end of this sequence if one is present
+	 * @return true if the sequence ends with '*' and can be chopped off, false 
+	 * otherwise
+	 */
+	public boolean chopStopCodon() {
 		if (this.seq.charAt(this.seq.length()-1)==(AminoAcid.STP.getOneLetterCode())) {
 			this.seq = this.seq.substring(0, this.seq.length()-1);
+			return true;
+		} else {
+			return false;
 		}
+		
 	}
 	
 	/*---------------------------- static methods ---------------------------*/

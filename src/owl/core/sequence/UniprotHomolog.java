@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -40,6 +42,8 @@ public class UniprotHomolog {
 	private List<Sequence> emblCdsSeqs; 
 	private GeneEncodingType geneEncodingOrganelle; // the organelle where this gene is encoded (important for genetic code): if gene encoded in nucleus this is null
 	
+	private boolean  repCDScached;
+	private Sequence representativeCDS; // cached after running getRepresentativeCDS()
 	
 	public UniprotHomolog(BlastHit blastHit, String uniId) {
 		this.blastHit = blastHit;
@@ -179,14 +183,106 @@ public class UniprotHomolog {
 
 	}
 
-	public void checkEmblCDSMatching() {
+	/**
+	 * Returns true if there is at least one associated CDS for which we could 
+	 * retrieve a sequence
+	 * @return
+	 */
+	public boolean hasCDS() {
+		return (this.emblCdsSeqs!=null && emblCdsSeqs.size()>0); 
+	}
+	
+	/**
+	 * Gets a single representative translated coding sequence from the set of CDS 
+	 * retrieved from EMBL. The sequence found is then cached and subsequent calls
+	 * to this method take the sequence from the cached value.
+	 * The CDSs are translated on their 6 frames, then aligned to the protein sequence
+	 * and if 100% matches exist one of them is returned. If no 100% matches exist the 
+	 * best one is returned (TODO must still check what are tolerable mismatches)
+	 * @return the translated CDS sequence or null if no correct match to the protein
+	 * sequence can be found
+	 */
+	public Sequence getRepresentativeCDS() {
+		if (repCDScached) {
+			return representativeCDS;
+		}
+		
+		if (this.geneEncodingOrganelle!=null) {
+			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
+		}
+
+		List<Sequence> fullMatchingCDSs = new ArrayList<Sequence>();
+		List<TranslatedSequence> nonFullMatchingCDSs = new ArrayList<TranslatedSequence>();
 		for (Sequence cds:emblCdsSeqs) {
-			if (this.geneEncodingOrganelle!=null) {
-				System.err.println("Warning! The cds sequence "+cds.getSecondaryAccession()+" is not encoded in nucleus!");
-			}
-			ProteinToCDSMatch matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
-			matching.printSummary(99.9999f);
 			
-		}		
+			ProteinToCDSMatch matching = null;
+			try {
+				matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
+			} catch (TranslationException e) {
+				System.err.println("Couldn't translate embl CDS "+cds.getName());
+				System.err.println(e.getMessage());
+				continue; // try the next one
+			}
+			if (matching.hasFullMatch()) {
+				fullMatchingCDSs.add(cds);
+			} else {
+				nonFullMatchingCDSs.add(matching.getBestTranslation()); 
+			}
+		}
+		if (fullMatchingCDSs.size()>1) {
+			HashMap<String,Sequence> map = new HashMap<String, Sequence>();
+			for (Sequence cds:fullMatchingCDSs) {
+				if (!map.containsKey(cds.getSeq())) {
+					map.put(cds.getSeq(), cds); // eliminating identical cdss
+				}
+			}
+			
+			Sequence rep = map.values().iterator().next();
+			if (map.size()>1) {
+				System.err.println("Warning! Multiple fully matching CDSs for uniprot entry "+this.getUniId()+". Using first CDS only ("+rep.getSecondaryAccession()+")"); 
+			}
+			representativeCDS = rep; // returning the first value (the one value if map.size()==1)
+			
+		} else if (fullMatchingCDSs.size()==1) {
+			representativeCDS = fullMatchingCDSs.get(0);
+		// NO full matching CDS, we try with the best matches
+		} else if (nonFullMatchingCDSs.size()>=1) {
+			TranslatedSequence best = Collections.max(nonFullMatchingCDSs);
+			int mismatches = best.getAln().getLength()-best.getAln().getIdentity();
+			System.err.println("Warning! No perfect CDS matches for uniprot entry "+this.getUniId()+". Using the best match with "+mismatches+" mismatches.");
+			best.getAln().printAlignment();
+			//TODO decide what are tolerable mismatching sequences. If tolerable return it, if not return null
+			representativeCDS = best.getSequence();
+		} else {
+			// no good CDS found
+			representativeCDS = null;
+		}
+		repCDScached = true;
+		return representativeCDS;
+	}
+	
+	public void checkEmblCDSMatching() {
+		if (this.geneEncodingOrganelle!=null) {
+			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
+		}
+		int countFullMatches = 0;
+		for (Sequence cds:emblCdsSeqs) {
+			
+			ProteinToCDSMatch matching = null;
+			try {
+				matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
+			} catch (TranslationException e) {
+				System.err.println("Couldn't translate embl CDS "+cds.getName());
+				System.err.println(e.getMessage());
+				continue; // try the next one
+			}
+			matching.printSummary(99.9999f);
+			if (matching.hasFullMatch()) {
+				countFullMatches++;
+			}
+		}
+		if (countFullMatches>1) {
+			System.out.println(this.getUniId()+": "+countFullMatches+" perfect CDS matches");
+		}
 	}
 }

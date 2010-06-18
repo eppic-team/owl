@@ -22,19 +22,18 @@ import owl.core.structure.AminoAcid;
  */
 public class Translator {
 
-
 	private static final String RESOURCES_DIR = "/owl/core/sequence/"; // path to data files to be retrieved with getResourceAsStream
 	private static final String GENCODE_FILE = "geneticCode.dat";
 	
-	private static final Map<Integer,Map<String,AminoAcid>> gcmaps = parseNCBIGenCodeFile(); 
+	private static final Map<Integer,Map<Codon,AminoAcid>> gcmaps = parseNCBIGenCodeFile(); // map of ncbi's genetic code identifiers to maps of codons to aminoacids
 	
 	/**
 	 * Parses NCBI genetic codes file
 	 * @return
 	 */
-	private static Map<Integer,Map<String,AminoAcid>> parseNCBIGenCodeFile() {
+	private static Map<Integer,Map<Codon,AminoAcid>> parseNCBIGenCodeFile() {
 		
-		Map<Integer,Map<String,AminoAcid>> allmaps= new HashMap<Integer,Map<String,AminoAcid>>();
+		Map<Integer,Map<Codon,AminoAcid>> allmaps= new HashMap<Integer,Map<Codon,AminoAcid>>();
 		
 		InputStream inp = null;
 		inp = Translator.class.getResourceAsStream(RESOURCES_DIR+GENCODE_FILE);
@@ -95,15 +94,14 @@ public class Translator {
 		return allmaps;
 	}
 	
-	private static Map<String,AminoAcid> initMap(String ncbieaa, String base1, String base2, String base3) {
-		Map<String,AminoAcid> map = new HashMap<String, AminoAcid>();
+	private static Map<Codon,AminoAcid> initMap(String ncbieaa, String base1, String base2, String base3) {
+		Map<Codon,AminoAcid> map = new HashMap<Codon, AminoAcid>();
 		for (int i=0;i<ncbieaa.length();i++) {
 			AminoAcid aa = AminoAcid.getByOneLetterCode(ncbieaa.charAt(i));
-			char b1 = base1.charAt(i);
-			char b2 = base2.charAt(i);
-			char b3 = base3.charAt(i);
-			char[] codon = {b1,b2,b3};
-			map.put(new String(codon),aa);
+			char b1 = Character.toLowerCase(base1.charAt(i));
+			char b2 = Character.toLowerCase(base2.charAt(i));
+			char b3 = Character.toLowerCase(base3.charAt(i));
+			map.put(new Codon(b1,b2,b3),aa);
 		}
 		return map;
 	}
@@ -114,12 +112,24 @@ public class Translator {
 	 * @param codon
 	 * @return
 	 * @throws IllegalArgumentException if codon length is not 3
+	 * @throws TranslationException if an ambiguous nucleotide code is found in the codon
 	 */
-	public static AminoAcid translate(GeneticCodeType gcType, String codon) {
-		if (codon.length()!=3) {
-			throw new IllegalArgumentException("Codon length is not 3! Codon: "+codon);
+	public static AminoAcid translate(GeneticCodeType gcType, String codon) throws TranslationException {
+		return translate(gcType,new Codon(codon.toLowerCase()));
+	}
+
+	/**
+	 * Translate given codon to its corresponding AminoAcid based on given GeneticCodeType
+	 * @param gcType
+	 * @param codon
+	 * @return
+	 * @throws TranslationException if an ambiguous nucleotide code is found in the codon
+	 */
+	public static AminoAcid translate(GeneticCodeType gcType, Codon codon) throws TranslationException {
+		if (codon.isAmbiguous()) {
+			throw new TranslationException("Ambiguous nucleotide in codon '"+codon+"'");
 		}
-		return gcmaps.get(gcType.getId()).get(codon.toUpperCase());
+		return gcmaps.get(gcType.getId()).get(codon);		
 	}
 	
 	/**
@@ -130,7 +140,7 @@ public class Translator {
 	 * @param rf
 	 * @return
 	 */
-	public static Sequence translate(GeneticCodeType gcType, Sequence sequence, ReadingFrame rf) {
+	public static Sequence translate(GeneticCodeType gcType, Sequence sequence, ReadingFrame rf) throws TranslationException {
 		String seq = sequence.getSeq();
 		StringBuffer sb = new StringBuffer();
 		
