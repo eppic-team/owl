@@ -339,7 +339,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	}
 	
 	/**
-	 * Returns true iff this graph has at least one edge in ]0;1[.
+	 * Returns true if this graph has at least one edge in ]0;1[.
 	 * @return true if at least one edge is weighted
 	 */
 	public boolean hasWeightedEdges() {

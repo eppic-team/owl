@@ -1518,6 +1518,14 @@ public class Pdb implements HasFeatures {
 	}
 	
 	/**
+	 * Returns all residue of pdb
+	 * @return
+	 */
+	public TreeMap<Integer, Residue> getResidues() {
+		return this.residues;
+	}
+	
+	/**
 	 * Gets the 4 letter pdb code identifying this structure
 	 * @return
 	 */
