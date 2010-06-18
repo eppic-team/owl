@@ -157,7 +157,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			Matcher m = Sequence.DEFLINE_PRIM_ACCESSION_REGEX.matcher(sid);
 			if (m.matches()) {
 				String uniId = m.group(1);
-				list.add(new UniprotHomolog(hit,uniId));
+				list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
 			} else {
 				System.err.println("Could not find uniprot id in subject id "+sid);
 			}
@@ -221,12 +221,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		for (UniProtEntry entry:entries) {
 			List<UniprotHomolog> homs = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
 			for (UniprotHomolog hom:homs) {
-				hom.setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
+				hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
 				List<String> taxIds = new ArrayList<String>();
 				for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
 					taxIds.add(ncbiTaxId.getValue());
 				}
-				hom.setTaxIds(taxIds);
+				hom.getUniprotEntry().setTaxIds(taxIds);
 				Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
 				List<String> emblCdsIds = new ArrayList<String>();
 				Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
@@ -239,14 +239,14 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					}
 				}
 				emblCdsIds.addAll(tmpEmblCdsIdsSet); // we use the set to be sure there are no duplicates (it does happen sometimes)
-				hom.setEmblCdsIds(emblCdsIds);
+				hom.getUniprotEntry().setEmblCdsIds(emblCdsIds);
 				
 				List<Organelle> orglls = entry.getOrganelles();
 				if (orglls.size()>0) {
-					hom.setGeneEncodingOrganelle(orglls.get(0).getType());
+					hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType());
 					if (orglls.size()>1) {
 						for (Organelle orgll:orglls){ 
-							if (!orgll.getType().equals(hom.getGeneEncodingOrganelle())) {
+							if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
 								System.err.println("Warning! Different gene encoding organelles for Uniprot "+hom.getUniId());
 							}
 						}
@@ -268,7 +268,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		List<String> allIds = new ArrayList<String>();
 		
 		for (UniprotHomolog hom:this) {
-			allIds.addAll(hom.getEmblCdsIds());
+			allIds.addAll(hom.getUniprotEntry().getEmblCdsIds());
 		}
 		List<Sequence> allSeqs = null;
 		try {
@@ -287,10 +287,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		 
 		for (UniprotHomolog hom:this) {
 			List<Sequence> seqs = new ArrayList<Sequence>();
-			for (String emblCdsId:hom.getEmblCdsIds()) {
+			for (String emblCdsId:hom.getUniprotEntry().getEmblCdsIds()) {
 				seqs.add(lookup.get(emblCdsId));
 			}
-			hom.setEmblCdsSeqs(seqs);
+			hom.getUniprotEntry().setEmblCdsSeqs(seqs);
 		}		
 	}
 	
@@ -441,14 +441,14 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	public void checkEmblCDSMatching() {
 		for (UniprotHomolog hom:this) {
-			hom.checkEmblCDSMatching();
+			hom.getUniprotEntry().checkEmblCDSMatching();
 		}		
 	}
 	
 	public int getNumHomologsWithCDS() {
 		int count = 0;
 		for (UniprotHomolog hom:this) {
-			if (hom.hasCDS()) {
+			if (hom.getUniprotEntry().hasCDS()) {
 				count++;
 			}
 		}				
@@ -458,7 +458,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	public int getNumHomologsWithValidCDS() {
 		int count = 0;
 		for (UniprotHomolog hom:this) {
-			if (hom.getRepresentativeCDS()!=null) {
+			if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
 				count++;
 			}
 		}
