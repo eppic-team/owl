@@ -439,12 +439,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return uniprotVer;
 	}
 	
-	public void checkEmblCDSMatching() {
-		for (UniprotHomolog hom:this) {
-			hom.getUniprotEntry().checkEmblCDSMatching();
-		}		
-	}
-	
 	public int getNumHomologsWithCDS() {
 		int count = 0;
 		for (UniprotHomolog hom:this) {

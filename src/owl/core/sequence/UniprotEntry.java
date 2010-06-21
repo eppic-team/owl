@@ -47,7 +47,7 @@ public class UniprotEntry implements HasFeatures {
 	private GeneEncodingType geneEncodingOrganelle; // the organelle where this gene is encoded (important for genetic code): if gene encoded in nucleus this is null
 	
 	private boolean  repCDScached;
-	private Sequence representativeCDS; // cached after running getRepresentativeCDS()
+	private ProteinToCDSMatch representativeCDS; // cached after running getRepresentativeCDS()
 
 	private Map<FeatureType, Collection<Feature>> features;
 	
@@ -231,91 +231,59 @@ public class UniprotEntry implements HasFeatures {
 	 * The CDSs are translated on their 6 frames, then aligned to the protein sequence
 	 * and if 100% matches exist one of them is returned. If no 100% matches exist the 
 	 * best one is returned (TODO must still check what are tolerable mismatches)
-	 * @return the translated CDS sequence or null if no correct match to the protein
-	 * sequence can be found
+	 * @return the ProteinsToCDSMatch object corresponding to the chosen translated CDS 
+	 * or null if no correct match to the protein sequence can be found
 	 */
-	public Sequence getRepresentativeCDS() {
+	public ProteinToCDSMatch getRepresentativeCDS() {
 		if (repCDScached) {
 			return representativeCDS;
 		}
 		
 		if (this.geneEncodingOrganelle!=null) {
 			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
+			System.exit(1);
 		}
 		
-		List<Sequence> fullMatchingCDSs = new ArrayList<Sequence>();
-		List<TranslatedFrame> nonFullMatchingCDSs = new ArrayList<TranslatedFrame>();
+		List<ProteinToCDSMatch> allMatchings = new ArrayList<ProteinToCDSMatch>();
 		for (Sequence cds:emblCdsSeqs) {
 			
 			ProteinToCDSMatch matching = null;
 			try {
 				matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
+				allMatchings.add(matching);
 			} catch (TranslationException e) {
 				System.err.println("Couldn't translate embl CDS "+cds.getName());
 				System.err.println(e.getMessage());
 				continue; // try the next one
 			}
-			if (matching.hasFullMatch()) {
-				fullMatchingCDSs.add(cds);
-			} else {
-				nonFullMatchingCDSs.add(matching.getBestTranslation()); 
+		}		
+
+		if (allMatchings.size()>0) {
+			List<TranslatedFrame> nonFullMatchingCDSs = new ArrayList<TranslatedFrame>(); 
+			for (ProteinToCDSMatch matching:allMatchings) {
+				if (matching.hasFullMatch()) {
+					representativeCDS = matching;
+					repCDScached = true;
+					return representativeCDS;
+				}
+				nonFullMatchingCDSs.add(matching.getBestTranslation());	
 			}
-		}
-		if (fullMatchingCDSs.size()>1) {
-			HashMap<String,Sequence> map = new HashMap<String, Sequence>();
-			for (Sequence cds:fullMatchingCDSs) {
-				if (!map.containsKey(cds.getSeq())) {
-					map.put(cds.getSeq(), cds); // eliminating identical cdss
+			TranslatedFrame bestTranslation = Collections.max(nonFullMatchingCDSs);
+			for (ProteinToCDSMatch matching:allMatchings){
+				if (matching.getBestTranslation()==bestTranslation) {
+					representativeCDS = matching;
+					repCDScached = true;
+					// TODO must still check whether this is an acceptable match, or should we do that at a later stage?
+					int mismatches = bestTranslation.getNumMismatches();
+					System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
+					bestTranslation.getAln().printAlignment();
+					return representativeCDS;
 				}
 			}
-			
-			Sequence rep = map.values().iterator().next();
-			if (map.size()>1) {
-				System.err.println("Warning! Multiple fully matching CDSs for uniprot entry "+this.getUniId()+". Using first CDS only ("+rep.getSecondaryAccession()+")"); 
-			}
-			representativeCDS = rep; // returning the first value (the one value if map.size()==1)
-			
-		} else if (fullMatchingCDSs.size()==1) {
-			representativeCDS = fullMatchingCDSs.get(0);
-		// NO full matching CDS, we try with the best matches
-		} else if (nonFullMatchingCDSs.size()>=1) {
-			TranslatedFrame best = Collections.max(nonFullMatchingCDSs);
-			int mismatches = best.getNumMismatches();
-			System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+best.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");
-			best.getAln().printAlignment();
-			//TODO decide what are tolerable mismatching sequences. If tolerable return it, if not return null
-			representativeCDS = best.getSequence();
-		} else {
-			// no good CDS found
-			representativeCDS = null;
 		}
 		repCDScached = true;
+		representativeCDS = null;
 		return representativeCDS;
-	}
-	
-	public void checkEmblCDSMatching() {
-		if (this.geneEncodingOrganelle!=null) {
-			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
-		}
-		int countFullMatches = 0;
-		for (Sequence cds:emblCdsSeqs) {
-			
-			ProteinToCDSMatch matching = null;
-			try {
-				matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
-			} catch (TranslationException e) {
-				System.err.println("Couldn't translate embl CDS "+cds.getName());
-				System.err.println(e.getMessage());
-				continue; // try the next one
-			}
-			matching.printSummary(99.9999f);
-			if (matching.hasFullMatch()) {
-				countFullMatches++;
-			}
-		}
-		if (countFullMatches>1) {
-			System.out.println(this.getUniId()+": "+countFullMatches+" perfect CDS matches");
-		}
 	}
 
 	/*------------------------ HasFeature interface implementation -----------------------*/

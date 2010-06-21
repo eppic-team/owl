@@ -134,4 +134,8 @@ public class ProteinToCDSMatch {
 	public ReadingFrame getBestTranslationFrame() {
 		return getBestTranslation().getReadingFrame();
 	}
+	
+	public String getCDSName() {
+		return this.cds.getName();
+	}
 }
