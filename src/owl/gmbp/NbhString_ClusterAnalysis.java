@@ -17,7 +17,7 @@ public class NbhString_ClusterAnalysis {
 	private int[] clusterN;      // contains clusterIDs: -1=noClusterAllocatedYet 0=Noise ID>0-->belongsToCluster
 	private int numFoundClusters;	
 	private double[][] clusterProp; // [][0]:minL, [][1]:averageL, [][2]:maxL, [][3]:minP, [][4]:averP, [][5]:maxP
-	private Vector<Integer>[] clusters; // clusters.length=numFoundClusters+1; 
+	private Vector<Integer>[] clusters; // clusters.length=numFoundClusters+1;  //Vector<Integer>[] clusters;
 									//clusters contains a vector of all IDs for noise (background) and each found cluster
 	private Vector<int[]> edges; // contains array with index of start-node and end-node for each edge --> int[2]
 	 							// index=start-node --> outgoing edge; index=end-node --> inbound edge
@@ -47,6 +47,10 @@ public class NbhString_ClusterAnalysis {
 	}
 	
 	// ______public methods
+	
+	/**
+	 Performs DBScan-algorithm
+	 */		
 	public void runClusterAnalysis(){		
 		int clusterID = 0;
 		int index;
@@ -55,19 +59,12 @@ public class NbhString_ClusterAnalysis {
 			if (!this.visistedN[i]){ // not visited yet
 				this.visistedN[i] = true;
 				nbIndices = getAllDirectNeighbours(i);
-//				int numNB = nbIndices.size();
-//				float[] node = (float[]) this.nbhsNodes.get(i);
 				if (nbIndices.size()<this.minNumNBs){
 					this.clusterN[i] = 0;
-					// Testoutput
-//					System.out.println(0+": "+(node[4]+Math.PI)+" , "+node[3]);
 				}
 				else{
 					clusterID++;
-					this.clusterN[i] = clusterID;
-//					// Testoutput
-//					System.out.println(clusterID+": "+(node[4]+Math.PI)+" , "+node[3]+ "  nbIndices.size()="+numNB);
-					
+					this.clusterN[i] = clusterID;					
 					for (int j=0; j<nbIndices.size(); j++){
 						index = (int) nbIndices.get(j);
 						if (this.clusterN[index] < 0){ // not yet member of any cluster or noise
@@ -82,6 +79,53 @@ public class NbhString_ClusterAnalysis {
 		System.out.println("number of extracted Clusters= "+this.numFoundClusters);
 	}
 	
+	/**
+	 Computes the set of all direct neighbours, for which 
+	 the distance is smaller than the given threshold epsilon.
+	 @param index of node
+	 @return vector with all direct neighbours
+	 */	
+	private Vector<Integer> getAllDirectNeighbours(int index){
+		Vector<Integer> nb = new Vector<Integer>();		
+		float[] centralN, node;
+		centralN = (float[]) this.nbhsNodes.get(index);
+		for(int i=0; i<this.nbhsNodes.size(); i++){
+			if (i!=index)
+			{
+				node = (float[]) this.nbhsNodes.get(i);
+				double dist;
+//				dist = getEuclideanDist(centralN[4]+Math.PI, centralN[3], node[4]+Math.PI, node[3]);
+				dist = getGeodesicDist(centralN[4]+Math.PI, centralN[3], node[4]+Math.PI, node[3]);
+				if (dist<this.epsilon)
+					nb.add(i);
+			}
+		}
+		return nb;
+	}
+		
+	private void expandCluster(int index, int clusterID){
+		this.clusterN[index] = clusterID;
+		int indexNB;
+		
+		if (!this.visistedN[index]){  // not visited yet
+			this.visistedN[index] = true;
+			Vector<Integer> nbIndices = getAllDirectNeighbours(index);
+			if (nbIndices.size() >= this.minNumNBs){
+				for (int j=0; j<nbIndices.size(); j++){
+					indexNB = (int) nbIndices.get(j);
+					if (this.clusterN[indexNB] == -1){ // not yet member of any cluster or noise
+						expandCluster(indexNB,clusterID);
+					}
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 Computes all properties of edge bundles outgoing from each found cluster
+	 that might be important for displaying purposes.
+	 */		
 	public void analyseEdgeDirection(){
 		if (this.numFoundClusters<=0)
 			runClusterAnalysis();
@@ -149,11 +193,10 @@ public class NbhString_ClusterAnalysis {
 			// use average lambda and phi as centroid
 			this.clusterAverDirec = new Vector<double[]>();
 			for (int i=1; i<this.clusters.length; i++){ 
-				System.out.println("C_ID="+i);
+//				System.out.println("C_ID="+i);
 				double[] averDir = new double[2];
-//				double[] dir1 = new double[2];
-				double[] dir2 = new double[2];
-				// --- histogram of quadrants
+				double[] dir = new double[2];
+				// --- histogram of quadrants --> use quadrant with most outgoing edges for average (remove outliers)
 				int[] histQuad = new int[4];
 				for (int j=0; j<clusters[i].size(); j++){
 					int nodeID = clusters[i].get(j);
@@ -163,20 +206,19 @@ public class NbhString_ClusterAnalysis {
 						nbNode = (float[]) this.nbhsNodes.get(nodeID);
 						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
 							// node[4]:lambda node[3]:phi
-							dir2[0] = nbNode[4]-node[4];
-							dir2[1] = nbNode[3]-node[3];
-							dir2 = normaliseVector(dir2);
-							int quad = getQuadrant4Vector(dir2);
+							dir[0] = nbNode[4]-node[4];
+							dir[1] = nbNode[3]-node[3];
+							dir = normaliseVector(dir);
+							int quad = getQuadrant4Vector(dir);
 							histQuad[quad]++;
 						}
 					}
 				}
-				System.out.println("Quadrants occupied: "+histQuad[0]+" - "+histQuad[1]+" - "+histQuad[2]+" - "+histQuad[3]);
 				int quad2use = 0;
 				for (int k=1; k<4; k++)
 					if (histQuad[k]>histQuad[quad2use])
 						quad2use = k;
-				System.out.println("Quadrant2Use = "+quad2use);
+				System.out.println("C_ID="+i+"  Quadrants occupied: "+histQuad[0]+" - "+histQuad[1]+" - "+histQuad[2]+" - "+histQuad[3]+" --> Quadrant2Use = "+quad2use);
 				//for each node of cluster
 				int startNode = 0;
 				for (int j=0; j<clusters[i].size(); j++){
@@ -187,16 +229,16 @@ public class NbhString_ClusterAnalysis {
 						nbNode = (float[]) this.nbhsNodes.get(nodeID);
 						if (node[0]==nbNode[0] && node[1]==nbNode[1]){
 							// node[4]:lambda node[3]:phi
-							dir2[0] = nbNode[4]-node[4];
-							dir2[1] = nbNode[3]-node[3];
-							dir2 = normaliseVector(dir2);
-							int quad = getQuadrant4Vector(dir2);
+							dir[0] = nbNode[4]-node[4];
+							dir[1] = nbNode[3]-node[3];
+							dir = normaliseVector(dir);
+							int quad = getQuadrant4Vector(dir);
 							if (quad==quad2use){
 								if (j==startNode)
-									averDir = dir2;
+									averDir = dir;
 								else{
-									averDir[0] = averDir[0]+dir2[0];
-									averDir[1] = averDir[1]+dir2[1];
+									averDir[0] = averDir[0]+dir[0];
+									averDir[1] = averDir[1]+dir[1];
 									averDir = normaliseVector(averDir);
 								}								
 							}
@@ -204,7 +246,7 @@ public class NbhString_ClusterAnalysis {
 								if (j==startNode)
 									startNode++;
 							}
-							System.out.println(quad+" dir2="+String.valueOf(dir2[0])+" , "+String.valueOf(dir2[1])+" --> averDir="+String.valueOf(averDir[0])+" , "+String.valueOf(averDir[1]));													
+//							System.out.println(quad+" dir="+String.valueOf(dir[0])+" , "+String.valueOf(dir[1])+" --> averDir="+String.valueOf(averDir[0])+" , "+String.valueOf(averDir[1]));													
 						}						
 					}
 				}
@@ -241,11 +283,11 @@ public class NbhString_ClusterAnalysis {
 						}							
 					}
 				}
-				System.out.println(this.clusters[i].size()+"nodes of cluster "+i+" end up in: ");
+//				System.out.println(this.clusters[i].size()+"nodes of cluster "+i+" end up in: ");
 				int idSuccClus = 0;
 				boolean centralRes = false;
 				for (int j=0; j<countNBclusters.length; j++){
-					System.out.print(countNBclusters[j]+" "+(double)countNBclusters[j]/cnt+"\t");
+//					System.out.print(countNBclusters[j]+" "+(double)countNBclusters[j]/cnt+"\t");
 					if ((double)countNBclusters[j]/cnt > 0.5){
 						if (j<=numFoundClusters)
 							idSuccClus = j;
@@ -253,10 +295,10 @@ public class NbhString_ClusterAnalysis {
 							centralRes = true;
 					}
 				}
-//				if (idSuccClus>this.numFoundClusters)
 				if (centralRes)
 					idSuccClus *= -1;
-				System.out.println("Successor cluster="+idSuccClus);
+//				System.out.println("Successor cluster="+idSuccClus);
+				System.out.println(this.clusters[i].size()+"nodes of cluster "+i+" end up in: "+idSuccClus);
 				this.nbCluster[i-1] = idSuccClus;
 			}
 		}
@@ -289,6 +331,10 @@ public class NbhString_ClusterAnalysis {
 		return nVec;
 	}
 	
+	/**
+	 Computes Cluster properties of contained nodes:
+	 minimum, maximum and average values of node positions (lambda and phi).
+	 */		
 	@SuppressWarnings("unchecked")
 	public void analyseClusters(){
 		if (this.numFoundClusters<=0)
@@ -376,6 +422,12 @@ public class NbhString_ClusterAnalysis {
 		}
 	}
 	
+	/**
+	 returns the slope of a line through two nodes
+	 @param position one
+	 @param position two
+	 @return slope
+	 */		 
 	private double getSlope(float[] node1, float[] node2){
 		double m;
 		m = (node2[3]-node1[3])/(node2[4]-node1[4]);
@@ -383,10 +435,15 @@ public class NbhString_ClusterAnalysis {
 		return m;
 	}
 	
-	/*  Computes the geodesic great circle distance between two points on a sphere,
-	 *  given by (lambda1,phi1) and (lambda2,phi2), whereas both angles need to be >0:
-	 *  lambda[0:2Pi] and phi[0:Pi].
-	 * */
+	/**
+	 Computes the geodesic great circle distance between two points on a sphere, 
+	 whereas lambda[0:2Pi] and phi[0:Pi].
+	 @param lambda value of first point
+	 @param phi value of first point
+	 @param lambda value of second point
+	 @param phi value of second point
+	 @return geodesic distance 
+	 */		 
 	private double getGeodesicDist(double l1, double p1, double l2, double p2){
 		double dist = 0;
 		double spherAng = 0;
@@ -400,10 +457,15 @@ public class NbhString_ClusterAnalysis {
 		return dist;
 	}
 	
-	/*  Computes the Euclidian distance between two points on a sphere,
-	 *  given by (lambda1,phi1) and (lambda2,phi2), whereas both angles need to be >0:
-	 *  lambda[0:2Pi] and phi[0:Pi].
-	 * */
+	/**
+	 Computes the Euclidian distance between two points on a sphere, 
+	 whereas lambda[0:2Pi] and phi[0:Pi].
+	 @param lambda value of first point
+	 @param phi value of first point
+	 @param lambda value of second point
+	 @param phi value of second point
+	 @return Euclidian distance 
+	 */	
 	@SuppressWarnings("unused")
 	private double getEuclideanDist(double l1, double p1, double l2, double p2){
 		double dist = 0;
@@ -420,45 +482,6 @@ public class NbhString_ClusterAnalysis {
 		return dist;
 	}
 	
-	private Vector<Integer> getAllDirectNeighbours(int index){
-		Vector<Integer> nb = new Vector<Integer>();		
-		float[] centralN, node;
-		centralN = (float[]) this.nbhsNodes.get(index);
-		for(int i=0; i<this.nbhsNodes.size(); i++){
-//			if (!this.visistedN[i]) // not visited yet 
-			if (i!=index)
-			{
-				node = (float[]) this.nbhsNodes.get(i);
-				double dist;
-//				dist = getEuclideanDist(centralN[4]+Math.PI, centralN[3], node[4]+Math.PI, node[3]);
-				dist = getGeodesicDist(centralN[4]+Math.PI, centralN[3], node[4]+Math.PI, node[3]);
-				if (dist<this.epsilon)
-					nb.add(i);
-			}
-		}
-		return nb;
-	}
-		
-	private void expandCluster(int index, int clusterID){
-		this.clusterN[index] = clusterID;
-		int indexNB;
-//		// Testoutput
-//		float[] node = (float[]) this.nbhsNodes.get(index);
-//		System.out.println(clusterID+": "+(node[4]+Math.PI)+" , "+node[3]);
-		
-		if (!this.visistedN[index]){  // not visited yet
-			this.visistedN[index] = true;
-			Vector<Integer> nbIndices = getAllDirectNeighbours(index);
-			if (nbIndices.size() >= this.minNumNBs){
-				for (int j=0; j<nbIndices.size(); j++){
-					indexNB = (int) nbIndices.get(j);
-					if (this.clusterN[indexNB] == -1){ // not yet member of any cluster or noise
-						expandCluster(indexNB,clusterID);
-					}
-				}
-			}
-		}
-	}
 	
 	// --- Getters and Setters ---	
 	public Vector<float[]> getNbhsNodes() {
