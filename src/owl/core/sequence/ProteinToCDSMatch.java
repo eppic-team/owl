@@ -15,7 +15,8 @@ public class ProteinToCDSMatch {
 	private Sequence protein;
 	private Sequence cds;
 	private GeneticCodeType gct;
-	private Map<ReadingFrame, TranslatedSequence> translations;
+	private Map<ReadingFrame, TranslatedFrame> translations;
+	private TranslatedFrame bestTranslation; // the cached best translation from the map above
 	
 	public ProteinToCDSMatch(Sequence protein, Sequence cds,GeneticCodeType gct) throws TranslationException {
 		this.protein = protein;
@@ -30,12 +31,12 @@ public class ProteinToCDSMatch {
 		this.align();
 	}
 	
-	private Map<ReadingFrame,TranslatedSequence> get6FramesTranslations() throws TranslationException {
-		Map<ReadingFrame,TranslatedSequence> map = new HashMap<ReadingFrame, TranslatedSequence>();
+	private Map<ReadingFrame,TranslatedFrame> get6FramesTranslations() throws TranslationException {
+		Map<ReadingFrame,TranslatedFrame> map = new HashMap<ReadingFrame, TranslatedFrame>();
 		for (ReadingFrame rf:ReadingFrame.values()) {
 			Sequence translated = Translator.translate(this.gct, this.cds, rf);
 			translated.chopStopCodon();
-			map.put(rf, new TranslatedSequence(translated,rf));
+			map.put(rf, new TranslatedFrame(translated,rf));
 		}
 		return map;
 	}
@@ -43,7 +44,7 @@ public class ProteinToCDSMatch {
 	private void align() {
 		for (ReadingFrame rf:translations.keySet()) {
 			try {
-				TranslatedSequence translated = translations.get(rf);
+				TranslatedFrame translated = translations.get(rf);
 				PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(this.protein,translated.getSequence());
 				translated.setAln(psa);
 			} catch (PairwiseSequenceAlignmentException e) {
@@ -53,8 +54,11 @@ public class ProteinToCDSMatch {
 		}
 	}
 	
-	public TranslatedSequence getBestTranslation() {
-		return Collections.max(translations.values());
+	public TranslatedFrame getBestTranslation() {
+		if (bestTranslation==null) {
+			bestTranslation = Collections.max(translations.values()); 
+		}
+		return bestTranslation; 
 	}
 	
 	public boolean hasFullMatch() {
@@ -66,7 +70,7 @@ public class ProteinToCDSMatch {
 	}
 	
 	public void printSummary(float cutoff) {
-		TranslatedSequence best = getBestTranslation();
+		TranslatedFrame best = getBestTranslation();
 		//if (!best.rf.equals(ReadingFrame.ONE) || best.percentIdentity<cutoff) {
 		if (best.getPercentIdentity()<cutoff) {
 			System.out.printf("%s\t%s\tframe %2d\t%5.1f\t%d\n",protein.getName(),best.getSequence().getSecondaryAccession(),best.getReadingFrame().getNumber(),best.getPercentIdentity(),best.getMismatches());
@@ -76,7 +80,7 @@ public class ProteinToCDSMatch {
 		
 	}
 	
-	private void printMatching(TranslatedSequence translated) {
+	private void printMatching(TranslatedFrame translated) {
 		int lineWidth = 80;
 		int codonPrintWidth = 5;
 		StringBuffer protLine = new StringBuffer();

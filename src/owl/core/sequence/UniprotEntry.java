@@ -242,9 +242,9 @@ public class UniprotEntry implements HasFeatures {
 		if (this.geneEncodingOrganelle!=null) {
 			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
 		}
-
+		
 		List<Sequence> fullMatchingCDSs = new ArrayList<Sequence>();
-		List<TranslatedSequence> nonFullMatchingCDSs = new ArrayList<TranslatedSequence>();
+		List<TranslatedFrame> nonFullMatchingCDSs = new ArrayList<TranslatedFrame>();
 		for (Sequence cds:emblCdsSeqs) {
 			
 			ProteinToCDSMatch matching = null;
@@ -279,8 +279,8 @@ public class UniprotEntry implements HasFeatures {
 			representativeCDS = fullMatchingCDSs.get(0);
 		// NO full matching CDS, we try with the best matches
 		} else if (nonFullMatchingCDSs.size()>=1) {
-			TranslatedSequence best = Collections.max(nonFullMatchingCDSs);
-			int mismatches = best.getAln().getLength()-best.getAln().getIdentity();
+			TranslatedFrame best = Collections.max(nonFullMatchingCDSs);
+			int mismatches = best.getNumMismatches();
 			System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+best.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");
 			best.getAln().printAlignment();
 			//TODO decide what are tolerable mismatching sequences. If tolerable return it, if not return null

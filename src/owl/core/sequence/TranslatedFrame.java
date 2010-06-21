@@ -5,15 +5,18 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 /**
  * A class to encapsulate a sequence translation together with the reading frame used
  * for translation and the alignment to its reference protein sequence.
+ * 
+ * Comparable based on the sequence identities of the alignments.
+ * 
  * @author duarte_j
  *
  */
-public class TranslatedSequence implements Comparable<TranslatedSequence> {
-	private Sequence sequence;
-	private PairwiseSequenceAlignment psa;
+public class TranslatedFrame implements Comparable<TranslatedFrame> {
+	private Sequence sequence; // the translated sequence (protein)
+	private PairwiseSequenceAlignment psa; // the alignment between the translated sequence and the reference protein sequence
 	private ReadingFrame rf;
 
-	public TranslatedSequence(Sequence sequence, ReadingFrame rf) {
+	public TranslatedFrame(Sequence sequence, ReadingFrame rf) {
 		this.sequence = sequence;
 		this.rf = rf;
 	}
@@ -35,7 +38,7 @@ public class TranslatedSequence implements Comparable<TranslatedSequence> {
 	}
 	
 	@Override
-	public int compareTo(TranslatedSequence o) {
+	public int compareTo(TranslatedFrame o) {
 		return Float.compare(this.getPercentIdentity(), o.getPercentIdentity());
 	}
 	
@@ -46,4 +49,9 @@ public class TranslatedSequence implements Comparable<TranslatedSequence> {
 	public ReadingFrame getReadingFrame() {
 		return rf;
 	}
+	
+	public int getNumMismatches() {
+		return this.psa.getLength()-this.psa.getIdentity();
+	}
+		
 }
