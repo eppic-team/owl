@@ -6,7 +6,17 @@ import java.util.Map;
 
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
+import owl.core.structure.AminoAcid;
 
+/**
+ * Class encapsulating an aminoacid sequence and its corresponding Uniprot-mapped CDS 
+ * (nucleotide coding sequence). It contains methods to check the translation of the CDS 
+ * sequence to the reference sequence and to obtain the best matching translation from
+ * all the possible reading frames. 
+ * 
+ * @author duarte_j
+ *
+ */
 public class ProteinToCDSMatch {
 
 	private static final float PERFECT_MATCH_THRESHOLD = 99.99999f;
@@ -22,11 +32,6 @@ public class ProteinToCDSMatch {
 		this.protein = protein;
 		this.cds = cds;
 		this.gct = gct;
-		// we don't warn anymore about the nucleotide sequence not being multiple of 3
-		// we do translations in all frames and alignments and if things don't match then we warn
-		//if (cds.getLength()%3!=0) {
-		//	System.err.println("Warning! Nucleotide sequence length is not multiple of 3 for sequence "+cds.getName());
-		//}
 		this.translations = get6FramesTranslations();
 		this.align();
 	}
@@ -54,6 +59,11 @@ public class ProteinToCDSMatch {
 		}
 	}
 	
+	/**
+	 * Gets the translation (sequence plus reading frame) of the CDS that matches with 
+	 * the highest sequence identity the reference protein. 
+	 * @return
+	 */
 	public TranslatedFrame getBestTranslation() {
 		if (bestTranslation==null) {
 			bestTranslation = Collections.max(translations.values()); 
@@ -61,6 +71,44 @@ public class ProteinToCDSMatch {
 		return bestTranslation; 
 	}
 	
+	/**
+	 * Gets the nucleotide sequence of the best translation obtained from {@link #getBestTranslation()}
+	 * by chopping off the non-translated tails. The output nucleotide sequence length will 
+	 * be multiple of 3. 
+	 * @return
+	 */
+	public String getNucleotideSeqForBestTranslation() {
+		ReadingFrame rf = getBestTranslationFrame();
+		StringBuffer sequenceSB = new StringBuffer(cds.getSeq());
+		if (rf.isReverse()) {
+			sequenceSB.reverse();
+		}
+		
+		String seq = sequenceSB.toString();
+		seq = seq.substring(Math.abs(rf.getNumber()-1));
+		seq = seq.substring(0,seq.length()-seq.length()%3);
+		if (seq.length()%3!=0) {
+			System.err.println("Error! The nucleotide sequence is not multiple of 3! Please report a bug.");
+			System.exit(1);
+		}
+		// chopping off the stop codon (if there is one)
+		try {
+			if (Translator.translate(this.gct, new Codon(seq.substring(seq.length()-3, seq.length()))).equals(AminoAcid.STP)) {
+				seq = seq.substring(0,seq.length()-3);
+			}
+		} catch (TranslationException e) {
+			System.err.println("Unexpected error while trying to chop off the STOP codon");
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return seq;
+	}
+	
+	/**
+	 * Returns true if this ProteinToCDSMatch has a fully matching CDS (100% identity 
+	 * to the reference protein sequence) in one of the reading frame. 
+	 * @return
+	 */
 	public boolean hasFullMatch() {
 		if (getBestTranslation().getPercentIdentity()>PERFECT_MATCH_THRESHOLD) {
 			return true;
@@ -131,11 +179,24 @@ public class ProteinToCDSMatch {
 
 	}
 	
+	/**
+	 * Gets the translation frame for which the CDS translation matches with highest
+	 * sequence identity to the reference protein sequence.
+	 * @return
+	 */
 	public ReadingFrame getBestTranslationFrame() {
 		return getBestTranslation().getReadingFrame();
 	}
 	
 	public String getCDSName() {
 		return this.cds.getName();
+	}
+	
+	public Sequence getCDS() {
+		return this.cds;
+	}
+	
+	public Sequence getProteinSequence() {
+		return this.protein;
 	}
 }

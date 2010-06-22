@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -374,6 +375,44 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		
 		return aln;
+	}
+	
+	/**
+	 * Returns a multiple sequence alignment of all valid nucleotide CDS sequences from the 
+	 * UniprotHomologList by mapping the nucleotide sequences to the protein sequences 
+	 * alignment. 
+	 * @return
+	 */
+	public MultipleSequenceAlignment getNucleotideAlignment(MultipleSequenceAlignment protAln) {
+		TreeMap<String,String> allSeqs = new TreeMap<String, String>();
+		for (UniprotHomolog hom:this) {
+			StringBuffer nucSeqSB = new StringBuffer();
+			String protSeq = protAln.getAlignedSequence(hom.getBlastHit().getSubjectId());
+			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
+			String bestNucSeq = matching.getNucleotideSeqForBestTranslation();
+			int j = 0;
+			for (int i=0;i<protSeq.length();i++) {
+				char aa = protSeq.charAt(i);
+				if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+				} else {
+					nucSeqSB.append(bestNucSeq.substring(j, j+3));
+					j+=3;
+				}
+			}
+			allSeqs.put(matching.getCDSName(),nucSeqSB.toString());
+		}
+		MultipleSequenceAlignment nucAln = null;
+		try {
+			nucAln = new MultipleSequenceAlignment(allSeqs);
+		} catch(AlignmentConstructionError e) {
+			System.err.println("Unexpected error while creating the nucleotides alignment");
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return nucAln;
 	}
  
 	/**

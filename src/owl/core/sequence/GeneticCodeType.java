@@ -12,26 +12,29 @@ import java.util.Map;
  */
 public enum GeneticCodeType {
 	
-	STANDARD     (1, true,false,"Standard"),
-	VERT_MIT     (2,false, true,"Vertebrate Mitochondrial"),
-	YEAST_MIT    (3,false, true,"Yeast Mitochondrial"),
-	MOLD_MIT     (4,false, true,"Mold Mitochondrial; Protozoan Mitochondrial; Coelenterate Mitochondrial; Mycoplasma; Spiroplasma"),
-	INV_MIT      (5,false, true,"Invertebrate Mitochondrial"),
-	CIL_NUC      (6,true ,false,"Ciliate Nuclear; Dasycladacean Nuclear; Hexamita Nuclear"),
-	ECHI_MIT     (7,false, true,"Echinoderm Mitochondrial; Flatworm Mitochondrial"),
-	EUPLOTID_NUC (8,true, false,"Euplotid Nuclear");
+	STANDARD     (1, 0, true, false,"Standard"),
+	VERT_MIT     (2, 4, false, true,"Vertebrate Mitochondrial"),
+	YEAST_MIT    (3,10, false, true,"Yeast Mitochondrial"),
+	MOLD_MIT     (4, 9, false, true,"Mold Mitochondrial; Protozoan Mitochondrial; Coelenterate Mitochondrial; Mycoplasma; Spiroplasma"),
+	INV_MIT      (5, 8, false, true,"Invertebrate Mitochondrial"),
+	CIL_NUC      (6, 2, true ,false,"Ciliate Nuclear; Dasycladacean Nuclear; Hexamita Nuclear"),
+	// selecton has different ids for flatworm (7) and echinoderm mitochondrial (6), why?
+	ECHI_MIT     (7, 6, false, true,"Echinoderm Mitochondrial; Flatworm Mitochondrial"), 
+	EUPLOTID_NUC (8, 3, true, false,"Euplotid Nuclear");
 	// there are still more exotic genetic codes defined by ncbi, didn't add them yet
 
 	private static Map<Integer, GeneticCodeType> id2GCT = initId2GCT();
 
 	
 	private int id;
+	private int selectonId;
 	private boolean mitochondrial;
 	private boolean nuclear;
 	private String name;
 	
-	private GeneticCodeType(int id, boolean nuclear, boolean mitochondrial, String name) {
+	private GeneticCodeType(int id, int selectonId, boolean nuclear, boolean mitochondrial, String name) {
 		this.id = id;
+		this.selectonId = selectonId;
 		this.nuclear = nuclear;
 		this.mitochondrial = mitochondrial;
 		this.name = name;
@@ -55,6 +58,10 @@ public enum GeneticCodeType {
 	
 	public int getId() {
 		return id;
+	}
+	
+	public int getSelectonId() {
+		return selectonId;
 	}
 	
 	public String getName() {
