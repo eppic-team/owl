@@ -129,13 +129,13 @@ public class GmbpGeometry {
 		// CENTRAL RESIDUE: TRANSLATION TO ORIGIN OVER // 		
 
 		if (toRotate) {//Performing the rotations only if the  "toRotate=true"
-		RotMatrix01 = getRotationMatrix01 (atom_coord_rotated);
-		atom_coord_rotated = getCoordAfterRotation (resser_i, res_type_i, pdb, atom_coord_rotated, RotMatrix01);
-		// CENTRAL RESIDUE: FIRST ROTATION OVER // 		
-
-		RotMatrix02 = getRotationMatrix02 (atom_coord_rotated);
-		atom_coord_rotated = getCoordAfterRotation (resser_i, res_type_i, pdb, atom_coord_rotated, RotMatrix02);
-		// CENTRAL RESIDUE: SECOND ROTATION OVER //
+			RotMatrix01 = getRotationMatrix01 (atom_coord_rotated);
+			atom_coord_rotated = getCoordAfterRotation (resser_i, res_type_i, pdb, atom_coord_rotated, RotMatrix01);
+			// CENTRAL RESIDUE: FIRST ROTATION OVER // 		
+	
+			RotMatrix02 = getRotationMatrix02 (atom_coord_rotated);
+			atom_coord_rotated = getCoordAfterRotation (resser_i, res_type_i, pdb, atom_coord_rotated, RotMatrix02);
+			// CENTRAL RESIDUE: SECOND ROTATION OVER //
 		}
 
 		// FOR EXTRACTING & WRITING THE TRANS-ROTATED COORDINATE INFORMATION OF A *SPECIFIC NEIGHBOR* OF THE *PRESENT NODE*. 
@@ -322,16 +322,28 @@ public class GmbpGeometry {
 		return RotMatrix02_4d;      
 	}        
 	
-	public Vector3d getSphericalFromKartesian (Vector3d Atom_Coord) {
+	public Vector3d getSphericalFromCartesian (Vector3d Atom_Coord) {
 		// METHOD for conversion from Cartesian to Spherical Coordinates
 		Vector3d Atom_Coord_sph = new Vector3d(0,0,0);
-
+		
+		// Sph(r,theta,phi) or Sph(r,phi,lambda)
 		Atom_Coord_sph.x = Math.sqrt( Math.pow(Atom_Coord.x, 2) + Math.pow(Atom_Coord.y, 2) + Math.pow(Atom_Coord.z, 2) ); //r
 		//Atom_Coord_sph.y = Math.atan2(Math.sqrt(Math.pow(Atom_Coord.x, 2)+Math.pow(Atom_Coord.y, 2)), Atom_Coord.z); //theta
 		Atom_Coord_sph.y = Math.acos( Atom_Coord.z/Atom_Coord_sph.x); //theta
 		Atom_Coord_sph.z = Math.atan2(Atom_Coord.y, Atom_Coord.x); //phi
 
 		return Atom_Coord_sph;
+	}
+	
+	public Vector3d getCartesianFromSpherical(Vector3d Atom_Coord){
+		// METHOD for conversion from Cartesian to Spherical Coordinates
+		Vector3d Atom_Coord_car = new Vector3d(0,0,0);
+		
+		Atom_Coord_car.x = Atom_Coord.x * Math.sin(Atom_Coord.y) * Math.cos(Atom_Coord.z);
+		Atom_Coord_car.y = Atom_Coord.x * Math.sin(Atom_Coord.y) * Math.sin(Atom_Coord.z);
+		Atom_Coord_car.x = Atom_Coord.x * Math.cos(Atom_Coord.y);
+		
+		return Atom_Coord_car;
 	}
 
 }

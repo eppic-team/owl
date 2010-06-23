@@ -57,13 +57,13 @@ public class CMPdb_nbhString_traces {
 		
 		stmt = conn.createStatement();	
 
-		System.out.println("extracting nbhstrings of certain type");
+//		System.out.println("extracting nbhstrings of certain type");
 		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' limit "+this.maxNumLines+";";
 		result_nbhs = stmt.executeQuery(query);
 		Vector<int[]> nodes = new Vector<int[]>();
 		while (result_nbhs.next()) {
 			int[] val = {result_nbhs.getInt(1), result_nbhs.getInt(2)}; //new int[2];
-			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
+//			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
 		System.out.println("number of nbhsTraces: "+nodes.size());
@@ -75,7 +75,7 @@ public class CMPdb_nbhString_traces {
 		int[] numNodesSSType = new int[sstypes.length];
 		int[][] numNodesSSTypeLine = new int[sstypes.length][nodes.size()];
 		
-		System.out.println("graphi_id + '\t' + i_num + '\t' + j_num + '\t' + theta + '\t' + phi");
+//		System.out.println("graphi_id + '\t' + i_num + '\t' + j_num + '\t' + theta + '\t' + phi");
 		for (int i=0; i<nodes.size(); i++){
 			stmt = conn.createStatement();
 			int[] val = (int[]) nodes.get(i);
