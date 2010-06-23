@@ -6,6 +6,7 @@ import owl.core.structure.Pdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.MySQLConnection;
 
 /**
  * Example implementation of the ResidueContactScoringFunction interface.
@@ -98,7 +99,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 	
 	@Override
 	public void init(Sequence sequence, RIGraph contacts,
-			SecondaryStructure ss, Pdb coordinates) {
+			SecondaryStructure ss, Pdb coordinates, MySQLConnection conn) {
 		this.sequence = sequence;
 		this.contacts = contacts;
 		// ignoring secondary structure and coordinates
@@ -151,7 +152,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 		
 		// initialize scoring function
 		HydrophobicPotential scoringFunction = new HydrophobicPotential();
-		scoringFunction.init(testSeq, new RIGraph(testSeq.getSeq()), null, null);
+		scoringFunction.init(testSeq, new RIGraph(testSeq.getSeq()), null, null,null);
 		
 		// printing all pairwise scores
 		for(int i = 1; i <= testSeq.getLength(); i++) {

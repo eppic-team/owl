@@ -444,7 +444,6 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		//TODO Get rid of this and only keep fast one??
 		
 		HashMap<Integer,Integer> resser2nodeid = new HashMap<Integer,Integer>();
-		
 		// values we fix to constant 
 		String CW = "1";
 		String CR = "(true)";

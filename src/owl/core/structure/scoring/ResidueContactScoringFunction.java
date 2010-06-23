@@ -4,6 +4,7 @@ import owl.core.sequence.Sequence;
 import owl.core.structure.Pdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.MySQLConnection;
 
 /**
  * This interface defines a scoring function for residue-residue contacts in proteins.
@@ -26,7 +27,7 @@ import owl.core.structure.graphs.RIGraph;
  * 
  * It is encouraged to return scores normalized to values between 0 and 1. We do not make this
  * a strict requirement yet because we need to gain more experience in how for this is a too severe
- * restriction (TODO).
+ * restriction. (TODO).
  * 
  * For sets of contacts, the score can be a simple average of the pairwise scores or something
  * more complex. This makes it possible to implement multi-body scoring functions which are
@@ -56,7 +57,7 @@ public interface ResidueContactScoringFunction {
 	* such that scores can be quickly retrieved with getScore. Before this method is called, the results
 	* of all other method calls are undefined.
 	*/
-	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates);
+	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates, MySQLConnection conn);
 
 	/**
 	* Notifies the ScoringFunction object that the underlying data has changed and scores have to be recalculated.

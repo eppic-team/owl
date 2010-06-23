@@ -367,6 +367,9 @@ public class ConstraintsMaker {
 		fkey.printf("RESTRAIN-ANGLE %d %d %d %5.1f %3.1f %3.1f\n",
 				N, CA, Cj, f, 
 				min,max);
+		System.out.printf("RESTRAIN-ANGLE %d %d %d %5.1f %3.1f %3.1f\n",
+				N, CA, Cj, f, 
+				min,max);
 	}
 	
 
