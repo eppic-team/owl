@@ -35,10 +35,10 @@ public class OptimalSingleEnv {
 	    Statement stmt = conn.createStatement();
 	    this.optNBHStrings = new Vector<String[]>();
 	    String query = "select nbstring, rvector, support, locate('"+this.iRes+"', rvector) from rvecs10 order by locate('"+this.iRes+"', rvector);"; 
-	    System.out.println(query);
+//	    System.out.println(query);
 	    ResultSet nbstrings = stmt.executeQuery(query); 
 	    String nbstring ="", rvector="", support="", loc=""; 
-	    System.out.println("fullnbs: " + fullnbs); 
+//	    System.out.println("fullnbs: " + fullnbs); 
 	    while (nbstrings.next()) {
 	    	nbstring = nbstrings.getString(1); 
 	    	rvector = nbstrings.getString(2);

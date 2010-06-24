@@ -58,12 +58,21 @@ public class CMPdb_nbhString_traces {
 		stmt = conn.createStatement();	
 
 //		System.out.println("extracting nbhstrings of certain type");
+		query = "SELECT count(*) from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"';";
+		result_nbhs = stmt.executeQuery(query);
+		int countAll =0;
+		if (result_nbhs.next())
+			countAll = result_nbhs.getInt(1); // extract raw count 
+		System.out.println("Orig num Traces = "+countAll);
 		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' limit "+this.maxNumLines+";";
+		// test query --> to get traces of 7odc
+//		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' and graph_id=1 limit "+this.maxNumLines+";";
+//		System.out.println(query);
 		result_nbhs = stmt.executeQuery(query);
 		Vector<int[]> nodes = new Vector<int[]>();
 		while (result_nbhs.next()) {
 			int[] val = {result_nbhs.getInt(1), result_nbhs.getInt(2)}; //new int[2];
-//			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
+			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
 		System.out.println("number of nbhsTraces: "+nodes.size());
