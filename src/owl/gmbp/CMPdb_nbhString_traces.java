@@ -72,7 +72,7 @@ public class CMPdb_nbhString_traces {
 		Vector<int[]> nodes = new Vector<int[]>();
 		while (result_nbhs.next()) {
 			int[] val = {result_nbhs.getInt(1), result_nbhs.getInt(2)}; //new int[2];
-			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
+//			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
 		System.out.println("number of nbhsTraces: "+nodes.size());
