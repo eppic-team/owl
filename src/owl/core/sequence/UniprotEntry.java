@@ -24,7 +24,7 @@ import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
-import uk.ac.ebi.kraken.interfaces.uniprot.GeneEncodingType;
+import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
@@ -41,10 +41,11 @@ public class UniprotEntry implements HasFeatures {
 
 	private String uniId;
 	private Sequence uniprotSeq;
-	private List<String> taxIds; // many taxonomy ids for a uniprot entry should be a very pathological case. Should be safe to use the first one always
+	private String taxId;
+	private List<String> taxons; // the taxonomy as returned by UniprotEntry.getTaxonomy(). First value is the most general (kingdom), last is the most specific (species).
 	private List<String> emblCdsIds;
 	private List<Sequence> emblCdsSeqs; 
-	private GeneEncodingType geneEncodingOrganelle; // the organelle where this gene is encoded (important for genetic code): if gene encoded in nucleus this is null
+	private String geneEncodingOrganelle; // the organelle where this gene is encoded (important for genetic code): if gene encoded in nucleus this is null
 	
 	private boolean  repCDScached;
 	private ProteinToCDSMatch representativeCDS; // cached after running getRepresentativeCDS()
@@ -84,17 +85,33 @@ public class UniprotEntry implements HasFeatures {
 	}
 
 	/**
-	 * @return the taxIds
+	 * @return the taxId
 	 */
-	public List<String> getTaxIds() {
-		return taxIds;
+	public String getTaxId() {
+		return taxId;
 	}
 
 	/**
-	 * @param taxIds the taxIds to set
+	 * @param taxId the taxId to set
 	 */
-	public void setTaxIds(List<String> taxIds) {
-		this.taxIds = taxIds;
+	public void setTaxId(String taxId) {
+		this.taxId = taxId;
+	}
+	
+	public List<String> getTaxons() {
+		return taxons;
+	}
+	
+	public String getFirstTaxon() {
+		return this.taxons.get(0);
+	}
+	
+	public String getLastTaxon() {
+		return this.taxons.get(this.taxons.size()-1);
+	}
+	
+	public void setTaxons(List<String> taxons) {
+		this.taxons = taxons;
 	}
 
 	/**
@@ -128,14 +145,14 @@ public class UniprotEntry implements HasFeatures {
 	/**
 	 * @return the geneEncodingOrganelle
 	 */
-	public GeneEncodingType getGeneEncodingOrganelle() {
+	public String getGeneEncodingOrganelle() {
 		return geneEncodingOrganelle;
 	}
 
 	/**
 	 * @param geneEncodingOrganelle the geneEncodingOrganelle to set
 	 */
-	public void setGeneEncodingOrganelle(GeneEncodingType geneEncodingOrganelle) {
+	public void setGeneEncodingOrganelle(String geneEncodingOrganelle) {
 		this.geneEncodingOrganelle = geneEncodingOrganelle;
 	}
 
@@ -152,7 +169,7 @@ public class UniprotEntry implements HasFeatures {
 	 * by using the remote Uniprot API
 	 */
 	public void retrieveUniprotKBData() {
-		this.taxIds = new ArrayList<String>();
+		this.taxons = new ArrayList<String>();
 		this.emblCdsIds = new ArrayList<String>();
 		Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
 		
@@ -167,10 +184,14 @@ public class UniprotEntry implements HasFeatures {
 		
 		this.setUniprotSeq(new Sequence(this.getUniId(),entry.getSequence().getValue()));
 		
-		for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
-			taxIds.add(ncbiTaxId.getValue());
+		List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
+		if (ncbiTaxIds.size()>1) {
+			System.err.println("Warning! more than one taxonomy id for uniprot entry "+this.uniId);
 		}
-		
+		this.taxId = ncbiTaxIds.get(0).getValue();
+		for (NcbiTaxon ncbiTax:entry.getTaxonomy()) {
+			taxons.add(ncbiTax.getValue());
+		}
 		Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
 		for(Embl ref:emblrefs) {
 			String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
@@ -184,7 +205,7 @@ public class UniprotEntry implements HasFeatures {
 		this.emblCdsIds.addAll(tmpEmblCdsIdsSet);
 		List<Organelle> orglls = entry.getOrganelles();
 		if (orglls.size()>0) {
-			this.geneEncodingOrganelle = orglls.get(0).getType();
+			this.geneEncodingOrganelle = orglls.get(0).getType().getValue();
 			if (orglls.size()>1) {
 				for (Organelle orgll:orglls){ 
 					if (!orgll.getType().equals(this.geneEncodingOrganelle)) {
@@ -284,6 +305,10 @@ public class UniprotEntry implements HasFeatures {
 		repCDScached = true;
 		representativeCDS = null;
 		return representativeCDS;
+	}
+	
+	public GeneticCodeType getGeneticCodeType() {
+		return GeneticCodeType.getByOrganelleAndOrganism(this.geneEncodingOrganelle,this.getLastTaxon());
 	}
 
 	/*------------------------ HasFeature interface implementation -----------------------*/

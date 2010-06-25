@@ -2,6 +2,8 @@ package owl.core.sequence;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Genetic code types as defined by NCBI in 
@@ -24,7 +26,8 @@ public enum GeneticCodeType {
 	// there are still more exotic genetic codes defined by ncbi, didn't add them yet
 
 	private static Map<Integer, GeneticCodeType> id2GCT = initId2GCT();
-
+	
+	private static Pattern MITOCHONDRIAL_REGEX = Pattern.compile(".*mitochond.*",Pattern.CASE_INSENSITIVE);
 	
 	private int id;
 	private int selectonId;
@@ -70,5 +73,21 @@ public enum GeneticCodeType {
 	
 	public static GeneticCodeType getById(int id) {
 		return id2GCT.get(id);
+	}
+	
+	public static GeneticCodeType getByOrganelleAndOrganism(String organelle, String organism) {
+		if (organelle==null) {
+			return GeneticCodeType.STANDARD;
+		}
+		boolean mitochondrial = false;
+		Matcher mitochondMatcher = MITOCHONDRIAL_REGEX.matcher(organelle);
+		if (mitochondMatcher.matches()) {
+			mitochondrial = true;
+		}
+		// TODO check organism too and do something sensible when finding mitochondrial
+		if (mitochondrial) {
+			return null;
+		}
+		return GeneticCodeType.STANDARD;
 	}
 }

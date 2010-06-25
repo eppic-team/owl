@@ -35,6 +35,7 @@ import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.util.FileFormatError;
 import owl.core.util.Goodies;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
+import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
@@ -223,11 +224,18 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			List<UniprotHomolog> homs = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
 			for (UniprotHomolog hom:homs) {
 				hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
-				List<String> taxIds = new ArrayList<String>();
-				for(NcbiTaxonomyId ncbiTaxId:entry.getNcbiTaxonomyIds()) {
-					taxIds.add(ncbiTaxId.getValue());
+				
+				List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
+				if (ncbiTaxIds.size()>1) {
+					System.err.println("Warning! more than one taxonomy id for uniprot entry "+hom.getUniId());
 				}
-				hom.getUniprotEntry().setTaxIds(taxIds);
+				hom.getUniprotEntry().setTaxId(ncbiTaxIds.get(0).getValue());
+				List<String> taxons = new ArrayList<String>();
+				for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
+					taxons.add(ncbiTaxon.getValue());
+				}
+				hom.getUniprotEntry().setTaxons(taxons);
+				
 				Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
 				List<String> emblCdsIds = new ArrayList<String>();
 				Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
@@ -244,7 +252,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				
 				List<Organelle> orglls = entry.getOrganelles();
 				if (orglls.size()>0) {
-					hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType());
+					hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType().getValue());
 					if (orglls.size()>1) {
 						for (Organelle orgll:orglls){ 
 							if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
@@ -498,4 +506,31 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return count;
 	}
 
+	/**
+	 * Checks whether this UniprotHomologList contains genes encoded with strictly 
+	 * one genetic code type.
+	 * @see GeneticCodeType
+	 * @return
+	 */
+	public boolean isConsistentGeneticCodeType() {
+		GeneticCodeType lastGct = null;
+		for (UniprotHomolog hom:this) {
+			GeneticCodeType gct = hom.getUniprotEntry().getGeneticCodeType();
+			if (lastGct!=null && !lastGct.equals(gct)) {
+				return false;
+			}
+			lastGct = gct;
+		}
+		return true;
+	}
+	
+	/**
+	 * Gets the genetic code type of this UniprotHomologList. It does it by simply returning
+	 * the genetic code type of the first homolog in the list. I does NOT check for consistency
+	 * within the list {@link #isConsistentGeneticCodeType()}
+	 * @return
+	 */
+	public GeneticCodeType getGeneticCodeType() {
+		return this.list.get(0).getUniprotEntry().getGeneticCodeType();
+	}
 }
