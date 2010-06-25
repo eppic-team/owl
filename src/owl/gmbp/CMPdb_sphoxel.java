@@ -55,6 +55,7 @@ public class CMPdb_sphoxel {
 		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
+	// actual fastest version to compute LOS's
 	public void runBayesPreComp() throws SQLException {
 		String query;
 		Statement stmt;

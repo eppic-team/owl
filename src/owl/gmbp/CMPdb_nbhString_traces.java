@@ -63,7 +63,7 @@ public class CMPdb_nbhString_traces {
 		int countAll =0;
 		if (result_nbhs.next())
 			countAll = result_nbhs.getInt(1); // extract raw count 
-		System.out.println("Orig num Traces = "+countAll);
+//		System.out.println("Orig num Traces = "+countAll);
 		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' limit "+this.maxNumLines+";";
 		// test query --> to get traces of 7odc
 //		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' and graph_id=1 limit "+this.maxNumLines+";";
@@ -75,7 +75,7 @@ public class CMPdb_nbhString_traces {
 //			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
-		System.out.println("number of nbhsTraces: "+nodes.size());
+		System.out.println("Orig num Traces = "+countAll+" -> number of nbhsTraces: "+nodes.size());
 		result_nbhs.close();
 		stmt.close();
 		this.numNodesPerLine = new int[nodes.size()];
@@ -86,6 +86,7 @@ public class CMPdb_nbhString_traces {
 		
 //		System.out.println("graphi_id + '\t' + i_num + '\t' + j_num + '\t' + theta + '\t' + phi");
 		for (int i=0; i<nodes.size(); i++){
+//		for (int i=0; i<1; i++){
 			stmt = conn.createStatement();
 			int[] val = (int[]) nodes.get(i);
 			gID = val[0];
@@ -118,13 +119,17 @@ public class CMPdb_nbhString_traces {
 
 			if (this.diffSSType)
 				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-		         +" and j_atom='"+this.jatom+"' order by j_num;";
+                +" and j_atom='"+this.jatom+"' order by j_num;";
+//				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+//		         +" and i_sstype='"+this.sstype+"' and j_atom='"+this.jatom+"' order by j_num;";
 			else 
 				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-                +" and j_atom='"+this.jatom+"' order by j_num;";
+                 +" and j_atom='"+this.jatom+"' order by j_num;";
 			
 			result_nodes = stmt.executeQuery(query);
+			int cntNodes = 0;
 			while(result_nodes.next()) {
+				cntNodes++;
 				j_num = result_nodes.getInt(1); //("j_num");
 				theta = result_nodes.getFloat(2);
 				phi = result_nodes.getFloat(3);
@@ -141,13 +146,18 @@ public class CMPdb_nbhString_traces {
 				if (iSSType == this.sstype || this.sstype == AnySStype ){
 					this.numNodesPerLine[i] += 1;
 					
+//					if (i==0)
 //					System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
 					
 					float[] node = {gID, num, j_num, theta, phi, resID, ssTypeID};
 					this.nbhsNodes.add(node);					
 				}
 			}
-			
+//			if (i==0)
+//				System.out.println();
+			if (cntNodes==0)
+				System.out.println("No result for query: "+query);
+						
 			result_nodes.close();
 			stmt.close();
 	    }
@@ -183,6 +193,8 @@ public class CMPdb_nbhString_traces {
 //			System.out.println();
 //		}
 		System.out.println("Histogram Nodes for SSType");
+		int mostOccSSType = 0;
+		int id=0;
 		for (int ssT=0; ssT<sstypes.length; ssT++){
 			char ssType = sstypes[ssT];
 			System.out.print(String.valueOf(ssType)+"\t");
@@ -191,8 +203,16 @@ public class CMPdb_nbhString_traces {
 		    }
 			System.out.print("sum= "+String.valueOf(numNodesSSType[ssT])+"\t");
 			System.out.println();
+			if (numNodesSSType[ssT]>mostOccSSType){
+				id = ssT;
+				mostOccSSType = numNodesSSType[ssT];
+			}
 		}
-		
+		if (sstypes[id]!=this.sstype && this.sstype!=AnySStype){
+			System.out.println("Mayority of traces for different ssType "+sstypes[id]+" instead of "+this.sstype);
+			this.sstype = sstypes[id]; 
+			this.run();
+		}		
 	}
 	
 	public void writeNbhsTracesOutput(String filename){
