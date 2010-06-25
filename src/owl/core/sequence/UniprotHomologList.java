@@ -397,20 +397,22 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			StringBuffer nucSeqSB = new StringBuffer();
 			String protSeq = protAln.getAlignedSequence(hom.getBlastHit().getSubjectId());
 			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
-			String bestNucSeq = matching.getNucleotideSeqForBestTranslation();
-			int j = 0;
-			for (int i=0;i<protSeq.length();i++) {
-				char aa = protSeq.charAt(i);
-				if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-				} else {
-					nucSeqSB.append(bestNucSeq.substring(j, j+3));
-					j+=3;
+			if (matching!=null) {
+				String bestNucSeq = matching.getNucleotideSeqForBestTranslation();
+				int j = 0;
+				for (int i=0;i<protSeq.length();i++) {
+					char aa = protSeq.charAt(i);
+					if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					} else {
+						nucSeqSB.append(bestNucSeq.substring(j, j+3));
+						j+=3;
+					}
 				}
+				allSeqs.put(matching.getCDSName(),nucSeqSB.toString());
 			}
-			allSeqs.put(matching.getCDSName(),nucSeqSB.toString());
 		}
 		MultipleSequenceAlignment nucAln = null;
 		try {
