@@ -15,6 +15,7 @@ public class Codon {
 	// codes for ambiguous nucleotides (from wikipedia/iupac http://en.wikipedia.org/wiki/Nucleic_acid_sequence)
 	private static final char AMB_ACGT = 'n';
 	private static final char AMB_AC   = 'm';
+	private static final char AMB_AT   = 'w';
 	
 	
 	private char[] codon;
@@ -82,7 +83,7 @@ public class Codon {
 	
 	public boolean isAmbiguous() {
 		for (char c:codon) {
-			if (c==AMB_ACGT || c==AMB_AC) return true;
+			if (c==AMB_ACGT || c==AMB_AC || c== AMB_AT) return true;
 		}
 		return false;
 	}
