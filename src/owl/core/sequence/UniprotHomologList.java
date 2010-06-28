@@ -297,8 +297,17 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		for (UniprotHomolog hom:this) {
 			List<Sequence> seqs = new ArrayList<Sequence>();
 			for (String emblCdsId:hom.getUniprotEntry().getEmblCdsIds()) {
-				seqs.add(lookup.get(emblCdsId));
+				if (lookup.containsKey(emblCdsId)) {
+					seqs.add(lookup.get(emblCdsId));
+				} else { 
+					// this will happen when the CDS sequence was not returned by embl dbfetch or the cache file does not have it (it's in the list of missing entries)
+					// in either case we don't want the list of emblcs sequences to contain a null
+					System.err.println("Warning! Sequence for EMBL CDS "+emblCdsId+" of uniprot entry "+hom.getUniId()+" could not be found. Not using it.");
+					//TODO should we also remove from the list of embl cds ids this emblCdsId? Not sure if it can cause problems
+					// to have an embl cds id without its corresponding sequence
+				}
 			}
+			
 			hom.getUniprotEntry().setEmblCdsSeqs(seqs);
 		}		
 	}
