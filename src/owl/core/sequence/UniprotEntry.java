@@ -39,6 +39,8 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  */
 public class UniprotEntry implements HasFeatures {
 
+	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
+	
 	private String uniId;
 	private Sequence uniprotSeq;
 	private String taxId;
@@ -292,12 +294,20 @@ public class UniprotEntry implements HasFeatures {
 			TranslatedFrame bestTranslation = Collections.max(nonFullMatchingCDSs);
 			for (ProteinToCDSMatch matching:allMatchings){
 				if (matching.getBestTranslation()==bestTranslation) {
-					representativeCDS = matching;
-					repCDScached = true;
 					// TODO must still check whether this is an acceptable match, or should we do that at a later stage?
 					int mismatches = bestTranslation.getNumMismatches();
-					System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
-					bestTranslation.getAln().printAlignment();
+					if (bestTranslation.getPercentIdentity()/100.0f<MIN_TOLERATED_ID) {
+						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+
+								". Best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+
+								") not good enough ("+String.format("%5.1f", bestTranslation.getPercentIdentity())+" identity). ");					
+						bestTranslation.getAln().printAlignment();
+						representativeCDS = null;
+					} else {
+						representativeCDS = matching;
+						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
+						bestTranslation.getAln().printAlignment();
+					}
+					repCDScached = true;
 					return representativeCDS;
 				}
 			}
