@@ -232,6 +232,14 @@ public class Residue implements Iterable<Atom> {
 	}
 	
 	/**
+	 * Get Collection of Atoms belonging to this Residue sorted by atom codes
+	 * @return
+	 */
+	public TreeMap<String,Atom> getAtomsMap() {
+		return atoms;
+	}
+	
+	/**
 	 * Gets a new Residue object containing only the atoms for the given contact type
 	 * (the new atom instances are references to the atom instances of this Residue)
 	 * @param ct
