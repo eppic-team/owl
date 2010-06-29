@@ -9,12 +9,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.runners.DsspRunner;
+import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
@@ -92,10 +94,9 @@ public class MultipleSequenceAlignment {
 	}
 		
 	/**
-	 * Creates a trivial alignment (i.e. without gaps) given a Map of tags to 
-	 * sequences
+	 * Creates a trivial alignment given a Map of tags to sequences
 	 * The sequences must have the same lengths. 
-	 * @param sequences
+	 * @param sequences a Map of sequence tags to sequences, the sequences must have the same length
 	 * @throws AlignmentConstructionError if sequences lengths differ or if 
 	 * size of given map is 0
 	 */
@@ -128,10 +129,9 @@ public class MultipleSequenceAlignment {
 	}
 	
 	/**
-	 * Creates a trivial alignment (i.e. without gaps) given a set of tags and
-	 * a set of sequences
+	 * Creates a trivial alignment given an array of tags and an array of sequences
 	 * @param seqTags
-	 * @param sequences
+	 * @param sequences an array of sequences, they must have the same length
 	 * @throws AlignmentConstructionError if different number of sequences and 
 	 * tags given, or if size of given array is 0
 	 */
@@ -161,6 +161,39 @@ public class MultipleSequenceAlignment {
 		}
 		doMapping();
 
+	}
+	
+	/**
+	 * Creates a trivial alignment given a list of Sequences
+	 * @param sequences a List of Sequence objects, the sequences must have the same length
+	 * @throws AlignmentConstructionError
+	 */
+	public MultipleSequenceAlignment(List<Sequence> sequences) throws AlignmentConstructionError {
+		if (sequences.size() == 0) {
+			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+		}
+		// check that sequences have the same length
+		int length = -1;
+		for(Sequence sequence: sequences) {
+			if (length==-1) {
+				length = sequence.getLength();
+				continue;
+			}
+			if(sequence.getLength() != length) {
+				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
+			}
+		}
+		
+		this.sequences = new String[sequences.size()];
+		this.indices2tags = new TreeMap<Integer, String>();
+		this.tags2indices = new TreeMap<String, Integer>();
+		
+		for (int i=0;i<sequences.size();i++) {
+			this.sequences[i]=sequences.get(i).getSeq();
+			this.indices2tags.put(i,sequences.get(i).getName());
+			this.tags2indices.put(sequences.get(i).getName(), i);
+		}
+		doMapping();		
 	}
 	
 	/*---------------------------- private methods --------------------------*/

@@ -13,7 +13,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -401,7 +400,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @return
 	 */
 	public MultipleSequenceAlignment getNucleotideAlignment(MultipleSequenceAlignment protAln) {
-		TreeMap<String,String> allSeqs = new TreeMap<String, String>();
+		List<Sequence> allSeqs = new ArrayList<Sequence>();
 		for (UniprotHomolog hom:this) {
 			StringBuffer nucSeqSB = new StringBuffer();
 			String protSeq = protAln.getAlignedSequence(hom.getBlastHit().getSubjectId());
@@ -420,7 +419,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 						j+=3;
 					}
 				}
-				allSeqs.put(matching.getCDSName(),nucSeqSB.toString());
+				allSeqs.add(new Sequence(matching.getCDSName(),nucSeqSB.toString()));
 			}
 		}
 		MultipleSequenceAlignment nucAln = null;
