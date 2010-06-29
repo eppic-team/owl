@@ -106,7 +106,7 @@ public class GmbpGeometry {
 		if (toRotate) {//Obtaining the rotated coordinates only if the  "toRotate=true"
 			atom_coord_rotated = getCoordAfterRotation(jRes, jResType, atom_coord_rotated, RotMatrix01); 
 			atom_coord_rotated = getCoordAfterRotation (jRes, jResType, atom_coord_rotated, RotMatrix02);
-		}
+		}		
 		return atom_coord_rotated;
 	}
 	@SuppressWarnings("unused")
