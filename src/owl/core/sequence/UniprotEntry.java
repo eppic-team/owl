@@ -298,13 +298,13 @@ public class UniprotEntry implements HasFeatures {
 					int mismatches = bestTranslation.getNumMismatches();
 					if (bestTranslation.getPercentIdentity()/100.0f<MIN_TOLERATED_ID) {
 						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+
-								". Best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+
+								". Best match "+matching.getCDSName()+" (reading frame "+bestTranslation.getReadingFrame().getNumber()+
 								") not good enough ("+String.format("%5.1f", bestTranslation.getPercentIdentity())+" identity). ");					
 						bestTranslation.getAln().printAlignment();
 						representativeCDS = null;
 					} else {
 						representativeCDS = matching;
-						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
+						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
 						bestTranslation.getAln().printAlignment();
 					}
 					repCDScached = true;

@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,6 +23,7 @@ import org.xml.sax.SAXException;
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
+import owl.core.runners.SelectonRunner;
 import owl.core.runners.TcoffeeError;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastError;
@@ -69,7 +71,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	/*-------------------------- members --------------------------*/
 	
-	private Sequence seq; 							 // the sequence to which the homologs refer
+	private UniprotEntry ref;						 // the uniprot entry to which the homologs refer
 	private List<UniprotHomolog> list; 				 // the list of homologs
 	private Map<String,List<UniprotHomolog>> lookup; // to speed up searches (uniprot ids to Homologs lists) 
 													 // it's a list because blast can hit a single uniprot in multiple regions (for us
@@ -77,20 +79,21 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	private double idCutoff; 						 // the identity cutoff (see restrictToMinId() )
 	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
 	
+	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
+	private MultipleSequenceAlignment nucAln; 		// the nucleotides alignment
+
+	private int reducedAlphabet;
+	private List<Double> entropies;
+	private List<Double> kaksRatios;
+
 	
-	
-	public UniprotHomologList(String tag, String sequence) {
-		this.seq = new Sequence(tag, sequence);
-		this.idCutoff = 0.0; // i.e. no filter
-	}
-	
-	public UniprotHomologList(Sequence seq) {
-		this.seq = seq;
+	public UniprotHomologList(UniprotEntry ref) {
+		this.ref = ref;
 		this.idCutoff = 0.0; // i.e. no filter
 	}
 	
 	/**
-	 * Performs a blast search to populate this list of homologs.
+	 * Performs a blast search based on the reference UniprotEntry to populate this list of homologs.
 	 * All blast output files will be removed on exit.
 	 * @param blastBinDir
 	 * @param blastDbDir
@@ -114,7 +117,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				outBlast.deleteOnExit();
 				inputSeqFile.deleteOnExit();
 			}
-			seq.writeToFastaFile(inputSeqFile);
+			// NOTE: we blast the reference uniprot sequence
+			this.ref.getUniprotSeq().writeToFastaFile(inputSeqFile);
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
 			this.uniprotVer = readUniprotVer(blastDbDir);
@@ -141,8 +145,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 
 		if (fromCache) {
-			if (!blastList.getQueryId().equals(seq.getName())) {
-				throw new IOException("Query id from cache file "+cacheFile+" does not match the id from the sequence: "+seq.getName());
+			if (!blastList.getQueryId().equals(this.ref.getUniprotSeq().getName())) {
+				throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotSeq().getName());
 			}
 			this.uniprotVer = readUniprotVer(cacheFile.getParent());
 			String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
@@ -325,8 +329,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 
 	/**
-	 * Write to the given file the query sequence and all the homolog sequences (full 
-	 * uniprot sequences) in fasta format.
+	 * Write to the given file the query protein sequence and all the homolog protein 
+	 * sequences (full uniprot sequences) in fasta format.
 	 * @param outFile
 	 * @throws FileNotFoundException
 	 */
@@ -335,9 +339,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		
 		int len = 80;
 
-		pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + seq.getName());
-		for(int i=0; i<seq.getSeq().length(); i+=len) {
-			pw.println(seq.getSeq().substring(i, Math.min(i+len,seq.getSeq().length())));
+		pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotSeq().getName());
+		for(int i=0; i<this.ref.getLength(); i+=len) {
+			pw.println(ref.getUniprotSeq().getSeq().substring(i, Math.min(i+len,ref.getLength())));
 		}
 		
 		for(UniprotHomolog hom:this) {
@@ -353,15 +357,14 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 	
 	/**
-	 * Runs t_coffee to align all sequences of homologs and the query sequence
+	 * Runs t_coffee to align all protein sequences of homologs and the query sequence
 	 * returning a MultipleSequenceAlignment object
 	 * @param tcoffeeBin
 	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
-	 * @return
 	 * @throws IOException
 	 * @throws TcoffeeError 
 	 */
-	public MultipleSequenceAlignment getTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeError {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeError {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");
@@ -375,8 +378,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		this.writeToFasta(homologSeqsFile);
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
 		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast);
-
-			MultipleSequenceAlignment aln = null;
 		
 		try {
 			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
@@ -390,20 +391,52 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			System.exit(1);
 		}
 		
+	}
+	
+	/**
+	 * Returns the protein sequence alignment of query sequence and all homologs
+	 * @return
+	 */
+	public MultipleSequenceAlignment getAlignment() {
 		return aln;
 	}
 	
 	/**
 	 * Returns a multiple sequence alignment of all valid nucleotide CDS sequences from the 
-	 * UniprotHomologList by mapping the nucleotide sequences to the protein sequences 
-	 * alignment. 
+	 * UniprotHomologList plus the query's CDS by mapping the nucleotide sequences to the protein 
+	 * sequences alignment. 
 	 * @return
 	 */
-	public MultipleSequenceAlignment getNucleotideAlignment(MultipleSequenceAlignment protAln) {
+	public MultipleSequenceAlignment getNucleotideAlignment() {
+		if (nucAln!=null) {
+			return nucAln;
+		}
 		List<Sequence> allSeqs = new ArrayList<Sequence>();
+		
+		// CDS of the query sequence
+		StringBuffer nucSeqSB = new StringBuffer();
+		String queryProtSeq = aln.getAlignedSequence(ref.getUniprotSeq().getName());
+		ProteinToCDSMatch queryMatching = ref.getRepresentativeCDS();
+		if (queryMatching!=null) {
+			String bestNucSeq = queryMatching.getNucleotideSeqForBestTranslation();
+			int j = 0;
+			for (int i=0;i<queryProtSeq.length();i++) {
+				char aa = queryProtSeq.charAt(i);
+				if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+				} else {
+					nucSeqSB.append(bestNucSeq.substring(j, j+3));
+					j+=3;
+				}
+			}
+			allSeqs.add(new Sequence(queryMatching.getCDSName(),nucSeqSB.toString()));
+		}
+		
 		for (UniprotHomolog hom:this) {
-			StringBuffer nucSeqSB = new StringBuffer();
-			String protSeq = protAln.getAlignedSequence(hom.getBlastHit().getSubjectId());
+			nucSeqSB = new StringBuffer();
+			String protSeq = aln.getAlignedSequence(hom.getBlastHit().getSubjectId());
 			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
 			if (matching!=null) {
 				String bestNucSeq = matching.getNucleotideSeqForBestTranslation();
@@ -422,7 +455,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				allSeqs.add(new Sequence(matching.getCDSName(),nucSeqSB.toString()));
 			}
 		}
-		MultipleSequenceAlignment nucAln = null;
 		try {
 			nucAln = new MultipleSequenceAlignment(allSeqs);
 		} catch(AlignmentConstructionError e) {
@@ -430,9 +462,18 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
+		
 		return nucAln;
 	}
+	
+	public void writeAlignmentToFile(File alnFile) throws FileNotFoundException {
+		aln.writeFasta(new PrintStream(alnFile), 80, true);
+	}
  
+	public void writeNucleotideAlignmentToFile(File alnFile) throws FileNotFoundException {
+		this.getNucleotideAlignment().writeFasta(new PrintStream(alnFile), 80, true);
+	}
+	
 	/**
 	 * Removes homologs below the given sequence identity value.
 	 * @param idCutoff
@@ -536,11 +577,77 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	/**
 	 * Gets the genetic code type of this UniprotHomologList. It does it by simply returning
-	 * the genetic code type of the first homolog in the list. I does NOT check for consistency
-	 * within the list {@link #isConsistentGeneticCodeType()}
+	 * the genetic code type of the first homolog in the list. It does NOT check for consistency
+	 * within the list. For that use {@link #isConsistentGeneticCodeType()}
 	 * @return
 	 */
 	public GeneticCodeType getGeneticCodeType() {
 		return this.list.get(0).getUniprotEntry().getGeneticCodeType();
+	}
+	
+	/**
+	 * Compute the sequence entropies for all reference sequence (uniprot) positions
+	 * @param reducedAlphabet
+	 */
+	public void computeEntropies(int reducedAlphabet) {
+		this.reducedAlphabet = reducedAlphabet;
+		this.entropies = new ArrayList<Double>(); 
+		for (int i=0;i<ref.getUniprotSeq().getLength();i++){
+			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniprotSeq().getName(),i+1), reducedAlphabet));
+		}
+	}
+	
+	/**
+	 * Compute the sequence ka/ks ratios with selecton for all reference CDS sequence positions
+	 * @param selectonBin
+	 * @param resultsFile
+	 * @param logFile
+	 * @param treeFile
+	 * @param globalResultsFile
+	 * @param epsilon
+	 * @throws IOException
+	 */
+	public void computeKaKsRatiosSelecton(File selectonBin, File resultsFile, File logFile, File treeFile, File globalResultsFile, double epsilon) 
+	throws IOException {
+		// TODO fix!!!
+		//      This is not taking into acount the mismatches of the CDS to their corresponding homologs or in the case 
+		//      of the query also not the matching of the pdb to uniprot to cds
+		kaksRatios = new ArrayList<Double>();
+		SelectonRunner sr = new SelectonRunner(selectonBin);
+		if(!resultsFile.exists()) {
+			File alnFile = File.createTempFile("selecton.", ".cds.aln");
+			alnFile.deleteOnExit();
+			this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
+			sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);
+		} else {
+			System.out.println("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
+			try {
+				sr.parseResultsFile(resultsFile, this.ref.getRepresentativeCDS().getCDSName());
+			} catch (FileFormatError e) {
+				System.err.println("Warning! cached output selecton file "+resultsFile+" does not seem to be in the righ format");
+				System.err.println(e.getMessage());
+				System.err.println("Running selecton and overwritting the file.");
+				File alnFile = File.createTempFile("selecton.", ".cds.aln");
+				alnFile.deleteOnExit();
+				this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
+				sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);				
+			}
+		}
+		kaksRatios = sr.getKaKsRatios();
+		if (kaksRatios.size()!=this.ref.getUniprotSeq().getLength()) {
+			System.err.println("Warning! Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
+		}
+	}
+
+	public List<Double> getEntropies() {
+		return entropies;
+	}
+	
+	public List<Double> getKaksRatios() {
+		return kaksRatios;
+	}
+	
+	public int getReducedAlphabet() {
+		return reducedAlphabet;
 	}
 }
