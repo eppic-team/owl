@@ -491,13 +491,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * Removes homologs below the given sequence identity value.
 	 * @param idCutoff
 	 */
-	public void restrictToMinId(double idCutoff) {
+	public void restrictToMinIdAndCoverage(double idCutoff, double queryCovCutoff) {
 		this.idCutoff = idCutoff;
 		List<String> toRemove = new ArrayList<String>();
 		Iterator<UniprotHomolog> it = list.iterator();
 		while (it.hasNext()) {
 			UniprotHomolog hom = it.next();
-			if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff) {
+			if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
 				it.remove();
 				toRemove.add(hom.getUniId());
 			}
@@ -510,7 +510,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			Iterator<UniprotHomolog> it2 = homs.iterator();
 			while (it2.hasNext()) {
 				UniprotHomolog hom = it2.next();
-				if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff) {
+				if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
 					it2.remove();
 				}
 			}
