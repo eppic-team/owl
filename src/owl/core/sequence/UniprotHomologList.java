@@ -677,13 +677,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		// check if each of the matching CDS of the homologs is reliable at position i of the ref sequence
 		for (UniprotHomolog hom:this){
+			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
+				continue; // the homolog may have no representative CDS, in that case we don't want to check the CDS alignment as it doesn't exist
+			}
 			int alnPos = aln.seq2al(this.ref.getUniprotSeq().getName(), i+1);
 			int seqPos = aln.al2seq(hom.getLongSequenceTag(), alnPos);
 			if (seqPos==-1) { // the position maps to a gap in the homolog sequence, there's no CDS alignment to check, we can continue to next homolog directly
 				continue;
-			}
-			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
-				continue; // the homolog may have no representative CDS, in that case we don't want to check the CDS alignment as it doesn't exist
 			}
 			if (!hom.getUniprotEntry().isReliablePosition(seqPos-1)) {
 				return false;
