@@ -82,9 +82,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
 	private MultipleSequenceAlignment nucAln; 		// the nucleotides alignment
 
-	private int reducedAlphabet;
-	private List<Double> entropies;
-	private List<Double> kaksRatios;
+	private int reducedAlphabet;					// the reduced alphabet used to calculate entropies
+	private List<Double> entropies;					// entropies for each uniprot reference sequence position
+	private List<Double> kaksRatios;				// ka/ks for each uniprot reference sequence position
 
 	
 	public UniprotHomologList(UniprotEntry ref) {
@@ -347,7 +347,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		for(UniprotHomolog hom:this) {
 			
 			String sequence = hom.getUniprotSeq().getSeq();
-			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getBlastHit().getSubjectId());
+			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getLongSequenceTag());
 			for(int i=0; i<sequence.length(); i+=len) {
 				pw.println(sequence.substring(i, Math.min(i+len,sequence.length())));
 			}
@@ -427,7 +427,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 				} else {
-					nucSeqSB.append(bestNucSeq.substring(j, j+3));
+					if (j+3<bestNucSeq.length()) {
+						nucSeqSB.append(bestNucSeq.substring(j, j+3));
+					} else {
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+					}
 					j+=3;
 				}
 			}
@@ -448,8 +454,15 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					} else {
-						nucSeqSB.append(bestNucSeq.substring(j, j+3));
+						if (j+3<bestNucSeq.length()) {
+							nucSeqSB.append(bestNucSeq.substring(j, j+3));
+						} else {
+							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
+						}
 						j+=3;
+						
 					}
 				}
 				allSeqs.add(new Sequence(matching.getCDSName(),nucSeqSB.toString()));
@@ -609,9 +622,6 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 */
 	public void computeKaKsRatiosSelecton(File selectonBin, File resultsFile, File logFile, File treeFile, File globalResultsFile, double epsilon) 
 	throws IOException {
-		// TODO fix!!!
-		//      This is not taking into acount the mismatches of the CDS to their corresponding homologs or in the case 
-		//      of the query also not the matching of the pdb to uniprot to cds
 		kaksRatios = new ArrayList<Double>();
 		SelectonRunner sr = new SelectonRunner(selectonBin);
 		if(!resultsFile.exists()) {
@@ -649,5 +659,36 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	public int getReducedAlphabet() {
 		return reducedAlphabet;
+	}
+	
+	/**
+	 * Tells whether a given position of the reference sequence (starting at 0)
+	 * is reliable with respect to the CDS matching of the reference sequence and the CDS
+	 * matchings of the homologs 
+	 * (not reliable is considered any position where the CDS translation does not match exactly the 
+	 * protein residue) 
+	 * @param i
+	 * @return
+	 */
+	public boolean isReferenceSeqPositionReliable(int i) {
+		// check if matching CDS of ref sequence is reliable at position i
+		if (!this.ref.isReliablePosition(i)) {
+			return false;
+		}
+		// check if each of the matching CDS of the homologs is reliable at position i of the ref sequence
+		for (UniprotHomolog hom:this){
+			int alnPos = aln.seq2al(this.ref.getUniprotSeq().getName(), i+1);
+			int seqPos = aln.al2seq(hom.getLongSequenceTag(), alnPos);
+			if (seqPos==-1) { // the position maps to a gap in the homolog sequence, there's no CDS alignment to check, we can continue to next homolog directly
+				continue;
+			}
+			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
+				continue; // the homolog may have no representative CDS, in that case we don't want to check the CDS alignment as it doesn't exist
+			}
+			if (!hom.getUniprotEntry().isReliablePosition(seqPos-1)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

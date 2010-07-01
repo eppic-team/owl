@@ -317,6 +317,16 @@ public class UniprotEntry implements HasFeatures {
 		return representativeCDS;
 	}
 	
+	/**
+	 * Given a protein sequence position (starting at 0), tells whether the corresponding CDS translation 
+	 * properly matches (identical aminoacids) at that position
+	 * @param i protein sequence index starting at 0
+	 * @return
+	 */
+	public boolean isReliablePosition(int i) {
+		return this.getRepresentativeCDS().getBestTranslation().isMatch(i);
+	}
+	
 	public GeneticCodeType getGeneticCodeType() {
 		return GeneticCodeType.getByOrganelleAndOrganism(this.geneEncodingOrganelle,this.getLastTaxon());
 	}

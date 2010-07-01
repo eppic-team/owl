@@ -33,23 +33,25 @@ public class PairwiseSequenceAlignment {
 	/*------------------------------ constants ------------------------------*/
 
 	// default parameters
-	static final float		DEFAULT_GAP_OPEN_SCORE =	10f;
-	static final float		DEFAULT_GAP_EXTEND_SCORE =	0.5f;
-	static final String		DEFAULT_MATRIX_NAME =		"BLOSUM50";
-
+	private static final float		DEFAULT_GAP_OPEN_SCORE =	10f;
+	private static final float		DEFAULT_GAP_EXTEND_SCORE =	0.5f;
+	private static final String		DEFAULT_MATRIX_NAME =		"BLOSUM50";
+	
 	/*--------------------------- member variables --------------------------*/
 
-	String				origSeq1;			// original sequence 1
-	String				origSeq2;			// original sequence 2
-	String				alignedSeq1;		// aligned sequence 1
-	String				alignedSeq2;		// aligned sequence 2
-	int					length;				// total length of alignment
-	int					gaps;				// number of gaps
-	int					identity;			// sequence identity score
-	int					similarity;			// sequence similarity score
-	float				score;				// alignment score
-	Alignment			alignment;			// alignment class from JAligner
+	private String				origSeq1;			// original sequence 1
+	private String				origSeq2;			// original sequence 2
+	private String				alignedSeq1;		// aligned sequence 1
+	private String				alignedSeq2;		// aligned sequence 2
+	private int					length;				// total length of alignment
+	private int					gaps;				// number of gaps
+	private int					identity;			// sequence identity score
+	private int					similarity;			// sequence similarity score
+	private float				score;				// alignment score
+	private Alignment			alignment;			// alignment class from JAligner
 
+	private int[]				one2two;			// mapping of sequence indices of sequence 1 to sequence 2
+	private int[]				two2one;			// mapping of sequence indices of sequence 2 to sequence 1
 
 	/*----------------------------- constructors ----------------------------*/
 
@@ -172,9 +174,39 @@ public class PairwiseSequenceAlignment {
 		String[] alignedSeqs = {alignedSeq1, alignedSeq2};
 		return alignedSeqs;
 	}
+	
 	public char[] getMarkupLine() {
 		return this.alignment.getMarkupLine();
 	}
+	
+	/**
+	 * Returns true if the given sequence 1 position matches to the corresponding residue 
+	 * in sequence 2 (identity)
+	 * @param i the position in sequence 1
+	 * @return true if the residues are identical, false otherwise (mismatch or gap)
+	 */
+	public boolean isMatchingTo2(int i) {
+		int posIn2 = getMapping1To2(i);
+		if (posIn2==-1) { // falls on a gap in 2
+			return false;
+		}
+		return (this.origSeq1.charAt(i)==this.origSeq2.charAt(posIn2));
+	}
+	
+	/**
+	 * Returns true if the given sequence 2 position matches to the corresponding residue 
+	 * in sequence 1 (identity)
+	 * @param i the position in sequence 2
+	 * @return true if the residues are identical, false otherwise (mismatch or gap)
+	 */
+	public boolean isMatchingTo1(int i) {
+		int posIn1 = getMapping2To1(i);
+		if (posIn1==-1) { // falls on a gap in 1
+			return false; 
+		}
+		return (this.origSeq1.charAt(posIn1)==this.origSeq2.charAt(i));
+	}
+	
 
 	public void printSummary() {
 		// summary from member variables
@@ -227,7 +259,11 @@ public class PairwiseSequenceAlignment {
 	 * if the position maps to a gap. 
 	 */
 	public int[] getMapping1To2() {
-		return getMapping(true);
+		if (one2two!=null) {
+			return one2two;
+		}
+		one2two = getMapping(true); 
+		return one2two;
 	}
 
 	/**
@@ -237,8 +273,32 @@ public class PairwiseSequenceAlignment {
 	 * if the position maps to a gap. 
 	 */
 	public int[] getMapping2To1() {
-		return getMapping(false);
-	}		
+		if (two2one!=null) {
+			return two2one;
+		}
+		two2one = getMapping(false);
+		return two2one;
+	}
+	
+	/**
+	 * Return the position in sequence 2 given a position in sequence 1
+	 * Indices are counted from 0 to sequence length-1
+	 * @param i the position in sequence 1
+	 * @return the position in sequence 2 or -1 if the position maps to a gap
+	 */
+	public int getMapping1To2(int i) {
+		return getMapping1To2()[i];
+	}
+	
+	/**
+	 * Return the position in sequence 1 given a position in sequence 2
+	 * Indices are counted from 0 to sequence length-1
+	 * @param i the position in sequence 2
+	 * @return the position in sequence 1 or -1 if the position maps to a gap
+	 */
+	public int getMapping2To1(int i) {
+		return getMapping2To1()[i];
+	}
 
 	/*---------------------------- private methods --------------------------*/
 
@@ -259,7 +319,7 @@ public class PairwiseSequenceAlignment {
 
 	/**
 	 * @param one2two specifies which mapping is to be returned
-	 * @return Returns the mapping from sequence 1 sequence 2 (if one2two = true) or
+	 * @return Returns the mapping from sequence 1 to sequence 2 (if one2two = true) or
 	 * from sequence 2 to sequence 1 (if one2two = false).
 	 */
 	private int[] getMapping(boolean one2two) {

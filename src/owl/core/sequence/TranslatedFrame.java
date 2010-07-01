@@ -13,7 +13,7 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
  */
 public class TranslatedFrame implements Comparable<TranslatedFrame> {
 	private Sequence sequence; // the translated sequence (protein)
-	private PairwiseSequenceAlignment psa; // the alignment between the translated sequence and the reference protein sequence
+	private PairwiseSequenceAlignment psa; // the alignment between the the reference protein (1) sequence and the translated sequence (2)
 	private ReadingFrame rf;
 
 	public TranslatedFrame(Sequence sequence, ReadingFrame rf) {
@@ -52,6 +52,16 @@ public class TranslatedFrame implements Comparable<TranslatedFrame> {
 	
 	public int getNumMismatches() {
 		return this.psa.getLength()-this.psa.getIdentity();
+	}
+	
+	/**
+	 * Given a reference protein sequence position, tells whether the translated sequence 
+	 * matches (is an identity)
+	 * @param i a reference protein sequence position (starting at 0)
+	 * @return true if the position matches the translated sequence, false otherwise
+	 */
+	public boolean isMatch(int i) {
+		return this.psa.isMatchingTo2(i);
 	}
 		
 }

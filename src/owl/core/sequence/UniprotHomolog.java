@@ -52,4 +52,12 @@ public class UniprotHomolog {
 		return this.blastHit.getPercentIdentity();
 	}
 	
+	/**
+	 * Returns the long sequence tag i.e. the original Uniprot long identifier (e.g. tr|Q6V461|Q6V461_AERHY)
+	 * (without the comment field)
+	 * @return
+	 */
+	public String getLongSequenceTag() {
+		return this.blastHit.getSubjectId();
+	}
 }
