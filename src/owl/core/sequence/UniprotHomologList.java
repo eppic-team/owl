@@ -332,16 +332,19 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * Write to the given file the query protein sequence and all the homolog protein 
 	 * sequences (full uniprot sequences) in fasta format.
 	 * @param outFile
+	 * @param writeQuery if true the query sequence is written as well, if false only homologs 
 	 * @throws FileNotFoundException
 	 */
-	public void writeToFasta(File outFile) throws FileNotFoundException {
+	public void writeToFasta(File outFile, boolean writeQuery) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(outFile);
 		
 		int len = 80;
 
-		pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotSeq().getName());
-		for(int i=0; i<this.ref.getLength(); i+=len) {
-			pw.println(ref.getUniprotSeq().getSeq().substring(i, Math.min(i+len,ref.getLength())));
+		if (writeQuery) {
+			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotSeq().getName());
+			for(int i=0; i<this.ref.getLength(); i+=len) {
+				pw.println(ref.getUniprotSeq().getSeq().substring(i, Math.min(i+len,ref.getLength())));
+			}
 		}
 		
 		for(UniprotHomolog hom:this) {
@@ -375,7 +378,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			tcoffeeLogFile.deleteOnExit();
 			outTreeFile.deleteOnExit(); 
 		}
-		this.writeToFasta(homologSeqsFile);
+		this.writeToFasta(homologSeqsFile, true);
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
 		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast);
 		
