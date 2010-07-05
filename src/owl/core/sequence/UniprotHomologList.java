@@ -114,7 +114,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		if (cacheFile!=null && cacheFile.exists()) {
 			outBlast = cacheFile;
 			fromCache = true;
-			LOGGER.info("Reading blast results from cache file "+cacheFile);
+			LOGGER.warn("Reading blast results from cache file "+cacheFile);
 		} else {
 			outBlast = File.createTempFile(BLAST_BASENAME,BLASTOUT_SUFFIX);
 			File inputSeqFile = File.createTempFile(BLAST_BASENAME,FASTA_SUFFIX);
@@ -543,12 +543,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				groups.put(key, list);
 			}
 		}
-		LOGGER.info("Number of protein sequence groups for redundancy elimination (based on same identity value and same tax id): "+groups.size());
+		LOGGER.debug("Number of protein sequence groups for redundancy elimination (based on same identity value and same tax id): "+groups.size());
 		// 2) finding if group members are really identical (all vs all pairwise alignments)
 		for (String key:groups.keySet()) {
 			// all vs all pairwise alignments
 			List<UniprotHomolog> list = groups.get(key);
-			LOGGER.info("Size of group "+key+": "+list.size());
+			LOGGER.debug("Size of group "+key+": "+list.size());
 			if (list.size()>1) {
 				double[][] pairwiseIdMatrix = new double[list.size()][list.size()];
 				for (int i=0;i<list.size();i++){
@@ -585,7 +585,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					matStr+="\n";
 				}
 
-				LOGGER.info("Pairwise similarities: \n"+matStr);
+				LOGGER.debug("Pairwise similarities: \n"+matStr);
 				Iterator<UniprotHomolog> it = list.iterator();
 				int i = 0;
 				while (it.hasNext()){
@@ -595,7 +595,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					}
 					i++;
 				}
-				LOGGER.info("Size of group after elimination of sequences not identical to any of the others: "+list.size());
+				LOGGER.debug("Size of group after elimination of sequences not identical to any of the others: "+list.size());
 			}
 		}
 		// 3) if there are still groups with size>1 then they are really redundant, all sequences except one have to be eliminated
@@ -736,13 +736,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
 			sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);
 		} else {
-			LOGGER.info("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
+			LOGGER.warn("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
 			try {
 				sr.parseResultsFile(resultsFile, this.ref.getRepresentativeCDS().getCDSName());
 			} catch (FileFormatError e) {
 				LOGGER.warn("Cached output selecton file "+resultsFile+" does not seem to be in the righ format");
 				LOGGER.warn(e.getMessage());
-				LOGGER.info("Running selecton and overwritting the file.");
+				LOGGER.warn("Running selecton and overwritting the file.");
 				File alnFile = File.createTempFile("selecton.", ".cds.aln");
 				alnFile.deleteOnExit();
 				this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
@@ -751,7 +751,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		kaksRatios = sr.getKaKsRatios();
 		if (kaksRatios.size()!=this.ref.getUniprotSeq().getLength()) {
-			LOGGER.warn("Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
+			LOGGER.info("Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
 		}
 	}
 

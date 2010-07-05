@@ -304,12 +304,12 @@ public class UniprotEntry implements HasFeatures {
 						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+
 								". Best match "+matching.getCDSName()+" (reading frame "+bestTranslation.getReadingFrame().getNumber()+
 								") not good enough ("+String.format("%5.1f", bestTranslation.getPercentIdentity())+" identity). ");					
-						LOGGER.warn("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
+						LOGGER.debug("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 						representativeCDS = null;
 					} else {
 						representativeCDS = matching;
 						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
-						LOGGER.warn("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
+						LOGGER.debug("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 					}
 					repCDScached = true;
 					return representativeCDS;
