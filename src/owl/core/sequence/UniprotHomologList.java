@@ -34,6 +34,8 @@ import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.alignment.AlignmentConstructionError;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment;
+import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.util.FileFormatError;
 import owl.core.util.Goodies;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
@@ -175,6 +177,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	//TODO write a searchithPSIBlast method
 
+	/**
+	 * Initialises the lookup map (for speeding up lookups of homologs by uniprot ids)
+	 */
 	private void initialiseMap() {
 		this.lookup = new HashMap<String, List<UniprotHomolog>>();
 		for (UniprotHomolog hom:this) {
@@ -309,7 +314,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				} else { 
 					// this will happen when the CDS sequence was not returned by embl dbfetch or the cache file does not have it (it's in the list of missing entries)
 					// in either case we don't want the list of emblcs sequences to contain a null
-					System.err.println("Warning! Sequence for EMBL CDS "+emblCdsId+" of uniprot entry "+hom.getUniId()+" could not be found. Not using it.");
+					LOGGER.warn("Sequence for EMBL CDS "+emblCdsId+" of uniprot entry "+hom.getUniId()+" could not be found. Not using it.");
 					//TODO should we also remove from the list of embl cds ids this emblCdsId? Not sure if it can cause problems
 					// to have an embl cds id without its corresponding sequence
 				}
@@ -500,37 +505,131 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 */
 	public void restrictToMinIdAndCoverage(double idCutoff, double queryCovCutoff) {
 		this.idCutoff = idCutoff;
-		List<String> toRemove = new ArrayList<String>();
+
 		Iterator<UniprotHomolog> it = list.iterator();
 		while (it.hasNext()) {
 			UniprotHomolog hom = it.next();
 			if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
 				it.remove();
-				toRemove.add(hom.getUniId());
+
 			}
 		}
-		// updating also lookup table
-		// 1st we go through toRemove uniIds and search each list for ids below cutoff
-		// thus it can happen that a uniId deletes all members of a list in its first appearance
-		for (String uniId:toRemove) {
-			List<UniprotHomolog> homs = lookup.get(uniId);
-			Iterator<UniprotHomolog> it2 = homs.iterator();
-			while (it2.hasNext()) {
-				UniprotHomolog hom = it2.next();
-				if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
-					it2.remove();
+		// finally we update the lookup table
+		initialiseMap();
+	}
+	
+	/**
+	 * Removes the redundant sequences in this list of Homologs. The redundancy reduction procedes as follows:
+	 * 1) It groups the sequences by taxonomy id and sequence identity
+	 * 2) If any of the groups have more than one member then the pairwise identities within the group are calculated 
+	 *    (all vs all Needleman-Wunsch). From the pairwise identity matrix sequences that are not 100% identity to all the others
+	 *    are removed from the group, leaving groups that contain only identical sequences from same species. 
+	 * 3) If after this second pruning any group has more than 1 member then a single member is chosen (first one with a
+	 *    good matching corresponding CDS sequence or simply first one if no good CDS matchings exist) 
+	 */
+	public void removeRedundancy() {
+		
+		// 1) grouping by tax id and sequence identity
+		Map<String,List<UniprotHomolog>> groups = new HashMap<String,List<UniprotHomolog>>();
+		for (UniprotHomolog hom:this){
+			double percentId = hom.getPercentIdentity();
+			String taxId = hom.getUniprotEntry().getTaxId();
+			String key = taxId+"_"+String.format("%5.1f",percentId);
+			if (groups.containsKey(key)) {
+				groups.get(key).add(hom);
+			} else {
+				List<UniprotHomolog> list = new ArrayList<UniprotHomolog>();
+				list.add(hom);
+				groups.put(key, list);
+			}
+		}
+		LOGGER.info("Number of protein sequence groups for redundancy elimination (based on same identity value and same tax id): "+groups.size());
+		// 2) finding if group members are really identical (all vs all pairwise alignments)
+		for (String key:groups.keySet()) {
+			// all vs all pairwise alignments
+			List<UniprotHomolog> list = groups.get(key);
+			LOGGER.info("Size of group "+key+": "+list.size());
+			if (list.size()>1) {
+				double[][] pairwiseIdMatrix = new double[list.size()][list.size()];
+				for (int i=0;i<list.size();i++){
+					for (int j=i+1;j<list.size();j++){
+						try {
+							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUniprotSeq(), list.get(j).getUniprotSeq());
+							pairwiseIdMatrix[i][j]=aln.getPercentIdentity();
+						} catch (PairwiseSequenceAlignmentException e) {
+							LOGGER.fatal("Unexpected error. Couldn't align sequences for redundancy removal procedure");
+							LOGGER.fatal(e.getMessage());
+							System.exit(1);
+						}
+					}
+				}
+				// mirroring the other side of the matrix
+				for (int i=0;i<list.size();i++){
+					for (int j=i+1;j<list.size();j++){
+						pairwiseIdMatrix[j][i] = pairwiseIdMatrix[i][j]; 
+					}
+				}
+
+				String matStr = "";
+				// if a member is not identical to all the others then we throw it away
+				boolean[] hasNoIdenticalPair = new boolean[list.size()];
+				for (int i=0;i<list.size()-1;i++){
+					boolean hasIdenticalPair = false;
+					for (int j=0;j<list.size();j++){
+						matStr+=String.format("%5.1f ", pairwiseIdMatrix[i][j]);
+						if (pairwiseIdMatrix[i][j]>99.99f) {
+							hasIdenticalPair = true;
+						}
+					}
+					if (!hasIdenticalPair) hasNoIdenticalPair[i] = true;
+					matStr+="\n";
+				}
+
+				LOGGER.info("Pairwise similarities: \n"+matStr);
+				Iterator<UniprotHomolog> it = list.iterator();
+				int i = 0;
+				while (it.hasNext()){
+					it.next();
+					if (hasNoIdenticalPair[i]) {
+						it.remove();
+					}
+					i++;
+				}
+				LOGGER.info("Size of group after elimination of sequences not identical to any of the others: "+list.size());
+			}
+		}
+		// 3) if there are still groups with size>1 then they are really redundant, all sequences except one have to be eliminated
+		//    in any case we first check that the one we want to eliminate doesn't have a better CDS representative
+		List<UniprotHomolog> toRemove = new ArrayList<UniprotHomolog>();
+		for (String key:groups.keySet()) {
+			List<UniprotHomolog> list = groups.get(key);
+			if (list.size()>1) {
+				UniprotHomolog homToKeep = null;
+				for (UniprotHomolog hom:list){
+					if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
+						homToKeep = hom;
+						break;
+					}
+				}
+				if (homToKeep==null) { // if there wasn't any good CDS homolog we remove all but first
+					for (int i=1;i<list.size();i++) {
+						toRemove.add(list.get(i));
+					}
+				} else { // if we found one good CDS homolog we remove all the others
+					for (UniprotHomolog hom:list) {
+						if (hom!=homToKeep) toRemove.add(hom);
+					}
 				}
 			}
 		}
-		// after the purge, now we get rid of uniIds mapping to empty list
-		Iterator<List<UniprotHomolog>> it3 = lookup.values().iterator(); 
-		while (it3.hasNext()) {
-			List<UniprotHomolog> homs = it3.next();
-			if (homs.isEmpty()) {
-				it3.remove();
-			}
+		for (UniprotHomolog hom:toRemove){
+			this.list.remove(hom);
+			LOGGER.info("Homolog "+hom.getUniId()+" removed because it is redundant.");
 		}
-
+		LOGGER.info("Number of homologs after redundancy elimination: "+this.size());
+		
+		// finally we update the lookup table
+		initialiseMap();
 	}
 	
 	/**
