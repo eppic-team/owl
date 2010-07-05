@@ -253,6 +253,14 @@ public class PairwiseSequenceAlignment {
 	}
 	
 	/**
+	 * Gets a string with a nicely formatted alignment
+	 * @return
+	 */
+	public String getFormattedAlignmentString() {
+		return new Pair().format(alignment);
+	}
+	
+	/**
 	 * Return the mapping of indices from sequence 1 to indices in sequence 2 based on the calculated alignment.
 	 * Indices are counted from 0 to sequence length - 1.
 	 * @return An array containing for each position in sequence 1 the corresponding position in sequence 2 or -1

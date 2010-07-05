@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
+
 import owl.core.sequence.Sequence;
 import owl.core.util.FileFormatError;
 
@@ -32,6 +34,8 @@ import owl.core.util.FileFormatError;
  *
  */
 public class EmblWSDBfetchConnection {
+	
+	private static final Logger LOGGER = Logger.getLogger(EmblWSDBfetchConnection.class);
 	
 	private static final String BASE_URL = "http://www.ebi.ac.uk/Tools/webservices/rest/dbfetch";
 	private static final int MAX_ENTRIES_PER_REQUEST = 200; // see the embl ws dbfetch docs (url above) 
@@ -97,7 +101,7 @@ public class EmblWSDBfetchConnection {
 				SequenceCache seqCache = readSeqs(cacheFile, FASTA_HEADER_REGEX);
 				List<String> notFoundIds = getNotFoundIds(db, seqCache.list, ids, seqCache.notFoundIds);
 				if (notFoundIds.isEmpty()) {
-					System.out.println("Using sequences from cache file "+cacheFile);
+					LOGGER.info("Using sequences from cache file "+cacheFile);
 					return seqCache.list;
 				} else {
 					allSeqs = new ArrayList<Sequence>();
@@ -120,11 +124,11 @@ public class EmblWSDBfetchConnection {
 			// looking up if all our ids were actually returned by embl dbfetch
 			List<String> notFoundIds = getNotFoundIds(db, allSeqs, ids, null);
 			if (!notFoundIds.isEmpty()) {
-				System.err.println("Warning: some ids weren't returned by EMBL DB fetch service:");
+				String msg = "Some ids weren't returned by EMBL DB fetch service:";
 				for (String id:notFoundIds) {
-					System.err.print(id+" ");
+					msg+=" "+id;
 				}
-				System.err.println();
+				LOGGER.warn(msg);
 			}
 			
 			// we did fetch the sequences from embl, let's write them out to the cache file

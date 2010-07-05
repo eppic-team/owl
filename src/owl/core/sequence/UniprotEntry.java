@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.log4j.Logger;
+
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
@@ -38,6 +40,8 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  *
  */
 public class UniprotEntry implements HasFeatures {
+	
+	private static final Logger LOGGER = Logger.getLogger(UniprotEntry.class);
 
 	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
 	
@@ -180,7 +184,7 @@ public class UniprotEntry implements HasFeatures {
 		try {
 			entry = uniprotConn.getEntry(uniId);
 		} catch (NoMatchFoundException e) {
-			System.err.println("Warning: couldn't find uniprot id "+uniId+" through Uniprot JAPI");
+			LOGGER.warn("Couldn't find uniprot id "+uniId+" through Uniprot JAPI");
 			return;
 		}
 		
@@ -188,7 +192,7 @@ public class UniprotEntry implements HasFeatures {
 		
 		List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
 		if (ncbiTaxIds.size()>1) {
-			System.err.println("Warning! more than one taxonomy id for uniprot entry "+this.uniId);
+			LOGGER.warn("More than one taxonomy id for uniprot entry "+this.uniId);
 		}
 		this.taxId = ncbiTaxIds.get(0).getValue();
 		for (NcbiTaxon ncbiTax:entry.getTaxonomy()) {
@@ -211,7 +215,7 @@ public class UniprotEntry implements HasFeatures {
 			if (orglls.size()>1) {
 				for (Organelle orgll:orglls){ 
 					if (!orgll.getType().equals(this.geneEncodingOrganelle)) {
-						System.err.println("Warning! Different gene encoding organelles for Uniprot "+this.uniId);
+						LOGGER.warn("Different gene encoding organelles for Uniprot "+this.uniId);
 					}
 				}
 			}
@@ -253,7 +257,7 @@ public class UniprotEntry implements HasFeatures {
 	 * to this method take the sequence from the cached value.
 	 * The CDSs are translated on their 6 frames, then aligned to the protein sequence
 	 * and if 100% matches exist one of them is returned. If no 100% matches exist the 
-	 * best one is returned (TODO must still check what are tolerable mismatches)
+	 * best one is returned (as long as it is above the {@value #MIN_TOLERATED_ID}) value)
 	 * @return the ProteinsToCDSMatch object corresponding to the chosen translated CDS 
 	 * or null if no correct match to the protein sequence can be found
 	 */
@@ -263,7 +267,7 @@ public class UniprotEntry implements HasFeatures {
 		}
 		
 		if (this.geneEncodingOrganelle!=null) {
-			System.err.println("Warning! The entry "+this.getUniId()+" is not encoded in nucleus!");
+			LOGGER.fatal("The entry "+this.getUniId()+" is not encoded in nucleus!");
 			System.exit(1);
 		}
 		
@@ -275,8 +279,8 @@ public class UniprotEntry implements HasFeatures {
 				matching = new ProteinToCDSMatch(this.getUniprotSeq(), cds, GeneticCodeType.STANDARD);
 				allMatchings.add(matching);
 			} catch (TranslationException e) {
-				System.err.println("Couldn't translate embl CDS "+cds.getName());
-				System.err.println(e.getMessage());
+				LOGGER.warn("Couldn't translate embl CDS "+cds.getName());
+				LOGGER.warn(e.getMessage());
 				continue; // try the next one
 			}
 		}		
@@ -297,15 +301,15 @@ public class UniprotEntry implements HasFeatures {
 					// TODO must still check whether this is an acceptable match, or should we do that at a later stage?
 					int mismatches = bestTranslation.getNumMismatches();
 					if (bestTranslation.getPercentIdentity()/100.0f<MIN_TOLERATED_ID) {
-						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+
+						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+
 								". Best match "+matching.getCDSName()+" (reading frame "+bestTranslation.getReadingFrame().getNumber()+
 								") not good enough ("+String.format("%5.1f", bestTranslation.getPercentIdentity())+" identity). ");					
-						bestTranslation.getAln().printAlignment();
+						LOGGER.warn("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 						representativeCDS = null;
 					} else {
 						representativeCDS = matching;
-						System.err.println("Warning! No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
-						bestTranslation.getAln().printAlignment();
+						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
+						LOGGER.warn("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 					}
 					repCDScached = true;
 					return representativeCDS;

@@ -18,6 +18,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
 import org.xml.sax.SAXException;
 
 import owl.core.connections.EmblWSDBfetchConnection;
@@ -69,6 +70,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	private static final boolean DEBUG = false;
 	
+	private static final Logger  LOGGER = Logger.getLogger(UniprotHomologList.class);
+	
 	/*-------------------------- members --------------------------*/
 	
 	private UniprotEntry ref;						 // the uniprot entry to which the homologs refer
@@ -109,7 +112,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		if (cacheFile!=null && cacheFile.exists()) {
 			outBlast = cacheFile;
 			fromCache = true;
-			System.out.println("Reading blast results from cache file "+cacheFile);
+			LOGGER.info("Reading blast results from cache file "+cacheFile);
 		} else {
 			outBlast = File.createTempFile(BLAST_BASENAME,BLASTOUT_SUFFIX);
 			File inputSeqFile = File.createTempFile(BLAST_BASENAME,FASTA_SUFFIX);
@@ -287,7 +290,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			allSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(allIds, cacheFile);
 		} catch (NoMatchFoundException e) {
 			// this is unlikely to happen here, that's why we don't write a better error message
-			System.err.println("Couldn't retrieve EMBL CDS sequences for some EMBL cds ids"); 
+			LOGGER.warn("Couldn't retrieve EMBL CDS sequences for some EMBL cds ids");
+			LOGGER.warn(e.getMessage());
 		}
 		
 		// we put the list (containing all the sequences from all the homologs) in a lookup table
@@ -633,13 +637,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
 			sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);
 		} else {
-			System.out.println("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
+			LOGGER.info("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
 			try {
 				sr.parseResultsFile(resultsFile, this.ref.getRepresentativeCDS().getCDSName());
 			} catch (FileFormatError e) {
-				System.err.println("Warning! cached output selecton file "+resultsFile+" does not seem to be in the righ format");
-				System.err.println(e.getMessage());
-				System.err.println("Running selecton and overwritting the file.");
+				LOGGER.warn("Cached output selecton file "+resultsFile+" does not seem to be in the righ format");
+				LOGGER.warn(e.getMessage());
+				LOGGER.info("Running selecton and overwritting the file.");
 				File alnFile = File.createTempFile("selecton.", ".cds.aln");
 				alnFile.deleteOnExit();
 				this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
@@ -648,7 +652,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 		kaksRatios = sr.getKaKsRatios();
 		if (kaksRatios.size()!=this.ref.getUniprotSeq().getLength()) {
-			System.err.println("Warning! Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
+			LOGGER.warn("Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
 		}
 	}
 
