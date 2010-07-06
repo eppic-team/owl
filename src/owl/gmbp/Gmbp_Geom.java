@@ -38,22 +38,22 @@ public class Gmbp_Geom {
 		proteinToLoad.load(str, 1);
 		TreeMap<Integer, Residue> protein=new TreeMap<Integer, Residue>(proteinToLoad.getResidues());
 		
-		int resno=23;
+		int resno=26;
 		Residue res=protein.get(resno);
 		String resType = res.getAaType().getThreeLetterCode();
 		System.out.println("ResType"+resType);
 		Atom atom=res.getAtom("CA");
 		Point3d coords=atom.getCoords();
-		System.out.println("CA TransRotCoord Cartesian: "+coords.x+","+coords.y+","+coords.z);
+		System.out.println("CA TransRotCoord Cartesian: "+coords.x+", "+coords.y+", "+coords.z);
 		atom=res.getAtom("C");
 		coords=atom.getCoords();
-		System.out.println("C TransRotCoord Cartesian: "+coords.x+","+coords.y+","+coords.z);
+		System.out.println("C TransRotCoord Cartesian: "+coords.x+", "+coords.y+", "+coords.z);
 		atom=res.getAtom("N");
 		coords=atom.getCoords();
-		System.out.println("N TransRotCoord Cartesian: "+coords.x+","+coords.y+","+coords.z);
+		System.out.println("N TransRotCoord Cartesian: "+coords.x+", "+coords.y+", "+coords.z);
 		atom=res.getAtom("CB");
 		coords=atom.getCoords();
-		System.out.println("CB TransRotCoord Cartesian: "+coords.x+","+coords.y+","+coords.z);
+		System.out.println("CB TransRotCoord Cartesian: "+coords.x+", "+coords.y+", "+coords.z);
 		//System.out.println(coords.x+"  "+coords.y+"   "+coords.z);
 			
 		// Transformation procedures by Saurabh
@@ -61,14 +61,14 @@ public class Gmbp_Geom {
 		HashMap<String, Point3d> atom_coord_sph = getRotated2SphericalCoords(atom_coord_cart);		
 
 		System.out.println("by Saurabh:");
-		System.out.println("CA TransRotCoord Cartesian: "+atom_coord_cart.get("CA").x+","+atom_coord_cart.get("CA").y+","+atom_coord_cart.get("CA").z
-				+" SPH: "+atom_coord_sph.get("CA").x+","+atom_coord_sph.get("CA").y+","+atom_coord_sph.get("CA").z);
-		System.out.println("C TransRotCoord Cartesian: "+atom_coord_cart.get("C").x+","+atom_coord_cart.get("C").y+","+atom_coord_cart.get("C").z
-				+" SPH: "+atom_coord_sph.get("C").x+","+atom_coord_sph.get("C").y+","+atom_coord_sph.get("C").z);
-		System.out.println("N TransRotCoord Cartesian: "+atom_coord_cart.get("N").x+","+atom_coord_cart.get("N").y+","+atom_coord_cart.get("N").z
-				+" SPH: "+atom_coord_sph.get("N").x+","+atom_coord_sph.get("N").y+","+atom_coord_sph.get("N").z);
-		System.out.println("N TransRotCoord Cartesian: "+atom_coord_cart.get("CB").x+","+atom_coord_cart.get("CB").y+","+atom_coord_cart.get("CB").z
-				+" SPH: "+atom_coord_sph.get("CB").x+","+atom_coord_sph.get("CB").y+","+atom_coord_sph.get("CB").z);
+		System.out.println("CA TransRotCoord Cartesian: "+atom_coord_cart.get("CA").x+", "+atom_coord_cart.get("CA").y+", "+atom_coord_cart.get("CA").z
+				+" SPH: "+atom_coord_sph.get("CA").x+", "+atom_coord_sph.get("CA").y+", "+atom_coord_sph.get("CA").z);
+		System.out.println("C TransRotCoord Cartesian: "+atom_coord_cart.get("C").x+", "+atom_coord_cart.get("C").y+", "+atom_coord_cart.get("C").z
+				+" SPH: "+atom_coord_sph.get("C").x+", "+atom_coord_sph.get("C").y+", "+atom_coord_sph.get("C").z);
+		System.out.println("N TransRotCoord Cartesian: "+atom_coord_cart.get("N").x+", "+atom_coord_cart.get("N").y+", "+atom_coord_cart.get("N").z
+				+" SPH: "+atom_coord_sph.get("N").x+", "+atom_coord_sph.get("N").y+", "+atom_coord_sph.get("N").z);
+		System.out.println("CB TransRotCoord Cartesian: "+atom_coord_cart.get("CB").x+", "+atom_coord_cart.get("CB").y+", "+atom_coord_cart.get("CB").z
+				+" SPH: "+atom_coord_sph.get("CB").x+", "+atom_coord_sph.get("CB").y+", "+atom_coord_sph.get("CB").z);
 				
 		// old tranformation procedures --> implemented in GmbpGeometry
 		// translate coordinates with rotation and translation invariant framework
@@ -84,20 +84,20 @@ public class Gmbp_Geom {
 			System.out.println("old Transformation:");
 			coord = atom_coord_cart2.get("CA"); 
 			coord_sph = gmbp.getSphericalFromCartesian(coord); // (r,theta,phi) // (r, phi,lambda)
-			System.out.println("CA TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
-					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
+			System.out.println("CA TransRotCoord Cartesian: "+coord.x+", "+coord.y+", "+coord.z
+					+" SPH: "+coord_sph.x+", "+coord_sph.y+", "+coord_sph.z);
 			coord = atom_coord_cart2.get("C"); 
 			coord_sph = gmbp.getSphericalFromCartesian(coord); // (r,theta,phi) // (r, phi,lambda)
-			System.out.println("C TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
-					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
+			System.out.println("C TransRotCoord Cartesian: "+coord.x+", "+coord.y+", "+coord.z
+					+" SPH: "+coord_sph.x+", "+coord_sph.y+", "+coord_sph.z);
 			coord = atom_coord_cart2.get("N"); 
 			coord_sph = gmbp.getSphericalFromCartesian(coord); // (r,theta,phi) // (r, phi,lambda)
-			System.out.println("N TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
-					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
+			System.out.println("N TransRotCoord Cartesian: "+coord.x+", "+coord.y+", "+coord.z
+					+" SPH: "+coord_sph.x+", "+coord_sph.y+", "+coord_sph.z);
 			coord = atom_coord_cart2.get("CB"); 
 			coord_sph = gmbp.getSphericalFromCartesian(coord); // (r,theta,phi) // (r, phi,lambda)
-			System.out.println("CB TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
-					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
+			System.out.println("CB TransRotCoord Cartesian: "+coord.x+", "+coord.y+", "+coord.z
+					+" SPH: "+coord_sph.x+", "+coord_sph.y+", "+coord_sph.z);
 		}
 				
 		
@@ -339,7 +339,7 @@ public class Gmbp_Geom {
 		Point3d tempRotated2CartesianCoordinates=new Point3d();
 		tempRotated2CartesianCoordinates.x=rotated1CartesianCoordinates.get(key).x;
 		tempRotated2CartesianCoordinates.y=rotated1CartesianCoordinates.get(key).y*Math.cos(omega)-rotated1CartesianCoordinates.get(key).z*Math.sin(omega);
-		tempRotated2CartesianCoordinates.z=rotated1CartesianCoordinates.get(key).y*Math.sin(omega)+rotated1CartesianCoordinates.get(key).z+Math.cos(omega);
+		tempRotated2CartesianCoordinates.z=rotated1CartesianCoordinates.get(key).y*Math.sin(omega)+rotated1CartesianCoordinates.get(key).z*Math.cos(omega);
 		rotated2CartesianCoordinates.put(key, tempRotated2CartesianCoordinates);
 		}
 	return rotated2CartesianCoordinates;

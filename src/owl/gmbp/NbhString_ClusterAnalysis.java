@@ -2,6 +2,7 @@ package owl.gmbp;
 
 import java.util.Vector;
 
+
 public class NbhString_ClusterAnalysis {
 	
 	public static final int defaultEpsilon = 5;
@@ -185,6 +186,8 @@ public class NbhString_ClusterAnalysis {
 				clusterDirProp[i-1][4] = averOutSlope; 
 				clusterDirProp[i-1][5] = maxOutSlope;  
 				// --- Test output ---
+//				minIncSlope+=Math.PI; averIncSlope+=Math.PI; maxIncSlope+=Math.PI;
+//				minOutSlope+=Math.PI; averOutSlope+=Math.PI; maxOutSlope+=Math.PI;
 				System.out.println("C_ID="+i+"\t"+"Inc: "+minIncSlope+":"+averIncSlope+":"+maxIncSlope+"\t"
 						+"Out: "+minOutSlope+":"+averOutSlope+":"+maxOutSlope+"\t"+"deltaInc="+deltaIncSlope+" deltaOut="+deltaOutSlope);
 			}
@@ -336,7 +339,7 @@ public class NbhString_ClusterAnalysis {
 	 minimum, maximum and average values of node positions (lambda and phi).
 	 */		
 	@SuppressWarnings("unchecked")
-	public void analyseClusters(){
+	public void analyseClusters(){		
 		if (this.numFoundClusters<=0)
 			runClusterAnalysis();
 		if (this.numFoundClusters>0){
@@ -382,6 +385,7 @@ public class NbhString_ClusterAnalysis {
 				clusterProp[i-1][3] = minP; 
 				clusterProp[i-1][4] = averP; 
 				clusterProp[i-1][5] = maxP;  
+				minL+=Math.PI; averL+=Math.PI; maxL+=Math.PI;
 				System.out.println("ID="+i+"\t"+"#nodes="+clusters[i].size()+"  lambda: "+minL+" : "+averL+" : "+maxL+"\t"+"\t"+"phi: "+minP+" : "+averP+" : "+maxP);
 			}
 			
@@ -394,6 +398,106 @@ public class NbhString_ClusterAnalysis {
 				System.out.println();
 			}
 		}
+	}
+	
+	/**
+	 Computes distribution of nodes within certain cluster (clusterID>0)
+	 @param ID that defines the cluster 
+	 */		
+	public double[] analyseNodeDistributionInCluster(int clusterID){
+		double[] nodeDistr = null;
+		if (clusterID>0 && clusterID<=this.numFoundClusters){			
+
+//			if (this.clusterProp==null)
+				analyseClusters();
+			// cluster centre
+			double averL = this.clusterProp[clusterID-1][1];
+		    double averP = this.clusterProp[clusterID-1][4];
+		    double maxRad = 0;
+		    if (Math.abs(this.clusterProp[clusterID-1][0]-averL)>maxRad)
+		    	maxRad = Math.abs(this.clusterProp[clusterID-1][0]-averL);
+		    if (Math.abs(this.clusterProp[clusterID-1][2]-averL)>maxRad)
+		    	maxRad = Math.abs(this.clusterProp[clusterID-1][2]-averL);
+		    if (Math.abs(this.clusterProp[clusterID-1][3]-averP)>maxRad)
+		    	maxRad = Math.abs(this.clusterProp[clusterID-1][3]-averP);
+		    if (Math.abs(this.clusterProp[clusterID-1][5]-averP)>maxRad)
+		    	maxRad = Math.abs(this.clusterProp[clusterID-1][5]-averP);
+		    double deltaRad = 0.03;
+		    int numRanges = (int)(maxRad/deltaRad) + 1;
+		    nodeDistr = new double[numRanges];
+		    
+			// ID=0 -> Background, ID>0 -> ClusterNr
+			Vector<Integer> nodeIDs = this.clusters[clusterID];
+			int numNodes = nodeIDs.size();
+			double lambda, phi;
+			double thres = getGeodesicDist(averL-maxRad, averP-maxRad, averL, averP);
+		    System.out.println("Node Distribution within cluster "+clusterID+" numNodes="+numNodes+"  maxRange="+String.valueOf(maxRad)+" thres="+thres+"_"+(thres/this.rSphere));
+			
+			double rad = deltaRad;
+			int i = 0;
+			int cnt=0;
+			double sum = 0;
+//			for (int nodeID:nodeIDs){
+//				float[] node = (float[]) this.nbhsNodes.get(nodeID);
+//				lambda = node[4]; //+Math.PI;
+//				phi = node[3];
+////				double dist = getGeodesicDist(lambda, phi, averL, averP);		
+//				double dist = getEuclideanDist2d(lambda, phi, averL, averP);
+////				System.out.println("node"+nodeID+" l="+(lambda+Math.PI)+" p="+phi+" dist="+dist);				
+//			}
+			while(rad-deltaRad < maxRad){	
+//				double innerT = getGeodesicDist(averL-(rad-deltaRad), averP-(rad-deltaRad), averL, averP);
+//				double outerT = getGeodesicDist(averL-rad, averP-rad, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+//				innerT = getGeodesicDist(averL, averP-(rad-deltaRad), averL, averP);
+//				outerT = getGeodesicDist(averL, averP-rad, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+//				innerT = getGeodesicDist(averL-(rad-deltaRad), averP, averL, averP);
+//				outerT = getGeodesicDist(averL-rad, averP, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+//				double innerT = getEuclideanDist2d(averL-(rad-deltaRad), averP-(rad-deltaRad), averL, averP);
+//				double outerT = getEuclideanDist2d(averL-rad, averP-rad, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+//				innerT = getEuclideanDist2d(averL, averP-(rad-deltaRad), averL, averP);
+//				outerT = getEuclideanDist2d(averL, averP-rad, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+				double innerT = getEuclideanDist2d(averL-(rad-deltaRad), averP, averL, averP);
+				double outerT = getEuclideanDist2d(averL-rad, averP, averL, averP);
+//				System.out.println(innerT+"<dist<"+outerT);
+
+
+				for (int nodeID:nodeIDs){
+					float[] node = (float[]) this.nbhsNodes.get(nodeID);
+					lambda = node[4]; //+Math.PI;
+					phi = node[3];
+//					double dist = getGeodesicDist(lambda, phi, averL, averP);				
+//					if (dist>=innerT && dist<outerT)
+//						cnt++;
+					
+					double dist = getEuclideanDist2d(lambda, phi, averL, averP);
+					if (dist>=innerT && dist<outerT)
+						cnt++;
+
+//					dist = dist/rSphere;
+//					if (dist>=rad-deltaRad && dist<rad)
+//						cnt++;
+				}
+				
+//				double distr = (double)cnt/(double)numNodes;
+				nodeDistr[i] = (double)cnt/(double)numNodes;
+				sum += nodeDistr[i];
+//				System.out.printf("i=%d \t rad<%5.3f \t cnt=%d \t distr=%5.3f sum=%5.3\n", i, rad, cnt, nodeDistr[i], sum); 
+				System.out.println("i="+i+"  rad<"+rad+"   "+innerT+"<dist<"+outerT+"   cnt="+cnt+"   distr="+nodeDistr[i]+ "   sum="+sum);
+				i++;
+				rad+=deltaRad;
+				cnt=0;
+			}			
+			
+		}
+		else
+			System.out.println("Distribution can't be computed of background (noise) cluster!");
+		
+		return nodeDistr;
 	}
 	
 	//  ________private methods	
@@ -482,6 +586,10 @@ public class NbhString_ClusterAnalysis {
 		return dist;
 	}
 	
+	private double getEuclideanDist2d(double l1, double p1, double l2, double p2){
+		double dist = Math.sqrt(Math.pow(l1-l2, 2) + Math.pow(p1-p2, 2));
+		return dist;
+	}
 	
 	// --- Getters and Setters ---	
 	public Vector<float[]> getNbhsNodes() {
@@ -500,12 +608,16 @@ public class NbhString_ClusterAnalysis {
 		this.epsilon = epsilon;
 	}
 
-	public int getminNumNBs() {
+	public int getMinNumNBs() {
 		return minNumNBs;
 	}
 
-	public void setminNumNBs(int minNumNBs) {
+	public void setMinNumNBs(int minNumNBs) {
 		this.minNumNBs = minNumNBs;
+	}
+	
+	public void setRadiusSphere(double rad){
+		this.rSphere = rad;
 	}
 	
 	public int[] getClusterN() {

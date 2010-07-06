@@ -2,6 +2,7 @@ package owl.core.structure.graphs;
 
 import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
@@ -91,7 +92,7 @@ public class RIGGeometry {
 				// METHOD FOR EXTRACTING THE NEIGHBOR'S TRANSLATED-ROTATED COORDINATES //
 				atom_coord_rotated_I = gmbp.getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
 				atom_coord_rotated_J = gmbp.getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
-				//========= C-ALPHA and C-coordinates ================// 
+				//========= C-ALPHA-coordinates ================// 
 				coord_I = atom_coord_rotated_I.get(this.atomType); //("CA");
 				coord_J = atom_coord_rotated_J.get(this.atomType); //("CA");
 			}
@@ -104,8 +105,10 @@ public class RIGGeometry {
 			Vector3d coord_sph_I = new Vector3d(0,0,0);
 			Vector3d coord_sph_J = new Vector3d(0,0,0);
 			if (!coord_J.equals(new Vector3d(0.0,0.0,0.0))) {
-				coord_sph_I = gmbp.getSphericalFromCartesian(coord_I); // (r,theta,phi) // (r, phi,lambda)
 				coord_sph_J = gmbp.getSphericalFromCartesian(coord_J); // (r,theta,phi) // (r, phi,lambda)
+			}
+			if (!coord_I.equals(new Vector3d(0.0,0.0,0.0))) {
+				coord_sph_I = gmbp.getSphericalFromCartesian(coord_I); // (r,theta,phi) // (r, phi,lambda)
 			}
 			
 			// Save translated and rotated coordinate of contact
@@ -119,8 +122,10 @@ public class RIGGeometry {
 			
 //			System.out.println("TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
 //					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
-//			System.out.printf("TransRotCoord i->j Cartesian: %s Spherical: %s   j->i Cartesian: %s Spherical: %s \n", CA_coord_I, CA_coord_sph_I, CA_coord_J, CA_coord_sph_J);
+//			System.out.printf("TransRotCoord i->j Cartesian: %s Spherical: %s   j->i Cartesian: %s Spherical: %s \n", coord_I, coord_sph_I, coord_J, coord_sph_J);
 		}
+		
+//		printGeom();
 		
 //		if (coord_sph_rotated.containsKey(new Integer[]{iNum,jNum})){
 //			Vector3d CA_coord_sph = coord_sph_rotated.get(new Integer[]{iNum,jNum});
@@ -140,6 +145,12 @@ public class RIGGeometry {
 //				
 //			}
 //		}
+	}
+	
+	public void printGeom(){
+		for (Entry<String, Vector3d> entry: this.coord_sph_rotated.entrySet()){
+			System.out.println(entry.getKey()+":"+entry.getValue().x);
+		}
 	}
 	
 	// --------- getters ----------

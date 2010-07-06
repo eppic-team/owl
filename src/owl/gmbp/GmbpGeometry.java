@@ -109,6 +109,7 @@ public class GmbpGeometry {
 		}		
 		return atom_coord_rotated;
 	}
+	
 	@SuppressWarnings("unused")
 	private static HashMap<String,Vector3d> getNeighborsTransRotatedCoord (int resser_i, String res_type_i, int resser_j, String res_type_j, Pdb pdb, Boolean toRotate) {
 		// METHOD for finding the transformed coordinates of the neighboring residue of a 'node'
