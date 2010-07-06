@@ -40,11 +40,23 @@ for jarfile in $jarfiles
 do
 	CLASSPATH="$jarfile:$CLASSPATH"
 done
+jarfiles=`ls ../jars/uniprot/*.jar`
+for jarfile in $jarfiles
+do
+        CLASSPATH="$jarfile:$CLASSPATH"
+done
 
 echo $CLASSPATH
 
 
-javac *.java proteinstructure/*.java tools/*.java tinker/*.java sadp/*.java sequence/*.java actionTools/*.java ppi/*.java
+javac \
+*.java \
+owl/core/structure/*.java \
+owl/core/sequence/*.java  \
+owl/core/util/*.java  \
+owl/core/connections/*.java \
+owl/core/features/*.java \
+owl/core/runners/*.java
 
 # creating jar file
 echo "Creating jar file: $tag.jar ..."
