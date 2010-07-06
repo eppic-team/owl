@@ -127,11 +127,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
 			this.uniprotVer = readUniprotVer(blastDbDir);
-			try {
-				Goodies.copyFile(outBlast, cacheFile);
-			} catch (IOException e) {
-				System.err.println("Couldn't write the blast cache file "+cacheFile);
-				System.err.println(e.getMessage());
+			if (cacheFile!=null) {
+				try {
+					Goodies.copyFile(outBlast, cacheFile);
+				} catch (IOException e) {
+					System.err.println("Couldn't write the blast cache file "+cacheFile);
+					System.err.println(e.getMessage());
+				}
 			}
 		}
 		
