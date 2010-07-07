@@ -441,7 +441,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 				} else {
-					if (j+3<bestNucSeq.length()) {
+					if (j+3<=bestNucSeq.length()) {
 						nucSeqSB.append(bestNucSeq.substring(j, j+3));
 					} else {
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
