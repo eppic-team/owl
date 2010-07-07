@@ -635,6 +635,76 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 	
 	/**
+	 * Reduces the number of homologs by skimming the list for homologs with same identities 
+	 * until maxDesiredHomologs is reached.
+	 * The procedure is as follows: sequences are grouped by identity to query and one of each group 
+	 * eliminated (if possible the one without valid CDS matching) at each iteration until the 
+	 * desired number of homologs is reached.
+	 * This is needed for example to perform ka/ks calculations with selecton (too many sequences 
+	 * are far too slow and a risk of ks saturation).
+	 * @param maxDesiredHomologs
+	 */
+	public void skimList(int maxDesiredHomologs) {
+		if (list.size()<=maxDesiredHomologs) {
+			return;
+		}
+		LOGGER.info("List of homologs too long: "+list.size()+", skimming it.");
+		// 1) grouping by sequence identity
+		Map<Integer,List<UniprotHomolog>> groups = new HashMap<Integer,List<UniprotHomolog>>();
+		for (UniprotHomolog hom:this){
+			double percentId = hom.getPercentIdentity();
+			int key =(int) Math.round(percentId);
+			if (groups.containsKey(key)) {
+				groups.get(key).add(hom);
+			} else {
+				List<UniprotHomolog> list = new ArrayList<UniprotHomolog>();
+				list.add(hom);
+				groups.put(key, list);
+			}
+		}
+		// 2) skimming iteratively
+		int countIterations = 0;
+		outer:
+		while (true) {
+			countIterations++;
+			for (int key:groups.keySet()) {
+				List<UniprotHomolog> group = groups.get(key);
+				if (group.size()>1) {
+					// remove the last element of the group
+					UniprotHomolog toRemove = getHomologNonValidCDS(group);
+					if (toRemove==null) {
+						toRemove = group.get(group.size()-1);
+					} 
+					list.remove(toRemove);					
+					group.remove(toRemove);
+					
+					LOGGER.info("Removed "+toRemove.getUniId());
+					if (list.size()<=maxDesiredHomologs) break outer;
+				}
+			}
+		}
+		LOGGER.info("Size of homolog list after skimming: "+list.size()+" ("+countIterations+" iterations)");
+
+		// and we reinitialise the lookup maps
+		initialiseMap();
+	}
+	
+	/**
+	 * Given a list of homologs returns the first one that does not have a valid CDS match 
+	 * or null if all homologs have valid matches. 
+	 * @param list
+	 * @return
+	 */
+	private static UniprotHomolog getHomologNonValidCDS(List<UniprotHomolog> list) {
+		for (UniprotHomolog hom:list) {
+			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
+				return hom;
+			}
+		}
+		return null;
+	}
+	
+	/**
 	 * Returns the number of homologs in this list
 	 * @return
 	 */
