@@ -52,11 +52,18 @@ echo $CLASSPATH
 javac \
 *.java \
 owl/core/structure/*.java \
+owl/core/structure/graphs/*.java \
+owl/core/structure/scoring/*.java \
 owl/core/sequence/*.java  \
+owl/core/sequence/alignment/*.java \
 owl/core/util/*.java  \
+owl/core/util/actionTools/*.java \
 owl/core/connections/*.java \
+owl/core/connections/pisa/*.java \
 owl/core/features/*.java \
-owl/core/runners/*.java
+owl/core/runners/*.java \
+owl/core/runners/blast/*.java \
+owl/core/runners/tinker/*.java 
 
 # creating jar file
 echo "Creating jar file: $tag.jar ..."
