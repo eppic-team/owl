@@ -16,6 +16,7 @@ public class Codon {
 	private static final char AMB_ACGT = 'n';
 	private static final char AMB_AC   = 'm';
 	private static final char AMB_AT   = 'w';
+	private static final char AMB_TC   = 'y';
 	
 	
 	private char[] codon;
@@ -83,7 +84,7 @@ public class Codon {
 	
 	public boolean isAmbiguous() {
 		for (char c:codon) {
-			if (c==AMB_ACGT || c==AMB_AC || c== AMB_AT) return true;
+			if (c==AMB_ACGT || c==AMB_AC || c== AMB_AT || c==AMB_TC) return true;
 		}
 		return false;
 	}
