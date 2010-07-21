@@ -1,8 +1,12 @@
 package owl.core.structure.graphs;
 
+//import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
@@ -10,6 +14,7 @@ import javax.vecmath.Vector3d;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.Residue;
+import owl.gmbp.CSVhandler;
 import owl.gmbp.GmbpGeometry;
 
 //RIGGeometry: class that computes and stores geometry information for graph based on rotation and translation invariant framework.
@@ -152,6 +157,87 @@ public class RIGGeometry {
 			System.out.println(entry.getKey()+":"+entry.getValue().x);
 		}
 	}
+	
+	/*
+     * This is a method to get the LogOddsScore for all the contact pairs in the RIGraph file. This function accesses 
+     * the precalculated log odds scores database in sphoxelBG.zip
+     * @params: Residues ires, jRes, double resDist
+     * @returns: double score for each contact. 
+     * @throws: NumberFormatException, IOException
+     */
+	public double outputLogOddsScore(Residue iRes, Residue jRes, double resDist) throws NumberFormatException, IOException
+        {
+        
+        String radiusPrefix="";
+            if (2.0<=resDist && resDist<5.6)
+                radiusPrefix="rSR";
+            
+            if (5.6<=resDist && resDist<9.2)
+                radiusPrefix="rMR";
+            
+            if (9.2<=resDist /*&& resDist<12.8*/)
+                radiusPrefix="rLR";
+            
+            
+//            File dir1 = new File (".");        
+//            String fn = "/amd/talyn/1/project/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG"; 
+            //                fn = dir1.getCanonicalPath() + "/src/resources/sphoxelBG/";
+            String fn = "/project/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
+            fn = "/Volumes/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
+            String archiveFN = fn + "SphoxelBGs.zip";
+//            System.out.println("archiveFN= "+archiveFN);
+            ZipFile zipfile = null;
+            try {
+                zipfile = new ZipFile(archiveFN);
+            } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            fn = "";
+            String iSecSType="";
+
+            if (iRes.getSsElem() == null)
+                {
+                iSecSType = "a";
+                }
+            else
+                {
+                iSecSType = String.valueOf(iRes.getSsElem().getType()).toLowerCase();
+                }
+            
+            int i=iRes.getSerial();
+            int j=jRes.getSerial();
+            
+            fn = fn+"sphoxelBG_"+iRes.getAaType().getOneLetterCode()+"-"+iSecSType+"_"+jRes.getAaType().getOneLetterCode()+"-"
+                +"a"+"_"+radiusPrefix+".csv";
+            System.out.println(i+"  "+j+"  "+resDist);
+            System.out.println("Filename= "+fn);
+            
+            ZipEntry zipentry = zipfile.getEntry(fn);
+            CSVhandler csv = new CSVhandler();
+            double bayesRatios [][][];            
+            
+            bayesRatios = csv.readCSVfile3Ddouble(zipfile, zipentry);
+
+            
+            double logOddsScores [][] = new double[bayesRatios.length][bayesRatios[0].length];
+            
+//            System.out.println(this.coord_sph_rotated.get(i+"_"+j).y+"  "+this.coord_sph_rotated.get(i+"_"+j).z);
+            int i1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).y)/(Math.PI/72));
+            int j1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).z)/(Math.PI/72))+72;            
+            
+            
+            for (int i2=0; i2<bayesRatios.length; i2++)
+                {
+                for (int j2=0; j2<bayesRatios[i2].length; j2++)
+                    {
+                    logOddsScores[i2][j2] = bayesRatios[i2][j2][0];
+                    }
+                }
+            
+//            System.out.println(i+"  "+j+"  "+logOddsScores[i1][j1]);
+            return     logOddsScores[i1][j1];            
+        }
 	
 	// --------- getters ----------
 	public HashMap<String,Vector3d> getRotatedCoordOfContacts(){
