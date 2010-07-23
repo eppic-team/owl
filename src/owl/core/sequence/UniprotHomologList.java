@@ -213,7 +213,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			}
 			br.close();
 		} catch(IOException e) {
-			System.err.println("Warning: couldn't read uniprot version from file "+uniprotVerFile);
+			LOGGER.warn("Couldn't read uniprot version from file "+uniprotVerFile);
 		}
 		return ver;
 	}
@@ -225,7 +225,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	public void retrieveUniprotKBData() {
 		UniProtConnection uniprotConn = new UniProtConnection();
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			System.err.println("Warning! Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+")don't match!");
+			LOGGER.warn("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();
 		for (UniprotHomolog hom:this) {
@@ -240,7 +240,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				
 				List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
 				if (ncbiTaxIds.size()>1) {
-					System.err.println("Warning! more than one taxonomy id for uniprot entry "+hom.getUniId());
+					LOGGER.warn("More than one taxonomy id for uniprot entry "+hom.getUniId());
 				}
 				hom.getUniprotEntry().setTaxId(ncbiTaxIds.get(0).getValue());
 				List<String> taxons = new ArrayList<String>();
@@ -269,7 +269,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 					if (orglls.size()>1) {
 						for (Organelle orgll:orglls){ 
 							if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
-								System.err.println("Warning! Different gene encoding organelles for Uniprot "+hom.getUniId());
+								LOGGER.warn("Different gene encoding organelles for Uniprot "+hom.getUniId());
 							}
 						}
 					}
@@ -468,7 +468,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					} else {
-						if (j+3<bestNucSeq.length()) {
+						if (j+3<=bestNucSeq.length()) {
 							nucSeqSB.append(bestNucSeq.substring(j, j+3));
 						} else {
 							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
