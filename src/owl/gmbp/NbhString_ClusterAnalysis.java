@@ -34,8 +34,6 @@ public class NbhString_ClusterAnalysis {
 		this.epsilon = defaultEpsilon; // should be chosen with respect to rSphere
 		this.minNumNBs = defaultMinNumNBs;
 		this.rSphere = defaultRadius;
-		
-		initialiseArguments();
 	}
 	
 	public NbhString_ClusterAnalysis(Vector<float[]> nodes, double eps, int num, double radius){
@@ -43,8 +41,6 @@ public class NbhString_ClusterAnalysis {
 		this.epsilon = eps; // should be chosen with respect to rSphere
 		this.minNumNBs = num;
 		this.rSphere = radius;
-		
-		initialiseArguments();
 	}
 	
 	// ______public methods
@@ -52,7 +48,9 @@ public class NbhString_ClusterAnalysis {
 	/**
 	 Performs DBScan-algorithm
 	 */		
-	public void runClusterAnalysis(){		
+	public void runClusterAnalysis(){	
+		initialiseArguments();
+		
 		int clusterID = 0;
 		int index;
 		for(int i=0; i<this.nbhsNodes.size(); i++){			
@@ -128,8 +126,11 @@ public class NbhString_ClusterAnalysis {
 	 that might be important for displaying purposes.
 	 */		
 	public void analyseEdgeDirection(){
-		if (this.numFoundClusters<=0)
+		if (this.clusterN == null)
+//		if (this.numFoundClusters<=0)
 			runClusterAnalysis();
+		this.clusterDirProp = null;
+		this.clusterAverDirec = null;
 		if (this.numFoundClusters>0){
 			if (this.clusters==null)
 				analyseClusters();

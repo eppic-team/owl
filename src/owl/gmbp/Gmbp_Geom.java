@@ -121,7 +121,7 @@ public class Gmbp_Geom {
 			HashMap<String, Point3d> rotated1SphericalCoordinates = getRotated1SphericalCoords(translatedSphericalCoordinates, right); //new HashMap<String, Point3d>(getRotated1SphericalCoords(translatedSphericalCoordinates, right));			
 			HashMap<String, Point3d> rotated1CartesianCoordinates = getRotated1CartesianCoords(rotated1SphericalCoordinates); //new HashMap<String, Point3d>(getRotated1CartesianCoords(rotated1SphericalCoordinates));			
 			HashMap<String, Point3d> rotated2CartesianCoordinates = getRotated2CartesianCoords(rotated1CartesianCoordinates, left); //new HashMap<String, Point3d>(getRotated2CartesianCoords(rotated1CartesianCoordinates, left));			
-			HashMap<String, Point3d> rotated2SphericalCoordinates = getRotated2SphericalCoords(rotated2CartesianCoordinates); //new HashMap<String, Point3d>(getRotated2SphericalCoords(rotated2CartesianCoordinates));
+//			HashMap<String, Point3d> rotated2SphericalCoordinates = getRotated2SphericalCoords(rotated2CartesianCoordinates); //new HashMap<String, Point3d>(getRotated2SphericalCoords(rotated2CartesianCoordinates));
 			
 			atom_coord = rotated2CartesianCoordinates;			
 
@@ -256,6 +256,7 @@ public class Gmbp_Geom {
 	/*
 	 *  This method gets the translated coordinates for a residue placing the selected center atom at the origin. 
 	 */	
+	@SuppressWarnings("unused")
 	private static HashMap<String, Point3d> getTranslatedCoordinates(TreeMap<Integer, Residue> protein, int resno, String centre){
 		HashMap<String, Point3d> translatedCoordinates=new HashMap<String, Point3d>();
 		for (String key: protein.get(resno).getAtomsMap().keySet())

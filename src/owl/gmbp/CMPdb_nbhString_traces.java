@@ -31,7 +31,7 @@ public class CMPdb_nbhString_traces {
 	private static final char[] aas = new char[]{'A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'}; // possible Residues
 	private final String AAStr = new String(aas); 
 	private static final char[] sstypes = new char[]{'H','S','O'};
-	private final String SSTStr = new String(sstypes);
+	public final String SSTStr = new String(sstypes);
 	public static final char AnySStype = 'A';
 	
 	public CMPdb_nbhString_traces(String nbhs, String jatom, String db) throws SQLException {
@@ -63,19 +63,15 @@ public class CMPdb_nbhString_traces {
 		int countAll =0;
 		if (result_nbhs.next())
 			countAll = result_nbhs.getInt(1); // extract raw count 
-//		System.out.println("Orig num Traces = "+countAll);
-		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' limit "+this.maxNumLines+";";
-		// test query --> to get traces of 7odc
-//		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' and graph_id=1 limit "+this.maxNumLines+";";
-//		System.out.println(query);
+//		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' limit "+this.maxNumLines+";";
+		query = "SELECT graph_id, num from "+db+".nbhstrings where nbhstring like '"+this.nbhs+"' ;";
 		result_nbhs = stmt.executeQuery(query);
 		Vector<int[]> nodes = new Vector<int[]>();
 		while (result_nbhs.next()) {
 			int[] val = {result_nbhs.getInt(1), result_nbhs.getInt(2)}; //new int[2];
-//			System.out.println(result_nbhs.getInt(1) + " , " + result_nbhs.getInt(2));
 			nodes.add(val);			
 		}
-		System.out.println("Orig num Traces = "+countAll+" -> number of nbhsTraces: "+nodes.size());
+		System.out.print("Orig num Traces = "+countAll+" -> number of nbhsTraces: "+this.maxNumLines+"\t");
 		result_nbhs.close();
 		stmt.close();
 		this.numNodesPerLine = new int[nodes.size()];
@@ -85,129 +81,93 @@ public class CMPdb_nbhString_traces {
 		int[][] numNodesSSTypeLine = new int[sstypes.length][nodes.size()];
 		
 //		System.out.println("graphi_id + '\t' + i_num + '\t' + j_num + '\t' + theta + '\t' + phi");
+		int foundTraces = 0;
 		for (int i=0; i<nodes.size(); i++){
-//		for (int i=0; i<1; i++){
-			stmt = conn.createStatement();
-			int[] val = (int[]) nodes.get(i);
-			gID = val[0];
-			num = val[1];
-//			if (this.diffSSType)
-//				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-//		         +" and j_atom='"+this.jatom+"' and i_sstype='"+this.sstype+"' order by j_num;";
-//			else 
-//				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-//                +" and j_atom='"+this.jatom+"' order by j_num;";
-//			
-//			result_nodes = stmt.executeQuery(query);
-//			while(result_nodes.next()) {
-//				j_num = result_nodes.getInt(1); //("j_num");
-//				theta = result_nodes.getFloat(2);
-//				phi = result_nodes.getFloat(3);
-//				jRes = result_nodes.getString(4).charAt(0);
-//				jSSType = result_nodes.getString(5).charAt(0);
-//				resID = this.AAStr.indexOf(jRes);
-//				ssTypeID = this.SSTStr.indexOf(jSSType);
-//				
-//				this.numNodesPerLine[i] += 1;
-//				
-//				System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
-//				
-//				float[] node = {gID, num, j_num, theta, phi, resID, ssTypeID};
-//				this.nbhsNodes.add(node);
-//			}
-			
+			if (foundTraces<this.maxNumLines){
 
-			if (this.diffSSType)
-				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-                +" and j_atom='"+this.jatom+"' order by j_num;";
-//				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-//		         +" and i_sstype='"+this.sstype+"' and j_atom='"+this.jatom+"' order by j_num;";
-			else 
-				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-                 +" and j_atom='"+this.jatom+"' order by j_num;";
-			
-			result_nodes = stmt.executeQuery(query);
-			int cntNodes = 0;
-			while(result_nodes.next()) {
-				cntNodes++;
-				j_num = result_nodes.getInt(1); //("j_num");
-				theta = result_nodes.getFloat(2);
-				phi = result_nodes.getFloat(3);
-				jRes = result_nodes.getString(4).charAt(0);
-				jSSType = result_nodes.getString(5).charAt(0);
-				iSSType = result_nodes.getString(6).charAt(0);
-				resID = this.AAStr.indexOf(jRes);
-				ssTypeID = this.SSTStr.indexOf(jSSType);
+				stmt = conn.createStatement();
+				int[] val = (int[]) nodes.get(i);
+				gID = val[0];
+				num = val[1];
+
+				if (this.diffSSType)
+					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+	                +" and j_atom='"+this.jatom+"' order by j_num;";
+//					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+//			         +" and i_sstype='"+this.sstype+"' and j_atom='"+this.jatom+"' order by j_num;";
+				else 
+					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+	                 +" and j_atom='"+this.jatom+"' order by j_num;";
 				
-				int index = SSTStr.indexOf(iSSType);
-				numNodesSSType[index] += 1;
-				numNodesSSTypeLine[index][i] += 1;
-				
-				if (iSSType == this.sstype || this.sstype == AnySStype ){
-					this.numNodesPerLine[i] += 1;
+				result_nodes = stmt.executeQuery(query);
+				int cntNodes = 0;
+				while(result_nodes.next()) {
+					j_num = result_nodes.getInt(1); //("j_num");
+					theta = result_nodes.getFloat(2);
+					phi = result_nodes.getFloat(3);
+					jRes = result_nodes.getString(4).charAt(0);
+					jSSType = result_nodes.getString(5).charAt(0);
+					iSSType = result_nodes.getString(6).charAt(0);
+					resID = this.AAStr.indexOf(jRes);
+					ssTypeID = this.SSTStr.indexOf(jSSType);
 					
-//					if (i==0)
-//					System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
+					int index = SSTStr.indexOf(iSSType);
+					numNodesSSType[index] += 1;
+					numNodesSSTypeLine[index][i] += 1;
 					
-					float[] node = {gID, num, j_num, theta, phi, resID, ssTypeID};
-					this.nbhsNodes.add(node);					
-				}
-			}
-//			if (i==0)
-//				System.out.println();
-			if (cntNodes==0)
-				System.out.println("No result for query: "+query);
+					if (iSSType == this.sstype || this.sstype == AnySStype || !this.diffSSType ){
+						cntNodes++;
+						this.numNodesPerLine[i] += 1;
 						
-			result_nodes.close();
-			stmt.close();
+//						if (i==0)
+//						System.out.println(gID+" , "+num+" , "+j_num+" , "+theta+" , "+phi+" , "+jRes+"="+resID+" , "+jSSType+"="+ssTypeID);
+						
+						float[] node = {gID, num, j_num, theta, phi, resID, ssTypeID};
+						this.nbhsNodes.add(node);					
+					}
+				}
+//				if (cntNodes==0)
+//					System.out.println("No result for query: "+query);
+				if (cntNodes>0)
+					foundTraces++;
+							
+				result_nodes.close();
+				stmt.close();
+				
+			}
 	    }
+		System.out.print("foundTraces: "+foundTraces+"\n");
 		
 		// ------ToDo
 		/* Count number of nodes for each sstype
 		 * evaluate if correct sstype was handed over (significant more modes than for set sstype)
 		 * change sstype in contactView
 		 * */		
-//		int[] numNodes = new int[sstypes.length];
-//		System.out.println("Histogram Nodes for SSType");
-//		for (int ssT=0; ssT<sstypes.length; ssT++){
-//			char ssType = sstypes[ssT];
-//			System.out.print(String.valueOf(ssType)+"\t");
-//			for (int i=0; i<nodes.size(); i++){
-//				this.numNodesPerLine[i] = 0;
-//				stmt = conn.createStatement();
-//				int[] val = (int[]) nodes.get(i);
-//				gID = val[0];
-//				num = val[1];
-//				query = "SELECT j_num as j, theta, phi, j_res, j_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-//		         +" and j_atom='"+this.jatom+"' and i_sstype='"+ssType+"' order by j_num;";				
-//				result_nodes = stmt.executeQuery(query);
-//				while(result_nodes.next()) {
-//					this.numNodesPerLine[i] += 1;
-//					numNodes[ssT] += 1;
-//				}		
-//				System.out.print(String.valueOf(this.numNodesPerLine[i])+"\t");
-//				result_nodes.close();
-//				stmt.close();
-//		    }
-//			System.out.print("sum= "+String.valueOf(numNodes[ssT])+"\t");
-//			System.out.println();
-//		}
-		System.out.println("Histogram Nodes for SSType");
+		System.out.print("Histogram Nodes for SSType"+"\t");
+		int id=this.SSTStr.indexOf(String.valueOf(this.sstype));
 		int mostOccSSType = 0;
-		int id=0;
+		if (this.sstype!=AnySStype)
+			mostOccSSType = numNodesSSType[id];
+		else
+			id = 0;
+//		id = this.SSTStr.indexOf("S"); // this.sstypes.toString().indexOf("H");
+//		// check
+//		if (this.sstype != this.sstypes[id])
+//			System.out.println("failed");
 		for (int ssT=0; ssT<sstypes.length; ssT++){
 			char ssType = sstypes[ssT];
 			System.out.print(String.valueOf(ssType)+"\t");
-			for (int i=0; i<nodes.size(); i++){
-				System.out.print(String.valueOf(numNodesSSTypeLine[ssT][i])+"\t");
-		    }
+//			for (int i=0; i<nodes.size(); i++){
+//				System.out.print(String.valueOf(numNodesSSTypeLine[ssT][i])+"\t");
+//		    }
 			System.out.print("sum= "+String.valueOf(numNodesSSType[ssT])+"\t");
-			System.out.println();
-			if (numNodesSSType[ssT]>mostOccSSType){
+//			System.out.println();
+			if (numNodesSSType[ssT]> 1.3*mostOccSSType){
 				id = ssT;
 				mostOccSSType = numNodesSSType[ssT];
 			}
 		}
+		System.out.println();
 		if (sstypes[id]!=this.sstype && this.sstype!=AnySStype){
 			System.out.println("Mayority of traces for different ssType "+sstypes[id]+" instead of "+this.sstype);
 			this.sstype = sstypes[id]; 
