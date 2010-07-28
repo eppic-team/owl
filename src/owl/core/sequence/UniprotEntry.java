@@ -45,6 +45,8 @@ public class UniprotEntry implements HasFeatures {
 
 	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
 	
+	private static final String GENE_ENC_ORG_PLASMID = "Plasmid";
+	
 	private String uniId;
 	private Sequence uniprotSeq;
 	private String taxId;
@@ -265,10 +267,14 @@ public class UniprotEntry implements HasFeatures {
 		if (repCDScached) {
 			return representativeCDS;
 		}
-		
+
+		//TODO this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
 		if (this.geneEncodingOrganelle!=null) {
-			LOGGER.fatal("The entry "+this.getUniId()+" is not encoded in nucleus!");
-			System.exit(1);
+			LOGGER.info("Non-empty uniprot gene encoding organelle field: entry "+this.getUniId()+" encoded in "+this.geneEncodingOrganelle);
+			if (!this.geneEncodingOrganelle.equals(GENE_ENC_ORG_PLASMID)) { 
+				LOGGER.fatal("The entry "+this.getUniId()+" is not encoded in nucleus or plasmid!");
+				System.exit(1);
+			}
 		}
 		
 		List<ProteinToCDSMatch> allMatchings = new ArrayList<ProteinToCDSMatch>();
