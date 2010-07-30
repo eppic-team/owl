@@ -268,12 +268,13 @@ public class UniprotEntry implements HasFeatures {
 			return representativeCDS;
 		}
 
-		//TODO this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
 		if (this.geneEncodingOrganelle!=null) {
-			LOGGER.info("Non-empty uniprot gene encoding organelle field: entry "+this.getUniId()+" encoded in "+this.geneEncodingOrganelle);
+			LOGGER.info("Non-empty uniprot gene encoding organelle field: entry "+this.getUniId()+" encoded in: "+this.geneEncodingOrganelle);
 			if (!this.geneEncodingOrganelle.equals(GENE_ENC_ORG_PLASMID)) { 
-				LOGGER.fatal("The entry "+this.getUniId()+" is not encoded in nucleus or plasmid!");
-				System.exit(1);
+				LOGGER.warn("The entry "+this.getUniId()+" is not encoded in nucleus or plasmid! Not using its CDS.");
+				//TODO this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
+				representativeCDS = null;
+				return representativeCDS;
 			}
 		}
 		
