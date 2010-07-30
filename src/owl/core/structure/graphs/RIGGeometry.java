@@ -23,8 +23,11 @@ public class RIGGeometry {
 	
 	private RIGraph graph;
 	private TreeMap<Integer, Residue> residues;
-	private HashMap<String,Vector3d> coord_sph_rotated;  // holds geometry (translated and rotated contact coordinates of CA-position
+//	private HashMap<String,Vector3d> coord_sph_rotated;  // holds geometry (translated and rotated contact coordinates of CA-position
+//						//	of j-Residue with respect to central iResidue of each edge of the graph, defined by residue serials of edge)
+	private HashMap<Pair<Integer>, Vector3d> coord_sph_rotated; // holds geometry (translated and rotated contact coordinates of CA-position
 							//of j-Residue with respect to central iResidue of each edge of the graph, defined by residue serials of edge)
+	
 	private String atomType = "CA";
 	
 	
@@ -58,8 +61,8 @@ public class RIGGeometry {
 		int edgeNum = 0;
 		GmbpGeometry gmbp = new GmbpGeometry();
 		
-//		HashMap<String,Vector3d> coord_sph_rotated = new HashMap<String, Vector3d>();
-		coord_sph_rotated = new HashMap<String,Vector3d>();
+//		coord_sph_rotated = new HashMap<String,Vector3d>();
+		coord_sph_rotated = new HashMap<Pair<Integer>, Vector3d>();
 		for (RIGEdge edge:graph.getEdges()) {
 			edgeNum++;
 			// extract (x,y,z) coordinates for nodes of both end of edge
@@ -117,9 +120,14 @@ public class RIGGeometry {
 			}
 			
 			// Save translated and rotated coordinate of contact
-			String key = String.valueOf(jNum)+"_"+String.valueOf(iNum);
+//			String key = String.valueOf(jNum)+"_"+String.valueOf(iNum);
+//			coord_sph_rotated.put(key, coord_sph_I);
+			Pair<Integer> key = new Pair<Integer>(jNum, iNum);
 			coord_sph_rotated.put(key, coord_sph_I);
-			key = String.valueOf(iNum)+"_"+String.valueOf(jNum);
+			
+//			key = String.valueOf(iNum)+"_"+String.valueOf(jNum);
+//			coord_sph_rotated.put(key, coord_sph_J);
+			key = new Pair<Integer>(iNum, jNum);
 			coord_sph_rotated.put(key, coord_sph_J);
 			if (!coord_sph_rotated.containsKey(key)){
 				System.out.println("Something is going wrong");
@@ -153,8 +161,11 @@ public class RIGGeometry {
 	}
 	
 	public void printGeom(){
-		for (Entry<String, Vector3d> entry: this.coord_sph_rotated.entrySet()){
-			System.out.println(entry.getKey()+":"+entry.getValue().x);
+//		for (Entry<String, Vector3d> entry: this.coord_sph_rotated.entrySet()){
+//			System.out.println(entry.getKey()+":"+entry.getValue().x);
+//		}
+		for (Entry<Pair<Integer>, Vector3d> entry: this.coord_sph_rotated.entrySet()){
+			System.out.println(entry.getKey().getFirst()+"_"+entry.getKey().getSecond()+":"+entry.getValue().x);
 		}
 	}
 	
@@ -223,8 +234,10 @@ public class RIGGeometry {
             double logOddsScores [][] = new double[bayesRatios.length][bayesRatios[0].length];
             
 //            System.out.println(this.coord_sph_rotated.get(i+"_"+j).y+"  "+this.coord_sph_rotated.get(i+"_"+j).z);
-            int i1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).y)/(Math.PI/72));
-            int j1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).z)/(Math.PI/72))+72;            
+//            int i1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).y)/(Math.PI/72));
+//            int j1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).z)/(Math.PI/72))+72;  
+            int i1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(i, j)).y)/(Math.PI/72));
+            int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(i, j)).z)/(Math.PI/72))+72;  
             
             
             for (int i2=0; i2<bayesRatios.length; i2++)
@@ -240,7 +253,11 @@ public class RIGGeometry {
         }
 	
 	// --------- getters ----------
-	public HashMap<String,Vector3d> getRotatedCoordOfContacts(){
+//	public HashMap<String,Vector3d> getRotatedCoordOfContacts(){
+//		return this.coord_sph_rotated;
+//	}
+	
+	public HashMap<Pair<Integer>,Vector3d> getRotCoordOfContacts(){
 		return this.coord_sph_rotated;
 	}
 	
