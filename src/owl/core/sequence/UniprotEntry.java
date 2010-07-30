@@ -274,6 +274,7 @@ public class UniprotEntry implements HasFeatures {
 				LOGGER.warn("The entry "+this.getUniId()+" is not encoded in nucleus or plasmid! Not using its CDS.");
 				//TODO this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
 				representativeCDS = null;
+				repCDScached = true;
 				return representativeCDS;
 			}
 		}
@@ -305,8 +306,8 @@ public class UniprotEntry implements HasFeatures {
 			TranslatedFrame bestTranslation = Collections.max(nonFullMatchingCDSs);
 			for (ProteinToCDSMatch matching:allMatchings){
 				if (matching.getBestTranslation()==bestTranslation) {
-					// TODO must still check whether this is an acceptable match, or should we do that at a later stage?
 					int mismatches = bestTranslation.getNumMismatches();
+					int gaps = bestTranslation.getNumGaps();
 					if (bestTranslation.getPercentIdentity()/100.0f<MIN_TOLERATED_ID) {
 						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+
 								". Best match "+matching.getCDSName()+" (reading frame "+bestTranslation.getReadingFrame().getNumber()+
@@ -315,7 +316,13 @@ public class UniprotEntry implements HasFeatures {
 						representativeCDS = null;
 					} else {
 						representativeCDS = matching;
-						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. ");					
+						LOGGER.warn("No fully matching CDSs for uniprot entry "+this.getUniId()+". Using the best match '"+matching.getCDSName()+
+								"' (reading frame "+bestTranslation.getReadingFrame().getNumber()+") with "+mismatches+" mismatches. Identity: "+
+								String.format("%4.1f",bestTranslation.getPercentIdentity()));
+						if (gaps>0) {
+							LOGGER.warn(gaps + " gaps in the CDS to uniprot alignment. Will discard this CDS.");						
+							representativeCDS = null;
+						}
 						LOGGER.info("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 					}
 					repCDScached = true;

@@ -425,68 +425,60 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		if (nucAln!=null) {
 			return nucAln;
 		}
-		List<Sequence> allSeqs = new ArrayList<Sequence>();
 		
-		// CDS of the query sequence
-		StringBuffer nucSeqSB = new StringBuffer();
-		String queryProtSeq = aln.getAlignedSequence(ref.getUniprotSeq().getName());
+		// first we gather all the aligned protein sequences and the unaligned nucleotide sequences
+		List<String> alignedProtSeqs = new ArrayList<String>();
+		List<ProteinToCDSMatch> protToCDSMatches = new ArrayList<ProteinToCDSMatch>();
+		// query
 		ProteinToCDSMatch queryMatching = ref.getRepresentativeCDS();
 		if (queryMatching!=null) {
-			String bestNucSeq = queryMatching.getNucleotideSeqForBestTranslation();
+			alignedProtSeqs.add(aln.getAlignedSequence(ref.getUniprotSeq().getName()));
+			protToCDSMatches.add(queryMatching);
+		}
+		// homologs
+		for (UniprotHomolog hom:this) {
+			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
+			if (matching!=null){
+				alignedProtSeqs.add(aln.getAlignedSequence(hom.getBlastHit().getSubjectId()));
+				protToCDSMatches.add(matching);
+			}
+		}
+		
+		// put the gaps in and produce the final nucleotide alignment
+		List<Sequence> allSeqs = new ArrayList<Sequence>();
+
+		for (int seqIdx=0;seqIdx<alignedProtSeqs.size();seqIdx++) {
+			String alignedProtSeq = alignedProtSeqs.get(seqIdx);
+			ProteinToCDSMatch protToCDSMatch = protToCDSMatches.get(seqIdx);
+			String unalignedNucSeq = protToCDSMatch.getNucleotideSeqForBestTranslation();
+			
+			StringBuffer nucSeqSB = new StringBuffer();
 			int j = 0;
-			for (int i=0;i<queryProtSeq.length();i++) {
-				char aa = queryProtSeq.charAt(i);
+			for (int i=0;i<alignedProtSeq.length();i++) {
+				char aa = alignedProtSeq.charAt(i);
 				if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 				} else {
-					if (j+3<=bestNucSeq.length()) {
-						nucSeqSB.append(bestNucSeq.substring(j, j+3));
+					if (j+3<=unalignedNucSeq.length()) {
+						nucSeqSB.append(unalignedNucSeq.substring(j, j+3));
 					} else {
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
 					}
 					j+=3;
-				}
+				}				
 			}
-			allSeqs.add(new Sequence(queryMatching.getCDSName(),nucSeqSB.toString()));
+			allSeqs.add(new Sequence(protToCDSMatch.getCDSName(),nucSeqSB.toString()));
 		}
 		
-		for (UniprotHomolog hom:this) {
-			nucSeqSB = new StringBuffer();
-			String protSeq = aln.getAlignedSequence(hom.getBlastHit().getSubjectId());
-			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
-			if (matching!=null) {
-				String bestNucSeq = matching.getNucleotideSeqForBestTranslation();
-				int j = 0;
-				for (int i=0;i<protSeq.length();i++) {
-					char aa = protSeq.charAt(i);
-					if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					} else {
-						if (j+3<=bestNucSeq.length()) {
-							nucSeqSB.append(bestNucSeq.substring(j, j+3));
-						} else {
-							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-							nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-						}
-						j+=3;
-						
-					}
-				}
-				allSeqs.add(new Sequence(matching.getCDSName(),nucSeqSB.toString()));
-			}
-		}
 		try {
 			nucAln = new MultipleSequenceAlignment(allSeqs);
 		} catch(AlignmentConstructionError e) {
-			System.err.println("Unexpected error while creating the nucleotides alignment");
-			System.err.println(e.getMessage());
+			LOGGER.fatal("Unexpected error while creating the nucleotides alignment");
+			LOGGER.fatal(e.getMessage());
 			System.exit(1);
 		}
 		

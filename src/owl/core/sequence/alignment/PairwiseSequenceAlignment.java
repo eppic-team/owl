@@ -156,13 +156,25 @@ public class PairwiseSequenceAlignment {
 		this.similarity =			alignment.getSimilarity();
 		this.score =         		alignment.getScore();
 		this.alignment =			alignment;
+
 	}
 
 	/*---------------------------- public methods ---------------------------*/
 
 	public char getGapCharacter() { return Alignment.GAP; }		
+	
+	/**
+	 * Returns the length of the alignment.
+	 * @return
+	 */
 	public int getLength() { return this.length; }
+	
+	/**
+	 * Returns the number of gaps in this alignment. 
+	 * @return
+	 */
 	public int getGaps() { return this.gaps; }
+		
 	public int getIdentity() { return this.identity; }
 	public int getSimilarity() { return this.similarity; }
 	public float getScore() { return this.score; }
@@ -170,6 +182,11 @@ public class PairwiseSequenceAlignment {
 	public float getPercentIdentity() { return 100.0f * getIdentity() / length; }
 	public float getPercentGaps() { return 100.0f * getGaps() / length; }
 	public float getRelativeScore() { return getScore() / length; }
+	
+	/**
+	 * Returns the aligned sequences in an array of length 2.
+	 * @return array of length 2, fist member is first sequence, second member is second sequence
+	 */
 	public String[] getAlignedSequences() {
 		String[] alignedSeqs = {alignedSeq1, alignedSeq2};
 		return alignedSeqs;
@@ -177,6 +194,14 @@ public class PairwiseSequenceAlignment {
 	
 	public char[] getMarkupLine() {
 		return this.alignment.getMarkupLine();
+	}
+	
+	/**
+	 * Tells wheter this alignment contains no gaps at all.
+	 * @return
+	 */
+	public boolean isGapless() {
+		return (gaps==0);
 	}
 	
 	/**

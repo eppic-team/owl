@@ -54,6 +54,10 @@ public class TranslatedFrame implements Comparable<TranslatedFrame> {
 		return this.psa.getLength()-this.psa.getIdentity();
 	}
 	
+	public int getNumGaps() {
+		return this.psa.getGaps();
+	}
+	
 	/**
 	 * Given a reference protein sequence position, tells whether the translated sequence 
 	 * matches (is an identity)
