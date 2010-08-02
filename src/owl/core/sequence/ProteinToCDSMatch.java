@@ -199,4 +199,8 @@ public class ProteinToCDSMatch {
 	public Sequence getProteinSequence() {
 		return this.protein;
 	}
+	
+	public boolean hasStopCodonsInBestTranslation() {
+		return (bestTranslation.getSequence().getSeq().contains("*"));
+	}
 }

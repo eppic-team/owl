@@ -323,6 +323,10 @@ public class UniprotEntry implements HasFeatures {
 							LOGGER.warn(gaps + " gaps in the CDS to uniprot alignment. Will discard this CDS.");						
 							representativeCDS = null;
 						}
+						if (matching.hasStopCodonsInBestTranslation()) {
+							LOGGER.warn("Translation contains STOP codons. Will discard this CDS");
+							representativeCDS = null;
+						}
 						LOGGER.info("Alignment of best translation:\n"+bestTranslation.getAln().getFormattedAlignmentString());
 					}
 					repCDScached = true;
