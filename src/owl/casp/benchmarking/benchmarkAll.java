@@ -66,22 +66,24 @@ public class benchmarkAll {
 	
 	public static void main(String[] args) {
 	
-		boolean writeTempBased = false;
-		boolean writeCccp3D = false;
-		boolean writeCccpCM = true;
+		boolean writeTempBased = true;		// write results for main 3d prediction group
+		boolean writeCccp3D = false;		// write results for consensus contact prediction
+		boolean writeCccpCM = false;		// write results for consensus 3d prediction
 		
-		boolean writeImages = false;
-		boolean writeDetails = false;
+		boolean writeImages = true;
+		boolean writeDetails = true;
 		boolean writeHTML = true;
 
 		if(args.length < 2) {
-			System.out.println("Usage: benchmarkAll <base_dir> <out_dir>");
-			System.out.println("e.g. benchmarkAll /project/StruPPi/CASP8/ /home/web/lappe/casp8/");
+			System.out.println("Usage: benchmarkAll <base_dir> <out_dir> <3d_group_id> <cccp_group_id>");
+			System.out.println("e.g. benchmarkAll /project/StruPPi/CASP8/ /home/web/lappe/casp8/ TS183 TS014");
 			System.exit(1);
 		}
 		
 		String baseDir = args[0];
 		String outBaseDir = args[1];
+		String groupSuffix3d = args[2];
+		String groupSuffixCccp = args[3];
 		
 		String allTargetsList = baseDir + "/targets/all_targets.list";
 		String humanTargetsList = baseDir + "/targets/human_targets.list";
@@ -93,11 +95,11 @@ public class benchmarkAll {
 		String[] newTargets = getTargetsFromListFile(newTargetsList);
 		String[] newHumanTargets = getTargetsFromListFile(newHumanTargetsList);
 		
-		Benchmarking bm = new Benchmarking(null);
+		Benchmarking bm = new Benchmarking(null, new File(baseDir));
 		String highlightGroup = null;
 		File outDir = null;
 		File predDir = null;
-		String groupSuffix = null;
+		//String groupSuffix = null;
 		boolean eval3D;
 		PrintStream out;
 		File outFile;
@@ -108,15 +110,15 @@ public class benchmarkAll {
 			System.out.println("Template based...");
 			outDir = new File(outBaseDir);
 			predDir = new File(baseDir + "/submitted");
-			groupSuffix = "TS183";
+			//groupSuffix = "TS183";
 			eval3D = true;
 			targetsPerRow = 19;
 			// Update images for template based
 			if(writeImages) {
 				System.out.println("Generating images...");
 				try {
-					bm.writeAllImages(predDir, groupSuffix, newTargets, 200, outDir);
-					bm.writeAllImages(predDir, groupSuffix, newTargets, 600, outDir);
+					bm.writeAllImages(predDir, groupSuffix3d, newTargets, 200, outDir);
+					bm.writeAllImages(predDir, groupSuffix3d, newTargets, 600, outDir);
 				} catch (IOException e) {
 					System.err.println("Error creating images: " + e.getMessage());
 				}
@@ -124,7 +126,7 @@ public class benchmarkAll {
 			// Update txt files for template based
 			if(writeDetails) {
 				System.out.println("Writing txt files...");
-				bm.writeAllTargetDetailFiles(predDir, groupSuffix, newTargets, outDir, eval3D);
+				bm.writeAllTargetDetailFiles(predDir, groupSuffix3d, newTargets, outDir, eval3D);
 			}
 			// Write main HTML report
 			if(writeHTML) {
@@ -132,7 +134,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -141,7 +143,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, newHumanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, newHumanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -151,7 +153,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -161,7 +163,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -171,7 +173,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -181,7 +183,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffix3d, humanTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -194,15 +196,15 @@ public class benchmarkAll {
 			System.out.println("CCCP...");
 			outDir = new File(outBaseDir + "/cccp/");
 			predDir = new File(baseDir + "/submitted/cccp");
-			groupSuffix = "TS014";
+			//groupSuffix = "TS014";
 			targetsPerRow = 25;
 			eval3D = true;
 			// Update images for cccp-3D
 			if(writeImages) {
 				System.err.println("Generating images...");
 				try {
-					bm.writeAllImages(predDir, groupSuffix, newTargets, 200, outDir);
-					bm.writeAllImages(predDir, groupSuffix, newTargets, 600, outDir);
+					bm.writeAllImages(predDir, groupSuffixCccp, newTargets, 200, outDir);
+					bm.writeAllImages(predDir, groupSuffixCccp, newTargets, 600, outDir);
 				} catch (IOException e) {
 					System.err.println("Error creating images: " + e.getMessage());
 				}
@@ -210,7 +212,7 @@ public class benchmarkAll {
 			// Update txt files for cccp-3D
 			if(writeDetails) {
 				System.out.println("Writing txt files...");
-				bm.writeAllTargetDetailFiles(predDir, groupSuffix, newTargets, outDir, eval3D);
+				bm.writeAllTargetDetailFiles(predDir, groupSuffixCccp, newTargets, outDir, eval3D);
 			}
 			// Write main report
 			if(writeHTML) {
@@ -218,7 +220,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, allTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffixCccp, allTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -227,7 +229,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, newTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffixCccp, newTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -238,13 +240,13 @@ public class benchmarkAll {
 		if(writeCccpCM) {
 			outDir = new File(outBaseDir + "/cccp/cm/");
 			predDir = new File(baseDir + "/submitted/cccp");
-			groupSuffix = "TS014";
+			//groupSuffix = "TS014";
 			eval3D = false;
 			targetsPerRow = 25;
 			// Update txt files for cccp-3D
 			if(writeDetails) {
 				System.out.println("Writing txt files...");
-				bm.writeAllTargetDetailFiles(predDir, groupSuffix, newTargets, outDir, eval3D);
+				bm.writeAllTargetDetailFiles(predDir, groupSuffixCccp, newTargets, outDir, eval3D);
 			}
 			// Write main report
 			if(writeHTML) {
@@ -252,7 +254,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, allTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffixCccp, allTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
@@ -261,7 +263,7 @@ public class benchmarkAll {
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
 					System.out.println("Writing " + outFile.getAbsolutePath());
-					bm.printAllResultsHTML(predDir, groupSuffix, newTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
+					bm.printAllResultsHTML(predDir, groupSuffixCccp, newTargets, highlightGroup, outDir, out, eval3D,targetsPerRow);
 				} catch (IOException e) {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}

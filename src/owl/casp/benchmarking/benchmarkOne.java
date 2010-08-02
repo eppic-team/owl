@@ -15,14 +15,15 @@ public class benchmarkOne {
 		}
 		
 		String baseDir = args[0];
-		String target = args[1];
+		String groupSuffix = args[1];
+		String target = args[2];
 		//String target = "T0399";
 		
-		File predDir = new File(baseDir + "/submitted");
-		String groupSuffix = "TS183";
+		File predDir = new File(new File(baseDir), "submitted");
+		//String groupSuffix = "TS183";
 		boolean eval3D = true;
 		
-		Benchmarking bm = new Benchmarking(null);
+		Benchmarking bm = new Benchmarking(null, new File(baseDir));
 		int ret = bm.getTargetResult(predDir, groupSuffix, target, eval3D);
 		if(ret == Benchmarking.NO_ERROR) {
 			bm.printLastResultTable(System.out);

@@ -20,7 +20,8 @@ public class Benchmarking {
 	public static final boolean EVAL_3D = false;	// otherwise evaluate contacts (acc+cov)
 	
 	public static final String TMP_DIR = System.getProperty("java.io.tmpdir");
-	public static final String serverModelDir = "/project/StruPPi/CASP8/server_models";
+	public static final String maxClusterExecutable = "/project/StruPPi/bin/maxcluster";	
+	public static final String tempFileName = "/tmp/casp.benchmark.tmp";
 
 	// Template based:
 //	public static final String GROUP_SUFFIX = "TS183"; // e.g. "T0xxx" + GROUP_SUFFIX + "_1"
@@ -35,10 +36,6 @@ public class Benchmarking {
 //	public static final String targetList   = "/project/StruPPi/CASP8/targets/all_targets.list";
 //	public static final int TARGETS_PER_ROW = 32; // for 128 server targets this gives exactly 8 rows
 //	public static final String IMG_DIR = "/home/web/lappe/casp8/cccp/cm/";
-	
-	public static final String answerDir = "/project/StruPPi/CASP8/answers";
-	public static final String maxClusterExecutable = "/project/StruPPi/bin/maxcluster";	
-	public static final String tempFileName = "/tmp/casp.benchmark.tmp";
 		
 	public static final int NO_ERROR = 0;
 	public static final int PRED_NOT_FOUND = -1;
@@ -71,6 +68,8 @@ public class Benchmarking {
 	}
 	
 	/*--------------------------- member variables --------------------------*/
+	File serverModelDir;
+	File answerDir;
 	ArrayList<MaxClusterRunner.MaxClusterRow> lastResultTable = null;
 	int lastNumModels = -1;
 	String lastTarget = null;
@@ -80,8 +79,9 @@ public class Benchmarking {
 	/**
 	 * Class to produce, hold and output benchmarking results for our Casp8 predictions
 	 */
-	public Benchmarking(String[] targets) {
-		
+	public Benchmarking(String[] targets, File baseDir) {
+		serverModelDir = new File(baseDir, "server_models");
+		answerDir = new File(baseDir, "answers");
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
