@@ -9,14 +9,16 @@ public class benchmarkOne {
 	public static void main(String[] args) {
 		
 		if(args.length < 1) {
-			System.out.println("Usage: Benchmarking <target>");
+			System.out.println("Usage: benchmarkOne <base_dir> <group_suffix> <target>");
+			System.out.println("e.g. benchmarkOne /project/StruPPi/CASP8/ TS183 T0318");
 			System.exit(0);
 		}
 		
-		String target = args[0];
+		String baseDir = args[0];
+		String target = args[1];
 		//String target = "T0399";
 		
-		File predDir = new File("/project/StruPPi/CASP8/submitted");
+		File predDir = new File(baseDir + "/submitted");
 		String groupSuffix = "TS183";
 		boolean eval3D = true;
 		
