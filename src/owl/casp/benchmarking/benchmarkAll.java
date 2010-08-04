@@ -11,9 +11,11 @@ import java.util.LinkedList;
 /**
  * This class provides the main method for benchmarking all our Casp8/Casp9 comparative modelling predictions.
  * 
- * The target ids to be processed are passed as a list file (= text file with one target id per line).
+ * The target ids to be processed are read from the list files (= text files with one target id per line):
+ * - <base_dir>/last_update.list
+ * - <base_dir>/last_update_human.list
  * 
- * The following files are created:
+ * The following files are created in <out_dir> and <out_dir>/cccp:
  * - text files with a ranking per target in text format
  * - img files with a comparsion of model vs. native for each of our models
  * - HTML report pages for each of the category and some variants (comparison with other groups, new targets)
@@ -25,7 +27,7 @@ import java.util.LinkedList;
  * 
  * @author stehr
  * @date 2008-09-02
- * @date 2010-08-02	update for Casp9, added parameters basedir and outdir, group suffix still hardcoded
+ * date 2010-08-02	update for Casp9, now requiring parameters basedir, outdir and group ids
  */
 public class benchmarkAll {
 

@@ -42,7 +42,7 @@ public class Benchmarking {
 	public static final int ANSWER_NOT_FOUND = -2;
 	public static final int OTHER_ERROR = -9;
 	
-	public static final String[] CmDescription = {"","Ensemble","Prediction","Native","Comparison",""};
+	public static final String[] CmDescription = {"","Ensemble","Prediction","Native","",""};
 	
 	/*--------------------------- type definitions --------------------------*/	
 	public class TargetResult {
