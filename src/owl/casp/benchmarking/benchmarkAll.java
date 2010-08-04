@@ -67,12 +67,12 @@ public class benchmarkAll {
 	public static void main(String[] args) {
 	
 		boolean writeTempBased = true;		// write results for main 3d prediction group
-		boolean writeCccp3D = false;		// write results for consensus contact prediction
-		boolean writeCccpCM = false;		// write results for consensus 3d prediction
+		boolean writeCccp3D = true;			// write results for consensus contact prediction
+		boolean writeCccpCM = true;			// write results for consensus 3d prediction
 		
-		boolean writeImages = true;
-		boolean writeDetails = true;
-		boolean writeHTML = true;
+		boolean writeImages = true;			// (re-) generate structure images
+		boolean writeDetails = true;		// (re-) generate text files with scores for each target
+		boolean writeHTML = true;			// (re-) generate main html files with google charts
 
 		if(args.length < 2) {
 			System.out.println("Usage: benchmarkAll <base_dir> <out_dir> <3d_group_id> <cccp_group_id>");
@@ -148,7 +148,7 @@ public class benchmarkAll {
 					System.err.println("Error writing to file " + outFile.getAbsolutePath() + ":" + e.getMessage());
 				}
 				// Write comparison with Baker
-				highlightGroup = "BAKER-ROBETTA";
+				highlightGroup = "BAKER";
 				outFile = new File(outDir, "baker.html");
 				try {
 					out = new PrintStream(new FileOutputStream(outFile));
@@ -201,7 +201,7 @@ public class benchmarkAll {
 			eval3D = true;
 			// Update images for cccp-3D
 			if(writeImages) {
-				System.err.println("Generating images...");
+				System.err.println("Writing images to " + outDir + "...");
 				try {
 					bm.writeAllImages(predDir, groupSuffixCccp, newTargets, 200, outDir);
 					bm.writeAllImages(predDir, groupSuffixCccp, newTargets, 600, outDir);
