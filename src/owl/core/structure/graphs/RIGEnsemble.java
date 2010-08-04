@@ -4,11 +4,13 @@ package owl.core.structure.graphs;
 import java.io.*;
 import java.util.*;
 
+import owl.core.runners.DsspRunner;
 import owl.core.sequence.Sequence;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.features.SecStrucElement;
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
 import owl.graphAveraging.GraphAverager;
@@ -41,6 +43,8 @@ public class RIGEnsemble {
 	private String edgeType;
 	private double distCutoff;
 	private boolean loadOnlyFirstModels;	// if true, all models != 1 will be ignored
+	private String dsspExecutable;			// if not null, use this to assign secondary
+	private String dsspParams;				//    structure when loading graphs from PDBs
 	
 	/*----------------------------- constructors ----------------------------*/
 	/**
@@ -149,6 +153,9 @@ public class RIGEnsemble {
 							//System.out.println(filename + ":" + chains[0]);
 							pdb.load(chains[0], models[0]);	// load first chain and first model
 							if(commonSequence != null) ((PdbfilePdb) pdb).setSequence(commonSequence.getSeq());
+							if(dsspExecutable != null && dsspParams != null) {
+								pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, dsspParams, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
+							}
 							graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 							this.addRIG(graph);
 							this.addFileName(filename);
@@ -341,6 +348,17 @@ public class RIGEnsemble {
 	 */
 	public void loadOnlyFirstModels() {
 		this.loadOnlyFirstModels = true;
+	}
+	
+	/**
+	 * Use Dssp to assign secondary structure when loading graphs from PDBs.
+	 * The given local Dssp executable and parameters will be used. If this
+	 * does not work, subsequent calls to load... method will fail. The
+	 * secondary structure will be stored in the graph objects.
+	 */
+	public void useDssp(String dsspExecutable, String dsspParams) {
+		this.dsspExecutable = dsspExecutable;
+		this.dsspParams = dsspParams;
 	}
 	
 	/**

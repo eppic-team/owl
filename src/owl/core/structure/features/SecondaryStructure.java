@@ -270,9 +270,9 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 			if (a == null) {
 				continue;
 			}
-			if (resser2secstruct.get(i).getType() == SecStrucElement.HELIX) {
+			if (resser2secstruct.get(i).isHelix()) {
 				bounds.put(i, new ConsensusSquare(new ConsensusInterval(-65,-55),new ConsensusInterval(-50,-40)));
-			} else if (resser2secstruct.get(i).getType() == SecStrucElement.STRAND) {
+			} else if (resser2secstruct.get(i).isStrand()) {
 				bounds.put(i, new ConsensusSquare(new ConsensusInterval(-135,-100),new ConsensusInterval(160,90)));
 			}
 		}

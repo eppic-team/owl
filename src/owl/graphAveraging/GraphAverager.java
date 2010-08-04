@@ -10,6 +10,7 @@ import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.TemplateList;
+import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGNode;
@@ -30,6 +31,9 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public class GraphAverager {
 
+	/*------------------------------ constants ------------------------------*/
+	public static final double DEFAULT_CONS_SS_THRESH = 0.5;
+	
 	/*--------------------------- member variables --------------------------*/
 	
 	private MultipleSequenceAlignment al;			// alignment containing the graphs below
@@ -107,7 +111,7 @@ public class GraphAverager {
 		this.sequence = rigs.getRIG(0).getSequence();
 		RIGraph firstGraph = templateGraphs.get(templateGraphs.firstKey());
 		this.contactType = firstGraph.getContactType();
-		this.distCutoff = firstGraph.getCutoff();		
+		this.distCutoff = firstGraph.getCutoff();
 		
 		TreeMap<String,String> sequences = new TreeMap<String, String>();
 		sequences.put(targetTag, sequence);	
@@ -477,6 +481,35 @@ public class GraphAverager {
 	}
 	
 	/**
+	 * Calculates the consensus secondary structure from the secondary structures of the
+	 * template graphs using the given consensus threshold. The threshold has to be from
+	 * the interval ]0,1]. A possition in the consensus will be assigned e.g. a helix if
+	 * at least the threshold fraction of templates have a helix at the same position.
+	 * See: {@link #getConsensusSecondaryStructure(double)}
+	 * @return the consensus secondary structure
+	 */
+	public SecondaryStructure getConsensusSecondaryStructure(double thresh) {
+		LinkedList<SecondaryStructure> ssList = new LinkedList<SecondaryStructure>();
+		for(String tag:templateGraphs.keySet()) {
+			RIGraph g = templateGraphs.get(tag);
+//			System.out.println("");
+//			g.getSecondaryStructure().print();
+			ssList.add(g.getSecondaryStructure());
+		}
+		//System.out.println("Number of secondary structures considered: " + ssList.size());
+		return SecondaryStructure.getConsensusSecondaryStructure(this.sequence, ssList, thresh);
+	}
+	
+	/**
+	 * Calculates the consensus secondary structure using the default threshold (0.5).
+	 * See {@link #getConsensusSecondaryStructure(double)}
+	 * @return the consensus secondary structure
+	 */
+	public SecondaryStructure getConsensusSecondaryStructure() {
+		return this.getConsensusSecondaryStructure(DEFAULT_CONS_SS_THRESH);
+	}
+	
+	/**
 	 * Calculates the consensus graph from the set of template graphs. An edge is contained
 	 * in the consensus graph if the fractions of template graphs it is contained in is above
 	 * the given threshold.
@@ -544,19 +577,12 @@ public class GraphAverager {
 	 * the union of all templates in order of consensus score (i.e. fraction of templates
 	 * confirming the contact). 
 	 * @param numContacts the number of contacts picked
+	 * @param setEdgeWeightsToOne if true, all remaining edges will have weight 1, otherwise the original weight
 	 * @return the graph with top contacts
 	 */
-	public RIGraph getGraphWithTopContacts(int numContacts) {
-		
-		// order edges by weight
+	public RIGraph getGraphWithTopContacts(int numContacts, boolean setEdgeWeightsToOne) {
+				
 		RIGraph av = getAverageGraph();
-		Collection<RIGEdge> edges = av.getEdges();
-		ArrayList<RIGEdge> edgeList = new ArrayList<RIGEdge>(edges);
-		Collections.sort(edgeList, new Comparator<RIGEdge>() {
-			public int compare(RIGEdge e1, RIGEdge e2) {
-			return -1 * Double.compare(e1.getWeight(), e2.getWeight());
-		}
-		});
 		
 		// create new graph
 //		RIGraph graph = new RIGraph(this.sequence);
@@ -576,12 +602,24 @@ public class GraphAverager {
 		
 		// try alternative: copy graph and remove worst edges
 		RIGraph graph = av.copy();
+		
+		// order edges by weight
+		Collection<RIGEdge> edges = graph.getEdges();
+		ArrayList<RIGEdge> edgeList = new ArrayList<RIGEdge>(edges);
+		Collections.sort(edgeList, new Comparator<RIGEdge>() {
+			public int compare(RIGEdge e1, RIGEdge e2) {
+			return -1 * Double.compare(e1.getWeight(), e2.getWeight());
+		}
+		});
+		
 		int numEdges = Math.min(edgeList.size(), numContacts);
 		
-		// set edge weights to one (do we need this for Tinker?)
-		for (int i = 0; i < numEdges; i++) {
-			RIGEdge e = edgeList.get(i);
-			e.setWeight(1.0);
+		// set edge weights to one
+		if(setEdgeWeightsToOne) {
+			for (int i = 0; i < numEdges; i++) {
+				RIGEdge e = edgeList.get(i);
+				e.setWeight(1.0);
+			}
 		}
 		// remove rest
 		for(int i = numEdges; i < edgeList.size(); i++) {
