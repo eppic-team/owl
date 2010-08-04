@@ -15,7 +15,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import owl.core.sequence.Sequence;
 import owl.core.util.FileFormatError;
@@ -35,7 +36,8 @@ import owl.core.util.FileFormatError;
  */
 public class EmblWSDBfetchConnection {
 	
-	private static final Logger LOGGER = Logger.getLogger(EmblWSDBfetchConnection.class);
+	private static final Log LOGGER = LogFactory.getLog(EmblWSDBfetchConnection.class);
+
 	
 	private static final String BASE_URL = "http://www.ebi.ac.uk/Tools/webservices/rest/dbfetch";
 	private static final int MAX_ENTRIES_PER_REQUEST = 200; // see the embl ws dbfetch docs (url above) 

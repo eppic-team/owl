@@ -18,7 +18,8 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xml.sax.SAXException;
 
 import owl.core.connections.EmblWSDBfetchConnection;
@@ -72,7 +73,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	
 	private static final boolean DEBUG = false;
 	
-	private static final Logger  LOGGER = Logger.getLogger(UniprotHomologList.class);
+	private static final Log LOGGER = LogFactory.getLog(UniprotHomologList.class);
+
 	
 	/*-------------------------- members --------------------------*/
 	

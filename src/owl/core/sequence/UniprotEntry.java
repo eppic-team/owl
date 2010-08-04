@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
@@ -41,8 +42,8 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  */
 public class UniprotEntry implements HasFeatures {
 	
-	private static final Logger LOGGER = Logger.getLogger(UniprotEntry.class);
-
+	private static final Log LOGGER = LogFactory.getLog(UniprotEntry.class);
+	
 	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
 	
 	private static final String GENE_ENC_ORG_PLASMID = "Plasmid";
