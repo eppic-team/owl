@@ -1799,6 +1799,11 @@ public class Pdb implements HasFeatures {
 		this.ec = ec;
 	}
 	
+	public void setChainCode(String chainCode) {
+		this.chainCode = chainCode;
+		// NOTE we don't modify the pdbChainCode
+	}
+	
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
