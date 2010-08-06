@@ -33,14 +33,16 @@ public class Atom {
 	 * @param code
 	 * @param coords
 	 * @param parentResidue
+	 * @param occupancy
+	 * @param bfactor
 	 */
-	public Atom(int serial, String code, Point3d coords, Residue parentResidue) {
+	public Atom(int serial, String code, Point3d coords, Residue parentResidue, double occupancy, double bfactor) {
 		this.serial = serial;
 		this.code = code;
 		this.coords = coords;
 		this.parentResidue = parentResidue;
-		this.bfactor = DEFAULT_B_FACTOR;
-		this.occupancy = DEFAULT_OCCUPANCY;
+		this.bfactor = bfactor;
+		this.occupancy = occupancy;
 		// getting atom type from code. This works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
 		Pattern p = Pattern.compile("^(\\w)\\w*$");
 		Matcher m = p.matcher(code);
@@ -139,7 +141,7 @@ public class Atom {
 	 * @return
 	 */
 	public Atom copy(Residue parentResidue) {
-		Atom newAtom = new Atom(this.serial,this.code,new Point3d(this.coords),parentResidue);
+		Atom newAtom = new Atom(this.serial,this.code,new Point3d(this.coords),parentResidue,DEFAULT_OCCUPANCY,DEFAULT_B_FACTOR);
 		newAtom.type = this.type;
 		newAtom.bfactor = this.bfactor;
 		newAtom.occupancy = this.occupancy;

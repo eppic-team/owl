@@ -72,14 +72,18 @@ public class CiffilePdb extends Pdb {
 		public String res_type;
 		public int res_serial;
 		public Point3d coords;
+		public double occupancy;
+		public double bfactor;
 
-		public AtomLine(String labelAltId, int atomserial, String atom, String res_type, int res_serial, Point3d coords) {
+		public AtomLine(String labelAltId, int atomserial, String atom, String res_type, int res_serial, Point3d coords, double occupancy, double bfactor) {
 			this.labelAltId = labelAltId;
 			this.atomserial = atomserial;
 			this.atom = atom;
 			this.res_type = res_type;
 			this.res_serial = res_serial;
 			this.coords = coords;
+			this.occupancy = occupancy;
+			this.bfactor = bfactor;
 		}
 	}
 	/*----------------------------- constructors ----------------------------*/
@@ -386,8 +390,10 @@ public class CiffilePdb extends Pdb {
 			int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
 			int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
 			int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
+			int occupancyIdx = fields2indices.get(atomSiteId+".occupancy");
+			int bIsoOrEquivIdx = fields2indices.get(atomSiteId+".B_iso_or_equiv");
 			int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
-			// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12
+			// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12, occupancy=13, B_iso_or_equiv=14
 			//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
 			//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
 			int numberFields = ids2fieldsIdx.get(atomSiteId);
@@ -409,7 +415,9 @@ public class CiffilePdb extends Pdb {
 				double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
 				double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
 				Point3d coords = new Point3d(x,y,z);
-				atomLinesData.add(new AtomLine(labelAltId, atomserial, atom, res_type, res_serial, coords));
+				double occupancy = Double.parseDouble(tokens[occupancyIdx]); // occupancy
+				double bfactor = Double.parseDouble(tokens[bIsoOrEquivIdx]); // bfactor
+				atomLinesData.add(new AtomLine(labelAltId, atomserial, atom, res_type, res_serial, coords, occupancy, bfactor));
 			}
 		}
 		if (atomLinesData.isEmpty()) { // no atom data was found for given pdb chain code and model
@@ -428,7 +436,7 @@ public class CiffilePdb extends Pdb {
 					}
 					if (AAinfo.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
 						Residue residue = this.getResidue(atomLine.res_serial);
-						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.coords,residue));
+						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.coords,residue,atomLine.occupancy,atomLine.bfactor));
 					}
 				}
 			}

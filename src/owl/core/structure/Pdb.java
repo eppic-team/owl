@@ -220,7 +220,7 @@ public class Pdb implements HasFeatures {
 		
 		int i = 0;
 		for (Residue residue:this.residues.values()) {
-			residue.addAtom(new Atom(i+1, atom, new Point3d(coords[i]), residue));
+			residue.addAtom(new Atom(i+1, atom, new Point3d(coords[i]), residue, Atom.DEFAULT_OCCUPANCY, Atom.DEFAULT_B_FACTOR));
 			i++;
 		}
 		this.initialiseMaps();

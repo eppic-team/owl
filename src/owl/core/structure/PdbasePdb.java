@@ -348,7 +348,7 @@ public class PdbasePdb extends Pdb {
 	private void readAtomData() throws PdbaseInconsistencyError, SQLException{
 		// NOTE: label_entity_key not really needed since there can be only one entity_key
 		// per entry_key,asym_id combination
-		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z " +
+		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
 				" FROM "+db+".atom_site " +
 				" WHERE entry_key="+entrykey +
 				" AND label_asym_id='"+asymid+"' " +
@@ -370,13 +370,15 @@ public class PdbasePdb extends Pdb {
 			double y = rsst.getDouble(6);				// y
 			double z = rsst.getDouble(7);				// z
 			Point3d coords = new Point3d(x, y, z);
+			double occupancy = rsst.getDouble(8);       // occupancy
+			double bfactor = rsst.getDouble(9);         // bfactor
 			if (AminoAcid.isStandardAA(res_type)) {
 				if (!this.containsResidue(res_serial)) { 
 					this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, this));
 				}
 				if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 					Residue residue = this.getResidue(res_serial);
-					residue.addAtom(new Atom(atomserial, atom,coords,residue));
+					residue.addAtom(new Atom(atomserial, atom,coords,residue,occupancy,bfactor));
 				}
 			}
 

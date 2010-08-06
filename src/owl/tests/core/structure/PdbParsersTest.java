@@ -3,6 +3,9 @@ package owl.tests.core.structure;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -10,6 +13,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import junit.framework.Assert;
 
@@ -34,9 +38,10 @@ import owl.core.util.MySQLConnection;
 
 public class PdbParsersTest {
 	
+	// paths to the mirror of the PDB ftp repository with all pdb/mmCIF compressed files
+	private static final String CIFDIR="/nfs/data/dbs/pdb/data/structures/all/mmCIF/";
+	private static final String PDBDIR="/nfs/data/dbs/pdb/data/structures/all/pdb/";
 	
-	private static final String CIFDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
-	private static final String PDBDIR="/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/pdb/";
 	private static final String LISTFILE = "src/owl/tests/core/structure/data/cullpdb_20";
 	private static final String PDBASE_DB = "pdbase";
 	
@@ -75,8 +80,8 @@ public class PdbParsersTest {
 			Pdb pdbasePdb = null;
 
 			try {
-				
-				ciffilePdb = new CiffilePdb(new File(CIFDIR,pdbCode+".cif"));
+				File cifFile = unzipFile(new File(CIFDIR,pdbCode+".cif.gz"));
+				ciffilePdb = new CiffilePdb(cifFile);
 				ciffilePdb.load(pdbChainCode);
 				
 				pdbasePdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
@@ -126,6 +131,8 @@ public class PdbParsersTest {
 				// info from atom serials 
 				for (int atomser:pdbasePdb.getAllAtomSerials()) {
 					Assert.assertEquals(pdbasePdb.getAtomCoord(atomser), ciffilePdb.getAtomCoord(atomser));
+					Assert.assertEquals(pdbasePdb.getAtom(atomser).getOccupancy(), ciffilePdb.getAtom(atomser).getOccupancy(),0.001);
+					Assert.assertEquals(pdbasePdb.getAtom(atomser).getBfactor(), ciffilePdb.getAtom(atomser).getBfactor(),0.001);
 					Assert.assertEquals(pdbasePdb.getResSerFromAtomSer(atomser), ciffilePdb.getResSerFromAtomSer(atomser));
 					Assert.assertEquals(pdbasePdb.getAtomNameFromAtomSer(atomser), ciffilePdb.getAtomNameFromAtomSer(atomser));
 				}
@@ -169,11 +176,11 @@ public class PdbParsersTest {
 				}
 				
 				
-			}
-			catch (PdbCodeNotFoundError e) {
+			} catch (FileNotFoundException e){
+				System.err.println("File missing. "+e.getMessage());
+			} catch (PdbCodeNotFoundError e) {
 				System.err.println("pdb code not found in pdbase");
-			}
-			catch (PdbLoadError e) {
+			} catch (PdbLoadError e) {
 				System.err.println("pdb load error, cause: "+e.getMessage());
 			}
 
@@ -198,7 +205,8 @@ public class PdbParsersTest {
 			Pdb pdbasePdb = null;
 			
 			try {
-				pdbfilePdb = new PdbfilePdb(new File(PDBDIR,"pdb"+pdbCode+".ent").getAbsolutePath());
+				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
+				pdbfilePdb = new PdbfilePdb(pdbFile.getAbsolutePath());
 				pdbasePdb = new PdbasePdb(pdbCode);
 				String[] chains = pdbfilePdb.getChains();
 				// test getChains/getModels
@@ -267,7 +275,9 @@ public class PdbParsersTest {
 					}
 				}		
 				
-			} catch (PdbLoadError e) {
+			} catch (FileNotFoundException e){
+				System.err.println("File missing. "+e.getMessage());
+			}catch (PdbLoadError e) {
 				System.err.println("pdb load error, cause: "+e.getMessage());
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("pdb code not found in pdbase");			
@@ -275,4 +285,31 @@ public class PdbParsersTest {
 		}
 		flist.close();
 	}
+	
+	private static File unzipFile(File repoGzFile) throws FileNotFoundException {
+		if (!repoGzFile.exists()) {
+			throw new FileNotFoundException("PDB repository file "+repoGzFile+" could not be found.");
+		}
+		File unzippedFile = null;
+		try {
+			String prefix = repoGzFile.getName().substring(0,repoGzFile.getName().lastIndexOf(".gz"));
+			unzippedFile = File.createTempFile(prefix,"");
+			unzippedFile.deleteOnExit();
+
+			GZIPInputStream zis = new GZIPInputStream(new FileInputStream(repoGzFile));
+			FileOutputStream os = new FileOutputStream(unzippedFile);
+			int b;
+			while ( (b=zis.read())!=-1) {
+				os.write(b);
+			}
+			zis.close();
+			os.close();
+		} catch (IOException e) {
+			System.err.println("Couldn't uncompress "+repoGzFile+" file into "+unzippedFile);
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return unzippedFile;
+	}
+
 }

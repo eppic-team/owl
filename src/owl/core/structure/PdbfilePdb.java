@@ -333,8 +333,8 @@ public class PdbfilePdb extends Pdb {
 			m = p.matcher(line);
 			if (m.find()){
 				try {
-					//                                 serial    atom       altcode     restype      chain 	   res_ser icode    x     y     z
-					Pattern pl = Pattern.compile("^.{6}(.....).(....)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})",
+					//                                 serial    atom       altcode     restype      chain 	   res_ser icode  x     y     z    occ  bfac
+					Pattern pl = Pattern.compile("^.{6}(.....).(....)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})(.{6})(.{6})",
 												Pattern.CASE_INSENSITIVE);
 					Matcher ml = pl.matcher(line);
 					if (ml.find()) {
@@ -366,6 +366,8 @@ public class PdbfilePdb extends Pdb {
 						double y = Double.parseDouble(ml.group(7).trim());
 						double z = Double.parseDouble(ml.group(8).trim());
 						Point3d coords = new Point3d(x,y,z);
+						double occupancy = Double.parseDouble(ml.group(9).trim());
+						double bfactor = Double.parseDouble(ml.group(10).trim());
 	
 						if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
 							// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
@@ -384,7 +386,7 @@ public class PdbfilePdb extends Pdb {
 							}
 							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
 								Residue residue = this.getResidue(res_serial);
-								residue.addAtom(new Atom(atomserial, atom, coords, residue));
+								residue.addAtom(new Atom(atomserial, atom, coords, residue,occupancy,bfactor));
 							}
 						}
 	
