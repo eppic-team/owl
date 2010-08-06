@@ -2,6 +2,7 @@ package owl.core.structure.graphs;
 
 //import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
@@ -14,6 +15,7 @@ import javax.vecmath.Vector3d;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.Residue;
+import owl.gmbp.CMPdb_sphoxel;
 import owl.gmbp.CSVhandler;
 import owl.gmbp.GmbpGeometry;
 
@@ -57,7 +59,7 @@ public class RIGGeometry {
 	
 	private void initialiseGeometry(){
 		
-		System.out.println("Geometry of graph with "+this.graph.getEdgeCount()+" edges:");
+//		System.out.println("Geometry of graph with "+this.graph.getEdgeCount()+" edges:");
 		int edgeNum = 0;
 		GmbpGeometry gmbp = new GmbpGeometry();
 		
@@ -161,12 +163,95 @@ public class RIGGeometry {
 	}
 	
 	public void printGeom(){
-//		for (Entry<String, Vector3d> entry: this.coord_sph_rotated.entrySet()){
-//			System.out.println(entry.getKey()+":"+entry.getValue().x);
-//		}
 		for (Entry<Pair<Integer>, Vector3d> entry: this.coord_sph_rotated.entrySet()){
 			System.out.println(entry.getKey().getFirst()+"_"+entry.getKey().getSecond()+":"+entry.getValue().x);
 		}
+	}
+	
+	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, String archiveFN) throws NumberFormatException, IOException{
+		ZipFile zipfile = null;
+        try {
+            zipfile = new ZipFile(archiveFN);
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        
+        String radiusPrefix="";
+        if (2.0<=resDist && resDist<5.6)
+            radiusPrefix="rSR";        
+        if (5.6<=resDist && resDist<9.2)
+            radiusPrefix="rMR";        
+        if (9.2<=resDist /*&& resDist<12.8*/)
+            radiusPrefix="rLR";
+        
+        String fn = "";
+        String iSecSType="";
+
+        if (iRes.getSsElem() == null)
+            iSecSType = "a";
+        else{
+        	//
+        	String[] sstypes; // 
+        	char[] types = {'H', 'S', 'O'};
+        	String ssType = String.valueOf(iRes.getSsElem().getType());
+        	if (types.toString().indexOf(ssType)>=0 && types.toString().indexOf(ssType)<types.length)
+        		iSecSType = ssType.toLowerCase();
+        	else {
+//        		System.out.println("unknown ssType: "+ssType);
+        		iSecSType = "a";
+        	}
+        }
+        
+        int iNum=iRes.getSerial();
+        int jNum=jRes.getSerial();
+
+        double score = 0;
+        if (Math.abs(iNum-jNum)>1)
+        {        
+	        fn = fn+"sphoxelBG_"+iRes.getAaType().getOneLetterCode()+"-"+iSecSType+"_"+jRes.getAaType().getOneLetterCode()+"-"
+	            +"a"+"_"+radiusPrefix+".csv";
+	        
+	        ZipEntry zipentry = zipfile.getEntry(fn);
+	        if (zipentry!=null){
+		        CSVhandler csv = new CSVhandler();
+		        double bayesRatios [][][];        
+		        bayesRatios = csv.readCSVfile3Ddouble(zipfile, zipentry); // dim = 72x144x3
+		
+		        int i1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).y)/(Math.PI/72));
+		        int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).z)/(Math.PI/72))+72;  
+		        
+		        // sum up scores over tiles in direct surrounding (3x3)
+		        for (int i=i1-1; i<=i1+1; i++){
+		        	for (int j=j1-1; j<=j1+1; j++){
+		        		int iIndex=i, jIndex=j;
+		            	if (i<0)
+		            		iIndex = i1+1;
+		            	if (i>=bayesRatios.length)
+		            		iIndex = i1-1;
+		            	if (j<0)
+		            		jIndex = bayesRatios[0].length-1;
+		            	if (j>=bayesRatios[0].length)
+		            		jIndex = 0;
+		            	score += bayesRatios[iIndex][jIndex][0];            		
+		            }
+		        }	    
+//		        score = bayesRatios[i1][j1][0];    	
+	        }
+	        else{
+	        	System.out.println("No SphoxelBG for "+fn);
+	        }	        
+        }
+       
+        return   score;  
+	}
+	
+	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist) throws NumberFormatException, IOException, SQLException{
+		CMPdb_sphoxel sphoxel = new CMPdb_sphoxel();
+		
+		double score = sphoxel.getLogOddsScore(iRes, jRes, resDist, this);
+		
+		return score;
 	}
 	
 	/*
@@ -193,9 +278,10 @@ public class RIGGeometry {
 //            File dir1 = new File (".");        
 //            String fn = "/amd/talyn/1/project/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG"; 
             //                fn = dir1.getCanonicalPath() + "/src/resources/sphoxelBG/";
-            String fn = "/project/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
-            fn = "/Volumes/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
-            String archiveFN = fn + "SphoxelBGs.zip";
+//            String fn = "/project/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
+//            fn = "/Volumes/StruPPi/Saurabh/workspace/CMView/src/resources/sphoxelBG/";
+            String zipP = "/Users/vehlow/Documents/workspace/CMView/src/resources/sphoxelBG/";
+            String archiveFN = zipP + "SphoxelBGs.zip";
 //            System.out.println("archiveFN= "+archiveFN);
             ZipFile zipfile = null;
             try {
@@ -204,7 +290,7 @@ public class RIGGeometry {
                 // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
-            fn = "";
+            String fn = "";
             String iSecSType="";
 
             if (iRes.getSsElem() == null)
@@ -231,7 +317,7 @@ public class RIGGeometry {
             bayesRatios = csv.readCSVfile3Ddouble(zipfile, zipentry);
 
             
-            double logOddsScores [][] = new double[bayesRatios.length][bayesRatios[0].length];
+//            double logOddsScores [][] = new double[bayesRatios.length][bayesRatios[0].length];
             
 //            System.out.println(this.coord_sph_rotated.get(i+"_"+j).y+"  "+this.coord_sph_rotated.get(i+"_"+j).z);
 //            int i1=(int)Math.floor((this.coord_sph_rotated.get(i+"_"+j).y)/(Math.PI/72));
@@ -240,16 +326,16 @@ public class RIGGeometry {
             int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(i, j)).z)/(Math.PI/72))+72;  
             
             
-            for (int i2=0; i2<bayesRatios.length; i2++)
-                {
-                for (int j2=0; j2<bayesRatios[i2].length; j2++)
-                    {
-                    logOddsScores[i2][j2] = bayesRatios[i2][j2][0];
-                    }
-                }
+//            for (int i2=0; i2<bayesRatios.length; i2++)
+//                {
+//                for (int j2=0; j2<bayesRatios[i2].length; j2++)
+//                    {
+//                    logOddsScores[i2][j2] = bayesRatios[i2][j2][0];
+//                    }
+//                }
             
 //            System.out.println(i+"  "+j+"  "+logOddsScores[i1][j1]);
-            return     logOddsScores[i1][j1];            
+            return   bayesRatios[i1][j1][0];  //logOddsScores[i1][j1];            
         }
 	
 	// --------- getters ----------

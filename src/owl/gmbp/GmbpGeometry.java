@@ -73,6 +73,42 @@ public class GmbpGeometry {
 		return atom_coord;  
 	}
 	
+	public Vector3d getSphericalTransRotCoord(Residue iRes, Residue jRes, String iResType, String jResType){
+		String atomType = "CA";
+		// translate coordinates with rotation and translation invariant framework
+		HashMap<String,Point3d> iCoord = getTheResidueCoord(iRes);
+		HashMap<String,Point3d> jCoord = getTheResidueCoord(jRes);
+		
+//		Vector3d coord_I = new Vector3d(0,0,0);
+		Vector3d coord_J = new Vector3d(0,0,0);
+		// LEAVE this EDGE and CONTINUE with next one if the above condition is not satisfied.
+//		HashMap<String,Vector3d> atom_coord_rotated_I = new HashMap<String, Vector3d>();
+		HashMap<String,Vector3d> atom_coord_rotated_J = new HashMap<String, Vector3d>();
+		if (iCoord!=null && jCoord!=null) {
+			// METHOD FOR EXTRACTING THE NEIGHBOR'S TRANSLATED-ROTATED COORDINATES //
+//			atom_coord_rotated_I = getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
+			atom_coord_rotated_J = getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
+			//========= C-ALPHA-coordinates ================// 
+//			coord_I = atom_coord_rotated_I.get(atomType); //("CA");
+			coord_J = atom_coord_rotated_J.get(atomType); //("CA");
+		}
+		else {
+			return null;
+		}
+		
+		// GET the SPHERICAL COORDINATES for CA, C, CB, and CG using METHOD "getSphericalFromCartesian", 
+		// if these coordinates exist (are non-zero).
+//		Vector3d coord_sph_I = new Vector3d(0,0,0);
+		Vector3d coord_sph_J = new Vector3d(0,0,0);
+		if (!coord_J.equals(new Vector3d(0.0,0.0,0.0))) {
+			coord_sph_J = getSphericalFromCartesian(coord_J); // (r,theta,phi) // (r, phi,lambda)
+		}
+//		if (!coord_I.equals(new Vector3d(0.0,0.0,0.0))) {
+//			coord_sph_I = getSphericalFromCartesian(coord_I); // (r,theta,phi) // (r, phi,lambda)
+//		}
+		
+		return coord_sph_J;
+	}
 	
 	public HashMap<String,Vector3d> getNeighborsTransRotatedCoord (HashMap<String,Point3d> iCoord, HashMap<String,Point3d> jCoord, 
 			String iResType, String jResType, Residue iRes, Residue jRes, Boolean toRotate) {
