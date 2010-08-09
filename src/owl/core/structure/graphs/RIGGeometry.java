@@ -192,7 +192,7 @@ public class RIGGeometry {
             iSecSType = "a";
         else{
         	//
-        	String[] sstypes; // 
+//        	String[] sstypes; // 
         	char[] types = {'H', 'S', 'O'};
         	String ssType = String.valueOf(iRes.getSsElem().getType());
         	if (types.toString().indexOf(ssType)>=0 && types.toString().indexOf(ssType)<types.length)
