@@ -4,6 +4,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import edu.uci.ics.jung.graph.util.Pair;
+
+import owl.core.structure.Residue;
+import owl.core.structure.graphs.RIGGeometry;
 import owl.core.util.MySQLConnection;
 
 public class CMPdb_sphoxel {
@@ -53,6 +57,114 @@ public class CMPdb_sphoxel {
 		this.jRes = jRes;
 //		conn = new MySQLConnection();
 		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
+	public CMPdb_sphoxel() throws SQLException {
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
+	public double getLogOddsScore(){
+		double score = 0;
+		
+		return score;
+	}
+	
+	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, RIGGeometry graphGeom, double dAngle, double dRad) throws SQLException{
+		String query;
+		Statement stmt;
+		ResultSet result_angle, result_type, result_angle_type, result_all;
+		double theta=0.0, phi=0.0;
+		double countAll = 0, countAngle = 0, countType = 0, countAngleType = 0;
+		double countExp = 0;
+		double countObs = 0;
+		double lOS=0;
+		
+		// extract parameters
+		if (iRes.getSsElem()!=null)
+			diffSSType=true;
+		else
+			diffSSType=false;
+		
+		int iNum=iRes.getSerial();
+		int j=jRes.getSerial();
+		
+		double r=resDist;
+		theta = graphGeom.getRotCoordOfContacts().get(new Pair<Integer>(iNum, j)).y;
+		phi = graphGeom.getRotCoordOfContacts().get(new Pair<Integer>(iNum, j)).z;
+		
+		this.db = defaultDB;
+//		if (diffSSType)
+//			tnRes = "edges_"+this.iRes+"_"+String.valueOf(this.issType).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(AnySStype).toLowerCase();
+//		else
+//			tnRes = "edges_"+this.iRes+"_"+String.valueOf(AnySStype).toLowerCase()+"_"+this.jRes+"_"+String.valueOf(AnySStype).toLowerCase();	
+		
+		stmt = conn.createStatement();		
+		// ---- count all
+		query = "SELECT count(*) from "+this.db+".edges;";
+		result_all = stmt.executeQuery(query);
+		if(result_all.next()) 
+			countAll = result_all.getInt(1); // extract raw count 
+		result_all.close();
+		
+		// ---- count where type	
+		if (diffSSType)
+			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iRes.getAaType().getOneLetterCode()+"' and i_sstype='"
+				+iRes.getSsElem().getType()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"';";					// System.out.println(query);
+		else 
+			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iRes.getAaType().getOneLetterCode()+"' and j_res='"
+			+jRes.getAaType().getOneLetterCode()+"';";	
+		result_type = stmt.executeQuery(query);		
+		if(result_type.next()) 
+			countType = result_type.getInt(1); // extract raw count 
+		result_type.close();
+			
+		// ---- count where angle
+		query = "SELECT count(*) from "+db+".edges where r >= "+(r-dRad)+" and r < "+(r+dRad)
+		   	+" and theta>="+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>="+(phi-dAngle)+" and phi<"
+		   	+(phi+dAngle)+" ;";
+		result_angle = stmt.executeQuery(query);
+		if(result_angle.next())
+			countAngle = result_angle.getInt(1); // extract raw count 
+		result_angle.close();
+				
+		// ---- count where angle and type	
+		if (diffSSType)
+			query = "SELECT count(*) from "+db+".edges where r >= "+(r-dRad)+" and r < "+(r+dRad)
+		    	+" and i_res='"+iRes.getAaType().getOneLetterCode()+"' and i_sstype='"+iRes.getSsElem().getType()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"' and theta>"
+		    	+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>"+(phi-dAngle)+" and phi<"+(phi+dAngle)+" ;";					// System.out.println(query);
+		else 
+			query = "SELECT count(*) from "+db+".edges where r >= "+(r-dRad)+" and r < "+(r+dRad)
+			   +" and i_res='"+iRes.getAaType().getOneLetterCode()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"' and theta>"+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>"+(phi-dAngle)
+			   +" and phi<"+(phi+dAngle)+" ;";					
+		result_angle_type = stmt.executeQuery(query);		
+		if(result_angle_type.next()) 
+			countAngleType = result_angle_type.getInt(1); // extract raw count 
+		result_angle_type.close();	
+				
+		countAll++; countAngle++; countType++; countAngleType++;
+				
+		countObs = countAngleType;
+		countExp = (countAngle*countType)/countAll;
+		// -- +factor to avoid division by 0 --> equals countObs++ and countExp++
+		double ratio = countObs/countExp;
+		double ratio1 = Math.log (ratio);
+		lOS=ratio1;
+//		System.out.print(ratio+"_"+ratio1+"\t");
+		stmt.close();
+		
+		return lOS;
+	}
+	
+	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, RIGGeometry graphGeom) throws SQLException{
+
+		double deltar=0.5;
+		double deltatheta=Math.PI/72;
+		deltatheta /= 2;
+//		double deltaphi=Math.PI/72;
+		
+		double lOS = getLogOddsScore(iRes, jRes, resDist, graphGeom, deltatheta, deltar);
+		
+		return lOS;
 	}
 	
 	// actual fastest version to compute LOS's
