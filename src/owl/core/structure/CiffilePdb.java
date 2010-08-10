@@ -46,8 +46,10 @@ public class CiffilePdb extends Pdb {
 	private static final String atomSiteId = "_atom_site";
 	private static final String pdbxPolySeqId = "_pdbx_poly_seq_scheme";
 	private static final String structConfId = "_struct_conf";
-	private static final String structSheetId = "_struct_sheet_range"; 
-	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId};
+	private static final String structSheetId = "_struct_sheet_range";
+	private static final String cell = "_cell";
+	private static final String symmetry = "_symmetry";
+	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -290,7 +292,8 @@ public class CiffilePdb extends Pdb {
 		}		
 		// now reading separate elements separately using private methods
 		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
-		this.pdbCode = readPdbCode();		
+		this.pdbCode = readPdbCode();
+		readCrystalData();
 		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
 		readAtomSite(); // populates residues 		
 		secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
@@ -331,7 +334,7 @@ public class CiffilePdb extends Pdb {
 			
 			for (String id:ids){
 				if (!ids2fieldsIdx.containsKey(id)) ids2fieldsIdx.put(id,0);
-				p = Pattern.compile("^"+id+"\\.(\\w+)(?:\\s+(.*))?$");
+				p = Pattern.compile("^"+id+"\\.([\\w\\-]+)(?:\\s+(.*))?$");
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					ids2elements.put(id,element);
@@ -365,6 +368,19 @@ public class CiffilePdb extends Pdb {
 	
 	private String readPdbCode(){
 		return fields2values.get(entryId+".id").trim().toLowerCase();
+	}
+	
+	private void readCrystalData() {
+		double a = Double.parseDouble(fields2values.get(cell+".length_a").trim());
+		double b = Double.parseDouble(fields2values.get(cell+".length_b").trim());
+		double c = Double.parseDouble(fields2values.get(cell+".length_c").trim());
+		double alpha = Double.parseDouble(fields2values.get(cell+".angle_alpha").trim());
+		double beta = Double.parseDouble(fields2values.get(cell+".angle_beta").trim());
+		double gamma = Double.parseDouble(fields2values.get(cell+".angle_gamma").trim());
+		this.crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+		
+		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
+		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 	}
 	
 	private void readAtomSite() throws IOException, PdbChainCodeNotFoundError, FileFormatError {

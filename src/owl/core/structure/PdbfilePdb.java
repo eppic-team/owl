@@ -235,6 +235,18 @@ public class PdbfilePdb extends Pdb {
 					}
 				}
 			}
+			// CRYST1
+			if (line.startsWith("CRYST1")) {
+				double a = Double.parseDouble(line.substring( 6, 15));
+				double b = Double.parseDouble(line.substring(15, 24));
+				double c = Double.parseDouble(line.substring(24, 33));
+				double alpha = Double.parseDouble(line.substring(33, 40));
+				double beta = Double.parseDouble(line.substring(40, 47));
+				double gamma = Double.parseDouble(line.substring(47, 54));
+				String sg = line.substring(55,66).trim();
+				crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+				spaceGroup = SymoplibParser.getSpaceGroup(sg);
+			}
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
 			p = Pattern.compile("^SEQRES.{5}"+chainCodeStr);

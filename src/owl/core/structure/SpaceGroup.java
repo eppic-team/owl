@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Matrix4d;
 
+
 /**
  * A crystallographic space group. We store the standard numeric identifier,
  * the international short symbol and the transformations corresponding to
@@ -107,6 +108,17 @@ public class SpaceGroup {
 	
 	public String getTransfAlgebraic(int i) {
 		return transfAlgebraic.get(i);
+	}
+	
+	public boolean equals(Object o) {
+		if (! (o instanceof SpaceGroup)) {
+			return false;
+		}
+		SpaceGroup other = (SpaceGroup) o;
+		if (other.getId()==this.getId()) {
+			return true;
+		}
+		return false;
 	}
 	
 }

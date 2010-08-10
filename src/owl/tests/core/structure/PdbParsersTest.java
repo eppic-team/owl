@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import owl.core.structure.AAinfo;
 import owl.core.structure.CiffilePdb;
+import owl.core.structure.CrystalCell;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
@@ -112,6 +113,16 @@ public class PdbParsersTest {
 				for (int model:ciffileModels) {
 					Assert.assertTrue(pdbaseModelsSet.contains(model));
 				}
+				// crystal data
+				Assert.assertEquals(pdbasePdb.getSpaceGroup(), ciffilePdb.getSpaceGroup());
+				CrystalCell pdbaseCell = pdbasePdb.getCrystalCell();
+				CrystalCell ciffileCell = ciffilePdb.getCrystalCell();
+				Assert.assertEquals(pdbaseCell.getA(), ciffileCell.getA(), 0.001);
+				Assert.assertEquals(pdbaseCell.getB(), ciffileCell.getB(), 0.001);
+				Assert.assertEquals(pdbaseCell.getC(), ciffileCell.getC(), 0.001);
+				Assert.assertEquals(pdbaseCell.getAlpha(), ciffileCell.getAlpha(), 0.001);
+				Assert.assertEquals(pdbaseCell.getBeta(), ciffileCell.getBeta(), 0.001);
+				Assert.assertEquals(pdbaseCell.getGamma(), ciffileCell.getGamma(), 0.001);
 				
 				// identifiers
 				Assert.assertEquals(pdbasePdb.getPdbCode(), ciffilePdb.getPdbCode());
@@ -237,6 +248,10 @@ public class PdbParsersTest {
 						// model as input
 						Assert.assertEquals(model,pdbfilePdb.getModel());
 						
+						// crystal data
+						Assert.assertNotNull(pdbfilePdb.getSpaceGroup());
+						Assert.assertNotNull(pdbfilePdb.getCrystalCell());
+
 						// sequence
 						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().length());
 						Assert.assertTrue(pdbfilePdb.getObsLength()==pdbfilePdb.getObsSequence().length());

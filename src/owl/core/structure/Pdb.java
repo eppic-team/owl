@@ -88,6 +88,10 @@ public class Pdb implements HasFeatures {
 	protected int fullLength; 							// length of full sequence as it appears in SEQRES field 
 														// to get observed length use method getObsLength()
 	
+	// crystallographic data
+	protected SpaceGroup spaceGroup;					// the space group (in CRYST1 field in PDB files)
+	protected CrystalCell crystalCell;					// the parameters of the crystal cell (in CRYST1 field in PDB files)
+	
 	// sequence features (annotations)
 	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
 	protected Scop scop;								// the scop annotation for this pdb object
@@ -1451,6 +1455,14 @@ public class Pdb implements HasFeatures {
 	 */
 	public void setTitle(String title) {
 		this.title = title;
+	}
+	
+	public SpaceGroup getSpaceGroup() {
+		return this.spaceGroup;
+	}
+	
+	public CrystalCell getCrystalCell() {
+		return this.crystalCell;
 	}
 	
 	/**

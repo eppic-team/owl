@@ -68,7 +68,7 @@ public class PdbasePdb extends Pdb {
 		// this makes sure that we find the pdb code in the database
 		this.entrykey = getEntryKey();
 		this.title = getTitle(); // this is available once we have the entry key
-		
+		readCrystalData(); // sets spaceGroup and crystalCell
 	}
 
 	/**
@@ -86,7 +86,7 @@ public class PdbasePdb extends Pdb {
 	 * Loads PDB data from pdbase given a chain code of type ccType.
 	 * Two possible ccTypes: 
 	 *  - PDB_CHAIN_CODE the classic, author-assigned pdb code (pdb_strand_id in pdbase): the pdbChainCode member of Pdb class
-	 *  - CIF_CHAIN_CODE the cif chain code (asym_id in pdabase): the chainCode member of Pdb class
+	 *  - CIF_CHAIN_CODE the cif chain code (asym_id in pdbase): the chainCode member of Pdb class
 	 * @param chainCode
 	 * @param modelSerial
 	 * @param ccType
@@ -343,6 +343,37 @@ public class PdbasePdb extends Pdb {
 		stmt.close();
 
 		return alt_locs_sql_str;
+	}
+	
+	private void readCrystalData() throws SQLException {
+		String sql = "SELECT space_group_name_h_m " +
+				" FROM "+db+".symmetry " +
+				" WHERE entry_key="+entrykey;
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		String sg = null;
+		if (rsst.next()) {
+			sg = rsst.getString(1);
+		}
+		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+		rsst.close();
+		
+		sql = "SELECT cell_length_a, cell_length_b, cell_length_c, cell_angle_alpha, cell_angle_beta, cell_angle_gamma " +
+			  " FROM "+db+".cell " +
+			  " WHERE entry_key="+entrykey;
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			double a = rsst.getFloat(1);
+			double b = rsst.getFloat(2);
+			double c = rsst.getFloat(3);
+			double alpha = rsst.getFloat(4);
+			double beta = rsst.getFloat(5);
+			double gamma = rsst.getFloat(6);
+			this.crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+		}
+		rsst.close();
+		stmt.close();
+		
 	}
 	
 	private void readAtomData() throws PdbaseInconsistencyError, SQLException{
