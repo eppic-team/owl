@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A class containing static methods to parse the symop.lib file from the 
@@ -22,6 +25,8 @@ public class SymoplibParser {
 	private static final InputStream symoplibIS = SymoplibParser.class.getResourceAsStream(SYMOPFILE);
 	private static final TreeMap<Integer, SpaceGroup> sgs = parseSymopLib();
 	
+	private static HashMap<String, SpaceGroup> name2sgs; // map for lookups based on short names
+	
 	/**
 	 * Gets the space group for the given standard identifier.
 	 * See for example http://en.wikipedia.org/wiki/Space_group
@@ -32,24 +37,41 @@ public class SymoplibParser {
 		return sgs.get(id);
 	}
 	
+	/**
+	 * Gets the space group for the given international short name, using
+	 * the PDB format, e.g. 'P 21 21 21' or 'C 1 c 1'
+	 * @param shortName
+	 * @return
+	 */
+	public static SpaceGroup getSpaceGroup(String shortName) {
+		return name2sgs.get(shortName);
+	}
+	
 	public static TreeMap<Integer,SpaceGroup> getAllSpaceGroups() {
 		return sgs;
 	}
 	
 	private static TreeMap<Integer,SpaceGroup> parseSymopLib() {
 		TreeMap<Integer, SpaceGroup> map = new TreeMap<Integer, SpaceGroup>();
+		name2sgs = new HashMap<String, SpaceGroup>();
 		try {
 			BufferedReader br = new BufferedReader(new InputStreamReader(symoplibIS));
 			String line;
 			SpaceGroup currentSG = null;
+			Pattern namePat = Pattern.compile(".*'(.+)'$");
 			while ((line=br.readLine())!=null) {
 				if (!line.startsWith(" ")) {
 					if (currentSG!=null) {
 						map.put(currentSG.getId(),currentSG);
+						name2sgs.put(currentSG.getShortSymbol(), currentSG);
 					}
-					String[] tokens = line.split("\\s+");
-					int id = Integer.parseInt(tokens[0]);
-					String shortSymbol = tokens[4];
+					
+					int id = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+					Matcher m = namePat.matcher(line);
+					String shortSymbol = null;
+					if (m.matches()) {
+						shortSymbol = m.group(1);
+					}
 					currentSG = new SpaceGroup(id, shortSymbol);
 				} else {
 					currentSG.addTransformation(line.trim());
