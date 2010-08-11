@@ -2352,7 +2352,7 @@ public class Pdb implements HasFeatures {
 	}
 
 	/**
-	 * Rotates or translates this structure.
+	 * Transforms (rotation+translation) this structure in place as indicated by the given matrix. 
 	 * @param m the rotation/translation matrix
 	 */
 	public void transform(Matrix4d m) {
@@ -2360,6 +2360,17 @@ public class Pdb implements HasFeatures {
 			Point3d coords = getAtomCoord(atomserial);
 			m.transform(coords);
 		}
+	}
+	
+	/**
+	 * Transforms (rotation+translation) this structure as indicate by the given matrix placing the
+	 * result into the given pdb parameter (its existing contents will be wiped out). 
+	 * @param m the rotation/translation matrix
+	 * @param pdb
+	 */
+	public void transform(Matrix4d m, Pdb pdb) {
+		pdb = this.copy();
+		pdb.transform(m);
 	}
 	
 	/**
@@ -2591,6 +2602,10 @@ public class Pdb implements HasFeatures {
 		newPdb.dataLoaded = this.dataLoaded;
 		newPdb.hasASA = this.hasASA;
 		newPdb.hasBfactors = this.hasBfactors;
+		
+		newPdb.crystalCell = new CrystalCell(crystalCell.getA(),crystalCell.getB(),crystalCell.getC(),
+								 			 crystalCell.getAlpha(),crystalCell.getBeta(),crystalCell.getGamma());
+		newPdb.spaceGroup = spaceGroup; // this class is immutable, we don't really need to deep copy
 		
 		newPdb.sequence = this.sequence;
 		newPdb.fullLength = this.fullLength;

@@ -20,7 +20,7 @@ import javax.vecmath.Matrix4d;
  * @author duarte_j
  * @see SymoplibParser
  */
-public class SpaceGroup {
+public final class SpaceGroup {
 
 	
 	private int id;
@@ -120,5 +120,12 @@ public class SpaceGroup {
 		}
 		return false;
 	}
+	
+	//public SpaceGroup copy() {
+	//	SpaceGroup newSG = new SpaceGroup(id, shortSymbol);
+	//	for (Matrix4d transf:transformations) {
+	//		newSG.transformations.add(transf)
+	//	}
+	//}
 	
 }
