@@ -22,6 +22,7 @@ public class Benchmarking {
 	public static final boolean EVAL_3D = false;	// otherwise evaluate contacts (acc+cov)
 	
 	public static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+//	public static final String maxClusterExecutable = "/Volumes/StruPPi/bin/maxcluster_i686_32bit.bin"; 
 	public static final String maxClusterExecutable = "/project/StruPPi/bin/maxcluster";	
 	public static final String tempFileName = "/tmp/casp.benchmark.tmp";
 
