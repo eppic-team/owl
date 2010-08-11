@@ -40,6 +40,8 @@ public class GmbpGeometry {
 				atom_coord.put(atom.getCode(), atom.getCoords());
 			}			
 		}
+		else
+			return null;
 		
 		return atom_coord;
 	}
