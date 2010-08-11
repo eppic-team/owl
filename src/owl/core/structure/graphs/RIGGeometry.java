@@ -67,6 +67,10 @@ public class RIGGeometry {
 		coord_sph_rotated = new HashMap<Pair<Integer>, Vector3d>();
 		for (RIGEdge edge:graph.getEdges()) {
 			edgeNum++;
+//			if (edgeNum>=36)
+//			{
+////				System.out.println(edgeNum);
+//			}
 			// extract (x,y,z) coordinates for nodes of both end of edge
 			Pair<RIGNode> nodes = this.graph.getEndpoints(edge);
 			RIGNode iNode = nodes.getFirst();
@@ -178,7 +182,7 @@ public class RIGGeometry {
         }
         
         String radiusPrefix="";
-        if (2.0<=resDist && resDist<5.6)
+        if (/*2.0<=resDist &&*/ resDist<5.6)
             radiusPrefix="rSR";        
         if (5.6<=resDist && resDist<9.2)
             radiusPrefix="rMR";        
@@ -207,41 +211,40 @@ public class RIGGeometry {
         int jNum=jRes.getSerial();
 
         double score = 0;
-        if (Math.abs(iNum-jNum)>1)
-        {        
-	        fn = fn+"sphoxelBG_"+iRes.getAaType().getOneLetterCode()+"-"+iSecSType+"_"+jRes.getAaType().getOneLetterCode()+"-"
-	            +"a"+"_"+radiusPrefix+".csv";
+        
+        fn = fn+"sphoxelBG_"+iRes.getAaType().getOneLetterCode()+"-"+iSecSType+"_"+jRes.getAaType().getOneLetterCode()+"-"
+            +"a"+"_"+radiusPrefix+".csv";
+        
+        ZipEntry zipentry = zipfile.getEntry(fn);
+        if (zipentry!=null){
+	        CSVhandler csv = new CSVhandler();
+	        double bayesRatios [][][];        
+	        bayesRatios = csv.readCSVfile3Ddouble(zipfile, zipentry); // dim = 72x144x3
+	
+	        int i1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).y)/(Math.PI/72));
+	        int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).z)/(Math.PI/72))+72;  
 	        
-	        ZipEntry zipentry = zipfile.getEntry(fn);
-	        if (zipentry!=null){
-		        CSVhandler csv = new CSVhandler();
-		        double bayesRatios [][][];        
-		        bayesRatios = csv.readCSVfile3Ddouble(zipfile, zipentry); // dim = 72x144x3
-		
-		        int i1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).y)/(Math.PI/72));
-		        int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).z)/(Math.PI/72))+72;  
-		        
-		        // sum up scores over tiles in direct surrounding (3x3)
-		        for (int i=i1-1; i<=i1+1; i++){
-		        	for (int j=j1-1; j<=j1+1; j++){
-		        		int iIndex=i, jIndex=j;
-		            	if (i<0)
-		            		iIndex = i1+1;
-		            	if (i>=bayesRatios.length)
-		            		iIndex = i1-1;
-		            	if (j<0)
-		            		jIndex = bayesRatios[0].length-1;
-		            	if (j>=bayesRatios[0].length)
-		            		jIndex = 0;
-		            	score += bayesRatios[iIndex][jIndex][0];            		
-		            }
-		        }	    
-//		        score = bayesRatios[i1][j1][0];    	
-	        }
-	        else{
-	        	System.out.println("No SphoxelBG for "+fn);
-	        }	        
+	        // sum up scores over tiles in direct surrounding (3x3)
+	        for (int i=i1-1; i<=i1+1; i++){
+	        	for (int j=j1-1; j<=j1+1; j++){
+	        		int iIndex=i, jIndex=j;
+	            	if (i<0)
+	            		iIndex = i1+1;
+	            	if (i>=bayesRatios.length)
+	            		iIndex = i1-1;
+	            	if (j<0)
+	            		jIndex = bayesRatios[0].length-1;
+	            	if (j>=bayesRatios[0].length)
+	            		jIndex = 0;
+	            	score += bayesRatios[iIndex][jIndex][0];            		
+	            }
+	        }	    
+//	        score = bayesRatios[i1][j1][0];    	
         }
+        else{
+        	System.out.println("No SphoxelBG for "+fn);
+        	return -666666;
+        }	
        
         return   score;  
 	}
