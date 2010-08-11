@@ -3,6 +3,8 @@ package owl.casp.benchmarking;
 import java.util.*;
 import java.io.*;
 
+import edu.uci.ics.jung.graph.util.Pair;
+
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.MaxClusterRunner.MaxClusterRow;
 import owl.core.structure.Pdb;
@@ -330,6 +332,23 @@ public class Benchmarking {
 		numRanks = lastResultTable.size();
 		
 		return new TargetResult(lastTarget,ourBestRank,ourMod1Rank,numRanks,ourBestGdt,ourMod1Gdt,avgGdt,medGdt);
+	}
+	
+	/**
+	 * Returns all rows of the result as TreeMap.
+	 */
+	public TreeMap<String, Pair<Double>> getLastResult(){
+		TreeMap<String, Pair<Double>> map = new TreeMap<String, Pair<Double>>();
+		for (MaxClusterRunner.MaxClusterRow row: lastResultTable) {
+			String model = row.getFileName();
+			String modelName = model.substring(model.lastIndexOf("/")+1);
+			modelName = modelName.trim();
+			double nr = row.getRank();
+			double score = row.getScore();
+			map.put(modelName, new Pair<Double>(nr,score));
+//			System.out.println(row);
+		}
+		return map;
 	}
 	
 	public void printLastResultHTML(String highlightGroup, File imgFileDir, boolean eval3D, PrintStream out) {
