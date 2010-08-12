@@ -22,9 +22,6 @@ public class benchmarkGraphAlgorithm {
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
 	public static String			PDB_DB = "pdbase_test";
-	public static String			DB_HOST = "talyn";								
-	public static String			DB_USER = getUserName();
-	public static String			DB_PWD = "nieve";
 
 	public static String			PDB_CODE = "1tdr";
 	public static String			CHAIN_CODE = "B";
@@ -32,17 +29,6 @@ public class benchmarkGraphAlgorithm {
 	public static String			edgeType = "ALL";
 	
 	/*---------------------------- private methods --------------------------*/
-	/** 
-	 * Get user name from operating system (for use as database username). 
-	 * */
-	private static String getUserName() {
-		String user = null;
-		user = System.getProperty("user.name");
-		if(user == null) {
-			System.err.println("Could not get user name from operating system.");
-		}
-		return user;
-	}
 	
 	public static void main(String[] args) throws IOException {
 		MySQLConnection conn = null;		
@@ -53,7 +39,7 @@ public class benchmarkGraphAlgorithm {
 		
 		// read structures from database
 		try{
-			conn = new MySQLConnection(DB_HOST, DB_USER, DB_PWD);
+			conn = new MySQLConnection();
 		} catch (Exception e) {
 			System.err.println("Error opening database connection");
 		}

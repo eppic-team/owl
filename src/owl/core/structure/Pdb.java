@@ -38,6 +38,8 @@ import owl.core.structure.features.Scop;
 import owl.core.structure.features.ScopRegion;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.graphs.AICGEdge;
+import owl.core.structure.graphs.AICGraph;
 import owl.core.structure.graphs.AIGEdge;
 import owl.core.structure.graphs.AIGNode;
 import owl.core.structure.graphs.AIGraph;
@@ -346,6 +348,26 @@ public class Pdb implements HasFeatures {
 			}
 		}
 		return reducedResidues;
+	}
+	
+	/**
+	 * Gets a new Map with atom serials to Atoms that contain only the atoms for the given 
+	 * contact type and given interval set. 
+	 *
+	 * @param ct the contact type
+	 * @param intervSet only residues of this intervals will be considered, if null then 
+	 * all residues taken
+	 * @return
+	 */
+	private TreeMap<Integer, Atom> getAtomsForCt(String ct, IntervalSet intervSet) {
+		TreeMap<Integer, Residue> reducedResidues = getReducedResidues(ct, intervSet);
+		TreeMap<Integer, Atom> atoms = new TreeMap<Integer, Atom>();
+		for (Residue residue:reducedResidues.values()) {
+			for (Atom atom:residue.getAtoms()) {
+				atoms.put(atom.getSerial(), atom);
+			}
+		}
+		return atoms;
 	}
 	
 	/**
@@ -846,7 +868,8 @@ public class Pdb implements HasFeatures {
 	/**
 	 * Get the graph for given contact type and cutoff for this Pdb object.
 	 * Returns a Graph object with the contacts
-	 * We do geometric hashing for fast contact computation (without needing to calculate full distance matrix)
+	 * A geometric hashing algorithm is used for fast contact computation (without needing 
+	 * to calculate full distance matrix)
 	 * @param ct
 	 * @param cutoff
 	 * @return
@@ -1236,7 +1259,7 @@ public class Pdb implements HasFeatures {
 	 * @param boxSize
 	 * @return 
 	 */
-	private int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
+	private static int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
 		Point3i neighbor;
 		int nbs = 0;
 		for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
@@ -1252,6 +1275,119 @@ public class Pdb implements HasFeatures {
 		return nbs;
 	}
 
+	/**
+	 * Computes the atom interaction graph between this and given protein chain for all
+	 * atoms of contact type ct and given cutoff. 
+	 * A geometric hashing algorithm is used for fast contact computation (without needing 
+	 * to calculate full distance matrix) 
+	 * @param other
+	 * @param ct
+	 * @param cutoff
+	 * @return a graph containing one edge per atom interaction i.e. per atom pair falling 
+	 * under the distance cutoff
+	 */
+	public AICGraph getAICGraph(Pdb other, String ct, double cutoff) {
+		TreeMap<Integer,Atom> thisAtoms = this.getAtomsForCt(ct, null);
+		TreeMap<Integer,Atom> otherAtoms = other.getAtomsForCt(ct, null);
+		
+		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
+
+		int boxSize = (int) Math.floor(cutoff*SCALE);
+
+		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
+
+		int[] thisSerials = new  int[thisAtoms.size()]; // map from matrix indices to atomserials
+		int[] otherSerials = new  int[otherAtoms.size()]; // map from matrix indices to atomserials
+		
+		int i = 0;
+		for (Atom thisAtom:thisAtoms.values()) {
+			Point3d coord = thisAtom.getCoords();
+			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
+			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
+			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
+			Point3i floor = new Point3i(floorX,floorY,floorZ);
+			if (boxes.containsKey(floor)){
+				// we put the coords for atom i in its corresponding box (identified by floor)
+				boxes.get(floor).put_i_Point(i, coord);
+			} else {
+				Box box = new Box(floor);
+				box.put_i_Point(i, coord);
+				boxes.put(floor,box);
+			}
+			thisSerials[i] = thisAtom.getSerial();
+			i++;
+		}
+		
+		int j = 0;
+		for (Atom otherAtom:otherAtoms.values()){
+			//coordinates for atom serial atomser, we will use j as its identifier below
+			Point3d coord = otherAtom.getCoords();
+			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
+			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
+			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
+			Point3i floor = new Point3i(floorX,floorY,floorZ);
+			if (boxes.containsKey(floor)){
+				// we put the coords for atom j in its corresponding box (identified by floor)
+				boxes.get(floor).put_j_Point(j, coord);
+			} else {
+				Box box = new Box(floor);
+				box.put_j_Point(j, coord);
+				boxes.put(floor,box);
+			}
+			otherSerials[j] = otherAtom.getSerial();
+			j++;
+		}
+		
+		float[][]distMatrix = new float[thisAtoms.size()][otherAtoms.size()];
+
+		for (Point3i floor:boxes.keySet()){ // for each box
+			// distances of points within this box
+			boxes.get(floor).getDistancesWithinBox(distMatrix,true);
+
+			//TODO should iterate only through half of the neighbours here 
+			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
+			for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
+				for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
+					for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
+						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
+							Point3i neighbor = new Point3i(x,y,z);
+							if (boxes.containsKey(neighbor)){
+								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix,true);
+							}
+						}
+					}
+				}
+			} 
+		} 
+		
+		AICGraph graph = new AICGraph();
+		for (Atom thisAtom:thisAtoms.values()){
+			graph.addVertex(thisAtom);
+		}
+		for (Atom otherAtom:otherAtoms.values()) {
+			graph.addVertex(otherAtom); 
+		}
+		//for (i=0;i<distMatrix.length;i++){
+		//	for (j=0;j<distMatrix[i].length;j++){
+		//		System.out.printf("%5.2f\t",distMatrix[i][j]);				
+		//	}
+		//	System.out.println();
+		//}
+
+		
+		for (i=0;i<distMatrix.length;i++){ 
+			for (j=0;j<distMatrix[i].length;j++){
+				// the condition distMatrix[i][j]!=0.0 takes care of skipping cells for which we 
+				// didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
+				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
+					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms.get(thisSerials[i]), otherAtoms.get(otherSerials[j]), EdgeType.UNDIRECTED);
+				}
+
+			}
+		}
+		return graph;
+	}
+	
 	/**
 	 * Gets the Consurf-HSSP score given an internal residue serial
 	 * @param resser

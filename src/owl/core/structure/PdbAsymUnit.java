@@ -3,6 +3,8 @@ package owl.core.structure;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Set;
 import java.util.TreeMap;
 
 import owl.core.util.FileFormatError;
@@ -111,6 +113,14 @@ public class PdbAsymUnit {
 	
 	public Pdb getChain(String pdbChainCode) {
 		return chains.get(pdbChainCode);
+	}
+	
+	public Collection<Pdb> getAllChains() {
+		return chains.values();
+	}
+	
+	public Set<String> getPdbChainCodes() {
+		return chains.keySet();
 	}
 	
 	public int getNumChains() {
