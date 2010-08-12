@@ -28,48 +28,25 @@ public class calculateGridDensity {
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
 	public static String			PDB_DB = "pdbase";
-	public static String			DB_HOST = "talyn";								
-	public static String			DB_USER = getUserName();
-	public static String			DB_PWD = "nieve";
 
 	public static String			PDB_CODE = "1tdr";
 	public static String			CHAIN_CODE = "B";
 	public static String			edgeType = "Ca";
 	public static double			cutoff_from = 4.0;
-	public static double			cutoff_to = 15.0;
+	public static double			cutoff_to = 5.0;
 	public static double			cutoff_step = 1.0;
 	public static int 				limit = 100;
 	
 	public static String			outFileName = "grid_nbs_pdbreps100";
 	
 	/*---------------------------- private methods --------------------------*/
-	/** 
-	 * Get user name from operating system (for use as database username). 
-	 * */
-	private static String getUserName() {
-		String user = null;
-		user = System.getProperty("user.name");
-		if(user == null) {
-			System.err.println("Could not get user name from operating system.");
-		}
-		return user;
-	}
 	
-	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) {
-		Pdb pdb = null;
-		try {
-			pdb = new PdbasePdb(pdbCode, PDB_DB, conn);
-			pdb.load(chainCode);
-			// add to density count vector
-			pdb.calcGridDensity(edgeType, cutoff, densityCount);
+	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) throws PdbLoadError, PdbCodeNotFoundError, SQLException {
+		Pdb pdb =  new PdbasePdb(pdbCode, PDB_DB, conn);
+		pdb.load(chainCode);
+		// add to density count vector
+		pdb.calcGridDensity(edgeType, cutoff, densityCount);
 			
-		} catch (PdbLoadError e) {
-			System.out.println("Error loading " + pdbCode + chainCode+", specific error: "+e.getMessage());
-		} catch (PdbCodeNotFoundError e) {
-			e.printStackTrace();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
 			
 	}
 	
@@ -133,7 +110,15 @@ public class calculateGridDensity {
 				numPdbs++;
 				
 				// calculate statistics
-				calcDensity(pdbCode, chainCode, cutoff, edgeType, conn, densityCount); // will add to densityCount
+				try {
+					calcDensity(pdbCode, chainCode, cutoff, edgeType, conn, densityCount); // will add to densityCount
+				} catch(PdbLoadError e) {
+					System.err.println(e.getMessage());
+					continue;
+				} catch (PdbCodeNotFoundError e) {
+					System.err.println(e.getMessage());
+					continue;					
+				}
 				if(verbose) {
 					if(numPdbs %2 == 0) {
 						System.out.print('\b');
@@ -151,7 +136,9 @@ public class calculateGridDensity {
 			
 		} catch (SQLException e) {
 			e.printStackTrace();
+			System.exit(1);
 		}		
+		
 		return densityCount;
 	}
 	
@@ -162,9 +149,9 @@ public class calculateGridDensity {
 
 		// opening db connection
 		try{
-			conn = new MySQLConnection(DB_HOST, DB_USER, DB_PWD);
-		} catch (Exception e) {
-			System.err.println("Error opening database connection. Exiting");
+			conn = new MySQLConnection();
+		} catch (SQLException e) {
+			System.err.println("Error opening database connection: "+e.getMessage()+"\nExiting");
 			System.exit(1);
 		}
 

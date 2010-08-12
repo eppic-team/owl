@@ -23,7 +23,6 @@ import java.util.regex.Pattern;
 import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.features.Feature;
@@ -45,7 +44,7 @@ import owl.core.structure.graphs.AIGNode;
 import owl.core.structure.graphs.AIGraph;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.Box;
+import owl.core.util.Grid;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -741,30 +740,6 @@ public class Pdb implements HasFeatures {
 	}
 	
 	/**
-	 * Gets a TreeMap with atom serials as keys and their coordinates as values for the 
-	 * given contact type.
-	 * The contact type can't be a cross contact type, it doesn't make sense here
-	 * @param ct
-	 * @return
-	 */
-	private TreeMap<Integer,Point3d> getCoordsForCt(String ct) {
-		TreeMap<Integer,Point3d> coords = new TreeMap<Integer,Point3d>();
-		for (Residue residue:residues.values()) {
-			Set<String> atomCodes = AAinfo.getAtomsForCTAndRes(ct, residue.getAaType().getThreeLetterCode());
-			for (String atomCode:atomCodes){
-				if (residue.containsAtom(atomCode)) {
-					coords.put(residue.getAtom(atomCode).getSerial(),residue.getAtom(atomCode).getCoords());
-				} 
-			}
-			// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
-			if ((ct.equals("ALL") || ct.equals("BB")) &&  residue.containsOXT()) { 
-				coords.put(residue.getAtom("OXT").getSerial(), residue.getAtom("OXT").getCoords());
-			}
-		}
-		return coords;
-	}
-
-	/**
 	 * Returns the distance matrix (one distance per pair of residues) as a Jama Matrix object. 
 	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
 	 * residues. 
@@ -828,25 +803,29 @@ public class Pdb implements HasFeatures {
 	public HashMap<Pair<Integer>, Double> calcAtomDistMatrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
-			TreeMap<Integer,Point3d> coords = getCoordsForCt(ct);
-			for (int i_atomser:coords.keySet()){
-				for (int j_atomser:coords.keySet()){
-					if (j_atomser>i_atomser) {
-						Pair<Integer> pair = new Pair<Integer>(i_atomser,j_atomser);
-						distMatrixAtoms.put(pair, coords.get(i_atomser).distance(coords.get(j_atomser)));
+			TreeMap<Integer,Atom> atoms = getAtomsForCt(ct, null);
+			for (Atom iAtom:atoms.values()){
+				for (Atom jAtom:atoms.values()){
+					int iAtomSer = iAtom.getSerial();
+					int jAtomSer = jAtom.getSerial();
+					if (jAtomSer>iAtomSer) {
+						Pair<Integer> pair = new Pair<Integer>(iAtomSer,jAtomSer);
+						distMatrixAtoms.put(pair, iAtom.getCoords().distance(jAtom.getCoords()));
 					}
 				}
 			}
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			TreeMap<Integer,Point3d> i_coords = getCoordsForCt(i_ct);
-			TreeMap<Integer,Point3d> j_coords = getCoordsForCt(j_ct);
-			for (int i_atomser:i_coords.keySet()){
-				for (int j_atomser:j_coords.keySet()){
-					if (j_atomser!=i_atomser){
-						Pair<Integer> pair = new Pair<Integer>(i_atomser,j_atomser);
-						distMatrixAtoms.put(pair, i_coords.get(i_atomser).distance(j_coords.get(j_atomser)));
+			TreeMap<Integer,Atom> iAtoms = getAtomsForCt(i_ct,null);
+			TreeMap<Integer,Atom> jAtoms = getAtomsForCt(j_ct,null);
+			for (Atom iAtom:iAtoms.values()){
+				for (Atom jAtom:jAtoms.values()){
+					int iAtomSer = iAtom.getSerial();
+					int jAtomSer = jAtom.getSerial();
+					if (jAtomSer!=iAtomSer){
+						Pair<Integer> pair = new Pair<Integer>(iAtomSer,jAtomSer);
+						distMatrixAtoms.put(pair, iAtom.getCoords().distance(jAtom.getCoords()));
 					}
 				}
 			}
@@ -875,107 +854,37 @@ public class Pdb implements HasFeatures {
 	 * @return
 	 */
 	private AIGraph getAIGraph(String ct, double cutoff){ 
-		TreeMap<Integer,Point3d> i_coords = null;
-		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymetric edge types
+		TreeMap<Integer,Atom> iAtoms = null;
+		TreeMap<Integer,Atom> jAtoms = null;		// only relevant for asymetric edge types
 		boolean crossed = false;
 		if (!ct.contains("/")){
-			i_coords = getCoordsForCt(ct);
+			iAtoms = getAtomsForCt(ct, null);
 			crossed = false;
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			i_coords = getCoordsForCt(i_ct);
-			j_coords = getCoordsForCt(j_ct);
+			iAtoms = getAtomsForCt(i_ct,null);
+			jAtoms = getAtomsForCt(j_ct,null);
 			crossed = true;
 		}
-		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
-		int[] j_atomserials = null;
 
-		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
-
-		int boxSize = (int) Math.floor(cutoff*SCALE);
-
-		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
-		int i=0;
-		for (int i_atomser:i_coords.keySet()){
-			//coordinates for atom serial atomser, we will use i as its identifier below
-			Point3d coord = i_coords.get(i_atomser);
-			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (boxes.containsKey(floor)){
-				// we put the coords for atom i in its corresponding box (identified by floor)
-				boxes.get(floor).put_i_Point(i, coord);
-				if (!crossed){
-					boxes.get(floor).put_j_Point(i, coord);
-				}
-			} else {
-				Box box = new Box(floor);
-				box.put_i_Point(i, coord);
-				if (!crossed){
-					box.put_j_Point(i, coord);
-				}
-				boxes.put(floor,box);
-			}
-			i_atomserials[i]=i_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
-			i++;
-		}
-		int j=0;
+		Grid grid = new Grid(cutoff);
+		grid.putIatoms(iAtoms.values());
 		if (crossed) {
-			j_atomserials = new  int[j_coords.size()];
-			for (int j_atomser:j_coords.keySet()){
-				//coordinates for atom serial atomser, we will use j as its identifier below
-				Point3d coord = j_coords.get(j_atomser);
-				int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-				int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-				int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-				Point3i floor = new Point3i(floorX,floorY,floorZ);
-				if (boxes.containsKey(floor)){
-					// we put the coords for atom j in its corresponding box (identified by floor)
-					boxes.get(floor).put_j_Point(j, coord);
-				} else {
-					Box box = new Box(floor);
-					box.put_j_Point(j, coord);
-					boxes.put(floor,box);
-				}
-				j_atomserials[j]=j_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
-				j++;
-			}
+			grid.putJatoms(jAtoms.values());
 		} else {
-			j_atomserials = i_atomserials;
+			grid.putJatoms(iAtoms.values());
 		}
 
-
-		float[][]distMatrix = new float[i_atomserials.length][j_atomserials.length];
-
-		for (Point3i floor:boxes.keySet()){ // for each box
-			// distances of points within this box
-			boxes.get(floor).getDistancesWithinBox(distMatrix,crossed);
-
-			//TODO should iterate only through half of the neighbours here 
-			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
-			for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
-				for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
-					for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
-						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
-							Point3i neighbor = new Point3i(x,y,z);
-							if (boxes.containsKey(neighbor)){
-								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix,crossed);
-							}
-						}
-					}
-				}
-			} 
-		} 
+		float[][] distMatrix = grid.getDistMatrix(crossed);
 
 		// creating the AIGraph
 		AIGraph graph = new AIGraph();
 		TreeMap<Integer,RIGNode> rignodemap = new TreeMap<Integer,RIGNode>();
 		TreeSet<Integer> atomSerials = new TreeSet<Integer>();
-		atomSerials.addAll(i_coords.keySet());
-		if (j_coords!=null){
-			atomSerials.addAll(j_coords.keySet());
+		atomSerials.addAll(iAtoms.keySet());
+		if (jAtoms!=null){
+			atomSerials.addAll(jAtoms.keySet());
 		}
 		// adding the AIGNodes (including parent RIGNode references)
 		SecondaryStructure secondaryStructureCopy = secondaryStructure.copy();
@@ -1008,21 +917,21 @@ public class Pdb implements HasFeatures {
 		graph.setCrossed(crossed);
 		
 		// populating the AIGraph with AIGEdges 
-		for (i=0;i<distMatrix.length;i++){
-			for (j=0;j<distMatrix[i].length;j++){
+		for (int i=0;i<distMatrix.length;i++){
+			for (int j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping several things: 
 				// - diagonal of the matrix in case of non-crossed
 				// - lower half of matrix in case of non-crossed
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
 					if (!crossed) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(i_atomserials[i]), graph.getNodeFromSerial(j_atomserials[j]), EdgeType.UNDIRECTED);
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(grid.getAtomSerFromIidx(i)), graph.getNodeFromSerial(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
 					}
 					// This condition is to take care of crossed contact types that have overlapping sets of atoms: 
 					//   the matrix would contain both i,j and j,i but that's only 1 edge in the AIGraph
-					//TODO if our AIGraph didn't allow parallel edges, this extra check woudn't be necessary
-					else if (!graph.containsEdgeIJ(i_atomserials[i], j_atomserials[j])) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(i_atomserials[i]), graph.getNodeFromSerial(j_atomserials[j]), EdgeType.UNDIRECTED);
+					//TODO if our AIGraph didn't allow parallel edges, this extra check wouldn't be necessary
+					else if (!graph.containsEdgeIJ(grid.getAtomSerFromIidx(i), grid.getAtomSerFromJidx(j))) {
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(grid.getAtomSerFromIidx(i)), graph.getNodeFromSerial(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
 					}
 				}
 
@@ -1091,90 +1000,14 @@ public class Pdb implements HasFeatures {
 	}
 	
 	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
-		TreeMap<Integer,Point3d> i_coords = null;
-		TreeMap<Integer,Point3d> j_coords = null;		// only relevant for asymmetric edge types
-		boolean directed = false;
-		if (!ct.contains("/")){
-			i_coords = getCoordsForCt(ct);			// mapping from atom serials to coordinates
-			directed = false;
-		} else {
-			String i_ct = ct.split("/")[0];
-			String j_ct = ct.split("/")[1];
-			i_coords = getCoordsForCt(i_ct);
-			j_coords = getCoordsForCt(j_ct);
-			directed = true;
-		}
-		int[] i_atomserials = new  int[i_coords.size()]; // map from matrix indices to atomserials
-		int[] j_atomserials = null;
+		TreeMap<Integer,Atom> atoms = getAtomsForCt(ct, null);
 
-		int SCALE=100; // i.e. we use units of hundredths of Angstroms (thus cutoffs can be specified with a maximum precission of 0.01A)
+		Grid grid = new Grid(cutoff);
+		grid.putIatoms(atoms.values());
+		grid.putJatoms(atoms.values());
 
-		int boxSize = (int) Math.floor(cutoff*SCALE);
-
-		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
-		int i=0;
-		for (int i_atomser:i_coords.keySet()){
-			//coordinates for atom serial atomser, we will use i as its identifier below
-			Point3d coord = i_coords.get(i_atomser);
-			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (boxes.containsKey(floor)){
-				// we put the coords for atom i in its corresponding box (identified by floor)
-				boxes.get(floor).put_i_Point(i, coord);
-				if (!directed){
-					boxes.get(floor).put_j_Point(i, coord);
-				}
-			} else {
-				Box box = new Box(floor);
-				box.put_i_Point(i, coord);
-				if (!directed){
-					box.put_j_Point(i, coord);
-				}
-				boxes.put(floor,box);
-			}
-			i_atomserials[i]=i_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
-			i++;
-		}
-		int j=0;
-		if (directed) {
-			j_atomserials = new  int[j_coords.size()];
-			for (int j_atomser:j_coords.keySet()){
-				//coordinates for atom serial atomser, we will use j as its identifier below
-				Point3d coord = j_coords.get(j_atomser);
-				int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-				int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-				int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-				Point3i floor = new Point3i(floorX,floorY,floorZ);
-				if (boxes.containsKey(floor)){
-					// we put the coords for atom j in its corresponding box (identified by floor)
-					boxes.get(floor).put_j_Point(j, coord);
-				} else {
-					Box box = new Box(floor);
-					box.put_j_Point(j, coord);
-					boxes.put(floor,box);
-				}
-				j_atomserials[j]=j_atomser; //as atomserials in coords were ordered (TreeMap) the new indexing will still be ordered
-				j++;
-			}
-		} else {
-			j_atomserials = i_atomserials;
-		}
-
-		// count density
-		for(Point3i floor:boxes.keySet()) {
-			//int size = boxes.get(floor).size();
-			int size = getNumGridNbs(boxes, floor, boxSize);	// count number of neighbouring grid cells with points in them
-			if(densityCount.containsKey(size)) {
-				int old = densityCount.get(size);
-				densityCount.put(size, ++old);
-			} else {
-				densityCount.put(size, 1);
-			}
-		}
-
-
+		grid.countDensity(densityCount);
+		
 	}
 
 	/**
@@ -1252,29 +1085,6 @@ public class Pdb implements HasFeatures {
 	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
 
-	/** 
-	 * Returns the number of neighbours of this grid cell
-	 * @param boxes
-	 * @param floor
-	 * @param boxSize
-	 * @return 
-	 */
-	private static int getNumGridNbs(HashMap<Point3i,Box> boxes, Point3i floor, int boxSize) {
-		Point3i neighbor;
-		int nbs = 0;
-		for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
-			for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
-				for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
-					neighbor = new Point3i(x,y,z);
-					if (boxes.containsKey(neighbor)) nbs++;
-				}
-			}
-		} 
-		// compensate for counting myself as a neighbour
-		if(boxes.containsKey(floor)) nbs--;
-		return nbs;
-	}
-
 	/**
 	 * Computes the atom interaction graph between this and given protein chain for all
 	 * atoms of contact type ct and given cutoff. 
@@ -1290,75 +1100,9 @@ public class Pdb implements HasFeatures {
 		TreeMap<Integer,Atom> thisAtoms = this.getAtomsForCt(ct, null);
 		TreeMap<Integer,Atom> otherAtoms = other.getAtomsForCt(ct, null);
 		
-		int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
-
-		int boxSize = (int) Math.floor(cutoff*SCALE);
-
-		HashMap<Point3i,Box> boxes = new HashMap<Point3i,Box>();
-
-		int[] thisSerials = new  int[thisAtoms.size()]; // map from matrix indices to atomserials
-		int[] otherSerials = new  int[otherAtoms.size()]; // map from matrix indices to atomserials
-		
-		int i = 0;
-		for (Atom thisAtom:thisAtoms.values()) {
-			Point3d coord = thisAtom.getCoords();
-			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (boxes.containsKey(floor)){
-				// we put the coords for atom i in its corresponding box (identified by floor)
-				boxes.get(floor).put_i_Point(i, coord);
-			} else {
-				Box box = new Box(floor);
-				box.put_i_Point(i, coord);
-				boxes.put(floor,box);
-			}
-			thisSerials[i] = thisAtom.getSerial();
-			i++;
-		}
-		
-		int j = 0;
-		for (Atom otherAtom:otherAtoms.values()){
-			//coordinates for atom serial atomser, we will use j as its identifier below
-			Point3d coord = otherAtom.getCoords();
-			int floorX = boxSize*((int)Math.floor(coord.x*SCALE/boxSize));
-			int floorY = boxSize*((int)Math.floor(coord.y*SCALE/boxSize));
-			int floorZ = boxSize*((int)Math.floor(coord.z*SCALE/boxSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (boxes.containsKey(floor)){
-				// we put the coords for atom j in its corresponding box (identified by floor)
-				boxes.get(floor).put_j_Point(j, coord);
-			} else {
-				Box box = new Box(floor);
-				box.put_j_Point(j, coord);
-				boxes.put(floor,box);
-			}
-			otherSerials[j] = otherAtom.getSerial();
-			j++;
-		}
-		
-		float[][]distMatrix = new float[thisAtoms.size()][otherAtoms.size()];
-
-		for (Point3i floor:boxes.keySet()){ // for each box
-			// distances of points within this box
-			boxes.get(floor).getDistancesWithinBox(distMatrix,true);
-
-			//TODO should iterate only through half of the neighbours here 
-			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
-			for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
-				for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
-					for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
-						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
-							Point3i neighbor = new Point3i(x,y,z);
-							if (boxes.containsKey(neighbor)){
-								boxes.get(floor).getDistancesToNeighborBox(boxes.get(neighbor),distMatrix,true);
-							}
-						}
-					}
-				}
-			} 
-		} 
+		Grid grid = new Grid(cutoff);
+		grid.putIatoms(thisAtoms.values());
+		grid.putJatoms(otherAtoms.values());
 		
 		AICGraph graph = new AICGraph();
 		for (Atom thisAtom:thisAtoms.values()){
@@ -1367,20 +1111,14 @@ public class Pdb implements HasFeatures {
 		for (Atom otherAtom:otherAtoms.values()) {
 			graph.addVertex(otherAtom); 
 		}
-		//for (i=0;i<distMatrix.length;i++){
-		//	for (j=0;j<distMatrix[i].length;j++){
-		//		System.out.printf("%5.2f\t",distMatrix[i][j]);				
-		//	}
-		//	System.out.println();
-		//}
-
+		float[][] distMatrix = grid.getDistMatrix(true);
 		
-		for (i=0;i<distMatrix.length;i++){ 
-			for (j=0;j<distMatrix[i].length;j++){
+		for (int i=0;i<distMatrix.length;i++){ 
+			for (int j=0;j<distMatrix[i].length;j++){
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping cells for which we 
 				// didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
-					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms.get(thisSerials[i]), otherAtoms.get(otherSerials[j]), EdgeType.UNDIRECTED);
+					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms.get(grid.getAtomSerFromIidx(i)), otherAtoms.get(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
 				}
 
 			}
