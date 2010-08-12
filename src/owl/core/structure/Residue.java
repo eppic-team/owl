@@ -253,6 +253,11 @@ public class Residue implements Iterable<Atom> {
 				reducedResidue.addAtom(this.getAtom(atomCode));
 			}
 		}
+		// in cts ("ALL","BB") we still miss the OXT, we need to add it now if it is there (it will be there when this resser is the last residue)
+		if ((ct.equals("ALL") || ct.equals("BB")) &&  this.containsOXT()) { 
+			reducedResidue.addAtom(this.getAtom("OXT"));
+		}
+		
 		return reducedResidue;
 	}
 
