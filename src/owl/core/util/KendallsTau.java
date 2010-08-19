@@ -1,5 +1,10 @@
 package owl.core.util;
 
+/**
+ * Calculates the Kendall rank correlation coefficient.
+ * For usage see main method or owl.core.util.Statistics.kendallsTau().
+ * @author cvehlow
+ */
 public class KendallsTau {
 	
 
