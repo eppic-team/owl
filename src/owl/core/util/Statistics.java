@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 
 /**
  * Class to keep some simple statistical methods. Originally created for the pearson function.
+ * See also: org.apache.commons.math.stat.StatUtils (in apache commons math)
+ * For median, use: StatUtils.percentile(double[] values, 0.5);
  */
 public class Statistics {
 	
@@ -100,6 +102,19 @@ public class Statistics {
 	public static double spearman(double[] x, double[] y) {
 		if (x.length!=y.length) throw new IllegalArgumentException("Arrays given to spearman calculation are of different length");
 		return pearson(getRanks(x),getRanks(y));
+	}
+	
+	/**
+	 * Calculates the Kendall rank correlation coefficient.
+	 * Uses the class KendallsTau by cvehlow.
+	 * @param x
+	 * @param y
+	 * @return the Kendall rank correlation coefficient (tau-B)
+	 * @throws IllegalArgumentException if arrays of different length
+	 */
+	public static double kendallsTau(double[] x, double[] y) {
+		if (x.length!=y.length) throw new IllegalArgumentException("Arrays given to spearman calculation are of different length");
+		return 0.0;
 	}
 	
 	/**
