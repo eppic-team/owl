@@ -17,13 +17,12 @@ import java.util.Vector;
 import javax.swing.JFileChooser;
 
 
+/**
+ * This class can be used to check CASP server models for their correct atom number ordering.
+ * Reordered atoms are saved as new files within a subfolder "SortedAtoms" of the respective target.
+ */
 public class checkCASPservertargets {
-	
-	/**
-	 * This class can be used to check server targets for their correct atom number ordering.
-	 * Reordered atoms are saved as new files within a subfolder "SortedAtoms" of the respective target.
-	 */
-	
+
 	private static final String folderCorrectedFiles = "SortedAtoms";
 
 	/**
@@ -38,10 +37,11 @@ public class checkCASPservertargets {
 		// run single file
 //		checkSingleFile();
 		
-		// all targets within the folder:
-		String inputDir = "/Volumes/StruPPi/CASP8/server_models/T0470/";
+		// all targets within single folder:
+		String inputDir = "/project/StruPPi/CASP8/server_models/T0470/";
 		// make copies of all files within subdirectory first
-//		checkForFileCopies(inputDir);
+
+		//		checkForFileCopies(inputDir);
 		runAllTargetsWithinFolder(inputDir);
 	}
 	
@@ -49,7 +49,7 @@ public class checkCASPservertargets {
 	private static void checkSingleFile() {
 		// TODO Auto-generated method stub
 		String filename = null;
-		final JFileChooser chooser = new JFileChooser("Verzeichnis wählen");
+		final JFileChooser chooser = new JFileChooser("Choose directory");
         chooser.setDialogType(JFileChooser.OPEN_DIALOG);
         chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
@@ -66,7 +66,7 @@ public class checkCASPservertargets {
         System.out.println(filename);        
         
         String filenameOut = filename+"_sortedAtoms";
-        final JFileChooser chooserOut = new JFileChooser("Verzeichnis wählen");
+        final JFileChooser chooserOut = new JFileChooser("Choose directory");
         chooserOut.setDialogType(JFileChooser.OPEN_DIALOG);
         chooserOut.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 
