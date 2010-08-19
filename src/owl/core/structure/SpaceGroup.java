@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3i;
+import javax.vecmath.Vector3d;
 
 
 /**
@@ -51,7 +54,15 @@ public final class SpaceGroup {
 		double[] yCoef = convertAlgebraicStrToCoefficients(parts[1].trim());
 		double[] zCoef = convertAlgebraicStrToCoefficients(parts[2].trim());
 		
-		return new Matrix4d(xCoef[0],xCoef[1],xCoef[2],xCoef[3],yCoef[0],yCoef[1],yCoef[2],yCoef[3],zCoef[0],zCoef[1],zCoef[2],zCoef[3],0,0,0,1);
+		Matrix4d mat = new Matrix4d();
+		mat.setIdentity();
+		mat.setRotation(new Matrix3d(xCoef[0],xCoef[1],xCoef[2],yCoef[0],yCoef[1],yCoef[2],zCoef[0],zCoef[1],zCoef[2]));
+		mat.setTranslation(new Vector3d(xCoef[3],yCoef[3],zCoef[3]));
+		return mat;
+		//return new Matrix4d(xCoef[0],xCoef[1],xCoef[2],xCoef[3],
+		//					yCoef[0],yCoef[1],yCoef[2],yCoef[3],
+		//					zCoef[0],zCoef[1],zCoef[2],zCoef[3],
+		//					0,0,0,1);
 	}
 	
 	private double[] convertAlgebraicStrToCoefficients(String algString) {
@@ -98,8 +109,32 @@ public final class SpaceGroup {
 		return shortSymbol;
 	}
 	
+	/**
+	 * Gets all transformations except for the identity.
+	 * @return
+	 */
 	public List<Matrix4d> getTransformations() {
-		return transformations;
+		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
+		for (int i=1;i<this.transformations.size();i++){
+			transfs.add(transformations.get(i));
+		}
+		return transfs;
+	}
+	
+	public List<Matrix4d> getTransformations(CrystalCell crystalCell) {
+		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
+		for (int i=1;i<this.transformations.size();i++) {
+			transfs.add(scaleTranslation(transformations.get(i), crystalCell));
+		}
+		return transfs;
+	}
+	
+	private static Matrix4d scaleTranslation(Matrix4d m, CrystalCell c) {
+		Point3i direction = new Point3i(1,1,1);
+		return new Matrix4d(m.m00,m.m01,m.m02,m.m03*c.getXtranslation(direction),
+							m.m10,m.m11,m.m12,m.m13*c.getYtranslation(direction),
+							m.m20,m.m21,m.m22,m.m23*c.getZtranslation(direction),
+							m.m30,m.m31,m.m32,m.m33);
 	}
 	
 	public Matrix4d getTransformation(int i) {
