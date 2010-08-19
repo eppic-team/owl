@@ -30,7 +30,7 @@ import java.util.LinkedList;
  * @date 2008-09-02
  * @date 2010-08-02	update for Casp9, now requiring parameters basedir, outdir and group ids
  */
-public class benchmarkAll {
+public class createResultWebPages {
 
 	public static String[] getTargetsFromDir(String dirName) {
 		
