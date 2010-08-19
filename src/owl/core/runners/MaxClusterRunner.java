@@ -89,6 +89,7 @@ public class MaxClusterRunner {
 		if (scoreType==ScoreType.GDT) scoreTypeStr = "gdt";
 		if (scoreType==ScoreType.RMSD) scoreTypeStr = "rmsd";
 		String cmdLine = String.format("%s %s %s -%s", maxClusterExecutable, prediction, experiment, scoreTypeStr);
+		//System.out.println(cmdLine);	// DEBUG
 		Process maxClusterProcess = Runtime.getRuntime().exec(cmdLine);
 		BufferedReader maxClusterOutput = new BufferedReader(new InputStreamReader(maxClusterProcess.getInputStream()));
 		String line;
@@ -99,6 +100,7 @@ public class MaxClusterRunner {
 				score = Double.parseDouble(m.group(2));
 			}
 		}
+		//System.out.println("SCORE="+score); // DEBUG
 		return score;
 	}
 
