@@ -7,6 +7,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.MaxClusterRunner.MaxClusterRow;
+import owl.core.runners.MaxClusterRunner.ScoreType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
@@ -48,6 +49,8 @@ public class Benchmarking {
 	public static final String[] CmDescription = {"","Ensemble","Prediction","Native","",""};
 	
 	/*--------------------------- type definitions --------------------------*/	
+	
+	// used for per-target scoring, see also class ModelScores for per-model scoring
 	public class TargetResult {
 		public String target;
 		public int bestRank = 0;
@@ -80,7 +83,7 @@ public class Benchmarking {
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Class to produce, hold and output benchmarking results for our Casp8 predictions
+	 * Class to produce, hold and output benchmarking results for our Casp predictions
 	 */
 	public Benchmarking(String[] targets, File baseDir) {
 		serverModelDir = new File(baseDir, "server_models");
@@ -88,6 +91,56 @@ public class Benchmarking {
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
+	
+	/**
+	 * Calculate GDT_TS and various contact map similarity measures for a single server model.
+	 * @return a ModelScores object with the results or null on error.
+	 * @throws IOException if something went wrong
+	 */
+	public static ModelScore getModelScores(File model, File answer) throws IOException {
+		String targetName = answer.getName().substring(0,5);
+		String modelName = model.getName();
+		ModelScore scores = new ModelScore(targetName, modelName);
+	
+		// use MaxCluster to get GDT score
+		MaxClusterRunner mcr = new MaxClusterRunner(maxClusterExecutable);
+		double score = mcr.calculatePairwiseScore(model.getPath(), answer.getPath(), ScoreType.GDT);
+		if(score <= 0) throw new IOException("MaxCluster returned an error");
+		scores.gdt = score;
+		
+		// get model graph
+		PdbfilePdb pdb = new PdbfilePdb(model.getPath());
+		try {
+			pdb.load(pdb.getChains()[0]);
+		} catch (PdbLoadError e) {
+			throw new IOException(e.getMessage());
+		}		
+		RIGraph predGraph = pdb.getRIGraph("Cb", 8.0);
+		pdb = null;	// collect garbage
+		
+		// get nativeGraph
+		PdbfilePdb pdb2 = new PdbfilePdb(answer.getPath());
+		try {
+			pdb2.load(pdb2.getChains()[0]);
+		} catch (PdbLoadError e) {
+			throw new IOException(e.getMessage());
+		}		
+		RIGraph nativeGraph = pdb2.getRIGraph("Cb", 8.0);
+		pdb2 = null;
+				
+		GraphComparisonResult res = predGraph.evaluatePrediction(nativeGraph);
+		GraphComparisonResult res12 = predGraph.evaluatePrediction(nativeGraph, 12);
+		GraphComparisonResult res24 = predGraph.evaluatePrediction(nativeGraph, 24);
+		
+		scores.acc = 100.0 * res.accuracy;
+		scores.cov = 100.0 * res.coverage;
+		scores.acc12 = 100.0 * res12.accuracy;
+		scores.cov12 = 100.0 * res12.coverage;
+		scores.acc24 = 100.0 * res24.accuracy;
+		scores.cov24 = 100.0 * res24.coverage;
+		
+		return scores;
+	}
 	
 	/**
 	 * Evaluates the given target and stores the results in the member variables

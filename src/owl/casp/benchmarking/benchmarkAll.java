@@ -9,7 +9,8 @@ import java.io.PrintStream;
 import java.util.LinkedList;
 
 /**
- * This class provides the main method for benchmarking all our Casp8/Casp9 comparative modelling predictions.
+ * This class provides the main method for benchmarking all our Casp8/Casp9 comparative modelling predictions
+ * and to create webpages with the results.
  * 
  * The target ids to be processed are read from the list files (= text files with one target id per line):
  * - <base_dir>/last_update.list
@@ -27,7 +28,7 @@ import java.util.LinkedList;
  * 
  * @author stehr
  * @date 2008-09-02
- * date 2010-08-02	update for Casp9, now requiring parameters basedir, outdir and group ids
+ * @date 2010-08-02	update for Casp9, now requiring parameters basedir, outdir and group ids
  */
 public class benchmarkAll {
 
