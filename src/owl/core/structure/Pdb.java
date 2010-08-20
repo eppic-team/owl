@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -2247,6 +2248,12 @@ public class Pdb implements HasFeatures {
 		pdb.transform(m);
 	}
 	
+	/**
+	 * Translates this Pdb to the given unit cell (direction).
+	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this Pdb to 
+	 * crystal cell (1,1,1), considering always this Pdb's cell to be (0,0,0)
+	 * @param direction
+	 */
 	public void doCrystalTranslation(Vector3d direction) {
 		this.transform(this.crystalCell.getTransform(direction));
 	}
@@ -2334,6 +2341,20 @@ public class Pdb implements HasFeatures {
 			coords.sub(sumVector);
 		}		
 	}
+	
+	/**
+	 * Gets all symmetry transformation operators corresponding to this Pdb's space group 
+	 * (except for the identity) expressed in the orthonormal basis. Using PDB's axes 
+	 * convention (NCODE=1).
+	 * @return
+	 */
+	public List<Matrix4d> getTransformations() {
+		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
+		for (int i=1;i<this.getSpaceGroup().getTransformations().size();i++) {
+			transfs.add(this.crystalCell.transfToOrthonormal(this.getSpaceGroup().getTransformation(i)));
+		}
+		return transfs;
+	}	
 	
 	/**
 	 * Gets the phi angle in degrees for given residue serial

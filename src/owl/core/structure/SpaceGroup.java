@@ -120,19 +120,6 @@ public final class SpaceGroup {
 		return transfs;
 	}
 	
-	/**
-	 * Gets all transformations except for the identity in orthonormal basis.
-	 * @param crystalCell
-	 * @return
-	 */
-	public List<Matrix4d> getTransformations(CrystalCell crystalCell) {
-		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
-		for (int i=1;i<this.transformations.size();i++) {
-			transfs.add(crystalCell.transfToOrthonormal(transformations.get(i)));
-		}
-		return transfs;
-	}
-		
 	public Matrix4d getTransformation(int i) {
 		return transformations.get(i);
 	}

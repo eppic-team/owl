@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -188,6 +189,12 @@ public class PdbAsymUnit {
 		}
 	}
 	
+	/**
+	 * Translates this PdbAsymUnit to the given unit cell (direction).
+	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this PdbAsymUnit to 
+	 * crystal cell (1,1,1), considering always this PdbAsymUnit's cell to be (0,0,0)
+	 * @param direction
+	 */
 	public void doCrystalTranslation(Vector3d direction) {
 		for (Pdb pdb:this.chains.values()) {
 			pdb.doCrystalTranslation(direction);
@@ -209,5 +216,15 @@ public class PdbAsymUnit {
 			chain.writeAtomLines(ps);
 		}
 		ps.close();
+	}
+	
+	/**
+	 * Gets all symmetry transformation operators corresponding to this Pdb's space group 
+	 * (except for the identity) expressed in the orthonormal basis. Using PDB's axes 
+	 * convention (NCODE=1).
+	 * @return
+	 */	
+	public List<Matrix4d> getTransformations() {
+		return this.chains.firstEntry().getValue().getTransformations();
 	}
 }
