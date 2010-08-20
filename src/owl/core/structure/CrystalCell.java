@@ -2,7 +2,6 @@ package owl.core.structure;
 
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 
@@ -25,9 +24,11 @@ public class CrystalCell {
 	private double alphaRad;
 	private double betaRad;
 	private double gammaRad;
-	
-	private Matrix3d transfToOrthonormal; // cached transformation crystal to orthonormal matrix
-	private Matrix3d inverseTrasnfToOrthonormal; // cached inverse transformation crystal to orthonormal
+
+	private Matrix3d M; 	// cached basis change transformation matrix
+	private Matrix3d Minv;  // cached basis change transformation matrix
+	private Matrix3d Mtransp;
+	private Matrix3d MtranspInv;
 	
 	public CrystalCell(double a, double b, double c, double alpha, double beta, double gamma){
 		this.a = a;
@@ -104,60 +105,100 @@ public class CrystalCell {
 	}
 	
 	/**
-	 * Returns the unit cell transformation, given 3 integers for each of the directions of the unit cell.
+	 * Returns the unit cell translation transformation matrix, given 3 integers for each 
+	 * of the directions of the unit cell.
 	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5, eq 2.30
 	 * @param direction
 	 * @return
 	 */
-	public Matrix4d getTransform(Point3i direction) {
+	public Matrix4d getTransform(Vector3d direction) {
 		Matrix4d mat = new Matrix4d();
 		mat.setIdentity();
-		
-		mat.setTranslation(new Vector3d(getXtranslation(direction),getYtranslation(direction),getZtranslation(direction)));
+		mat.setTranslation(getTranslationVector(direction));
 		return mat;
 	}
+	
+	private Vector3d getTranslationVector(Vector3d direction) {
+		Vector3d translationVec = new Vector3d();
+		// see Giacovazzo section 2.E, eq. 2.E.1
+		getMTransposeInv().transform(direction, translationVec);
+		return translationVec;
+	}
+	
+	/**
+	 * Transform given Matrix4d in crystal basis to the orthonormal basis using
+	 * the PDB convention (NCODE=1)
+	 * @param m
+	 * @return
+	 */
+	public Matrix4d transfToOrthonormal(Matrix4d m) {
+		Vector3d trans = this.getTranslationVector(new Vector3d(m.m03,m.m13,m.m23));
+		
+		Matrix3d rot = new Matrix3d();
+		m.getRotationScale(rot);
+		// see Giacovazzo section 2.E, eq. 2.E.1
+		// Rprime = MT-1 * R * MT
+		rot.mul(this.getMTranspose());
+		rot.mul(this.getMTransposeInv(),rot);
 
-	public double getXtranslation(Point3i direction) {
-		return  (double)direction.x*a+
-				(double)direction.y*b*Math.cos(gammaRad)+
-				(double)direction.z*c*Math.cos(betaRad);
+		return new Matrix4d(rot,trans,1.0);
 	}
-	
-	public double getYtranslation(Point3i direction) {
-		// see Table 2.1 of chapter 2 of Giacovazzo
-		double cosAlphaStar = (Math.cos(betaRad)*Math.cos(gammaRad)-Math.cos(alphaRad))/(Math.sin(betaRad)*Math.sin(gammaRad));
-		return  (double)direction.y*b*Math.sin(gammaRad)+
-				(double)direction.z*(-1.0)*c*Math.sin(betaRad)*cosAlphaStar;
-	}
-	
-	public double getZtranslation(Point3i direction) {
-		// see Table 2.1 of chapter 2 of Giacovazzo
-		double cStar = (this.a*this.b*Math.sin(gammaRad))/getVolume();
-		return (double)direction.z*(1.0/cStar);
-	}
-	
-	public Matrix3d getTransfToOrthonormal() {
-		if (transfToOrthonormal!=null) {
-			return transfToOrthonormal;
+
+	/**
+	 * Returns the change of basis (crystal to orthonormal) transform matrix, that is 
+	 * M inverse in the notation of Giacovazzo using the PDB convention (NCODE=1). 
+	 * The matrix is only calculated upon first call of this method, thereafter it is cached.
+	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 
+	 * @return
+	 */
+	private Matrix3d getMInv() {
+		if (Minv!=null) {
+			return Minv;
 		}
 		// see Table 2.1 of chapter 2 of Giacovazzo
 		double cosAlphaStar = (Math.cos(betaRad)*Math.cos(gammaRad)-Math.cos(alphaRad))/(Math.sin(betaRad)*Math.sin(gammaRad));
 		double cStar = (this.a*this.b*Math.sin(gammaRad))/getVolume();
 		// see eq. 2.30 Giacovazzo
-		double m32 = -this.c*Math.sin(betaRad)*cosAlphaStar;
-		double m33 = 1.0/cStar;
-		transfToOrthonormal =  new Matrix3d(                   this.a,                         0,    0,
-							  				this.b*Math.cos(gammaRad), this.b*Math.sin(gammaRad),    0,
-							  				this.c*Math.cos(betaRad) ,                       m32,  m33);
-		return transfToOrthonormal;
+		double m21 = -this.c*Math.sin(betaRad)*cosAlphaStar;
+		double m22 = 1.0/cStar;
+		Minv =  new Matrix3d(                    this.a,                         0,    0,
+							  this.b*Math.cos(gammaRad), this.b*Math.sin(gammaRad),    0,
+							  this.c*Math.cos(betaRad) ,                       m21,  m22);
+		return Minv;
 	}
 	
-	public Matrix3d getInverseTransfToOrthonormal() {
-		if (inverseTrasnfToOrthonormal!=null){
-			return inverseTrasnfToOrthonormal;
+	/**
+	 * Returns the change of basis (orthonormal to crystal) transform matrix, that is
+	 * M in the notation of Giacovazzo using the PDB convention (NCODE=1).
+	 * The matrix is only calculated upon first call of this method, thereafter it is cached. 
+	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 
+	 * @return
+	 */
+	private Matrix3d getM() {
+		if (M!=null){
+			return M;
 		}
-		inverseTrasnfToOrthonormal = new Matrix3d();
-		inverseTrasnfToOrthonormal.invert(getTransfToOrthonormal());
-		return inverseTrasnfToOrthonormal;
+		M = new Matrix3d();
+		M.invert(getMInv());
+		return M;
+	}
+	
+	private Matrix3d getMTranspose() {
+		if (Mtransp!=null){
+			return Mtransp;
+		}
+		Matrix3d M = getM();
+		Mtransp = new Matrix3d();
+		Mtransp.transpose(M);
+		return Mtransp;
+	}
+	
+	private Matrix3d getMTransposeInv() {
+		if (MtranspInv!=null){
+			return MtranspInv;
+		}
+		MtranspInv = new Matrix3d();
+		MtranspInv.invert(getMTranspose());
+		return MtranspInv;
 	}
 }

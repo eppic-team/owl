@@ -1,11 +1,16 @@
 package owl.core.structure;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Set;
 import java.util.TreeMap;
+
+import javax.vecmath.Matrix4d;
+import javax.vecmath.Vector3d;
 
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
@@ -31,6 +36,23 @@ public class PdbAsymUnit {
 	
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
+	
+	/**
+	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.
+	 * @param pdbCode
+	 * @param model
+	 * @param title
+	 * @param crystalCell
+	 * @param spaceGroup
+	 */
+	public PdbAsymUnit(String pdbCode, int model, String title, CrystalCell crystalCell, SpaceGroup spaceGroup) {
+		this.pdbCode = pdbCode;
+		this.model = model;
+		this.title = title;
+		this.crystalCell = crystalCell;
+		this.spaceGroup = spaceGroup;
+		this.chains = new TreeMap<String, Pdb>();
+	}
 	
 	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatError, PdbLoadError {
 		chains = new TreeMap<String, Pdb>();
@@ -147,4 +169,45 @@ public class PdbAsymUnit {
 		return spaceGroup;
 	}
 	
+	public void setChain(String pdbChainCode, Pdb chain) {
+		chains.put(pdbChainCode, chain);
+	}
+	
+	public void transform(Matrix4d m) {
+		for (Pdb pdb:this.chains.values()) {
+			pdb.transform(m);
+		}
+	}
+	
+	public void transform(Matrix4d m, PdbAsymUnit pdb) {
+
+		for (String pdbChainCode:getPdbChainCodes()) {
+			Pdb newChain = this.getChain(pdbChainCode).copy();
+			this.getChain(pdbChainCode).transform(m, newChain);
+			pdb.setChain(pdbChainCode, newChain);
+		}
+	}
+	
+	public void doCrystalTranslation(Vector3d direction) {
+		for (Pdb pdb:this.chains.values()) {
+			pdb.doCrystalTranslation(direction);
+		}		
+		
+	}
+	
+	public PdbAsymUnit copy() {
+		PdbAsymUnit newAsym = new PdbAsymUnit(this.pdbCode, this.model, this.title, this.crystalCell, this.spaceGroup);
+		for (String pdbChainCode:getPdbChainCodes()){
+			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy());
+		}
+		return newAsym;
+	}
+	
+	public void writeToPdbFile(File outFile) throws FileNotFoundException {
+		PrintStream ps = new PrintStream(outFile);
+		for (Pdb chain:getAllChains()) {
+			chain.writeAtomLines(ps);
+		}
+		ps.close();
+	}
 }

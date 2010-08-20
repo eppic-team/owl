@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 
@@ -110,7 +109,7 @@ public final class SpaceGroup {
 	}
 	
 	/**
-	 * Gets all transformations except for the identity.
+	 * Gets all transformations except for the identity in crystal axes basis.
 	 * @return
 	 */
 	public List<Matrix4d> getTransformations() {
@@ -121,22 +120,19 @@ public final class SpaceGroup {
 		return transfs;
 	}
 	
+	/**
+	 * Gets all transformations except for the identity in orthonormal basis.
+	 * @param crystalCell
+	 * @return
+	 */
 	public List<Matrix4d> getTransformations(CrystalCell crystalCell) {
 		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
 		for (int i=1;i<this.transformations.size();i++) {
-			transfs.add(scaleTranslation(transformations.get(i), crystalCell));
+			transfs.add(crystalCell.transfToOrthonormal(transformations.get(i)));
 		}
 		return transfs;
 	}
-	
-	private static Matrix4d scaleTranslation(Matrix4d m, CrystalCell c) {
-		Point3i direction = new Point3i(1,1,1);
-		return new Matrix4d(m.m00,m.m01,m.m02,m.m03*c.getXtranslation(direction),
-							m.m10,m.m11,m.m12,m.m13*c.getYtranslation(direction),
-							m.m20,m.m21,m.m22,m.m23*c.getZtranslation(direction),
-							m.m30,m.m31,m.m32,m.m33);
-	}
-	
+		
 	public Matrix4d getTransformation(int i) {
 		return transformations.get(i);
 	}

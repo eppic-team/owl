@@ -2247,6 +2247,10 @@ public class Pdb implements HasFeatures {
 		pdb.transform(m);
 	}
 	
+	public void doCrystalTranslation(Vector3d direction) {
+		this.transform(this.crystalCell.getTransform(direction));
+	}
+	
 	/**
 	 * Transform the coordinates of this structure translating them to the given center
 	 * and rotating them so that the given axis aligns with the z-axis
