@@ -66,14 +66,23 @@ public class KendallsTau {
 		// rank with respect to increasing value
 		// rank = 1 --> lowest value
 		for (int i=0; i<this.values.length; i++){
-			int rank = 0;
-			for (int j=0; j<this.values.length; j++){
-				if (this.values[j] < this.values[i] && i!=j)
-					rank++;
-			}			
-			rank++;
-			this.ranking[i] = rank;
-		}		
+			this.ranking[i] = i+1;
+		}
+		bubbleSort();
+		
+//		int[] ranking2 = new int[this.values.length];
+//		for (int i=0; i<this.values.length; i++){
+//			int rank = 0;
+//			for (int j=0; j<this.values.length; j++){
+//				if (this.values[j] < this.values[i] && i!=j)
+//					rank++;
+//			}			
+//			rank++;
+//			ranking2[i] = rank;
+//		}	
+//		for (int i=0; i<this.values.length; i++){
+//			System.out.print(this.values[i]+"\t"+this.ranking[i]+"\t"+ranking2[i]+"\n");
+//		}
 	}
 	
 	private void initialiseKeys() {
