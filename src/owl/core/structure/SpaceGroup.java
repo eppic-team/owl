@@ -139,6 +139,15 @@ public final class SpaceGroup {
 		return false;
 	}
 	
+	/**
+	 * Gets the number of symmetry operators corresponding to this SpaceGroup (counting 
+	 * the identity operator)
+	 * @return
+	 */
+	public int getNumOperators() {
+		return this.transformations.size();
+	}
+	
 	//public SpaceGroup copy() {
 	//	SpaceGroup newSG = new SpaceGroup(id, shortSymbol);
 	//	for (Matrix4d transf:transformations) {

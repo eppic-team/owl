@@ -2350,7 +2350,7 @@ public class Pdb implements HasFeatures {
 	 */
 	public List<Matrix4d> getTransformations() {
 		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
-		for (int i=1;i<this.getSpaceGroup().getTransformations().size();i++) {
+		for (int i=1;i<this.getSpaceGroup().getNumOperators();i++) {
 			transfs.add(this.crystalCell.transfToOrthonormal(this.getSpaceGroup().getTransformation(i)));
 		}
 		return transfs;
