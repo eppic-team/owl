@@ -32,17 +32,18 @@ public class checkCASPservertargets {
 	public static void main(String[] args) throws IOException {
 		
 		// all targets within sub-folders of "/Volumes/StruPPi/CASP8/server_models/"
-//		runAllCaspTargets();
+		runAllCaspTargets();
 		
 		// run single file
 //		checkSingleFile();
 		
-		// all targets within single folder:
-		String inputDir = "/project/StruPPi/CASP8/server_models/T0470/";
-		// make copies of all files within subdirectory first
+//		// all targets within the folder:
+//		String inputDir = "/Volumes/StruPPi/CASP8/server_models/T0423/";
+//		// make copies of all files within subdirectory first
+
 
 		//		checkForFileCopies(inputDir);
-		runAllTargetsWithinFolder(inputDir);
+//		runAllTargetsWithinFolder(inputDir);
 	}
 	
 	@SuppressWarnings("unused")
@@ -98,7 +99,7 @@ public class checkCASPservertargets {
 			File srcPath = new File(filenameIn);
 			File dstPath = new File(filenameOut);
 			test = copyDirectory(srcPath, dstPath);
-			System.out.println(test);
+			System.out.println("Files Copied into subdirectory "+filenameOut+"  "+test);
 		}    		
 	}
 	
@@ -155,14 +156,14 @@ public class checkCASPservertargets {
 	    int iF=0;
 	    for (String dir : inputDirs){
 //	    	if(targetNames.get(iF).equals("T0471"))
-	    	{	    	
-	    		// make copies of all files within subdirectory first
-	    		checkForFileCopies(inputDir);
-	    		
+	    	{	    		    		
 		    	inputFile = inputFiles.get(iF);
 		    	folder = new File(dir);
 		    	String target = targetNames.get(iF); // "T0389";
 		    	
+		    	// make copies of all files within subdirectory first
+	    		checkForFileCopies(dir);
+	    				    	
 			    File[] listOfFiles = folder.listFiles();
 			    PrintWriter out = new PrintWriter(new FileWriter(inputFile));
 			    for (int i=0;i<listOfFiles.length; i++)	{			    	

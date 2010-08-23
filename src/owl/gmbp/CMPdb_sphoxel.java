@@ -17,14 +17,18 @@ public class CMPdb_sphoxel {
 	protected static final String defaultDB = "bg";
 	public static final String[] radiusRanges = {"rSR","rMR","rLR"};
 	public static final char AnySStype = 'A';
+	protected static final double defaultDeltaR=0.5; // +-0.5A
+	protected static final double defaultDeltaTheta = Math.PI/(72*2);
+	protected static final double defaultDeltaPhi = defaultDeltaTheta;
+	protected static final String defaultEdgeTable ="edges";
 	
 	/*--------------------------- member variables --------------------------*/		
-	private MySQLConnection conn;
+	protected MySQLConnection conn;
 	
-	private String host = "talyn";
-	private String username = "vehlow";
-	private String password = "nieve";
-	private String db = "bagler_all13p0_alledges";
+	protected String host = "talyn";
+	protected String username = "vehlow";
+	protected String password = "nieve";
+	protected String db = "bagler_all13p0_alledges";
 	private String tableNameRes = "edgesCertainRes";
 	private String tableNameResR = "edgesCertainResRRange";
 	private String tableNameResRT = "edgesCertainResRTRange";
@@ -33,7 +37,7 @@ public class CMPdb_sphoxel {
 	private final String tn = "edges";
 	private String tnRes = "";
 	
-    private boolean diffSSType = false;
+    protected boolean diffSSType = false;
 	
 	private int numSteps = defaultNumSteps;
 	private int numRatiosX = numSteps;
@@ -47,8 +51,9 @@ public class CMPdb_sphoxel {
 	private String radiusPrefix = "rSR"; // "rMR" or "rLR"
 	private final double mintheta=0.0, minphi=-Math.PI;
 	private double svoxelsize=(Math.PI)/numSteps; //, deltar=1.0 ;
-	private char iRes='A', jRes='A';
-	private char issType='H', jssType='H';
+	protected char iRes='A';
+	protected char jRes='A';
+	protected char issType='H', jssType='H';
 //	private final char[] sstype = {'H', 'S', 'O', 'A'};
 	
 	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
@@ -63,13 +68,13 @@ public class CMPdb_sphoxel {
 		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
-	public double getLogOddsScore(){
-		double score = 0;
-		
-		return score;
-	}
+//	public double getLogOddsScore(){
+//		double score = 0;
+//		
+//		return score;
+//	}
 	
-	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, RIGGeometry graphGeom, double dAngle, double dRad) throws SQLException{
+	public double getLogOddsScore(Residue iResidue, Residue jResidue , double resDist, RIGGeometry graphGeom, double dAngle, double dRad) throws SQLException{
 		String query;
 		Statement stmt;
 		ResultSet result_angle, result_type, result_angle_type, result_all;
@@ -80,13 +85,13 @@ public class CMPdb_sphoxel {
 		double lOS=0;
 		
 		// extract parameters
-		if (iRes.getSsElem()!=null)
+		if (iResidue.getSsElem()!=null)
 			diffSSType=true;
 		else
 			diffSSType=false;
 		
-		int iNum=iRes.getSerial();
-		int j=jRes.getSerial();
+		int iNum=iResidue.getSerial();
+		int j=jResidue.getSerial();
 		
 		double r=resDist;
 		theta = graphGeom.getRotCoordOfContacts().get(new Pair<Integer>(iNum, j)).y;
@@ -108,11 +113,11 @@ public class CMPdb_sphoxel {
 		
 		// ---- count where type	
 		if (diffSSType)
-			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iRes.getAaType().getOneLetterCode()+"' and i_sstype='"
-				+iRes.getSsElem().getType()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"';";					// System.out.println(query);
+			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iResidue.getAaType().getOneLetterCode()+"' and i_sstype='"
+				+iResidue.getSsElem().getType()+"' and j_res='"+jResidue.getAaType().getOneLetterCode()+"';";					// System.out.println(query);
 		else 
-			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iRes.getAaType().getOneLetterCode()+"' and j_res='"
-			+jRes.getAaType().getOneLetterCode()+"';";	
+			query = "SELECT count(*) from "+this.db+".edges where i_res='"+iResidue.getAaType().getOneLetterCode()+"' and j_res='"
+			+jResidue.getAaType().getOneLetterCode()+"';";	
 		result_type = stmt.executeQuery(query);		
 		if(result_type.next()) 
 			countType = result_type.getInt(1); // extract raw count 
@@ -130,11 +135,11 @@ public class CMPdb_sphoxel {
 		// ---- count where angle and type	
 		if (diffSSType)
 			query = "SELECT count(*) from "+db+".edges where r >= "+(r-dRad)+" and r < "+(r+dRad)
-		    	+" and i_res='"+iRes.getAaType().getOneLetterCode()+"' and i_sstype='"+iRes.getSsElem().getType()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"' and theta>"
+		    	+" and i_res='"+iResidue.getAaType().getOneLetterCode()+"' and i_sstype='"+iResidue.getSsElem().getType()+"' and j_res='"+jResidue.getAaType().getOneLetterCode()+"' and theta>"
 		    	+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>"+(phi-dAngle)+" and phi<"+(phi+dAngle)+" ;";					// System.out.println(query);
 		else 
 			query = "SELECT count(*) from "+db+".edges where r >= "+(r-dRad)+" and r < "+(r+dRad)
-			   +" and i_res='"+iRes.getAaType().getOneLetterCode()+"' and j_res='"+jRes.getAaType().getOneLetterCode()+"' and theta>"+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>"+(phi-dAngle)
+			   +" and i_res='"+iResidue.getAaType().getOneLetterCode()+"' and j_res='"+jResidue.getAaType().getOneLetterCode()+"' and theta>"+(theta-dAngle)+" and theta<"+(theta+dAngle)+" and phi>"+(phi-dAngle)
 			   +" and phi<"+(phi+dAngle)+" ;";					
 		result_angle_type = stmt.executeQuery(query);		
 		if(result_angle_type.next()) 
@@ -157,9 +162,8 @@ public class CMPdb_sphoxel {
 	
 	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, RIGGeometry graphGeom) throws SQLException{
 
-		double deltar=0.5;
-		double deltatheta=Math.PI/72;
-		deltatheta /= 2;
+		double deltar = defaultDeltaR; //0.5;
+		double deltatheta = defaultDeltaTheta; //=Math.PI/72;	deltatheta /= 2;
 //		double deltaphi=Math.PI/72;
 		
 		double lOS = getLogOddsScore(iRes, jRes, resDist, graphGeom, deltatheta, deltar);

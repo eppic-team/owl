@@ -30,7 +30,13 @@ public class TestKendallsTau {
 	 */
 	public static void main(String[] args) {
 
-//		TestKendallsTau kdTest = new TestKendallsTau();
+////		TestKendallsTau kdTest = new TestKendallsTau();
+//		double[] x = new double[]{4.5,2.3,5.5,1.5,8.9,10.7};
+//		double[] y = new double[]{1.3,2.1,5.6,7.5,8.4,10.3};
+//		KendallsTau kt1 = new KendallsTau(x);
+//		KendallsTau kt2 = new KendallsTau(y);
+//		double kt = kt1.kendallsTauB(kt2);
+//		System.out.println("kt= "+kt);
 		
 //		try {
 ////			runByDB1();

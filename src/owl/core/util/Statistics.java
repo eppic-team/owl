@@ -114,7 +114,11 @@ public class Statistics {
 	 */
 	public static double kendallsTau(double[] x, double[] y) {
 		if (x.length!=y.length) throw new IllegalArgumentException("Arrays given to spearman calculation are of different length");
-		return 0.0;
+		
+		KendallsTau kt1 = new KendallsTau(x);
+		KendallsTau kt2 = new KendallsTau(y);
+		
+		return kt1.kendallsTauB( kt2);
 	}
 	
 	/**

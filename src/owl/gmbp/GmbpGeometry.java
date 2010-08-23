@@ -361,6 +361,11 @@ public class GmbpGeometry {
 		return RotMatrix02_4d;      
 	}        
 	
+	/**
+	 * Transforms Cartesian into spherical coordinates
+	 * @param Atom_Coord (Cartesian coordinates)
+	 * @return vector3d spherical coordinates (r, theta[0:PI], phi[-PI:+PI])
+	 */
 	public Vector3d getSphericalFromCartesian (Vector3d Atom_Coord) {
 		// METHOD for conversion from Cartesian to Spherical Coordinates
 		Vector3d Atom_Coord_sph = new Vector3d(0,0,0);
@@ -370,6 +375,11 @@ public class GmbpGeometry {
 		//Atom_Coord_sph.y = Math.atan2(Math.sqrt(Math.pow(Atom_Coord.x, 2)+Math.pow(Atom_Coord.y, 2)), Atom_Coord.z); //theta
 		Atom_Coord_sph.y = Math.acos( Atom_Coord.z/Atom_Coord_sph.x); //theta
 		Atom_Coord_sph.z = Math.atan2(Atom_Coord.y, Atom_Coord.x); //phi
+		
+//		if (Atom_Coord_sph.y<0)
+//			System.out.println("theta is negative!");
+//		if (Atom_Coord_sph.z<0)
+//			System.out.println("phi is negative!");
 
 		return Atom_Coord_sph;
 	}

@@ -1,7 +1,7 @@
 package owl.core.structure.graphs;
 
-//import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.TreeMap;
@@ -14,7 +14,9 @@ import javax.vecmath.Vector3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
+import owl.core.structure.AAinfo;
 import owl.core.structure.Residue;
+import owl.core.structure.features.SecStrucElement;
 import owl.gmbp.CMPdb_sphoxel;
 import owl.gmbp.CSVhandler;
 import owl.gmbp.GmbpGeometry;
@@ -62,6 +64,16 @@ public class RIGGeometry {
 //		System.out.println("Geometry of graph with "+this.graph.getEdgeCount()+" edges:");
 		int edgeNum = 0;
 		GmbpGeometry gmbp = new GmbpGeometry();
+
+		PrintWriter logOut = null;
+//		String logFileFN = "/Volumes/StruPPi/CASP8/server_models/Geometry.csv";
+//		logFileFN = "/Users/vehlow/Documents/workspace/outputFiles/Geometry.csv";
+//		try {
+//			logOut = new PrintWriter(new FileWriter(logFileFN));
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 //		coord_sph_rotated = new HashMap<String,Vector3d>();
 		coord_sph_rotated = new HashMap<Pair<Integer>, Vector3d>();
@@ -80,6 +92,7 @@ public class RIGGeometry {
 			String iResType = iNode.getResidueType();
 			String jResType = jNode.getResidueType();
 			
+			
 			Residue iRes = this.residues.get(iNum);
 			Residue jRes = this.residues.get(jNum);
 			
@@ -96,7 +109,7 @@ public class RIGGeometry {
 			// translate coordinates with rotation and translation invariant framework
 			HashMap<String,Point3d> iCoord = gmbp.getTheResidueCoord(iRes);
 			HashMap<String,Point3d> jCoord = gmbp.getTheResidueCoord(jRes);
-			
+						
 			Vector3d coord_I = new Vector3d(0,0,0);
 			Vector3d coord_J = new Vector3d(0,0,0);
 			// LEAVE this EDGE and CONTINUE with next one if the above condition is not satisfied.
@@ -112,6 +125,8 @@ public class RIGGeometry {
 			}
 			else {
 				continue;
+			}
+			if (iNum==63){
 			}
 			
 			// GET the SPHERICAL COORDINATES for CA, C, CB, and CG using METHOD "getSphericalFromCartesian", 
@@ -141,8 +156,29 @@ public class RIGGeometry {
 			
 //			System.out.println("TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
 //					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
-//			System.out.printf("TransRotCoord i->j Cartesian: %s Spherical: %s   j->i Cartesian: %s Spherical: %s \n", coord_I, coord_sph_I, coord_J, coord_sph_J);
+//			System.out.printf("TransRotCoord i->j Cartesian: %s Spherical: %s   j->i Cartesian: %s Spherical: %s \n", coord_J, coord_sph_J, coord_I, coord_sph_I);
+			char iResT = AAinfo.threeletter2oneletter(iResType).charAt(0);
+			char jResT = AAinfo.threeletter2oneletter(jResType).charAt(0);
+			char iSS, jSS;
+			SecStrucElement ssElem = iNode.getSecStrucElement();
+			if (ssElem == null)
+				iSS = 'A';
+			else
+				iSS = ssElem.getType();
+			ssElem = jNode.getSecStrucElement();
+			if (ssElem == null)
+				jSS = 'A';
+			else
+				jSS = ssElem.getType();
+			if (logOut!=null){
+				logOut.println(iNum+","+jNum+","+iResT+","+jResT+","+iSS+","+jSS+","+coord_sph_J.x+","+coord_sph_J.y+","+coord_sph_J.z);
+				logOut.println(jNum+","+iNum+","+jResT+","+iResT+","+jSS+","+iSS+","+coord_sph_I.x+","+coord_sph_I.y+","+coord_sph_I.z);
+			}
+//			System.out.printf("TransRotCoord i->j Spherical: %s   j->i Spherical: %s \n", coord_sph_I, coord_sph_J);
+//			System.out.printf("TransRotCoord i->j Spherical: %s   j->i Spherical: %s \n", coord_sph_I, coord_sph_J);
 		}
+		if (logOut!=null)
+			logOut.close();
 		
 //		printGeom();
 		
@@ -170,6 +206,19 @@ public class RIGGeometry {
 		for (Entry<Pair<Integer>, Vector3d> entry: this.coord_sph_rotated.entrySet()){
 			System.out.println(entry.getKey().getFirst()+"_"+entry.getKey().getSecond()+":"+entry.getValue().x);
 		}
+	}
+	
+	public boolean isContactOnNorthernHemisphere(Residue iRes, Residue jRes){
+		int iNum=iRes.getSerial();
+        int jNum=jRes.getSerial();
+        
+        double phi = this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).y; //[0:Math.PI]
+//        double lambda = this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).z;  //[-Math.PI:Math.PI]
+        
+        if (phi<(Math.PI/2))   // north
+        	return true;
+        else
+        	return false;
 	}
 	
 	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, String archiveFN) throws NumberFormatException, IOException{
@@ -225,21 +274,22 @@ public class RIGGeometry {
 	        int j1=(int)Math.floor((this.coord_sph_rotated.get(new Pair<Integer>(iNum, jNum)).z)/(Math.PI/72))+72;  
 	        
 	        // sum up scores over tiles in direct surrounding (3x3)
-	        for (int i=i1-1; i<=i1+1; i++){
-	        	for (int j=j1-1; j<=j1+1; j++){
-	        		int iIndex=i, jIndex=j;
-	            	if (i<0)
-	            		iIndex = i1+1;
-	            	if (i>=bayesRatios.length)
-	            		iIndex = i1-1;
-	            	if (j<0)
-	            		jIndex = bayesRatios[0].length-1;
-	            	if (j>=bayesRatios[0].length)
-	            		jIndex = 0;
-	            	score += bayesRatios[iIndex][jIndex][0];            		
-	            }
-	        }	    
-//	        score = bayesRatios[i1][j1][0];    	
+//	        for (int i=i1-1; i<=i1+1; i++){
+//	        	for (int j=j1-1; j<=j1+1; j++){
+//	        		int iIndex=i, jIndex=j;
+//	            	if (i<0)
+//	            		iIndex = i1+1;
+//	            	if (i>=bayesRatios.length)
+//	            		iIndex = i1-1;
+//	            	if (j<0)
+//	            		jIndex = bayesRatios[0].length-1;
+//	            	if (j>=bayesRatios[0].length)
+//	            		jIndex = 0;
+//	            	score += bayesRatios[iIndex][jIndex][0];            		
+//	            }
+//	        }	    
+	        score = bayesRatios[i1][j1][0]; 
+	        
         }
         else{
         	System.out.println("No SphoxelBG for "+fn);
