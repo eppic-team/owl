@@ -90,14 +90,12 @@ public class CMPdb_nbhString_traces {
 				gID = val[0];
 				num = val[1];
 
-				if (this.diffSSType)
-					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-	                +" and j_atom='"+this.jatom+"' order by j_num;";
+
+				query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
+                 +" and j_atom='"+this.jatom+"' order by j_num;";
+//				if (this.diffSSType)
 //					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
 //			         +" and i_sstype='"+this.sstype+"' and j_atom='"+this.jatom+"' order by j_num;";
-				else 
-					query = "SELECT j_num as j, theta, phi, j_res, j_sstype, i_sstype from "+db+".edges where graph_id="+gID+" and i_num="+num
-	                 +" and j_atom='"+this.jatom+"' order by j_num;";
 				
 				result_nodes = stmt.executeQuery(query);
 				int cntNodes = 0;
@@ -170,8 +168,8 @@ public class CMPdb_nbhString_traces {
 		System.out.println();
 		if (sstypes[id]!=this.sstype && this.sstype!=AnySStype){
 			System.out.println("Mayority of traces for different ssType "+sstypes[id]+" instead of "+this.sstype);
-			this.sstype = sstypes[id]; 
-			this.run();
+//			this.sstype = sstypes[id]; 
+//			this.run();
 		}		
 	}
 	
