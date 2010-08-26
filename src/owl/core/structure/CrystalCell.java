@@ -214,11 +214,22 @@ public class CrystalCell {
 	 * Transforms the given crystal basis coordinates into orthonormal coordinates.
 	 * e.g. getOrthFromCrystalCoords(new Point3d(1,1,1)) returns the orthonormal coordinates of the 
 	 * vertex of the unit cell.
-	 * @param vertex
+	 * See Giacovazzo eq 2.20 (or any linear algebra manual) 
+	 * @param point
 	 * @return
 	 */
-	public void getOrthFromCrystalCoords(Point3d vertex) {
-		getMTransposeInv().transform(vertex);		
+	public void getOrthFromCrystalCoords(Point3d point) {
+		getMTransposeInv().transform(point);		
+	}
+
+	/**
+	 * Transforms the given orthonormal basis coordinates into crystal coordinates.
+	 * See Giacovazzo eq 2.20 (or any linear algebra manual)
+	 * @param point
+	 * @return
+	 */
+	public void getCrystalFromOrthCoords(Point3d point) {
+		getMTranspose().transform(point);
 	}
 	
 	/**

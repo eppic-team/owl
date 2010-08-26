@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3d;
+import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.structure.graphs.AICGraph;
@@ -31,6 +33,8 @@ import owl.core.util.MySQLConnection;
  */
 public class PdbAsymUnit {
 	
+	private static final String DEFAULT_TRANSFORM = "X,Y,Z";
+	
 	private String pdbCode;
 	private int model;
 	private String title;
@@ -39,6 +43,8 @@ public class PdbAsymUnit {
 	
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
+	
+	private String transform;
 	
 	/**
 	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.
@@ -55,9 +61,11 @@ public class PdbAsymUnit {
 		this.crystalCell = crystalCell;
 		this.spaceGroup = spaceGroup;
 		this.chains = new TreeMap<String, Pdb>();
+		this.transform = DEFAULT_TRANSFORM;
 	}
 	
 	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatError, PdbLoadError {
+		this.transform = DEFAULT_TRANSFORM;
 		chains = new TreeMap<String, Pdb>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE) {
@@ -71,6 +79,7 @@ public class PdbAsymUnit {
 	}
 	
 	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundError {
+		this.transform = DEFAULT_TRANSFORM;
 		chains = new TreeMap<String, Pdb>();
 		loadFromPdbase(pdbCode, conn, dbName);
 	}
@@ -190,6 +199,17 @@ public class PdbAsymUnit {
 	}
 	
 	/**
+	 * Tells whether given Pdb object is contained in this PdbAsymUnit.
+	 * At the moment the comparison will be done based on reference, if the Pdb.equals() is 
+	 * implemented then that will change.
+	 * @param pdb
+	 * @return
+	 */
+	public boolean containsChain(Pdb pdb) {
+		return this.chains.values().contains(pdb);
+	}
+	
+	/**
 	 * Returns the Residue for the given residue serial and pdbChainCode
 	 * @param resSerial
 	 * @param pdbChainCode
@@ -203,6 +223,40 @@ public class PdbAsymUnit {
 		return this.getChain(pdbChainCode).getResidue(resSerial);
 	}
 	
+	public Point3d getCenterOfMass() {
+		Vector3d sumVector = new Vector3d();
+		int numAtoms = 0;
+		for (Pdb chain:this.chains.values()) {
+			for(int atomserial:chain.getAllAtomSerials()) {
+				Point3d coords = chain.getAtomCoord(atomserial);
+				sumVector.add(coords);
+				numAtoms++;
+			}
+		}
+		sumVector.scale(1.0/numAtoms);
+		return new Point3d(sumVector);
+	}
+	
+	/**
+	 * Returns an integer triplet indicating the crystal coordinates of this PdbAsymUnit with respect to the given one.
+	 * e.g. if given PdbAsymUnit is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
+	 * @param pdb
+	 * @return
+	 */
+	public Point3i getCrystalSeparation(PdbAsymUnit pdb) {
+		Point3d thisCoM  = this.getCenterOfMass();
+		Point3d otherCoM = pdb.getCenterOfMass();
+		crystalCell.getCrystalFromOrthCoords(thisCoM);
+		crystalCell.getCrystalFromOrthCoords(otherCoM);
+		double asep = otherCoM.x-thisCoM.x;
+		double bsep = otherCoM.y-thisCoM.y;
+		double csep = otherCoM.z-thisCoM.z;
+		//System.out.printf("a: %5.2f ",asep);
+		//System.out.printf("b: %5.2f ",bsep);
+		//System.out.printf("c: %5.2f \n",csep);
+		return new Point3i((int)asep, (int)bsep, (int)csep);
+	}
+
 	public void transform(Matrix4d m) {
 		for (Pdb pdb:this.chains.values()) {
 			pdb.transform(m);
@@ -220,6 +274,7 @@ public class PdbAsymUnit {
 	
 	public List<PdbAsymUnit> getSymRelatedObjects() {
 		List<PdbAsymUnit> syms = new ArrayList<PdbAsymUnit>();
+		int i = 1; // we start at 1 because we want to skip the identity
 		for (Matrix4d m:this.getTransformations()) {
 			PdbAsymUnit sym = new PdbAsymUnit(this.pdbCode, this.model, this.title, this.crystalCell, this.spaceGroup);
 			for (String pdbChainCode:getPdbChainCodes()) {
@@ -227,9 +282,27 @@ public class PdbAsymUnit {
 				newChain.transform(m);
 				sym.setChain(pdbChainCode, newChain);
 			}
+			// the transformed object might end up in another cell but we want it in the original cell
+			// that's why we check it now and translate if it wasn't
+			Point3i sep = this.getCrystalSeparation(sym);
+			if (!sep.equals(new Point3i(0,0,0))) {
+				sym.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
+			}
+			sym.setTransform(this.spaceGroup.getTransfAlgebraic(i));
 			syms.add(sym);
+			i++;
 		}
 		return syms;
+	}
+	
+	public PdbUnitCell getUnitCell() {
+		PdbUnitCell cell = new PdbUnitCell();
+		List<PdbAsymUnit> syms = this.getSymRelatedObjects();
+		cell.addUnit(this);
+		for (PdbAsymUnit sym:syms) {
+			cell.addUnit(sym);
+		}
+		return cell;
 	}
 	
 	/**
@@ -271,6 +344,14 @@ public class PdbAsymUnit {
 		return this.chains.firstEntry().getValue().getTransformations();
 	}
 	
+	public String getTransform() {
+		return transform;
+	}
+	
+	public void setTransform(String transform) {
+		this.transform = transform;
+	}
+	
 	/**
 	 * Returns a list of all interfaces (any 2 atoms under cutoff) that this chain has 
 	 * upon generation of all crystal symmetry objects. 
@@ -279,83 +360,70 @@ public class PdbAsymUnit {
 	 */
 	public List<ChainInterface> getAllInterfaces(double cutoff) {
 		
-		// the strategy here should be first generate the unit cell from the asymmetric unit with the space group's symmetry operator
-		// once you have that it's like having a P1, you need 2 things: check interfaces within unit cell and with 26 (actually just half) 
-		// of the neighbouring cells
-		// also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
+		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
+		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
-		//Set<ChainInterface> list = new HashSet<ChainInterface>();
 		List<ChainInterface> list = new ArrayList<ChainInterface>();
-		// 0. interfaces of original asymmetric unit with the space-group symmetry generated objects
-		List<PdbAsymUnit> syms = getSymRelatedObjects();
-		int t = 1;
-		for (PdbAsymUnit sym:syms) {
-			String transf = this.getSpaceGroup().getTransfAlgebraic(t);
-			for (int i=-1;i<=1;i++) {
-				for (int j=-1;j<=1;j++) {
-					for (int k=-1;k<=1;k++) {
-						PdbAsymUnit symtrans = sym.copy();
-						symtrans.doCrystalTranslation(new Vector3d(i,j,k));
-						for (Pdb chaini:this.getAllChains()) {
-							System.out.print(".");
-							for (Pdb chainj:symtrans.getAllChains()) {
-								//if (!chaini.isCrystalNeighbor(chainj)) {
-								//	System.out.println("Not neighbors: "+i+","+j+","+k+" "+chaini.getPdbChainCode()+" "+chainj.getPdbChainCode());
-								//	continue;
-								//}
-								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
-								if (graph.getEdgeCount()>0) {
-									list.add(new ChainInterface(chaini,chainj,graph,transf));
-								}							
-							}
-						}
-						System.out.println();
-					}
-				}
-			}
-			t++;
-		}
+
+		// 0. generate complete unit cell
+		PdbUnitCell cell = this.getUnitCell();
 		
 		// 1. interfaces within unit cell
-		for (String iChain:this.chains.keySet()) {
-			for (String jChain:this.chains.keySet()) {
-				// we skip half of the pairs
-				if (iChain.compareTo(jChain)<=0) continue; 
-				Pdb chaini = chains.get(iChain);
-				Pdb chainj = chains.get(jChain);
+		// 1.1 within asymmetric unit
+		for (String iChainCode:this.getPdbChainCodes()) {
+			for (String jChainCode:this.getPdbChainCodes()) {
+				if (iChainCode.compareTo(jChainCode)<=0) continue;
+				//System.out.print(".");
+				Pdb chaini = this.getChain(iChainCode);
+				Pdb chainj = this.getChain(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 				if (graph.getEdgeCount()>0) {
-					list.add(new ChainInterface(chaini,chainj,graph,"X,Y,Z"));
-				}							
+					list.add(new ChainInterface(chaini,chainj,graph,"X,Y,Z","X,Y,Z"));
+				}											
 			}
-		}		
-		// 2. interfaces between unit cell and 26 neighbouring cells, we only need to check half of them (13)
+			//System.out.println();
+		}
+		//System.out.println();
+		
+		// 1.2 between the original asymmetric unit and the others resulting in applying the symmetry transformations
+		for (int j=0;j<cell.getNumAsymUnits();j++) {
+			PdbAsymUnit jAsym = cell.getAsymUnit(j);
+			if (jAsym==this) continue; // we want to compare this to all others but not to itself
+			//System.out.print(".");
+			for (Pdb chaini:this.getAllChains()) {
+				for (Pdb chainj:jAsym.getAllChains()) {
+					AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
+					if (graph.getEdgeCount()>0) {
+						list.add(new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()));
+					}													
+				}
+			}
+			
+		}
+		//System.out.println();
+		
+		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells, we only need to check half of them (13)
 		// to choose the half we simply take the right half of the tree (i>=0, if i==0 then j>=0, if i==0 & j==0 then k>0) 
 		for (int i=0;i<=1;i++) {
 			for (int j=-1;j<=1;j++) {
 				if (i==0 && j<0) continue;
 				for (int k=-1;k<=1;k++) {
 					if (i==0 && j==0 && k<=0) continue;
-					PdbAsymUnit translated = this.copy();
+					PdbUnitCell translated = cell.copy();
 					translated.doCrystalTranslation(new Vector3d(i,j,k));
-					//try {
-					//	translated.writeToPdbFile(new File("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+".pdb"));
-					//} catch (IOException e) {
-					//	e.printStackTrace();
-					//}
-					System.out.print(".");
-					for (Pdb chaini:this.getAllChains()) {
+					//System.out.print(".");
+					for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
 						for (Pdb chainj:translated.getAllChains()) {
 							AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 							if (graph.getEdgeCount()>0) {
-								list.add(new ChainInterface(chaini,chainj,graph,String.format("X%+d,Y%+d,Z%+d",i,j,k)));
+								list.add(new ChainInterface(chaini,chainj,graph,"X,Y,Z",String.format("X%+d,Y%+d,Z%+d",i,j,k)));
 							}							
 						}
 					}
 				}
-				System.out.println();
+				//System.out.println();
 			}
-			System.out.println();
+			//System.out.println();
 		}
  
 		return list;

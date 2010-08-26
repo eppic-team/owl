@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
+import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.features.Feature;
@@ -2300,6 +2301,26 @@ public class Pdb implements HasFeatures {
 			return true;
 		}
 		return false;
+	}
+	
+	/**
+	 * Returns an integer triplet indicating the crystal coordinates of this Pdb with respect to the given one.
+	 * e.g. if given Pdb is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
+	 * @param pdb
+	 * @return
+	 */
+	public Point3i getCrystalSeparation(Pdb pdb) {
+		Point3d thisCoM  = this.getCenterOfMass();
+		Point3d otherCoM = pdb.getCenterOfMass();
+		crystalCell.getCrystalFromOrthCoords(thisCoM);
+		crystalCell.getCrystalFromOrthCoords(otherCoM);
+		double asep = otherCoM.x-thisCoM.x;
+		double bsep = otherCoM.y-thisCoM.y;
+		double csep = otherCoM.z-thisCoM.z;
+		//System.out.printf("a: %5.2f ",asep);
+		//System.out.printf("b: %5.2f ",bsep);
+		//System.out.printf("c: %5.2f \n",csep);
+		return new Point3i((int)asep, (int)bsep, (int)csep);
 	}
 	
 	/**

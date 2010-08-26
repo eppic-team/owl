@@ -15,13 +15,15 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	private Pdb firstMolecule;
 	private Pdb secondMolecule;
 	
-	private String transf; // the transformation applied expressed in algebraic notation 
+	private String firstTransf; // the transformation applied to first molecule expressed in algebraic notation 
+	private String secondTransf; // the transformation applied to second molecule expressed in algebraic notation
 	
-	public ChainInterface(Pdb firstMolecule, Pdb secondMolecule, AICGraph graph, String transf) {
+	public ChainInterface(Pdb firstMolecule, Pdb secondMolecule, AICGraph graph, String firstTransf, String secondTransf) {
 		this.firstMolecule = firstMolecule;
 		this.secondMolecule = secondMolecule;
 		this.graph = graph;
-		this.transf = transf;
+		this.firstTransf = firstTransf;
+		this.secondTransf = secondTransf;
 	}
 	
 	public int getId() {
@@ -57,8 +59,12 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return graph;
 	}
 	
-	public String getTransf() {
-		return transf;
+	public String getFirstTransf() {
+		return firstTransf;
+	}
+	
+	public String getSecondTransf() {
+		return secondTransf;
 	}
 	
 	/**
@@ -92,37 +98,6 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		}
 
 		this.interfaceArea = firstTotSurface+secondTotSurface-complexTotSurface;
-	}
-	
-	/**
-	 * Equality based on same transformation string and same chain identifiers (independent of order)
-	 */
-	public boolean equals(Object other) {
-		if (!(other instanceof ChainInterface)) {
-			return false;
-		}
-		ChainInterface o = (ChainInterface) other;
-		if (!this.getTransf().equals(o.getTransf())) {
-			return false;
-		}
-		if (!(firstMolecule.getPdbChainCode().equals(o.firstMolecule.getPdbChainCode()) && 
-			  secondMolecule.getPdbChainCode().equals(o.secondMolecule.getPdbChainCode())) ||
-			!(firstMolecule.getPdbChainCode().equals(o.secondMolecule.getPdbChainCode()) &&
-			  secondMolecule.getPdbChainCode().equals(o.firstMolecule.getPdbChainCode()))
-		) {
-			return false;
-		}
-		return true;
-	}
-	
-	/**
-	 * Hash code based on transformation string and chain identifiers (independent of order)
-	 */
-	public int hashCode() {
-		int hash = 1;
-		hash = hash*31 + transf.hashCode();
-		hash = hash*31 + firstMolecule.getPdbChainCode().hashCode()+secondMolecule.getPdbChainCode().hashCode();
-		return hash;
 	}
 	
 	@Override

@@ -43,12 +43,11 @@ public class enumerateInterfaces {
 		for (int i=sortedInterfaces.size()-1;i>=0;i--) {
 			ChainInterface interf = sortedInterfaces.get(i);
 			int j= sortedInterfaces.size()-i;
-			System.out.println("Interface "+j);
-			System.out.println(interf.getTransf());
+			System.out.println("\n##Interface "+j);
+			System.out.println("Transf1: "+interf.getFirstTransf()+". Transf2: "+interf.getSecondTransf());
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
 			System.out.println("Contacting atoms: "+interf.getAICGraph().getEdgeCount());
-			System.out.println("Interface area: "+interf.getInterfaceArea());
-			System.out.println("Hash: "+interf.hashCode());
+			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 			
 		}
 	}
