@@ -462,6 +462,24 @@ public class Pdb implements HasFeatures {
 			return null;
 		}
 	}
+	
+	/**
+	 * Returns the per-residue all-atoms absolute solvent accessible areas as calculated by NACCESS
+	 * @return a map from residue serial to absolute ASA value or null if ASA has not previously been 
+	 * calculated with {@link runner.NaccessRunner}.
+	 */
+	public HashMap<Integer, Double> getAbsSurfaceAccessibilities() {
+		if (hasASA()) {
+			HashMap<Integer, Double> resser2allrsa = new HashMap<Integer, Double>();
+			for (Residue residue:residues.values()) {
+				resser2allrsa.put(residue.getSerial(), residue.getAsa());
+			}
+			return resser2allrsa;
+		} else {
+			return null;
+		}
+	}
+
 
 	/**
 	 * Assigns b-factor values to the atoms of this structure. If structure is written to pdb file,
@@ -607,9 +625,19 @@ public class Pdb implements HasFeatures {
 	
 	/** 
 	 * Writes atom lines for this structure to the given output stream
-	 * @param Out
+	 * @param out
 	 */
-	public void writeAtomLines(PrintStream Out) {
+	public void writeAtomLines(PrintStream out) {
+		writeAtomLines(out,chainCode);
+	}
+	
+	/**
+	 * Writes atom lines for this structure to the given output stream using the given
+	 * chain code instead of the internal chain code.
+	 * @param out
+	 * @param chainCode
+	 */
+	public void writeAtomLines(PrintStream out, String chainCode) {
 		String chainCodeStr = chainCode;
 		if (chainCode.length()>1) {
 			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
@@ -630,9 +658,10 @@ public class Pdb implements HasFeatures {
 				printfStr = "ATOM  %5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
 			}
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			Out.printf(Locale.US, printfStr,
+			out.printf(Locale.US, printfStr,
 					atomser, atomCode, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
 		}
+		
 	}
 
 	/**
@@ -2259,6 +2288,21 @@ public class Pdb implements HasFeatures {
 	}
 	
 	/**
+	 * Tells wheter given Pdb's centre of mass is closer to this' centre of mass than twice 
+	 * the maximum diagonal dimension of the unit cell.
+	 * @param pdb
+	 * @return
+	 */
+	public boolean isCrystalNeighbor(Pdb pdb) {
+		Point3d thisCoM  = this.getCenterOfMass();
+		Point3d otherCoM = pdb.getCenterOfMass();
+		if (thisCoM.distance(otherCoM)<2.0*this.crystalCell.getMaxDimension()) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
 	 * Transform the coordinates of this structure translating them to the given center
 	 * and rotating them so that the given axis aligns with the z-axis
 	 * @param center
@@ -2340,6 +2384,18 @@ public class Pdb implements HasFeatures {
 			Point3d coords = getAtomCoord(atomserial);
 			coords.sub(sumVector);
 		}		
+	}
+	
+	public Point3d getCenterOfMass() {
+		Vector3d sumVector = new Vector3d();
+		int numAtoms = 0;
+		for(int atomserial:getAllAtomSerials()) {
+			Point3d coords = getAtomCoord(atomserial);
+			sumVector.add(coords);
+			numAtoms++;
+		}
+		sumVector.scale(1.0/numAtoms);
+		return new Point3d(sumVector);
 	}
 	
 	/**

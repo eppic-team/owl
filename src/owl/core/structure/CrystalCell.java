@@ -1,7 +1,11 @@
 package owl.core.structure;
 
+import java.util.ArrayList;
+import java.util.Collections;
+
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 
@@ -24,6 +28,8 @@ public class CrystalCell {
 	private double alphaRad;
 	private double betaRad;
 	private double gammaRad;
+	
+	private double maxDimension; // cached max dimension
 
 	private Matrix3d M; 	// cached basis change transformation matrix
 	private Matrix3d Minv;  // cached basis change transformation matrix
@@ -127,7 +133,7 @@ public class CrystalCell {
 	
 	/**
 	 * Transform given Matrix4d in crystal basis to the orthonormal basis using
-	 * the PDB convention (NCODE=1)
+	 * the PDB axes convention (NCODE=1)
 	 * @param m
 	 * @return
 	 */
@@ -146,7 +152,8 @@ public class CrystalCell {
 
 	/**
 	 * Returns the change of basis (crystal to orthonormal) transform matrix, that is 
-	 * M inverse in the notation of Giacovazzo using the PDB convention (NCODE=1). 
+	 * M inverse in the notation of Giacovazzo. 
+	 * Using the PDB axes convention (NCODE=1). 
 	 * The matrix is only calculated upon first call of this method, thereafter it is cached.
 	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 
 	 * @return
@@ -169,7 +176,8 @@ public class CrystalCell {
 	
 	/**
 	 * Returns the change of basis (orthonormal to crystal) transform matrix, that is
-	 * M in the notation of Giacovazzo using the PDB convention (NCODE=1).
+	 * M in the notation of Giacovazzo.
+	 * Using the PDB convention (NCODE=1).
 	 * The matrix is only calculated upon first call of this method, thereafter it is cached. 
 	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 
 	 * @return
@@ -201,4 +209,50 @@ public class CrystalCell {
 		MtranspInv.invert(getMTranspose());
 		return MtranspInv;
 	}
+	
+	/**
+	 * Transforms the given crystal basis coordinates into orthonormal coordinates.
+	 * e.g. getOrthFromCrystalCoords(new Point3d(1,1,1)) returns the orthonormal coordinates of the 
+	 * vertex of the unit cell.
+	 * @param vertex
+	 * @return
+	 */
+	public void getOrthFromCrystalCoords(Point3d vertex) {
+		getMTransposeInv().transform(vertex);		
+	}
+	
+	/**
+	 * Gets the maximum dimension of the unit cell.
+	 * @return
+	 */
+	public double getMaxDimension() {
+		if (maxDimension!=0) {
+			return maxDimension;
+		}
+		Point3d vert0 = new Point3d(0,0,0);
+		Point3d vert1 = new Point3d(1,0,0);
+		getOrthFromCrystalCoords(vert1);
+		Point3d vert2 = new Point3d(0,1,0);
+		getOrthFromCrystalCoords(vert2);
+		Point3d vert3 = new Point3d(0,0,1);
+		getOrthFromCrystalCoords(vert3);
+		Point3d vert4 = new Point3d(1,1,0);
+		getOrthFromCrystalCoords(vert4);
+		Point3d vert5 = new Point3d(1,0,1);
+		getOrthFromCrystalCoords(vert5);
+		Point3d vert6 = new Point3d(0,1,1);
+		getOrthFromCrystalCoords(vert6);
+		Point3d vert7 = new Point3d(1,1,1);
+		getOrthFromCrystalCoords(vert7);
+
+		ArrayList<Double> vertDists = new ArrayList<Double>();
+		vertDists.add(vert0.distance(vert7));
+		vertDists.add(vert3.distance(vert4));
+		vertDists.add(vert1.distance(vert6));
+		vertDists.add(vert2.distance(vert5));
+		maxDimension = Collections.max(vertDists);
+		return maxDimension;
+	}
+	
+	
 }

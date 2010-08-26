@@ -148,4 +148,27 @@ public class Atom {
 		return newAtom;
 	}
 	
+	/**
+	 * Equality based on same atom serial and same atom code.
+	 */
+	public boolean equals(Object other) {
+		if (!(other instanceof Atom)) return false;
+		Atom o = (Atom) other;
+		if (this.serial!=o.serial) { 
+			return false;
+		}
+		if (!this.code.equals(o.code)) {
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Hash code based on serial and atom code.
+	 */
+	public int hashCode() {
+		int hash = serial;
+	    hash = hash * 31 + code.hashCode();
+	    return hash;
+	}
 }

@@ -54,8 +54,11 @@ public class Residue implements Iterable<Atom> {
 	// is missing
 	private Double consurfScore;
 	private Integer consurfColor;
-	private Double rsa;
-	private Double scRsa;
+	private Double rsa;   // relative all-atoms accessible surface area
+	private Double scRsa; // relative side chain-atoms accessible surface area
+	
+	private double asa;   // all-atoms accessible surface area (absolute)
+	private double bsa;   // all-atoms accessible surface area upon burial (this can only be calculated by running naccess for 2 partners and a complex, see ChainInterface class)
 	
 	private TreeMap<String, Atom> atoms; // atom codes to atoms
 	
@@ -207,6 +210,10 @@ public class Residue implements Iterable<Atom> {
 		this.consurfColor = consurfColor;
 	}
 
+	/**
+	 * Returns the relative all-atoms accessible surface area as calculated by NACCESS 
+	 * @return the rsa value or null if NACCESS has not been run
+	 */
 	public Double getRsa() {
 		return rsa;
 	}
@@ -215,6 +222,37 @@ public class Residue implements Iterable<Atom> {
 		this.rsa = rsa;
 	}
 
+	/**
+	 * Returns the absolute (square Angstroms) all-atoms accessible surface area as calculated 
+	 * by NACCESS
+	 * @return
+	 */
+	public double getAsa() {
+		return asa;
+	}
+	
+	public void setAsa(double asa) {
+		this.asa = asa;
+	}
+
+	/**
+	 * Returns the absolute (square Angstroms) accessible surface area upon burial as calculated by NACCESS.
+	 * This can be calculated by running NACCES for 2 partners separately and the complex of both.
+	 * @see ChainInterface
+	 * @return
+	 */
+	public double getBsa() {
+		return bsa;
+	}
+	
+	public void setBsa(double bsa) {
+		this.bsa = bsa;
+	}
+
+	/**
+	 * Returns the relative sidechain-atoms accessible surface area as calculated by NACCESS 
+	 * @return the sc-rsa value or null if NACCESS has not been run
+	 */
 	public Double getScRsa() {
 		return scRsa;
 	}
@@ -341,6 +379,8 @@ public class Residue implements Iterable<Atom> {
 		newResidue.consurfScore = this.consurfScore;
 		newResidue.consurfColor = this.consurfColor;
 		newResidue.rsa = this.rsa;
+		newResidue.asa = this.asa;
+		newResidue.bsa = this.bsa;
 		newResidue.scRsa = this.scRsa;
 		newResidue.ssElem = parentPdb.getSecondaryStructure().getSecStrucElement(serial);
 		newResidue.atoms = new TreeMap<String, Atom>();
