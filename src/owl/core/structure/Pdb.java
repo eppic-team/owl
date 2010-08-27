@@ -480,7 +480,18 @@ public class Pdb implements HasFeatures {
 			return null;
 		}
 	}
-
+	
+	/**
+	 * Sets the absolute surface accessibility values of the Residue objects from the 
+	 * given map of residue serials to ASA values.
+	 * @param asas
+	 */
+	public void setAbsSurfaceAccessibilities(HashMap<Integer, Double> asas) {
+		for (Residue residue:residues.values()){
+			residue.setAsa(asas.get(residue.getSerial()));
+		}
+		hasASA = true;
+	}
 
 	/**
 	 * Assigns b-factor values to the atoms of this structure. If structure is written to pdb file,

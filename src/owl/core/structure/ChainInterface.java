@@ -2,6 +2,7 @@ package owl.core.structure;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
@@ -68,16 +69,28 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 	
 	/**
-	 * Runs the NACCESS program to calculate accessible surface areas of both interface 
-	 * partners and of the complex (the Buried Surface Area). Calculates also the total
-	 * interface area, use {@link #getInterfaceArea()} to get it.
+	 * Sets the absolute surface accessibility values of this interface's two members from the given map 
+	 * of pdb chain codes to maps of residue serials to ASA values.
+	 * @param asas
+	 */
+	private void setAbsSurfaceAccessibilities(HashMap<String, HashMap<Integer,Double>> asas) {
+		this.getFirstMolecule().setAbsSurfaceAccessibilities(asas.get(getFirstMolecule().getPdbChainCode()));
+		this.getSecondMolecule().setAbsSurfaceAccessibilities(asas.get(getSecondMolecule().getPdbChainCode()));
+	}
+	
+	/**
+	 * Runs the NACCESS program to calculate accessible surface areas of the complex of 
+	 * the two molecules making up this interface. 
+	 * A HashMap with the ASA values of the uncomplexed molecules must be given (pdb chain codes to 
+	 * HashMaps of residue serials to ASA values).
+	 * Then the BSAs are set from the uncomplexed and complexed ASA values and finally the total 
+	 * interface area is calculated (use {@link #getInterfaceArea()} to get it)
 	 * @param naccessExecutable
 	 * @throws IOException
 	 */
-	public void calcBSAnaccess(File naccessExecutable) throws IOException {
+	public void calcBSAnaccess(File naccessExecutable, HashMap<String, HashMap<Integer,Double>> asas) throws IOException {
+		this.setAbsSurfaceAccessibilities(asas);
 		NaccessRunner nar = new NaccessRunner(naccessExecutable, "");
-		nar.runNaccess(firstMolecule);
-		nar.runNaccess(secondMolecule);
 		
 		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
 		complex.setChain("A", firstMolecule);

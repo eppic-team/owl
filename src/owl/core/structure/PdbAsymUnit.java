@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
@@ -429,4 +430,15 @@ public class PdbAsymUnit {
 		return list;
 	}
 	
+	/**
+	 * Returns a HashMap with pdb chain codes to HashMaps of residue serials to absolute surface accessibility values.
+	 * @return
+	 */
+	public HashMap<String, HashMap<Integer,Double>> getAbsSurfaceAccessibilities() {
+		HashMap<String, HashMap<Integer,Double>> asas = new HashMap<String, HashMap<Integer,Double>>();
+		for (String pdbChainCode:this.chains.keySet()){
+			asas.put(pdbChainCode, this.getChain(pdbChainCode).getAbsSurfaceAccessibilities());
+		}
+		return asas;
+	}
 }

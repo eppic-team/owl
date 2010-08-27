@@ -1,10 +1,13 @@
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 //import java.util.Set;
 
+import owl.core.runners.NaccessRunner;
 import owl.core.structure.ChainInterface;
+import owl.core.structure.Pdb;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.util.MySQLConnection;
 
@@ -32,9 +35,16 @@ public class enumerateInterfaces {
 		List<ChainInterface> interfaces = pdb.getAllInterfaces(CUTOFF);
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 		System.out.println("Calculating BSAs with NACCESS");
+		
+		for (Pdb chain:pdb.getAllChains()) {
+			NaccessRunner nar = new NaccessRunner(NACCESS_EXE, "");
+			nar.runNaccess(chain);
+		}
+		HashMap<String, HashMap<Integer,Double>> asas = pdb.getAbsSurfaceAccessibilities();
+		
 		for (ChainInterface interf:interfaces) {
 			System.out.print(".");
-			interf.calcBSAnaccess(NACCESS_EXE);
+			interf.calcBSAnaccess(NACCESS_EXE,asas);
 		}
 		System.out.println();
 		
