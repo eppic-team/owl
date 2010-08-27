@@ -39,6 +39,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String CHAIN_ID_TAG = "chain_id";
 	private static final String CLASS_TAG = "class";
 	
+	private static final String SYMOP_TAG = "symop";
 	private static final String RXX_TAG = "rxx";
 	private static final String RXY_TAG = "rxy";
 	private static final String RXZ_TAG = "rxz";
@@ -170,6 +171,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(CLASS_TAG)) {
 					initValueReading();
+				} else if (name.equals(SYMOP_TAG)) {
+					initValueReading();
 				} else if (name.equals(RXX_TAG)) {
 					initValueReading();
 				} else if (name.equals(RXY_TAG)) {
@@ -265,6 +268,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					currentPisaMolecule.setChainId(flushValue());
 				} else if (name.equals(CLASS_TAG)) {
 					currentPisaMolecule.setMolClass(flushValue());
+				} else if (name.equals(RXX_TAG)) {
+					currentPisaMolecule.setTransf(flushValue());
 				} else if (name.equals(RXX_TAG)) {
 					currentPisaMolecule.setRxx(Double.parseDouble(flushValue()));
 				} else if (name.equals(RXY_TAG)) {

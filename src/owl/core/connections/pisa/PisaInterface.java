@@ -170,4 +170,12 @@ public class PisaInterface {
 		this.secondMolecule = secondMolecule;
 	}
 	
+	/**
+	 * Returns true if both members of this interface are proteins.
+	 * @return
+	 */
+	public boolean isProtein() {
+		return (firstMolecule.isProtein() && secondMolecule.isProtein());
+	}
+	
 }

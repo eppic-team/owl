@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
+import javax.vecmath.Matrix4d;
+
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
 
@@ -16,10 +18,10 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	private Pdb firstMolecule;
 	private Pdb secondMolecule;
 	
-	private String firstTransf; // the transformation applied to first molecule expressed in algebraic notation 
-	private String secondTransf; // the transformation applied to second molecule expressed in algebraic notation
+	private Matrix4d firstTransf; // the transformation applied to first molecule expressed in algebraic notation 
+	private Matrix4d secondTransf; // the transformation applied to second molecule expressed in algebraic notation
 	
-	public ChainInterface(Pdb firstMolecule, Pdb secondMolecule, AICGraph graph, String firstTransf, String secondTransf) {
+	public ChainInterface(Pdb firstMolecule, Pdb secondMolecule, AICGraph graph, Matrix4d firstTransf, Matrix4d secondTransf) {
 		this.firstMolecule = firstMolecule;
 		this.secondMolecule = secondMolecule;
 		this.graph = graph;
@@ -60,11 +62,11 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return graph;
 	}
 	
-	public String getFirstTransf() {
+	public Matrix4d getFirstTransf() {
 		return firstTransf;
 	}
 	
-	public String getSecondTransf() {
+	public Matrix4d getSecondTransf() {
 		return secondTransf;
 	}
 	

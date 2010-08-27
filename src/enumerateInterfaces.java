@@ -9,6 +9,7 @@ import owl.core.runners.NaccessRunner;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbAsymUnit;
+import owl.core.structure.SpaceGroup;
 import owl.core.util.MySQLConnection;
 
 
@@ -16,8 +17,12 @@ public class enumerateInterfaces {
 
 	private static final File NACCESS_EXE = new File("/home/duarte_j/bin/naccess");
 
-	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing 
-	private static final double CUTOFF = 6.0; 
+	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing
+	// 5.0  gives 25 for 1pmo (right number) but 6.0 gives one more (26) for which NACCESS measures a negative area...
+	// what's the cutoff then? I'm trying a value in between but it seems strange to choose such fractional values
+	// 5.75 gives 25 for 1pmo (right) but 26 for 1pmm (instead of 27)
+	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)  
+	private static final double CUTOFF = 5.9; 
 	
 	/**
 	 * @param args
@@ -56,7 +61,8 @@ public class enumerateInterfaces {
 			ChainInterface interf = sortedInterfaces.get(i);
 			int j= sortedInterfaces.size()-i;
 			System.out.println("\n##Interface "+j);
-			System.out.println("Transf1: "+interf.getFirstTransf()+". Transf2: "+interf.getSecondTransf());
+			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
+					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
 			System.out.println("Contacting atoms: "+interf.getAICGraph().getEdgeCount());
 			System.out.printf("Interface area: %8.2f (%8.2f)\n",interf.getInterfaceArea(),interf.getInterfaceArea()/2.0);

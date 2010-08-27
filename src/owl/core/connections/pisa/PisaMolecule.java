@@ -30,6 +30,8 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	private double ty;
 	private double tz;
 	
+	private String transf; // the symop transformation in algebraic notation (we upper case it)
+	
 	
 	private List<PisaResidue> residues;
 	
@@ -145,11 +147,27 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	}
 
 	/**
-	 * Gets the symmetry operator needed to generate this molecule. 
+	 * Gets the symmetry operator used to generate this molecule. 
 	 * @return
 	 */
 	public Matrix4d getSymOp() {
 		return new Matrix4d(new Matrix3d(rxx,rxy,rxz,ryx,ryy,ryz,rzx,rzy,rzz),new Vector3d(tx,ty,tz),1.0);
+	}
+	
+	/**
+	 * Gets the symmetry operator (algebraic notation, upper-case) used to generate this molecule.
+	 * @return
+	 */
+	public String getTransf() {
+		return transf;
+	}
+	
+	/**
+	 * Sets the symmetry operator (algebraic notation, upper-case) used to generate this molecule.
+	 * @param transf
+	 */
+	public void setTransf(String transf) {
+		this.transf = transf;
 	}
 	
 	/**

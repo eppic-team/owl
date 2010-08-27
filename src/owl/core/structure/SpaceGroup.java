@@ -120,10 +120,22 @@ public final class SpaceGroup {
 		return transfs;
 	}
 	
+	/**
+	 * Gets a transformation by index expressed in crystal axes basis.
+	 * Index 0 corresponds always to the identity transformation.
+	 * @param i
+	 * @return
+	 */
 	public Matrix4d getTransformation(int i) {
 		return transformations.get(i);
 	}
 	
+	/**
+	 * Gets a transformation algebraic string given its index.
+	 * Index 0 corresponds always to the identity transformation. 
+	 * @param i
+	 * @return
+	 */
 	public String getTransfAlgebraic(int i) {
 		return transfAlgebraic.get(i);
 	}
@@ -148,11 +160,28 @@ public final class SpaceGroup {
 		return this.transformations.size();
 	}
 	
-	//public SpaceGroup copy() {
-	//	SpaceGroup newSG = new SpaceGroup(id, shortSymbol);
-	//	for (Matrix4d transf:transformations) {
-	//		newSG.transformations.add(transf)
-	//	}
-	//}
+	public static String getAlgebraicFromMatrix(Matrix4d m) {
+		String x = formatAlg(m.m00,m.m01,m.m02,m.m03);
+		String y = formatAlg(m.m10,m.m11,m.m12,m.m13);
+		String z = formatAlg(m.m20,m.m21,m.m22,m.m23);
+		String alg = x+","+y+","+z;
+		return alg;
+	}
 	
+	private static String formatAlg(double xcoef, double ycoef, double zcoef, double trans) {
+		double delta=0.0000001;
+		return ((deltaComp(xcoef,0,delta)?"":formatCoef(xcoef)+"X")+
+				(deltaComp(ycoef,0,delta)?"":formatCoef(ycoef)+"Y")+
+				(deltaComp(zcoef,0,delta)?"":formatCoef(zcoef)+"Z")+
+				(deltaComp(trans,0,delta)?"":String.format("%+3.1f", trans)));
+	}
+	
+	private static String formatCoef(double c) {
+		double delta=0.0000001;
+		return (deltaComp(Math.abs(c),1,delta)?(c>0?"+":"-"):String.format("%3.1f",c));
+	}
+	
+	private static boolean deltaComp(double d1, double d2, double delta) {
+		return Math.abs(d1-d2)<delta;
+	}
 }

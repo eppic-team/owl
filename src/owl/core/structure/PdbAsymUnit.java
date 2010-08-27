@@ -34,7 +34,10 @@ import owl.core.util.MySQLConnection;
  */
 public class PdbAsymUnit {
 	
-	private static final String DEFAULT_TRANSFORM = "X,Y,Z";
+	private static final Matrix4d IDENTITY_TRANSFORM = new Matrix4d(1,0,0,0,
+																	0,1,0,0,
+																	0,0,1,0,
+																	0,0,0,1);
 	
 	private String pdbCode;
 	private int model;
@@ -45,7 +48,7 @@ public class PdbAsymUnit {
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
 	
-	private String transform;
+	private Matrix4d transform; // transformation matrix used to generate this asym unit
 	
 	/**
 	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.
@@ -62,11 +65,11 @@ public class PdbAsymUnit {
 		this.crystalCell = crystalCell;
 		this.spaceGroup = spaceGroup;
 		this.chains = new TreeMap<String, Pdb>();
-		this.transform = DEFAULT_TRANSFORM;
+		this.transform = IDENTITY_TRANSFORM;
 	}
 	
 	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatError, PdbLoadError {
-		this.transform = DEFAULT_TRANSFORM;
+		this.transform = IDENTITY_TRANSFORM;
 		chains = new TreeMap<String, Pdb>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE) {
@@ -80,7 +83,7 @@ public class PdbAsymUnit {
 	}
 	
 	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundError {
-		this.transform = DEFAULT_TRANSFORM;
+		this.transform = IDENTITY_TRANSFORM;
 		chains = new TreeMap<String, Pdb>();
 		loadFromPdbase(pdbCode, conn, dbName);
 	}
@@ -287,9 +290,12 @@ public class PdbAsymUnit {
 			// that's why we check it now and translate if it wasn't
 			Point3i sep = this.getCrystalSeparation(sym);
 			if (!sep.equals(new Point3i(0,0,0))) {
-				sym.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
+				// we don't use here doCrystalTranslation method because we don't want sym's transf member to be reset
+				for (Pdb pdb:sym.chains.values()) {
+					pdb.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
+				}	
 			}
-			sym.setTransform(this.spaceGroup.getTransfAlgebraic(i));
+			sym.setTransform(this.spaceGroup.getTransformation(i));
 			syms.add(sym);
 			i++;
 		}
@@ -316,7 +322,10 @@ public class PdbAsymUnit {
 		for (Pdb pdb:this.chains.values()) {
 			pdb.doCrystalTranslation(direction);
 		}		
-		
+		transform.m03 = transform.m03+direction.x;
+		transform.m13 = transform.m13+direction.y;
+		transform.m23 = transform.m23+direction.z;
+
 	}
 	
 	public PdbAsymUnit copy() {
@@ -324,6 +333,7 @@ public class PdbAsymUnit {
 		for (String pdbChainCode:getPdbChainCodes()){
 			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy());
 		}
+		newAsym.setTransform(new Matrix4d(this.transform));
 		return newAsym;
 	}
 	
@@ -345,11 +355,20 @@ public class PdbAsymUnit {
 		return this.chains.firstEntry().getValue().getTransformations();
 	}
 	
-	public String getTransform() {
+	/**
+	 * Gets the transformation used to generate the asymmetric unit, if no transformation used on
+	 * it yet, this will return the identity matrix.
+	 * @return
+	 */
+	public Matrix4d getTransform() {
 		return transform;
 	}
 	
-	public void setTransform(String transform) {
+	/**
+	 * Sets the transformation used to generate the asymmetric unit.
+	 * @param transform
+	 */
+	public void setTransform(Matrix4d transform) {
 		this.transform = transform;
 	}
 	
@@ -379,7 +398,7 @@ public class PdbAsymUnit {
 				Pdb chainj = this.getChain(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 				if (graph.getEdgeCount()>0) {
-					list.add(new ChainInterface(chaini,chainj,graph,"X,Y,Z","X,Y,Z"));
+					list.add(new ChainInterface(chaini,chainj,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
 				}											
 			}
 			//System.out.println();
@@ -404,21 +423,23 @@ public class PdbAsymUnit {
 		//System.out.println();
 		
 		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells, we only need to check half of them (13)
-		// to choose the half we simply take the left half of the tree (i<=0, if i==0 then j<=0, if i==0 & j==0 then k<0) (PISA does it in the same way) 
-		for (int i=-1;i<=0;i++) {
+		// to choose the half we simply take the right half of the tree (i>=0, if i==0 then j>=0, if i==0 & j==0 then k>0) 
+		for (int i=0;i<=1;i++) {
 			for (int j=-1;j<=1;j++) {
-				if (i==0 && j>0) continue;
+				if (i==0 && j<0) continue;
 				for (int k=-1;k<=1;k++) {
-					if (i==0 && j==0 && k>=0) continue;
+					if (i==0 && j==0 && k<=0) continue;
 					PdbUnitCell translated = cell.copy();
 					translated.doCrystalTranslation(new Vector3d(i,j,k));
 					//System.out.print(".");
 					for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
-						for (Pdb chainj:translated.getAllChains()) {
-							AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
-							if (graph.getEdgeCount()>0) {
-								list.add(new ChainInterface(chaini,chainj,graph,"X,Y,Z",String.format("X%+d,Y%+d,Z%+d",i,j,k)));
-							}							
+						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
+							for (Pdb chainj:jAsym.getAllChains()) {
+								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
+								if (graph.getEdgeCount()>0) {
+									list.add(new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()));
+								}							
+							}
 						}
 					}
 				}
