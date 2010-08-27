@@ -11,7 +11,11 @@ import owl.core.util.MySQLConnection;
 
 public class enumerateInterfaces {
 
-	private static final File naccessExecutable = new File("/home/duarte_j/bin/naccess");
+	private static final File NACCESS_EXE = new File("/home/duarte_j/bin/naccess");
+
+	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing 
+	private static final double CUTOFF = 6.0; 
+	
 	/**
 	 * @param args
 	 */
@@ -25,14 +29,12 @@ public class enumerateInterfaces {
 		
 		PdbAsymUnit pdb = new PdbAsymUnit(pdbCode, new MySQLConnection(), "pdbase");
 		
-		
-		//Set<ChainInterface> interfaces = pdb.getAllInterfaces(5.0);
-		List<ChainInterface> interfaces = pdb.getAllInterfaces(5.0);
+		List<ChainInterface> interfaces = pdb.getAllInterfaces(CUTOFF);
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 		System.out.println("Calculating BSAs with NACCESS");
 		for (ChainInterface interf:interfaces) {
 			System.out.print(".");
-			interf.calcBSAnaccess(naccessExecutable);
+			interf.calcBSAnaccess(NACCESS_EXE);
 		}
 		System.out.println();
 		
@@ -47,7 +49,7 @@ public class enumerateInterfaces {
 			System.out.println("Transf1: "+interf.getFirstTransf()+". Transf2: "+interf.getSecondTransf());
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
 			System.out.println("Contacting atoms: "+interf.getAICGraph().getEdgeCount());
-			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
+			System.out.printf("Interface area: %8.2f (%8.2f)\n",interf.getInterfaceArea(),interf.getInterfaceArea()/2.0);
 			
 		}
 	}

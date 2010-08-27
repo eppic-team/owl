@@ -403,12 +403,12 @@ public class PdbAsymUnit {
 		//System.out.println();
 		
 		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells, we only need to check half of them (13)
-		// to choose the half we simply take the right half of the tree (i>=0, if i==0 then j>=0, if i==0 & j==0 then k>0) 
-		for (int i=0;i<=1;i++) {
+		// to choose the half we simply take the left half of the tree (i<=0, if i==0 then j<=0, if i==0 & j==0 then k<0) (PISA does it in the same way) 
+		for (int i=-1;i<=0;i++) {
 			for (int j=-1;j<=1;j++) {
-				if (i==0 && j<0) continue;
+				if (i==0 && j>0) continue;
 				for (int k=-1;k<=1;k++) {
-					if (i==0 && j==0 && k<=0) continue;
+					if (i==0 && j==0 && k>=0) continue;
 					PdbUnitCell translated = cell.copy();
 					translated.doCrystalTranslation(new Vector3d(i,j,k));
 					//System.out.print(".");
