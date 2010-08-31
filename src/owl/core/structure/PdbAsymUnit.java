@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
@@ -406,13 +407,11 @@ public class PdbAsymUnit {
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact 
 	 * @return
 	 */
-	public List<ChainInterface> getAllInterfaces(double cutoff) {
-		long start = System.currentTimeMillis();
-		
+	public Set<ChainInterface> getAllInterfaces(double cutoff) {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
-		List<ChainInterface> list = new ArrayList<ChainInterface>();
+		Set<ChainInterface> list = new HashSet<ChainInterface>();
 
 		// 0. generate complete unit cell
 		PdbUnitCell cell = this.getUnitCell();
@@ -430,9 +429,7 @@ public class PdbAsymUnit {
 					list.add(new ChainInterface(chaini,chainj,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
 				}											
 			}
-			//System.out.println();
 		}
-		//System.out.println();
 
 		// 1.2 between the original asymmetric unit and the others resulting in applying the symmetry transformations
 		for (int j=0;j<cell.getNumAsymUnits();j++) {
@@ -489,8 +486,6 @@ public class PdbAsymUnit {
 			}
 		}
 		
-		long end = System.currentTimeMillis();
-		System.out.println("Time "+(end-start)/1000+"s");
 		return list;
 	}
 	

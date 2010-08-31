@@ -4,7 +4,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PisaInterface {
+public class PisaInterface implements Comparable<PisaInterface> {
 
 	private int id;						// note this is call NN in the PISA web tables
 	private int type;					// note this is call id in the PISA web tables
@@ -177,5 +177,11 @@ public class PisaInterface {
 	public boolean isProtein() {
 		return (firstMolecule.isProtein() && secondMolecule.isProtein());
 	}
+
+	@Override
+	public int compareTo(PisaInterface o) {
+		return new Double(this.getInterfaceArea()).compareTo(o.getInterfaceArea());
+	}
+	
 	
 }

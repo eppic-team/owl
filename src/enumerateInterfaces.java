@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 //import java.util.Set;
 
 import owl.core.runners.NaccessRunner;
@@ -36,8 +37,16 @@ public class enumerateInterfaces {
 		String pdbCode = args[0];
 		
 		PdbAsymUnit pdb = new PdbAsymUnit(pdbCode, new MySQLConnection(), "pdbase");
+
+		System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 		
-		List<ChainInterface> interfaces = pdb.getAllInterfaces(CUTOFF);
+		System.out.println("Calculating possible interfaces...");
+		long start = System.currentTimeMillis();
+		Set<ChainInterface> interfaces = pdb.getAllInterfaces(CUTOFF);
+		long end = System.currentTimeMillis();
+		System.out.println("Done. Time "+(end-start)/1000+"s");
+
+		
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 		System.out.println("Calculating BSAs with NACCESS");
 		

@@ -124,5 +124,28 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return firstMolecule.getPdbChainCode()+"-"+secondMolecule.getPdbChainCode()+" "+
 		getAICGraph().getEdgeCount()+" "+SpaceGroup.getAlgebraicFromMatrix(secondTransf);
 	}
+	
+	public boolean equals(Object o) {
+		if (!(o instanceof ChainInterface)) return false;
+		ChainInterface other = (ChainInterface) o;
+		String tcc1 = firstMolecule.getPdbChainCode();
+		String tcc2 = secondMolecule.getPdbChainCode();
+		String occ1 = other.firstMolecule.getPdbChainCode();
+		String occ2 = other.secondMolecule.getPdbChainCode();
 		
+		if ( !(occ1.equals(tcc1) && occ2.equals(tcc2)) &&
+			 !(occ2.equals(tcc1) && occ1.equals(tcc2)) ) {
+			return false;
+		}
+		if (graph.getEdgeCount()!=other.graph.getEdgeCount()) {
+			return false;
+		}
+		return true;
+	}
+	
+	public int hashCode() {
+		int hash = graph.getEdgeCount();
+	    hash = hash * 31 + firstMolecule.getPdbChainCode().hashCode()+secondMolecule.getPdbChainCode().hashCode();
+	    return hash; 
+	}
 }
