@@ -48,7 +48,12 @@ public class PdbAsymUnit {
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
 	
-	private Matrix4d transform; // transformation matrix used to generate this asym unit
+	private Matrix4d transform; // transformation matrix used to generate this asym unit (includes the possible translation from the original cell)
+	
+	private int transformId;    // and identifier of the space group transformation used (0 is identity i.e. original asymmetric unit) 
+								// (does not count the translations: 2 equivalent asym units of 2 different cells will have the same identifier)
+								// i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
+								// goes from 1 to m (m=number of symmetry operations of the space group)
 	
 	/**
 	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.
@@ -66,10 +71,12 @@ public class PdbAsymUnit {
 		this.spaceGroup = spaceGroup;
 		this.chains = new TreeMap<String, Pdb>();
 		this.transform = IDENTITY_TRANSFORM;
+		this.transformId = 0;
 	}
 	
 	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatError, PdbLoadError {
 		this.transform = IDENTITY_TRANSFORM;
+		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE) {
@@ -84,6 +91,7 @@ public class PdbAsymUnit {
 	
 	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundError {
 		this.transform = IDENTITY_TRANSFORM;
+		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
 		loadFromPdbase(pdbCode, conn, dbName);
 	}
@@ -242,12 +250,12 @@ public class PdbAsymUnit {
 	}
 	
 	/**
-	 * Returns an integer triplet indicating the crystal coordinates of this PdbAsymUnit with respect to the given one.
-	 * e.g. if given PdbAsymUnit is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
+	 * Returns the separation in the three crystal axes (unit cell units) of this PdbAsymUnit's 
+	 * centre of mass with respect to the given one's centre of mass.
 	 * @param pdb
 	 * @return
 	 */
-	public Point3i getCrystalSeparation(PdbAsymUnit pdb) {
+	public Point3d getCrystalSeparation(PdbAsymUnit pdb) {
 		Point3d thisCoM  = this.getCenterOfMass();
 		Point3d otherCoM = pdb.getCenterOfMass();
 		crystalCell.getCrystalFromOrthCoords(thisCoM);
@@ -255,12 +263,9 @@ public class PdbAsymUnit {
 		double asep = otherCoM.x-thisCoM.x;
 		double bsep = otherCoM.y-thisCoM.y;
 		double csep = otherCoM.z-thisCoM.z;
-		//System.out.printf("a: %5.2f ",asep);
-		//System.out.printf("b: %5.2f ",bsep);
-		//System.out.printf("c: %5.2f \n",csep);
-		return new Point3i((int)asep, (int)bsep, (int)csep);
+		return new Point3d(asep,bsep,csep);
 	}
-
+	
 	public void transform(Matrix4d m) {
 		for (Pdb pdb:this.chains.values()) {
 			pdb.transform(m);
@@ -288,7 +293,8 @@ public class PdbAsymUnit {
 			}
 			// the transformed object might end up in another cell but we want it in the original cell
 			// that's why we check it now and translate if it wasn't
-			Point3i sep = this.getCrystalSeparation(sym);
+			Point3d sep3d = this.getCrystalSeparation(sym);
+			Point3i sep = new Point3i((int)Math.round(sep3d.x),(int)Math.round(sep3d.y),(int)Math.round(sep3d.z));
 			if (!sep.equals(new Point3i(0,0,0))) {
 				// we don't use here doCrystalTranslation method because we don't want sym's transf member to be reset
 				for (Pdb pdb:sym.chains.values()) {
@@ -296,6 +302,7 @@ public class PdbAsymUnit {
 				}	
 			}
 			sym.setTransform(this.spaceGroup.getTransformation(i));
+			sym.setTransformId(i);
 			syms.add(sym);
 			i++;
 		}
@@ -325,7 +332,7 @@ public class PdbAsymUnit {
 		transform.m03 = transform.m03+direction.x;
 		transform.m13 = transform.m13+direction.y;
 		transform.m23 = transform.m23+direction.z;
-
+		// note that transformId doesn't change here. That's the whole point of having such an id: to identify equivalent crystal symmtry units  
 	}
 	
 	public PdbAsymUnit copy() {
@@ -334,6 +341,7 @@ public class PdbAsymUnit {
 			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy());
 		}
 		newAsym.setTransform(new Matrix4d(this.transform));
+		newAsym.setTransformId(this.getTransformId());
 		return newAsym;
 	}
 	
@@ -371,6 +379,26 @@ public class PdbAsymUnit {
 	public void setTransform(Matrix4d transform) {
 		this.transform = transform;
 	}
+
+	/**
+	 * Returns the transform id, which identifies which space group symmetry operator was
+	 * used to generate this asym unit, 2 equivalent units related by a crystal translation
+	 * will have the same id. 
+	 * @param id
+	 */
+	public int getTransformId() {
+		return transformId;
+	}
+	
+	/**
+	 * Sets the transform id, which identifies which space group symmetry operator was
+	 * used to generate this asym unit, 2 equivalent units related by a crystal translation
+	 * will have the same id. 
+	 * @param id
+	 */
+	public void setTransformId(int id) {
+		this.transformId = id;
+	}
 	
 	/**
 	 * Returns a list of all interfaces (any 2 atoms under cutoff) that this chain has 
@@ -379,6 +407,7 @@ public class PdbAsymUnit {
 	 * @return
 	 */
 	public List<ChainInterface> getAllInterfaces(double cutoff) {
+		long start = System.currentTimeMillis();
 		
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
@@ -404,50 +433,64 @@ public class PdbAsymUnit {
 			//System.out.println();
 		}
 		//System.out.println();
-		
+
 		// 1.2 between the original asymmetric unit and the others resulting in applying the symmetry transformations
 		for (int j=0;j<cell.getNumAsymUnits();j++) {
 			PdbAsymUnit jAsym = cell.getAsymUnit(j);
 			if (jAsym==this) continue; // we want to compare this to all others but not to itself
-			//System.out.print(".");
 			for (Pdb chaini:this.getAllChains()) {
 				for (Pdb chainj:jAsym.getAllChains()) {
 					AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 					if (graph.getEdgeCount()>0) {
-						list.add(new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()));
+						ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()); 
+						list.add(interf);
 					}													
 				}
 			}
 			
 		}
-		//System.out.println();
 		
-		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells, we only need to check half of them (13)
-		// to choose the half we simply take the right half of the tree (i>=0, if i==0 then j>=0, if i==0 & j==0 then k>0) 
-		for (int i=0;i<=1;i++) {
+		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
+		for (int i=-1;i<=1;i++) {
 			for (int j=-1;j<=1;j++) {
-				if (i==0 && j<0) continue;
 				for (int k=-1;k<=1;k++) {
-					if (i==0 && j==0 && k<=0) continue;
+					if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
 					PdbUnitCell translated = cell.copy();
-					translated.doCrystalTranslation(new Vector3d(i,j,k));
-					//System.out.print(".");
-					for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
-						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
-							for (Pdb chainj:jAsym.getAllChains()) {
+					Vector3d trans = new Vector3d(i,j,k);
+					translated.doCrystalTranslation(trans);
+					
+					for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
+						Point3d sep = this.getCrystalSeparation(jAsym);
+						if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
+							//System.out.println("skipping:");
+							//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
+							//		sep.x,sep.y,sep.z,
+							//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
+							continue;
+						}
+						for (Pdb chainj:jAsym.getAllChains()) {
+							//try {
+							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
+							//} catch (FileNotFoundException e) {
+							//	e.printStackTrace();
+							//}
+
+							for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
 								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 								if (graph.getEdgeCount()>0) {
-									list.add(new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()));
+									ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform());
+									list.add(interf);
 								}							
 							}
+						
 						}
 					}
 				}
-				//System.out.println();
 			}
-			//System.out.println();
 		}
- 
+		
+		long end = System.currentTimeMillis();
+		System.out.println("Time "+(end-start)/1000+"s");
 		return list;
 	}
 	

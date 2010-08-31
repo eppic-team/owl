@@ -119,4 +119,10 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	public int compareTo(ChainInterface o) {
 		return (Double.compare(this.interfaceArea,o.interfaceArea));
 	}
+	
+	public String toString() {
+		return firstMolecule.getPdbChainCode()+"-"+secondMolecule.getPdbChainCode()+" "+
+		getAICGraph().getEdgeCount()+" "+SpaceGroup.getAlgebraicFromMatrix(secondTransf);
+	}
+		
 }
