@@ -102,7 +102,8 @@ public class checkCASPservertargets {
 			System.out.println("Files Copied into subdirectory "+filenameOut+"  "+test);
 		}    		
 	}
-	
+
+	@SuppressWarnings("unused")
 	private static void runAllTargetsWithinFolder(String dir) throws IOException{
 		File folder = new File(dir);    	
 	    File[] listOfFiles = folder.listFiles();
@@ -122,7 +123,6 @@ public class checkCASPservertargets {
 	    }
 	}
 
-	@SuppressWarnings("unused")
 	private static void runAllCaspTargets() throws IOException{
 		String scoreType = "";
 		
