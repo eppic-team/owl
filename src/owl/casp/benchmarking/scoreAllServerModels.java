@@ -20,14 +20,6 @@ import owl.core.util.MySQLConnection;
  */
 public class scoreAllServerModels {
 	
-	/*------------------------------ constants ------------------------------*/
-	// if server models are to be taken from a subdir of /server_models/T0???/
-	// (we use this for preprocessing the models) - NOT YET IMPLEMENTED!
-	static final boolean takeModelsFromSubDir = false;
-	static final File subDir = new File("SortedAtoms");
-	
-	/*---------------------------- private methods --------------------------*/
-	
 	/*--------------------------------- main --------------------------------*/
 	
 	public static void main(String[] args) {
