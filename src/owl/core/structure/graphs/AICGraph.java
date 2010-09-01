@@ -28,15 +28,13 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		
 		AICGraph o = (AICGraph) other;
 		
+		if (this.getEdgeCount()!=o.getEdgeCount()) {
+			return false;
+		}
+		
 		for (AICGEdge edge:this.getEdges()) {
 			Pair<Atom> pair = this.getEndpoints(edge);
-			if (!o.containsEdge(o.findEdge(pair.getFirst(), pair.getSecond()))) {
-				return false;
-			}
-		}
-		for (AICGEdge edge:o.getEdges()) {
-			Pair<Atom> pair = o.getEndpoints(edge);
-			if (!this.containsEdge(this.findEdge(pair.getFirst(), pair.getSecond()))) {
+			if (o.findEdge(pair.getFirst(), pair.getSecond())==null) {
 				return false;
 			}
 		}

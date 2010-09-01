@@ -150,8 +150,9 @@ public class PdbAsymUnitTest {
 				//Assert.assertNotNull(interf);
 				
 				
-				// we allow for a 5% discrepancy from PISA
-				System.out.printf("Areas, pisa: %8.2f my: %8.2f\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea()/2.0);
+				// we allow for a 10% discrepancy from PISA
+				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea()/2.0,
+						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea()/2.0)*100.0/pisaInterf.getInterfaceArea());
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea()/2.0, pisaInterf.getInterfaceArea()*0.10);
 				i--;
 			}

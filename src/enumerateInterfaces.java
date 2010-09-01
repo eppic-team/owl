@@ -73,7 +73,8 @@ public class enumerateInterfaces {
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
-			System.out.println("Contacting atoms: "+interf.getAICGraph().getEdgeCount());
+			System.out.println("Number of contacts: "+interf.getNumContacts());
+			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.printf("Interface area: %8.2f (%8.2f)\n",interf.getInterfaceArea(),interf.getInterfaceArea()/2.0);
 			
 		}

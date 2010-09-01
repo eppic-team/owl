@@ -160,6 +160,13 @@ public class Atom {
 		if (!this.code.equals(o.code)) {
 			return false;
 		}
+		if (!this.parentResidue.getAaType().equals(o.parentResidue.getAaType())) {
+			return false;
+		}
+		if (this.parentResidue.getSerial()!=o.parentResidue.getSerial()) {
+			return false;
+		}
+		
 		return true;
 	}
 	
@@ -169,6 +176,8 @@ public class Atom {
 	public int hashCode() {
 		int hash = serial;
 	    hash = hash * 31 + code.hashCode();
+	    hash = hash * 31 + parentResidue.getAaType().getNumber();
+	    hash = hash * 31 + parentResidue.getSerial();
 	    return hash;
 	}
 }

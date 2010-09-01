@@ -1147,12 +1147,7 @@ public class Pdb implements HasFeatures {
 		grid.putJatoms(otherAtoms.values());
 		
 		AICGraph graph = new AICGraph();
-		for (Atom thisAtom:thisAtoms.values()){
-			graph.addVertex(thisAtom);
-		}
-		for (Atom otherAtom:otherAtoms.values()) {
-			graph.addVertex(otherAtom); 
-		}
+
 		float[][] distMatrix = grid.getDistMatrix(true);
 		
 		for (int i=0;i<distMatrix.length;i++){ 

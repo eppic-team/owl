@@ -115,6 +115,14 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		this.interfaceArea = firstTotSurface+secondTotSurface-complexTotSurface;
 	}
 	
+	public int getNumAtomsInContact() {
+		return this.graph.getVertexCount();
+	}
+	
+	public int getNumContacts() {
+		return this.graph.getEdgeCount();
+	}
+	
 	@Override
 	public int compareTo(ChainInterface o) {
 		return (Double.compare(this.interfaceArea,o.interfaceArea));
@@ -137,10 +145,7 @@ public class ChainInterface implements Comparable<ChainInterface> {
 			 !(occ2.equals(tcc1) && occ1.equals(tcc2)) ) {
 			return false;
 		}
-		if (graph.getEdgeCount()!=other.graph.getEdgeCount()) {
-			return false;
-		}
-		return true;
+		return this.graph.equals(other.graph);
 	}
 	
 	public int hashCode() {
