@@ -371,6 +371,11 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	private void readCrystalData() {
+		// cell and symmetry fields are optional, e.g. NMR entries don't have them at all
+		// we first see if the fields are there at all (enough with seeing if cell.length_a is there)
+		if (!fields2values.containsKey(cell+".length_a")) {
+			return;
+		}
 		double a = Double.parseDouble(fields2values.get(cell+".length_a").trim());
 		double b = Double.parseDouble(fields2values.get(cell+".length_b").trim());
 		double c = Double.parseDouble(fields2values.get(cell+".length_c").trim());

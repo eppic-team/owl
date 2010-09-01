@@ -70,6 +70,7 @@ public class PdbParsersTest {
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
+			if (line.startsWith("#")) continue;
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
 			String pdbChainCode = line.split("\\s+")[1];
 			
@@ -117,12 +118,14 @@ public class PdbParsersTest {
 				Assert.assertEquals(pdbasePdb.getSpaceGroup(), ciffilePdb.getSpaceGroup());
 				CrystalCell pdbaseCell = pdbasePdb.getCrystalCell();
 				CrystalCell ciffileCell = ciffilePdb.getCrystalCell();
-				Assert.assertEquals(pdbaseCell.getA(), ciffileCell.getA(), 0.001);
-				Assert.assertEquals(pdbaseCell.getB(), ciffileCell.getB(), 0.001);
-				Assert.assertEquals(pdbaseCell.getC(), ciffileCell.getC(), 0.001);
-				Assert.assertEquals(pdbaseCell.getAlpha(), ciffileCell.getAlpha(), 0.001);
-				Assert.assertEquals(pdbaseCell.getBeta(), ciffileCell.getBeta(), 0.001);
-				Assert.assertEquals(pdbaseCell.getGamma(), ciffileCell.getGamma(), 0.001);
+				if (pdbaseCell!=null && ciffileCell!=null) { // nulls will happen for NMR entries
+					Assert.assertEquals(pdbaseCell.getA(), ciffileCell.getA(), 0.001);
+					Assert.assertEquals(pdbaseCell.getB(), ciffileCell.getB(), 0.001);
+					Assert.assertEquals(pdbaseCell.getC(), ciffileCell.getC(), 0.001);
+					Assert.assertEquals(pdbaseCell.getAlpha(), ciffileCell.getAlpha(), 0.001);
+					Assert.assertEquals(pdbaseCell.getBeta(), ciffileCell.getBeta(), 0.001);
+					Assert.assertEquals(pdbaseCell.getGamma(), ciffileCell.getGamma(), 0.001);
+				}
 				
 				// identifiers
 				Assert.assertEquals(pdbasePdb.getPdbCode(), ciffilePdb.getPdbCode());
@@ -207,6 +210,7 @@ public class PdbParsersTest {
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
+			if (line.startsWith("#")) continue;
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
 			//String pdbChainCode = line.split("\\s+")[1];
 			

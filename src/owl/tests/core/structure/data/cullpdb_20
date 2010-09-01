@@ -1,3 +1,5 @@
+# adding a NMR entry to the test set (1NMR), all others are xray. NMR might have special features we want to catch
+1NMR    A 
 7ODC	A
 1WB4	A
 2H6F	B

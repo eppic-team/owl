@@ -355,7 +355,11 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			sg = rsst.getString(1);
 		}
-		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+		if (sg!=null) {
+			// for some pdb entries (e.g. NMRs) there's no crystal information at all
+			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);			
+		}
+
 		rsst.close();
 		
 		sql = "SELECT cell_length_a, cell_length_b, cell_length_c, cell_angle_alpha, cell_angle_beta, cell_angle_gamma " +
