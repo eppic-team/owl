@@ -110,8 +110,10 @@ public class CMPdb_nbhString_traces {
 					ssTypeID = this.SSTStr.indexOf(jSSType);
 					
 					int index = SSTStr.indexOf(iSSType);
-					numNodesSSType[index] += 1;
-					numNodesSSTypeLine[index][i] += 1;
+					if (index>=0 && index<sstypes.length){
+						numNodesSSType[index] += 1;
+						numNodesSSTypeLine[index][i] += 1;						
+					}
 					
 					if (iSSType == this.sstype || this.sstype == AnySStype || !this.diffSSType ){
 						cntNodes++;

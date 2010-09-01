@@ -9,6 +9,11 @@ public class NbhString_ClusterAnalysis {
 	public static final int defaultMinNumNBs = 10;
 	public static final double defaultRadius = 100;
 	
+	public final char[] aas = new char[]{'A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','V','W','Y'}; // possible Residues
+//	private final String AAStr = new String(aas); 
+	public final char[] sstypes = new char[]{'H','S','O','A'};
+	private final String SSTStr = new String(sstypes);
+	
 	// --- input arguments
 	private Vector<float[]> nbhsNodes;
 	private double epsilon;
@@ -26,6 +31,8 @@ public class NbhString_ClusterAnalysis {
 	private double[][] clusterDirProp; // [][0]:minIncSlope, [][1]:averageIncSlope, [][2]:maxIncSlope, [][3]:minOutSlope, [][4]:averOutSlope, [][5]:maxOutSlope
 	private int[] nbCluster;    // holds ID of neighbouring cluster (at the other end of edge); if any neighbouring cluster exists, ID=0
 	private Vector<double[]> clusterAverDirec;   // holds direction (vector saved as array) for each cluster
+	private Vector<int[][]> histNodeType4Clusters;
+	private Vector<Integer>[] mostFrequentResT4Clusters;
 
 	private double rSphere;
 	
@@ -340,6 +347,90 @@ public class NbhString_ClusterAnalysis {
 	 minimum, maximum and average values of node positions (lambda and phi).
 	 */		
 	@SuppressWarnings("unchecked")
+	public void analyseCNodeTypes(){
+		if (this.numFoundClusters<=0)
+			runClusterAnalysis();
+		if (this.numFoundClusters>0){
+			if (this.clusters==null)
+				analyseClusters();
+
+			int jResID, jSSTypeID;
+			int[][][] tempHist = new int[this.clusters.length][4][aas.length];
+			this.histNodeType4Clusters = new Vector<int[][]>();
+			this.mostFrequentResT4Clusters = new Vector[this.numFoundClusters];
+			for (int i=0; i<mostFrequentResT4Clusters.length; i++)
+				mostFrequentResT4Clusters[i] = new Vector<Integer>();
+			
+			System.out.println("ClusterProperties: ");
+			for (int i=1; i<clusters.length; i++){ // for each cluster
+				int index = i-1;
+				// count res types
+				for (int j=0; j<clusters[i].size(); j++){ // for each node of cluster
+					float[] node = (float[]) this.nbhsNodes.get(clusters[i].get(j));
+					jResID = (int) node[5];
+					jSSTypeID = (int) node[6];
+					
+					if (jSSTypeID>=4 || jSSTypeID<0)
+						jSSTypeID = SSTStr.indexOf("O");
+
+					tempHist[index][jSSTypeID][jResID] += 1; 
+					tempHist[index][sstypes.length-1][jResID] += 1; 
+				}				
+			}
+			// sstypes = new char[]{'H','S','O','A'};
+			for (int i=1; i<clusters.length; i++){ 
+				int [][] count4Cluster = tempHist[i-1];
+				histNodeType4Clusters.add(count4Cluster);
+				System.out.println("Cluster Nr:"+i);
+				Vector<Integer> mostOftenAAType = new Vector<Integer>();
+				Vector<Integer> dominantAAType = new Vector<Integer>();
+				int nrOfOccurances = 0;
+				double averOcc = 0; 
+				double maxOcc = 0;
+				for (int j=0; j<aas.length; j++){
+					averOcc += count4Cluster[3][j];
+					if (count4Cluster[3][j]>maxOcc)
+						maxOcc = count4Cluster[3][j];
+				}
+				averOcc /= aas.length;
+				double thresOcc = (averOcc+maxOcc)/2;
+				for (int j=0; j<aas.length; j++){
+					System.out.println(aas[j]+":   H:"+count4Cluster[0][j]+":   S:"+count4Cluster[1][j]
+					                         +":   O:"+count4Cluster[2][j]+":   A:"+count4Cluster[3][j]);
+					if (count4Cluster[3][j] > nrOfOccurances){
+						nrOfOccurances = count4Cluster[3][j];
+						mostOftenAAType = new Vector<Integer>();
+						mostOftenAAType.add(j);
+					}
+					else if (count4Cluster[3][j] == nrOfOccurances){
+						mostOftenAAType.add(j);						
+					}
+					if (count4Cluster[3][j] >= thresOcc)
+						dominantAAType.add(j);
+				}
+				System.out.print("Most dominant Residue types: thres="+thresOcc+" \t");
+				for(int aaT:dominantAAType){
+					System.out.print(aas[aaT]+"\t");
+					this.mostFrequentResT4Clusters[i-1].add(aaT);
+				}
+				System.out.println();
+				System.out.print("Most often Residue types: \t");
+				for(int aaT:mostOftenAAType){
+					System.out.print(aas[aaT]+"\t");
+//					this.mostFrequentResT4Clusters[i-1].add(aaT);
+				}
+				System.out.println();
+				
+			}
+			
+		}
+	}
+	
+	/**
+	 Computes Cluster properties of contained nodes:
+	 minimum, maximum and average values of node positions (lambda and phi).
+	 */		
+	@SuppressWarnings("unchecked")
 	public void analyseClusters(){		
 		if (this.numFoundClusters<=0)
 			runClusterAnalysis();
@@ -643,6 +734,14 @@ public class NbhString_ClusterAnalysis {
 
 	public Vector<Integer>[] getClusters() {
 		return clusters;
+	}
+	
+	public Vector<int[][]> getHistNodeType4Clusters() {
+		return histNodeType4Clusters;
+	}
+
+	public Vector<Integer>[] getMostFrequentResT4Clusters() {
+		return mostFrequentResT4Clusters;
 	}
 
 	// --- End Getters and Setters ---	
