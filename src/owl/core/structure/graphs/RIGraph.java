@@ -1134,6 +1134,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 	 * @param other
 	 * @return
 	 * @throws Exception
+	 * See also: {@link #evaluatePrediction(RIGraph)}
 	 */
 	//TODO not sure what kind of return we want, for now is a HashMap with three graph objects 
 	public HashMap<String,RIGraph> compare(RIGraph other) throws Exception{
