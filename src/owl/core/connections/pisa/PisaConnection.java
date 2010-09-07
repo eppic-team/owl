@@ -10,6 +10,9 @@ import java.util.Map;
 
 import org.xml.sax.SAXException;
 
+import owl.core.structure.ChainInterface;
+import owl.core.structure.ChainInterfaceList;
+
 /**
  * Connection class to get interface data from the PISA server.
  * 
@@ -45,8 +48,8 @@ public class PisaConnection {
 	 * @throws IOException
 	 * @throws SAXException
 	 */
-	public Map<String,List<PisaInterface>> getInterfacesDescription(List<String> pdbCodesList) throws IOException, SAXException {
-		Map<String,List<PisaInterface>> allInterfaces = new HashMap<String,List<PisaInterface>>();
+	public Map<String,ChainInterfaceList> getInterfacesDescription(List<String> pdbCodesList) throws IOException, SAXException {
+		Map<String,ChainInterfaceList> allInterfaces = new HashMap<String,ChainInterfaceList>();
 		// we do batches of MAX_ENTRIES_PER_REQUEST
 		for (int i=0;i<pdbCodesList.size();i+=MAX_ENTRIES_PER_REQUEST) {
 			String commaSepList = "";
@@ -67,7 +70,7 @@ public class PisaConnection {
 	 * @throws IOException
 	 * @throws SAXException
 	 */
-	private Map<String,List<PisaInterface>> getInterfacesDescription(String commaSepList) throws IOException, SAXException {
+	private Map<String,ChainInterfaceList> getInterfacesDescription(String commaSepList) throws IOException, SAXException {
 		URL interfacesURL = new URL(interfacesUrl+commaSepList);
 		URLConnection conn = interfacesURL.openConnection();
 		
@@ -80,13 +83,13 @@ public class PisaConnection {
 		List<String> pdbCodes = new ArrayList<String>();
 		pdbCodes.add("1aor");
 		pdbCodes.add("1bxy");
-		Map<String,List<PisaInterface>> all = pc.getInterfacesDescription(pdbCodes);
+		Map<String,ChainInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
 		for (String pdbCode:all.keySet()) {
 			System.out.println("#####");
 			System.out.println("# "+pdbCode);
 			System.out.println("#####");
-			List<PisaInterface> interfaces = all.get(pdbCode);
-			for (PisaInterface interf:interfaces) {
+			ChainInterfaceList interfaces = all.get(pdbCode);
+			for (ChainInterface interf:interfaces) {
 				
 				interf.printTabular(System.out);
 			}

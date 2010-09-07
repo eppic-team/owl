@@ -1,5 +1,7 @@
 package owl.core.structure;
 
+import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
@@ -15,7 +17,9 @@ import owl.core.structure.features.SecStrucElement;
  * @author duarte
  *
  */
-public class Residue implements Iterable<Atom> {
+public class Residue implements Iterable<Atom>, Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	public enum Chirality {
 		L( 1,"L","L-form"),
@@ -61,6 +65,13 @@ public class Residue implements Iterable<Atom> {
 	private double bsa;   // all-atoms accessible surface area upon burial (this can only be calculated by running naccess for 2 partners and a complex, see ChainInterface class)
 	
 	private TreeMap<String, Atom> atoms; // atom codes to atoms
+	
+	/**
+	 * Constructs an empty Residue. Use setters to add content to it.
+	 */
+	public Residue() {
+		atoms = new TreeMap<String, Atom>();
+	}
 	
 	/**
 	 * Constructs a new Residue given its type, serial and parentPdb. The Residue will 
@@ -262,6 +273,14 @@ public class Residue implements Iterable<Atom> {
 	}
 
 	/**
+	 * Returns bsa/asa
+	 * @return
+	 */
+	public double getBsaToAsaRatio() {
+		return (double)this.bsa/ (double)this.asa;
+	}
+	
+	/**
 	 * Get Collection of Atoms belonging to this Residue sorted by atom codes
 	 * @return
 	 */
@@ -389,6 +408,10 @@ public class Residue implements Iterable<Atom> {
 		}
  
 		return newResidue;
+	}
+	
+	public void printTabular(PrintStream ps) {
+		ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f\n",serial,pdbSerial,aaType==null?"UNK":aaType.getThreeLetterCode(),asa,bsa);
 	}
 	
 }

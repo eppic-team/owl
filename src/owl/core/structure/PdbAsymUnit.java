@@ -18,6 +18,7 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
@@ -402,16 +403,20 @@ public class PdbAsymUnit {
 	}
 	
 	/**
-	 * Returns a list of all interfaces (any 2 atoms under cutoff) that this chain has 
-	 * upon generation of all crystal symmetry objects. 
-	 * @param cutoff the distance cutoff for 2 chains to be considered in contact 
+	 * Returns a sorted (increasing area) list of all interfaces (any 2 atoms under cutoff) 
+	 * that this chain has upon generation of all crystal symmetry objects. 
+	 * The interface areas and BSAs are calculated with the external NACCESS program.
+	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
+	 * @param naccessExe the NACCESS executable
 	 * @return
 	 */
-	public Set<ChainInterface> getAllInterfaces(double cutoff) {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe) throws IOException {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
-		Set<ChainInterface> list = new HashSet<ChainInterface>();
+		// the set takes care of eliminating duplicates, comparison is based on the equals() 
+		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
+		Set<ChainInterface> set = new HashSet<ChainInterface>();
 
 		// 0. generate complete unit cell
 		PdbUnitCell cell = this.getUnitCell();
@@ -426,7 +431,7 @@ public class PdbAsymUnit {
 				Pdb chainj = this.getChain(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 				if (graph.getEdgeCount()>0) {
-					list.add(new ChainInterface(chaini,chainj,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
+					set.add(new ChainInterface(chaini,chainj,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
 				}											
 			}
 		}
@@ -440,7 +445,7 @@ public class PdbAsymUnit {
 					AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 					if (graph.getEdgeCount()>0) {
 						ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()); 
-						list.add(interf);
+						set.add(interf);
 					}													
 				}
 			}
@@ -476,16 +481,34 @@ public class PdbAsymUnit {
 								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 								if (graph.getEdgeCount()>0) {
 									ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform());
-									list.add(interf);
+									set.add(interf);
 								}							
 							}
-						
 						}
 					}
 				}
 			}
 		}
 		
+		// bsa calculation with naccess
+		for (Pdb chain:this.getAllChains()) {
+			NaccessRunner nar = new NaccessRunner(naccessExe, "");
+			nar.runNaccess(chain);
+		}
+		HashMap<String, HashMap<Integer,Double>> asas = this.getAbsSurfaceAccessibilities();
+		
+		for (ChainInterface interf:set) {
+			//System.out.print(".");
+			interf.calcBSAnaccess(naccessExe,asas);
+		}
+
+		// now that we have the areas we can put them into a list and sort them
+		ChainInterfaceList list = new ChainInterfaceList();
+		list.setPdb(this);
+		for (ChainInterface interf:set) {
+			list.addInterface(interf);
+		}
+		list.sort();
 		return list;
 	}
 	
@@ -493,7 +516,7 @@ public class PdbAsymUnit {
 	 * Returns a HashMap with pdb chain codes to HashMaps of residue serials to absolute surface accessibility values.
 	 * @return
 	 */
-	public HashMap<String, HashMap<Integer,Double>> getAbsSurfaceAccessibilities() {
+	private HashMap<String, HashMap<Integer,Double>> getAbsSurfaceAccessibilities() {
 		HashMap<String, HashMap<Integer,Double>> asas = new HashMap<String, HashMap<Integer,Double>>();
 		for (String pdbChainCode:this.chains.keySet()){
 			asas.put(pdbChainCode, this.getChain(pdbChainCode).getAbsSurfaceAccessibilities());

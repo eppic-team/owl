@@ -1,14 +1,7 @@
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-//import java.util.Set;
 
-import owl.core.runners.NaccessRunner;
 import owl.core.structure.ChainInterface;
-import owl.core.structure.Pdb;
+import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.SpaceGroup;
 import owl.core.util.MySQLConnection;
@@ -42,33 +35,16 @@ public class enumerateInterfaces {
 		
 		System.out.println("Calculating possible interfaces...");
 		long start = System.currentTimeMillis();
-		Set<ChainInterface> interfaces = pdb.getAllInterfaces(CUTOFF);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, NACCESS_EXE);
 		long end = System.currentTimeMillis();
 		System.out.println("Done. Time "+(end-start)/1000+"s");
-
 		
 		System.out.println("Total number of interfaces found: "+interfaces.size());
-		System.out.println("Calculating BSAs with NACCESS");
-		
-		for (Pdb chain:pdb.getAllChains()) {
-			NaccessRunner nar = new NaccessRunner(NACCESS_EXE, "");
-			nar.runNaccess(chain);
-		}
-		HashMap<String, HashMap<Integer,Double>> asas = pdb.getAbsSurfaceAccessibilities();
-		
-		for (ChainInterface interf:interfaces) {
-			System.out.print(".");
-			interf.calcBSAnaccess(NACCESS_EXE,asas);
-		}
-		System.out.println();
-		
-		List<ChainInterface> sortedInterfaces = new ArrayList<ChainInterface>();
-		sortedInterfaces.addAll(interfaces);
-		Collections.sort(sortedInterfaces);
-		
-		for (int i=sortedInterfaces.size()-1;i>=0;i--) {
-			ChainInterface interf = sortedInterfaces.get(i);
-			int j= sortedInterfaces.size()-i;
+
+					
+		for (int i=interfaces.size()-1;i>=0;i--) {
+			ChainInterface interf = interfaces.get(i);
+			int j= interfaces.size()-i;
 			System.out.println("\n##Interface "+j);
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));

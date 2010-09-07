@@ -1465,11 +1465,19 @@ public class Pdb implements HasFeatures {
 	}
 
 	/**
-	 * Gets the pdb chain code (author assignment)
+	 * Gets the pdb chain code (author assignment code)
 	 * @return
 	 */
 	public String getPdbChainCode(){
 		return this.pdbChainCode;
+	}
+	
+	/**
+	 * Sets the pdb chain code (author assignment code) 
+	 * @param pdbChainCode
+	 */
+	public void setPdbChainCode(String pdbChainCode) {
+		this.pdbChainCode = pdbChainCode;
 	}
 	
 	/**
@@ -2249,6 +2257,53 @@ public class Pdb implements HasFeatures {
 		fullLength = sequence.length();
 		
 	}
+	
+	/**
+	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object: core residues are those for 
+	 * which the bsa/asa ratio is above the given cut-off, rim those with bsa>0 and with 
+	 * bsa/asa below the cut-off.
+	 * @param bsaToAsaCutoff
+	 * @return
+	 */
+	public InterfaceRimCore getRimAndCore(double bsaToAsaCutoff) {
+		List<Residue> core = new ArrayList<Residue>();
+		List<Residue> rim = new ArrayList<Residue>();
+		for (Residue residue:this.residues.values()) {
+			if (residue.getBsa()>0) {
+				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
+					rim.add(residue);
+				} else {
+					core.add(residue);
+				}
+			}
+		}
+		return new InterfaceRimCore(rim,core,bsaToAsaCutoff);
+	}
+	
+	/**
+	 * Returns 2 list of residues as a {@link InterfaceRimCore} object (see {@link #getRimAndCore(double)})
+	 * The core is required to have a minimum of minNumResidues. If the minimum is not 
+	 * reached with the bsaToAsaSoftCutoff, then the cutoff is relaxed in relaxationStep steps 
+	 * until reaching the bsaToAsaHardCutoff.
+	 * @param bsaToAsaSoftCutoff
+	 * @param bsaToAsaHardCutoff
+	 * @param relaxationStep
+	 * @param minNumResidues
+	 * @return
+	 */
+	public InterfaceRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		InterfaceRimCore rimCore = null;
+		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
+		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
+			rimCore = getRimAndCore(cutoff);
+			//System.out.printf("cutoff %4.2f, core size: %d\n",cutoff,rimCore.getCoreSize());
+			if (rimCore.getCoreSize()>=minNumResidues) {
+				break;
+			}
+		}
+		return rimCore;
+	}
+	
 	
 	/**
 	 * Mirror this Pdb structure by inverting through the origin.

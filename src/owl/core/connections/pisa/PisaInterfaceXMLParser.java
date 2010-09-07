@@ -2,10 +2,10 @@ package owl.core.connections.pisa;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
+import javax.vecmath.Matrix4d;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
@@ -14,6 +14,12 @@ import org.xml.sax.Locator;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
+
+import owl.core.structure.AminoAcid;
+import owl.core.structure.ChainInterface;
+import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.Pdb;
+import owl.core.structure.Residue;
 
 
 /**
@@ -35,11 +41,11 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String TYPE_TAG = "type";
 	private static final String INT_AREA_TAG = "int_area";
 	private static final String	INT_SOLV_EN_TAG = "int_solv_en";
-	private static final String	PVALUE_TAG = "pvalue";
+	//private static final String	PVALUE_TAG = "pvalue";
 	private static final String CHAIN_ID_TAG = "chain_id";
 	private static final String CLASS_TAG = "class";
 	
-	private static final String SYMOP_TAG = "symop";
+	//private static final String SYMOP_TAG = "symop";
 	private static final String RXX_TAG = "rxx";
 	private static final String RXY_TAG = "rxy";
 	private static final String RXZ_TAG = "rxz";
@@ -58,18 +64,21 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String NAME_TAG = "name";
 	private static final String ASA_TAG = "asa";
 	private static final String BSA_TAG = "bsa";
-	private static final String SOLV_EN_TAG = "solv_en";
+	//private static final String SOLV_EN_TAG = "solv_en";
 	
 	// members
 	private InputSource input;
 	
-	private Map<String,List<PisaInterface>> allInterfaces;
+	private Map<String,ChainInterfaceList> allInterfaces;
 	
-	private List<PisaInterface> currentInterfaces;
+	private ChainInterfaceList currentInterfaces;
 	private String currentPdbCode;
-	private PisaInterface currentPisaInterface;
-	private PisaMolecule currentPisaMolecule;
-	private PisaResidue currentResidue;
+	private ChainInterface currentPisaInterface;
+	private Pdb currentPisaMolecule;
+	private Residue currentResidue;
+	private int currentMolecId;
+	private Matrix4d currentTransf;
+	private String currentMolType;
 	
 	private StringBuffer buffer;
 	private boolean inValue;
@@ -97,7 +106,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	 * Returns the parsed interfaces data
 	 * @return a map of pdb codes to lists of interfaces
 	 */
-	public Map<String,List<PisaInterface>> getAllInterfaces() {
+	public Map<String,ChainInterfaceList> getAllInterfaces() {
 		return allInterfaces;
 	}
 	
@@ -121,7 +130,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	}
 	
 	public void startDocument() throws SAXException {
-		allInterfaces = new HashMap<String,List<PisaInterface>>();
+		allInterfaces = new HashMap<String,ChainInterfaceList>();
 		inEntry = false;
 		inValue = false;
 		inInterface = false;
@@ -138,14 +147,14 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 			Attributes atts) throws SAXException {
 		if (name.equals(PDB_ENTRY_TAG)){
 			inEntry = true;
-			currentInterfaces = new ArrayList<PisaInterface>();
+			currentInterfaces = new ChainInterfaceList();
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
 				initValueReading();
 			} else if (name.equals(INTERFACE_TAG)) {
 				inInterface = true;
-				currentPisaInterface = new PisaInterface();
+				currentPisaInterface = new ChainInterface();
 			}
 			if (inInterface && !inMolecule) {
 				if (name.equals(ID_TAG)) {
@@ -156,11 +165,14 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(INT_SOLV_EN_TAG)){
 					initValueReading();
-				} else if (name.equals(PVALUE_TAG)){
-					initValueReading();
+				//} else if (name.equals(PVALUE_TAG)){
+				//	initValueReading();
 				} else if (name.equals(MOLECULE_TAG)) {
 					inMolecule = true;
-					currentPisaMolecule = new PisaMolecule();
+					currentPisaMolecule = new Pdb();
+					currentMolecId = 0;
+					currentTransf = new Matrix4d();
+					currentMolType = null;
 				}
 				
 			}
@@ -171,8 +183,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(CLASS_TAG)) {
 					initValueReading();
-				} else if (name.equals(SYMOP_TAG)) {
-					initValueReading();
+				//} else if (name.equals(SYMOP_TAG)) {
+				//	initValueReading();
 				} else if (name.equals(RXX_TAG)) {
 					initValueReading();
 				} else if (name.equals(RXY_TAG)) {
@@ -199,7 +211,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(RESIDUE_TAG)){
 					inResidue = true;
-					currentResidue = new PisaResidue();
+					currentResidue = new Residue();
 				} 
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
@@ -212,8 +224,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 						initValueReading();
 					} else if (name.equals(BSA_TAG)) {
 						initValueReading();
-					} else if (name.equals(SOLV_EN_TAG)) {
-						initValueReading();
+					//} else if (name.equals(SOLV_EN_TAG)) {
+					//	initValueReading();
 					}
 				}
 			}
@@ -233,19 +245,19 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				currentPdbCode = flushValue().toLowerCase();
 			} else if (name.equals(INTERFACE_TAG)){
 				inInterface = false;
-				currentInterfaces.add(currentPisaInterface);
+				currentInterfaces.addInterface(currentPisaInterface);
 			}
 			if (inInterface && !inMolecule) {
 				if (name.equals(ID_TAG)) {
 					currentPisaInterface.setId(Integer.parseInt(flushValue()));
 				} else if (name.equals(TYPE_TAG)) {
-					currentPisaInterface.setType(Integer.parseInt(flushValue()));
+					//currentPisaInterface.setType(Integer.parseInt(flushValue()));
 				} else if (name.equals(INT_AREA_TAG)){
 					currentPisaInterface.setInterfaceArea(Double.parseDouble(flushValue()));
 				} else if (name.equals(INT_SOLV_EN_TAG)){
-					currentPisaInterface.setSolvEnergy(Double.parseDouble(flushValue()));
-				} else if (name.equals(PVALUE_TAG)){
-					currentPisaInterface.setSolvEnergyPvalue(Double.parseDouble(flushValue()));
+					currentPisaInterface.setScore(Double.parseDouble(flushValue()));
+				//} else if (name.equals(PVALUE_TAG)){
+				//	currentPisaInterface.setSolvEnergyPvalue(Double.parseDouble(flushValue()));
 				} 
 				
 			}
@@ -253,64 +265,66 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 			if (inInterface && inMolecule) {
 				if (name.equals(MOLECULE_TAG)){
 					inMolecule = false;
-					if (currentPisaMolecule.getId()==1){
+					if (currentMolecId==1){
 						currentPisaInterface.setFirstMolecule(currentPisaMolecule);
-					} else if (currentPisaMolecule.getId()==2){
+						currentPisaInterface.setFirstMolType(currentMolType); 
+						currentPisaInterface.setFirstTransfOrth(currentTransf);
+					} else if (currentMolecId==2){
 						currentPisaInterface.setSecondMolecule(currentPisaMolecule);
+						currentPisaInterface.setSecondMolType(currentMolType);
+						currentPisaInterface.setSecondTransfOrth(currentTransf);
 					} else {
 						System.err.println("Warning: molecule with id other than 1 or 2 in PISA XML interfaces description");
 					}
 				}
 
 				if (name.equals(ID_TAG)) {
-					currentPisaMolecule.setId(Integer.parseInt(flushValue()));
+					currentMolecId = Integer.parseInt(flushValue());
 				} else if (name.equals(CHAIN_ID_TAG)){
-					currentPisaMolecule.setChainId(flushValue());
+					currentPisaMolecule.setPdbChainCode(flushValue());
 				} else if (name.equals(CLASS_TAG)) {
-					currentPisaMolecule.setMolClass(flushValue());
+					currentMolType = flushValue();
 				} else if (name.equals(RXX_TAG)) {
-					currentPisaMolecule.setTransf(flushValue());
-				} else if (name.equals(RXX_TAG)) {
-					currentPisaMolecule.setRxx(Double.parseDouble(flushValue()));
+					currentTransf.m00=Double.parseDouble(flushValue());
 				} else if (name.equals(RXY_TAG)) {
-					currentPisaMolecule.setRxy(Double.parseDouble(flushValue()));
+					currentTransf.m01=Double.parseDouble(flushValue());
 				} else if (name.equals(RXZ_TAG)) {
-					currentPisaMolecule.setRxz(Double.parseDouble(flushValue()));
+					currentTransf.m02=Double.parseDouble(flushValue());
 				} else if (name.equals(RYX_TAG)) {
-					currentPisaMolecule.setRyx(Double.parseDouble(flushValue()));
+					currentTransf.m10=Double.parseDouble(flushValue());
 				} else if (name.equals(RYY_TAG)) {
-					currentPisaMolecule.setRyy(Double.parseDouble(flushValue()));
+					currentTransf.m11=Double.parseDouble(flushValue());
 				} else if (name.equals(RYZ_TAG)) {
-					currentPisaMolecule.setRyz(Double.parseDouble(flushValue()));
+					currentTransf.m12=Double.parseDouble(flushValue());
 				} else if (name.equals(RZX_TAG)) {
-					currentPisaMolecule.setRzx(Double.parseDouble(flushValue()));
+					currentTransf.m20=Double.parseDouble(flushValue());
 				} else if (name.equals(RZY_TAG)) {
-					currentPisaMolecule.setRzy(Double.parseDouble(flushValue()));
+					currentTransf.m21=Double.parseDouble(flushValue());
 				} else if (name.equals(RZZ_TAG)) {
-					currentPisaMolecule.setRzz(Double.parseDouble(flushValue()));
+					currentTransf.m22=Double.parseDouble(flushValue());
 				} else if (name.equals(TX_TAG)) {
-					currentPisaMolecule.setTx(Double.parseDouble(flushValue()));
+					currentTransf.m03=Double.parseDouble(flushValue());
 				} else if (name.equals(TY_TAG)) {
-					currentPisaMolecule.setTy(Double.parseDouble(flushValue()));
+					currentTransf.m13=Double.parseDouble(flushValue());
 				} else if (name.equals(TZ_TAG)) {
-					currentPisaMolecule.setTz(Double.parseDouble(flushValue()));
+					currentTransf.m23=Double.parseDouble(flushValue());
 				} else if (name.equals(RESIDUE_TAG)) {
 					inResidue = false;
 					currentPisaMolecule.addResidue(currentResidue);
 				}
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
-						currentResidue.setResSerial(Integer.parseInt(flushValue()));
+						currentResidue.setSerial(Integer.parseInt(flushValue()));
 					} else if (name.equals(SEQ_NUM_TAG)) {
-						currentResidue.setPdbResSer(flushValue());
+						currentResidue.setPdbSerial(flushValue());
 					} else if (name.equals(NAME_TAG)) {
-						currentResidue.setResType(flushValue());
+						currentResidue.setAaType(AminoAcid.getByThreeLetterCode(flushValue()));
 					} else if (name.equals(ASA_TAG)) {
 						currentResidue.setAsa(Double.parseDouble(flushValue()));
 					} else if (name.equals(BSA_TAG)) {
 						currentResidue.setBsa(Double.parseDouble(flushValue()));
-					} else if (name.equals(SOLV_EN_TAG)) {
-						currentResidue.setSolvEnergy(Double.parseDouble(flushValue()));
+					//} else if (name.equals(SOLV_EN_TAG)) {
+					//	currentResidue.setSolvEnergy(Double.parseDouble(flushValue()));
 					}
 				}
 			}

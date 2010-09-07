@@ -1,17 +1,17 @@
-package owl.core.connections.pisa;
+package owl.core.structure;
 
 import java.io.Serializable;
 import java.util.List;
 
-public class PisaRimCore implements Serializable {
+public class InterfaceRimCore implements Serializable {
 
 	private static final long serialVersionUID = -1931015962640626829L;
 
-	private List<PisaResidue> rimResidues;
-	private List<PisaResidue> coreResidues;
+	private List<Residue> rimResidues;
+	private List<Residue> coreResidues;
 	private double bsaToAsaCutoff;
 	
-	public PisaRimCore(List<PisaResidue> rimResidues, List<PisaResidue> coreResidues, double bsaToAsaCutoff) {
+	public InterfaceRimCore(List<Residue> rimResidues, List<Residue> coreResidues, double bsaToAsaCutoff) {
 		this.rimResidues = rimResidues;
 		this.coreResidues = coreResidues;
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
@@ -20,28 +20,28 @@ public class PisaRimCore implements Serializable {
 	/**
 	 * @return the rimResidues
 	 */
-	public List<PisaResidue> getRimResidues() {
+	public List<Residue> getRimResidues() {
 		return rimResidues;
 	}
 
 	/**
 	 * @param rimResidues the rimResidues to set
 	 */
-	public void setRimResidues(List<PisaResidue> rimResidues) {
+	public void setRimResidues(List<Residue> rimResidues) {
 		this.rimResidues = rimResidues;
 	}
 
 	/**
 	 * @return the coreResidues
 	 */
-	public List<PisaResidue> getCoreResidues() {
+	public List<Residue> getCoreResidues() {
 		return coreResidues;
 	}
 
 	/**
 	 * @param coreResidues the coreResidues to set
 	 */
-	public void setCoreResidues(List<PisaResidue> coreResidues) {
+	public void setCoreResidues(List<Residue> coreResidues) {
 		this.coreResidues = coreResidues;
 	}
 	
@@ -66,5 +66,5 @@ public class PisaRimCore implements Serializable {
 	public int getRimSize() {
 		return this.rimResidues.size();
 	}
-	
+
 }
