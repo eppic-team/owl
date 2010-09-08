@@ -179,19 +179,15 @@ public class ChainInterface implements Comparable<ChainInterface> {
  
 		nar.runNaccess(complex); // this will set the bsa members of the Residues of firstMolecule and secondMolecule
 	
-		double firstTotSurface = 0.0;
-		double secondTotSurface = 0.0;
-		double complexTotSurface = 0.0;
+		double totBuried = 0.0;
 		for (Residue residue:firstMolecule.getResidues().values()) {
-			firstTotSurface+=residue.getAsa();
-			complexTotSurface+=residue.getBsa();
+			totBuried+=residue.getBsa();
 		}
 		for (Residue residue:secondMolecule.getResidues().values()) {
-			secondTotSurface+=residue.getAsa();
-			complexTotSurface+=residue.getBsa();
+			totBuried+=residue.getBsa();
 		}
 
-		this.interfaceArea = firstTotSurface+secondTotSurface-complexTotSurface;
+		this.interfaceArea = totBuried;
 	}
 	
 	public int getNumAtomsInContact() {
@@ -216,7 +212,8 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	
 	@Override
 	public int compareTo(ChainInterface o) {
-		return (Double.compare(this.interfaceArea,o.interfaceArea));
+		// this will sort descending on interface areas
+		return (Double.compare(o.interfaceArea,this.interfaceArea));
 	}
 	
 	public String toString() {

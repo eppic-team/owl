@@ -1,5 +1,6 @@
 package owl.core.structure;
 
+import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,7 +11,9 @@ import javax.vecmath.Point3d;
  * @author duarte
  *
  */
-public class Atom {
+public class Atom implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	public static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
 	public static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given

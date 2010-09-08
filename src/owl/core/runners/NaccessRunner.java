@@ -178,7 +178,7 @@ public class NaccessRunner {
 						//residue.setRsa(allrsa);
 						//residue.setScRsa(scrsa);
 						//residue.setAsa(allasa);
-						residue.setBsa(allasa);
+						residue.setBsa(residue.getAsa()-allasa);
 					}
 				}
 			}

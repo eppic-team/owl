@@ -24,9 +24,11 @@ import org.xml.sax.SAXException;
 import owl.core.connections.pisa.PisaConnection;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.Pdb;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundError;
 import owl.core.structure.PdbLoadError;
+import owl.core.structure.Residue;
 import owl.core.util.MySQLConnection;
 import owl.tests.TestsSetup;
 
@@ -114,22 +116,88 @@ public class PdbAsymUnitTest {
 			System.out.println("PISA interface count: "+pisaCount);
 			Assert.assertEquals(pisaCount, interfaces.size());
 
-			int i = interfaces.size()-1;
-			for (int p=pisaInterfaces.size()-1;p>=0;p--) {
+			int i = 0;
+			for (int p=0;p<pisaInterfaces.size();p++) {
 				ChainInterface pisaInterf = pisaInterfaces.get(p);
 				if (!pisaInterf.isProtein()) continue;
-				System.out.println("\nInterface "+(interfaces.size()-i));
+				System.out.println("\nInterface "+(i+1));
 				ChainInterface myInterf = interfaces.get(i);
 				
 				
-				// we allow for a 10% discrepancy from PISA
+				// total interface area, we allow for a 20% discrepancy from PISA
+				double MARGIN = 0.20;
 				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea()/2.0,
 						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea()/2.0)*100.0/pisaInterf.getInterfaceArea());
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea()/2.0, pisaInterf.getInterfaceArea()*0.10);
-				i--;
+				
+				// bsas of individual residues, we allow for a 20% discrepancy from PISA
+				System.out.println("Chain 1");
+				int a1 = 0;
+				int b1 = 0;
+				int t1 = 0;
+				for (Residue residue:pisaInterf.getFirstMolecule().getResidues().values()) {
+					Pdb myFirstMol = myInterf.getFirstMolecule();
+					if (!myFirstMol.getPdbChainCode().equals(pisaInterf.getFirstMolecule().getPdbChainCode())) {
+						myFirstMol = myInterf.getSecondMolecule();
+					}
+					int resser = myFirstMol.getResSerFromPdbResSer(residue.getPdbSerial());
+					double pisaAsa = residue.getAsa();
+					double pisaBsa = residue.getBsa();
+					Residue myRes = myFirstMol.getResidue(resser);
+					if (myRes!=null) {
+						double myAsa = myRes.getAsa();
+						double myBsa = myRes.getBsa();
+						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
+								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
+						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
+						if (deltaComp(pisaAsa, myAsa, pisaAsa*MARGIN)) a1++;
+						if (deltaComp(pisaBsa, myBsa, pisaBsa*MARGIN)) b1++;
+						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
+						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
+						t1++;
+					}
+				}
+				System.out.println("Total: "+t1+". Agreements within "+String.format("%4.2f",MARGIN)+" tolerance: ASA "+a1+" BSA "+b1);
+				//Assert.assertTrue(a1>(0.80*(double)t1));
+				//Assert.assertTrue(b1>(0.80*(double)t1));
+				System.out.println("Chain 2");
+				int a2 = 0;
+				int b2 = 0;
+				int t2 = 0;
+				for (Residue residue:pisaInterf.getSecondMolecule().getResidues().values()) {
+					Pdb mySecondMol = myInterf.getSecondMolecule();
+					if (!mySecondMol.getPdbChainCode().equals(pisaInterf.getSecondMolecule().getPdbChainCode())) {
+						mySecondMol = myInterf.getFirstMolecule();
+					}
+					int resser = mySecondMol.getResSerFromPdbResSer(residue.getPdbSerial());
+					double pisaAsa = residue.getAsa();
+					double pisaBsa = residue.getBsa();
+					Residue myRes = mySecondMol.getResidue(resser);
+					if (myRes!=null) {
+						double myAsa = myRes.getAsa();
+						double myBsa = myRes.getBsa();
+						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
+								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
+						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
+						if (deltaComp(pisaAsa, myAsa, pisaAsa*MARGIN)) a2++;
+						if (deltaComp(pisaBsa, myBsa, pisaBsa*MARGIN)) b2++;
+						t2++;
+						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
+						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
+					}
+				}
+				System.out.println("Total: "+t2+". Agreements within "+String.format("%4.2f",MARGIN)+" tolerance: ASA "+a2+" BSA "+b2);
+				//Assert.assertTrue(a2>(0.80*(double)t2));
+				//Assert.assertTrue(b2>(0.80*(double)t2));
+
+				i++;
 			}
 			
 		}
+	}
+	
+	public boolean deltaComp(double a, double b, double delta) {
+		return (Math.abs(a-b)<delta);
 	}
 
 }

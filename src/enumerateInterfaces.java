@@ -42,10 +42,9 @@ public class enumerateInterfaces {
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 
 					
-		for (int i=interfaces.size()-1;i>=0;i--) {
+		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
-			int j= interfaces.size()-i;
-			System.out.println("\n##Interface "+j);
+			System.out.println("\n##Interface "+(i+1));
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
