@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -522,5 +523,27 @@ public class PdbAsymUnit {
 			asas.put(pdbChainCode, this.getChain(pdbChainCode).getAbsSurfaceAccessibilities());
 		}
 		return asas;
+	}
+	
+	/**
+	 * Returns a map of sequences to lists of pdb chain codes corresponding to that sequence.
+	 * @return
+	 */
+	public Map<String, List<String>> getUniqueSequences() {
+		
+		// map of sequences to list of chain codes
+		Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
+		// finding the entities (groups of identical chains)
+		for (String chain:this.chains.keySet()) {
+			Pdb pdb = getChain(chain);
+			if (uniqSequences.containsKey(pdb.getSequence())) {
+				uniqSequences.get(pdb.getSequence()).add(chain);
+			} else {
+				List<String> list = new ArrayList<String>();
+				list.add(chain);
+				uniqSequences.put(pdb.getSequence(),list);
+			}		
+		}
+		return uniqSequences;
 	}
 }
