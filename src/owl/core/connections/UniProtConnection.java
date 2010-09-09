@@ -1,12 +1,17 @@
 package owl.core.connections;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import owl.core.connections.NoMatchFoundException;
+
+import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseCrossReference;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.pdb.Pdb;
+import uk.ac.ebi.kraken.interfaces.uniprot.dbx.phosphosite.PhosphoSite;
 import uk.ac.ebi.kraken.interfaces.uniprot.features.BindingFeature;
 import uk.ac.ebi.kraken.interfaces.uniprot.features.Feature;
 import uk.ac.ebi.kraken.interfaces.uniprot.features.FeatureType;
@@ -21,6 +26,11 @@ import uk.ac.ebi.kraken.uuw.services.remoting.UniProtQueryService;
 import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastData;
 import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastInput;
 
+/**
+ * Our interface to the Uniprot Java API.
+ * TODO: Merge with owl.core.connections.UniprotConnection
+ * @author stehr
+ */
 public class UniProtConnection {
 	
 	/*--------------------------- member variables --------------------------*/
@@ -40,9 +50,9 @@ public class UniProtConnection {
 	/*---------------------------- public methods ---------------------------*/
 	
 	/**
-	 * Gets a single Uniprot entry given its Uniprot identifier. 
-	 * @param uniProtId
-	 * @return
+	 * Primary method to retrieve a Uniprot entry by its ID. The entry object
+	 * can be used for subsequent method calls or for functions provided by the
+	 * Uniprot API for which we do not have our own implementation.
 	 */
 	public UniProtEntry getEntry(String uniProtId) throws NoMatchFoundException {
 		UniProtEntry entry = (UniProtEntry) entryRetrievalService.getUniProtEntry(uniProtId);
@@ -64,12 +74,17 @@ public class UniProtConnection {
 	
 	/**
 	 * Return the UniProt version this connection is connected to
-	 * @return
+	 * @return a Uniprot version string
 	 */
 	public String getVersion() {
 		return UniProtJAPI.factory.getVersion();
 	}
 	
+	/**
+	 * Use the Uniprot blast interface to find an entry by sequence.
+	 * @param sequence the query sequence
+	 * @return the uniprot entry with the best match to the query sequence
+	 */
 	public UniProtEntry getHumanEntryBySequence(String sequence) {
 	    //Create a blast input with a Database and sequence
 	    BlastInput input = new BlastInput(DatabaseOptions.UNIPROT_HUMAN, sequence);
@@ -114,6 +129,15 @@ public class UniProtConnection {
 	/*---------------------------- static methods ---------------------------*/
 	
 	/**
+	 * Returns a collection of pdb cross references for the given Uniprot entry.
+	 * @return a (possible empty) collection of pdb xref objects
+	 */
+	public static Collection<UniprotPdbRef> getPdbRefs(UniProtEntry entry) {
+		ArrayList<UniprotPdbRef> ret = new ArrayList<UniprotPdbRef>();		
+		return ret;
+	}
+	
+	/**
 	 * Returns the start location of an ATP binding site, or 0 if no such site is annotated in the entry.
 	 */
 	public static int getAtpBindingSite(UniProtEntry entry) {
@@ -126,6 +150,27 @@ public class UniProtConnection {
 			}
 		}
 		return 0;
+	}
+	
+	/**
+	 * Returns the URL for accessing the PhosphoSitePlus record for this entry.
+	 * @param entry the Uniprot entry
+	 * @return the PhosphoSite URL or null if no entry was found
+	 */
+	public static String getPhosphoSiteUrl(UniProtEntry entry) {
+		
+		String baseUrl="http://www.phosphosite.org/uniprotAccAction.do?id=";
+		
+		// obtain id (most likely just the sp_id but just to make sure...)
+		String ac = null;
+		List<DatabaseCrossReference> list = entry.getDatabaseCrossReferences(DatabaseType.PHOSPHOSITE);
+		if(list != null && list.size() > 0) {
+			PhosphoSite phosphoSiteXRef = ((PhosphoSite)list.get(0));
+			ac = phosphoSiteXRef.toString();
+		} else {
+			ac = entry.getUniProtId().getValue();
+		}
+		return baseUrl + ac;
 	}
 	
 	/*--------------------------------- main --------------------------------*/
