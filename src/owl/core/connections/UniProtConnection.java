@@ -132,8 +132,8 @@ public class UniProtConnection {
 	 * Returns a collection of pdb cross references for the given Uniprot entry.
 	 * @return a (possible empty) collection of pdb xref objects
 	 */
-	public static Collection<UniprotPdbRef> getPdbRefs(UniProtEntry entry) {
-		ArrayList<UniprotPdbRef> ret = new ArrayList<UniprotPdbRef>();		
+	public static Collection<UniProtPdbRef> getPdbRefs(UniProtEntry entry) {
+		ArrayList<UniProtPdbRef> ret = new ArrayList<UniProtPdbRef>();		
 		return ret;
 	}
 	

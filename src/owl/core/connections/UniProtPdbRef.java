@@ -9,7 +9,7 @@ import owl.core.util.MySQLConnection;
  * Also provides methods to write records of this type to database.
  * @author stehr
  */
-public class UniprotPdbRef {
+public class UniProtPdbRef {
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -25,7 +25,7 @@ public class UniprotPdbRef {
 
 	/*----------------------------- constructors ----------------------------*/
 	
-	public UniprotPdbRef(String geneName, String uniprotId, String pdbCode,
+	public UniProtPdbRef(String geneName, String uniprotId, String pdbCode,
 			String chainCode, char type, double resolution, int begPos, int endPos) {
 		this.geneName = geneName;
 		this.uniprotId = uniprotId;
