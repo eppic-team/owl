@@ -130,10 +130,37 @@ public class UniProtConnection {
 	
 	/**
 	 * Returns a collection of pdb cross references for the given Uniprot entry.
+	 * Notes: 
+	 * - If a xref contains multiple chains, only the first in returned.
 	 * @return a (possible empty) collection of pdb xref objects
 	 */
 	public static Collection<UniProtPdbRef> getPdbRefs(UniProtEntry entry) {
-		ArrayList<UniProtPdbRef> ret = new ArrayList<UniProtPdbRef>();		
+		ArrayList<UniProtPdbRef> ret = new ArrayList<UniProtPdbRef>();
+		String uniprotId = entry.getPrimaryUniProtAccession().getValue();
+		// get PDB cross references
+		Collection<Pdb> refs = entry.getDatabaseCrossReferences(DatabaseType.PDB);
+		for(Pdb ref:refs) {
+			String pdbCode = ref.getPdbAccessionNumber().getValue();
+			String chainRecordsStr = ref.getPdbChains().getValue();	
+			String[] chainRecords = chainRecordsStr.split(",");	// in rare cases, there can be multiple of these
+			String chainRecord = chainRecords[0];				// take first, ignore others, TOOO: log WARNING
+			String[] fields = chainRecord.trim().split("=");	// e.g. A/B/C/D=319-360
+			if(fields.length < 2) {
+				System.err.println("Error parsing xref from Uniprot for " + uniprotId + ". Sequence range not found.");
+				continue;
+			}
+			String[] chains = fields[0].split("/");
+			String[] begEnd = fields[1].split("-");
+			int beg = Integer.parseInt(begEnd[0]);
+			int end = Integer.parseInt(begEnd[1]);	    		
+			String method = ref.getPdbMethod().getValue();
+			String resStr = ref.getPdbResolution().getValue();
+			double res = resStr.equals("-")?Double.NaN:Double.parseDouble(resStr.split(" ")[0]);
+			//DEBUG: System.out.printf("%s:%s:%.2f:%s:%d-%d\n", pdbCode, method, res, chains[0], beg, end);			
+			String geneName = entry.getGenes().get(0).getGeneName().getValue();
+			UniProtPdbRef xref = new UniProtPdbRef(geneName, uniprotId, pdbCode, chains, method, res, beg, end);
+			ret.add(xref);
+		}
 		return ret;
 	}
 	
