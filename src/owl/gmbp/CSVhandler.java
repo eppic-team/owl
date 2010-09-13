@@ -34,9 +34,40 @@ public class CSVhandler {
 	public CSVhandler(){
 	}
 	
+	public static void main(String[] args){
+		CSVhandler csv = new CSVhandler();	
+		
+		String outputPath = "/Users/vehlow/Documents/workspace/outputFiles/";
+		double[][] ratios;
+
+		String sFileName = csv.openCSVFile(outputPath);
+		System.out.println(sFileName);		
+		if (sFileName!=null){
+            System.out.println("Chosen path/file:" + sFileName);
+		}
+		else
+            System.out.println("No path chosen!");
+		// ----- start import from csv-file -----	
+		try {
+			ratios = csv.readCSVfile2Ddouble(sFileName);
+			System.out.println("Dimensions: " + ratios.length + " x " + ratios[0].length);
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
+	}
+	
 	public String openCSVFile(String outputPath) {
+		return openCSVFile(outputPath, "Choose CSV-File");
+	}
+	
+	public String openCSVFile(String outputPath, String title) {
 		String sFileName = null;
-		final JFileChooser chooser = new JFileChooser("Choose directory");
+		final JFileChooser chooser = new JFileChooser(title);
+		chooser.setDialogTitle(title);
         chooser.setDialogType(JFileChooser.OPEN_DIALOG);
         chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
         FileFilter filter = new FileNameExtensionFilter("CSV file", "csv");
@@ -182,6 +213,15 @@ public class CSVhandler {
     	}
     	
 	}
+    
+    
+    public void generateCsvFile(double[][][] array3d, String sFileName)	{
+    	String [] names = new String[array3d[0][0].length];
+    	for (int i=0; i<array3d[0][0].length; i++){
+    		names[i] = String.valueOf(i);
+    	}
+    	generateCsvFile(array3d, names, sFileName);
+    }
     
     public void generateCsvFile(double[][][] array3d, String[] names, String sFileName)	{
 		
@@ -390,27 +430,26 @@ public class CSVhandler {
     
     public double[][] readCSVfile2Ddouble(String filename) throws NumberFormatException, IOException{
     	double [][] array2d = null;
-		int numTokens = 0;
+		int numTokens = 0 , numLines = 0;
 		BufferedReader bufRdr;
 		try {
 			bufRdr = new BufferedReader(new FileReader(filename));
 			String line = null;		 
 			//read each line of text file
-//			while((line = bufRdr.readLine()) != null)
+			while((line = bufRdr.readLine()) != null)
 			{
-				line = bufRdr.readLine();
+//				line = bufRdr.readLine();
 				StringTokenizer st = new StringTokenizer(line,",");
-				numTokens = st.countTokens();
+				if (st.countTokens() > numTokens)
+					numTokens = st.countTokens();
+				numLines++;
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}	
-		if (numTokens%2!=0){
-			System.out.print("Odd number of tokens in csv file! Can't read file.");
-		}
-		else {
-			array2d = new double [numTokens/2][numTokens];
+		if (numTokens>0 && numLines>0){
+			array2d = new double [numLines][numTokens];
 			try {
 				bufRdr = new BufferedReader(new FileReader(filename));
 				String line = null;
@@ -434,11 +473,63 @@ public class CSVhandler {
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}		
+			}	
 		}
 		
 		return array2d;
 	}
+    
+//    public double[][] readCSVfile2Ddouble(String filename) throws NumberFormatException, IOException{
+//    	double [][] array2d = null;
+//		int numTokens = 0;
+//		BufferedReader bufRdr;
+//		try {
+//			bufRdr = new BufferedReader(new FileReader(filename));
+//			String line = null;		 
+//			//read each line of text file
+////			while((line = bufRdr.readLine()) != null)
+//			{
+//				line = bufRdr.readLine();
+//				StringTokenizer st = new StringTokenizer(line,",");
+//				numTokens = st.countTokens();
+//			}
+//		} catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}	
+//		if (numTokens%2!=0){
+//			System.out.print("Odd number of tokens in csv file! Can't read file.");
+//		}
+//		else {
+//			array2d = new double [numTokens/2][numTokens];
+//			try {
+//				bufRdr = new BufferedReader(new FileReader(filename));
+//				String line = null;
+//				String token = null;
+//				int row = 0;
+//				int col = 0;				 
+//				//read each line of text file
+//				while((line = bufRdr.readLine()) != null){
+//					col = 0;
+//					StringTokenizer st = new StringTokenizer(line,",");
+//					while (st.hasMoreTokens()){
+//						token = st.nextToken();
+//						//get next token and store it in the array
+//						array2d[row][col] = Double.valueOf(token);
+//						col++;
+//					}
+//					row++;
+//				}
+//				//close the file
+//				bufRdr.close();
+//			} catch (FileNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}		
+//		}
+//		
+//		return array2d;
+//	}
     
     public int[][] readCSVfile2Dint(String filename) throws NumberFormatException, IOException{
     	int [][] array2d = null;
