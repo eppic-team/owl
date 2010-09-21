@@ -46,6 +46,9 @@ public class PdbAsymUnitTest {
 	
 	private static final double CUTOFF = 6.0;
 
+	// we allow for a 30% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
+	private static final double TOLERANCE = 0.30;
+
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -124,8 +127,6 @@ public class PdbAsymUnitTest {
 				ChainInterface myInterf = interfaces.get(i);
 				
 				
-				// total interface area, we allow for a 20% discrepancy from PISA
-				double MARGIN = 0.20;
 				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea()/2.0,
 						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea()/2.0)*100.0/pisaInterf.getInterfaceArea());
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea()/2.0, pisaInterf.getInterfaceArea()*0.10);
@@ -150,16 +151,16 @@ public class PdbAsymUnitTest {
 						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
 								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
 						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
-						if (deltaComp(pisaAsa, myAsa, pisaAsa*MARGIN)) a1++;
-						if (deltaComp(pisaBsa, myBsa, pisaBsa*MARGIN)) b1++;
+						if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) a1++;
+						if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) b1++;
 						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
 						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
 						t1++;
 					}
 				}
-				System.out.println("Total: "+t1+". Agreements within "+String.format("%4.2f",MARGIN)+" tolerance: ASA "+a1+" BSA "+b1);
-				//Assert.assertTrue(a1>(0.80*(double)t1));
-				//Assert.assertTrue(b1>(0.80*(double)t1));
+				System.out.println("Total: "+t1+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a1+" BSA "+b1);
+				Assert.assertTrue(a1>(0.80*(double)t1));
+				Assert.assertTrue(b1>(0.80*(double)t1));
 				System.out.println("Chain 2");
 				int a2 = 0;
 				int b2 = 0;
@@ -179,16 +180,16 @@ public class PdbAsymUnitTest {
 						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
 								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
 						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
-						if (deltaComp(pisaAsa, myAsa, pisaAsa*MARGIN)) a2++;
-						if (deltaComp(pisaBsa, myBsa, pisaBsa*MARGIN)) b2++;
-						t2++;
+						if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) a2++;
+						if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) b2++;
 						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
 						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
+						t2++;
 					}
 				}
-				System.out.println("Total: "+t2+". Agreements within "+String.format("%4.2f",MARGIN)+" tolerance: ASA "+a2+" BSA "+b2);
-				//Assert.assertTrue(a2>(0.80*(double)t2));
-				//Assert.assertTrue(b2>(0.80*(double)t2));
+				System.out.println("Total: "+t2+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a2+" BSA "+b2);
+				Assert.assertTrue(a2>(0.80*(double)t2));
+				Assert.assertTrue(b2>(0.80*(double)t2));
 
 				i++;
 			}
@@ -197,7 +198,13 @@ public class PdbAsymUnitTest {
 	}
 	
 	public boolean deltaComp(double a, double b, double delta) {
-		return (Math.abs(a-b)<delta);
+		boolean within = false;
+		if (delta<0.01) {
+			within = (Math.abs(a-b)<TOLERANCE);
+		}
+		within = (Math.abs(a-b)<=delta);
+		
+		return within;
 	}
 
 }

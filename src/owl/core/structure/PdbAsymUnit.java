@@ -432,7 +432,10 @@ public class PdbAsymUnit {
 				Pdb chainj = this.getChain(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 				if (graph.getEdgeCount()>0) {
-					set.add(new ChainInterface(chaini,chainj,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
+					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+					Pdb chainiCopy = chaini.copy();
+					Pdb chainjCopy = chainj.copy();
+					set.add(new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
 				}											
 			}
 		}
@@ -445,7 +448,9 @@ public class PdbAsymUnit {
 				for (Pdb chainj:jAsym.getAllChains()) {
 					AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 					if (graph.getEdgeCount()>0) {
-						ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform()); 
+						// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+						Pdb chainiCopy = chaini.copy();
+						ChainInterface interf = new ChainInterface(chainiCopy,chainj,graph,this.getTransform(),jAsym.getTransform()); 
 						set.add(interf);
 					}													
 				}
@@ -481,7 +486,9 @@ public class PdbAsymUnit {
 							for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
 								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
 								if (graph.getEdgeCount()>0) {
-									ChainInterface interf = new ChainInterface(chaini,chainj,graph,this.getTransform(),jAsym.getTransform());
+									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+									Pdb chainiCopy = chaini.copy();
+									ChainInterface interf = new ChainInterface(chainiCopy,chainj,graph,this.getTransform(),jAsym.getTransform());
 									set.add(interf);
 								}							
 							}

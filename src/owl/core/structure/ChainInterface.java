@@ -1,6 +1,7 @@
 package owl.core.structure;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.HashMap;
@@ -309,4 +310,29 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return rimcores;
 	}
 
+	/**
+	 * Writes this interface to given PDB file with original chain names, unless the 2 chains 
+	 * are the same where the second one is renamed to next letter in alphabet.
+	 * @param file
+	 * @throws FileNotFoundException 
+	 */
+	public void writeToPdbFile(File file) throws FileNotFoundException {
+		PrintStream ps = new PrintStream(file);
+
+		firstMolecule.writeAtomLines(ps);
+
+		String chain2forOutput = secondMolecule.getPdbChainCode();
+		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
+			// if both chains are named equally we want to still named them differently in the output pdb file
+			// so that molecular viewers can handle properly the 2 chains as separate entities 
+			char letter = firstMolecule.getPdbChainCode().charAt(0);
+			if (letter!='Z' && letter!='z') {
+				chain2forOutput = Character.toString((char)(letter+1)); // i.e. next letter in alphabet
+			} else {
+				chain2forOutput = Character.toString((char)(letter-25)); //i.e. 'A' or 'a'
+			}
+		}
+		secondMolecule.writeAtomLines(ps,chain2forOutput);
+		ps.close();
+	}
 }
