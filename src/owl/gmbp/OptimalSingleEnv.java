@@ -23,6 +23,16 @@ public class OptimalSingleEnv {
 
 	private Vector<String[]> optNBHStrings;
 	
+	public OptimalSingleEnv(String nbhString, char ires, String host, String user, String pwd) throws SQLException{
+		this.fullnbs = nbhString;
+		this.iRes = ires;
+		this.host = host;
+		this.username = user;
+		this.password = pwd;
+
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
 	public OptimalSingleEnv(String nbhString, char ires) throws SQLException{
 		this.fullnbs = nbhString;
 		this.iRes = ires;

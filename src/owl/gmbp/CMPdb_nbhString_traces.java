@@ -231,4 +231,10 @@ public class CMPdb_nbhString_traces {
 		this.maxNumLines = maxNumLines;
 	}
 
+	public void setDBaccess(String dBUSER, String dBPWD, String dBHOST) {
+		this.host = dBHOST;
+		this.username = dBUSER;
+		this.password = dBPWD;		
+	}
+
 }
