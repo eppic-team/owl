@@ -1047,7 +1047,7 @@ public class SparseMatrix {
 		//double[][] ar2 = {{2.0,0.0,1.0},{1.0,2.0,0.0},{0.0,0.0,2.0}};
 		//double[][] ar3 = {{-1.0,1.0,0.0},{1.0,0.0,-1.0},{0.0,0.0,1.0}};
 		SparseMatrix mat = new SparseMatrix(ar1);
-		SparseMatrix s1   = mat.add(mat);
+		//SparseMatrix s1   = mat.add(mat);
 		//SparseMatrix s1  = new SparseMatrix(ar3);
 		SparseMatrix ker = mat.kernelVector();
 		System.out.println("\n\n"+ker.toString());

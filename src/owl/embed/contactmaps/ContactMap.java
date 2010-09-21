@@ -224,6 +224,7 @@ public class ContactMap {
 		potence_normalized = normal;
 	}
 	
+	@SuppressWarnings("deprecation")
 	public void setNormalizedSeries (){
 		if(potence_series != null){
 			potence_normalized = new HashMap<Integer,SparseMatrix> ();
