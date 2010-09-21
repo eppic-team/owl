@@ -112,7 +112,7 @@ public class PdbAsymUnitTest {
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
 			
-			int pisaCount = interfaces.getNumProtProtInterfaces();
+			int pisaCount = pisaInterfaces.getNumProtProtInterfaces();
 			System.out.println("PISA interface count: "+pisaCount);
 			Assert.assertEquals(pisaCount, interfaces.size());
 
