@@ -130,7 +130,7 @@ public class NaccessRunner {
 		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 
 		// we need to write a PDB file that contains two different chain codes, that's why we don't use the writeToPDBFile method from PdbAsymUnit
-		// note that in any moment we modify the chain identifiers of the original members firstMolecule, secondMolecule
+		// note that we DON'T modify the chain identifiers of the original members firstMolecule, secondMolecule
 		PrintStream ps = new PrintStream(pdbFile);
 		pdb.getChain("A").writeAtomLines(ps,"A");
 		pdb.getChain("B").writeAtomLines(ps,"B");

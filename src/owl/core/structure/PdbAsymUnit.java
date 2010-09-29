@@ -19,7 +19,6 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
@@ -450,7 +449,8 @@ public class PdbAsymUnit {
 					if (graph.getEdgeCount()>0) {
 						// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 						Pdb chainiCopy = chaini.copy();
-						ChainInterface interf = new ChainInterface(chainiCopy,chainj,graph,this.getTransform(),jAsym.getTransform()); 
+						Pdb chainjCopy = chainj.copy();
+						ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
 						set.add(interf);
 					}													
 				}
@@ -488,7 +488,8 @@ public class PdbAsymUnit {
 								if (graph.getEdgeCount()>0) {
 									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 									Pdb chainiCopy = chaini.copy();
-									ChainInterface interf = new ChainInterface(chainiCopy,chainj,graph,this.getTransform(),jAsym.getTransform());
+									Pdb chainjCopy = chainj.copy();
+									ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
 									set.add(interf);
 								}							
 							}
@@ -499,15 +500,15 @@ public class PdbAsymUnit {
 		}
 		
 		// bsa calculation with naccess
-		for (Pdb chain:this.getAllChains()) {
-			NaccessRunner nar = new NaccessRunner(naccessExe, "");
-			nar.runNaccess(chain);
-		}
-		HashMap<String, HashMap<Integer,Double>> asas = this.getAbsSurfaceAccessibilities();
+		// NOTE in principle it is more efficient to run naccess only once per isolated chain
+		// BUT! surprisingly naccess gives slightly different values for same molecule in different 
+		// orientations! (can't really understand why!)
+		// That's why we run naccess always for 2 separate member of interface and the complex, otherwise 
+		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
 		
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
-			interf.calcBSAnaccess(naccessExe,asas);
+			interf.calcSurfAccessNaccess(naccessExe);
 		}
 
 		// now that we have the areas we can put them into a list and sort them
@@ -518,18 +519,6 @@ public class PdbAsymUnit {
 		}
 		list.sort();
 		return list;
-	}
-	
-	/**
-	 * Returns a HashMap with pdb chain codes to HashMaps of residue serials to absolute surface accessibility values.
-	 * @return
-	 */
-	private HashMap<String, HashMap<Integer,Double>> getAbsSurfaceAccessibilities() {
-		HashMap<String, HashMap<Integer,Double>> asas = new HashMap<String, HashMap<Integer,Double>>();
-		for (String pdbChainCode:this.chains.keySet()){
-			asas.put(pdbChainCode, this.getChain(pdbChainCode).getAbsSurfaceAccessibilities());
-		}
-		return asas;
 	}
 	
 	/**

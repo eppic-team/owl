@@ -151,33 +151,31 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 	
 	/**
-	 * Sets the absolute surface accessibility values of this interface's two members from the given map 
-	 * of pdb chain codes to maps of residue serials to ASA values.
-	 * @param asas
-	 */
-	private void setAbsSurfaceAccessibilities(HashMap<String, HashMap<Integer,Double>> asas) {
-		this.getFirstMolecule().setAbsSurfaceAccessibilities(asas.get(getFirstMolecule().getPdbChainCode()));
-		this.getSecondMolecule().setAbsSurfaceAccessibilities(asas.get(getSecondMolecule().getPdbChainCode()));
-	}
-	
-	/**
-	 * Runs the NACCESS program to calculate accessible surface areas of the complex of 
-	 * the two molecules making up this interface. 
-	 * A HashMap with the ASA values of the uncomplexed molecules must be given (pdb chain codes to 
-	 * HashMaps of residue serials to ASA values).
-	 * Then the BSAs are set from the uncomplexed and complexed ASA values and finally the total 
-	 * interface area is calculated (use {@link #getInterfaceArea()} to get it)
+	 * Runs the NACCESS program to calculate accessible surface areas of separate molecules
+	 * and 2 molecules-complex setting both ASAs and BSAs of the residues of the two molecules making 
+	 * up this interface. 
+	 * The total interface area is also calculated from the individual residue values (use {@link #getInterfaceArea()} 
+	 * to get it)
 	 * @param naccessExecutable
 	 * @throws IOException
 	 */
-	public void calcBSAnaccess(File naccessExecutable, HashMap<String, HashMap<Integer,Double>> asas) throws IOException {
-		this.setAbsSurfaceAccessibilities(asas);
+	public void calcSurfAccessNaccess(File naccessExecutable) throws IOException {
+
+		// NOTE in principle it is more efficient to run naccess only once per isolated chain
+		// BUT! surprisingly naccess gives slightly different values for same molecule in different 
+		// orientations! (can't really understand why!)
+		// That's why we run naccess always for 2 separate member of interface and the complex, otherwise 
+		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
+		
 		NaccessRunner nar = new NaccessRunner(naccessExecutable, "");
 		
 		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
 		complex.setChain("A", firstMolecule);
 		complex.setChain("B", secondMolecule);
- 
+		
+		nar.runNaccess(firstMolecule);
+		nar.runNaccess(secondMolecule);
+		
 		nar.runNaccess(complex); // this will set the bsa members of the Residues of firstMolecule and secondMolecule
 	
 		double totBuried = 0.0;

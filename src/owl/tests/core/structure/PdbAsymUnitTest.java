@@ -44,7 +44,7 @@ public class PdbAsymUnitTest {
 	
 	private static final String PISA_INTERFACES_URL = "http://www.ebi.ac.uk/msd-srv/pisa/cgi-bin/interfaces.pisa?";
 	
-	private static final double CUTOFF = 6.0;
+	private static final double CUTOFF = 5.9;
 
 	// we allow for a 30% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
 	private static final double TOLERANCE = 0.30;
@@ -136,11 +136,11 @@ public class PdbAsymUnitTest {
 				int a1 = 0;
 				int b1 = 0;
 				int t1 = 0;
+				Pdb myFirstMol = myInterf.getFirstMolecule();
+				if (!myFirstMol.getPdbChainCode().equals(pisaInterf.getFirstMolecule().getPdbChainCode())) {
+					myFirstMol = myInterf.getSecondMolecule();
+				}
 				for (Residue residue:pisaInterf.getFirstMolecule().getResidues().values()) {
-					Pdb myFirstMol = myInterf.getFirstMolecule();
-					if (!myFirstMol.getPdbChainCode().equals(pisaInterf.getFirstMolecule().getPdbChainCode())) {
-						myFirstMol = myInterf.getSecondMolecule();
-					}
 					int resser = myFirstMol.getResSerFromPdbResSer(residue.getPdbSerial());
 					double pisaAsa = residue.getAsa();
 					double pisaBsa = residue.getBsa();
@@ -165,11 +165,11 @@ public class PdbAsymUnitTest {
 				int a2 = 0;
 				int b2 = 0;
 				int t2 = 0;
+				Pdb mySecondMol = myInterf.getSecondMolecule();
+				if (!mySecondMol.getPdbChainCode().equals(pisaInterf.getSecondMolecule().getPdbChainCode())) {
+					mySecondMol = myInterf.getFirstMolecule();
+				}
 				for (Residue residue:pisaInterf.getSecondMolecule().getResidues().values()) {
-					Pdb mySecondMol = myInterf.getSecondMolecule();
-					if (!mySecondMol.getPdbChainCode().equals(pisaInterf.getSecondMolecule().getPdbChainCode())) {
-						mySecondMol = myInterf.getFirstMolecule();
-					}
 					int resser = mySecondMol.getResSerFromPdbResSer(residue.getPdbSerial());
 					double pisaAsa = residue.getAsa();
 					double pisaBsa = residue.getBsa();
