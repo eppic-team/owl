@@ -47,9 +47,10 @@ public class PdbAsymUnitTest {
 	private static final double CUTOFF = 5.9;
 
 	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
-	private static final double TOLERANCE = 0.20;
+	private static final double TOLERANCE_ASA = 0.30;
+	private static final double TOLERANCE_BSA = 0.20;
 	// at least so many residues have to be in agreement within TOLERANCE above
-	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.80;
+	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.90;
 
 	
 	@BeforeClass
@@ -80,6 +81,7 @@ public class PdbAsymUnitTest {
 		String line;
 		while ((line = flist.readLine() ) != null ) {
 			if (line.startsWith("#")) continue;
+			if (line.isEmpty()) break;
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
 			pdbCodes.add(pdbCode);
 		}
@@ -129,9 +131,9 @@ public class PdbAsymUnitTest {
 				ChainInterface myInterf = interfaces.get(i);
 				
 				
-				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea()/2.0,
-						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea()/2.0)*100.0/pisaInterf.getInterfaceArea());
-				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea()/2.0, pisaInterf.getInterfaceArea()*0.10);
+				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea(),
+						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea())*100.0/pisaInterf.getInterfaceArea());
+				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea(), pisaInterf.getInterfaceArea()*0.10);
 				
 				// asa/bsas of individual residues, we allow for some discrepancy from PISA
 				
@@ -175,10 +177,11 @@ public class PdbAsymUnitTest {
 	
 	private static boolean deltaComp(double a, double b, double delta) {
 		boolean within = false;
-		if (delta<0.01) {
-			within = (Math.abs(a-b)<TOLERANCE);
+		if (delta<0.2) { // for small values we have to have a bigger margin, chose 0.50 more or less arbitrarily
+			within = (Math.abs(a-b)<0.50); 
+		} else {
+			within = (Math.abs(a-b)<=delta);
 		}
-		within = (Math.abs(a-b)<=delta);
 		
 		return within;
 	}
@@ -204,13 +207,13 @@ public class PdbAsymUnitTest {
 				System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\t",
 						residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
 				Assert.assertEquals(residue.getAaType(),myRes.getAaType());
-				if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) {
+				if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE_ASA)) {
 					System.out.print(" ");
 					a++;
 				} else {
 					System.out.print("x");
 				}
-				if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) {
+				if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE_BSA)) {
 					System.out.print(" ");
 					b++;
 				} else {
@@ -220,7 +223,7 @@ public class PdbAsymUnitTest {
 				System.out.println();
 			}
 		}
-		System.out.println("Total: "+t+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a+" BSA "+b);
+		System.out.println("Total: "+t+". Agreements within "+String.format("%4.2f(ASA) %4.2f(BSA)",TOLERANCE_ASA,TOLERANCE_BSA)+" tolerance: ASA "+a+" BSA "+b);
 		int[] counts = {a,b,t};
 		return counts;
 	}

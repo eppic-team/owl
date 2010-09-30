@@ -517,7 +517,7 @@ public class PdbAsymUnit {
 		for (ChainInterface interf:set) {
 			list.addInterface(interf);
 		}
-		list.sort();
+		list.sort(); // this sorts the returned list and assigns ids to the ChainInterface members
 		return list;
 	}
 	

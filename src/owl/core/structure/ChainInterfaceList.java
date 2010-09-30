@@ -38,6 +38,11 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 	
 	public void sort() {
 		Collections.sort(list);
+		int i=1;
+		for (ChainInterface interf:list) {
+			interf.setId(i);
+			i++;
+		}
 	}
 	
 	public int size() {

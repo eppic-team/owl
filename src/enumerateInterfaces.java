@@ -101,7 +101,7 @@ public class enumerateInterfaces {
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
-			System.out.printf("Interface area: %8.2f (%8.2f)\n",interf.getInterfaceArea(),interf.getInterfaceArea()/2.0);
+			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 		
 			if (writeDir!=null) {
 				interf.writeToPdbFile(new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb"));

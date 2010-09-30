@@ -186,7 +186,7 @@ public class ChainInterface implements Comparable<ChainInterface> {
 			totBuried+=residue.getBsa();
 		}
 
-		this.interfaceArea = totBuried;
+		this.setInterfaceArea(totBuried/2.0); // to use the same convention as in PISA we halve it
 	}
 	
 	public int getNumAtomsInContact() {
