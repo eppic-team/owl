@@ -27,14 +27,15 @@ public class SparseMatrix {
 	/** a HashMap mapping the second (column) index <tt>j</tt> to all index pairs <tt>(i,j)</tt>, where it is present*/
 	private HashMap<Integer,HashSet<Pair<Integer>>> second;
 	/** the row dimension*/
-	private int row_dim;
+	private int rowDim;
 	/** the column dimension*/ 
-	private int col_dim;
-	/**
-	 * 
-	 */
+	private int colDim;
+	/**flag, indicating whether this matrix is considered sparse, i.e. number of entries does not exceed
+	 * <tt>0.2 * row_dim * col_dim</tt>*/ 
 	private boolean isSparse;
+	/**flag, indicating whether this matrix is symmetric*/
 	private boolean isSymmetric;
+	/**flag, indicating whether this matrix object was changed without refreshing index mapping*/
 	private boolean wasModified;
 	/**
 	 * Constructs an empty <tt>SparseMatrix</tt>. Note, that invocation of instance methods
@@ -87,8 +88,8 @@ public class SparseMatrix {
 	public SparseMatrix (GMatrix mat){
 		this();
 		setDimension(mat.getNumRow(),mat.getNumCol());
-		for(int i = 0; i < row_dim; i++){
-			for(int j = 0; j < col_dim; j++){
+		for(int i = 0; i < rowDim; i++){
+			for(int j = 0; j < colDim; j++){
 				double entry = mat.getElement(i, j);
 				if(entry!=0){
 					Pair<Integer> indPair = new Pair<Integer>(new Integer(i),new Integer(j));
@@ -113,7 +114,7 @@ public class SparseMatrix {
 	 * @param mat a <tt>double</tt> matrix to be converted
 	 * @throws SparseMatrixException if the inner dimensions do not match
 	 */
-	public void setMatrix (double[][] mat) throws SparseMatrixException {
+	private void setMatrix (double[][] mat) throws SparseMatrixException {
 		int length1  = mat.length, length2 = mat[0].length;
 		matrix  = new HashMap<Pair<Integer>,Double> ();
 		first   = new HashMap<Integer,HashSet<Pair<Integer>>> ();
@@ -131,29 +132,36 @@ public class SparseMatrix {
 						"make sure, only matrices with matching dimensions are converted.");
 			}
 		}
-		setDimension(length1,length2);
+		rowDim = length1;
+		colDim = length2;
 		refreshMatrix();
 	}
 	/**
 	 * Initial setter: converts a <tt>HashMap</tt> instance to a <tt>SparseMatrix</tt> instance.
+	 * Note, that this method refreshes all index mappings.
 	 * @param map a <tt>HashMap</tt>
 	 * @throws SparseMatrixException if at least one index exceeds the specified dimensions
 	 */
-	public void setMatrix (HashMap<Pair<Integer>,Double> map) throws SparseMatrixException {
+	protected void setMatrix (HashMap<Pair<Integer>,Double> map) throws SparseMatrixException {
 		matrix  = new HashMap<Pair<Integer>,Double> (map);
-		first   = new HashMap<Integer,HashSet<Pair<Integer>>> ();
-		second  = new HashMap<Integer,HashSet<Pair<Integer>>> ();
+		if(first==null)
+			first   = new HashMap<Integer,HashSet<Pair<Integer>>> ();
+		if(second==null)
+			second  = new HashMap<Integer,HashSet<Pair<Integer>>> ();
 		refreshMatrix();
 	}
 	/**
-	 * Initial setter: copies <tt>mat</tt> to a new <tt>SparseMatrix</tt>.
+	 * Initial setter: copies <tt>mat</tt> to a new <tt>SparseMatrix</tt>. Note, that this
+	 * method refreshes all index mappings.
 	 * @param mat a <tt>SparseMatrix</tt>
 	 */
-	public void setMatrix (SparseMatrix mat){
+	private void setMatrix (SparseMatrix mat){
 		matrix  = mat.getMatrix();
 		first   = mat.getFirstIndexSet();
 		second  = mat.getSecondIndexSet();
-		setDimension (mat.getRowDimension(),mat.getColumnDimension());
+		rowDim = mat.rowDim;
+		colDim = mat.colDim;
+		refreshMatrix();
 	}
 	/**
 	 * Initial setter: sets the row and column dimension fields.
@@ -161,12 +169,73 @@ public class SparseMatrix {
 	 * @param col the column dimension
 	 * @throws SparseMatrixException if at least one dimension parameter is less than or equal to zero
 	 */
-	public void setDimension (int row, int col) throws SparseMatrixException {
+	protected void setDimension (int row, int col) throws SparseMatrixException {
 		if(row > 0 && col > 0){
-			col_dim = col;
-			row_dim = row;
+			colDim = col;
+			rowDim = row;
 		}
 		else throw new SparseMatrixException ("Any dimension field must be greater than zero!");
+	}
+	/**
+     * Adds the <tt>mat</tt> matrix to this matrix.
+     * @param subMat the sub matrix
+     * @param rowBeg the row onset
+     * @param colBeg the column onset
+     * @throws util.SparseMatrixException if the onset exceeds the matrix dimension
+     */
+    public void setSubMatrix (SparseMatrix subMat, int rowBeg, int colBeg)
+            throws SparseMatrixException {
+        if(rowBeg>rowDim-subMat.rowDim) throw new SparseMatrixException ("Onset greater than/equal to offset!");
+        if(colBeg>colDim-subMat.colDim) throw new SparseMatrixException ("Onset greater than/equal to offset!");
+        for (Pair<Integer> matIndex : subMat.matrix.keySet()){
+            int currRow = matIndex.getFirst(), currCol = matIndex.getSecond();
+            Pair<Integer> nPair = new Pair<Integer> (new Integer (currRow+rowBeg),new Integer(currCol+colBeg));
+            matrix.put(nPair,subMat.matrix.get(matIndex));
+        }
+    }
+	/**
+	 * Adds a column vector (an <tt>n x 1</tt> <code>SparseMatrix</code>) to the 
+	 * column, specified by <tt>index</tt>. 
+	 * @param vec the vector as an <tt>n x 1</tt> <code>SparseMatrix</code>
+	 * @param index the column index
+	 * @throws SparseMatrixException if either <li><tt>index</tt> exceeds the column dimension</li>
+	 * <li>the row dimensions of both instances are unequal, or</li>
+	 * <li>the column dimension of <tt>vec</tt> is not 1</li>
+	 */
+	public void addColumnVector (SparseMatrix vec, int index) throws SparseMatrixException {
+		if(vec.rowDim!=rowDim)
+			throw new SparseMatrixException ("Row dimension mismatch!");
+		if(vec.colDim!=1)
+			throw new SparseMatrixException ("A vector must have column dimension = 1!");
+		if(index>=colDim)
+			throw new SparseMatrixException ("Index i = "+index+" exceeds matrix column dimension!");
+		for (Pair<Integer> pairs : vec.matrix.keySet()){
+			Pair<Integer> nPair = new Pair<Integer>(pairs.getFirst(),new Integer(index));
+			addEntrySuppressRefresh(nPair,vec.matrix.get(pairs));
+		}
+		refreshMatrix();
+	}
+	/**
+	 * Adds a row vector (an <tt>1 x n</tt> <code>SparseMatrix</code>) to the 
+	 * row, specified by <tt>index</tt>. 
+	 * @param vec the vector as an <tt>1 x n</tt> <code>SparseMatrix</code>
+	 * @param index the row index
+	 * @throws SparseMatrixException if either <li><tt>index</tt> exceeds the row dimension</li>
+	 * <li>the column dimensions of both instances are unequal, or</li>
+	 * <li>the row dimension of <tt>vec</tt> is not 1</li>
+	 */
+	public void addRowVector (SparseMatrix vec, int index) throws SparseMatrixException {
+		if(vec.colDim!=colDim)
+			throw new SparseMatrixException ("Row dimension mismatch!");
+		if(vec.rowDim!=1)
+			throw new SparseMatrixException ("A vector must have column dimension = 1!");
+		if(index>=rowDim)
+			throw new SparseMatrixException ("Index i = "+index+" exceeds matrix column dimension!");
+		for (Pair<Integer> pairs : vec.matrix.keySet()){
+			Pair<Integer> nPair = new Pair<Integer>(new Integer(index),pairs.getSecond());
+			addEntrySuppressRefresh(nPair,vec.matrix.get(pairs));
+		}
+		refreshMatrix();
 	}
 	/**
 	 * Adds a new entry to the matrix, if the row and column indices do not
@@ -176,7 +245,7 @@ public class SparseMatrix {
 	 * <p>
 	 * <p>SparseMatrix matrix = new SparseMatrix(...);
 	 * <p><tt>while(...){
-	 * <p>matrix.removeEntrySuppressRefresh(//some entry index);
+	 * <p>matrix.addEntrySuppressRefresh(//some entry index and value);
 	 * <p>}
 	 * <p>matrix.refresh();</tt>
 	 * <p>Calling some method, that depends on the row or column index maps without refreshing
@@ -187,17 +256,14 @@ public class SparseMatrix {
 	 */
 	public void addEntrySuppressRefresh(Pair<Integer> index, double value) throws SparseMatrixException {
 		int rowIndex = index.getFirst(), colIndex = index.getSecond();
-		if(row_dim>rowIndex&&rowIndex>=0&&col_dim>colIndex&&colIndex>=0){
-			Pair<Integer> pair = new Pair<Integer>(new Integer(rowIndex),new Integer(colIndex));
-			//if (matrix.containsKey(pair)) System.err.println("Matrix contains entry for " +
-				//	firstIndex+", "+secondIndex+"!");
+		if(rowDim>rowIndex&&rowIndex>=0&&colDim>colIndex&&colIndex>=0){
 			if(value!=0d){
-				matrix.put(pair,new Double(value));
+				matrix.put(index,new Double(value));
 				wasModified = true;
 			}
 		}
 		else throw new SparseMatrixException ("Index values must be within the range of " +
-				row_dim+" and "+col_dim+" and equal to or greater than zero!");		
+				rowDim+" and "+colDim+" and equal to or greater than zero!");		
 	}
 	/**
 	 * Adds a new entry to the matrix, if the row and column indices do not
@@ -211,7 +277,7 @@ public class SparseMatrix {
 	 * @see addEntrySuppressRefresh(Pair,double) 
 	 */
 	public void addEntrySuppressRefresh(int rowIndex, int colIndex, double value) throws SparseMatrixException {
-		if(row_dim>rowIndex&&rowIndex>=0&&col_dim>colIndex&&colIndex>=0){
+		if(rowDim>rowIndex&&rowIndex>=0&&colDim>colIndex&&colIndex>=0){
 			Pair<Integer> pair = new Pair<Integer>(new Integer(rowIndex),new Integer(colIndex));
 			//if (matrix.containsKey(pair)) System.err.println("Matrix contains entry for " +
 				//	firstIndex+", "+secondIndex+"!");
@@ -221,11 +287,11 @@ public class SparseMatrix {
 			}
 		}
 		else throw new SparseMatrixException ("Index values must be within the range of " +
-				row_dim+" and "+col_dim+" and equal to or greater than zero!");		
+				rowDim+" and "+colDim+" and equal to or greater than zero!");		
 	}
 	/**
 	 * Method adding a new entry to the matrix. If the matrix already contained an entry in the specified
-	 * position an error message is displayed.
+	 * position the old value is replaced.
 	 * @param firstIndex the first index (row index)
 	 * @param secondIndex the second index (column index)
 	 * @param value the entry value
@@ -233,38 +299,34 @@ public class SparseMatrix {
 	 */
 	public void addEntry(int firstIndex, int secondIndex, double value) throws SparseMatrixException
 	{
-		if(row_dim>firstIndex&&firstIndex>=0&&col_dim>secondIndex&&secondIndex>=0){
+		if(rowDim>firstIndex&&firstIndex>=0&&colDim>secondIndex&&secondIndex>=0){
 			Pair<Integer> pair = new Pair<Integer>(new Integer(firstIndex),new Integer(secondIndex));
-			//if (matrix.containsKey(pair)) System.err.println("Matrix contains entry for " +
-				//	firstIndex+", "+secondIndex+"!");
 			if(value!=0d){
 				matrix.put(pair,new Double(value));
 				refreshMatrix();
 			}
 		}
 		else throw new SparseMatrixException ("Index values must be within the range of " +
-				row_dim+" and "+col_dim+" and equal to or greater than zero!");		
+				rowDim+" and "+colDim+" and equal to or greater than zero!");		
 	}
 	/**
 	 * Method adding a new entry to the matrix. If the matrix already contained an entry in the specified
-	 * position an error message is displayed.
+	 * position the old value is replaced.
 	 * @param pair the index pair
 	 * @param value the entry value
-	 * @throws IllegalArgumentException if the index values exceed the matrix dimensions
+	 * @throws SparseMatrixException if the index values exceed the matrix dimensions
 	 */
-	public void addEntry(Pair<Integer> pair, double value) throws IllegalArgumentException
+	public void addEntry(Pair<Integer> pair, double value) throws SparseMatrixException
 	{
 		int firstIndex=pair.getFirst().intValue(), secondIndex=pair.getSecond().intValue();
-		if(row_dim>firstIndex&&firstIndex>=0&&col_dim>secondIndex&&secondIndex>=0){
-			//if (matrix.containsKey(pair)) System.err.println("Matrix contains entry for " +
-				//	firstIndex+", "+secondIndex+"!");
+		if(rowDim>firstIndex&&firstIndex>=0&&colDim>secondIndex&&secondIndex>=0){
 			if(value!=0d){
 				matrix.put(pair,new Double(value));
 				refreshMatrix();
 			}
 		}
-		else throw new IllegalArgumentException ("Index values must be within the range of " +
-				row_dim+" and "+col_dim+" and equal to or greater than zero!");		
+		else throw new SparseMatrixException ("Index values must be within the range of " +
+				rowDim+" and "+colDim+" and equal to or greater than zero!");		
 	}
 	/**
 	 * Removes the entry associated to the <tt>index</tt> from this matrix, if the row and column indices do not
@@ -278,7 +340,7 @@ public class SparseMatrix {
 		if(containsIndexPair(index)) {matrix.remove(index); wasModified = true;}
 	}
 	/**
-	 * Removes the entry associated to the <tt>index</tt> from this matrix, if the row and column indices do not
+	 * Removes the entry associated to the indices from this matrix, if they do not
 	 * exceed the matrix dimensions. Note, that refreshing is suppressed, so this
 	 * method should be used, when multiple removing is needed, followed by explicit
 	 * refreshing.
@@ -291,7 +353,7 @@ public class SparseMatrix {
 		if(containsIndexPair(index)) {matrix.remove(index); wasModified = true;}
 	}
 	/**
-	 * Removes the entry of the matrix specified by <tt>firstIndex</tt> and <tt>seconIndex</tt>.
+	 * Removes the entry of the matrix specified by <tt>firstIndex</tt> and <tt>secondIndex</tt>.
 	 * If no such entry is present, this object is left unchanged. 
 	 * @param firstIndex the row index
 	 * @param secondIndex the column index
@@ -299,20 +361,18 @@ public class SparseMatrix {
 	public void removeEntry(int firstIndex, int secondIndex){
 		Pair<Integer> pair = new Pair<Integer>(new Integer(firstIndex),new Integer(secondIndex));
 		if(containsIndexPair(pair)) {matrix.remove(pair); refreshMatrix();}
-		//else System.err.println("No such entry: ("+firstIndex+","+secondIndex+")!");
 	}
 	/**
 	 * Removes the entry of the matrix specified by <tt>pair</tt>.
 	 * If no such entry is present, this object is left unchanged. 
-	 * @param pair
+	 * @param pair the index pair
 	 */
 	public void removeEntry(Pair<Integer> pair){
 		if(containsIndexPair(pair)) {matrix.remove(pair); refreshMatrix();}
-		//else System.err.println("No such entry: ("+pair.getFirst().toString()+","+pair.getSecond().toString()+")!");
 	}
 	/**
 	 * Refreshes all index mapping, that is, each instance of this class contains a
-	 * mapping of all row and column indices onto a set of index pairs. So after any modification
+	 * mapping of all row and column indices onto a set of index pairs, respectively. So after any modification
 	 * of a SparseMatrix object, this method is called before returning from most of the
 	 * modifying methods. Though, some methods explicitly suppress refreshing, so
 	 * the user has to call this method, before some index map may be used.
@@ -322,40 +382,66 @@ public class SparseMatrix {
 	 * <p><b>Note</b>, that this method must be called before calling any method dealing
 	 * with indexing operations, otherwise a <code>SparseMatrixException</code> will be thrown
 	 */
-	public void refreshMatrix (){
-		if(this==null) throw new NullPointerException ("Null object!");
-		else{
-			first.clear();
-			second.clear();
-			for (Pair<Integer> pairs : matrix.keySet()){
-				Integer firstInd  = pairs.getFirst();
-				Integer secondInd = pairs.getSecond();
-				if(first.containsKey(firstInd)){
-					HashSet<Pair<Integer>> helper1 = first.get(firstInd);
-					helper1.add(pairs);
-					first.put(firstInd,helper1);
-				}
-				else{
-					HashSet<Pair<Integer>> helper1 = new HashSet<Pair<Integer>> (); 
-					helper1.add(pairs);
-					first.put(firstInd,helper1);
-				}
-				if(second.containsKey(secondInd)){
-					HashSet<Pair<Integer>> helper1 = second.get(secondInd);
-					helper1.add(pairs);
-					second.put(firstInd,helper1);
-				}
-				else{
-					HashSet<Pair<Integer>> helper1 = new HashSet<Pair<Integer>> (); 
-					helper1.add(pairs);
-					second.put(firstInd,helper1);
-				}
+	public final void refreshMatrix (){
+		if(this==null||matrix==null) throw new NullPointerException ("Null object!");
+
+		first.clear();
+		second.clear();
+		for (Pair<Integer> pairs : matrix.keySet()){
+			Integer firstInd  = pairs.getFirst();
+			Integer secondInd = pairs.getSecond();
+			if(first.containsKey(firstInd)){
+				HashSet<Pair<Integer>> helper1 = first.get(firstInd);
+				helper1.add(pairs);
+				first.put(firstInd,helper1);
 			}
-			double frac = ((double)matrix.size())/((double) col_dim*row_dim);
-			if(frac<.2) isSparse = true;
-			wasModified = false;
-			symmetric();			
+			else{
+				HashSet<Pair<Integer>> helper1 = new HashSet<Pair<Integer>> (); 
+				helper1.add(pairs);
+				first.put(firstInd,helper1);
+			}
+			if(second.containsKey(secondInd)){
+				HashSet<Pair<Integer>> helper1 = second.get(secondInd);
+				helper1.add(pairs);
+				second.put(secondInd,helper1);
+			}
+			else{
+				HashSet<Pair<Integer>> helper1 = new HashSet<Pair<Integer>> (); 
+				helper1.add(pairs);
+				second.put(secondInd,helper1);
+			}
 		}
+		double frac = ((double)matrix.size())/((double) colDim*rowDim);
+		if(frac<.2) isSparse = true;
+		wasModified = false;
+		symmetric();			
+	}
+	/**
+	 * Returns the eigenvector of the absolute greatest eigenvalue of this <code>SparseMatrix</code>.
+	 * @return an <tt>n x 1</tt> <code>SparseMatrix</code> representing the eigenvector associated to the
+	 * absolute greatest eigenvalue
+	 * @throws SparseMatrixException if this matrix is not a square matrix
+	 */
+	public SparseMatrix computeCentralityVector () throws SparseMatrixException {
+		if(colDim!=rowDim)
+			throw new SparseMatrixException ("Intended only for square matrices!");
+		SparseMatrix vec = new SparseMatrix (rowDim,1);
+		for(int i = 0; i < rowDim; i++){
+			vec.addEntrySuppressRefresh(i, 0, 1/Math.sqrt(rowDim));
+		}
+		vec.refreshMatrix();
+		SparseMatrix old = new SparseMatrix (rowDim,1);
+		double diff = (vec.subtract(old)).norm2();
+		double mean = .5*(vec.add(old)).norm2();
+		while(diff/mean>1e-12){
+			SparseMatrix nVec = multiply(vec);
+			old = new SparseMatrix (vec);
+			vec = nVec.multiply(1/nVec.norm2());
+			diff = (vec.subtract(old)).norm2();
+			mean = .5*(vec.add(old)).norm2();
+			System.out.println("||x_n - x_n-1||2 = "+diff);
+		}
+		return vec;
 	}
 	
 	/**
@@ -365,13 +451,27 @@ public class SparseMatrix {
 	 * @return the identity matrix
 	 */
 	public SparseMatrix constructSquareIdentity (int dim){
-		SparseMatrix id = new SparseMatrix ();
-		id.setDimension(dim,dim);
+		SparseMatrix id = new SparseMatrix (dim,dim);
 		for (int i = 0; i < dim; i++){
 			id.matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
 		}
 		id.refreshMatrix();
 		return id;
+	}
+	/**
+	 * Sets this matrix object to identity.
+	 */
+	public void identity (){
+		if(this==null) throw new NullPointerException ("Null object!");
+		else{
+			if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
+			else matrix.clear();
+			int dim = Math.min(rowDim, colDim);
+			for(int i = 0; i < dim; i++){
+				matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
+			}
+			refreshMatrix();
+		}
 	}
 	/**
 	 * Sets this SparseMatrix to the square (<tt>dim x dim</tt>) identity matrix
@@ -380,7 +480,7 @@ public class SparseMatrix {
 	public void identity (int dim){
 		if(this==null) throw new NullPointerException ("Null object!");
 		else{
-			if(row_dim==0&&col_dim==0) {row_dim = dim; col_dim = dim;}
+			if(rowDim==0&&colDim==0) {rowDim = dim; colDim = dim;}
 			if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
 			else matrix.clear();
 			for(int i = 0; i < dim; i++){
@@ -390,12 +490,14 @@ public class SparseMatrix {
 		}
 	}
 	/**
-	 * Sets an <tt>row x col</tt> identity matrix.
+	 * Sets this matrix to an <tt>row x col</tt> identity matrix.
 	 * @param row the row dimension
 	 * @param col the column dimension
 	 */
 	public void identity (int row, int col){
 		setDimension(row,col);
+		if(matrix==null)
+			matrix = new HashMap<Pair<Integer>,Double>();
 		int minDim = Math.min(row, col);
 		for(int i = 0; i < minDim; i++){
 			Pair<Integer> index = new Pair<Integer>(new Integer(i),new Integer(i));
@@ -404,14 +506,12 @@ public class SparseMatrix {
 		refreshMatrix();
 	}
 	/**
-	 * Checks whether the <tt>Pair</tt> instance <tt>pair</tt> is present in the <tt>SparseMatrix</tt>.
+	 * Checks whether the <code>Pair</code> instance <tt>pair</tt> is present in the <code>SparseMatrix</code>.
 	 * Returns true, iff the entry for the given index pair is non-zero.
 	 * @param pair an index pair
 	 * @return true, iff the entry for the index pair is non-zero
 	 */
 	public boolean containsIndexPair (Pair<Integer> pair){
-		/*if(matrix.containsKey(pair)) return true;
-		else return false;*/
 		return matrix.containsKey(pair)?true:false;
 	}
 	/**
@@ -423,7 +523,7 @@ public class SparseMatrix {
 	 */
 	public boolean containsIndexPair (int i, int j){
 		Pair<Integer> pair = new Pair<Integer> (i,j);
-		return containsIndexPair (pair);
+		return containsIndexPair (pair)?true:false;
 	}
 	/**
 	 * Returns a <tt>HashMap</tt>, where the keys are <tt>Pair</tt>s of <tt>Integer</tt>s and the value
@@ -443,12 +543,12 @@ public class SparseMatrix {
 	 * @throws SparseMatrixException if at least one index exceeds the dimensions
 	 */
 	public double getMatrixEntry(int i, int j) throws SparseMatrixException {
-		if(i < row_dim && j < col_dim){
+		if(i < rowDim && j < colDim&&i>=0&&j>=0){
 			Pair<Integer> pair = new Pair<Integer>  (new Integer (i), new Integer (j));
 			if(containsIndexPair(pair)) return matrix.get(pair).doubleValue();
 			else return 0.0;
 		}
-		else throw new SparseMatrixException ("\nAt least one index exceeded the matrix dimensions.");
+		else throw new SparseMatrixException ("\nAt least one index exceeded the matrix dimensions, or was negative.");
 	}
 	//position<0||position>=seq.length){		if(position>=seq.length)
 	/**
@@ -461,8 +561,8 @@ public class SparseMatrix {
 	 */
 	public double getMatrixEntry(Pair<Integer> indexPair) throws SparseMatrixException {
 		int firstInd = indexPair.getFirst().intValue(), secondInd = indexPair.getSecond().intValue();
-		if((firstInd>=row_dim||firstInd<0)&&(secondInd>=col_dim||secondInd<0)){
-			if(firstInd>=row_dim&&secondInd>=col_dim) throw new SparseMatrixException("At least one" +
+		if((firstInd>=rowDim||firstInd<0)||(secondInd>=colDim||secondInd<0)){
+			if(firstInd>=rowDim&&secondInd>=colDim) throw new SparseMatrixException("At least one" +
 					" index exceeds the matrix dimensions!");
 			else throw new SparseMatrixException("At least one index is negative!");			
 		}
@@ -479,13 +579,13 @@ public class SparseMatrix {
 		if(matrix==null) throw new NullPointerException ("Null object!");
 		else{
 			int counter = 0;
-			double max = matrix.get(new Pair<Integer>(new Integer(0),new Integer(0)));
+			double max = Double.NEGATIVE_INFINITY;
 			for(Pair<Integer> pairs : matrix.keySet()){
 				double currMax = getMatrixEntry(pairs);
 				if(currMax>max) max = currMax;
 				counter++;
 			}
-			boolean test = counter<col_dim*row_dim;
+			boolean test = counter<colDim*rowDim;
 			return max>=0&&test?max:test?0d:max;
 		}
 	}
@@ -496,38 +596,99 @@ public class SparseMatrix {
 	public double getMin (){
 		if(matrix==null) throw new NullPointerException ("Null object!");
 		else{
-			double min = matrix.get(new Pair<Integer>(new Integer(0),new Integer(0)));
+			double min = Double.POSITIVE_INFINITY;
 			int counter = 0;
 			for(Pair<Integer> pairs : matrix.keySet()){
 				double currMin = getMatrixEntry(pairs);
 				if(currMin<min) min = currMin;
 				counter++;
 			}
-			boolean test = counter<col_dim*row_dim;
+			boolean test = counter<colDim*rowDim;
 			return min<=0&&test?min:test?0:min;
 		}
+	}
+	/**
+	 * Returns the minimal non-zero entry in this matrix
+	 * @return the minimal non-zero entry
+	 */
+	public double getMinNonZero (){
+		if(matrix==null) throw new NullPointerException ("Null object!");
+		double min = Double.POSITIVE_INFINITY;
+		for(Pair<Integer> pairs : matrix.keySet()){
+			double currMin = getMatrixEntry(pairs);
+			if(currMin<min) min = currMin;
+		}
+		return min;
 	}
 	/**
 	 * Returns the row dimension
 	 * @return the row dimension
 	 */
 	public int getRowDimension (){
-		return row_dim;
+		return rowDim;
 	}
 	/**
 	 * Returns the column dimension
 	 * @return the column dimension
 	 */
 	public int getColumnDimension (){
-		return col_dim;
+		return colDim;
+	}
+	/**
+	 * Returns the <tt>i</tt>-th column vector of this matrix as a <tt>n x 1</tt> <code>SparseMatrix</code>
+	 * instance.
+	 * @param i the column index
+	 * @return the <tt>i</tt>-th column vector
+	 * @throws SparseMatrixException if <tt>i</tt> exceeds the column dimension or
+	 * <tt>i</tt> is negative 
+	 */
+	public SparseMatrix getColumnVector (int i) throws SparseMatrixException {
+		if(i>=colDim||i<0) throw new SparseMatrixException ("Column dimension exceeded or negative index: i = "+i+"!");
+		SparseMatrix col = new SparseMatrix (rowDim,1);
+		Integer colInd = new Integer(i);
+		if(!second.containsKey(colInd))
+			return col;
+		for (Pair<Integer> pairs : second.get(colInd)){
+			int index = pairs.getFirst();
+			col.addEntrySuppressRefresh(index,0, matrix.get(pairs));
+		}
+		col.refreshMatrix();
+		return col;
+	}
+	/**
+	 * Returns the <tt>i</tt>-th row vector of this matrix as a <tt>n x 1</tt> <code>SparseMatrix</code>
+	 * instance.
+	 * @param i the row index
+	 * @return the <tt>i</tt>-th row vector
+	 * @throws SparseMatrixException if <tt>i</tt> exceeds the row dimension or
+	 * <tt>i</tt> is negative 
+	 */
+	public SparseMatrix getRowVector (int i) throws SparseMatrixException {
+		if(i>=rowDim||i<0) throw new SparseMatrixException ("Row dimension exceeded or negative index: i = "+i+"!");
+		SparseMatrix row = new SparseMatrix (colDim,1);
+		Integer rowInd = new Integer(i);
+		if(!second.containsKey(rowInd))
+			return row;
+		for (Pair<Integer> pairs : first.get(rowInd)){
+			int index = pairs.getSecond();
+			row.addEntrySuppressRefresh(0,index, matrix.get(pairs));
+		}
+		row.refreshMatrix();
+		return row;
 	}
 	/**
 	 * Converts an object of this class to a <tt>double</tt> matrix, including zero entries.
 	 * @return a <tt>double</tt> matrix
 	 */
 	public double[][] getFullMatrix (){
-		if(matrix != null && matrix.size() > 0){
-			double[][] fullmat = new double[row_dim][col_dim];
+		if(matrix == null || matrix.size() == 0){
+			if(matrix==null)
+				throw new NullPointerException ("The matrix field was not initialized before calling this method.");
+			else
+				return new double [rowDim][colDim];
+		}
+		else{
+			double[][] fullmat = new double[rowDim][colDim];
 			Set<Pair<Integer>> keys = getMatrix().keySet();
 			Iterator<Pair<Integer>> it = keys.iterator();
 			while(it.hasNext()){
@@ -537,26 +698,20 @@ public class SparseMatrix {
 			}
 			return fullmat;
 		}
-		else{
-			if(matrix.size() == 0) return new double [getRowDimension()][getColumnDimension()];
-			else throw new NullPointerException ("The matrix field was not initialized before calling this method.");
-		}
 	}
 	/**
-	 * Returns a set of all index pairs. Note, the return object is NOT a copy of the key set, so
-	 * any change of the Set while an Iterator is running over the collection causes an ConcurrentModificationException!
-	 * This problem can simply be circumvented by calling a constructor of a class, that implements
-	 * the java.util.Set interface (i.e. TreeSet, HashSet,...) 
+	 * Returns a set of all index pairs. Note, the return object is a deep copy of the key set, so
+	 * any change of the Set while an Iterator is running over the collection causes no ConcurrentModificationException!  
 	 * @return a set of all index pairs
 	 */
-	public Set<Pair<Integer>> getIndexPairs (){
-		if(matrix != null) return matrix.keySet();
+	public HashSet<Pair<Integer>> getIndexPairs (){
+		if(matrix != null) return new HashSet<Pair<Integer>>(matrix.keySet());
 		else throw new NullPointerException ("The matrix field was not initialized before calling this method.");
 	}
 	
 
     /**
-     * Getter: returns a HashMap representation of all first indices. The index
+     * Getter: returns a HashMap representation of all first (row) indices. The index
      * is used as key mapping onto a HashSet of Pairs of Integers.
      * @return a HashSet of the first index of the matrix
      * @throws SparseMatrixException matrix was modified, but not refreshed before calling this method
@@ -578,27 +733,29 @@ public class SparseMatrix {
     }
 
     /**
-     * Returns a HashSet of Pairs of Integers, that is all index pairs sharing a
-     * common first index.
+     * Returns a HashSet of Pairs of Integers, that is all index pairs sharing the
+     * first index, or null, if no such entry exists.
      * @param i the first index in an index pair <tt>(i,j)</tt>
-     * @return a HashSet of all index pairs sharing a common first index
+     * @return a HashSet of all index pairs sharing the first index or null
      * @throws SparseMatrixException matrix was modified, but not refreshed before calling this method 
      */
     public HashSet<Pair<Integer>> getPairSetFromFirstIndex (int i) throws SparseMatrixException {
-    	if(wasModified) throw new SparseMatrixException ("Matrix was not refreshed after modification!");
-    	else return first.get(new Integer (i));
+    	Integer index = new Integer (i);
+    	if(wasModified) throw new SparseMatrixException ("Matrix was not refreshed after modification!");    	
+    	else return first.get(index)==null?null:new HashSet<Pair<Integer>>(first.get(index));
     }
 
     /**
      * Returns a HashSet of Pairs of Integers, that is all index pairs sharing a
-     * common second index.
+     * common second index, or null, if no such entry exists.
      * @param j the second index in an index pair <tt>(i,j)</tt>
      * @return a HashSet of all index pairs sharing a common second index
      * @throws SparseMatrixException matrix was modified, but not refreshed before calling this method 
      */
     public HashSet<Pair<Integer>> getPairSetFromSecondIndex (int j) throws SparseMatrixException {
-    	if(wasModified) throw new SparseMatrixException ("Matrix was not refreshed after modification!");
-    	else return second.get(new Integer (j));
+    	Integer index = new Integer (j);
+    	if(wasModified) throw new SparseMatrixException ("Matrix was not refreshed after modification!");    	
+    	else return second.get(index)==null?null:new HashSet<Pair<Integer>>(second.get(index));
     }
     
     /**
@@ -623,6 +780,37 @@ public class SparseMatrix {
     	}
     	else return 0.0;
     }
+    /**
+     * Returns the matrix of this <code>SparseMatrix.
+     * @param rowBegin the row onset
+     * @param rowEnd the row offset
+     * @param colBegin the column onset
+     * @param colEnd the column offset
+     * @return the matrix
+     * @throws util.SparseMatrixException<li>if onset is greater than or equal to offset, or</tt>
+     * <li>the offset exceeds the matrix dimensions</li>
+     */
+    public SparseMatrix getSubMatrix (int rowBegin, int rowEnd, int colBegin,
+            int colEnd) throws SparseMatrixException {
+        if(rowBegin>rowEnd) throw new SparseMatrixException ("Onset greater than/equal to offset!");
+        if(colBegin>colEnd) throw new SparseMatrixException ("Onset greater than/equal to offset!");
+        if(rowEnd>rowDim||colEnd>colDim)
+             throw new SparseMatrixException ("Offset exceeds matrix dimension!");
+        int newRow = rowEnd-rowBegin+1;
+        int newCol = colEnd-colBegin+1;
+        SparseMatrix sub = new SparseMatrix (newRow,newCol);
+        for (int i = 0; i < newRow; i++){
+            for (int j = 0; j < newCol; j++){
+                Pair<Integer> thisPair = new Pair<Integer> (new Integer (i+rowBegin), new Integer (j+colBegin));
+                if(containsIndexPair(thisPair)){
+                    Pair<Integer> subIndex = new Pair<Integer> (new Integer (i), new Integer (j));
+                    sub.matrix.put(subIndex,matrix.get(thisPair));
+                }
+            }
+        }
+        sub.refreshMatrix();
+        return sub;
+    }
     /*------------------------Operation methods------------------------*/
     /**
      * Addition method: adds <tt>mat</tt> to <tt>this</tt> an returns
@@ -638,7 +826,7 @@ public class SparseMatrix {
 			HashMap<Pair<Integer>,Double> map1 = getMatrix();
 			HashMap<Pair<Integer>,Double> map2 = mat.getMatrix();
 			SparseMatrix sum = new SparseMatrix();
-			sum.setDimension(row_dim, col_dim);
+			sum.setDimension(rowDim, colDim);
 			Set<Pair<Integer>> key1 = map1.keySet();
 			Iterator<Pair<Integer>> it1 = key1.iterator();
 			while(it1.hasNext()){
@@ -651,6 +839,7 @@ public class SparseMatrix {
 				else sum.matrix.put(pair, matrix.get(pair));
 			}
 			sum.matrix.putAll(map2);
+			sum.refreshMatrix();
 			return sum;
 		}
 		else throw new SparseMatrixException ("The row and column dimensions must match!");
@@ -670,7 +859,7 @@ public class SparseMatrix {
 	 * <tt>this</tt> and <tt>mat</tt>:
 	 * <p><tt>sum(i,j) this(i,j) * mat(i,j)</tt>
 	 * <p>Note, calling this method on <tt>this</tt> is equivalent to 
-	 * computing the Frobenius-norm of a given matrix.
+	 * computing the Frobenius-norm ({@link SparseMatrix#norm2()} of a given matrix.
 	 * @param mat another matrix
 	 * @return the inner product of <tt>this</tt> and <tt>mat</tt> 
 	 */
@@ -692,8 +881,7 @@ public class SparseMatrix {
 	 * rate
 	 */
 	public boolean isSparse (){
-		if(isSparse) return true;
-		else return false;
+		return isSparse?true:false;
 	}
 	/**
 	 * Setter: sets the symmetry flag if and only if this matrix
@@ -703,12 +891,12 @@ public class SparseMatrix {
 	 * considered a non-symmetric matrix.
 	 * @throws SparseMatrixException matrix was modified, but not refreshed before calling this method 
 	 */
-	public void symmetric () throws SparseMatrixException {
+	private void symmetric () throws SparseMatrixException {
 		if(first==null&&second==null) throw new NullPointerException ("Null object!");
 		else{
 			if(wasModified) throw new SparseMatrixException ("Matrix was not refreshed after modification!");
 			else{
-				if(row_dim==col_dim){
+				if(rowDim==colDim){
 					for(Pair<Integer> index : matrix.keySet()){
 						Double entry = matrix.get(index);
 						int fIndex = index.getFirst(), sIndex = index.getSecond();
@@ -730,7 +918,7 @@ public class SparseMatrix {
 	 */
 	public boolean isSymmetric (){
 		symmetric();
-		return isSymmetric;
+		return isSymmetric?true:false;
 	}
 	/**
 	 * Returns the kernel vector <tt>v</tt> of this matrix,
@@ -743,16 +931,16 @@ public class SparseMatrix {
 	public SparseMatrix kernelVector (){
 		if(matrix==null) throw new NullPointerException ("Null object!");
 		else{
-			if(convert2Matrix().rank()==row_dim) return new SparseMatrix (row_dim,1);
+			if(convert2Matrix().rank()==rowDim) return new SparseMatrix (rowDim,1);
 			//if this matrix has full rank, the kernel is trivial!
 			
 			else{
-				SparseMatrix kerVec = new SparseMatrix (col_dim,1);
-				SparseMatrix operator = new SparseMatrix(row_dim,col_dim);
-				operator.identity(row_dim,col_dim);
-				for(int i = 0; i < col_dim; i++){
+				SparseMatrix kerVec = new SparseMatrix (colDim,1);
+				SparseMatrix operator = new SparseMatrix(rowDim,colDim);
+				operator.identity(rowDim,colDim);
+				for(int i = 0; i < colDim; i++){
 					Pair<Integer> index = new Pair<Integer>(new Integer(i),new Integer(0));
-					kerVec.matrix.put(index, 1/Math.sqrt(col_dim));
+					kerVec.matrix.put(index, 1/Math.sqrt(colDim));
 				}
 				kerVec.refreshMatrix();
 				operator = operator.add(this);
@@ -765,7 +953,7 @@ public class SparseMatrix {
 				}*/
 				//operator = operator.add(this);
 				operator = operator.multiply(1/(normOP+1));
-				SparseMatrix latter = new SparseMatrix (col_dim,1);
+				SparseMatrix latter = new SparseMatrix (colDim,1);
 				double currNorm = kerVec.norm2(), diff = 0;
 				while(Math.abs(currNorm-diff)>1e-13){
 					latter = new SparseMatrix (kerVec);
@@ -798,6 +986,7 @@ public class SparseMatrix {
 		}
 		return new SparseMatrix (nmap,getRowDimension(),getColumnDimension());
 	}
+	
 	/**
 	 * Multiplication method: multiplies <tt>mat</tt> to <tt>this</tt> and returns the
 	 * product as a new instance.
@@ -863,6 +1052,7 @@ public class SparseMatrix {
 			return Math.sqrt(innerProduct(this));
 		}
 	}
+	
 	/**
 	 * Returns the infinity norm of this matrix.
 	 * @return the infinity norm
@@ -886,18 +1076,21 @@ public class SparseMatrix {
 	/**
 	 * Takes this SparseMatrix instance and and raises it to the power defined by the
 	 * parameter <tt>exp</tt>. So the return object is the result <tt>X</tt> of the equation
-	 * <p><tt>X = this^exp</tt>. <b>Note, that in case of a dimension mismatch</b>, an intermediate
+	 * <p><tt>X = this^exp</tt>. <b>Note, that in case of a non-square matrix</b>, an intermediate
 	 * (power) result will be a SparseMatrix with smaller dimension, causing SparseMatrixException, since
-	 * multiplication of matrices with mismatching inner dimensions causes the same exception. So, square
+	 * multiplication of matrices with mismatching dimensions causes the same exception. So, square
 	 * matrices are the only acceptable arguments. Additionally, the exponent <tt>exp</tt> must be an integer
-	 * greater than or equal to zero, otherwise an SparseMatrixException is thrown.
-	 * @param exp the power to which the SparseMatrix is raised
+	 * greater than zero, otherwise an SparseMatrixException is thrown.
+	 * @param exp the power to which the SparseMatrix is raised (strictly positive)
 	 * @return the result <tt>X</tt> of <tt>X = this^exp</tt>
-	 * @throws SparseMatrixException if the dimension don't fit
+	 * @throws SparseMatrixException if this matrix is not square
+	 * @throws IllegalArgumentException if the exponent is not positive
 	 */
-	public SparseMatrix pow (int exp) throws SparseMatrixException {
-		if(getColumnDimension()==getRowDimension() && exp >=0){
-			if(exp > 1){
+	public SparseMatrix pow (int exp) throws SparseMatrixException, IllegalArgumentException  {
+		if(getColumnDimension()==getRowDimension() && exp > 0){
+			if(exp == 1)
+				return new SparseMatrix(this);
+			else{
 				SparseMatrix cp1 = new SparseMatrix(this);
 				SparseMatrix cp2 = new SparseMatrix(this);
 				for(int i = 1; i < exp; i++){
@@ -905,9 +1098,8 @@ public class SparseMatrix {
 				}
 				return cp1;
 			}
-			else return new SparseMatrix(this);
 		}
-		else {if(exp < 0) throw new SparseMatrixException("Only positive integers are accepted!");
+		else {if(exp <= 0) throw new IllegalArgumentException ("Only positive integers are accepted!");
 
 		else throw new SparseMatrixException("Only square matrices are acceptable arguments!");}
 	}
@@ -989,12 +1181,13 @@ public class SparseMatrix {
 		setDimension(row,col);
 		setMatrix(map);
 	}
+	/*----------------------converting methods-------------------------------*/
 	/**
 	 * Returns a this matrix as a <code>GMatrix</code> object
 	 * @return a GMatrix object
 	 */
 	public GMatrix convert2GMatrix (){
-		GMatrix gMatr = new GMatrix(row_dim,col_dim);
+		GMatrix gMatr = new GMatrix(rowDim,colDim);
 		gMatr.setZero();
 		if(matrix==null){
 			return gMatr;
@@ -1012,7 +1205,7 @@ public class SparseMatrix {
 	 * @return a Matrix object
 	 */
 	public Matrix convert2Matrix (){
-		Matrix gMatr = new Matrix(row_dim,col_dim);
+		Matrix gMatr = new Matrix(rowDim,colDim);
 		if(matrix==null){
 			return gMatr;
 		}
@@ -1043,15 +1236,13 @@ public class SparseMatrix {
 		return pair;
 	}
 	public static void main (String[] args){
-		double[][] ar1 = {{0.0,1.0,0.0,0.0},{-1.0,2.0,2.0,0.0},{0.0,0.0,0.0,0.0},{0.0,0.0,0.0,0.0}};
-		//double[][] ar2 = {{2.0,0.0,1.0},{1.0,2.0,0.0},{0.0,0.0,2.0}};
-		//double[][] ar3 = {{-1.0,1.0,0.0},{1.0,0.0,-1.0},{0.0,0.0,1.0}};
-		SparseMatrix mat = new SparseMatrix(ar1);
-		//SparseMatrix s1   = mat.add(mat);
-		//SparseMatrix s1  = new SparseMatrix(ar3);
-		SparseMatrix ker = mat.kernelVector();
-		System.out.println("\n\n"+ker.toString());
-		System.out.println("\n"+mat.multiply(ker).toString());
+		double[][] s1 = {{1d/3d,0d,0d},{0d,0d,1d},{0d,1d,0d}};
+		double[][] s2 = {{3d,0d,0d},{0d,0d,1d},{0d,1d,0d}};
+		double[][] a  = {{0d,0d,3d},{0d,0d,0d},{0d,0d,0d}};
+		SparseMatrix S1 = new SparseMatrix(s1);
+		SparseMatrix S2 = new SparseMatrix(s2);
+		SparseMatrix m  = new SparseMatrix(a);
+		System.out.println((S1.multiply(m.multiply(S2))).toString());
 	}
 
 }
