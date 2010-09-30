@@ -46,8 +46,10 @@ public class PdbAsymUnitTest {
 	
 	private static final double CUTOFF = 5.9;
 
-	// we allow for a 30% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
-	private static final double TOLERANCE = 0.30;
+	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
+	private static final double TOLERANCE = 0.20;
+	// at least so many residues have to be in agreement within TOLERANCE above
+	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.80;
 
 	
 	@BeforeClass
@@ -131,65 +133,39 @@ public class PdbAsymUnitTest {
 						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea()/2.0)*100.0/pisaInterf.getInterfaceArea());
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea()/2.0, pisaInterf.getInterfaceArea()*0.10);
 				
-				// bsas of individual residues, we allow for a 20% discrepancy from PISA
-				System.out.println("Chain 1");
-				int a1 = 0;
-				int b1 = 0;
-				int t1 = 0;
+				// asa/bsas of individual residues, we allow for some discrepancy from PISA
+				
 				Pdb myFirstMol = myInterf.getFirstMolecule();
 				if (!myFirstMol.getPdbChainCode().equals(pisaInterf.getFirstMolecule().getPdbChainCode())) {
 					myFirstMol = myInterf.getSecondMolecule();
 				}
-				for (Residue residue:pisaInterf.getFirstMolecule().getResidues().values()) {
-					int resser = myFirstMol.getResSerFromPdbResSer(residue.getPdbSerial());
-					double pisaAsa = residue.getAsa();
-					double pisaBsa = residue.getBsa();
-					Residue myRes = myFirstMol.getResidue(resser);
-					if (myRes!=null) {
-						double myAsa = myRes.getAsa();
-						double myBsa = myRes.getBsa();
-						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
-								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
-						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
-						if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) a1++;
-						if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) b1++;
-						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
-						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
-						t1++;
-					}
-				}
-				System.out.println("Total: "+t1+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a1+" BSA "+b1);
-				Assert.assertTrue(a1>(0.80*(double)t1));
-				Assert.assertTrue(b1>(0.80*(double)t1));
-				System.out.println("Chain 2");
-				int a2 = 0;
-				int b2 = 0;
-				int t2 = 0;
 				Pdb mySecondMol = myInterf.getSecondMolecule();
 				if (!mySecondMol.getPdbChainCode().equals(pisaInterf.getSecondMolecule().getPdbChainCode())) {
 					mySecondMol = myInterf.getFirstMolecule();
 				}
-				for (Residue residue:pisaInterf.getSecondMolecule().getResidues().values()) {
-					int resser = mySecondMol.getResSerFromPdbResSer(residue.getPdbSerial());
-					double pisaAsa = residue.getAsa();
-					double pisaBsa = residue.getBsa();
-					Residue myRes = mySecondMol.getResidue(resser);
-					if (myRes!=null) {
-						double myAsa = myRes.getAsa();
-						double myBsa = myRes.getBsa();
-						System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\n",
-								residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
-						Assert.assertEquals(residue.getAaType(),myRes.getAaType());
-						if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) a2++;
-						if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) b2++;
-						//Assert.assertEquals(pisaAsa, myAsa, pisaAsa*MARGIN);
-						//Assert.assertEquals(pisaBsa, myBsa, pisaBsa*MARGIN);
-						t2++;
-					}
+
+				
+				System.out.println("Chain 1");
+				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol);
+				int[] counts2 = null;
+				
+				if (checkCounts(counts1)) {
+					System.out.println("Chain 2");
+					counts2 = checkResidues(pisaInterf.getSecondMolecule(), mySecondMol);
+
+				} else {
+					System.out.println("Counts of first PISA chain to our first didn't match. Trying swapping chains.");
+					System.out.println("Chain 1");
+					counts1 = checkResidues(pisaInterf.getSecondMolecule(), myFirstMol);
+					System.out.println("Chain 2");
+					counts2 = checkResidues(pisaInterf.getFirstMolecule(), mySecondMol);
 				}
-				System.out.println("Total: "+t2+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a2+" BSA "+b2);
-				Assert.assertTrue(a2>(0.80*(double)t2));
-				Assert.assertTrue(b2>(0.80*(double)t2));
+				
+				if (!checkCounts(counts1) || !checkCounts(counts2)) {
+					System.out.println("Failure for "+pdbCode+", interface "+(i+1));
+				}
+				Assert.assertTrue(checkCounts(counts1));
+				Assert.assertTrue(checkCounts(counts2));
 
 				i++;
 			}
@@ -197,7 +173,7 @@ public class PdbAsymUnitTest {
 		}
 	}
 	
-	public boolean deltaComp(double a, double b, double delta) {
+	private static boolean deltaComp(double a, double b, double delta) {
 		boolean within = false;
 		if (delta<0.01) {
 			within = (Math.abs(a-b)<TOLERANCE);
@@ -206,5 +182,56 @@ public class PdbAsymUnitTest {
 		
 		return within;
 	}
+	
+	/**
+	 * Checks individual residues' ASAs and BSAs values between pisa and our values
+	 * @param pisaMolecule
+	 * @param myMolecule
+	 * @return
+	 */
+	private static int[] checkResidues(Pdb pisaMolecule, Pdb myMolecule) {
+		int a = 0;
+		int b = 0;
+		int t = 0;
+		for (Residue residue:pisaMolecule.getResidues().values()) {
+			int resser = myMolecule.getResSerFromPdbResSer(residue.getPdbSerial());
+			double pisaAsa = residue.getAsa();
+			double pisaBsa = residue.getBsa();
+			Residue myRes = myMolecule.getResidue(resser);
+			if (myRes!=null) {
+				double myAsa = myRes.getAsa();
+				double myBsa = myRes.getBsa();
+				System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\t",
+						residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
+				Assert.assertEquals(residue.getAaType(),myRes.getAaType());
+				if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE)) {
+					System.out.print(" ");
+					a++;
+				} else {
+					System.out.print("x");
+				}
+				if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE)) {
+					System.out.print(" ");
+					b++;
+				} else {
+					System.out.print("x");
+				}
+				t++;
+				System.out.println();
+			}
+		}
+		System.out.println("Total: "+t+". Agreements within "+String.format("%4.2f",TOLERANCE)+" tolerance: ASA "+a+" BSA "+b);
+		int[] counts = {a,b,t};
+		return counts;
+	}
 
+	/**
+	 * Returns true if both asa and bsa counts are above the predefined tolerance
+	 * threshold {@value #TOLERANCE_RESIDUE_AGREEMENT} for number of residues in agreement with PISA
+	 * @param counts
+	 * @return
+	 */
+	private static boolean checkCounts(int[] counts) {
+		return (counts[0]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]) && counts[1]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]));
+	}
 }
