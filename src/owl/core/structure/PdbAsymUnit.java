@@ -499,18 +499,21 @@ public class PdbAsymUnit {
 			}
 		}
 		
-		// bsa calculation with naccess
-		// NOTE in principle it is more efficient to run naccess only once per isolated chain
-		// BUT! surprisingly naccess gives slightly different values for same molecule in different 
-		// orientations! (can't really understand why!)
-		// That's why we run naccess always for 2 separate member of interface and the complex, otherwise 
+		// bsa calculation 
+		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
+		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
+		// orientations! (can't really understand why!). Both NACCESS and our own implementation behave like that.
+		// That's why we calculate always for the 2 separate members of interface and the complex, otherwise 
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
-		
+		//long start = System.currentTimeMillis();
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
-			interf.calcSurfAccessNaccess(naccessExe);
+			//interf.calcSurfAccessNaccess(naccessExe);
+			interf.calcSurfAccess();
 		}
-
+		//long end = System.currentTimeMillis();
+		//System.out.println("ASA computation time: "+(end-start)/1000+" s");
+		
 		// now that we have the areas we can put them into a list and sort them
 		ChainInterfaceList list = new ChainInterfaceList();
 		list.setPdb(this);
@@ -519,6 +522,82 @@ public class PdbAsymUnit {
 		}
 		list.sort(); // this sorts the returned list and assigns ids to the ChainInterface members
 		return list;
+	}
+
+	/**
+	 * Calculate the Accessible Surface Areas using our implementation of the 
+	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members.
+	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
+	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
+	 */
+	public void calcASAs() {
+		Atom[] atoms = new Atom[this.getNumAtoms()];
+		
+		int i = 0;
+		for (Pdb pdb:this.getAllChains()) {
+			pdb.setAtomRadii();
+			for (int atomser: pdb.getAllAtomSerials()) {
+				atoms[i] = pdb.getAtom(atomser);
+				i++;
+			}
+		}
+		
+		double[] asas = Asa.calculateAsa(atoms);
+		for (i=0;i<atoms.length;i++){
+			atoms[i].setAsa(asas[i]);
+		}
+
+		// and finally sums per residue
+		for (Pdb pdb:this.getAllChains()) {
+			for (Residue residue: pdb.getResidues().values()) {
+				double tot = 0;
+				for (Atom atom:residue.getAtoms()) {
+					tot+=atom.getAsa();
+				}
+				residue.setAsa(tot);
+			}
+		}
+	}
+
+	/**
+	 * Calculate the Buried Surface Areas by calculating the ASAs of this PdbAsymUnit 
+	 * as a complex and then using the (previously calculated) isolated chain ASA values
+	 * to compute the difference and set the bsa members of Atoms and Residues
+	 */
+	public void calcBSAs() {
+		Atom[] atoms = new Atom[this.getNumAtoms()];
+		
+		int i = 0;
+		for (Pdb pdb:this.getAllChains()) {
+			pdb.setAtomRadii();
+			for (int atomser: pdb.getAllAtomSerials()) {
+				atoms[i] = pdb.getAtom(atomser);
+				i++;
+			}
+		}
+		
+		double[] asas = Asa.calculateAsa(atoms);
+		for (i=0;i<atoms.length;i++){
+			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
+		}
+		// and finally sums per residue
+		for (Pdb pdb:this.getAllChains()) {
+			for (Residue residue: pdb.getResidues().values()) {
+				double tot = 0;
+				for (Atom atom:residue.getAtoms()) {
+					tot+=atom.getBsa();
+				}
+				residue.setBsa(tot);
+			}
+		}		
+	}
+	
+	public int getNumAtoms() {
+		int tot = 0;
+		for (Pdb pdb:this.getAllChains()) {
+			tot+=pdb.getNumAtoms();
+		}
+		return tot;
 	}
 	
 	/**

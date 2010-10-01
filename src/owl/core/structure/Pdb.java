@@ -511,7 +511,7 @@ public class Pdb implements HasFeatures {
 	 * Use subsequently Atom.getRadius() to get the value.
 	 * This uses the AtomRadii parser of the vdw.radii resource file.
 	 */
-	private void setAtomRadii() {
+	protected void setAtomRadii() {
 		for (Residue residue:residues.values()) {
 			residue.setAtomRadii();
 		}
@@ -531,7 +531,11 @@ public class Pdb implements HasFeatures {
 			atoms[i] = this.getAtom(atomser);
 			i++;
 		}
-		Asa.calculateAsa(atoms);
+		double[] asas = Asa.calculateAsa(atoms);
+		
+		for (i=0;i<atoms.length;i++) {
+			atoms[i].setAsa(asas[i]);
+		}
 
 		// and finally sums per residue
 		for (Residue residue: residues.values()) {

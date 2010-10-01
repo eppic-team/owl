@@ -21,7 +21,9 @@ import javax.vecmath.Point3d;
  */
 public class Asa {
 
-	private static final int DEFAULT_N_SPHERE_POINTS = 960;
+	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92
+	// to get a bit faster computations I've reduced it to 2/3 of 960, still gets acceptable agreement with default NACCESS accuracy
+	private static final int DEFAULT_N_SPHERE_POINTS = 640;
 	private static final double DEFAULT_PROBE_SIZE = 1.4;
 	
 	/**
@@ -71,25 +73,26 @@ public class Asa {
 	}
 
 	/**
-	 * Calculates the Accessible Surface Areas of the given atoms, setting their ASA
-	 * members with the calculated values.
+	 * Calculates the Accessible Surface Areas of the given atoms
 	 * Probe size is default value {@value #DEFAULT_PROBE_SIZE} and number of sphere points is also default value
 	 * {@value #DEFAULT_N_SPHERE_POINTS}
 	 * @param atoms
+	 * @return an array with asa values matching the input atoms array
 	 */
-	public static void calculateAsa(Atom[] atoms) {
-		calculateAsa(atoms, DEFAULT_PROBE_SIZE, DEFAULT_N_SPHERE_POINTS);
+	public static double[] calculateAsa(Atom[] atoms) {
+		return calculateAsa(atoms, DEFAULT_PROBE_SIZE, DEFAULT_N_SPHERE_POINTS);
 	}
 	
 	/**
-	 * Calculates the Accessible Surface Areas of the given atoms, setting their ASA
-	 * members with the calculated values, using given probe size.
+	 * Calculates the Accessible Surface Areas of the given atoms, using given probe size.
 	 * @param atoms
 	 * @param probe the probe size
 	 * @param nSpherePoints the number of points to be used in generating the spherical 
 	 * dot-density, the more points the more accurate (and slower) calculation.
+	 * @return an array with asa values matching the input atoms array
 	 */
-	public static void calculateAsa(Atom[] atoms, double probe, int nSpherePoints) { 
+	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints) { 
+		double[] asas = new double[atoms.length];
 	    List<Point3d> sphere_points = generateSpherePoints(nSpherePoints);
 
 	    double cons = 4.0 * Math.PI / (double)sphere_points.size(); 
@@ -134,8 +137,10 @@ public class Asa {
 	            }
 	        }
 	        double area = cons*n_accessible_point*radius*radius ;
-	        atom_i.setAsa(area);
+	        asas[i] = area;
+	        //atom_i.setAsa(area);
 	    }
+	    return asas;
 	}
 
 	/**

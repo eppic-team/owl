@@ -189,6 +189,41 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		this.setInterfaceArea(totBuried/2.0); // to use the same convention as in PISA we halve it
 	}
 	
+	/**
+	 * Calculates the accessible surface area for separate molecules and 2 molecules-complex setting
+	 * both ASAs and BSAs of the residues of the two molecules making up this interface.
+	 * The total interface area is also calculated from the individual residue values (use {@link #getInterfaceArea()} 
+	 * to get it)
+	 */
+	public void calcSurfAccess() {
+		// NOTE in principle it is more efficient to calculate the ASAs only once per isolated chain
+		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
+		// orientations! (can't really understand why!)
+		// That's why we calculate ASAs always for 2 separate member of interface and the complex, otherwise 
+		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
+
+		
+		firstMolecule.calcASAs();
+		secondMolecule.calcASAs();
+		
+		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
+		complex.setChain("A", firstMolecule);
+		complex.setChain("B", secondMolecule);
+
+		complex.calcBSAs();
+		double totBuried = 0.0;
+		
+		for (Residue residue:firstMolecule.getResidues().values()) {
+			totBuried+=residue.getBsa();
+		}
+		for (Residue residue:secondMolecule.getResidues().values()) {
+			totBuried+=residue.getBsa();
+		}
+
+		this.setInterfaceArea(totBuried/2.0); // to use the same convention as in PISA we halve it
+		
+	}
+	
 	public int getNumAtomsInContact() {
 		return this.graph.getVertexCount();
 	}

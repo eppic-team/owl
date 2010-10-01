@@ -30,6 +30,7 @@ public class Atom implements Serializable {
 	private double occupancy;
 	
 	private double asa;
+	private double bsa;
 	private double vdwradius;
 
 	/**
@@ -136,6 +137,14 @@ public class Atom implements Serializable {
 	
 	public void setAsa(double asa) {
 		this.asa = asa;
+	}
+	
+	public double getBsa() {
+		return this.bsa;
+	}
+	
+	public void setBsa(double bsa) {
+		this.bsa = bsa;
 	}
 	
 	public double getRadius() {
