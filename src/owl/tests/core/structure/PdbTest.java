@@ -127,6 +127,66 @@ public class PdbTest {
 	}
 	
 	@Test
+	public void testASAcalcVsNaccess() throws IOException, PdbLoadError, SQLException {
+		
+		System.out.println("Our ASA values against NACCESS's");
+		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
+		MySQLConnection conn = new MySQLConnection();
+		for (String pdbId:pdbIds) {
+			System.out.println(pdbId);
+			String pdbCode = pdbId.substring(0,4);
+			String pdbChainCode = pdbId.substring(4,5);
+
+			Pdb theirs = null;
+			Pdb ours = null;
+			try {
+				theirs = new PdbasePdb(pdbCode,PDBASE_DB,conn);
+				theirs.load(pdbChainCode);
+				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC), "");
+				naccRunner.runNaccess(theirs);
+
+				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
+				ours.load(pdbChainCode);
+				ours.calcASAs();
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Could not fild pdb code "+pdbCode);
+				continue;
+			}
+			checkASAsMatch(theirs, ours, 0.20, 0.10);
+			
+			// test wheter values calculated for a rotated molecule match to those of the original molecule. 
+			// The values don't match exactly at all! (NACCESS had this problem too). It must be something inherent to the algorithm,
+			// I don't think it can be just rounding, I don't really understand it!
+			ours.rotate(new Vector3d(0,0,1), Math.PI/4.0);
+			Pdb rotated = ours.copy();
+			rotated.calcASAs();
+			checkASAsMatch(ours,rotated, 0.15, 0.10);
+		}
+		
+		
+	}
+	
+	private void checkASAsMatch(Pdb theirs, Pdb ours, double toleranceSingleVal, double toleranceGlobal) {
+		int missMatches = 0;
+		for (int resser:ours.getAllSortedResSerials()) {
+			Residue tRes = theirs.getResidue(resser);
+			Residue oRes = ours.getResidue(resser);
+			//String notWithin = "";
+			// we allow for a max 20% discrepancy
+			if (Math.abs(tRes.getAsa()-oRes.getAsa())>tRes.getAsa()*toleranceSingleVal){
+				//notWithin = "x";
+				missMatches++;
+			}
+			//System.out.printf("%6.2f\t%6.2f\t"+notWithin+"\n",tRes.getAsa(),oRes.getAsa());
+			
+		}
+		System.out.printf("%4.1f%% missmatches\n",100.0*(double)missMatches/(double)ours.getObsLength());
+		// we require that 90% of them must be within the 20% tolerance
+		Assert.assertTrue(missMatches<(double)ours.getObsLength()*toleranceGlobal);
+
+	}
+	
+	@Test
 	public void testConsurfConnection() throws IOException, PdbLoadError {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);

@@ -281,6 +281,16 @@ public class Residue implements Iterable<Atom>, Serializable {
 	}
 	
 	/**
+	 * Sets the vdw radius field of the member Atoms by using the AtomRadii parser.
+	 * Use subsequently Atom.getRadius() to get the value.
+	 */
+	public void setAtomRadii() {
+		for (Atom atom:this) {
+			atom.setRadius(AtomRadii.getRadius(this.aaType, atom));
+		}
+	}
+	
+	/**
 	 * Get Collection of Atoms belonging to this Residue sorted by atom codes
 	 * @return
 	 */

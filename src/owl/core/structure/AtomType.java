@@ -10,26 +10,29 @@ import java.util.HashMap;
  * @author duarte
  *
  */
+
 public enum AtomType {
 
-	H( 1,  1.008, "H", "Hydrogen"),
-	C( 6, 12.000, "C", "Carbon"),
-	O( 8, 15.995, "O", "Oxygen"),
-	N( 7, 14.003, "N", "Nitrogen"),
-	S(16, 31.972, "S", "Sulfur"),
-	P(15, 30.974, "P", "Phosphorus");
+	H( 1,  1.008, 1.20, "H", "Hydrogen"),
+	C( 6, 12.000, 1.70, "C", "Carbon"),
+	O( 8, 15.995, 1.52, "O", "Oxygen"),
+	N( 7, 14.003, 1.55, "N", "Nitrogen"),
+	S(16, 31.972, 1.80, "S", "Sulfur"),
+	P(15, 30.974, 1.80, "P", "Phosphorus");
 	
 	
 	private int atomicNumber;
 	private double atomicMass;
+	private double radius;
 	private String symbol;
 	private String name;
 	
 	private static final HashMap<String,AtomType> symbol2AtomType = initSymbol2AtomType();
 
-	private AtomType(int atomicNumber, double atomicMass, String symbol, String name) {
+	private AtomType(int atomicNumber, double atomicMass, double radius, String symbol, String name) {
 		this.atomicMass = atomicMass;
 		this.atomicNumber = atomicNumber;
+		this.radius = radius;
 		this.name = name;
 		this.symbol = symbol;
 	}
@@ -42,6 +45,10 @@ public enum AtomType {
 		return atomicMass;
 	}
 
+	public double getRadius() {
+		return radius;
+	}
+	
 	public String getSymbol() {
 		return symbol;
 	}

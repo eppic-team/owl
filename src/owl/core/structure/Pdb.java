@@ -507,6 +507,43 @@ public class Pdb implements HasFeatures {
 	}
 	
 	/**
+	 * Sets the VdW radius values of all Atoms of this Pdb. 
+	 * Use subsequently Atom.getRadius() to get the value.
+	 * This uses the AtomRadii parser of the vdw.radii resource file.
+	 */
+	private void setAtomRadii() {
+		for (Residue residue:residues.values()) {
+			residue.setAtomRadii();
+		}
+	}
+	
+	/**
+	 * Calculate the Accessible Surface Area using our implementation of the 
+	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members 
+	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
+	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
+	 */
+	public void calcASAs() {
+		this.setAtomRadii();
+		Atom[] atoms = new Atom[this.getNumAtoms()];
+		int i = 0;
+		for (int atomser: this.getAllAtomSerials()) {
+			atoms[i] = this.getAtom(atomser);
+			i++;
+		}
+		Asa.calculateAsa(atoms);
+
+		// and finally sums per residue
+		for (Residue residue: residues.values()) {
+			double tot = 0;
+			for (Atom atom:residue.getAtoms()) {
+				tot+=atom.getAsa();
+			}
+			residue.setAsa(tot);
+		}
+	}
+	
+	/**
 	 * Calculates for each atom in this structure the deviation to the corresponding atom
 	 * in the reference structure and returns a map from atom serials to differences in Angstrom.
 	 * The corresponding atom is the atom with the same residue serial and the same PDB residue code
