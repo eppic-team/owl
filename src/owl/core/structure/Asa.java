@@ -21,9 +21,8 @@ import javax.vecmath.Point3d;
  */
 public class Asa {
 
-	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92
-	// to get a bit faster computations I've reduced it to 2/3 of 960, still gets acceptable agreement with default NACCESS accuracy
-	private static final int DEFAULT_N_SPHERE_POINTS = 640;
+	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92 (not sure if this is actually the same parameter)
+	private static final int DEFAULT_N_SPHERE_POINTS = 960;
 	private static final double DEFAULT_PROBE_SIZE = 1.4;
 	
 	/**
