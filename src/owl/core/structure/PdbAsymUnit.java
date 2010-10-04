@@ -405,9 +405,12 @@ public class PdbAsymUnit {
 	/**
 	 * Returns a sorted (increasing area) list of all interfaces (any 2 atoms under cutoff) 
 	 * that this chain has upon generation of all crystal symmetry objects. 
-	 * The interface areas and BSAs are calculated with the external NACCESS program.
+	 * The interface areas and BSAs are calculated with either our implementation of the rolling
+	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
+	 * be passed)
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
-	 * @param naccessExe the NACCESS executable
+	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
+	 * will be used
 	 * @return
 	 */
 	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe) throws IOException {	
@@ -508,8 +511,11 @@ public class PdbAsymUnit {
 		//long start = System.currentTimeMillis();
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
-			//interf.calcSurfAccessNaccess(naccessExe);
-			interf.calcSurfAccess();
+			if (naccessExe!=null) {
+				interf.calcSurfAccessNaccess(naccessExe);
+			} else {
+				interf.calcSurfAccess();
+			}
 		}
 		//long end = System.currentTimeMillis();
 		//System.out.println("ASA computation time: "+(end-start)/1000+" s");

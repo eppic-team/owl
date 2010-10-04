@@ -51,21 +51,13 @@ public class Asa {
 	 * @param probe the probe size
 	 * @param k index of atom for which we want neighbor indices
 	 */
-	private static List<Integer> findNeighborIndices(Atom[] atoms, double probe, int k) {
-	    List<Integer> neighbor_indices = new ArrayList<Integer>();
-	    Atom atom_k = atoms[k];
-	    double radius = atom_k.getRadius() + probe + probe;
-	    List<Integer> indices = new ArrayList<Integer>(); 
-	    for (int i=0;i<k;i++) {
-	    	indices.add(i);
-	    }
-	    for (int i=k+1;i<atoms.length;i++) {
-	    	indices.add(i);
-	    }
-	    for (int i: indices) {
-	        Atom atom_i = atoms[i];
-	        double dist = atom_i.getCoords().distance(atom_k.getCoords()); 
-	        if (dist < radius + atom_i.getType().getRadius()) {
+	private static ArrayList<Integer> findNeighborIndices(Atom[] atoms, double probe, int k) {
+	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>();
+	    double radius = atoms[k].getRadius() + probe + probe;
+	    for (int i=0;i<atoms.length;i++) {
+	    	if (i==k) continue;
+	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords()); 
+	        if (dist < radius + atoms[i].getType().getRadius()) {
 	            neighbor_indices.add(i);
 	        }
 	    }
@@ -100,7 +92,7 @@ public class Asa {
 
 	    for (int i=0;i<atoms.length;i++) {
 	    	Atom atom_i = atoms[i];
-	    	List<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
+	    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
 	        int n_neighbor = neighbor_indices.size();
 	        int j_closest_neighbor = 0;
 	        double radius = probe + atom_i.getRadius();
@@ -114,12 +106,15 @@ public class Asa {
 	            test_point.y = point.y*radius + atom_i.getCoords().y;
 	            test_point.z = point.z*radius + atom_i.getCoords().z;
 
-	            List<Integer> cycled_indices = new ArrayList<Integer>();
+	            int[] cycled_indices = new int[n_neighbor];
+	            int arind = 0;
 	            for (int ind=j_closest_neighbor;ind<n_neighbor;ind++) {
-	            	cycled_indices.add(ind);
+	            	cycled_indices[arind] = ind;
+	            	arind++;
 	            }
 	            for (int ind=0;ind<j_closest_neighbor;ind++){
-	            	cycled_indices.add(ind);
+	            	cycled_indices[arind] = ind;
+	            	arind++;
 	            }
 
 	            for (int j: cycled_indices) {

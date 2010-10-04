@@ -147,7 +147,10 @@ public class PdbTest {
 
 				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
 				ours.load(pdbChainCode);
+				long start = System.currentTimeMillis();
 				ours.calcASAs();
+				long end = System.currentTimeMillis();
+				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Could not fild pdb code "+pdbCode);
 				continue;

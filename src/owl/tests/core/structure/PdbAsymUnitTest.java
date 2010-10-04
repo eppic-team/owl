@@ -1,7 +1,7 @@
 package owl.tests.core.structure;
 
 import java.io.BufferedReader;
-import java.io.File;
+//import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -35,6 +35,7 @@ import owl.tests.TestsSetup;
 
 public class PdbAsymUnitTest {
 
+	@SuppressWarnings("unused") // we keep it here since we might still want to use naccess for area calculations
 	private static String NACCESS_EXEC; 
 	
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
@@ -46,12 +47,13 @@ public class PdbAsymUnitTest {
 	
 	private static final double CUTOFF = 5.9;
 
-	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS and results will disagree always)
+	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS/our own implementation and results will disagree always)
 	private static final double TOLERANCE_ASA = 0.30;
 	private static final double TOLERANCE_BSA = 0.20;
 	// at least so many residues have to be in agreement within TOLERANCE above
 	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.90;
 
+	private static final boolean PRINT_PER_RES = true; // whether to print areas agreement per residue or not
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -114,7 +116,8 @@ public class PdbAsymUnitTest {
 			System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 			
 			long start = System.currentTimeMillis();
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
+			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
@@ -148,19 +151,19 @@ public class PdbAsymUnitTest {
 
 				
 				System.out.println("Chain 1");
-				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol);
+				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol, PRINT_PER_RES);
 				int[] counts2 = null;
 				
 				if (checkCounts(counts1)) {
 					System.out.println("Chain 2");
-					counts2 = checkResidues(pisaInterf.getSecondMolecule(), mySecondMol);
+					counts2 = checkResidues(pisaInterf.getSecondMolecule(), mySecondMol, PRINT_PER_RES);
 
 				} else {
 					System.out.println("Counts of first PISA chain to our first didn't match. Trying swapping chains.");
 					System.out.println("Chain 1");
-					counts1 = checkResidues(pisaInterf.getSecondMolecule(), myFirstMol);
+					counts1 = checkResidues(pisaInterf.getSecondMolecule(), myFirstMol, PRINT_PER_RES);
 					System.out.println("Chain 2");
-					counts2 = checkResidues(pisaInterf.getFirstMolecule(), mySecondMol);
+					counts2 = checkResidues(pisaInterf.getFirstMolecule(), mySecondMol, PRINT_PER_RES);
 				}
 				
 				if (!checkCounts(counts1) || !checkCounts(counts2)) {
@@ -192,7 +195,7 @@ public class PdbAsymUnitTest {
 	 * @param myMolecule
 	 * @return
 	 */
-	private static int[] checkResidues(Pdb pisaMolecule, Pdb myMolecule) {
+	private static int[] checkResidues(Pdb pisaMolecule, Pdb myMolecule, boolean printPerRes) {
 		int a = 0;
 		int b = 0;
 		int t = 0;
@@ -204,23 +207,25 @@ public class PdbAsymUnitTest {
 			if (myRes!=null) {
 				double myAsa = myRes.getAsa();
 				double myBsa = myRes.getBsa();
-				System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\t",
+				if (printPerRes) {
+					System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\t",
 						residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
+				}
 				Assert.assertEquals(residue.getAaType(),myRes.getAaType());
 				if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE_ASA)) {
-					System.out.print(" ");
+					if (printPerRes) System.out.print(" ");
 					a++;
 				} else {
-					System.out.print("x");
+					if (printPerRes) System.out.print("x");
 				}
 				if (deltaComp(pisaBsa, myBsa, pisaBsa*TOLERANCE_BSA)) {
-					System.out.print(" ");
+					if (printPerRes) System.out.print(" ");
 					b++;
 				} else {
-					System.out.print("x");
+					if (printPerRes) System.out.print("x");
 				}
 				t++;
-				System.out.println();
+				if (printPerRes) System.out.println();
 			}
 		}
 		System.out.println("Total: "+t+". Agreements within "+String.format("%4.2f(ASA) %4.2f(BSA)",TOLERANCE_ASA,TOLERANCE_BSA)+" tolerance: ASA "+a+" BSA "+b);
