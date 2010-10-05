@@ -13,17 +13,19 @@ import javax.vecmath.Point3d;
  * and adapted to java.
  * Thanks again to Bosco K. Ho for another great piece of code (our rmsd calculation is also his)
  * 
- * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
+ * See 
+ * Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
  * Lysozyme and Insulin." JMB (1973) 79:351-371.
- * 
+ * Lee, B., and Richards, F.M. "The interpretation of Protein Structures: Estimation of
+ * Static Accessibility" JMB (1971) 55:379-400
  * @author duarte_j
  *
  */
 public class Asa {
 
 	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92 (not sure if this is actually the same parameter)
-	private static final int DEFAULT_N_SPHERE_POINTS = 960;
-	private static final double DEFAULT_PROBE_SIZE = 1.4;
+	public static final int DEFAULT_N_SPHERE_POINTS = 960;
+	public static final double DEFAULT_PROBE_SIZE = 1.4;
 	
 	/**
 	 * Returns list of 3d coordinates of points on a sphere using the
@@ -79,7 +81,7 @@ public class Asa {
 	 * @param atoms
 	 * @param probe the probe size
 	 * @param nSpherePoints the number of points to be used in generating the spherical 
-	 * dot-density, the more points the more accurate (and slower) calculation.
+	 * dot-density, the more points the more accurate (and slower) calculation
 	 * @return an array with asa values matching the input atoms array
 	 */
 	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints) { 

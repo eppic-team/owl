@@ -129,7 +129,7 @@ public class PdbTest {
 	@Test
 	public void testASAcalcVsNaccess() throws IOException, PdbLoadError, SQLException {
 		
-		System.out.println("Our ASA values against NACCESS's");
+		System.out.println("Matching of our ASA values against NACCESS's. Areas with disagreement >20% reported");
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
 		MySQLConnection conn = new MySQLConnection();
 		for (String pdbId:pdbIds) {
@@ -152,25 +152,49 @@ public class PdbTest {
 				long end = System.currentTimeMillis();
 				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 			} catch (PdbCodeNotFoundError e) {
-				System.err.println("Could not fild pdb code "+pdbCode);
+				System.err.println("Could not find pdb code "+pdbCode);
 				continue;
 			}
 			checkASAsMatch(theirs, ours, 0.20, 0.10);
 			
-			// test wheter values calculated for a rotated molecule match to those of the original molecule. 
+		}
+
+		System.out.println("Matching of our ASAs from a chain to itself rotated. Areas with disagreement >15% reported");
+		for (String pdbId:pdbIds) {
+			// test whether values calculated for a rotated molecule match to those of the original molecule. 
 			// The values don't match exactly at all! (NACCESS had this problem too). It must be something inherent to the algorithm,
 			// I don't think it can be just rounding, I don't really understand it!
-			ours.rotate(new Vector3d(0,0,1), Math.PI/4.0);
-			Pdb rotated = ours.copy();
-			rotated.calcASAs();
-			checkASAsMatch(ours,rotated, 0.15, 0.10);
+			System.out.println(pdbId);
+			String pdbCode = pdbId.substring(0,4);
+			String pdbChainCode = pdbId.substring(4,5);
+			Pdb ours = null;
+			try {
+				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
+				ours.load(pdbChainCode);
+				
+				Pdb rotated = ours.copy();
+
+				rotated.rotate(new Vector3d(0,0,1), Math.PI/4.0);
+				System.out.println("960 sphere points");
+				ours.calcASAs(960);
+				rotated.calcASAs(960);
+				checkASAsMatch(ours,rotated, 0.15, 0.10);
+				System.out.println("9600 sphere points");
+				ours.calcASAs(9600);
+				rotated.calcASAs(9600);
+				checkASAsMatch(ours,rotated, 0.15, 0.10);
+
+			} catch (PdbCodeNotFoundError e) {
+				System.err.println("Could not find pdb code "+pdbCode);
+				continue;				
+			}
 		}
 		
 		
 	}
 	
 	private void checkASAsMatch(Pdb theirs, Pdb ours, double toleranceSingleVal, double toleranceGlobal) {
-		int missMatches = 0;
+		int misMatches = 0;
 		for (int resser:ours.getAllSortedResSerials()) {
 			Residue tRes = theirs.getResidue(resser);
 			Residue oRes = ours.getResidue(resser);
@@ -178,14 +202,14 @@ public class PdbTest {
 			// we allow for a max 20% discrepancy
 			if (Math.abs(tRes.getAsa()-oRes.getAsa())>tRes.getAsa()*toleranceSingleVal){
 				//notWithin = "x";
-				missMatches++;
+				misMatches++;
 			}
 			//System.out.printf("%6.2f\t%6.2f\t"+notWithin+"\n",tRes.getAsa(),oRes.getAsa());
 			
 		}
-		System.out.printf("%4.1f%% missmatches\n",100.0*(double)missMatches/(double)ours.getObsLength());
+		System.out.printf("%4.1f%% mismatches\n",100.0*(double)misMatches/(double)ours.getObsLength());
 		// we require that 90% of them must be within the 20% tolerance
-		Assert.assertTrue(missMatches<(double)ours.getObsLength()*toleranceGlobal);
+		Assert.assertTrue(misMatches<(double)ours.getObsLength()*toleranceGlobal);
 
 	}
 	
