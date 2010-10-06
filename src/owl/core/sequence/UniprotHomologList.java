@@ -198,7 +198,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		}
 	}
 	
-	private String readUniprotVer(String blastDbDir) {
+	public static String readUniprotVer(String blastDbDir) {
 		String ver = "unknown";
 		File uniprotVerFile = new File(blastDbDir,UNIPROT_VER_FILE);
 		try {

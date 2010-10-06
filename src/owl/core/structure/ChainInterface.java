@@ -280,7 +280,9 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	
 	public void printTabular(PrintStream ps) {
 		ps.print("# ");
-		ps.printf("%d\t%9.2f\t%5.2f\n",this.getId(),this.getInterfaceArea(),this.getScore());
+		ps.printf("%d\t%9.2f\t%5.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(),this.getScore(), 
+				this.getFirstMolecule().getPdbChainCode()+"+"+this.getSecondMolecule().getPdbChainCode(),
+				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf()));
 		ps.print("## ");
 		this.printFirstMolInfoTabular(ps);
 		ps.print("## ");
