@@ -1,7 +1,6 @@
 package owl.core.structure;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.vecmath.Point3d;
 
@@ -26,6 +25,32 @@ public class Asa {
 	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92 (not sure if this is actually the same parameter)
 	public static final int DEFAULT_N_SPHERE_POINTS = 960;
 	public static final double DEFAULT_PROBE_SIZE = 1.4;
+	public static final int DEFAULT_NTHREADS = 1;
+	
+	private class GroupASACalcThread extends Thread {
+		
+		int start;
+		int end;
+		Atom[] atoms;
+		Point3d[] sphere_points;
+		double[] asas;
+		double probe;
+		double cons;
+		
+		public GroupASACalcThread(int start, int end, Atom[] atoms, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+			this.start = start;
+			this.end = end;
+			this.atoms = atoms;
+			this.sphere_points = sphere_points;
+			this.asas = asas;
+			this.probe = probe;
+			this.cons = cons;
+		}
+
+		public void run() {
+			calcGroupOfAsas(start, end, atoms, sphere_points, asas, probe, cons);
+		}
+	}
 	
 	/**
 	 * Returns list of 3d coordinates of points on a sphere using the
@@ -33,15 +58,15 @@ public class Asa {
 	 * @param n the number of points to be used in generating the spherical dot-density
 	 * @return
 	 */
-	private static List<Point3d> generateSpherePoints(int n) {
-	    List<Point3d> points = new ArrayList<Point3d>();
+	private static Point3d[] generateSpherePoints(int n) {
+	    Point3d[] points = new Point3d[n];
 	    double inc = Math.PI * (3.0 - Math.sqrt(5.0));
 	    double offset = 2.0 / (double)n; 
 	    for (int k=0;k<n;k++) {
 	        double y = k * offset - 1.0 + (offset / 2.0);
 	        double r = Math.sqrt(1.0 - y*y);
 	        double phi = k * inc;
-	        points.add(new Point3d(Math.cos(phi)*r, y, Math.sin(phi)*r));
+	        points[k] = new Point3d(Math.cos(phi)*r, y, Math.sin(phi)*r);
 	    }
 	    return points;
 	}
@@ -66,79 +91,118 @@ public class Asa {
 	}
 
 	/**
-	 * Calculates the Accessible Surface Areas of the given atoms
-	 * Probe size is default value {@value #DEFAULT_PROBE_SIZE} and number of sphere points is also default value
-	 * {@value #DEFAULT_N_SPHERE_POINTS}
-	 * @param atoms
-	 * @return an array with asa values matching the input atoms array
-	 */
-	public static double[] calculateAsa(Atom[] atoms) {
-		return calculateAsa(atoms, DEFAULT_PROBE_SIZE, DEFAULT_N_SPHERE_POINTS);
-	}
-	
-	/**
 	 * Calculates the Accessible Surface Areas of the given atoms, using given probe size.
 	 * @param atoms
 	 * @param probe the probe size
 	 * @param nSpherePoints the number of points to be used in generating the spherical 
 	 * dot-density, the more points the more accurate (and slower) calculation
+	 * @param nThreads the number of parallel threads to use for the calculation
 	 * @return an array with asa values matching the input atoms array
 	 */
-	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints) { 
+	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints, int nThreads) { 
 		double[] asas = new double[atoms.length];
-	    List<Point3d> sphere_points = generateSpherePoints(nSpherePoints);
+	    Point3d[] sphere_points = generateSpherePoints(nSpherePoints);
 
-	    double cons = 4.0 * Math.PI / (double)sphere_points.size(); 
-	    Point3d test_point = new Point3d();
+	    double cons = 4.0 * Math.PI / (double)nSpherePoints; 
 
-	    for (int i=0;i<atoms.length;i++) {
-	    	Atom atom_i = atoms[i];
-	    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
-	        int n_neighbor = neighbor_indices.size();
-	        int j_closest_neighbor = 0;
-	        double radius = probe + atom_i.getRadius();
+	    if (nThreads==1) {
+		    for (int i=0;i<atoms.length;i++) {	    	
+		        asas[i] = calcSingleAsa(atoms, sphere_points, i, probe, cons); 
+		        //atom_i.setAsa(area);
+		    }
+	    } else {
+	    	// NOTE the multithreaded calculation does not scale up well (only tried 4 CPUs for which we get a speed-up of x2)
+	    	// I guess this is because of memory access issues when reading the atoms array from the different threads
+	    	GroupASACalcThread[] threads = new GroupASACalcThread[nThreads];
+	    	
+	    	int[] startIndices = getStartingIdxForGroups(atoms.length, nThreads);
 
-	        int n_accessible_point = 0;
-	        
-	        for (Point3d point: sphere_points){
-	            boolean is_accessible = true;
-
-	            test_point.x = point.x*radius + atom_i.getCoords().x;
-	            test_point.y = point.y*radius + atom_i.getCoords().y;
-	            test_point.z = point.z*radius + atom_i.getCoords().z;
-
-	            int[] cycled_indices = new int[n_neighbor];
-	            int arind = 0;
-	            for (int ind=j_closest_neighbor;ind<n_neighbor;ind++) {
-	            	cycled_indices[arind] = ind;
-	            	arind++;
-	            }
-	            for (int ind=0;ind<j_closest_neighbor;ind++){
-	            	cycled_indices[arind] = ind;
-	            	arind++;
-	            }
-
-	            for (int j: cycled_indices) {
-	                Atom atom_j = atoms[neighbor_indices.get(j)];
-	                double r = atom_j.getRadius() + probe;
-	                double diff_sq = atom_j.getCoords().distanceSquared(test_point);
-	                if (diff_sq < r*r) {
-	                    j_closest_neighbor = j;
-	                    is_accessible = false;
-	                    break;
-	                }
-	            }
-	            if (is_accessible) {
-	                n_accessible_point++;
-	            }
-	        }
-	        double area = cons*n_accessible_point*radius*radius ;
-	        asas[i] = area;
-	        //atom_i.setAsa(area);
+		    for (int k=0;k<nThreads;k++) {		    			    	
+		    	threads[k] = new Asa().new GroupASACalcThread(startIndices[k], startIndices[k+1], atoms, sphere_points, asas, probe, cons);
+		    	threads[k].start();
+		    }
+	    	
+		    for (int k=0;k<nThreads;k++) {
+		    	try {
+		    		threads[k].join();
+		    	} catch (InterruptedException e) {
+		    		System.err.println("Unexpected error while running multi-threaded ASA calculation. Exiting.");
+		    		e.printStackTrace();
+		    		System.exit(1);
+		    	}
+		    }
 	    }
+	    
+	    
 	    return asas;
 	}
+	
+	private static void calcGroupOfAsas(int startIdx, int endIdx, Atom[] atoms, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+		for (int i=startIdx;i<endIdx;i++) {
+			asas[i] = calcSingleAsa(atoms, sphere_points, i, probe, cons);
+		}
+	}
 
+	private static double calcSingleAsa(Atom[] atoms, Point3d[] sphere_points, int i, double probe, double cons) {
+    	Atom atom_i = atoms[i];
+    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
+        int n_neighbor = neighbor_indices.size();
+        int j_closest_neighbor = 0;
+        double radius = probe + atom_i.getRadius();
+
+        int n_accessible_point = 0;
+        
+        for (Point3d point: sphere_points){
+            boolean is_accessible = true;
+            Point3d test_point = new Point3d(point.x*radius + atom_i.getCoords().x,
+            								point.y*radius + atom_i.getCoords().y,
+            								point.z*radius + atom_i.getCoords().z);
+
+            int[] cycled_indices = new int[n_neighbor];
+            int arind = 0;
+            for (int ind=j_closest_neighbor;ind<n_neighbor;ind++) {
+            	cycled_indices[arind] = ind;
+            	arind++;
+            }
+            for (int ind=0;ind<j_closest_neighbor;ind++){
+            	cycled_indices[arind] = ind;
+            	arind++;
+            }
+
+            for (int j: cycled_indices) {
+                Atom atom_j = atoms[neighbor_indices.get(j)];
+                double r = atom_j.getRadius() + probe;
+                double diff_sq = atom_j.getCoords().distanceSquared(test_point);
+                if (diff_sq < r*r) {
+                    j_closest_neighbor = j;
+                    is_accessible = false;
+                    break;
+                }
+            }
+            if (is_accessible) {
+                n_accessible_point++;
+            }
+        }
+        return cons*n_accessible_point*radius*radius;
+	}
+	
+	private static int[] getStartingIdxForGroups(int n, int nGroups) {
+		int[] indices = new int[nGroups+1];
+
+		int baseSize = n/nGroups;
+		int remainder = n%nGroups;
+
+		indices[0] = 0;
+		for (int k=1;k<nGroups;k++){
+			indices[k] = indices[k-1]+baseSize;
+			if (k<remainder) {
+				indices[k]+=1;
+			}
+		}
+		indices[nGroups] = n;
+		return indices;
+	}
+		
 	/**
 	 * To test the class
 	 * @param args
@@ -147,7 +211,7 @@ public class Asa {
 	public static void main(String[] args) throws Exception {
 		Pdb pdb = new PdbfilePdb(args[0]);
 		pdb.load(pdb.getChains()[0]);
-		pdb.calcASAs();
+		pdb.calcASAs(DEFAULT_N_SPHERE_POINTS,1);
 		
 		double tot = 0;
 		for (int resser:pdb.getAllSortedResSerials()) {
@@ -158,5 +222,6 @@ public class Asa {
 		}
 		System.out.printf("Total area: %9.2f\n",tot);
 		
+
 	}
 }

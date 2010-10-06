@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 import owl.core.connections.pisa.PisaConnection;
+import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.Pdb;
@@ -55,6 +56,8 @@ public class PdbAsymUnitTest {
 
 	private static final boolean PRINT_PER_RES = true; // whether to print areas agreement per residue or not
 	
+	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
+
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		Properties p = TestsSetup.readPaths();
@@ -89,6 +92,8 @@ public class PdbAsymUnitTest {
 		}
 		flist.close();
 
+		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+		
 		// getting PISA interfaces
 		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, null, null);
 		System.out.println("Downloading PISA interfaces");
@@ -117,7 +122,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());

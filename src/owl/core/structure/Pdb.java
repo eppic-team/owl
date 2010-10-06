@@ -524,8 +524,9 @@ public class Pdb implements HasFeatures {
 	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
 	 * @param nSpherePoints the number of points to be used in generating the spherical 
 	 * dot-density, the more points the more accurate (and slower) calculation
+	 * @param nThreads number of threads to be used for ASA calculation
 	 */
-	public void calcASAs(int nSpherePoints) {
+	public void calcASAs(int nSpherePoints, int nThreads) {
 		this.setAtomRadii();
 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		int i = 0;
@@ -533,7 +534,7 @@ public class Pdb implements HasFeatures {
 			atoms[i] = this.getAtom(atomser);
 			i++;
 		}
-		double[] asas = Asa.calculateAsa(atoms,Asa.DEFAULT_PROBE_SIZE,nSpherePoints);
+		double[] asas = Asa.calculateAsa(atoms,Asa.DEFAULT_PROBE_SIZE,nSpherePoints,nThreads);
 		
 		for (i=0;i<atoms.length;i++) {
 			atoms[i].setAsa(asas[i]);
@@ -547,18 +548,6 @@ public class Pdb implements HasFeatures {
 			}
 			residue.setAsa(tot);
 		}
-	}
-	
-	/**
-	 * Calculate the Accessible Surface Area using our implementation of the 
-	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members 
-	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
-	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
-	 * Uses default value for the number of sphere points parameters (which control de accuracy
-	 * of the surface calculations). 
-	 */
-	public void calcASAs() {
-		calcASAs(Asa.DEFAULT_N_SPHERE_POINTS);
 	}
 	
 	/**

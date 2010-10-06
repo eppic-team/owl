@@ -411,9 +411,11 @@ public class PdbAsymUnit {
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
 	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
 	 * will be used
+	 * @param nSpherePoints
+	 * @param nThreads
 	 * @return
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe) throws IOException {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads) throws IOException {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
@@ -514,7 +516,7 @@ public class PdbAsymUnit {
 			if (naccessExe!=null) {
 				interf.calcSurfAccessNaccess(naccessExe);
 			} else {
-				interf.calcSurfAccess();
+				interf.calcSurfAccess(nSpherePoints, nThreads);
 			}
 		}
 		//long end = System.currentTimeMillis();
@@ -535,8 +537,10 @@ public class PdbAsymUnit {
 	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members.
 	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
 	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
+	 * @param nSpherePoints
+	 * @param nThreads
 	 */
-	public void calcASAs() {
+	public void calcASAs(int nSpherePoints, int nThreads) {
 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		
 		int i = 0;
@@ -548,7 +552,7 @@ public class PdbAsymUnit {
 			}
 		}
 		
-		double[] asas = Asa.calculateAsa(atoms);
+		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
 		for (i=0;i<atoms.length;i++){
 			atoms[i].setAsa(asas[i]);
 		}
@@ -569,8 +573,10 @@ public class PdbAsymUnit {
 	 * Calculate the Buried Surface Areas by calculating the ASAs of this PdbAsymUnit 
 	 * as a complex and then using the (previously calculated) isolated chain ASA values
 	 * to compute the difference and set the bsa members of Atoms and Residues
+	 * @param nSpherePoints
+	 * @param nThreads
 	 */
-	public void calcBSAs() {
+	public void calcBSAs(int nSpherePoints, int nThreads) {
 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		
 		int i = 0;
@@ -582,7 +588,7 @@ public class PdbAsymUnit {
 			}
 		}
 		
-		double[] asas = Asa.calculateAsa(atoms);
+		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
 		for (i=0;i<atoms.length;i++){
 			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
 		}

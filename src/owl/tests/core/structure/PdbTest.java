@@ -76,6 +76,7 @@ public class PdbTest {
 
 	private static final String PDBASE_DB = "pdbase";
 
+	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -129,6 +130,7 @@ public class PdbTest {
 	@Test
 	public void testASAcalcVsNaccess() throws IOException, PdbLoadError, SQLException {
 		
+		System.out.println("Using "+NTHREADS+" CPUs for ASA calculations");
 		System.out.println("Matching of our ASA values against NACCESS's. Areas with disagreement >20% reported");
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
 		MySQLConnection conn = new MySQLConnection();
@@ -148,9 +150,11 @@ public class PdbTest {
 				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
 				ours.load(pdbChainCode);
 				long start = System.currentTimeMillis();
-				ours.calcASAs();
+				ours.calcASAs(960, NTHREADS);
 				long end = System.currentTimeMillis();
 				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
+
+
 			} catch (PdbCodeNotFoundError e) {
 				System.err.println("Could not find pdb code "+pdbCode);
 				continue;
@@ -176,12 +180,14 @@ public class PdbTest {
 
 				rotated.rotate(new Vector3d(0,0,1), Math.PI/4.0);
 				System.out.println("960 sphere points");
-				ours.calcASAs(960);
-				rotated.calcASAs(960);
+				ours.calcASAs(960,NTHREADS);
+				rotated.calcASAs(960,NTHREADS);
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 				System.out.println("9600 sphere points");
-				ours.calcASAs(9600);
-				rotated.calcASAs(9600);
+
+				ours.calcASAs(9600,NTHREADS);
+				rotated.calcASAs(9600,NTHREADS);
+
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 
 			} catch (PdbCodeNotFoundError e) {

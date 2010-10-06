@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
@@ -24,6 +25,8 @@ public class enumerateInterfaces {
 	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)  
 	private static final double CUTOFF = 5.9; 
 	
+	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
+	
 	/**
 	 * @param args
 	 */
@@ -36,8 +39,9 @@ public class enumerateInterfaces {
 		
 		String pdbStr = null;
 		File writeDir = null;
+		int nThreads = NTHREADS;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:h?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -46,6 +50,9 @@ public class enumerateInterfaces {
 				break;
 			case 'w':
 				writeDir = new File(g.getOptarg());
+				break;
+			case 't':
+				nThreads = Integer.parseInt(g.getOptarg());
 				break;
 			case 'h':
 			case '?':
@@ -84,9 +91,9 @@ public class enumerateInterfaces {
 
 		System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 		
-		System.out.println("Calculating possible interfaces...");
+		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, NACCESS_EXE);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, NACCESS_EXE, Asa.DEFAULT_N_SPHERE_POINTS, nThreads);
 		long end = System.currentTimeMillis();
 		System.out.println("Done. Time "+(end-start)/1000+"s");
 		

@@ -194,8 +194,10 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	 * both ASAs and BSAs of the residues of the two molecules making up this interface.
 	 * The total interface area is also calculated from the individual residue values (use {@link #getInterfaceArea()} 
 	 * to get it)
+	 * @param nSpherePoints
+	 * @param nThreads 
 	 */
-	public void calcSurfAccess() {
+	public void calcSurfAccess(int nSpherePoints, int nThreads) {
 		// NOTE in principle it is more efficient to calculate the ASAs only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
 		// orientations! (can't really understand why!)
@@ -203,14 +205,14 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
 
 		
-		firstMolecule.calcASAs();
-		secondMolecule.calcASAs();
+		firstMolecule.calcASAs(nSpherePoints, nThreads);
+		secondMolecule.calcASAs(nSpherePoints, nThreads);
 		
 		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
 		complex.setChain("A", firstMolecule);
 		complex.setChain("B", secondMolecule);
 
-		complex.calcBSAs();
+		complex.calcBSAs(nSpherePoints, nThreads);
 		double totBuried = 0.0;
 		
 		for (Residue residue:firstMolecule.getResidues().values()) {
