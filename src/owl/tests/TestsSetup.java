@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Properties;
 
 /**
@@ -13,7 +14,8 @@ import java.util.Properties;
  */
 public class TestsSetup {
 
-	public static final File DEFAULT_PATHS_FILE = new File("src/owl/tests/owl_test_paths.dat");
+	public static final String DEFAULT_PATHS_FILE = "/owl/tests/owl_test_paths.dat";
+	private static final InputStream PATHS_FILE_IS = TestsSetup.class.getResourceAsStream(DEFAULT_PATHS_FILE);
 	public static final File HOME_PATHS_FILE = new File(System.getProperty("user.home"),"owl_test_paths.dat") ; 
 	
 	/**
@@ -27,7 +29,7 @@ public class TestsSetup {
 	public static Properties readPaths() throws FileNotFoundException, IOException {
 		
 		Properties p = new Properties();
-		p.load(new FileInputStream(DEFAULT_PATHS_FILE));
+		p.load(PATHS_FILE_IS);
 				
 		if (HOME_PATHS_FILE.canRead()) {
 			p.load(new FileInputStream(HOME_PATHS_FILE));
