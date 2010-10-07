@@ -421,7 +421,13 @@ public class Residue implements Iterable<Atom>, Serializable {
 	}
 	
 	public void printTabular(PrintStream ps) {
-		ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f\n",serial,pdbSerial,aaType==null?"UNK":aaType.getThreeLetterCode(),asa,bsa);
+		ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",serial,pdbSerial,aaType==null?"UNK":aaType.getThreeLetterCode(),asa,bsa);
+		double percentBurial = 100.0*bsa/asa;
+		if (percentBurial>0.1) {
+			ps.printf("\t%5.1f\n",percentBurial);
+		} else {
+			ps.println();
+		}
 	}
 	
 }
