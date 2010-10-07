@@ -111,13 +111,16 @@ public class Asa {
 		        //atom_i.setAsa(area);
 		    }
 	    } else {
-	    	// NOTE the multithreaded calculation does not scale up well (only tried 4 CPUs for which we get a speed-up of x2)
-	    	// I guess this is because of memory access issues when reading the atoms array from the different threads
+	    	// NOTE the multithreaded calculation does not scale up well (4 CPUs ~ x2.8, 8CPUs ~ x2.9)
+	    	// tried copying the arrays (atoms and sphere_points) as new arrays but the scaling behaves the same
+	    	// also tried dividing the asas array in parts and them joining all together but same scaling behaviour
+	    	// I guess it's simply memory bottlenecks of the architecture :(
 	    	GroupASACalcThread[] threads = new GroupASACalcThread[nThreads];
 	    	
 	    	int[] startIndices = getStartingIdxForGroups(atoms.length, nThreads);
 
-		    for (int k=0;k<nThreads;k++) {		    			    	
+
+		    for (int k=0;k<nThreads;k++) {
 		    	threads[k] = new Asa().new GroupASACalcThread(startIndices[k], startIndices[k+1], atoms, sphere_points, asas, probe, cons);
 		    	threads[k].start();
 		    }
@@ -202,7 +205,7 @@ public class Asa {
 		indices[nGroups] = n;
 		return indices;
 	}
-		
+
 	/**
 	 * To test the class
 	 * @param args
@@ -210,8 +213,12 @@ public class Asa {
 	 */
 	public static void main(String[] args) throws Exception {
 		Pdb pdb = new PdbfilePdb(args[0]);
+		int nThreads = Integer.parseInt(args[1]);
+		
 		pdb.load(pdb.getChains()[0]);
-		pdb.calcASAs(DEFAULT_N_SPHERE_POINTS,1);
+		long start = System.currentTimeMillis();
+		pdb.calcASAs(9600,nThreads);
+		long end = System.currentTimeMillis();
 		
 		double tot = 0;
 		for (int resser:pdb.getAllSortedResSerials()) {
@@ -221,6 +228,7 @@ public class Asa {
 			tot+=res.getAsa();
 		}
 		System.out.printf("Total area: %9.2f\n",tot);
+		System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 		
 
 	}
