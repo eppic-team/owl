@@ -109,8 +109,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @param cacheFile a file with the cached xml blast output file, if null blast will be always run
 	 * @throws IOException
 	 * @throws BlastError
+	 * @throws UniprotVerMisMatchException 
 	 */
-	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastError {
+	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastError, UniprotVerMisMatchException {
 		File outBlast = null;
 		boolean fromCache = false;
 		if (cacheFile!=null && cacheFile.exists()) {
@@ -160,7 +161,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			this.uniprotVer = readUniprotVer(cacheFile.getParent());
 			String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
 			if (!uniprotVerFromBlastDbDir.equals(uniprotVer)) {
-				throw new IOException("Uniprot version from blast db dir "+blastDbDir+" does not match version in cache dir "+cacheFile.getParent());
+				throw new UniprotVerMisMatchException("Uniprot version from blast db dir "+blastDbDir+
+						" ("+uniprotVerFromBlastDbDir+") does not match version in cache dir "+cacheFile.getParent()+" ("+uniprotVer+")");
 			}
 		}
 
