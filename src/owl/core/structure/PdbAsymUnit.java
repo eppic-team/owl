@@ -1,9 +1,14 @@
 package owl.core.structure;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.URL;
+import java.net.URLConnection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -13,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
@@ -632,5 +638,49 @@ public class PdbAsymUnit {
 			}		
 		}
 		return uniqSequences;
+	}
+	
+	/**
+	 * Grabs and unzips a cif file from either the online PDB ftp or a local directory 
+	 * containing zipped cif files. The file is written to the given cifFile. 
+	 * @param localCifDir
+	 * @param pdbFtpCifUrl
+	 * @param pdbCode
+	 * @param cifFile the file where the data will be written to
+	 * @param online if true taken from online ftp, otherwise from local dir
+	 * @throws IOException
+	 */
+	public static void grabCifFile(String localCifDir, String pdbFtpCifUrl, String pdbCode, File cifFile, boolean online) throws IOException {
+
+		String gzCifFileName = pdbCode+".cif.gz";
+		File gzCifFile = null;
+		if (!online) {	
+			gzCifFile = new File(localCifDir,gzCifFileName);
+		} else {
+			gzCifFile = File.createTempFile(pdbCode+".", ".cif.gz");
+			System.out.println("Downloading cif file "+gzCifFileName+" from ftp...");
+			// getting gzipped cif file from ftp
+			URL url = new URL(pdbFtpCifUrl+gzCifFileName);
+			URLConnection urlc = url.openConnection();
+			InputStream is = urlc.getInputStream();
+			FileOutputStream os = new FileOutputStream(gzCifFile);
+			int b;
+			while ( (b=is.read())!=-1) {
+				os.write(b);
+			}
+			is.close();
+			os.close();
+			gzCifFile.deleteOnExit();
+		} 
+
+		// unzipping file
+		GZIPInputStream zis = new GZIPInputStream(new FileInputStream(gzCifFile));
+		FileOutputStream os = new FileOutputStream(cifFile);
+		int b;
+		while ( (b=zis.read())!=-1) {
+			os.write(b);
+		}
+		zis.close();
+		os.close();
 	}
 }

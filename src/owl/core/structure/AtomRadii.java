@@ -17,7 +17,7 @@ public class AtomRadii {
 	// the van der waals radii file from NACCESS
 	private static final String RADFILE = "/owl/core/structure/vdw.radii";
 
-	private static final InputStream vdwradIS = SymoplibParser.class.getResourceAsStream(RADFILE);
+	private static final InputStream vdwradIS = AtomRadii.class.getResourceAsStream(RADFILE);
 	private static final HashMap<String, HashMap<String,Double>> radii = parseRadFile();
 
 	/**

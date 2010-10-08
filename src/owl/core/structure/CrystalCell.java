@@ -151,6 +151,25 @@ public class CrystalCell {
 	}
 
 	/**
+	 * Transform given Matrix4d in orthonormal basis to the crystal basis using
+	 * the PDB axes convention (NCODE=1)
+	 * @param m
+	 * @return
+	 */
+	public Matrix4d transfToCrystal(Matrix4d m) {
+		Vector3d trans = this.getTranslationVector(new Vector3d(m.m03,m.m13,m.m23));
+		
+		Matrix3d rot = new Matrix3d();
+		m.getRotationScale(rot);
+		// see Giacovazzo section 2.E, eq. 2.E.1 (the inverse equation)
+		// R = MT * Rprime * MT-1
+		rot.mul(this.getMTransposeInv());
+		rot.mul(this.getMTranspose(),rot);
+
+		return new Matrix4d(rot,trans,1.0);		
+	}
+	
+	/**
 	 * Returns the change of basis (crystal to orthonormal) transform matrix, that is 
 	 * M inverse in the notation of Giacovazzo. 
 	 * Using the PDB axes convention (NCODE=1). 

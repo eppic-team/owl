@@ -25,6 +25,11 @@ import javax.vecmath.Vector3d;
 public final class SpaceGroup {
 
 	
+	private static final Pattern splitPat1 = Pattern.compile("([+-]?[XYZ])([+-][0-9/.]+)");
+	private static final Pattern splitPat2 = Pattern.compile("([+-]?[0-9/.]+)([+-][XYZ])");
+	private static final Pattern coordPat = Pattern.compile("([+-])?([XYZ])");
+	private static final Pattern transCoefPat = Pattern.compile("([-+]?[0-9.]+)(?:/([0-9.]+))?");
+	
 	private int id;
 	private String shortSymbol;
 	private List<Matrix4d> transformations;
@@ -44,11 +49,11 @@ public final class SpaceGroup {
 	
 	public void addTransformation(String transfAlgebraic) {
 		this.transfAlgebraic.add(transfAlgebraic);
-		this.transformations.add(convertAlgebraicToMatrix(transfAlgebraic));
+		this.transformations.add(getMatrixFromAlgebraic(transfAlgebraic));
 	}
 	
-	private Matrix4d convertAlgebraicToMatrix(String transfAlgebraic) {
-		String[] parts = transfAlgebraic.split(",");
+	public static Matrix4d getMatrixFromAlgebraic(String transfAlgebraic) {
+		String[] parts = transfAlgebraic.toUpperCase().split(",");
 		double[] xCoef = convertAlgebraicStrToCoefficients(parts[0].trim());
 		double[] yCoef = convertAlgebraicStrToCoefficients(parts[1].trim());
 		double[] zCoef = convertAlgebraicStrToCoefficients(parts[2].trim());
@@ -64,11 +69,25 @@ public final class SpaceGroup {
 		//					0,0,0,1);
 	}
 	
-	private double[] convertAlgebraicStrToCoefficients(String algString) {
+	private static double[] convertAlgebraicStrToCoefficients(String algString) {
+		String letters = null;
+		String noLetters = null;
+		Matcher m = splitPat1.matcher(algString);
+		if (m.matches()) {
+			letters = m.group(1);
+			noLetters = m.group(2);
+		} else {
+			m = splitPat2.matcher(algString);
+			if (m.matches()) {
+				letters = m.group(2);
+				noLetters = m.group(1);
+			} else {
+				letters = algString;
+			}
+		}
 		double[] coefficients = new double[4];
-		Pattern coordPat = Pattern.compile("([+-])?([XYZ])");
-		Matcher m = coordPat.matcher(algString);
-		while(m.find()){
+		m = coordPat.matcher(letters);
+		if(m.matches()){
 			String sign = "";
 			if (m.group(1)!=null) {
 				sign = m.group(1);
@@ -87,15 +106,18 @@ public final class SpaceGroup {
 			}
 			
 		}
-		Pattern transCoefPat = Pattern.compile(".*([-+]?\\d+)/(\\d+).*");
-		m = transCoefPat.matcher(algString);
-		if (m.matches()) {
-			double num = Double.parseDouble(m.group(1));
-			double den = 1;
-			if (m.group(2)!=null) {
-				den = Double.parseDouble(m.group(2));
+		if (noLetters!=null) {
+			m = transCoefPat.matcher(noLetters);
+			if (m.matches()) {
+				double num = Double.parseDouble(m.group(1));
+				double den = 1;
+				if (m.group(2)!=null) {
+					den = Double.parseDouble(m.group(2));
+				}
+				coefficients[3] = num/den;
 			}
-			coefficients[3] = num/den;
+		} else {
+			coefficients[3]=0;
 		}
 		return coefficients;
 	}

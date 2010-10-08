@@ -1501,6 +1501,15 @@ public class Pdb implements HasFeatures {
 	}
 
 	/**
+	 * Sets the 4 letter pdb code identifying this structure.
+	 * The input will always be converted to lower case
+	 * @param pdbCode
+	 */
+	public void setPdbCode(String pdbCode){
+		this.pdbCode = pdbCode.toLowerCase();
+	}
+	
+	/**
 	 * Gets the internal chain code (cif)
 	 * @return
 	 */
