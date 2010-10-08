@@ -223,11 +223,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
+	 * @throws UniprotVerMisMatchException 
 	 */
-	public void retrieveUniprotKBData() {
+	public void retrieveUniprotKBData() throws UniprotVerMisMatchException {
 		UniProtConnection uniprotConn = new UniProtConnection();
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			LOGGER.warn("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
+			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();
 		for (UniprotHomolog hom:this) {
