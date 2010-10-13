@@ -1,13 +1,19 @@
 #!/bin/sh
 if [ -z "$2" ]
 then
-    echo "Usage: make-owl.sh <svn url> <tempdir>"
-    echo "e.g. for svn url: svn://black/aglappe/trunk or svn://www.bioinformatics.org/svnroot/owl/tags/owl-1.2.0"
+    echo "Usage: make-owl.sh <svn url> <tempdir> [<rev>]"
+    echo "e.g. for svn url: svn://black/aglappe/trunk or svn://bioinformatics.org/svnroot/owl/tags/owl-1.2.0"
+    echo "Optionally specify a revision to be exported instead of head"
     exit
 fi
 
 svnurl=$1
 tempdir=$2
+rev=""
+if [ -n "$3" ]
+then
+	rev=$3
+fi
 
 echo "Compiling with:"
 javac -version
@@ -18,10 +24,15 @@ cd $tempdir
 
 tag=`basename $svnurl` 
 
+revStr=""
+if [ -n "$rev" ]
+then 
+	revStr="-r $rev"
+fi
 
 # exporting from svn
 echo "Exporting source from svn"
-svn export $svnurl
+svn export $revStr $svnurl
 if [ "$?" -ne "0" ]
 then
 	echo "Couldn't export from svn. Exiting"
