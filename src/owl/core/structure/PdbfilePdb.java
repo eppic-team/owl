@@ -243,7 +243,11 @@ public class PdbfilePdb extends Pdb {
 				double alpha = Double.parseDouble(line.substring(33, 40));
 				double beta = Double.parseDouble(line.substring(40, 47));
 				double gamma = Double.parseDouble(line.substring(47, 54));
-				String sg = line.substring(55,66).trim();
+				int endsg = 66;
+				if (line.length()<66) {
+					endsg = line.length(); // some programs like phenix don't write the z number and thus can have no trailing spaces so that the line is shorter
+				}
+				String sg = line.substring(55,endsg).trim();
 				crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 				spaceGroup = SymoplibParser.getSpaceGroup(sg);
 			}
