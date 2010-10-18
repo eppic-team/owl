@@ -23,6 +23,11 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	private Pdb firstMolecule;
 	private Pdb secondMolecule;
 	
+	private InterfaceRimCore[] firstRimCores;  // cached first molecule's rim and cores (indices as bsaToAsaCutoffs)
+	private InterfaceRimCore[] secondRimCores; // cached second molecule's rim and cores (indices as bsaToAsaCutoffs)
+	
+	private double[] bsaToAsaCutoffs;
+	
 	private Matrix4d firstTransf; 		// the transformation applied to first molecule expressed in crystal axes coordinates
 	private Matrix4d firstTransfOrth;	// the transformation applied to first molecule expressed in orthonormal axes coordinates
 	private Matrix4d secondTransf; 		// the transformation applied to second molecule expressed in crystal axes coordinates
@@ -304,7 +309,7 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 
 	/**
-	 * Returns a map containing 2 {@link InterfaceRimCore} objects (see getRimAndCore in {@link PisaMolecule})
+	 * Returns a map containing 2 {@link InterfaceRimCore} objects (see getRimAndCore in {@link Pdb})
 	 * for each of the 2 members of the interface.
 	 * The sum of the residues of the 2 cores is required to be at least minNumResidues. 
 	 * If the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
@@ -318,7 +323,8 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	 * @param minNumResidues
 	 * @return
 	 */
-	public Map<Integer,InterfaceRimCore> getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+	@SuppressWarnings("unused")
+	private Map<Integer,InterfaceRimCore> calcRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
 		
 		Map<Integer,InterfaceRimCore> rimcores = new HashMap<Integer, InterfaceRimCore>();
 		if (!isFirstProtein() && !isSecondProtein()) {
@@ -347,6 +353,55 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return rimcores;
 	}
 
+	/**
+	 * Calculates residues in rim and core for all given bsaToAsaCutoffs, storing the 
+	 * lists in a cached array.
+	 * Use {@link #getFirstRimCores()} and {@link #getSecondRimCores()} to retrieve them.
+	 * (see getRimAndCore in {@link Pdb})
+	 * If either of the 2 molecules of this interface is not a protein, the map will be empty for it. 
+	 * @param bsaToAsaCutoffs
+	 * @return
+	 */
+	public void calcRimAndCore(double[] bsaToAsaCutoffs) {
+
+		this.bsaToAsaCutoffs = bsaToAsaCutoffs;
+		
+		firstRimCores = new InterfaceRimCore[bsaToAsaCutoffs.length];
+		secondRimCores = new InterfaceRimCore[bsaToAsaCutoffs.length];
+		
+		InterfaceRimCore rimCore1 = null;
+		InterfaceRimCore rimCore2 = null;
+		if (isFirstProtein()) { 
+			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
+				rimCore1 = this.firstMolecule.getRimAndCore(bsaToAsaCutoffs[i]);
+				firstRimCores[i] = rimCore1;
+			}
+		}
+		
+		if (isSecondProtein()) {
+			for (int i=0;i<bsaToAsaCutoffs.length;i++) {		
+				rimCore2 = this.secondMolecule.getRimAndCore(bsaToAsaCutoffs[i]);
+				secondRimCores[i] = rimCore2;
+			}
+		}
+	}
+	
+	public double[] getBsaToAsaCutoffs() {
+		return bsaToAsaCutoffs;
+	}
+	
+	public int getNumBsaToAsaCutoffs() {
+		return bsaToAsaCutoffs.length;
+	}
+	
+	public InterfaceRimCore[] getFirstRimCores() {
+		return firstRimCores;
+	}
+	
+	public InterfaceRimCore[] getSecondRimCores() {
+		return secondRimCores;
+	}
+	
 	/**
 	 * Writes this interface to given PDB file with original chain names, unless the 2 chains 
 	 * are the same where the second one is renamed to next letter in alphabet.

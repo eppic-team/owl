@@ -61,6 +61,17 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		this.pdb = pdb;
 	}
 	
+	/**
+	 * Calculates the rims and cores of all member interfaces for each of the
+	 * bsaToAsa cutoffs given.
+	 * @param bsaToAsaCutoffs
+	 */
+	public void calcRimAndCores(double[] bsaToAsaCutoffs) {
+		for (ChainInterface interf:list){
+			interf.calcRimAndCore(bsaToAsaCutoffs);
+		}
+	}
+	
 	@Override
 	public Iterator<ChainInterface> iterator() {
 		return list.iterator();
