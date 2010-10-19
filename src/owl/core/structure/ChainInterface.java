@@ -296,13 +296,33 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	
 	private void printFirstMolInfoTabular(PrintStream ps) {
 		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+this.getFirstMolType());
+		if (isFirstProtein()) {
+			InterfaceRimCore[] rimCores = getFirstRimCores();
+			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
+				ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
+				ps.println("## rim : "+rimCores[i].getRimResString());
+				if (rimCores[i].getCoreResidues().size()>0) {
+					ps.println("## core: "+rimCores[i].getCoreResString());
+				}
+			}
+		}
 		for (Residue residue:firstMolecule.getResidues().values()) {
 			residue.printTabular(ps);
 		}
 	}
 
 	private void printSecondMolInfoTabular(PrintStream ps) {
-		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+this.getFirstMolType());
+		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+this.getSecondMolType());
+		if (isSecondProtein()) {
+			InterfaceRimCore[] rimCores = getSecondRimCores();
+			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
+				ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
+				ps.println("## rim : "+rimCores[i].getRimResString());
+				if (rimCores[i].getCoreResidues().size()>0) {
+					ps.println("## core: "+rimCores[i].getCoreResString());
+				}
+			}
+		}
 		for (Residue residue:secondMolecule.getResidues().values()) {
 			residue.printTabular(ps);
 		}
