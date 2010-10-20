@@ -149,7 +149,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 			Attributes atts) throws SAXException {
 		if (name.equals(PDB_ENTRY_TAG)){
 			inEntry = true;
-			currentInterfaces = new ChainInterfaceList();
+			currentInterfaces = new ChainInterfaceList(ChainInterfaceList.AsaCalcMethod.PISA);
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {

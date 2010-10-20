@@ -529,7 +529,14 @@ public class PdbAsymUnit {
 		//System.out.println("ASA computation time: "+(end-start)/1000+" s");
 		
 		// now that we have the areas we can put them into a list and sort them
-		ChainInterfaceList list = new ChainInterfaceList();
+		ChainInterfaceList.AsaCalcMethod asaCalcMethod = ChainInterfaceList.AsaCalcMethod.INTERNAL;
+		if (naccessExe!=null) {
+			asaCalcMethod = ChainInterfaceList.AsaCalcMethod.NACCESS;
+		}
+		ChainInterfaceList list = new ChainInterfaceList(asaCalcMethod);
+		if (asaCalcMethod == ChainInterfaceList.AsaCalcMethod.INTERNAL) {
+			list.setAsaCalcAccuracyParam(nSpherePoints);
+		}
 		list.setPdb(this);
 		for (ChainInterface interf:set) {
 			list.addInterface(interf);
