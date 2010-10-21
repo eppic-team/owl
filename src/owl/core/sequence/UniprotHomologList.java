@@ -93,10 +93,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	private List<Double> entropies;					// entropies for each uniprot reference sequence position
 	private List<Double> kaksRatios;				// ka/ks for each uniprot reference sequence position
 
+	private boolean haveCDSData;
 	
 	public UniprotHomologList(UniprotEntry ref) {
 		this.ref = ref;
 		this.idCutoff = 0.0; // i.e. no filter
+		haveCDSData = false;
 	}
 	
 	/**
@@ -329,6 +331,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			
 			hom.getUniprotEntry().setEmblCdsSeqs(seqs);
 		}		
+		haveCDSData = true;
 	}
 	
 	/**
@@ -604,10 +607,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			List<UniprotHomolog> list = groups.get(key);
 			if (list.size()>1) {
 				UniprotHomolog homToKeep = null;
-				for (UniprotHomolog hom:list){
-					if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
-						homToKeep = hom;
-						break;
+				if (hasCDSData()) {
+					for (UniprotHomolog hom:list){
+						if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
+							homToKeep = hom;
+							break;
+						}
 					}
 				}
 				if (homToKeep==null) { // if there wasn't any good CDS homolog we remove all but first
@@ -668,7 +673,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 				List<UniprotHomolog> group = groups.get(key);
 				if (group.size()>1) {
 					// remove the last element of the group
-					UniprotHomolog toRemove = getHomologNonValidCDS(group);
+					UniprotHomolog toRemove = null;
+					if (hasCDSData()) {
+						toRemove = getHomologNonValidCDS(group);
+					}
 					if (toRemove==null) {
 						toRemove = group.get(group.size()-1);
 					} 
@@ -745,6 +753,14 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		return count;
 	}
 
+	/**
+	 * Tells whether CDS data was retrieved from this list by calling {@link #retrieveEmblCdsSeqs(File)}
+	 * @return
+	 */
+	public boolean hasCDSData() {
+		return haveCDSData;
+	}
+	
 	/**
 	 * Checks whether this UniprotHomologList contains genes encoded with strictly 
 	 * one genetic code type.
