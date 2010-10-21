@@ -189,6 +189,8 @@ public class EmblWSDBfetchConnection {
 	    while ((nextLine = reader.readLine())!=null) {
 		    if (nextLine.startsWith("No entries found")) 
 		    	throw new NoMatchFoundException("No "+db.getDBfetchStr()+" match found for ids "+commaSepList);
+		    if (nextLine.startsWith("ERROR")) 
+		    	throw new IOException("EMBL DB fetch server returned an error.");
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
 				if (nextLine.startsWith(">")){
