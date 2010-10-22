@@ -22,6 +22,8 @@ public class SymoplibParser {
 	// the symop library from the CCP4 package
 	private static final String SYMOPFILE = "/owl/core/structure/symop.lib";
 	
+	private static final Pattern namePat = Pattern.compile(".*\\s([A-Z]+)(?:\\s'.+')?\\s+'(.+)'.*");
+	
 	private static final InputStream symoplibIS = SymoplibParser.class.getResourceAsStream(SYMOPFILE);
 	private static final TreeMap<Integer, SpaceGroup> sgs = parseSymopLib();
 	
@@ -58,7 +60,6 @@ public class SymoplibParser {
 			BufferedReader br = new BufferedReader(new InputStreamReader(symoplibIS));
 			String line;
 			SpaceGroup currentSG = null;
-			Pattern namePat = Pattern.compile(".*'(.+)'$");
 			while ((line=br.readLine())!=null) {
 				if (!line.startsWith(" ")) {
 					if (currentSG!=null) {
@@ -69,10 +70,12 @@ public class SymoplibParser {
 					int id = Integer.parseInt(line.substring(0, line.indexOf(' ')));
 					Matcher m = namePat.matcher(line);
 					String shortSymbol = null;
+					String brav = null;
 					if (m.matches()) {
-						shortSymbol = m.group(1);
+						brav = m.group(1);
+						shortSymbol = m.group(2);
 					}
-					currentSG = new SpaceGroup(id, shortSymbol);
+					currentSG = new SpaceGroup(id, shortSymbol,SpaceGroup.BravaisLattice.getByName(brav));
 				} else {
 					currentSG.addTransformation(line.trim());
 				}
