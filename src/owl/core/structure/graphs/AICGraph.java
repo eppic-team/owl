@@ -13,11 +13,23 @@ import edu.uci.ics.jung.graph.util.Pair;
 public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 
 	private static final long serialVersionUID = 1L;
+	
+	// in theory the shortest distance between any 2 non-H atoms would be that of a disulfide bond (2.05A)
+	public static final double CLASH_DISTANCE_CUTOFF = 1.5; 
 
 	private double distCutoff;
 	
 	public double getDistCutoff() {
 		return distCutoff;
+	}
+	
+	public boolean hasClashes() {
+		for (AICGEdge edge:this.getEdges()) {
+			if (edge.getDistance()<CLASH_DISTANCE_CUTOFF) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/**

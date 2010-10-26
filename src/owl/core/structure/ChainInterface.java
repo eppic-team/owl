@@ -251,6 +251,10 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return this.secondMolType.equals(TYPE_PROTEIN);
 	}
 	
+	public boolean hasClashes() {
+		return this.graph.hasClashes();
+	}
+	
 	@Override
 	public int compareTo(ChainInterface o) {
 		// this will sort descending on interface areas

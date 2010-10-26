@@ -103,6 +103,7 @@ public class enumerateInterfaces {
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
 			System.out.println("\n##Interface "+(i+1));
+			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());

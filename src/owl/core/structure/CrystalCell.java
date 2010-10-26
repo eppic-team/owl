@@ -29,6 +29,8 @@ public class CrystalCell {
 	private double betaRad;
 	private double gammaRad;
 	
+	private double volume; // cached volume
+	
 	private double maxDimension; // cached max dimension
 
 	private Matrix3d M; 	// cached basis change transformation matrix
@@ -104,10 +106,14 @@ public class CrystalCell {
 	 * @return
 	 */
 	public double getVolume() {
-		
-		return a*b*c*
+		if (volume!=0) {
+			return volume;
+		}
+		volume =  a*b*c*
 		Math.sqrt(1-Math.cos(alphaRad)*Math.cos(alphaRad)-Math.cos(betaRad)*Math.cos(betaRad)-Math.cos(gammaRad)*Math.cos(gammaRad)
 				+2.0*Math.cos(alphaRad)*Math.cos(betaRad)*Math.cos(gammaRad));
+		
+		return volume;
 	}
 	
 	/**
@@ -172,25 +178,89 @@ public class CrystalCell {
 	/**
 	 * Returns the change of basis (crystal to orthonormal) transform matrix, that is 
 	 * M inverse in the notation of Giacovazzo. 
-	 * Using the PDB axes convention (NCODE=1). 
+	 * Using the PDB axes convention 
+	 * (CCP4 uses NCODE identifiers to distinguish the different conventions, the PDB one is called NCODE=1) 
 	 * The matrix is only calculated upon first call of this method, thereafter it is cached.
-	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 
+	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 (eq 2.30)
 	 * @return
 	 */
 	private Matrix3d getMInv() {
 		if (Minv!=null) {
 			return Minv;
 		}
-		// see Table 2.1 of chapter 2 of Giacovazzo
-		double cosAlphaStar = (Math.cos(betaRad)*Math.cos(gammaRad)-Math.cos(alphaRad))/(Math.sin(betaRad)*Math.sin(gammaRad));
-		double cStar = (this.a*this.b*Math.sin(gammaRad))/getVolume();
-		// see eq. 2.30 Giacovazzo
-		double m21 = -this.c*Math.sin(betaRad)*cosAlphaStar;
-		double m22 = 1.0/cStar;
-		Minv =  new Matrix3d(                    this.a,                         0,    0,
-							  this.b*Math.cos(gammaRad), this.b*Math.sin(gammaRad),    0,
-							  this.c*Math.cos(betaRad) ,                       m21,  m22);
+
+		// see eq. 2.30 Giacovazzo 
+		Minv =  new Matrix3d(                    this.a,                                           0,              0,
+							  this.b*Math.cos(gammaRad),                   this.b*Math.sin(gammaRad),              0,
+							  this.c*Math.cos(betaRad) , -this.c*Math.sin(betaRad)*getCosAlphaStar(),  1.0/getCstar());
 		return Minv;
+	}
+
+	// another axes convention (from Giacovazzo) eq. 2.31b, not sure what would be the NCODE of this
+//	private Matrix3d getMInv() {
+//		if (Minv!=null) {
+//			return Minv;
+//		}
+//		Minv = new Matrix3d( 1/getAstar(),  -(getCosGammaStar()/getSinGammaStar())/getAstar(), this.a*Math.cos(betaRad),
+//				                        0,                   1/(getBstar()*getSinGammaStar()), this.b*Math.sin(alphaRad),
+//				                        0,                                                  0,                  this.c);
+//		return Minv;
+//	}
+	
+	// and yet another axes convention (from Giacovazzo) eq. 2.31c, not sure what would be the NCODE of this
+//	private Matrix3d getMInv() {
+//		if (Minv!=null) {
+//			return Minv;
+//		}
+//		Minv = new Matrix3d( alphaRad*Math.sin(gammaRad)*getSinBetaStar(), this.a*Math.cos(gammaRad), this.a*Math.sin(gammaRad)*getCosBetaStar(),
+//				                                                        0,                    this.b,                                          0,
+//				                                                        0, this.c*Math.cos(alphaRad),                   this.c*Math.sin(alphaRad));
+//		return Minv;
+//	}
+	
+	// relationships among direct and reciprocal lattice parameters
+	// see Table 2.1 of chapter 2 of Giacovazzo
+	@SuppressWarnings("unused")
+	private double getAstar() {
+		return (this.b*this.c*Math.sin(alphaRad))/getVolume();
+	}
+	
+	@SuppressWarnings("unused")
+	private double getBstar() {
+		return (this.a*this.c*Math.sin(betaRad))/getVolume();
+	}
+	
+	private double getCstar() {
+		return (this.a*this.b*Math.sin(gammaRad))/getVolume();
+	}
+	
+	private double getCosAlphaStar() {
+		return (Math.cos(betaRad)*Math.cos(gammaRad)-Math.cos(alphaRad))/(Math.sin(betaRad)*Math.sin(gammaRad));
+	}
+	
+	@SuppressWarnings("unused")
+	private double getCosBetaStar() {
+		return (Math.cos(alphaRad)*Math.cos(gammaRad)-Math.cos(betaRad))/(Math.sin(alphaRad)*Math.sin(gammaRad));
+	}
+	
+	@SuppressWarnings("unused")
+	private double getCosGammaStar() {
+		return (Math.cos(alphaRad)*Math.cos(betaRad)-Math.cos(gammaRad))/(Math.sin(alphaRad)*Math.sin(betaRad));
+	}
+	
+	@SuppressWarnings("unused")
+	private double getSinAlphaStar() {
+		return getVolume()/(this.a*this.b*this.c*Math.sin(betaRad)*Math.sin(gammaRad));
+	}
+	
+	@SuppressWarnings("unused")
+	private double getSinBetaStar() {
+		return getVolume()/(this.a*this.b*this.c*Math.sin(alphaRad)*Math.sin(gammaRad));
+	}
+	
+	@SuppressWarnings("unused")
+	private double getSinGammaStar() {
+		return getVolume()/(this.a*this.b*this.c*Math.sin(alphaRad)*Math.sin(betaRad));
 	}
 	
 	/**

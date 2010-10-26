@@ -420,6 +420,7 @@ public class PdbAsymUnit {
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @return
+	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
 	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads) throws IOException {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour

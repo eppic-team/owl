@@ -143,6 +143,9 @@ public class PdbAsymUnitTest {
 						(pisaInterf.getInterfaceArea()-myInterf.getInterfaceArea())*100.0/pisaInterf.getInterfaceArea());
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea(), pisaInterf.getInterfaceArea()*0.10);
 				
+				// make sure there are no clashes
+				Assert.assertFalse(myInterf.hasClashes());
+				
 				// asa/bsas of individual residues, we allow for some discrepancy from PISA
 				
 				Pdb myFirstMol = myInterf.getFirstMolecule();
