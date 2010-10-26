@@ -60,8 +60,8 @@ public final class SpaceGroup {
 		}
 	}
 	
-	private static final Pattern splitPat1 = Pattern.compile("([+-]?[XYZ])([+-][0-9/.]+)");
-	private static final Pattern splitPat2 = Pattern.compile("([+-]?[0-9/.]+)([+-][XYZ])");
+	private static final Pattern splitPat1 = Pattern.compile("((?:[+-]?[XYZ])+)([+-][0-9/.]+)");
+	private static final Pattern splitPat2 = Pattern.compile("([+-]?[0-9/.]+)((?:[+-][XYZ])+)");
 	private static final Pattern coordPat = Pattern.compile("(?:([+-])?([XYZ]))+?"); // the last +? is for ungreedy matching
 	private static final Pattern transCoefPat = Pattern.compile("([-+]?[0-9.]+)(?:/([0-9.]+))?");
 	
