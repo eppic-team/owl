@@ -102,6 +102,13 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		}
 	}
 	
+	public boolean hasInterfacesWithClashes() {
+		for (ChainInterface interf:list){
+			if (interf.hasClashes()) return true;
+		}
+		return false;
+	}
+	
 	@Override
 	public Iterator<ChainInterface> iterator() {
 		return list.iterator();
