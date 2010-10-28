@@ -93,7 +93,7 @@ public class ProteinToCDSMatch {
 		}
 		// chopping off the stop codon (if there is one)
 		try {
-			if (Translator.translate(this.gct, new Codon(seq.substring(seq.length()-3, seq.length()))).equals(AminoAcid.STP)) {
+			if (Translator.translate(this.gct, new Codon(seq.substring(seq.length()-3, seq.length()).toLowerCase())).equals(AminoAcid.STP)) {
 				seq = seq.substring(0,seq.length()-3);
 			}
 		} catch (TranslationException e) {
