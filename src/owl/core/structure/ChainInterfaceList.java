@@ -91,6 +91,16 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		return asaCalcAccuracyParam;
 	}
 	
+	public int getNumInterfacesAboveArea(double area) {
+		int count = 0;
+		for (ChainInterface interf:this) {
+			if (interf.getInterfaceArea()>area) {
+				count++;
+			}
+		}
+		return count;
+	}
+	
 	/**
 	 * Calculates the rims and cores of all member interfaces for each of the
 	 * bsaToAsa cutoffs given.
