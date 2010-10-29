@@ -427,15 +427,16 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 	
 	/**
-	 * Writes this interface to given PDB file with original chain names, unless the 2 chains 
-	 * are the same where the second one is renamed to next letter in alphabet.
+	 * Writes this interface to given PDB file with original chain names (pdb chain codes),
+	 * unless the 2 chains are the same where the second one is renamed to next letter in 
+	 * alphabet.
 	 * @param file
 	 * @throws FileNotFoundException 
 	 */
 	public void writeToPdbFile(File file) throws FileNotFoundException {
 		PrintStream ps = new PrintStream(file);
 
-		firstMolecule.writeAtomLines(ps);
+		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
 
 		String chain2forOutput = secondMolecule.getPdbChainCode();
 		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
