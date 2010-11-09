@@ -6,6 +6,8 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 /**
  * An atom inter-chain interaction graph.
+ * Note that for the clash methods, a clash distance must be passed. A reasonable value for 
+ * it is anything under the disulfide bond length (2.05A).
  * 
  * @author duarte_j
  *
@@ -14,22 +16,29 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 
 	private static final long serialVersionUID = 1L;
 	
-	// in theory the shortest distance between any 2 non-H atoms would be that of a disulfide bond (2.05A)
-	public static final double CLASH_DISTANCE_CUTOFF = 1.5; 
-
 	private double distCutoff;
 	
 	public double getDistCutoff() {
 		return distCutoff;
 	}
 	
-	public boolean hasClashes() {
+	public boolean hasClashes(double clashDistance) {
 		for (AICGEdge edge:this.getEdges()) {
-			if (edge.getDistance()<CLASH_DISTANCE_CUTOFF) {
+			if (edge.getDistance()<clashDistance) {
 				return true;
 			}
 		}
 		return false;
+	}
+	
+	public int getNumClashes(double clashDistance) {
+		int count = 0;
+		for (AICGEdge edge:this.getEdges()) {
+			if (edge.getDistance()<clashDistance) {
+				count++;
+			}
+		}
+		return count;		
 	}
 	
 	/**

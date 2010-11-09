@@ -251,8 +251,12 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return this.secondMolType.equals(TYPE_PROTEIN);
 	}
 	
-	public boolean hasClashes() {
-		return this.graph.hasClashes();
+	public boolean hasClashes(double clashDistance) {
+		return this.graph.hasClashes(clashDistance);
+	}
+	
+	public int getNumClashes(double clashDistance) {
+		return this.graph.getNumClashes(clashDistance);
 	}
 	
 	@Override

@@ -112,11 +112,21 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		}
 	}
 	
-	public boolean hasInterfacesWithClashes() {
+	public boolean hasInterfacesWithClashes(double clashDistance) {
 		for (ChainInterface interf:list){
-			if (interf.hasClashes()) return true;
+			if (interf.hasClashes(clashDistance)) return true;
 		}
 		return false;
+	}
+	
+	public List<ChainInterface> getInterfacesWithClashes(double clashDistance) {
+		List<ChainInterface> clashyInterfs = new ArrayList<ChainInterface>();
+		for (ChainInterface interf:list){
+			if (interf.hasClashes(clashDistance)) {
+				clashyInterfs.add(interf);
+			}
+		}
+		return clashyInterfs;
 	}
 	
 	@Override
