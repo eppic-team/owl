@@ -25,6 +25,8 @@ public class enumerateInterfaces {
 	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)  
 	private static final double CUTOFF = 5.9; 
 	
+	private static final double CLASH_DISTANCE = 1.5;
+	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
 	
 	/**
@@ -103,7 +105,7 @@ public class enumerateInterfaces {
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
 			System.out.println("\n##Interface "+(i+1));
-			if (interf.hasClashes()) System.out.println("CLASHES!!!");
+			if (interf.hasClashes(CLASH_DISTANCE)) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
