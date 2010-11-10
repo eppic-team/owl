@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.vecmath.Matrix4d;
 
@@ -27,6 +25,9 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	private InterfaceRimCore[] secondRimCores; // cached second molecule's rim and cores (indices as bsaToAsaCutoffs)
 	
 	private double[] bsaToAsaCutoffs;
+	private boolean zoomingUsed;
+	private double bsaToAsaSoftCutoff; // the hard cutoff is stored in the bsaToAsaCutoffs array (must be then an array with only the one member)
+	private double bsaToAsaRelaxStep;
 	
 	private Matrix4d firstTransf; 		// the transformation applied to first molecule expressed in crystal axes coordinates
 	private Matrix4d firstTransfOrth;	// the transformation applied to first molecule expressed in orthonormal axes coordinates
@@ -337,38 +338,45 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 
 	/**
-	 * Returns a map containing 2 {@link InterfaceRimCore} objects (see getRimAndCore in {@link Pdb})
-	 * for each of the 2 members of the interface.
-	 * The sum of the residues of the 2 cores is required to be at least minNumResidues. 
-	 * If the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
+	 * Calculates residues in rim and core using zooming for each of the 2 members of the 
+	 * interface storing result in cached arrays. 
+	 * Use {@link #getFirstRimCores()} and {@link #getSecondRimCores()} to retrieve them.
+	 * The zooming procedure is: the sum of the residues of the 2 cores is required to be at least minNumResidues, 
+	 * if the minimum is not reached with the bsaToAsaSoftCutoff, then the cutoff is 
 	 * relaxed in relaxationStep steps until reaching the bsaToAsaHardCutoff.
-	 * If either of the 2 molecules of this interface is not a protein, its rimCore 
-	 * object in the output map object will be null. If both are not proteins then the map 
-	 * will contain null object references for both.
+	 * If either of the 2 molecules of this interface is not a protein, its cached rimCore 
+	 * object will be null.
 	 * @param bsaToAsaSoftCutoff
 	 * @param bsaToAsaHardCutoff
 	 * @param relaxationStep
 	 * @param minNumResidues
 	 * @return
 	 */
-	@SuppressWarnings("unused")
-	private Map<Integer,InterfaceRimCore> calcRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+	public void calcRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		zoomingUsed = true;
 		
-		Map<Integer,InterfaceRimCore> rimcores = new HashMap<Integer, InterfaceRimCore>();
+		bsaToAsaCutoffs = new double[1];
+		bsaToAsaCutoffs[0] = bsaToAsaHardCutoff;
+		this.bsaToAsaSoftCutoff = bsaToAsaSoftCutoff;
+		this.bsaToAsaRelaxStep = relaxationStep;
+		
+		firstRimCores = new InterfaceRimCore[1];
+		secondRimCores = new InterfaceRimCore[1];
+		
 		if (!isFirstProtein() && !isSecondProtein()) {
-			rimcores.put(1, null);
-			rimcores.put(2, null);
-			return rimcores;
+			firstRimCores[0] = null;
+			secondRimCores[0] = null;
+			return;
 		}
 		
-		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
+		// we introduce a margin of relaxationStep*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
 		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
 			InterfaceRimCore rimCore1 = null;
 			InterfaceRimCore rimCore2 = null;
 			if (isFirstProtein()) rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
 			if (isSecondProtein()) rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
-			rimcores.put(1,rimCore1);
-			rimcores.put(2,rimCore2);
+			firstRimCores[0] = rimCore1;
+			secondRimCores[0] = rimCore2;
 			
 			int totalCoreResidues = 0;
 			if (isFirstProtein()) totalCoreResidues+=rimCore1.getCoreSize();
@@ -377,8 +385,6 @@ public class ChainInterface implements Comparable<ChainInterface> {
 				break;
 			}
 		}
-		
-		return rimcores;
 	}
 
 	/**
@@ -391,7 +397,8 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	 * @return
 	 */
 	public void calcRimAndCore(double[] bsaToAsaCutoffs) {
-
+		zoomingUsed = false;
+		
 		this.bsaToAsaCutoffs = bsaToAsaCutoffs;
 		
 		firstRimCores = new InterfaceRimCore[bsaToAsaCutoffs.length];
@@ -420,6 +427,14 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	
 	public int getNumBsaToAsaCutoffs() {
 		return bsaToAsaCutoffs.length;
+	}
+	
+	public double getBsaToAsaSoftCutoff() {
+		return bsaToAsaSoftCutoff;
+	}
+	
+	public double getBsaToAsaRelaxStep() {
+		return bsaToAsaRelaxStep;
 	}
 	
 	public InterfaceRimCore[] getFirstRimCores() {
@@ -455,5 +470,14 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		}
 		secondMolecule.writeAtomLines(ps,chain2forOutput);
 		ps.close();
+	}
+	
+	/**
+	 * Tells whether rim/core residues were calculated with zooming (true)
+	 * or with fixed cutoff (false).
+	 * @return
+	 */
+	public boolean isRimAndCoreZoomed() {
+		return zoomingUsed;
 	}
 }

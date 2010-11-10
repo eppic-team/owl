@@ -112,6 +112,19 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		}
 	}
 	
+	/**
+	 * Calculates the rims and cores of all member interfaces with a zooming approach.
+	 * @param bsaToAsaSoftCutoff
+	 * @param bsaToAsaHardCutoff
+	 * @param relaxationStep
+	 * @param minNumResidues
+	 */
+	public void calcRimAndCores(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		for (ChainInterface interf:list){
+			interf.calcRimAndCore(bsaToAsaSoftCutoff, bsaToAsaHardCutoff, relaxationStep, minNumResidues);
+		}		
+	}
+	
 	public boolean hasInterfacesWithClashes(double clashDistance) {
 		for (ChainInterface interf:list){
 			if (interf.hasClashes(clashDistance)) return true;
