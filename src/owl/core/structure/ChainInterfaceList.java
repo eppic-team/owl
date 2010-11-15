@@ -54,6 +54,10 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		return count;
 	}
 	
+	/**
+	 * Sorts the interface list descending on total interface areas assigning identifiers 
+	 * from 1 to n in that order.
+	 */
 	public void sort() {
 		Collections.sort(list);
 		int i=1;

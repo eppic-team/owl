@@ -409,7 +409,7 @@ public class PdbAsymUnit {
 	}
 	
 	/**
-	 * Returns a sorted (increasing area) list of all interfaces (any 2 atoms under cutoff) 
+	 * Returns a sorted (decreasing area) list of all interfaces (any 2 atoms under cutoff) 
 	 * that this chain has upon generation of all crystal symmetry objects. 
 	 * The interface areas and BSAs are calculated with either our implementation of the rolling
 	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 

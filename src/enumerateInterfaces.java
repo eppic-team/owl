@@ -9,11 +9,14 @@ import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.SpaceGroup;
-import owl.core.util.MySQLConnection;
 
 
 public class enumerateInterfaces {
 
+	private static final String LOCAL_CIF_DIR = "/nfs/data/dbs/pdb/data/structures/all/mmCIF";
+	private static final String BASENAME = "interf_enum";
+	private static final String TMPDIR = System.getProperty("java.io.tmpdir");
+	
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
 	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing
@@ -83,7 +86,9 @@ public class enumerateInterfaces {
 		
 		PdbAsymUnit pdb = null;
 		if (inputFile==null) {
-			pdb = new PdbAsymUnit(pdbStr, new MySQLConnection(), "pdbase");
+			File cifFile = new File(TMPDIR,BASENAME+"_"+pdbStr+".cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbStr, cifFile, false);
+			pdb = new PdbAsymUnit(cifFile);
 		} else {
 			pdb = new PdbAsymUnit(inputFile);
 			outBaseName = inputFile.getName().substring(0, inputFile.getName().lastIndexOf("."));
