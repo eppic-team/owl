@@ -14,8 +14,6 @@ import owl.core.util.MySQLConnection;
 
 public class enumerateInterfaces {
 
-	private static final File NACCESS_EXE = new File("/home/duarte_j/bin/naccess");
-
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
 	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing
@@ -95,7 +93,7 @@ public class enumerateInterfaces {
 		
 		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, NACCESS_EXE, Asa.DEFAULT_N_SPHERE_POINTS, nThreads);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads);
 		long end = System.currentTimeMillis();
 		System.out.println("Done. Time "+(end-start)/1000+"s");
 		
