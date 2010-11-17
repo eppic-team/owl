@@ -180,7 +180,7 @@ public class PdbfilePdb extends Pdb {
 	 * @throws PdbChainCodeNotFoundError if no ATOM lines are found for given 
 	 * pdbChainCode and model
 	 */
-	private void parse() throws IOException, FileFormatError, PdbChainCodeNotFoundError {
+	private void parse() throws IOException, FileFormatError, PdbChainCodeNotFoundError, PdbLoadError {
 		Pattern p;
 		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
@@ -250,6 +250,9 @@ public class PdbfilePdb extends Pdb {
 				String sg = line.substring(55,endsg).trim();
 				crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 				spaceGroup = SymoplibParser.getSpaceGroup(sg);
+				if (spaceGroup==null) {
+					throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+				}
 			}
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE

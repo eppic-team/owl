@@ -285,7 +285,7 @@ public class CiffilePdb extends Pdb {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private void parseCifFile() throws IOException, FileFormatError, PdbChainCodeNotFoundError{
+	private void parseCifFile() throws IOException, FileFormatError, PdbChainCodeNotFoundError, PdbLoadError {
 		
 		if (!fieldsTitlesRead) {
 			readFieldsTitles();
@@ -370,7 +370,7 @@ public class CiffilePdb extends Pdb {
 		return fields2values.get(entryId+".id").trim().toLowerCase();
 	}
 	
-	private void readCrystalData() {
+	private void readCrystalData() throws PdbLoadError {
 		// cell and symmetry fields are optional, e.g. NMR entries don't have them at all
 		// we first see if the fields are there at all (enough with seeing if cell.length_a is there)
 		if (!fields2values.containsKey(cell+".length_a")) {
@@ -386,6 +386,9 @@ public class CiffilePdb extends Pdb {
 		
 		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
 		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+		if (spaceGroup==null) {
+			throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+		}
 	}
 	
 	private void readAtomSite() throws IOException, PdbChainCodeNotFoundError, FileFormatError {

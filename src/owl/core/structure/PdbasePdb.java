@@ -45,8 +45,9 @@ public class PdbasePdb extends Pdb {
 	 * @param pdbCode
 	 * @throws SQLException  
 	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbLoadError
 	 */
-	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundError {
+	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
 		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection());
 	}
 
@@ -58,8 +59,9 @@ public class PdbasePdb extends Pdb {
 	 * @param conn
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbLoadError
 	 */
-	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, SQLException  {
+	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
 		this.db=db;
 		
@@ -345,7 +347,7 @@ public class PdbasePdb extends Pdb {
 		return alt_locs_sql_str;
 	}
 	
-	private void readCrystalData() throws SQLException {
+	private void readCrystalData() throws SQLException, PdbLoadError {
 		String sql = "SELECT space_group_name_h_m " +
 				" FROM "+db+".symmetry " +
 				" WHERE entry_key="+entrykey;
@@ -357,7 +359,10 @@ public class PdbasePdb extends Pdb {
 		}
 		if (sg!=null) {
 			// for some pdb entries (e.g. NMRs) there's no crystal information at all
-			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);			
+			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+			if (spaceGroup==null) {
+				throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+			}
 		}
 
 		rsst.close();

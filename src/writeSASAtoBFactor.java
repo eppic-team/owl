@@ -99,15 +99,17 @@ public class writeSASAtoBFactor {
 				String chainCode = arg.substring(4,5);
 				try {
 					System.out.println("Loading pdb code " + pdbCode);
-					pdb = new PdbasePdb(pdbCode);
-					if(chainCode.length() == 0) {
-						try {
+					try {
+						pdb = new PdbasePdb(pdbCode);
+						if(chainCode.length() == 0) {
+
 							chainCode = pdb.getChains()[0];
-						} catch (PdbLoadError e) {
-							System.err.println("Error loading pdb structure:" + e.getMessage());
-							System.exit(1);
 						}
+					} catch (PdbLoadError e) {
+						System.err.println("Error loading pdb structure:" + e.getMessage());
+						System.exit(1);
 					}
+
 					try {
 						System.out.println("Loading chain " + chainCode);
 						pdb.load(pdb.getChains()[0]);

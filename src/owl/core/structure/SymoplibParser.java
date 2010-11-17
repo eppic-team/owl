@@ -43,7 +43,7 @@ public class SymoplibParser {
 	 * Gets the space group for the given international short name, using
 	 * the PDB format, e.g. 'P 21 21 21' or 'C 1 c 1'
 	 * @param shortName
-	 * @return
+	 * @return the SpaceGroup or null if the shortName is not valid
 	 */
 	public static SpaceGroup getSpaceGroup(String shortName) {
 		return name2sgs.get(shortName);

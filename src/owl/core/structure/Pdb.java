@@ -2789,15 +2789,17 @@ public class Pdb implements HasFeatures {
 				String chainCode = arg.substring(4,5);
 				try {
 					if(!silent) System.out.println("Loading pdb code " + pdbCode);
-					pdb = new PdbasePdb(pdbCode);
-					if(chainCode.length() == 0) {
-						try {
+					try {
+						pdb = new PdbasePdb(pdbCode);
+						if(chainCode.length() == 0) {
+
 							chainCode = pdb.getChains()[0];
-						} catch (PdbLoadError e) {
-							if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
-							if(exit) System.exit(1);
 						}
+					} catch (PdbLoadError e) {
+						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
+						if(exit) System.exit(1);
 					}
+
 					try {
 						if(!silent) System.out.println("Loading chain " + chainCode);
 						pdb.load(chainCode);
