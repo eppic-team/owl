@@ -387,7 +387,7 @@ public class CiffilePdb extends Pdb {
 		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
 		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
-			throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+			throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
 		}
 	}
 	

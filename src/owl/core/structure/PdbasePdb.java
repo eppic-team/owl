@@ -361,7 +361,7 @@ public class PdbasePdb extends Pdb {
 			// for some pdb entries (e.g. NMRs) there's no crystal information at all
 			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 			if (spaceGroup==null) {
-				throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+				throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
 			}
 		}
 

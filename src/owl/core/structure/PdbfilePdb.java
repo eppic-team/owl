@@ -251,7 +251,7 @@ public class PdbfilePdb extends Pdb {
 				crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 				spaceGroup = SymoplibParser.getSpaceGroup(sg);
 				if (spaceGroup==null) {
-					throw new PdbLoadError("The space group found '"+sg+" is not recognised as a standard space group");
+					throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
 				}
 			}
 			// SEQRES
