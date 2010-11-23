@@ -60,24 +60,35 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	public int getId() {
 		return id;
 	}
+	
 	public void setId(int id) {
 		this.id = id;
 	}
+	
+	public String getName() {
+		return this.firstMolecule.getPdbChainCode()+"+"+this.secondMolecule.getPdbChainCode();
+	}
+	
 	public double getInterfaceArea() {
 		return interfaceArea;
 	}
+	
 	public void setInterfaceArea(double interfaceArea) {
 		this.interfaceArea = interfaceArea;
 	}
+	
 	public Pdb getFirstMolecule() {
 		return firstMolecule;
 	}
+	
 	public void setFirstMolecule(Pdb firstMolecule) {
 		this.firstMolecule = firstMolecule;
 	}
+	
 	public Pdb getSecondMolecule() {
 		return secondMolecule;
 	}
+	
 	public void setSecondMolecule(Pdb secondMolecule) {
 		this.secondMolecule = secondMolecule;
 	}
