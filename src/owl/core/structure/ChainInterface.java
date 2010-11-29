@@ -271,7 +271,6 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		return this.graph.getNumClashes(clashDistance);
 	}
 	
-	@Override
 	public int compareTo(ChainInterface o) {
 		// this will sort descending on interface areas
 		return (Double.compare(o.interfaceArea,this.interfaceArea));

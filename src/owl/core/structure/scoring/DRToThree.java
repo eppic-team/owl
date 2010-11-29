@@ -16,17 +16,17 @@ public class DRToThree implements ResidueContactScoringFunction {
 	private double score;
 	private MySQLConnection conn;
 	
-	@Override
+	
 	public String getMethodName() {
 		return "Gripps^3";
 	}
 
-	@Override
+	
 	public double getOverallScore() {
 		return score;
 	}
 
-	@Override
+	
 	public double getScore(int i, int j) {
 		double v  = scoreMatrix.getElement(i, j);
 		if (v== -1) {
@@ -35,13 +35,13 @@ public class DRToThree implements ResidueContactScoringFunction {
 		return 1-v;
 	}
 
-	@Override
+	
 	public double getScoreForSelection(RIGraph subSet) {
 		// TODO Auto-generated method stub
 		return 0;
 	}
 
-	@Override
+	
 	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates, MySQLConnection conn) {
 		contactMatrix = new RIGMatrix(contacts);
 		this.conn = conn;
@@ -53,12 +53,12 @@ public class DRToThree implements ResidueContactScoringFunction {
 		
 	}
 
-	@Override
+	
 	public boolean requiresCoordinates() {
 		return false;
 	}
 
-	@Override
+	
 	public void updateData(Sequence sequence, RIGraph contacts,
 			SecondaryStructure ss, Pdb coordinates) {
 		contactMatrix = new RIGMatrix(contacts);

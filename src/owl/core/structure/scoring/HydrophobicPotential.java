@@ -86,18 +86,18 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 	}
 	
 	// implemented methods
-	@Override
+	
 	public String getMethodName() {
 		return "Hydrophobic potential";
 	}
 
-	@Override
+	
 	public boolean requiresCoordinates() {
 		return false;	// score is purely sequence based
 						// so does not require coordinates
 	}
 	
-	@Override
+	
 	public void init(Sequence sequence, RIGraph contacts,
 			SecondaryStructure ss, Pdb coordinates, MySQLConnection conn) {
 		this.sequence = sequence;
@@ -106,7 +106,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 		initializeScoringMatrix();
 	}
 	
-	@Override
+	
 	public void updateData(Sequence sequence, RIGraph contacts,
 			SecondaryStructure ss, Pdb coordinates) {
 		// if data has changed, simply update the sequence and contacts variables
@@ -115,12 +115,12 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 		this.contacts = contacts;
 	}
 
-	@Override
+	
 	public double getScore(int i, int j) {
 		return normalize(getRawScore(i,j));
 	}
 
-	@Override
+	
 	public double getScoreForSelection(RIGraph subSet) {
 		double sumScore = 0;
 		for(RIGEdge e: subSet.getEdges()) {
@@ -133,7 +133,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 		return sumScore;
 	}
 
-	@Override
+	
 	public double getOverallScore() {
 		return getScoreForSelection(contacts);	// whole graph
 	}

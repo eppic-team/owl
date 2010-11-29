@@ -37,7 +37,6 @@ public class TranslatedFrame implements Comparable<TranslatedFrame> {
 		return psa;
 	}
 	
-	@Override
 	public int compareTo(TranslatedFrame o) {
 		return Float.compare(this.getPercentIdentity(), o.getPercentIdentity());
 	}

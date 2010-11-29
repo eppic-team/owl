@@ -146,7 +146,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 		return clashyInterfs;
 	}
 	
-	@Override
 	public Iterator<ChainInterface> iterator() {
 		return list.iterator();
 	}

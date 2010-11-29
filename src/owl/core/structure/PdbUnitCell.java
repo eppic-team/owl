@@ -56,7 +56,6 @@ public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 		
 	}
 	
-	@Override
 	public Iterator<PdbAsymUnit> iterator() {
 		return units.iterator();
 	}
