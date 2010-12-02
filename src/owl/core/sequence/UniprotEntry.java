@@ -177,19 +177,15 @@ public class UniprotEntry implements HasFeatures {
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
 	 */
-	public void retrieveUniprotKBData() {
+	public void retrieveUniprotKBData() throws NoMatchFoundException {
 		this.taxons = new ArrayList<String>();
 		this.emblCdsIds = new ArrayList<String>();
 		Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
 		
 		UniProtConnection uniprotConn = new UniProtConnection();
 		UniProtEntry entry = null;
-		try {
-			entry = uniprotConn.getEntry(uniId);
-		} catch (NoMatchFoundException e) {
-			LOGGER.warn("Couldn't find uniprot id "+uniId+" through Uniprot JAPI");
-			return;
-		}
+		
+		entry = uniprotConn.getEntry(uniId);
 		
 		this.setUniprotSeq(new Sequence(this.getUniId(),entry.getSequence().getValue()));
 		
