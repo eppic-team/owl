@@ -14,7 +14,6 @@ import java.util.zip.ZipFile;
 
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.filechooser.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**

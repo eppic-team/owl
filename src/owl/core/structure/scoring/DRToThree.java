@@ -1,5 +1,4 @@
 package owl.core.structure.scoring;
-
 import owl.core.structure.graphs.RIGMatrix;
 
 import java.sql.SQLException;
@@ -71,7 +70,6 @@ public class DRToThree implements ResidueContactScoringFunction {
 	}
 	
 	private void scoreSet(int power) throws SQLException {
-		
 		// faster scoring : only need the contacts in the subset^power
 		// generate rim raised to power
 		RIGMatrix rip = new RIGMatrix(contactMatrix);
@@ -84,6 +82,4 @@ public class DRToThree implements ResidueContactScoringFunction {
 		score = scoreMatrix.getSum(); // score the entire matrix 
 		scoreMatrix.reScale(0, 1);
 	}
-	
-
 }

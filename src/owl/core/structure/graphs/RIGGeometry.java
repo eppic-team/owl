@@ -117,11 +117,11 @@ public class RIGGeometry {
 			HashMap<String,Vector3d> atom_coord_rotated_J = new HashMap<String, Vector3d>();
 			if (iCoord!=null && jCoord!=null) {
 				// METHOD FOR EXTRACTING THE NEIGHBOR'S TRANSLATED-ROTATED COORDINATES //
-				atom_coord_rotated_I = gmbp.getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
-				atom_coord_rotated_J = gmbp.getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
+				//atom_coord_rotated_I = gmbp.getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
+				//atom_coord_rotated_J = gmbp.getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
 				//========= C-ALPHA-coordinates ================// 
-				coord_I = atom_coord_rotated_I.get(this.atomType); //("CA");
-				coord_J = atom_coord_rotated_J.get(this.atomType); //("CA");
+				//coord_I = atom_coord_rotated_I.get(this.atomType); //("CA");
+				//coord_J = atom_coord_rotated_J.get(this.atomType); //("CA");
 			}
 			else {
 				continue;
