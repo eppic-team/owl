@@ -2744,8 +2744,16 @@ public class Pdb implements HasFeatures {
 		return readFromFileOrPdbCode(arg, false, true);		
 	}
 	
+	/**
+	 * Not sure why in this method the 'exit' parameter to readFromFileOrPdbCode was set to true
+	 * @param arg
+	 * @param chain
+	 * @return
+	 */
 	public static Pdb readStructureOrNull(String arg, String chain) {
-		return readFromFileOrPdbCode(arg, chain, true, true);		
+		// Not sure why in the following call the 'exit' parameter was set to true,
+		// I'm setting it to false beacuse otherwise it would cause the program to exit.
+		return readFromFileOrPdbCode(arg, chain, false, true);		
 	}	
 
 	/**
