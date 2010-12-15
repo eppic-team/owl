@@ -12,6 +12,8 @@ LOCALDIR=$1
 CURRENT="$LOCALDIR/current"
 DOWNLOAD="$LOCALDIR/download"
 
+FORMATDB=/usr/bin/formatdb
+
 #SITE="ftp://ftp.uniprot.org/pub" # US main ftp
 SITE="ftp://ftp.ebi.ac.uk/pub" # UK mirror
 # the swiss mirror doesn't seem to update properly, not using it anymore
@@ -97,9 +99,9 @@ echo "Running formatdb..."
 logfile="$DOWNLOAD/formatdb.log"
 
 cd $DOWNLOAD
-formatdb -p T -o T -l $logfile -i $SPROT
-formatdb -p T -o T -l $logfile -i $TREMBL
-formatdb -p T -o T -l $logfile -i $ALL
+$FORMATDB -p T -o T -l $logfile -i $SPROT
+$FORMATDB -p T -o T -l $logfile -i $TREMBL
+$FORMATDB -p T -o T -l $logfile -i $ALL
 
 #renaming DOWNLOAD dir to uniprot version and updating current symlink
 echo "Creating new symlink..."
