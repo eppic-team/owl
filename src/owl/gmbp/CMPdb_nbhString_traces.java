@@ -12,10 +12,10 @@ public class CMPdb_nbhString_traces {
     private MySQLConnection conn;
 	
     // variables for queries
-	private String host = "talyn";
-	private String username = "vehlow";
-	private String password = "nieve";
-	private String db = "bagler_all13p0_alledges";
+	private String host; // = "localhost" "talyn";
+	private String username; // = "root" "vehlow";
+	private String password; // = "nieve";
+	private String db; // = "bagler_all13p0_alledges";
 	
 	private String jatom = "CA";
 	private String nbhs = "%P%R%T%x%W%";
@@ -34,12 +34,19 @@ public class CMPdb_nbhString_traces {
 	public final String SSTStr = new String(sstypes);
 	public static final char AnySStype = 'A';
 	
-	public CMPdb_nbhString_traces(String nbhs, String jatom, String db) throws SQLException {
+	public CMPdb_nbhString_traces(String nbhs, String jatom, String db){ // throws SQLException {
 		this.db = db;
 		this.jatom = jatom;
 		this.nbhs = nbhs;
 //		conn = new MySQLConnection();
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
+	public CMPdb_nbhString_traces(String nbhs, String jatom){ // throws SQLException {
+		this.jatom = jatom;
+		this.nbhs = nbhs;
+//		conn = new MySQLConnection();
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public void run() throws SQLException {
@@ -231,11 +238,12 @@ public class CMPdb_nbhString_traces {
 		this.maxNumLines = maxNumLines;
 	}
 
-	public void setDBaccess(String dbUSER, String dbPWD, String dbHOST, String dbNAME) {
+	public void setDBaccess(String dbUSER, String dbPWD, String dbHOST, String dbNAME) throws SQLException {
 		this.host = dbHOST;
 		this.username = dbUSER;
 		this.password = dbPWD;
 		this.db = dbNAME;
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 
 }

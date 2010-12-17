@@ -25,10 +25,12 @@ public class CMPdb_sphoxel {
 	/*--------------------------- member variables --------------------------*/		
 	protected MySQLConnection conn;
 	
-	protected String host = "talyn";
-	protected String username = "vehlow";
-	protected String password = "nieve";
-	protected String db = "bagler_all13p0_alledges";
+	// variables for queries
+	protected String host; // = "localhost" "talyn";
+	protected String username; // = "root" "vehlow";
+	protected String password; // = "nieve";
+	protected String db; // = "bagler_all13p0_alledges";
+	
 	private String tableNameRes = "edgesCertainRes";
 	private String tableNameResR = "edgesCertainResRRange";
 	private String tableNameResRT = "edgesCertainResRTRange";
@@ -56,12 +58,19 @@ public class CMPdb_sphoxel {
 	protected char issType='H', jssType='H';
 //	private final char[] sstype = {'H', 'S', 'O', 'A'};
 	
-	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
-		this.db = db;
+//	public CMPdb_sphoxel(char iRes, char jRes, String db) throws SQLException {
+//		this.db = db;
+//		this.iRes = iRes;
+//		this.jRes = jRes;
+////		conn = new MySQLConnection();
+////		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//	}
+	
+	public CMPdb_sphoxel(char iRes, char jRes) throws SQLException {
 		this.iRes = iRes;
 		this.jRes = jRes;
 //		conn = new MySQLConnection();
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public CMPdb_sphoxel() throws SQLException {
@@ -760,6 +769,14 @@ public class CMPdb_sphoxel {
 	}
 	public void setRadiusPrefix(String radiusPrefix) {
 		this.radiusPrefix = radiusPrefix;
+	}
+	
+	public void setDBaccess(String dbUSER, String dbPWD, String dbHOST, String dbNAME) throws SQLException {
+		this.host = dbHOST;
+		this.username = dbUSER;
+		this.password = dbPWD;
+		this.db = dbNAME;
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 
 
