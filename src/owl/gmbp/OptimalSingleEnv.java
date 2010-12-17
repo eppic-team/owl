@@ -33,6 +33,17 @@ public class OptimalSingleEnv {
 		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
+	public OptimalSingleEnv(String nbhString, char ires, String host, String user, String pwd, String db) throws SQLException{
+		this.fullnbs = nbhString;
+		this.iRes = ires;
+		this.host = host;
+		this.username = user;
+		this.password = pwd;
+		this.db = db;
+
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+	}
+	
 	public OptimalSingleEnv(String nbhString, char ires) throws SQLException{
 		this.fullnbs = nbhString;
 		this.iRes = ires;
