@@ -13,10 +13,10 @@ public class OptimalSingleEnv {
     private MySQLConnection conn;
 	
     // variables for queries
-	private String host = "talyn";
-	private String username = "vehlow";
-	private String password = "nieve";
-	private String db = "mw";
+	private String host; // = "talyn";
+	private String username; // = "vehlow";
+	private String password; // = "nieve";
+	private String db; // = "mw";
 	
 	private String fullnbs;
 	private char iRes='A';	
@@ -30,7 +30,7 @@ public class OptimalSingleEnv {
 		this.username = user;
 		this.password = pwd;
 
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public OptimalSingleEnv(String nbhString, char ires, String host, String user, String pwd, String db) throws SQLException{
@@ -41,14 +41,14 @@ public class OptimalSingleEnv {
 		this.password = pwd;
 		this.db = db;
 
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public OptimalSingleEnv(String nbhString, char ires) throws SQLException{
 		this.fullnbs = nbhString;
 		this.iRes = ires;
 
-		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
+//		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 	public void run() throws SQLException {
@@ -103,6 +103,14 @@ public class OptimalSingleEnv {
 
 	public void setiRes(char iRes) {
 		this.iRes = iRes;
+	}
+	
+	public void setDBaccess(String dbUSER, String dbPWD, String dbHOST, String dbNAME) throws SQLException {
+		this.host = dbHOST;
+		this.username = dbUSER;
+		this.password = dbPWD;
+		this.db = dbNAME;
+		conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
 }

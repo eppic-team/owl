@@ -1,5 +1,6 @@
 package owl.core.structure.graphs;
 
+//import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
@@ -67,7 +68,7 @@ public class RIGGeometry {
 
 		PrintWriter logOut = null;
 //		String logFileFN = "/Volumes/StruPPi/CASP8/server_models/Geometry.csv";
-//		logFileFN = "/Users/vehlow/Documents/workspace/outputFiles/Geometry.csv";
+//		logFileFN = "/Users/vehlow/GeometryTestTest.csv";
 //		try {
 //			logOut = new PrintWriter(new FileWriter(logFileFN));
 //		} catch (IOException e) {
@@ -79,10 +80,6 @@ public class RIGGeometry {
 		coord_sph_rotated = new HashMap<Pair<Integer>, Vector3d>();
 		for (RIGEdge edge:graph.getEdges()) {
 			edgeNum++;
-//			if (edgeNum>=36)
-//			{
-////				System.out.println(edgeNum);
-//			}
 			// extract (x,y,z) coordinates for nodes of both end of edge
 			Pair<RIGNode> nodes = this.graph.getEndpoints(edge);
 			RIGNode iNode = nodes.getFirst();
@@ -95,16 +92,7 @@ public class RIGGeometry {
 			
 			Residue iRes = this.residues.get(iNum);
 			Residue jRes = this.residues.get(jNum);
-			
-			// Testoutput
-//			Atom iAtom = iRes.getAtom("CA");
-//			Atom jAtom = jRes.getAtom("CA");
-//			Point3d iCoordCA = iAtom.getCoords();
-//			Point3d jCoordCA = jAtom.getCoords();
-//			System.out.println("EdgeNr="+edgeNum+" between "+iNum+iResType+"("+iCoordCA.x+","+iCoordCA.y+","+iCoordCA.z+")"
-//					+" and "+jNum+jResType+"("+jCoordCA.x+","+jCoordCA.y+","+jCoordCA.z+")");
-//			System.out.printf("EdgeNr= %s between %s%s %s and %s%s %s  ",edgeNum,iNum,iResType,iCoordCA,jNum,jResType,jCoordCA);
-			
+				
 			
 			// translate coordinates with rotation and translation invariant framework
 			HashMap<String,Point3d> iCoord = gmbp.getTheResidueCoord(iRes);
@@ -117,16 +105,14 @@ public class RIGGeometry {
 			HashMap<String,Vector3d> atom_coord_rotated_J = new HashMap<String, Vector3d>();
 			if (iCoord!=null && jCoord!=null) {
 				// METHOD FOR EXTRACTING THE NEIGHBOR'S TRANSLATED-ROTATED COORDINATES //
-				//atom_coord_rotated_I = gmbp.getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
-				//atom_coord_rotated_J = gmbp.getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
+				atom_coord_rotated_I = gmbp.getNeighborsTransRotatedCoord(jCoord, iCoord, jResType, iResType, jRes, iRes, true);
+				atom_coord_rotated_J = gmbp.getNeighborsTransRotatedCoord(iCoord, jCoord, iResType, jResType, iRes, jRes, true);
 				//========= C-ALPHA-coordinates ================// 
-				//coord_I = atom_coord_rotated_I.get(this.atomType); //("CA");
-				//coord_J = atom_coord_rotated_J.get(this.atomType); //("CA");
+				coord_I = atom_coord_rotated_I.get(this.atomType); //("CA");
+				coord_J = atom_coord_rotated_J.get(this.atomType); //("CA");
 			}
 			else {
 				continue;
-			}
-			if (iNum==63){
 			}
 			
 			// GET the SPHERICAL COORDINATES for CA, C, CB, and CG using METHOD "getSphericalFromCartesian", 
@@ -141,13 +127,9 @@ public class RIGGeometry {
 			}
 			
 			// Save translated and rotated coordinate of contact
-//			String key = String.valueOf(jNum)+"_"+String.valueOf(iNum);
-//			coord_sph_rotated.put(key, coord_sph_I);
 			Pair<Integer> key = new Pair<Integer>(jNum, iNum);
 			coord_sph_rotated.put(key, coord_sph_I);
 			
-//			key = String.valueOf(iNum)+"_"+String.valueOf(jNum);
-//			coord_sph_rotated.put(key, coord_sph_J);
 			key = new Pair<Integer>(iNum, jNum);
 			coord_sph_rotated.put(key, coord_sph_J);
 			if (!coord_sph_rotated.containsKey(key)){
@@ -179,27 +161,7 @@ public class RIGGeometry {
 		}
 		if (logOut!=null)
 			logOut.close();
-		
-//		printGeom();
-		
-//		if (coord_sph_rotated.containsKey(new Integer[]{iNum,jNum})){
-//			Vector3d CA_coord_sph = coord_sph_rotated.get(new Integer[]{iNum,jNum});
-//		}
-		
-//		// iterate over translated coordinates
-//		for (Entry<Integer[], Vector3d> entry : coord_sph_rotated.entrySet()) {
-//  		    System.out.printf("Contact %s,%s coord: %s \n", entry.getKey()[0], entry.getKey()[1], entry
-// 					.getValue());
-//  		}
-		
-//		this.graph.containsEdgeIJ(i, j);
-//		this.graph.containsEdge(edge);
-//		this.graph.getEdgeFromSerials(i, j);
-//		for (Residue residue:residues.values()) {
-//			for (Atom atom:residue.getAtoms()) {
-//				
-//			}
-//		}
+
 	}
 	
 	public void printGeom(){
