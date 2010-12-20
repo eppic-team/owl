@@ -2747,6 +2747,11 @@ public class Pdb implements HasFeatures {
 								 			 crystalCell.getAlpha(),crystalCell.getBeta(),crystalCell.getGamma());
 		newPdb.spaceGroup = spaceGroup; // this class is immutable, we don't really need to deep copy
 		
+		newPdb.expMethod = this.expMethod;
+		newPdb.resolution = this.resolution;
+		newPdb.rFree = this.rFree;
+		newPdb.rSym = this.rSym;
+		
 		newPdb.sequence = this.sequence;
 		newPdb.fullLength = this.fullLength;
 		newPdb.secondaryStructure = this.secondaryStructure.copy();
