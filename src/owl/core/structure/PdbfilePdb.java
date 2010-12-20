@@ -235,6 +235,48 @@ public class PdbfilePdb extends Pdb {
 					}
 				}
 			}
+			// EXPDTA
+			if (line.startsWith("EXPDTA")) {
+				expMethod = line.substring(6, line.length()).trim();
+			}
+			// REMARK 3 (for resolution)
+			if (line.startsWith("REMARK   3   RESOLUTION RANGE HIGH")){
+				Pattern pR = Pattern.compile("^REMARK   3   RESOLUTION RANGE HIGH \\(ANGSTROMS\\) :\\s+(\\d+\\.\\d+).*");
+				Matcher mR = pR.matcher(line);
+				if (mR.matches()) {
+					resolution = Double.parseDouble(mR.group(1));
+				}
+			}
+			// REMARK 3 (for R free)
+			if (line.startsWith("REMARK   3   FREE R VALUE")) {
+				Pattern pR = Pattern.compile("^REMARK   3   FREE R VALUE\\s+(?:\\(NO CUTOFF\\))?\\s+:\\s+(\\d\\.\\d+).*");
+				Matcher mR = pR.matcher(line);
+				if (mR.matches()) {
+					rFree = Double.parseDouble(mR.group(1));
+				}				
+			}
+			// REMARK 200 (for R merge)
+			if (line.startsWith("REMARK 200  R MERGE                    (I)")) {
+				Pattern pR = Pattern.compile("^REMARK 200  R MERGE                    \\(I\\)\\s+:\\s+(\\d\\.\\d+).*");
+				Matcher mR = pR.matcher(line);
+				if (mR.matches()) {
+					rSym = Double.parseDouble(mR.group(1));
+				}								
+			}
+			// REMARK 200 (for R sym) 
+			if (line.startsWith("REMARK 200  R SYM                      (I)")) {
+				Pattern pR = Pattern.compile("^REMARK 200  R SYM                      \\(I\\)\\s+:\\s+(\\d\\.\\d+).*");
+				Matcher mR = pR.matcher(line);
+				if (mR.matches()) {
+					double rSymFromRsymField = Double.parseDouble(mR.group(1));
+					if (this.rSym==-1) {
+						this.rSym = rSymFromRsymField;
+					} else if (Math.abs(this.rSym-rSymFromRsymField)>0.0001) {
+						// disagreement between the 2, we consider it unreliable: reset to -1 
+						rSym = -1;
+					} 
+				}												
+			}
 			// CRYST1
 			if (line.startsWith("CRYST1")) {
 				double a = Double.parseDouble(line.substring( 6, 15));

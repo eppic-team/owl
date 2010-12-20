@@ -91,9 +91,17 @@ public class Pdb implements HasFeatures {
 	protected int fullLength; 							// length of full sequence as it appears in SEQRES field 
 														// to get observed length use method getObsLength()
 	
+	// experimental method
+	protected String expMethod;							// x-ray crystallograpy, NMR, etc.
+	
 	// crystallographic data
 	protected SpaceGroup spaceGroup;					// the space group (in CRYST1 field in PDB files)
 	protected CrystalCell crystalCell;					// the parameters of the crystal cell (in CRYST1 field in PDB files)
+	
+	// quality data (for crystal structures)
+	protected double resolution;						// all 3 parameters initialised to -1 (for non-crystal structures they just don't apply)
+	protected double rFree;
+	protected double rSym;
 	
 	// sequence features (annotations)
 	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
@@ -145,6 +153,11 @@ public class Pdb implements HasFeatures {
 		this.hasASA = false;
 		this.hasBfactors = false;
 		
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		
 		this.initialiseResidues();
 	}
 	
@@ -162,7 +175,12 @@ public class Pdb implements HasFeatures {
 		this.dataLoaded = true;
 		this.hasASA = false;
 		this.hasBfactors = false;
-		
+
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+
 		this.sequence = sequence;
 		this.fullLength = sequence.length();
 		this.initialiseResidues();
@@ -204,6 +222,11 @@ public class Pdb implements HasFeatures {
 		this.hasASA = false;
 		this.hasBfactors = false;
 		
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+
 		if (coords.length!=sequence.length()) {
 			throw new IllegalArgumentException("Array of coordinates is not of same length as given sequence");
 		}
@@ -1418,6 +1441,38 @@ public class Pdb implements HasFeatures {
 	
 	public CrystalCell getCrystalCell() {
 		return this.crystalCell;
+	}
+	
+	/**
+	 * Returns the experimental method, e.g. "X-RAY DIFFRACTION" or "SOLUTION NMR"
+	 * @return
+	 */
+	public String getExpMethod() {
+		return this.expMethod;
+	}
+	
+	/**
+	 * Returns the resolution or -1 if does not apply
+	 * @return
+	 */
+	public double getResolution() {
+		return this.resolution;
+	}
+	
+	/**
+	 * Returns the R free value or -1 if does not apply or not available
+	 * @return
+	 */
+	public double getRfree() {
+		return this.rFree;
+	}
+	
+	/**
+	 * Returns the R sym/R merge value or -1 if does not apply or not available.
+	 * @return
+	 */
+	public double getRsym() {
+		return this.rSym;
 	}
 	
 	/**

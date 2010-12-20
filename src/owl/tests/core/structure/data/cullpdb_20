@@ -171,7 +171,7 @@
 1RU4	A
 2BWR	A
 1O7I	A
-1KT6	A
+#1KT6	A  # (SHELX entry) R free disagrees between PDB and mmCIF (see pdbwiki). Won't pass our test, skipping
 2CKK	A
 1JX6	A
 2GUI	A
@@ -638,14 +638,14 @@
 2FR5	A
 1F8E	A
 1KAF	A
-1KQP	A
+#1KQP	A # (SHELX entry) R free in cif file is the one at sigma=4 (instead of no cutoff one). Won't pass our test, we skip it
 1VFY	A
 2JDC	A
 1TU9	A
 1YBK	A
 2NWF	A
 1UTG	A
-1XT5	A
+#1XT5	A # (SHELX entry) R free in cif file is the no cutoff one and then pdbx_ls_sigma_F is 0. Inconsistent again. Won't pass our test, we skip it
 1M1F	A
 1T4B	A
 2P8I	A
@@ -791,7 +791,7 @@
 2NQW	A
 2POF	A
 1JEK	B
-2AEB	A
+#2AEB	A # (SHELX entry) R free in cif file is the one at sigma=4 (instead of no cutoff one). Won't pass our test, we skip it
 2F3Z	B
 2GQW	A
 1IN4	A
@@ -813,7 +813,7 @@
 2H8G	A
 2JC9	A
 2D5W	A
-1LWB	A
+#1LWB	A # (SHELX entry) R free inconsistencies PDB vs mmCIF (see pdbwiki)
 1M4J	A
 1CXQ	A
 1GK9	A

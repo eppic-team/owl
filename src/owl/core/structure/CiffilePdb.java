@@ -49,7 +49,10 @@ public class CiffilePdb extends Pdb {
 	private static final String structSheetId = "_struct_sheet_range";
 	private static final String cell = "_cell";
 	private static final String symmetry = "_symmetry";
-	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry};
+	private static final String exptl = "_exptl";
+	private static final String reflns = "_reflns";
+	private static final String refine = "_refine";
+	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -294,6 +297,8 @@ public class CiffilePdb extends Pdb {
 		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
 		this.pdbCode = readPdbCode();
 		readCrystalData();
+		readExpMethod();
+		readQparams();
 		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
 		readAtomSite(); // populates residues 		
 		secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
@@ -388,6 +393,41 @@ public class CiffilePdb extends Pdb {
 		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
 			throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
+		}
+	}
+	
+	private void readExpMethod() {
+		String expMethWithQuotes = fields2values.get(exptl+".method").trim();
+		this.expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
+	}
+	
+	private void readQparams() {
+		// refine only present in xray structures
+		if (fields2values.containsKey(refine+".ls_d_res_high")) {
+			String resolStr = fields2values.get(refine+".ls_d_res_high").trim();
+			if (!resolStr.equals("?")) {
+				this.resolution = Double.parseDouble(resolStr);
+			}
+			String rfreeStr = fields2values.get(refine+".ls_R_factor_R_free").trim();
+			if (!rfreeStr.equals("?")) {
+				this.rFree = Double.parseDouble(rfreeStr);
+			}
+		}
+		if (fields2values.containsKey(reflns+".pdbx_Rsym_value")){
+			String rsymvalStr = fields2values.get(reflns+".pdbx_Rsym_value").trim();
+			String rmergevalStr = fields2values.get(reflns+".pdbx_Rmerge_I_obs").trim();
+			if (!rsymvalStr.equals("?")) {
+				this.rSym = Double.parseDouble(rsymvalStr);
+			}
+			if (!rmergevalStr.equals("?")) {
+				if (this.rSym==-1) {
+					this.rSym = Double.parseDouble(rmergevalStr);
+				} else {
+					if (Math.abs(Double.parseDouble(rmergevalStr)-Double.parseDouble(rsymvalStr))>0.0001) {
+						this.rSym = -1; // they disagree -> unreliable, we reset the value
+					}
+				}
+			}
 		}
 	}
 	

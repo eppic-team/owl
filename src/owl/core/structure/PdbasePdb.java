@@ -71,6 +71,8 @@ public class PdbasePdb extends Pdb {
 		this.entrykey = getEntryKey();
 		this.title = getTitle(); // this is available once we have the entry key
 		readCrystalData(); // sets spaceGroup and crystalCell
+		readExpMethod(); // sets expMethod
+		readQparams(); // sets resolution, rFree and rSym
 	}
 
 	/**
@@ -383,6 +385,53 @@ public class PdbasePdb extends Pdb {
 		rsst.close();
 		stmt.close();
 		
+	}
+	
+	private void readExpMethod() throws SQLException {
+		String sql = "SELECT method FROM "+db+".exptl WHERE entry_key="+entrykey;
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			this.expMethod=rsst.getString(1).trim();
+		}
+		rsst.close();
+		stmt.close();
+	}
+	
+	private void readQparams() throws SQLException {
+		// NOTE that in case of non-xray structures no records will be present in refine or reflns and nothing will be set
+		String sql = "SELECT ls_d_res_high, ls_r_factor_r_free FROM "+db+".refine WHERE entry_key="+entrykey;
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			double resol = rsst.getFloat(1);
+			if (resol<1000) { // for some reason there are a few 3.4e+38 in the db, which is basically a null
+				this.resolution = resol;
+			}
+			double val =rsst.getFloat(2);
+			if (val<1000) { // for some reason there are lots of 3.4e+38 in the db, which is basically a null
+				this.rFree = val;
+			}
+		}
+		sql = "SELECT pdbx_Rsym_value, pdbx_Rmerge_I_obs FROM "+db+".reflns WHERE entry_key="+entrykey;
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			double rsymval = rsst.getFloat(1);
+			double rmergeval = rsst.getFloat(2);
+			if (rsymval<1000) {
+				if (rmergeval<1000) {
+					if (Math.abs(rsymval-rmergeval)<0.0001) {
+						this.rSym = rsymval; // they agree, we assign. Otherwise no rSym is assigned
+					}
+				} else {
+					this.rSym = rsymval;
+				}
+			} else if (rmergeval<1000) {
+				this.rSym = rmergeval;
+			}
+		}
+		rsst.close();
+		stmt.close();		
 	}
 	
 	private void readAtomData() throws PdbaseInconsistencyError, SQLException{

@@ -127,6 +127,12 @@ public class PdbParsersTest {
 					Assert.assertEquals(pdbaseCell.getGamma(), ciffileCell.getGamma(), 0.001);
 				}
 				
+				// exp data and quality parameters
+				Assert.assertEquals(pdbasePdb.getExpMethod(),ciffilePdb.getExpMethod());
+				Assert.assertEquals(pdbasePdb.getResolution(),ciffilePdb.getResolution(),0.0001);
+				Assert.assertEquals(pdbasePdb.getRfree(),ciffilePdb.getRfree(),0.0001);
+				Assert.assertEquals(pdbasePdb.getRsym(),ciffilePdb.getRsym(),0.0001);
+				
 				// identifiers
 				Assert.assertEquals(pdbasePdb.getPdbCode(), ciffilePdb.getPdbCode());
 				Assert.assertEquals(pdbasePdb.getChainCode(), ciffilePdb.getChainCode());
@@ -253,8 +259,16 @@ public class PdbParsersTest {
 						Assert.assertEquals(model,pdbfilePdb.getModel());
 						
 						// crystal data
-						Assert.assertNotNull(pdbfilePdb.getSpaceGroup());
+						if (pdbasePdb.getSpaceGroup()!=null) {
+							Assert.assertEquals(pdbasePdb.getSpaceGroup().getId(),pdbfilePdb.getSpaceGroup().getId());
+						}
 						Assert.assertNotNull(pdbfilePdb.getCrystalCell());
+						
+						// exp data and quality parameters
+						Assert.assertEquals(pdbasePdb.getExpMethod(),pdbfilePdb.getExpMethod());
+						Assert.assertEquals(pdbasePdb.getResolution(),pdbfilePdb.getResolution(),0.01);
+						Assert.assertEquals(pdbasePdb.getRfree(),pdbfilePdb.getRfree(),0.01);
+						Assert.assertEquals(pdbasePdb.getRsym(),pdbfilePdb.getRsym(),0.001);
 
 						// sequence
 						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().length());
@@ -329,6 +343,13 @@ public class PdbParsersTest {
 			System.exit(1);
 		}
 		return unzippedFile;
+	}
+
+	// to debug the testing code (run as java program so that we can use normal debugger)
+	public static void main(String[] args) throws Exception {
+		PdbParsersTest pdbTest = new PdbParsersTest();
+		//pdbTest.testCIFagainstPDBASE();
+		pdbTest.testPdbfileParser();
 	}
 
 }
