@@ -260,21 +260,20 @@ public class PdbfilePdb extends Pdb {
 				Pattern pR = Pattern.compile("^REMARK 200  R MERGE                    \\(I\\)\\s+:\\s+(\\d\\.\\d+).*");
 				Matcher mR = pR.matcher(line);
 				if (mR.matches()) {
-					rSym = Double.parseDouble(mR.group(1));
+					if (this.rSym == -1) {
+						this.rSym = Double.parseDouble(mR.group(1));
+					}
 				}								
 			}
-			// REMARK 200 (for R sym) 
+			// REMARK 200 (for R sym)
+			// if both Rsym/Rmerge are present, we don't compare them but take the Rsym value to be 
+			// the right one (there's not much consensus in the field as to what's the 
+			// right thing to do anyway!)			
 			if (line.startsWith("REMARK 200  R SYM                      (I)")) {
 				Pattern pR = Pattern.compile("^REMARK 200  R SYM                      \\(I\\)\\s+:\\s+(\\d\\.\\d+).*");
 				Matcher mR = pR.matcher(line);
 				if (mR.matches()) {
-					double rSymFromRsymField = Double.parseDouble(mR.group(1));
-					if (this.rSym==-1) {
-						this.rSym = rSymFromRsymField;
-					} else if (Math.abs(this.rSym-rSymFromRsymField)>0.0001) {
-						// disagreement between the 2, we consider it unreliable: reset to -1 
-						rSym = -1;
-					} 
+					this.rSym = Double.parseDouble(mR.group(1));
 				}												
 			}
 			// CRYST1

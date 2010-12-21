@@ -416,17 +416,16 @@ public class CiffilePdb extends Pdb {
 		if (fields2values.containsKey(reflns+".pdbx_Rsym_value")){
 			String rsymvalStr = fields2values.get(reflns+".pdbx_Rsym_value").trim();
 			String rmergevalStr = fields2values.get(reflns+".pdbx_Rmerge_I_obs").trim();
+			// if both are present, we don't compare them but take the Rsym value to be 
+			// the right one (there's not much consensus in the field as to what's the 
+			// right thing to do anyway!)
 			if (!rsymvalStr.equals("?")) {
 				this.rSym = Double.parseDouble(rsymvalStr);
 			}
 			if (!rmergevalStr.equals("?")) {
 				if (this.rSym==-1) {
 					this.rSym = Double.parseDouble(rmergevalStr);
-				} else {
-					if (Math.abs(Double.parseDouble(rmergevalStr)-Double.parseDouble(rsymvalStr))>0.0001) {
-						this.rSym = -1; // they disagree -> unreliable, we reset the value
-					}
-				}
+				} 
 			}
 		}
 	}

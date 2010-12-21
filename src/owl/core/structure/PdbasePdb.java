@@ -400,6 +400,7 @@ public class PdbasePdb extends Pdb {
 	
 	private void readQparams() throws SQLException {
 		// NOTE that in case of non-xray structures no records will be present in refine or reflns and nothing will be set
+		
 		String sql = "SELECT ls_d_res_high, ls_r_factor_r_free FROM "+db+".refine WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -413,19 +414,17 @@ public class PdbasePdb extends Pdb {
 				this.rFree = val;
 			}
 		}
+		
+		// if both Rsym/Rmerge are present, we don't compare them but take the Rsym value to be 
+		// the right one (there's not much consensus in the field as to what's the 
+		// right thing to do anyway!)
 		sql = "SELECT pdbx_Rsym_value, pdbx_Rmerge_I_obs FROM "+db+".reflns WHERE entry_key="+entrykey;
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
 			double rsymval = rsst.getFloat(1);
 			double rmergeval = rsst.getFloat(2);
 			if (rsymval<1000) {
-				if (rmergeval<1000) {
-					if (Math.abs(rsymval-rmergeval)<0.0001) {
-						this.rSym = rsymval; // they agree, we assign. Otherwise no rSym is assigned
-					}
-				} else {
-					this.rSym = rsymval;
-				}
+				this.rSym = rsymval;
 			} else if (rmergeval<1000) {
 				this.rSym = rmergeval;
 			}
