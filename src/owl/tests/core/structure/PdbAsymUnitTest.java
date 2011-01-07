@@ -22,6 +22,7 @@ import org.junit.Test;
 import org.xml.sax.SAXException;
 
 import owl.core.connections.pisa.PisaConnection;
+import owl.core.connections.pisa.PisaInterfaceList;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
@@ -99,14 +100,10 @@ public class PdbAsymUnitTest {
 		// getting PISA interfaces
 		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, null, null);
 		System.out.println("Downloading PISA interfaces");
-		Map<String, ChainInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
+		Map<String, PisaInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
 
 		for (String pdbCode: pdbCodes) {
-		
-			ChainInterfaceList pisaInterfaces = all.get(pdbCode);
-			// we sort them on interface area because pisa doesn't always sort them like that (it does some kind of grouping)
-			pisaInterfaces.sort();
-			
+					
 			System.out.println("\n##"+pdbCode);
 
 			PdbAsymUnit pdb = null;
@@ -120,6 +117,10 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 
+			ChainInterfaceList pisaInterfaces = all.get(pdbCode).convertToChainInterfaceList(pdb);
+			// we sort them on interface area because pisa doesn't always sort them like that (it does some kind of grouping)
+			pisaInterfaces.sort();
+			
 			System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 			
 			long start = System.currentTimeMillis();
@@ -252,4 +253,11 @@ public class PdbAsymUnitTest {
 	private static boolean checkCounts(int[] counts) {
 		return (counts[0]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]) && counts[1]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]));
 	}
+	
+	// to debug the testing code (run as java program so that we can use normal debugger)
+	public static void main(String[] args) throws Exception {
+		PdbAsymUnitTest pdbAUTest = new PdbAsymUnitTest();
+		pdbAUTest.testGetAllInterfaces();
+	}
+
 }

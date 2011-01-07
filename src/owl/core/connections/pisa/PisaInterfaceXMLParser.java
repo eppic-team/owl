@@ -15,11 +15,6 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import owl.core.structure.AminoAcid;
-import owl.core.structure.ChainInterface;
-import owl.core.structure.ChainInterfaceList;
-import owl.core.structure.Pdb;
-import owl.core.structure.Residue;
 import owl.core.structure.SpaceGroup;
 
 
@@ -70,17 +65,15 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	// members
 	private InputSource input;
 	
-	private Map<String,ChainInterfaceList> allInterfaces;
+	private Map<String,PisaInterfaceList> allInterfaces;
 	
-	private ChainInterfaceList currentInterfaces;
+	private PisaInterfaceList currentInterfaces;
 	private String currentPdbCode;
-	private ChainInterface currentPisaInterface;
-	private Pdb currentPisaMolecule;
-	private Residue currentResidue;
-	private int currentMolecId;
+	private PisaInterface currentPisaInterface;
+	private PisaMolecule currentPisaMolecule;
+	private PisaResidue currentResidue;
 	private Matrix4d currentTransfOrth;
 	private Matrix4d currentTransf;
-	private String currentMolType;
 	
 	private StringBuffer buffer;
 	private boolean inValue;
@@ -108,7 +101,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	 * Returns the parsed interfaces data
 	 * @return a map of pdb codes to lists of interfaces
 	 */
-	public Map<String,ChainInterfaceList> getAllInterfaces() {
+	public Map<String,PisaInterfaceList> getAllInterfaces() {
 		return allInterfaces;
 	}
 	
@@ -132,7 +125,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	}
 	
 	public void startDocument() throws SAXException {
-		allInterfaces = new HashMap<String,ChainInterfaceList>();
+		allInterfaces = new HashMap<String,PisaInterfaceList>();
 		inEntry = false;
 		inValue = false;
 		inInterface = false;
@@ -149,14 +142,14 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 			Attributes atts) throws SAXException {
 		if (name.equals(PDB_ENTRY_TAG)){
 			inEntry = true;
-			currentInterfaces = new ChainInterfaceList(ChainInterfaceList.AsaCalcMethod.PISA);
+			currentInterfaces = new PisaInterfaceList();
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
 				initValueReading();
 			} else if (name.equals(INTERFACE_TAG)) {
 				inInterface = true;
-				currentPisaInterface = new ChainInterface();
+				currentPisaInterface = new PisaInterface();
 			}
 			if (inInterface && !inMolecule) {
 				if (name.equals(ID_TAG)) {
@@ -171,10 +164,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				//	initValueReading();
 				} else if (name.equals(MOLECULE_TAG)) {
 					inMolecule = true;
-					currentPisaMolecule = new Pdb();
-					currentMolecId = 0;
+					currentPisaMolecule = new PisaMolecule();
 					currentTransfOrth = new Matrix4d();
-					currentMolType = null;
 				}
 				
 			}
@@ -213,7 +204,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(RESIDUE_TAG)){
 					inResidue = true;
-					currentResidue = new Residue();
+					currentResidue = new PisaResidue();
 				} 
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
@@ -245,19 +236,20 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
 				currentPdbCode = flushValue().toLowerCase();
+				currentInterfaces.setPdbCode(currentPdbCode);
 			} else if (name.equals(INTERFACE_TAG)){
 				inInterface = false;
-				currentInterfaces.addInterface(currentPisaInterface);
+				currentInterfaces.add(currentPisaInterface);
 			}
 			if (inInterface && !inMolecule) {
 				if (name.equals(ID_TAG)) {
 					currentPisaInterface.setId(Integer.parseInt(flushValue()));
 				} else if (name.equals(TYPE_TAG)) {
-					//currentPisaInterface.setType(Integer.parseInt(flushValue()));
+					currentPisaInterface.setType(Integer.parseInt(flushValue()));
 				} else if (name.equals(INT_AREA_TAG)){
 					currentPisaInterface.setInterfaceArea(Double.parseDouble(flushValue()));
 				} else if (name.equals(INT_SOLV_EN_TAG)){
-					currentPisaInterface.setScore(Double.parseDouble(flushValue()));
+					currentPisaInterface.setSolvEnergy(Double.parseDouble(flushValue()));
 				//} else if (name.equals(PVALUE_TAG)){
 				//	currentPisaInterface.setSolvEnergyPvalue(Double.parseDouble(flushValue()));
 				} 
@@ -267,27 +259,23 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 			if (inInterface && inMolecule) {
 				if (name.equals(MOLECULE_TAG)){
 					inMolecule = false;
-					if (currentMolecId==1){
+					currentPisaMolecule.setTransf(currentTransf);
+					currentPisaMolecule.setTransfOrth(currentTransfOrth);
+					if (currentPisaMolecule.getId()==1){
 						currentPisaInterface.setFirstMolecule(currentPisaMolecule);
-						currentPisaInterface.setFirstMolType(currentMolType); 
-						currentPisaInterface.setFirstTransfOrth(currentTransfOrth);
-						currentPisaInterface.setFirstTransf(currentTransf);
-					} else if (currentMolecId==2){
+					} else if (currentPisaMolecule.getId()==2){
 						currentPisaInterface.setSecondMolecule(currentPisaMolecule);
-						currentPisaInterface.setSecondMolType(currentMolType);
-						currentPisaInterface.setSecondTransfOrth(currentTransfOrth);
-						currentPisaInterface.setSecondTransf(currentTransf);
 					} else {
 						System.err.println("Warning: molecule with id other than 1 or 2 in PISA XML interfaces description");
 					}
 				}
 
 				if (name.equals(ID_TAG)) {
-					currentMolecId = Integer.parseInt(flushValue());
+					currentPisaMolecule.setId(Integer.parseInt(flushValue()));
 				} else if (name.equals(CHAIN_ID_TAG)){
-					currentPisaMolecule.setPdbChainCode(flushValue());
+					currentPisaMolecule.setChainId(flushValue());
 				} else if (name.equals(CLASS_TAG)) {
-					currentMolType = flushValue();
+					currentPisaMolecule.setMolClass(flushValue());
 				} else if (name.equals(SYMOP_TAG)) {
 					currentTransf = SpaceGroup.getMatrixFromAlgebraic(flushValue());
 				} else if (name.equals(RXX_TAG)) {
@@ -320,11 +308,11 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				}
 				if (inResidue) {
 					if (name.equals(SER_NO_TAG)) {
-						currentResidue.setSerial(Integer.parseInt(flushValue()));
+						currentResidue.setResSerial(Integer.parseInt(flushValue()));
 					} else if (name.equals(SEQ_NUM_TAG)) {
-						currentResidue.setPdbSerial(flushValue());
+						currentResidue.setPdbResSer(flushValue());
 					} else if (name.equals(NAME_TAG)) {
-						currentResidue.setAaType(AminoAcid.getByThreeLetterCode(flushValue()));
+						currentResidue.setResType(flushValue());
 					} else if (name.equals(ASA_TAG)) {
 						currentResidue.setAsa(Double.parseDouble(flushValue()));
 					} else if (name.equals(BSA_TAG)) {

@@ -30,8 +30,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 
 	private List<ChainInterface> list;
 	
-	private PdbAsymUnit pdb; //the PDB entry that this list of interfaces refers to
-	
 	private AsaCalcMethod asaCalcMethod;
 	private int asaCalcAccuracyParam;
 	
@@ -73,14 +71,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 	
 	public ChainInterface get(int i) {
 		return list.get(i);
-	}
-	
-	public PdbAsymUnit getPdb() {
-		return pdb;
-	}
-	
-	public void setPdb(PdbAsymUnit pdb) {
-		this.pdb = pdb;
 	}
 	
 	public AsaCalcMethod getAsaCalcType() {

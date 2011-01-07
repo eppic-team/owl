@@ -538,7 +538,6 @@ public class PdbAsymUnit {
 		if (asaCalcMethod == ChainInterfaceList.AsaCalcMethod.INTERNAL) {
 			list.setAsaCalcAccuracyParam(nSpherePoints);
 		}
-		list.setPdb(this);
 		for (ChainInterface interf:set) {
 			list.addInterface(interf);
 		}

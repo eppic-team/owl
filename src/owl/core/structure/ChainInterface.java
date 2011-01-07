@@ -15,6 +15,7 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	public static final String TYPE_PROTEIN = "Protein";
 
 	private int id;
+	private String name;
 	private double interfaceArea;
 	private AICGraph graph;
 	
@@ -55,6 +56,7 @@ public class ChainInterface implements Comparable<ChainInterface> {
 		this.secondTransf = secondTransf;
 		this.firstMolType = TYPE_PROTEIN;
 		this.secondMolType = TYPE_PROTEIN;
+		this.name = this.firstMolecule.getPdbChainCode()+"+"+this.secondMolecule.getPdbChainCode();
 	}
 	
 	public int getId() {
@@ -66,7 +68,11 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	}
 	
 	public String getName() {
-		return this.firstMolecule.getPdbChainCode()+"+"+this.secondMolecule.getPdbChainCode();
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
 	}
 	
 	public double getInterfaceArea() {
@@ -305,26 +311,30 @@ public class ChainInterface implements Comparable<ChainInterface> {
 	public void printTabular(PrintStream ps) {
 		ps.print("# ");
 		ps.printf("%d\t%9.2f\t%5.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(),this.getScore(), 
-				this.getFirstMolecule().getPdbChainCode()+"+"+this.getSecondMolecule().getPdbChainCode(),
+				this.getName(),
 				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf()));
-		ps.print("## ");
-		this.printFirstMolInfoTabular(ps);
-		ps.print("## ");
-		this.printSecondMolInfoTabular(ps);
+		if (isFirstProtein()) {
+			ps.print("## ");
+			this.printFirstMolInfoTabular(ps);
+		}
+		if (isSecondProtein()) {
+			ps.print("## ");
+			this.printSecondMolInfoTabular(ps);
+		}
 	}
 	
 	private void printFirstMolInfoTabular(PrintStream ps) {
 		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+this.getFirstMolType());
-		if (isFirstProtein()) {
-			InterfaceRimCore[] rimCores = getFirstRimCores();
-			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
-				ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
-				ps.println("## rim : "+rimCores[i].getRimResString());
-				if (rimCores[i].getCoreResidues().size()>0) {
-					ps.println("## core: "+rimCores[i].getCoreResString());
-				}
+
+		InterfaceRimCore[] rimCores = getFirstRimCores();
+		for (int i=0;i<bsaToAsaCutoffs.length;i++) {
+			ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
+			ps.println("## rim : "+rimCores[i].getRimResString());
+			if (rimCores[i].getCoreResidues().size()>0) {
+				ps.println("## core: "+rimCores[i].getCoreResString());
 			}
 		}
+
 		for (Residue residue:firstMolecule.getResidues().values()) {
 			residue.printTabular(ps);
 		}
@@ -332,16 +342,16 @@ public class ChainInterface implements Comparable<ChainInterface> {
 
 	private void printSecondMolInfoTabular(PrintStream ps) {
 		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+this.getSecondMolType());
-		if (isSecondProtein()) {
-			InterfaceRimCore[] rimCores = getSecondRimCores();
-			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
-				ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
-				ps.println("## rim : "+rimCores[i].getRimResString());
-				if (rimCores[i].getCoreResidues().size()>0) {
-					ps.println("## core: "+rimCores[i].getCoreResString());
-				}
+
+		InterfaceRimCore[] rimCores = getSecondRimCores();
+		for (int i=0;i<bsaToAsaCutoffs.length;i++) {
+			ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
+			ps.println("## rim : "+rimCores[i].getRimResString());
+			if (rimCores[i].getCoreResidues().size()>0) {
+				ps.println("## core: "+rimCores[i].getCoreResString());
 			}
 		}
+
 		for (Residue residue:secondMolecule.getResidues().values()) {
 			residue.printTabular(ps);
 		}
