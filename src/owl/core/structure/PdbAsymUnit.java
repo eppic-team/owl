@@ -12,6 +12,7 @@ import java.net.URLConnection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,6 +53,8 @@ public class PdbAsymUnit {
 	private String title;
 	
 	private TreeMap<String, Pdb> chains;		// pdbChainCodes to Pdbs
+	private HashMap<String, String> chain2repChain; // a map of all pdb chain codes to the representative pdb chain code (the first chain alphabetically from the group of identical chains)
+	private HashMap<String,List<String>> repChain2members; // a map of representative pdb chain code to the members of the group of identical chains
 	
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
@@ -626,11 +629,10 @@ public class PdbAsymUnit {
 	}
 	
 	/**
-	 * Returns a map of sequences to lists of pdb chain codes corresponding to that sequence.
-	 * @return
+	 * Initialises the map of chain codes to representative chain codes.
+	 * @see #getRepChain(String)
 	 */
-	public Map<String, List<String>> getUniqueSequences() {
-		
+	private void initialiseRepChainsMaps() {
 		// map of sequences to list of chain codes
 		Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
 		// finding the entities (groups of identical chains)
@@ -644,7 +646,66 @@ public class PdbAsymUnit {
 				uniqSequences.put(pdb.getSequence(),list);
 			}		
 		}
-		return uniqSequences;
+		
+		chain2repChain = new HashMap<String,String>();
+		repChain2members = new HashMap<String,List<String>>();
+		for (List<String> entity:uniqSequences.values()) {
+			for (int i=0;i<entity.size();i++) {
+				chain2repChain.put(entity.get(i),entity.get(0));
+			}
+			repChain2members.put(entity.get(0), entity);
+		}
+		
+	}
+	
+	/**
+	 * Returns the representative chain's PDB chain code for the given PDB chain 
+	 * code, i.e. the first chain (alphabetically) that represents a set of 
+	 * sequence-identical chains.
+	 * A PDB entrity is composed of several chains, some of them can be identical in sequence
+	 * (an entity). For each of those groups (entities) we define a representative chain (the 
+	 * first PDB chain code alphabetically). 
+	 * That's the chain returned here, given a particular chain.
+	 * @param pdbChainCode the chain for which we want to get the representative chain
+	 * @return
+	 * @see {@link #getSeqIdenticalGroup(String)}
+	 */
+	public String getRepChain(String pdbChainCode) {
+		if (chain2repChain==null) {
+			initialiseRepChainsMaps();
+		}
+		return chain2repChain.get(pdbChainCode);
+	}
+	
+	/**
+	 * For a given PDB chain code of a representative chain returns all the PDB chain codes
+	 * of the sequence-identical chains that it represents.
+	 * @param repPdbChainCode
+	 * @return
+	 * @see {@link #getRepChain(String)}
+	 */
+	public List<String> getSeqIdenticalGroup(String repPdbChainCode) {
+		if (repChain2members==null) {
+			initialiseRepChainsMaps();
+		}
+		return repChain2members.get(repPdbChainCode);
+	}
+	
+	/**
+	 * Returns a sorted list of the representative chains' PDB chain codes. 
+	 * @return
+	 * @see {@link #getRepChain(String)} and {@link #getSeqIdenticalGroup(String)}
+	 */
+	public List<String> getAllRepChains() {
+		if (repChain2members==null) {
+			initialiseRepChainsMaps();
+		}
+		List<String> reps = new ArrayList<String>();
+		for (String rep:repChain2members.keySet()) {
+			reps.add(rep);
+		}
+		Collections.sort(reps);
+		return reps;
 	}
 	
 	/**
