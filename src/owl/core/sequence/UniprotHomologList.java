@@ -83,7 +83,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	private Map<String,List<UniprotHomolog>> lookup; // to speed up searches (uniprot ids to Homologs lists) 
 													 // it's a list because blast can hit a single uniprot in multiple regions (for us
 													 // that's multiple BlastHits)
-	private double idCutoff; 						 // the identity cutoff (see restrictToMinId() )
+	private double idCutoff; 						 // the identity cutoff (see restrictToMinIdAndCoverage() )
+	private double qCoverageCutoff;					 // the query coverage cutoff (see restrictToMinIdAndCoverage() )
 	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
 	
 	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
@@ -502,11 +503,12 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 	
 	/**
-	 * Removes homologs below the given sequence identity value.
+	 * Removes homologs below the given sequence identity and query coverage values.
 	 * @param idCutoff
 	 */
 	public void restrictToMinIdAndCoverage(double idCutoff, double queryCovCutoff) {
 		this.idCutoff = idCutoff;
+		this.qCoverageCutoff = queryCovCutoff;
 
 		Iterator<UniprotHomolog> it = list.iterator();
 		while (it.hasNext()) {
@@ -718,11 +720,19 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	}
 	
 	/**
-	 * Returns the sequence identity cutoff, see {@link #restrictToMinId(double)}
+	 * Returns the sequence identity cutoff, see {@link #restrictToMinIdAndCoverage(double, double)}
 	 * @return
 	 */
 	public double getIdCutoff() {
 		return idCutoff;
+	}
+	
+	/**
+	 * Returns the query coverage cutoff, see {@link #restrictToMinIdAndCoverage(double, double)}
+	 * @return
+	 */
+	public double getQCovCutoff() {
+		return qCoverageCutoff;
 	}
 	
 	/**
