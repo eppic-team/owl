@@ -112,7 +112,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 	 * @param cacheFile a file with the cached xml blast output file, if null blast will be always run
 	 * @throws IOException
 	 * @throws BlastError
-	 * @throws UniprotVerMisMatchException 
+	 * @throws UniprotVerMisMatchException if uniprot versions of cacheFile given and blastDbDir do not coincide
 	 */
 	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastError, UniprotVerMisMatchException {
 		File outBlast = null;
