@@ -1,0 +1,308 @@
+BLASTP 2.2.18 [Mar-02-2008]
+
+
+Reference: Altschul, Stephen F., Thomas L. Madden, Alejandro A. Schaffer, 
+Jinghui Zhang, Zheng Zhang, Webb Miller, and David J. Lipman (1997), 
+"Gapped BLAST and PSI-BLAST: a new generation of protein database search
+programs",  Nucleic Acids Res. 25:3389-3402.
+
+Reference for compositional score matrix adjustment: Altschul, Stephen F., 
+John C. Wootton, E. Michael Gertz, Richa Agarwala, Aleksandr Morgulis,
+Alejandro A. Schaffer, and Yi-Kuo Yu (2005) "Protein database searches
+using compositionally adjusted substitution matrices", FEBS J. 272:5101-5109.
+
+Query= MLH1_HUMAN P40692 DNA mismatch repair protein Mlh1 OS=Homo
+sapiens GN=MLH1 PE=1 SV=1
+         (340 letters)
+
+Database: seqs_pdbase_20080903.fix.reps.fa 
+           20,430 sequences; 4,636,376 total letters
+
+Searching..................................................done
+
+
+
+                                                                 Score    E
+Sequences producing significant alignments:                      (bits) Value
+
+pdb|1B63|A protein                                                    209   4e-55
+pdb|1H7S|A B protein                                                  168   1e-42
+pdb|1VA6|A B protein                                                   32   0.13 
+pdb|2P1G|A B protein                                                   32   0.23 
+pdb|1A6T|B D protein                                                   29   1.2  
+pdb|1GZ7|A B C D protein                                               29   1.3  
+pdb|1GDJ|A protein                                                     29   1.4  
+pdb|1GKZ|A protein                                                     28   2.1  
+pdb|1YSR|A B C protein                                                 28   2.3  
+pdb|1Q0P|A protein                                                     28   2.4  
+pdb|2C2A|A protein                                                     28   2.6  
+pdb|2OK5|A protein                                                     28   3.3  
+pdb|1RRK|A protein                                                     27   3.9  
+pdb|2OCD|A B C D protein                                               27   4.9  
+pdb|2FOK|A B protein                                                   26   8.1  
+pdb|2D7P|A protein                                                     26   9.7  
+
+>pdb|1B63|A protein
+          Length = 333
+
+ Score =  209 bits (533), Expect = 4e-55,   Method: Compositional matrix adjust.
+ Identities = 119/331 (35%), Positives = 191/331 (57%), Gaps = 7/331 (2%)
+
+Query: 8   IRRLDETVVNRIAAGEVIQRPANAIKEMIENCLDAKSTSIQVIVKEGGLKLIQIQDNGTG 67
+           I+ L   + N+IAAGEV++RPA+ +KE++EN LDA +T I + ++ GG KLI+I+DNG G
+Sbjct: 5   IQVLPPQLANQIAAGEVVERPASVVKELVENSLDAGATRIDIDIERGGAKLIRIRDNGCG 64
+
+Query: 68  IRKEDLDIVCERFTTSKLQSFEDLASISTYGFRGEALASISHVAHVTITTKTADGKCAYR 127
+           I+K++L +   R  TSK+ S +DL +I + GFRGEALASIS V+ +T+T++TA+ + A++
+Sbjct: 65  IKKDELALALARHATSKIASLDDLEAIISLGFRGEALASISSVSRLTLTSRTAEQQEAWQ 124
+
+Query: 128 ASYSDGK-LKAPPKPCAGNQGTQITVEDLFYNIATRRKALKNPSEEYGKILEVVGRYSVH 186
+           A Y++G+ +    KP A   GT + V DLFYN   RRK L+    E+  I E++ R ++ 
+Sbjct: 125 A-YAEGRDMNVTVKPAAHPVGTTLEVLDLFYNTPARRKFLRTEKTEFNHIDEIIRRIALA 183
+
+Query: 187 NAGISFSVKKQGETVADVRTLPNASTVD-NIRSIFGNAVSRELIEIGCEDKTLAFKMNGY 245
+              ++ ++   G+ V   R +P     +  + +I G A   + + I  +   L  +  G+
+Sbjct: 184 RFDVTINLSHNGKIVRQYRAVPEGGQKERRLGAICGTAFLEQALAIEWQHGDLTLR--GW 241
+
+Query: 246 ISNANYSVKKC--IFLLFINHRLVESTSLRKAIETVYAAYLPKNTHPFLYLSLEISPQNV 303
+           +++ N++      I   ++N R++    +  AI       L  +  P   L LEI P  V
+Sbjct: 242 VADPNHTTPALAEIQYCYVNGRMMRDRLINHAIRQACEDKLGADQQPAFVLYLEIDPHQV 301
+
+Query: 304 DVNVHPTKHEVHFLHEESILERVQQHIESKL 334
+           DVNVHP KHEV F     + + + Q + S L
+Sbjct: 302 DVNVHPAKHEVRFHQSRLVHDFIYQGVLSVL 332
+
+
+>pdb|1H7S|A B protein
+          Length = 365
+
+ Score =  168 bits (425), Expect = 1e-42,   Method: Compositional matrix adjust.
+ Identities = 115/359 (32%), Positives = 196/359 (54%), Gaps = 36/359 (10%)
+
+Query: 5   AGVIRRLDETVVNRIAAGEVIQRPANAIKEMIENCLDAKSTSIQVIVKEGGLKLIQIQDN 64
+           A  I+ +D   V++I +G+V+   + A+KE++EN LDA +T+I + +K+ G+ LI++ DN
+Sbjct: 12  AKAIKPIDRKSVHQICSGQVVLSLSTAVKELVENSLDAGATNIDLKLKDYGVDLIEVSDN 71
+
+Query: 65  GTGIRKEDLDIVCERFTTSKLQSFEDLASISTYGFRGEALASISHVAHVTITTKTADGKC 124
+           G G+ +E+ + +  +  TSK+Q F DL  + T+GFRGEAL+S+  ++ VTI+T  A  K 
+Sbjct: 72  GCGVEEENFEGLTLKHHTSKIQEFADLTQVETFGFRGEALSSLCALSDVTISTCHASAKV 131
+
+Query: 125 AYRASYS-DGKL--KAP-PKPCAGNQGTQITVEDLFYNIATRRKAL-KNPSEEYGKILEV 179
+             R  +  +GK+  K P P+P    +GT ++V+ LF  +  R K   +N  +EY K ++V
+Sbjct: 132 GTRLXFDHNGKIIQKTPYPRP----RGTTVSVQQLFSTLPVRHKEFQRNIKKEYAKXVQV 187
+
+Query: 180 VGRYSVHNAGISFSVKK---QGETVADVRTLPNASTVDNIRSIFGNAVSRELIEI----- 231
+           +  Y + +AGI  S      QG+    V T  + S  +NI S+FG    + LI       
+Sbjct: 188 LHAYCIISAGIRVSCTNQLGQGKRQPVVCTGGSPSIKENIGSVFGQKQLQSLIPFVQLPP 247
+
+Query: 232 ---GCEDKTLA--------FKMNGYISNANYSVKKCIF---LLFINHRLVESTSLRKAIE 277
+               CE+  L+        F ++G+IS   + V +        FIN R  +   + + + 
+Sbjct: 248 SDSVCEEYGLSCSDALHNLFYISGFISQCTHGVGRSSTDRQFFFINRRPCDPAKVCRLVN 307
+
+Query: 278 TVYAAYLPKNTHPFLYLSLEISPQNVDVNVHPTKHEVHFLHEESILERVQQHIESKLLG 336
+            VY  Y  ++ +PF+ L++ +  + VD+NV P K ++  L EE +L  V   +++ L+G
+Sbjct: 308 EVYHXY-NRHQYPFVVLNISVDSECVDINVTPDKRQI-LLQEEKLLLAV---LKTSLIG 361
+
+
+>pdb|1VA6|A B protein
+          Length = 518
+
+ Score = 32.3 bits (72), Expect = 0.13,   Method: Compositional matrix adjust.
+ Identities = 14/27 (51%), Positives = 19/27 (70%)
+
+Query: 150 ITVEDLFYNIATRRKALKNPSEEYGKI 176
+           IT  DL+  +A  ++A+K PSEEY KI
+Sbjct: 251 ITFNDLYEYVAGLKQAIKTPSEEYAKI 277
+
+
+>pdb|2P1G|A B protein
+          Length = 249
+
+ Score = 31.6 bits (70), Expect = 0.23,   Method: Compositional matrix adjust.
+ Identities = 29/95 (30%), Positives = 44/95 (46%), Gaps = 24/95 (25%)
+
+Query: 241 KMNGYISNANYSVKKCIFLLFINHRLVESTSLRKAIETVYAAYLP---------KNTHPF 291
+           K++GY S  +Y         +IN+ + +       +E V AAY P          +THP 
+Sbjct: 81  KIDGYTSRLHYISD------WINNAVRQGL-----LEDVTAAYSPFKQKLSLSYMSTHPE 129
+
+Query: 292 LYLSLEISPQNVDVNVHPTK----HEVHFLHEESI 322
+           LY SL+ SP+NV       K     EVH+L ++ +
+Sbjct: 130 LYKSLKNSPENVAQMAKYEKALSGKEVHYLPKDKL 164
+
+
+>pdb|1A6T|B D protein
+          Length = 217
+
+ Score = 28.9 bits (63), Expect = 1.2,   Method: Compositional matrix adjust.
+ Identities = 13/34 (38%), Positives = 20/34 (58%)
+
+Query: 171 EEYGKILEVVGRYSVHNAGISFSVKKQGETVADV 204
+           + +GK LE +GR    N G SF+ K +G+ +  V
+Sbjct: 39  QSHGKSLEWIGRVDPDNGGTSFNQKFKGKAILTV 72
+
+
+>pdb|1GZ7|A B C D protein
+          Length = 534
+
+ Score = 28.9 bits (63), Expect = 1.3,   Method: Compositional matrix adjust.
+ Identities = 25/104 (24%), Positives = 42/104 (40%), Gaps = 6/104 (5%)
+
+Query: 50  IVKEGGLKLIQIQDNGTGIRKEDLDIVCERFTTSKLQSFE-DLASISTYGFRGEALASIS 108
+           +   G L    IQ+ G+G        +  ++    +  F  D + ++ YG   E+  S+S
+Sbjct: 158 VASWGFLAGPDIQNEGSGNAGLHDQRLAMQWVADNIAGFGGDPSKVTIYG---ESAGSMS 214
+
+Query: 109 HVAHVTITT--KTADGKCAYRASYSDGKLKAPPKPCAGNQGTQI 150
+              H+       T +GK  +RA+        P  P  G  GT+I
+Sbjct: 215 TFVHLVWNDGDNTYNGKPLFRAAIMQSGCMVPSDPVDGTYGTEI 258
+
+
+>pdb|1GDJ|A protein
+          Length = 153
+
+ Score = 28.9 bits (63), Expect = 1.4,   Method: Compositional matrix adjust.
+ Identities = 17/41 (41%), Positives = 24/41 (58%), Gaps = 1/41 (2%)
+
+Query: 266 LVES-TSLRKAIETVYAAYLPKNTHPFLYLSLEISPQNVDV 305
+           L ES  +L K+    + A +PK+TH F  L LEI+P   D+
+Sbjct: 3   LTESQAALVKSSWEEFNANIPKHTHRFFILVLEIAPAAKDL 43
+
+
+>pdb|1GKZ|A protein
+          Length = 388
+
+ Score = 28.5 bits (62), Expect = 2.1,   Method: Compositional matrix adjust.
+ Identities = 19/59 (32%), Positives = 31/59 (52%), Gaps = 4/59 (6%)
+
+Query: 30  NAIKEMIENCLDAKSTSIQVIVKEGGLK---LIQIQDNGTGIRKEDLDIVCE-RFTTSK 84
+           NA++  +E+ LD       V++         +I+I D G GI  +DLD V +  FTT++
+Sbjct: 249 NAMRATMESHLDTPYNVPDVVITIANNDVDLIIRISDRGGGIAHKDLDRVMDYHFTTAE 307
+
+
+>pdb|1YSR|A B C protein
+          Length = 150
+
+ Score = 28.1 bits (61), Expect = 2.3,   Method: Compositional matrix adjust.
+ Identities = 17/53 (32%), Positives = 25/53 (47%), Gaps = 13/53 (24%)
+
+Query: 42  AKSTSIQVIVKEGGLKLIQ-------------IQDNGTGIRKEDLDIVCERFT 81
+           A   +I   VK GG  L+Q             I DNG+G+ + +  +V ERF+
+Sbjct: 50  AVDNAIANAVKHGGATLVQLSAVSSRAGVEIAIDDNGSGVPEGERQVVFERFS 102
+
+
+>pdb|1Q0P|A protein
+          Length = 223
+
+ Score = 28.1 bits (61), Expect = 2.4,   Method: Compositional matrix adjust.
+ Identities = 13/45 (28%), Positives = 26/45 (57%), Gaps = 1/45 (2%)
+
+Query: 247 SNANYSVKKCIFLLFINHRLVESTSLRKAIETVYAAY-LPKNTHP 290
+           SNA++  K+   + + +H+L   T+ +KA++ VY+    P +  P
+Sbjct: 77  SNADWVTKQLNEINYEDHKLKSGTNTKKALQAVYSMMSWPDDVPP 121
+
+
+>pdb|2C2A|A protein
+          Length = 258
+
+ Score = 28.1 bits (61), Expect = 2.6,   Method: Compositional matrix adjust.
+ Identities = 17/42 (40%), Positives = 26/42 (61%), Gaps = 3/42 (7%)
+
+Query: 41  DAKSTSIQVIV--KEGGLKLIQIQDNGTGIRKEDLDIVCERF 80
+           DA    ++VI+  K+GG+ LI ++DNG GI     D + E+F
+Sbjct: 157 DAPDKYVKVILDEKDGGV-LIIVEDNGIGIPDHAKDRIFEQF 197
+
+
+>pdb|2OK5|A protein
+          Length = 752
+
+ Score = 27.7 bits (60), Expect = 3.3,   Method: Compositional matrix adjust.
+ Identities = 13/45 (28%), Positives = 26/45 (57%), Gaps = 1/45 (2%)
+
+Query: 247 SNANYSVKKCIFLLFINHRLVESTSLRKAIETVYAAY-LPKNTHP 290
+           SNA++  K+   + + +H+L   T+ +KA++ VY+    P +  P
+Sbjct: 315 SNADWVTKQLNEINYEDHKLKSGTNTKKALQAVYSMMSWPDDVPP 359
+
+
+>pdb|1RRK|A protein
+          Length = 497
+
+ Score = 27.3 bits (59), Expect = 3.9,   Method: Compositional matrix adjust.
+ Identities = 13/45 (28%), Positives = 26/45 (57%), Gaps = 1/45 (2%)
+
+Query: 247 SNANYSVKKCIFLLFINHRLVESTSLRKAIETVYAAY-LPKNTHP 290
+           SNA++  K+   + + +H+L   T+ +KA++ VY+    P +  P
+Sbjct: 63  SNADWVTKQLNEINYEDHKLKSGTNTKKALQAVYSMMSWPDDVPP 107
+
+
+>pdb|2OCD|A B C D protein
+          Length = 337
+
+ Score = 26.9 bits (58), Expect = 4.9,   Method: Compositional matrix adjust.
+ Identities = 20/64 (31%), Positives = 33/64 (51%), Gaps = 5/64 (7%)
+
+Query: 249 ANYSVKKCIFLLFINHRLVESTSLRKAIETVYAAYLPKNTHPFLY--LSLEISPQNVDVN 306
+           ANY + +    LF N+RL      RK+    ++A+   N  P L   +++E+S  NV V+
+Sbjct: 140 ANYPINEVT--LFFNNRLXRGNRSRKSHADGFSAFSSPNLPPLLEAGINIELS-TNVKVD 196
+
+Query: 307 VHPT 310
+             P+
+Sbjct: 197 EKPS 200
+
+
+>pdb|2FOK|A B protein
+          Length = 579
+
+ Score = 26.2 bits (56), Expect = 8.1,   Method: Compositional matrix adjust.
+ Identities = 13/32 (40%), Positives = 21/32 (65%), Gaps = 3/32 (9%)
+
+Query: 47  IQVIVKEGGLKLIQIQDNGTGIRKEDLDIVCE 78
+           +++++K G LK+ QIQDN   ++K   D V E
+Sbjct: 314 LEILIKAGSLKIEQIQDN---LKKLGFDEVIE 342
+
+
+>pdb|2D7P|A protein
+          Length = 112
+
+ Score = 26.2 bits (56), Expect = 9.7,   Method: Compositional matrix adjust.
+ Identities = 13/44 (29%), Positives = 24/44 (54%)
+
+Query: 25 IQRPANAIKEMIENCLDAKSTSIQVIVKEGGLKLIQIQDNGTGI 68
+          +  P+ A++E   + LD+   +I+ I  E G+  I ++ NG  I
+Sbjct: 47 VHTPSGAVEECYVSELDSDKHTIRFIPHENGVHSIDVKFNGAHI 90
+
+
+  Database: seqs_pdbase_20080903.fix.reps.fa
+    Posted date:  Sep 3, 2008 11:00 PM
+  Number of letters in database: 4,636,376
+  Number of sequences in database:  20,430
+  
+Lambda     K      H
+   0.317    0.132    0.369 
+
+Gapped
+Lambda     K      H
+   0.267   0.0410    0.140 
+
+
+Matrix: BLOSUM62
+Gap Penalties: Existence: 11, Extension: 1
+Number of Sequences: 20430
+Number of Hits to DB: 2,885,479
+Number of extensions: 112747
+Number of successful extensions: 306
+Number of sequences better than 10.0: 18
+Number of HSP's gapped: 303
+Number of HSP's successfully gapped: 18
+Length of query: 340
+Length of database: 4,636,376
+Length adjustment: 92
+Effective length of query: 248
+Effective length of database: 2,756,816
+Effective search space: 683690368
+Effective search space used: 683690368
+Neighboring words threshold: 11
+Window for multiple hits: 40
+X1: 16 ( 7.3 bits)
+X2: 38 (14.6 bits)
+X3: 64 (24.7 bits)
+S1: 41 (21.7 bits)
+S2: 56 (26.2 bits)
