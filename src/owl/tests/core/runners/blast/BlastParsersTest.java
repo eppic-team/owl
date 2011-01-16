@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
+import owl.core.runners.blast.BlastHsp;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastTabularParser;
 import owl.core.runners.blast.BlastXMLParser;
@@ -97,45 +98,58 @@ public class BlastParsersTest {
 			BlastXMLParser bxm = new BlastXMLParser(xmlFiles[i]);
 			BlastHitList hitListXML = bxm.getHits();
 			
-			Assert.assertEquals(hitListTAB.size(), hitListXML.size());
+			// it seems that the tabular output lists a maximum of 250 hsp lines, thus the following
+			if (hitListXML.size()>250) {
+				Assert.assertTrue(hitListTAB.size()==250);
+			} else {
+				Assert.assertEquals(hitListTAB.size(), hitListXML.size());
+			}
 			
+			int hspCount = 0;
 			Iterator<BlastHit> it = hitListTAB.iterator();
 			for (BlastHit hitXML: hitListXML) {
-				BlastHit hitTAB = it.next();
 				System.out.println("  "+hitXML.getSubjectId());
+				// it seems that the tabular output lists a maximum of 250 hsp lines, thus the following
+				if (hspCount>=250) break;
+				BlastHit hitTAB = it.next();
+				Iterator<BlastHsp> hspIt= hitTAB.iterator();
 				Assert.assertEquals(hitTAB.getSubjectId(),hitXML.getSubjectId());
-				Assert.assertEquals(hitTAB.getAliLength(), hitXML.getAliLength());
-				assertEvalues(hitTAB.getEValue(),hitXML.getEValue());
-				Assert.assertEquals(hitTAB.getPercentIdentity(),hitXML.getPercentIdentity(),0.01);
-				Assert.assertEquals(hitTAB.getQueryEnd(),hitXML.getQueryEnd());
-				Assert.assertEquals(hitTAB.getQueryStart(),hitXML.getQueryStart());
-				Assert.assertEquals(hitTAB.getScore(),hitXML.getScore(),1);
-				Assert.assertEquals(hitTAB.getSubjectEnd(),hitXML.getSubjectEnd());
-				Assert.assertEquals(hitTAB.getSubjectStart(),hitXML.getSubjectStart());
-				
-				// alignment
-				Assert.assertNull(hitTAB.getAlignment());
-				Assert.assertEquals(2,hitXML.getAlignment().getNumberOfSequences());
-				
-				String queryId = hitXML.getQueryId();
-				String subjectId = hitXML.getSubjectId();
-				int n = 1;
-				for (String tag:hitXML.getAlignment().getTags()) {
-					if (n==1) Assert.assertEquals(queryId, tag);
-					if (n==2) Assert.assertEquals(subjectId, tag);
-					Assert.assertNotNull(hitXML.getAlignment().getAlignedSequence(tag));
-					n++;
+				for (BlastHsp hspXML:hitXML) {
+					hspCount++;
+					BlastHsp hspTAB = hspIt.next();
+					Assert.assertEquals(hspTAB.getAliLength(), hspXML.getAliLength());
+					assertEvalues(hspTAB.getEValue(),hspXML.getEValue());
+					Assert.assertEquals(hspTAB.getPercentIdentity(),hspXML.getPercentIdentity(),0.01);
+					Assert.assertEquals(hspTAB.getQueryEnd(),hspXML.getQueryEnd());
+					Assert.assertEquals(hspTAB.getQueryStart(),hspXML.getQueryStart());
+					Assert.assertEquals(hspTAB.getScore(),hspXML.getScore(),1);
+					Assert.assertEquals(hspTAB.getSubjectEnd(),hspXML.getSubjectEnd());
+					Assert.assertEquals(hspTAB.getSubjectStart(),hspXML.getSubjectStart());
+
+					// alignment
+					Assert.assertNull(hspTAB.getAlignment());
+					Assert.assertEquals(2,hspXML.getAlignment().getNumberOfSequences());
+
+					String queryId = hitXML.getQueryId();
+					String subjectId = hitXML.getSubjectId();
+					int n = 1;
+					for (String tag:hspXML.getAlignment().getTags()) {
+						if (n==1) Assert.assertEquals(queryId, tag);
+						if (n==2) Assert.assertEquals(subjectId, tag);
+						Assert.assertNotNull(hspXML.getAlignment().getAlignedSequence(tag));
+						n++;
+					}
+
+					// sanity checks
+					Assert.assertTrue(hitXML.getQueryLength()>=hspXML.getQueryEnd());
+					Assert.assertTrue(hitXML.getQueryLength()>=hspXML.getQueryStart());
+					Assert.assertTrue(hitXML.getSubjectLength()>=hspXML.getSubjectEnd());
+					Assert.assertTrue(hitXML.getSubjectLength()>=hspXML.getSubjectStart());
+					Assert.assertTrue(hitXML.getQueryLength()>=hspXML.getQueryEnd()-hspXML.getQueryStart());
+					Assert.assertTrue(hitXML.getSubjectLength()>=hspXML.getSubjectEnd()-hspXML.getSubjectStart());
+					Assert.assertTrue(hspXML.getAliLength()<hitXML.getQueryLength()+hitXML.getSubjectLength());
+					Assert.assertEquals(hspXML.getAlignment().getAlignmentLength(), hspXML.getAliLength());
 				}
-			
-				// sanity checks
-				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryEnd());
-				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryStart());
-				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectEnd());
-				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectStart());
-				Assert.assertTrue(hitXML.getQueryLength()>=hitXML.getQueryEnd()-hitXML.getQueryStart());
-				Assert.assertTrue(hitXML.getSubjectLength()>=hitXML.getSubjectEnd()-hitXML.getSubjectStart());
-				Assert.assertTrue(hitXML.getAliLength()<hitXML.getQueryLength()+hitXML.getSubjectLength());
-				Assert.assertEquals(hitXML.getAlignment().getAlignmentLength(), hitXML.getAliLength());
 			}
 		}
 	}
@@ -157,4 +171,13 @@ public class BlastParsersTest {
 			Assert.assertEquals(d1,d2,0.5);
 		}
 	}
+	
+	// to debug the testing code (run as java program so that we can use normal debugger)
+	public static void main(String[] args) throws Exception {
+		BlastParsersTest tester = new BlastParsersTest();
+		setUpBeforeClass();
+		tester.setUp();
+		tester.testXMLAgainstTAB();
+	}
+
 }

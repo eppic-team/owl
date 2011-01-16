@@ -483,7 +483,7 @@ public class RunAll {
 		if (!templates.getSource().equals(TemplateList.SRC_OTHER)) {
 			System.out.println("Target to template alignment from "+templates.getSource());
 			hit = templates.getTemplate(0).getBlastHit();
-			return hit.getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+			return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
 		} else { // we've read templates from a file (-t option)
 			// we try to find the blast or psiblast alignments in the outdir, if one of them exists we use it
 			File blastFile = new File(outDir,baseName+TemplateSelection.PSIBLASTOUT_PDB_SUFFIX);
@@ -496,7 +496,7 @@ public class RunAll {
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from blast file "+blastFile);
 						hit = hits.getHit(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()));
-						return hit.getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
 					} 
 				} catch (SAXException e) {
 					System.err.println("Problem parsing blast xml file "+blastFile+". Can't use blast alignment. Error: "+e.getMessage());
@@ -513,7 +513,7 @@ public class RunAll {
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from psi-blast file "+psiblastFile);
 						hit = hits.getHit(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()));
-						return hit.getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
 					}
 				} catch (SAXException e) {
 					System.err.println("Problem parsing psi-blast xml file "+psiblastFile+". Can't use psi-blast alignment. Error: "+e.getMessage());

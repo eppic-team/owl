@@ -513,7 +513,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		Iterator<UniprotHomolog> it = list.iterator();
 		while (it.hasNext()) {
 			UniprotHomolog hom = it.next();
-			if ((hom.getBlastHit().getPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
+			if ((hom.getBlastHit().getTotalPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
 				it.remove();
 
 			}

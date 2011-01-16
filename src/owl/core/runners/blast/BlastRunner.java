@@ -209,7 +209,7 @@ public class BlastRunner {
 		BlastHitList hits1 = blastParser1.getHits();
 		hits1.setQueryLength(queryLength);
 		System.out.println("Number of hits: "+hits1.size());
-		if(hits1.size() > 0) System.out.println("Best E-value: "+hits1.getBestHit().getEValue());
+		if(hits1.size() > 0) System.out.println("Best E-value: "+hits1.getBestHit().getEvalueMaxScoringHsp());
 		hits1.printSome(5);
 		
 		// PsiBlast
@@ -223,7 +223,7 @@ public class BlastRunner {
 		hits2.setQueryLength(queryLength);
 		System.out.println("Number of hits: "+hits2.size());
 		if(hits2.size() > 0) {
-			System.out.println("Best E-value: "+hits2.getBestHit().getEValue());
+			System.out.println("Best E-value: "+hits2.getBestHit().getEvalueMaxScoringHsp());
 			System.out.println("Filtering with cutoff " + eValCutoff);
 			hits2.applyCutoff(eValCutoff);
 			System.out.println("Number of hits: "+hits2.size());

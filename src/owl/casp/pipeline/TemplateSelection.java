@@ -237,7 +237,7 @@ public class TemplateSelection {
 			System.err.println("Unexpected error: "+e.getMessage());
 		}
 		
-		if (hitsPdbBlast.size()>0) System.out.println("Blast done, best e-value was "+hitsPdbBlast.getBestHit().getEValue());
+		if (hitsPdbBlast.size()>0) System.out.println("Blast done, best e-value was "+hitsPdbBlast.getBestHit().getEvalueMaxScoringHsp());
 		System.out.println("Number of hits: "+hitsPdbBlast.size());
 		hitsPdbBlast.applyCutoff(eValueCutoff);
 		if (hitsPdbBlast.size()>=maxHits) {
@@ -287,7 +287,7 @@ public class TemplateSelection {
 			System.err.println("Unexpected error: "+e.getMessage());
 		}
 		
-		if (hitsPdbPsiblast.size()>0) System.out.println("Psi-blast done, best e-value was "+hitsPdbPsiblast.getBestHit().getEValue());
+		if (hitsPdbPsiblast.size()>0) System.out.println("Psi-blast done, best e-value was "+hitsPdbPsiblast.getBestHit().getEvalueMaxScoringHsp());
 		System.out.println("Number of hits: "+hitsPdbPsiblast.size());
 		hitsPdbPsiblast.applyCutoff(eValueCutoff);
 		if (hitsPdbPsiblast.size()>=maxHits) {
@@ -563,11 +563,11 @@ public class TemplateSelection {
 			int scoreGTG = 0;
 			if (templatesBlast.contains(id)) {
 				Template template = templatesBlast.getTemplate(id); 
-				eValBlast = template.getBlastHit().getEValue();
+				eValBlast = template.getBlastHit().getEvalueMaxScoringHsp();
 			} 
 			if (templatesPsiBlast!=null && templatesPsiBlast.contains(id)) {
 				Template template = templatesPsiBlast.getTemplate(id); 
-				eValPsiBlast = template.getBlastHit().getEValue();
+				eValPsiBlast = template.getBlastHit().getEvalueMaxScoringHsp();
 			} 
 			if (templatesGTG!=null && templatesGTG.contains(id)) {
 				Template template = templatesGTG.getTemplate(id); 
@@ -632,7 +632,7 @@ public class TemplateSelection {
 			if (templatesBlast!=null && templatesBlast.size()>0) {
 				// we want to catch the special case of a full match, we don't want modelling for that case!
 				Template firstTemp = templatesBlast.iterator().next();
-				if (firstTemp.getBlastHit().getPercentIdentity()>FULLMATCH_IDENTITY_THRESHOLD &&
+				if (firstTemp.getBlastHit().getTotalPercentIdentity()>FULLMATCH_IDENTITY_THRESHOLD &&
 						(firstTemp.getBlastHit().getQueryCoverage()>FULLMATCH_COVERAGE)) {
 					
 					fullMatch = true;

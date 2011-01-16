@@ -57,6 +57,8 @@ public class BlastXMLParser implements ContentHandler {
 	private String currentSubjectDef;
 	private int currentSubjectLength;
 	
+	
+	private BlastHsp currentHsp;
 	private String currentQSeq;
 	private String currentHSeq;
 	private int currentIdentity;
@@ -151,6 +153,7 @@ public class BlastXMLParser implements ContentHandler {
 		}
 		else if (name.equals(HIT_TAG)) {
 			inHit = true;
+			this.currentHit = new BlastHit();
 		}
 		if (inIterationHits && inHit) {
 			if (name.equals(HIT_ID_TAG)){
@@ -164,12 +167,13 @@ public class BlastXMLParser implements ContentHandler {
 			}
 			else if (name.equals(HSP_TAG)) {
 				inHsp = true;
-				this.currentHit = new BlastHit();
+				this.currentHsp = new BlastHsp(currentHit);
 				this.currentHit.setQueryId(queryId);
 				this.currentHit.setQueryLength(hitList.getQueryLength());
 				this.currentHit.setSubjectId(currentSubjectId);
 				this.currentHit.setSubjectDef(currentSubjectDef);
 				this.currentHit.setSubjectLength(currentSubjectLength);
+				this.currentHit.addHsp(currentHsp);
 			}
 			if (inHsp) {
 				if (name.equals(HSP_BIT_SCORE_TAG)) {
@@ -235,6 +239,7 @@ public class BlastXMLParser implements ContentHandler {
 			inIterationHits = false;
 		}
 		else if (name.equals(HIT_TAG)) {
+			this.hitList.add(currentHit);
 			inHit = false;
 		}
 		if (inIterationHits && inHit) {
@@ -253,37 +258,35 @@ public class BlastXMLParser implements ContentHandler {
 				this.currentSubjectLength = Integer.parseInt(flushValue());
 			}
 			else if (name.equals(HSP_TAG)) {
-				this.currentHit.setAlignment(currentQSeq, currentHSeq);
-				this.currentHit.setPercentIdentity((double)(100*currentIdentity)/((double)currentAliLength));
-				this.hitList.add(currentHit);
-				currentHit = null;
+				this.currentHsp.setAlignment(currentQSeq, currentHSeq);
+				this.currentHsp.setPercentIdentity((double)(100*currentIdentity)/((double)currentAliLength));
 				inHsp = false;
 			}
 			if (inHsp) {
 				if (name.equals(HSP_BIT_SCORE_TAG)) {
-					this.currentHit.setScore(Double.parseDouble(flushValue()));
+					this.currentHsp.setScore(Double.parseDouble(flushValue()));
 				}
 				else if (name.equals(HSP_EVALUE_TAG)) {
-					this.currentHit.setEValue(Double.parseDouble(flushValue()));
+					this.currentHsp.setEValue(Double.parseDouble(flushValue()));
 				}
 				else if (name.equals(HSP_QUERY_FROM_TAG)) {
-					this.currentHit.setQueryStart(Integer.parseInt(flushValue()));
+					this.currentHsp.setQueryStart(Integer.parseInt(flushValue()));
 				}
 				else if (name.equals(HSP_QUERY_TO_TAG)) {
-					this.currentHit.setQueryEnd(Integer.parseInt(flushValue()));
+					this.currentHsp.setQueryEnd(Integer.parseInt(flushValue()));
 				}
 				else if (name.equals(HSP_HIT_FROM_TAG)) {
-					this.currentHit.setSubjectStart(Integer.parseInt(flushValue()));
+					this.currentHsp.setSubjectStart(Integer.parseInt(flushValue()));
 				}
 				else if (name.equals(HSP_HIT_TO_TAG)) {
-					this.currentHit.setSubjectEnd(Integer.parseInt(flushValue()));
+					this.currentHsp.setSubjectEnd(Integer.parseInt(flushValue()));
 				}
 				else if (name.equals(HSP_IDENTITY)) {
 					this.currentIdentity = Integer.parseInt(flushValue());
 				}
 				else if (name.equals(HSP_ALIGN_LEN)) {
 					this.currentAliLength = Integer.parseInt(flushValue());
-					this.currentHit.setAliLength(currentAliLength);
+					this.currentHsp.setAliLength(currentAliLength);
 				}
 				else if (name.equals(HSP_QSEQ)) {
 					this.currentQSeq = flushValue();
@@ -352,10 +355,13 @@ public class BlastXMLParser implements ContentHandler {
 
 		// printing alignments
 		for (BlastHit hit: hitListXML) {
-			hit.getAlignment().printFasta();
-			System.out.println();
+			for (BlastHsp hsp:hit) {
+				hsp.getAlignment().printFasta();
+				System.out.println();
+			}
 		}
 		
+		//hitListXML.printTabular();
 		
 		
 	}

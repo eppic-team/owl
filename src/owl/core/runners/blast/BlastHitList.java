@@ -82,7 +82,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 		Iterator<BlastHit> it = hits.iterator();
 		while (it.hasNext()) {
 			BlastHit hit = it.next();
-			if (hit.getEValue()>=eValueCutoff) {
+			if (hit.getEvalueMaxScoringHsp()>=eValueCutoff) {
 				it.remove();
 				lookup.remove(hit.getSubjectId());
 			}
@@ -103,6 +103,16 @@ public class BlastHitList implements Iterable<BlastHit> {
 				lookup.remove(hit.getSubjectId());
 			}
 			i++;
+		}
+	}
+	
+	/**
+	 * Prints this BlastHitList in tabular format, one HSP per line, replicating 
+	 * blast's own tabular output (blast's command line option -m 8)
+	 */	
+	public void printTabular() {
+		for (BlastHit hit:this) {
+			hit.printTabular();
 		}
 	}
 	
@@ -179,7 +189,7 @@ public class BlastHitList implements Iterable<BlastHit> {
 		if(this.size() == 0) return null;
 		BlastHit bestHit = this.hits.get(0);
 		for(BlastHit hit:hits) {
-			if(hit.getEValue() < bestHit.getEValue()) {
+			if(hit.getEvalueMaxScoringHsp() < bestHit.getEvalueMaxScoringHsp()) {
 				bestHit = hit;
 			}
 		}

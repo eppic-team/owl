@@ -49,7 +49,7 @@ public class UniprotHomolog {
 	
 
 	public double getPercentIdentity() {
-		return this.blastHit.getPercentIdentity();
+		return this.blastHit.getTotalPercentIdentity();
 	}
 	
 	/**

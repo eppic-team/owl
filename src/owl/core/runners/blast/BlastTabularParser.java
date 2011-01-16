@@ -32,6 +32,8 @@ public class BlastTabularParser {
 	
 	private void parse() throws IOException, FileFormatError {
 		hits = new BlastHitList();
+		String lastSubjectId = null;
+		BlastHit currentHit = null;
 		BufferedReader br = new BufferedReader(new FileReader(blastOutFile));
 		String line;
 		int lineCount = 0;
@@ -42,10 +44,25 @@ public class BlastTabularParser {
 			String[] fields = line.split("\t");
 			if (fields.length!=12) 
 				throw new FileFormatError("Blast output file "+blastOutFile+" doesn't seem to have the right format at line "+lineCount);
-			hits.add(new BlastHit(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],fields[6],fields[7],fields[8],fields[9],fields[10],fields[11]));
 			
+			BlastHsp hsp = new BlastHsp(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],fields[6],fields[7],fields[8],fields[9],fields[10],fields[11]);
+			String subjectId = fields[1].trim();
+			if (lastSubjectId!=null && lastSubjectId.equals(subjectId)) {
+				currentHit.addHsp(hsp);				
+			} else {
+				currentHit = new BlastHit();
+				currentHit.addHsp(hsp);
+				currentHit.setQueryId(fields[0].trim());
+				currentHit.setQueryLength(-1);
+				currentHit.setSubjectId(subjectId);
+				currentHit.setSubjectDef(null);
+				currentHit.setSubjectLength(-1);
+				hits.add(currentHit);
+			}
+			lastSubjectId = subjectId;
 		}
 		br.close();
+		
 	}
 	
 	/**
