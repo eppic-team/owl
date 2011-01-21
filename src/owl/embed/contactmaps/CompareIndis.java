@@ -30,7 +30,7 @@ public class CompareIndis extends Demes {
 		super();
 	}
 
-	public CompareIndis (String dir) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
+	public CompareIndis (String dir) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
 		super();
 		conn = new MySQLConnection ();
 		setContactSet(dir);
@@ -67,7 +67,7 @@ public class CompareIndis extends Demes {
 		}
 	}
 	
-	public void generateIndis () throws PdbCodeNotFoundError, SQLException, PdbLoadError{
+	public void generateIndis () throws PdbCodeNotFoundException, SQLException, PdbLoadError{
 		if(contact_sets !=null && contact_sets.size() > 0){
 			HashMap<Integer,HashSet<Pair<Integer>>> copy = getContactSet();
 			int size = copy.size();
@@ -109,7 +109,7 @@ public class CompareIndis extends Demes {
 		return new String (super.toString());
 	}
 	
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
 		String dir  = "/home/gmueller/shellscripts/1e0l/";
 		String[] sub1 = {"Starter/","Final/"};
 		for(int i = 0; i < 2; i++){

@@ -5,7 +5,7 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
@@ -109,11 +109,11 @@ public class GTGHit {
 	 * @param conn
 	 * @param pdbaseDb
 	 * @return false if sequences don't match, true if they do
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 */
-	public boolean checkSubjectSequence(MySQLConnection conn, String pdbaseDb) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public boolean checkSubjectSequence(MySQLConnection conn, String pdbaseDb) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
 		if (subjectSequence.equals("")) {
 			System.err.println("Subject sequence is empty");
 			return false;
@@ -165,10 +165,10 @@ public class GTGHit {
 	 * @param conn
 	 * @param pdbaseDb
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
 		if (subjectStart==0 && subjectEnd ==0 ) return; // subject start and end not known: nothing to do
 		
 		String pdbCode = subjectId.substring(0, 4);

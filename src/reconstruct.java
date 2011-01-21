@@ -18,9 +18,9 @@ import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.AAinfo;
 import owl.core.structure.CiffilePdb;
-import owl.core.structure.ConformationsNotSameSizeError;
+import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
@@ -394,7 +394,7 @@ public class reconstruct {
 			} catch (PdbLoadError e) {
 				System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
 				System.exit(1);
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Given pdb code "+pdbCode+" couldn't be found in pdbase. Exiting");
 				System.exit(1);
 			} catch (SQLException e) {
@@ -560,7 +560,7 @@ public class reconstruct {
 				}
 				catch (TinkerError e) {
 					System.err.println("Warning: couldn't load tinker pdb output file, error: "+ e.getMessage()+". Can't calculate rmsd for it.");
-				} catch (ConformationsNotSameSizeError e) {
+				} catch (ConformationsNotSameSizeException e) {
 					System.err.println(origPdbFile+" and "+tr.getOutPdbFile(i)+" don't have the same conformation size, can't calculate rmsd for them.");
 				}				
 			}					

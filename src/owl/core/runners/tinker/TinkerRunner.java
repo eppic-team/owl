@@ -44,7 +44,7 @@ import owl.core.util.IntPairSet;
 import owl.core.util.actionTools.TinkerStatusNotifier;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
-import owl.graphAveraging.GraphAveragerError;
+import owl.graphAveraging.GraphAveragerException;
 
 
 
@@ -1518,7 +1518,7 @@ public class TinkerRunner {
 		GraphAverager ga = null;
 		try {
 			ga = new GraphAverager(ensemble);
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			throw new TinkerError(e);
 		}
 		return ga.getAverageGraph();

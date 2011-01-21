@@ -33,7 +33,7 @@ import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastXMLParser;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
@@ -408,7 +408,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" does not seem to be in the right format.");
 			System.err.println("Error: "+e.getMessage());
 			System.exit(1);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" seems to contain .");
 			System.err.println("Error: "+e.getMessage());
 			System.exit(1);
@@ -485,7 +485,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>{
 		
 		try {
 			nucAln = new MultipleSequenceAlignment(allSeqs);
-		} catch(AlignmentConstructionError e) {
+		} catch(AlignmentConstructionException e) {
 			LOGGER.fatal("Unexpected error while creating the nucleotides alignment");
 			LOGGER.fatal(e.getMessage());
 			System.exit(1);

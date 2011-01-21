@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.TreeMap;
 
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
@@ -87,7 +87,7 @@ public class superimposeMult {
 		 } catch (FileFormatError e) {
 			 System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			 System.exit(1);
-		 } catch (AlignmentConstructionError e) {
+		 } catch (AlignmentConstructionException e) {
 			 System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			 System.exit(1);
 		 } catch (IOException e) {

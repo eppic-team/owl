@@ -41,7 +41,7 @@ public class calculateGridDensity {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) throws PdbLoadError, PdbCodeNotFoundError, SQLException {
+	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) throws PdbLoadError, PdbCodeNotFoundException, SQLException {
 		Pdb pdb =  new PdbasePdb(pdbCode, PDB_DB, conn);
 		pdb.load(chainCode);
 		// add to density count vector
@@ -115,7 +115,7 @@ public class calculateGridDensity {
 				} catch(PdbLoadError e) {
 					System.err.println(e.getMessage());
 					continue;
-				} catch (PdbCodeNotFoundError e) {
+				} catch (PdbCodeNotFoundException e) {
 					System.err.println(e.getMessage());
 					continue;					
 				}

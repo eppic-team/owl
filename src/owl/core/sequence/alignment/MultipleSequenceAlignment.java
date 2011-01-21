@@ -19,7 +19,7 @@ import owl.core.runners.DsspRunner;
 import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
@@ -68,9 +68,9 @@ public class MultipleSequenceAlignment {
 	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT},  {@link #DALIFORMAT} or {@link #CLUSTALFORMAT}
 	 * @throws IOException
 	 * @throws FileFormatError
-	 * @throws AlignmentConstructionError 
+	 * @throws AlignmentConstructionException 
 	 */
-	public MultipleSequenceAlignment(String fileName, String format) throws IOException, FileFormatError, AlignmentConstructionError {
+	public MultipleSequenceAlignment(String fileName, String format) throws IOException, FileFormatError, AlignmentConstructionException {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
 		} else if (format.equals(FASTAFORMAT)){
@@ -88,7 +88,7 @@ public class MultipleSequenceAlignment {
 		
 		// if indices2tags/tags2indices length don't match sequences length then there were duplicate tags in the file
 		if (indices2tags.size()!=sequences.length || tags2indices.size()!=sequences.length) {
-			throw new AlignmentConstructionError("There are duplicate tags in the file "+fileName);
+			throw new AlignmentConstructionException("There are duplicate tags in the file "+fileName);
 		}
 
 	}
@@ -97,19 +97,19 @@ public class MultipleSequenceAlignment {
 	 * Creates a trivial alignment given a Map of tags to sequences
 	 * The sequences must have the same lengths. 
 	 * @param sequences a Map of sequence tags to sequences, the sequences must have the same length
-	 * @throws AlignmentConstructionError if sequences lengths differ or if 
+	 * @throws AlignmentConstructionException if sequences lengths differ or if 
 	 * size of given map is 0
 	 */
-	public MultipleSequenceAlignment(TreeMap<String, String> sequences) throws AlignmentConstructionError {
+	public MultipleSequenceAlignment(TreeMap<String, String> sequences) throws AlignmentConstructionException {
 
 		if (sequences.size() == 0) {
-			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+			throw new AlignmentConstructionException("No sequences were passed for constructing the alignment.");
 		}
 		// check that sequences have the same length
 		int length = sequences.get(sequences.firstKey()).length();
 		for(String seqTag: sequences.keySet()) {
 			if(sequences.get(seqTag).length() != length) {
-				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
+				throw new AlignmentConstructionException("Cannot create trivial alignment. Sequence lenghts are not the same.");
 			}
 		}
 		
@@ -132,21 +132,21 @@ public class MultipleSequenceAlignment {
 	 * Creates a trivial alignment given an array of tags and an array of sequences
 	 * @param seqTags
 	 * @param sequences an array of sequences, they must have the same length
-	 * @throws AlignmentConstructionError if different number of sequences and 
+	 * @throws AlignmentConstructionException if different number of sequences and 
 	 * tags given, or if size of given array is 0
 	 */
-	public MultipleSequenceAlignment(String[] seqTags, String[] sequences) throws AlignmentConstructionError {
+	public MultipleSequenceAlignment(String[] seqTags, String[] sequences) throws AlignmentConstructionException {
 		if (seqTags.length!=sequences.length) {
-			throw new AlignmentConstructionError("Different number of sequences and tags given.");
+			throw new AlignmentConstructionException("Different number of sequences and tags given.");
 		}
 		if (sequences.length == 0) {
-			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+			throw new AlignmentConstructionException("No sequences were passed for constructing the alignment.");
 		}
 		// check that sequences have the same length
 		int length = sequences[0].length();
 		for(String sequence: sequences) {
 			if(sequence.length() != length) {
-				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
+				throw new AlignmentConstructionException("Cannot create trivial alignment. Sequence lenghts are not the same.");
 			}
 		}
 		
@@ -166,11 +166,11 @@ public class MultipleSequenceAlignment {
 	/**
 	 * Creates a trivial alignment given a list of Sequences
 	 * @param sequences a List of Sequence objects, the sequences must have the same length
-	 * @throws AlignmentConstructionError
+	 * @throws AlignmentConstructionException
 	 */
-	public MultipleSequenceAlignment(List<Sequence> sequences) throws AlignmentConstructionError {
+	public MultipleSequenceAlignment(List<Sequence> sequences) throws AlignmentConstructionException {
 		if (sequences.size() == 0) {
-			throw new AlignmentConstructionError("No sequences were passed for constructing the alignment.");
+			throw new AlignmentConstructionException("No sequences were passed for constructing the alignment.");
 		}
 		// check that sequences have the same length
 		int length = -1;
@@ -180,7 +180,7 @@ public class MultipleSequenceAlignment {
 				continue;
 			}
 			if(sequence.getLength() != length) {
-				throw new AlignmentConstructionError("Cannot create trivial alignment. Sequence lenghts are not the same.");
+				throw new AlignmentConstructionException("Cannot create trivial alignment. Sequence lenghts are not the same.");
 			}
 		}
 		
@@ -225,7 +225,7 @@ public class MultipleSequenceAlignment {
 		}
 	}
 	
-	private void checkLengths() throws AlignmentConstructionError {
+	private void checkLengths() throws AlignmentConstructionException {
 		if (sequences.length==0) return;
 		
 		int firstLength = 0;
@@ -234,7 +234,7 @@ public class MultipleSequenceAlignment {
 				firstLength = sequences[i].length();
 			} else {
 				if (sequences[i].length()!=firstLength) {
-					throw new AlignmentConstructionError("Error: Some sequences in alignment have different lengths.");
+					throw new AlignmentConstructionException("Error: Some sequences in alignment have different lengths.");
 				}
 			}
 		}
@@ -420,7 +420,7 @@ public class MultipleSequenceAlignment {
 	/**
 	 * @return a deep copy of this alignment
 	 */
-	public MultipleSequenceAlignment copy() throws AlignmentConstructionError {
+	public MultipleSequenceAlignment copy() throws AlignmentConstructionException {
 		String[] newSeqs = sequences.clone();
 		String[] newTags = new String[newSeqs.length];
 		for (int i = 0; i < newTags.length; i++) {
@@ -435,18 +435,18 @@ public class MultipleSequenceAlignment {
 	 * The internal mappings are regenerated for the new alignment.
 	 * @param newTag the sequence name
 	 * @param newSeq the new sequence
-	 * @throws AlignmentConstructionError if given newSeq differs in length from this alignment or if 
+	 * @throws AlignmentConstructionException if given newSeq differs in length from this alignment or if 
 	 * given newTag already exists in this alignment
 	 */
-	public void addSequence(String newTag, String newSeq) throws AlignmentConstructionError {
+	public void addSequence(String newTag, String newSeq) throws AlignmentConstructionException {
 		int l = this.getAlignmentLength();
 		// check length of new sequence
 		if(newSeq.length() != l) {
-			throw new AlignmentConstructionError("Cannot add sequence of length " + newSeq.length() + " to alignment of length " + l);
+			throw new AlignmentConstructionException("Cannot add sequence of length " + newSeq.length() + " to alignment of length " + l);
 		}
 		// make sure that tag does not exist yet
 		if(tags2indices.containsKey(newTag)) {
-			throw new AlignmentConstructionError("Cannot add sequence. Tag " + newTag + " exists in alignment.");
+			throw new AlignmentConstructionException("Cannot add sequence. Tag " + newTag + " exists in alignment.");
 		}
 		
 		int oldNumSeqs = sequences.length;
@@ -470,10 +470,10 @@ public class MultipleSequenceAlignment {
 	 * @param newTag the sequence name
 	 * @param newSeq the new sequence (possibly containing gaps)
 	 * @return a deep copy of this alignment where the given sequence has been added.
-	 * @throws AlignmentConstructionError if given newSeq differs in length from this alignment or if 
+	 * @throws AlignmentConstructionException if given newSeq differs in length from this alignment or if 
 	 * given newTag already exists in this alignment 
 	 */
-	public MultipleSequenceAlignment copyAndAdd(String newTag, String newSeq) throws AlignmentConstructionError {
+	public MultipleSequenceAlignment copyAndAdd(String newTag, String newSeq) throws AlignmentConstructionException {
 		MultipleSequenceAlignment newAl = this.copy();
 		newAl.addSequence(newTag, newSeq);
 		return newAl;
@@ -1153,7 +1153,7 @@ public class MultipleSequenceAlignment {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
 				} catch (SQLException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
-				} catch (PdbCodeNotFoundError e) {
+				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());					
 				} catch (IOException e) {
 					secStruct = pdb.getSecondaryStructure(); // we take author's assignment
@@ -1320,8 +1320,8 @@ public class MultipleSequenceAlignment {
      * to test the class 
      * @throws IOException 
      * @throws FileFormatError 
-     * @throws AlignmentConstructionError */
-    public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionError {
+     * @throws AlignmentConstructionException */
+    public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionException {
     	if (args.length<1){
     		System.err.println("Must provide FASTA file name as argument");
     		System.exit(1);

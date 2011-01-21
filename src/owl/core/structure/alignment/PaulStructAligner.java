@@ -8,7 +8,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
 import owl.core.sequence.Sequence;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.Template;
@@ -64,7 +64,7 @@ public class PaulStructAligner implements StructAligner {
 		this.cutoff = DEFAULT_CUTOFF;
 	}
 
-	public MultipleSequenceAlignment alignStructures(TemplateList templates) throws StructAlignmentError, IOException {
+	public MultipleSequenceAlignment alignStructures(TemplateList templates) throws StructAlignmentException, IOException {
 		if (!templates.isGraphDataLoaded()) {
 			throw new IllegalArgumentException("Given TemplateList does not have graph data loaded");
 		}
@@ -86,10 +86,10 @@ public class PaulStructAligner implements StructAligner {
 	 * @param pdbs
 	 * @param tags
 	 * @return
-	 * @throws StructAlignmentError if a problem occurs while running the structural alignment
+	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentError, IOException {
+	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentException, IOException {
 		if (pdbs.length!=tags.length) {
 			throw new IllegalArgumentException("Given pdbs and tags have different sizes (pdbs "+pdbs.length+", tags "+tags.length+").");
 		}
@@ -100,7 +100,7 @@ public class PaulStructAligner implements StructAligner {
 		return alignStructures(graphs,tags);
 	}
 	
-	public MultipleSequenceAlignment alignStructures(RIGraph[] graphs, String[] tags) throws StructAlignmentError, IOException {
+	public MultipleSequenceAlignment alignStructures(RIGraph[] graphs, String[] tags) throws StructAlignmentException, IOException {
 		if (graphs.length!=tags.length) {
 			throw new IllegalArgumentException("Given graphs and tags have different sizes (graphs "+graphs.length+", tags "+tags.length+").");
 		}
@@ -133,7 +133,7 @@ public class PaulStructAligner implements StructAligner {
 		return al; 
 	}
 	
-	private MultipleSequenceAlignment runPaul(File cmListFile, File seqListFile) throws StructAlignmentError, IOException {
+	private MultipleSequenceAlignment runPaul(File cmListFile, File seqListFile) throws StructAlignmentException, IOException {
 		String cmdLine = paulProg+" -i "+cmListFile+" -s "+seqListFile+" -m "+paulMode;
 				
 		Process proc = Runtime.getRuntime().exec(cmdLine);
@@ -162,7 +162,7 @@ public class PaulStructAligner implements StructAligner {
 			// throwing exception if exit state is not 0 
 			if (exitValue!=0) {
 				paulLog.flush();
-				throw new StructAlignmentError("paul exited with value "+exitValue+". Revise log file "+logFile);
+				throw new StructAlignmentException("paul exited with value "+exitValue+". Revise log file "+logFile);
 			}
 		} catch (InterruptedException e) {
 			System.err.println("Unexpected error while waiting for paul to exit. Error: "+e.getMessage());
@@ -173,15 +173,15 @@ public class PaulStructAligner implements StructAligner {
 		MultipleSequenceAlignment al = null;
 		try {
 			al = new MultipleSequenceAlignment(outAliClustal.getAbsolutePath(),MultipleSequenceAlignment.CLUSTALFORMAT);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			this.cleanUp(base);
 			this.paulLog.flush();
-			throw new StructAlignmentError(e);
+			throw new StructAlignmentException(e);
 		}
 		catch (FileFormatError e) {
 			this.cleanUp(base);
 			this.paulLog.flush();
-			throw new StructAlignmentError(e);
+			throw new StructAlignmentException(e);
 		}
 		
 		this.cleanUp(base);

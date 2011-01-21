@@ -11,7 +11,7 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
@@ -38,10 +38,10 @@ public class DaliRunner {
 	 * @param tempdir
 	 * @throws IOException
 	 * @throws InterruptedException
-	 * @throws AlignmentConstructionError
+	 * @throws AlignmentConstructionException
 	 */
 	
-	public DaliRunner(Pdb query, Pdb subj,String dali_executable, String tempdir) throws IOException, InterruptedException, AlignmentConstructionError {
+	public DaliRunner(Pdb query, Pdb subj,String dali_executable, String tempdir) throws IOException, InterruptedException, AlignmentConstructionException {
 		
 		first = query;
 		second = subj;
@@ -59,7 +59,7 @@ public class DaliRunner {
 				new String[]{"",""}, workdir);
 		dali.waitFor();
 		} catch (IOException e) {
-			throw new AlignmentConstructionError("Could not run DALI. Check if "+dali_executable+" exists");
+			throw new AlignmentConstructionException("Could not run DALI. Check if "+dali_executable+" exists");
 		}
 		new File(workdir.getAbsolutePath()+"/aln.html").renameTo(new File(daliOutputFilename));
 		correctFileDALIFormat(daliOutputFilename);
@@ -78,7 +78,7 @@ public class DaliRunner {
 	 * @throws FileFormatError
 	 */
 	
-  private void correctFileDALIFormat(String fileName) throws IOException, AlignmentConstructionError {
+  private void correctFileDALIFormat(String fileName) throws IOException, AlignmentConstructionException {
 
 	String nextLine = "";
 	String subj = "";
@@ -112,7 +112,7 @@ public class DaliRunner {
 		}
 	}
 	} catch (IllegalStateException e) {
-		throw new AlignmentConstructionError("Could not read DALI alignment. Check "+fileName+" for errors");
+		throw new AlignmentConstructionException("Could not read DALI alignment. Check "+fileName+" for errors");
 	}
 
 	// We convert the dot used by DALI to whatever we are using

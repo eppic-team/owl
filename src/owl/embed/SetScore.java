@@ -13,7 +13,7 @@ import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.GraphAverager;
-import owl.graphAveraging.GraphAveragerError;
+import owl.graphAveraging.GraphAveragerException;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -103,7 +103,7 @@ public class SetScore implements Comparable<SetScore>{
 		GraphAverager ga = null;
 		try { 
 			ga = new GraphAverager(rigs);
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			// this shouldn't happen
 			System.err.println("Unexpected error while creating the average RIG: "+e.getMessage());
 		}

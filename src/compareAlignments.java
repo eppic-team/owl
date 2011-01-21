@@ -2,7 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
@@ -39,7 +39,7 @@ public class compareAlignments {
 		} catch (FileFormatError e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (PairwiseSequenceAlignmentException e) {

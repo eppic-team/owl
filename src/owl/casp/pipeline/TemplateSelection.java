@@ -28,7 +28,7 @@ import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastUtils;
 import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.Sequence;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
@@ -407,7 +407,7 @@ public class TemplateSelection {
 			hits.reassignSubjectSerials(conn, PDBASE_DB);
 		} catch (SQLException e) {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());
-		} catch (PdbCodeNotFoundError e) {
+		} catch (PdbCodeNotFoundException e) {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());
 		} catch (PdbLoadError e) {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());

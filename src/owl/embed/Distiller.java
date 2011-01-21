@@ -12,7 +12,7 @@ import java.util.Random;
 import java.util.TreeSet;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGEdge;
@@ -20,7 +20,7 @@ import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
 import owl.graphAveraging.GraphAverager;
-import owl.graphAveraging.GraphAveragerError;
+import owl.graphAveraging.GraphAveragerException;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -123,9 +123,9 @@ public class Distiller {
 	 * @param contactsToSample fraction of total contacts we want to be selected for the subset 
 	 * @throws PdbLoadError 
 	 * @throws SQLException 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 */
-	public void distillRandomSampling(int numSamples, double contactsToSample) throws PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public void distillRandomSampling(int numSamples, double contactsToSample) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
 		 
 		allSampledSets = new ArrayList<SetScore>();		
 
@@ -193,7 +193,7 @@ public class Distiller {
 		GraphAverager ga = null;
 		try { 
 			ga = new GraphAverager(rigs);
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			// this shouldn't happen
 			System.err.println("Unexpected error while creating the average RIG: "+e.getMessage());
 		}

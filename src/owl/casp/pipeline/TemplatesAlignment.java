@@ -11,7 +11,7 @@ import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.PaulStructAligner;
-import owl.core.structure.alignment.StructAlignmentError;
+import owl.core.structure.alignment.StructAlignmentException;
 import owl.core.util.MySQLConnection;
 
 
@@ -58,9 +58,9 @@ public class TemplatesAlignment {
 	 * 
 	 * @throws IOException if I/O problems while running the structural aligner or writing
 	 *  final alignment 
-	 * @throws StructAlignmentError if the structural aligner fails to run
+	 * @throws StructAlignmentException if the structural aligner fails to run
 	 */	
-	public MultipleSequenceAlignment run() throws IOException, StructAlignmentError {
+	public MultipleSequenceAlignment run() throws IOException, StructAlignmentException {
 		
 		File paulLogFile = new File(outDir,baseName+".paul.log");
 		File alOutFile = new File(outDir,baseName+".templates_aln.fasta"); 
@@ -151,7 +151,7 @@ public class TemplatesAlignment {
 		TemplatesAlignment ta = new TemplatesAlignment(templates, paulMode, baseName, outDir);
 		try {
 			ta.run();
-		} catch (StructAlignmentError e) {
+		} catch (StructAlignmentException e) {
 			System.err.println("Problems while performing structural alignment. Error: "+e.getMessage());
 			System.exit(1);
 		} catch (IOException e) {

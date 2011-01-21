@@ -13,7 +13,7 @@ import owl.core.connections.ScopConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
@@ -301,7 +301,7 @@ public class genDbGraph {
 					
 				} catch (PdbLoadError e) {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
-				} catch (PdbCodeNotFoundError e) {
+				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
 				} catch (SQLException e) {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());

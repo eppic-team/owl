@@ -28,7 +28,7 @@ import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.Residue;
 import owl.core.util.MySQLConnection;
@@ -109,7 +109,7 @@ public class PdbAsymUnitTest {
 			PdbAsymUnit pdb = null;
 			try {
 				pdb = new PdbAsymUnit(pdbCode, conn, PDBASE_DB);
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Missing PDB code "+pdbCode);
 				continue;
 			} catch (PdbLoadError e) {

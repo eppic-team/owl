@@ -1,6 +1,6 @@
 package owl.core.runners.blast;
 
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 
 public class BlastHsp {
@@ -189,7 +189,7 @@ public class BlastHsp {
 		String[] seqs = {querySeq, subjectSeq};
 		try {
 			this.al = new MultipleSequenceAlignment(tags, seqs);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			System.err.println("Error while constructing alignment from parsed blast output: "+e.getMessage());
 		}
 	}
@@ -252,7 +252,7 @@ public class BlastHsp {
 		MultipleSequenceAlignment newAln = null;
 		try {
 			newAln = new MultipleSequenceAlignment(tags, seqs);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			System.err.println("Unexpected error: new alignment with full sequences from blast alignment couldn't be created. Please report the bug! Error: "+e.getMessage());
 			System.exit(1);
 		}

@@ -5,25 +5,25 @@ package owl.graphAveraging;
  * @author duarte
  *
  */
-public class GraphAveragerError extends Exception {
+public class GraphAveragerException extends Exception {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public GraphAveragerError() {
+	public GraphAveragerException() {
 	}
 
-	public GraphAveragerError(String arg0) {
+	public GraphAveragerException(String arg0) {
 		super(arg0);
 	}
 
-	public GraphAveragerError(Throwable arg0) {
+	public GraphAveragerException(Throwable arg0) {
 		super(arg0);
 	}
 
-	public GraphAveragerError(String arg0, Throwable arg1) {
+	public GraphAveragerException(String arg0, Throwable arg1) {
 		super(arg0, arg1);
 	}
 

@@ -15,7 +15,7 @@ import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
 import owl.core.runners.PolyposeRunner;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
@@ -349,7 +349,7 @@ public class StructureAlignmentEvaluator {
 		} catch (FileFormatError e) {
 			System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			System.exit(1);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			System.exit(1);
 		} catch (IOException e) {

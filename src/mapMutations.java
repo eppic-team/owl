@@ -9,7 +9,7 @@ import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
@@ -326,7 +326,7 @@ public class mapMutations {
 				} catch (SQLException e) {
 					System.err.println("Database error: " + e.getMessage());
 					System.exit(1);
-				} catch (PdbCodeNotFoundError e) {
+				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Pdb code " + pdbCode + " not found in database.");
 					System.exit(1);
 				}

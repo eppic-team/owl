@@ -13,7 +13,7 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.FileFormatError;
@@ -68,7 +68,7 @@ public class MapStru2Seq {
 				pdb = new CiffilePdb(cifFile);
 				pdb.load(chainCode);				
 			}
-		} catch (PdbCodeNotFoundError e1) {
+		} catch (PdbCodeNotFoundException e1) {
 			System.err.println(e1.getMessage());
 			System.exit(1);
 		} catch (PdbLoadError e) {

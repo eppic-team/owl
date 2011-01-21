@@ -15,7 +15,7 @@ import owl.embed.contactmaps.Individuals;
 
 import owl.core.structure.AAinfo;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGCommonNbhood;
@@ -144,7 +144,7 @@ public class ConePeeler extends RIGraph {
 		catch(SQLException e){
 			throw new ConePeelerException(e.getMessage());
 		}
-		catch(PdbCodeNotFoundError e){
+		catch(PdbCodeNotFoundException e){
 			throw new ConePeelerException (e.getMessage());
 		}
 		catch(PdbLoadError e){
@@ -356,7 +356,7 @@ public class ConePeeler extends RIGraph {
 	 * @param graph a residue interaction graph object
 	 * @return the minimal set as an RIGraph 
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
 	public static RIGraph getMinSubset (RIGraph graph) throws ConePeelerException {
@@ -407,7 +407,7 @@ public class ConePeeler extends RIGraph {
 	public static RIGraph getMinSubset (String pdbCode, String chainCode, String db) throws ConePeelerException{
 		return getMinSubset(pdbCode,chainCode,db,3);
 	}
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
+	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
 		RIGraph subset = getMinSubset("1bkr","A","pdbase_20090728",8.0,1);
 		String output = "/project/StruPPi/gabriel/Arbeiten/ConePeeler/1bkr1bkr-31.indi";
 		Individuals in2 = new Individuals (output);

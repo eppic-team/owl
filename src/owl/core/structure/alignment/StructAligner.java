@@ -22,29 +22,29 @@ public interface StructAligner {
 	 * the structural alignment is based on contact maps.
 	 * @param templates
 	 * @return
-	 * @throws StructAlignmentError if a problem occurs while running the structural alignment
+	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(TemplateList templates) throws StructAlignmentError, IOException;
+	public MultipleSequenceAlignment alignStructures(TemplateList templates) throws StructAlignmentException, IOException;
 	
 	/**
 	 * Structurally aligns the given pdbs 
 	 * @param pdbs
 	 * @param tags
 	 * @return
-	 * @throws StructAlignmentError if a problem occurs while running the structural alignment
+	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentError, IOException;
+	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentException, IOException;
 	
 	/**
 	 * Performs structural alignment of the given contact maps (graphs)
 	 * @param graphs
 	 * @param tags
 	 * @return
-	 * @throws StructAlignmentError if a problem occurs while running the structural alignment
+	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(RIGraph[] graphs, String[] tags) throws StructAlignmentError, IOException;
+	public MultipleSequenceAlignment alignStructures(RIGraph[] graphs, String[] tags) throws StructAlignmentException, IOException;
 
 }

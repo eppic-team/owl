@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.*;
 import java.sql.SQLException;
 
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.util.RegexFileFilter;
 
@@ -40,7 +40,7 @@ public class NeighbourhoodString {
 	
 	/*---------------------------------------constructors-------------------------------------------------------*/
 	
-	public NeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public NeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		setNeighbourhoodString(dir);
 	}
 	
@@ -50,7 +50,7 @@ public class NeighbourhoodString {
 	/**
 	 * initial setter: initialized all instances of this class. It checks whether 
 	 */
-	public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		File is_f = new File(dir);
 		if(is_f.exists()){
 			path = new String(dir);
@@ -226,7 +226,7 @@ public class NeighbourhoodString {
 		return new String (content);
 	}
 	
-	public static Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public static Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		Individuals[] first_n_last = new Individuals[2];
 		File file = new File(dir);
 		if(Individuals.containsReadableFiles(file)){
@@ -275,7 +275,7 @@ public class NeighbourhoodString {
 		}
 	}
 	
-	public static void main (String[] args) throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public static void main (String[] args) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		String dir = "/project/StruPPi/gabriel/Arbeiten/1sha/1sha/deme0/evo2/1shademe0gen12-34.cmap"; //Starter/";
 		//String helper = "starter", helper2 = "1sha";
 		for(int i = 0; i < 1; i++){

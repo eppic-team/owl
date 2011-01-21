@@ -1845,9 +1845,9 @@ public class Pdb implements HasFeatures {
 	 * @param otherPdb
 	 * @param ct the contact type (crossed contact types don't make sense here)
 	 * @return
-	 * @throws ConformationsNotSameSizeError
+	 * @throws ConformationsNotSameSizeException
 	 */
-	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeError {
+	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeException {
 		return rmsd(otherPdb, ct, null);
 	}
 	
@@ -1861,9 +1861,9 @@ public class Pdb implements HasFeatures {
 	 * @param intervSet an interval set of residues for which the rmsd will be calculated, if 
 	 * null then all residues will be considered
 	 * @return
-	 * @throws ConformationsNotSameSizeError
+	 * @throws ConformationsNotSameSizeException
 	 */
-	public double rmsd(Pdb otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeError {
+	public double rmsd(Pdb otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeException {
 		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct,intervSet);
 		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
 
@@ -1917,12 +1917,12 @@ public class Pdb implements HasFeatures {
 	 * @param conformation1
 	 * @param conformation2
 	 * @return
-	 * @throws ConformationsNotSameSizeError
+	 * @throws ConformationsNotSameSizeException
 	 */
-	public static double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeError{
+	public static double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeException{
 		if (conformation1.length!=conformation2.length) {
 			//System.err.println("Conformations not the same size");
-			throw new ConformationsNotSameSizeError(
+			throw new ConformationsNotSameSizeException(
 					"Given conformations have different size: conformation1: "+conformation1.length+", conformation2: "+conformation2.length);
 		}
 		int n_vec = conformation1.length;
@@ -2878,7 +2878,7 @@ public class Pdb implements HasFeatures {
 				} catch (SQLException e) {
 					if(!silent) System.err.println("Database error: " + e.getMessage());
 					if(exit) System.exit(1);
-				} catch (PdbCodeNotFoundError e) {
+				} catch (PdbCodeNotFoundException e) {
 					if(!silent) System.err.println("Pdb code " + pdbCode + " not found in database.");
 					if(exit) System.exit(1);
 				}

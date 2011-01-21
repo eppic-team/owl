@@ -7,7 +7,7 @@ import java.io.PrintStream;
 import java.sql.SQLException;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
@@ -149,7 +149,7 @@ public class dumppdb {
 
 			} catch (PdbLoadError e) {
 				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+": "+e.getMessage());
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
 			} catch (SQLException e) {
 				System.err.println("SQL error for structure "+pdbCode+pdbChainCode+": "+e.getMessage());

@@ -99,7 +99,7 @@ public class SADPContactMap {
 	 * <li>...</li>
 	 * </ul>  
 	 */
-	public SADPContactMap(RIGraph g) throws ContactMapConstructorError {
+	public SADPContactMap(RIGraph g) throws ContactMapConstructorException {
 		this.nNodes = g.getFullLength();//g.getNodes.size();
 		this.nEdges = g.getEdgeCount();
 		this.deg    = new int[nNodes];
@@ -111,7 +111,7 @@ public class SADPContactMap {
 		for( RIGEdge e : g.getEdges() ) {
 			Pair<RIGNode> pair = g.getEndpoints(e);
 			if( pair.getFirst().getResidueSerial() < 0 || pair.getSecond().getResidueSerial() < 0 ) {
-				throw new ContactMapConstructorError("Graph contains negative node indices. I don't like it!");
+				throw new ContactMapConstructorException("Graph contains negative node indices. I don't like it!");
 			}
 
 			A[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = true;

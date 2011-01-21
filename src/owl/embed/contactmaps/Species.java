@@ -4,7 +4,7 @@ import java.sql.SQLException;
 import java.util.*;
 import java.io.*;
 
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.util.RegexFileFilter;
 
@@ -75,10 +75,10 @@ public class Species {
 	 * @param dummy - dummy parameter, to distinguish this constructor from <code> {@link #Population (int)} </code>
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Species (int protentry, String dummy) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (int protentry, String dummy) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		threshold = 0.0003;
 		setDeme2(5, protentry, 14, 5, dummy,true);
 	}
@@ -91,10 +91,10 @@ public class Species {
 	 * @param threshold_val - the threshold value to which the mean standard deviation of a fixed generation will be compared
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Species (int protentry, int numofconts, double threshold_val, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (int protentry, int numofconts, double threshold_val, boolean evo) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		threshold = threshold_val;
 		evosteps = 30;
 		setDeme2(5, protentry, 20, numofconts, "dummy",evo);
@@ -109,15 +109,15 @@ public class Species {
 	 * @param dummy
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Species (int protentry, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (int protentry, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		threshold = 0.0003;
 		setDeme2(5,protentry, 20, num_of_conts, dummy,evo);
 	}	
 	
-	public Species (String dir) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (String dir) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		readStarterFromFile(dir);
 	}
 	
@@ -125,10 +125,10 @@ public class Species {
 		setDeme2(deme,steps,dir,temp_dir,thres);
 	}
 	
-	public Species (String pdb, int pop, int deme, int steps, double cont_percent, String output) throws IllegalArgumentException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (String pdb, int pop, int deme, int steps, double cont_percent, String output) throws IllegalArgumentException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		this(pdb,pop,deme,steps,cont_percent,output,true);
 	}
-	public Species (String pdb, int pop, int deme, int steps, double cont_percent, String output, boolean evoType) throws IllegalArgumentException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Species (String pdb, int pop, int deme, int steps, double cont_percent, String output, boolean evoType) throws IllegalArgumentException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		setDeme2(pdb,pop,deme,steps,cont_percent,output);
 		this.evoType = evoType;
 	}
@@ -143,10 +143,10 @@ public class Species {
 	 * @param popsize
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public void setDeme2 (int demesize, int protentry, int popsize, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public void setDeme2 (int demesize, int protentry, int popsize, int num_of_conts, String dummy, boolean evo) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		if((0 <= protentry) && (protentry < 15) && (demesize > 0)){
 			int deme_size_mult = demesize*2;
 			deme2 = new HashMap<Pair<String>,Demes> (deme_size_mult);
@@ -192,10 +192,10 @@ public class Species {
 	 * @param evsteps
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public void setDeme2 (int demesize, int protentry, int popsize, int evsteps) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public void setDeme2 (int demesize, int protentry, int popsize, int evsteps) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		demenumb = demesize;
 		evosteps = evsteps;
 		deme2 = new HashMap<Pair<String>,Demes> (2*demesize);
@@ -218,13 +218,13 @@ public class Species {
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws IllegalArgumentException - thrown if either the pdb code of two different Individuals are not the same or
 	 * if the denoted path does not contain any contact map files.
 	 * @throws NullPointerException the denoted path does not exist
 	 */
-	public void readStarterFromFile (String dir) throws IOException, FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError , IllegalArgumentException , NullPointerException {
+	public void readStarterFromFile (String dir) throws IOException, FileNotFoundException, SQLException, PdbCodeNotFoundException, PdbLoadError , IllegalArgumentException , NullPointerException {
 		File filedir = new File(dir);
 		if(filedir.exists()){																					//tests whether this abstract path exists
 			
@@ -390,7 +390,7 @@ public class Species {
 		threshold = thres;		
 	}
 	
-	public void setDeme2 (String pdb, int pop, int deme, int steps, double num_conts, String out_dir) throws IllegalArgumentException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public void setDeme2 (String pdb, int pop, int deme, int steps, double num_conts, String out_dir) throws IllegalArgumentException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		demenumb = deme;
 		pop_size = pop;
 		evoType = true;
@@ -424,11 +424,11 @@ public class Species {
 	 * use the abovementioned method.
 	 * @throws FileNotFoundException
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws IOException
 	 */
-	public void evolve2 () throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
+	public void evolve2 () throws FileNotFoundException, SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
 		HashMap<Pair<String>,Demes> map = getDeme2();
 		Set<Pair<String>> demeset = map.keySet();
 		Iterator<Pair<String>> it = demeset.iterator();
@@ -461,11 +461,11 @@ public class Species {
 	 * @param final_generation - the last generation in the evolution (inclusive)
 	 * @throws FileNotFoundException
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws IOException
 	 */
-	public void evolve2 (int final_generation) throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
+	public void evolve2 (int final_generation) throws FileNotFoundException, SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
 		int currentgen = gen;
 		evosteps = final_generation + 1;
 		//boolean homogenity = false;
@@ -528,11 +528,11 @@ public class Species {
 	 * @param current_gen
 	 * @throws FileNotFoundException
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws IOException
 	 */
-	public void evolve2 (int i, int current_gen) throws FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError, IOException{
+	public void evolve2 (int i, int current_gen) throws FileNotFoundException, SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
 		Integer deme_index    = new Integer (i);
 		//current generation index as an Integer instance		
 		
@@ -623,7 +623,7 @@ public class Species {
 	 * @param path a String denoting the output directory
 	 * @param name a String specifying the output file name
 	 */
-	public void printToFile(String path, String name) throws IOException, FileNotFoundException, SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public void printToFile(String path, String name) throws IOException, FileNotFoundException, SQLException, PdbCodeNotFoundException, PdbLoadError {
 		Individuals ne = new Individuals(getDeme2(0,0).getPop(0));
 		String cont = "#CMVIEW GRAPH FILE ver: 1.0\n#SEQUENCE: "+ne.getSequence()+"\n"+
 		"#PDB: "+ne.getName()+ "\n#PDB CHAIN CODE: "+ne.getChainCode()+"\n#CT: "+Individuals.getContactT()+ "\n#CUTOFF: "+Individuals.getContactDist()+"\n"+ 
@@ -650,7 +650,7 @@ public class Species {
 		System.out.println(ne.getName()+" at generation "+gen+" written to file...");
 	}
 	
-	public Demes[] copyPops(Demes[] input) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Demes[] copyPops(Demes[] input) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
 		int dim1 = input.length;
 		Demes[] pop = new Demes[dim1];
 		for(int i = 0; i < dim1; i++){
@@ -684,7 +684,7 @@ public class Species {
 		return map;
 	}
 	
-	public double[] getErrorDev (int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public double[] getErrorDev (int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		HashMap<String,Demes> map = getDemesOfSameGen(gen_index);
 		Set<String> keyset = map.keySet();
 		double[] stdev_array = new double[keyset.size()];
@@ -706,7 +706,7 @@ public class Species {
 		return stdev_array;
 	}
 	
-	public double getMeanStDev(int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public double getMeanStDev(int gen_index, boolean CMDM) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		double[] st_dev = getErrorDev(gen_index, CMDM);
 		int dim =  st_dev.length;
 		double sum = 0.0;
@@ -716,7 +716,7 @@ public class Species {
 		return sum/((double) dim);
 	}
 	
-	public boolean isLessThanThreshold (int gen_index, boolean CMDM, double threshold) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public boolean isLessThanThreshold (int gen_index, boolean CMDM, double threshold) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		double average = getMeanStDev(gen_index, CMDM);
 		if(average <= threshold){
 			return true;
@@ -750,7 +750,7 @@ public class Species {
 	
 	
 	
-	public boolean isGenXHomogenous (int gen) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public boolean isGenXHomogenous (int gen) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		if(deme2 != null){
 			HashMap<String,Demes> deme_map = getDemesOfSameGen(gen);
 			Integer deme0 = new Integer (0);
@@ -780,7 +780,7 @@ public class Species {
 		else throw new NullPointerException ("Deme field not initialized!");
 	}
 	
-	public void swapSpecies (int gen_index) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public void swapSpecies (int gen_index) throws ArrayIndexOutOfBoundsException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		if(deme2 != null){
 		HashMap<Pair<String>,Demes> population = getDeme2();			//getting the whole population
 		
@@ -886,7 +886,7 @@ public class Species {
 	 * @param j generation index
 	 * @return the Species in the i-th deme and the j-th generation
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws ArrayIndexOutOfBoundsException
 	 */
@@ -933,12 +933,12 @@ public class Species {
 	 * severe error occurring, interrupting the run.
 	 * @param k - the k-th deme to be written to a contact map file
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public void printDemesToTempFiles (int deme_num, int gen_num) throws SQLException, PdbCodeNotFoundError, PdbLoadError, FileNotFoundException, IOException{
+	public void printDemesToTempFiles (int deme_num, int gen_num) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
 		String pdbcode = "";
 			if(getDeme2(deme_num,gen_num) != null){
 				Demes buffer = getDeme2(deme_num,gen_num);
@@ -1047,7 +1047,7 @@ public class Species {
 		}
 	}
 
-	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		//Population pop1 = new Population (path + "1e0l/");
 		/*int[] array = {2};//{0,2,3,7,8,9,10,11,12,13,14};
 		String helper = "1,4,5,6";

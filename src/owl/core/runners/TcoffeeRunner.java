@@ -6,7 +6,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 
 import owl.core.sequence.Sequence;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.util.FileFormatError;
 
@@ -57,7 +57,7 @@ public class TcoffeeRunner {
 		MultipleSequenceAlignment al =  null;
 		try {
 			al = new MultipleSequenceAlignment(outFile.getAbsolutePath(), MultipleSequenceAlignment.CLUSTALFORMAT);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			throw new TcoffeeError("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());			
 		} catch (FileFormatError e) {
 			throw new TcoffeeError("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());

@@ -27,12 +27,12 @@ import owl.core.connections.ConsurfConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.NaccessRunner;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Atom;
-import owl.core.structure.ConformationsNotSameSizeError;
+import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
@@ -155,7 +155,7 @@ public class PdbTest {
 				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 
 
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Could not find pdb code "+pdbCode);
 				continue;
 			}
@@ -190,7 +190,7 @@ public class PdbTest {
 
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Could not find pdb code "+pdbCode);
 				continue;				
 			}
@@ -256,7 +256,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testRmsd() throws PdbLoadError, ConformationsNotSameSizeError, IOException {
+	public void testRmsd() throws PdbLoadError, ConformationsNotSameSizeException, IOException {
 		Pdb pdb1 = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb1.load(TEST_CHAIN_1);
 		Pdb pdb1p = new PdbfilePdb(TEST_PDB_FILE_1);
@@ -287,7 +287,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetGraph() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, FileFormatError {
+	public void testGetGraph() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadError, FileFormatError {
 		// NOTE: to test we compare to previously calculated graphs with an older version of our software
 		//		In principle edges should coincide 100%. However there can be rounding problems that make one
 		//		version consider a border-case to be an edge or not. Indeed I've seen there is a difference 
@@ -385,7 +385,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testConstructors() throws PdbLoadError, ConformationsNotSameSizeError {
+	public void testConstructors() throws PdbLoadError, ConformationsNotSameSizeException {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
@@ -424,7 +424,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundError, PdbLoadError, AlignmentConstructionError {
+	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundException, PdbLoadError, AlignmentConstructionException {
 		
 		MySQLConnection conn = new MySQLConnection();
 		
@@ -496,7 +496,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundError, SQLException, PdbLoadError {
+	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
 		MySQLConnection conn = new MySQLConnection();
 		for (String pdbId:pdbIds) {

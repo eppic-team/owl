@@ -339,7 +339,7 @@ public class TemplateList implements Iterable<Template> {
 		for (Template template:this) {
 			try {
 				template.loadPdbData(conn, pdbaseDb);
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Warning: no PDB data for template "+template.getId()+". Error: "+e.getMessage());
 			}
 		}

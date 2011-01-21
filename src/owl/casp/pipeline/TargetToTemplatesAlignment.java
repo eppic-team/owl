@@ -9,7 +9,7 @@ import java.io.PrintStream;
 import owl.core.runners.TcoffeeError;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.sequence.Sequence;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.util.FileFormatError;
 
@@ -120,7 +120,7 @@ public class TargetToTemplatesAlignment {
 		} catch (FileFormatError e) {
 			System.err.println("Problem while reading templates alignment file "+tempsAlnFile+". Error: "+e.getMessage());
 			System.exit(1);			
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			System.err.println("Problem while reading templates alignment file "+tempsAlnFile+". Error: "+e.getMessage());
 			System.exit(1);			
 		}

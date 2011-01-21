@@ -14,7 +14,7 @@ import owl.core.structure.features.SecStrucElement;
 import owl.core.util.FileFormatError;
 import owl.core.util.FileTypeGuesser;
 import owl.graphAveraging.GraphAverager;
-import owl.graphAveraging.GraphAveragerError;
+import owl.graphAveraging.GraphAveragerException;
 
 
 /**
@@ -370,7 +370,7 @@ public class RIGEnsemble {
 		try {
 			ga = new GraphAverager(this);
 			return ga.getAverageGraph();
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			e.printStackTrace();
 		}
 		return null;
@@ -385,7 +385,7 @@ public class RIGEnsemble {
 		try {
 			ga = new GraphAverager(this);
 			return ga.getConsensusGraph(weightCutoff);
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			e.printStackTrace();
 		}
 		return null;

@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
@@ -91,7 +91,7 @@ public class AtomTripletScorer extends TripletScorer {
 				}
 				System.out.println(id);
 				this.structureIds.add(id);
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
 			} catch (PdbLoadError e) {

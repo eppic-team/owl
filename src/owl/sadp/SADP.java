@@ -6,7 +6,7 @@ import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.logging.Logger;
 
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseAlignmentConverter;
 import owl.core.util.IntPairComparator;
@@ -687,7 +687,7 @@ public class SADP {
 	 * @param tag2  name of the second contact map 
 	 */
 	public MultipleSequenceAlignment getAlignment( String tag1, String tag2 ) 
-	throws AlignmentConstructionError {
+	throws AlignmentConstructionException {
 
 		SADPContactMap[] cm = new SADPContactMap[2];
 

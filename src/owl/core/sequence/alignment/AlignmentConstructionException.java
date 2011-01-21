@@ -8,21 +8,21 @@ package owl.core.sequence.alignment;
  * 
  * @author Lars Petzold
  */
-public class AlignmentConstructionError extends Exception {
+public class AlignmentConstructionException extends Exception {
     static final long serialVersionUID = 1L;
 
-    public AlignmentConstructionError() {
+    public AlignmentConstructionException() {
     }
 
-    public AlignmentConstructionError(String arg0) {
+    public AlignmentConstructionException(String arg0) {
 	super(arg0);
     }
 
-    public AlignmentConstructionError(Throwable arg0) {
+    public AlignmentConstructionException(Throwable arg0) {
 	super(arg0);
     }
 
-    public AlignmentConstructionError(String arg0, Throwable arg1) {
+    public AlignmentConstructionException(String arg0, Throwable arg1) {
 	super(arg0, arg1);
     }
 }

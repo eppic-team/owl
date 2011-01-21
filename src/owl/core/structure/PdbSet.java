@@ -58,11 +58,11 @@ public class PdbSet {
 
 	/**
 	 * Given a collection of pdb+chain codes or file names, loads the respective structures from PDBase.
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 * @throws PdbLoadError 
 	 */
-	public void readFromList(Collection<String> list) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public void readFromList(Collection<String> list) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
 		for(String pdbChain:list) {
 			String pdbCode = pdbChain.substring(0, 4);
 			String chainCode = pdbChain.substring(4, 5);
@@ -102,10 +102,10 @@ public class PdbSet {
 	 * automatically.
 	 * @throws IOException 
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
-	public void readCullPdb20() throws IOException, SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public void readCullPdb20() throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError {
 		LinkedList<String> pdbCodes = new LinkedList<String>();
 		
 		// read pdb+chain codes from file

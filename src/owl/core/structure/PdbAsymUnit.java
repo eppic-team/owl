@@ -100,7 +100,7 @@ public class PdbAsymUnit {
 		
 	}
 	
-	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundError {
+	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundException {
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
@@ -147,7 +147,7 @@ public class PdbAsymUnit {
 		
 	}
 	
-	private void loadFromPdbase(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundError {
+	private void loadFromPdbase(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundException {
 		try {
 			Pdb pdb = new PdbasePdb(pdbCode,dbName,conn);
 			String[] chainCodes = pdb.getChains();

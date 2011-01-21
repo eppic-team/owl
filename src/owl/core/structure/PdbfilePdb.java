@@ -88,7 +88,7 @@ public class PdbfilePdb extends Pdb {
 			throw new PdbLoadError(e);
 		} catch (IOException e) {
 			throw new PdbLoadError(e);
-		} catch (PdbChainCodeNotFoundError e) {
+		} catch (PdbChainCodeNotFoundException e) {
 			throw new PdbLoadError(e);
 		}
 	}
@@ -177,10 +177,10 @@ public class PdbfilePdb extends Pdb {
 	 * and no TARGET line found, if sequences from ATOM lines and SEQRES do not coincide, 
 	 * if an insertion code is found, if a residue number<=0 found, if ATOM lines are not 
 	 * in residue ascending order, if 0 observed residues are found for given chain
-	 * @throws PdbChainCodeNotFoundError if no ATOM lines are found for given 
+	 * @throws PdbChainCodeNotFoundException if no ATOM lines are found for given 
 	 * pdbChainCode and model
 	 */
-	private void parse() throws IOException, FileFormatError, PdbChainCodeNotFoundError, PdbLoadError {
+	private void parse() throws IOException, FileFormatError, PdbChainCodeNotFoundException, PdbLoadError {
 		Pattern p;
 		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
@@ -461,7 +461,7 @@ public class PdbfilePdb extends Pdb {
 		fpdb.close();
 		if (empty) {
 			fpdb.close();
-			throw new PdbChainCodeNotFoundError("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbChainCodeNotFoundException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 
 		// we check also that resser2restype is not empty: happens when all residues in chain are non-standard

@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
@@ -180,10 +180,10 @@ public class Demes {
 	 * @param starter
 	 * @param size
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Demes (Individuals starter, int size) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Demes (Individuals starter, int size) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(starter.getName(), pdbaseDb, conn);
 		pdb.load(starter.getChainCode());
@@ -254,10 +254,10 @@ public class Demes {
 	 * @param addname
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Demes (int popsize, int startfiles, int numofCons, int generation, String addname) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public Demes (int popsize, int startfiles, int numofCons, int generation, String addname) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		setSize(popsize);
 		sathyasSet(popsize, startfiles, numofCons);
 		setPopName(getPop(0).getName() + addname);
@@ -280,12 +280,12 @@ public class Demes {
 	 * @param file_name a String denoting the 'cmap' file
 	 * @throws FileNotFoundException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 * @throws IllegalArgumentException if the denoted file is neither a file nor is not in the required format
 	 */
-	public Demes (String file_name) throws FileNotFoundException, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, IllegalArgumentException {
+	public Demes (String file_name) throws FileNotFoundException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError, IllegalArgumentException {
 		File file = new File (file_name);
 		if(file.exists()){
 			readFile(file);
@@ -295,7 +295,7 @@ public class Demes {
 	
 	/**
 	 * Three parameter constructor: initializes an instance of this class. The first parameter <tt>pdb_code</tt> is the
-	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundError}</code>
+	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundException}</code>
 	 * is issued. Note, that only the default database is used, in order to change the database, please use the four parameter
 	 * constructor <code>{@link #Demes(String, String, int, double)}</code>. Additionally, this constructor does only random
 	 * samples.
@@ -303,17 +303,17 @@ public class Demes {
 	 * @param size the number of entries in the Individuals array
 	 * @param percent_cont the number of contacts each Individuals has, must hold <tt> 0.0 < percent <= 100.0</tt>
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError if an unknown pdb code is used
+	 * @throws PdbCodeNotFoundException if an unknown pdb code is used
 	 * @throws PdbLoadError
 	 * @throws IllegalArgumentException if 'size <= 0' or 'percent not in (0.0,100.0]' 
 	 */
-	public Demes (String pdb_code, int size, double percent_cont) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
+	public Demes (String pdb_code, int size, double percent_cont) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
 		setDemes(pdb_code, pdbaseDb, size, percent_cont);
 	}
 	
 	/**
 	 * Four parameter constructor: initializes an instance of this class. The first parameter <tt>pdb_code</tt> is the
-	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundError}</code>
+	 * standard pdb code, identifying the protein. If no such pdb code is present in the database, an <code>{@link PdbCodeNotFoundException}</code>
 	 * is issued. Note, that database used must be specified. If the default database shall be used, please use the three parameter constructor
 	 * <code>{@link #Demes(String, int, double)}</code>. Additionally, this constructor does only random
 	 * samples.
@@ -323,10 +323,10 @@ public class Demes {
 	 * @param percent the number of contacts each Individuals has, must hold <tt> 0.0 < percent <= 100.0</tt>
 	 * @throws IllegalArgumentException  if 'size <= 0' or 'percent not in (0.0,100.0]'
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError if an unknown pdb code is used
+	 * @throws PdbCodeNotFoundException if an unknown pdb code is used
 	 * @throws PdbLoadError
 	 */
-	public Demes (String pdb_code, String db, int size, double percent) throws IllegalArgumentException, SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public Demes (String pdb_code, String db, int size, double percent) throws IllegalArgumentException, SQLException, PdbCodeNotFoundException, PdbLoadError{
 		setDemes(pdb_code, db, size, percent);
 	}
 	
@@ -335,7 +335,7 @@ public class Demes {
 	/**
 	 * one parameter setter, reads an array of 'Individuals'
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void setPop(Individuals[] pop){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -408,7 +408,7 @@ public class Demes {
 	 * setting 'fiftyfifty' true, if this Individual has a better Error value than the worst approx. 50 %.
 	 * @param CMDM - determines which Error is taken into account: CMDM = true -> CMError, false -> DMError
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void bestFifty (boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -456,7 +456,7 @@ public class Demes {
 	 * @param dummy - dummy parameter, to distinguish this method from {@link #bestFifty(boolean)}
 	 * @param CMDM - determines which Error is taken into account: CMDM = true -> CMError, false -> DMError
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void bestFifty (String dummy, boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -598,7 +598,7 @@ public class Demes {
 	 * is less or equal to this Speciess average error, CMDM = true: CMError, CMDM = false: DMError
 	 * @param CMDM
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void compareToAverage(boolean CMDM) {// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -678,7 +678,7 @@ public class Demes {
 	 * the same, this field should be favoured over the 'weighted' one, because looking up
 	 * is much quicker...
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void setWHasher (){// throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -717,10 +717,10 @@ public class Demes {
 	 * @param numofCons
 	 * @throws SQLException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public void sathyasSet(int popsize, int startfiles, int numofCons) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public void sathyasSet(int popsize, int startfiles, int numofCons) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		String dir1 = "/project/StruPPi/gabriel/workspace_old/aglappe/embed/teststructures/";
 		File dir = new File(dir1);
 		File[] test = dir.listFiles(new RegexFileFilter(".*_all\\.graph"));
@@ -774,7 +774,7 @@ public class Demes {
 	 * this sense X is a subset of the power set P(T) of T, where T is a finite set {1,...,n} x {1,...,n}.
 	 * Accordingly, all the elements of X, being subsets of T, are having the same number of elements. 
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void setMetrics() {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -823,7 +823,7 @@ public class Demes {
 	 * @throws IOException
 	 * @throws FileNotFoundException
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public void printToFile(String path, String name) throws IOException, FileNotFoundException {//SQLException, PdbCodeNotFoundError, PdbLoadError {
@@ -939,12 +939,12 @@ public class Demes {
 	 * @param file
 	 * @throws FileNotFoundException
 	 * @throws IOException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
 	 * @throws PdbLoadError
 	 * @throws IllegalArgumentException
 	 */
-	public void readFile (File file) throws FileNotFoundException, IOException, PdbCodeNotFoundError, SQLException, PdbLoadError, IllegalArgumentException {
+	public void readFile (File file) throws FileNotFoundException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError, IllegalArgumentException {
 		if(file.exists() && file.getAbsolutePath().contains(".cmap")){
 			BufferedReader reader = new BufferedReader (new FileReader (file));
 			String linereader = null, chain_code = null, seq = null;
@@ -1071,11 +1071,11 @@ public class Demes {
 	 * @param size
 	 * @param percent
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 * @throws IllegalArgumentException
 	 */
-	public void setDemes (String pdb_code, String pdb_db, int size, double percent) throws SQLException, PdbCodeNotFoundError, PdbLoadError, IllegalArgumentException {
+	public void setDemes (String pdb_code, String pdb_db, int size, double percent) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
 		if(size > 0 && (percent <= 100.0 && percent > 0.0) ){
 			MySQLConnection conn = new MySQLConnection ();
 			Pdb pdb = new PdbasePdb(pdb_code, pdb_db, conn);
@@ -1237,7 +1237,7 @@ public class Demes {
 	 * @param CMDM
 	 * @return
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
 	public double[] getErrorArray(boolean CMDM) {//throws SQLException, PdbCodeNotFoundError, PdbLoadError{
@@ -1611,10 +1611,10 @@ public class Demes {
 	 * @param dummy a dummy parameter
 	 * @return an array of Individuals
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */			
-	public Individuals[] evolve (boolean CMDM, String dummy) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public Individuals[] evolve (boolean CMDM, String dummy) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
 		checkSize();
 		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
@@ -1697,10 +1697,10 @@ public class Demes {
 	 * @param dummy a dummy parameter
 	 * @return an array of Individuals
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public Individuals[] evolve (String dummy, boolean CMDM) throws SQLException, PdbCodeNotFoundError, PdbLoadError {
+	public Individuals[] evolve (String dummy, boolean CMDM) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
 		checkSize();
 		bestFifty(CMDM);
 		//ranking all Individuals in the field 'pop
@@ -1766,10 +1766,10 @@ public class Demes {
 	/**
 	 * method, to copy an array of Individuals to a specified array of Individuals
 	 * @throws PdbLoadError 
-	 * @throws PdbCodeNotFoundError 
+	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
-	public static void copyInd(Individuals[] in, Individuals[] out) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public static void copyInd(Individuals[] in, Individuals[] out) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
 		int dim = in.length;
 		if(out != null){
 			if(in.length != out.length){
@@ -1796,10 +1796,10 @@ public class Demes {
 	 * @param input
 	 * @return
 	 * @throws SQLException
-	 * @throws PdbCodeNotFoundError
+	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadError
 	 */
-	public static Individuals[] trim (Individuals[] input) throws SQLException, PdbCodeNotFoundError, PdbLoadError{
+	public static Individuals[] trim (Individuals[] input) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
 		int dim = input.length, counter = 0;
 		boolean[] tester = new boolean[dim];
 		for(int i = 0; i < dim; i++){
@@ -2034,7 +2034,7 @@ public class Demes {
 		return new String (pdbaseDb);
 	}
 
-	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundError, PdbLoadError{
+	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
 		/*Demes pop = new Demes(14,0,5,0,"run");
 		String path = "/home/gmueller/workspace/aglappe/embed/teststructures/";
 		pop.printToFile(path, pop.getName());

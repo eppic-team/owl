@@ -21,7 +21,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 public class testJUNGframework {
 
-	public static void main(String[] args) throws FileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundError {
+	public static void main(String[] args) throws FileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundException {
 		Pdb pdb = new PdbasePdb("7adh");
 		pdb.load("A");
 		

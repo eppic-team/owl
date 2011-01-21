@@ -2,7 +2,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
@@ -51,7 +51,7 @@ public class scorePdbSet {
 			} catch (PdbLoadError e) {
 				System.err.println("Couldn't load "+pdbId);
 				continue;
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find "+pdbId);
 				continue;				
 			}

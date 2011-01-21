@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.PdbCodeNotFoundError;
+import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
@@ -160,7 +160,7 @@ public class GTGParser {
 				hit.reassignSubjectSerials(conn, pdbaseDb);
 			} catch (PdbLoadError e) {
 				System.err.println(e.getMessage());
-			} catch (PdbCodeNotFoundError e) {
+			} catch (PdbCodeNotFoundException e) {
 				System.err.println(e.getMessage());
 			}
 		}

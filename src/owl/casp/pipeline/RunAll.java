@@ -19,18 +19,18 @@ import owl.core.runners.blast.BlastXMLParser;
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
 import owl.core.sequence.Sequence;
-import owl.core.sequence.alignment.AlignmentConstructionError;
+import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.TemplateList;
-import owl.core.structure.alignment.StructAlignmentError;
+import owl.core.structure.alignment.StructAlignmentException;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatError;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
-import owl.graphAveraging.GraphAveragerError;
+import owl.graphAveraging.GraphAveragerException;
 import owl.graphAveraging.PhiPsiAverager;
 
 
@@ -345,7 +345,7 @@ public class RunAll {
 				} catch (IOException e) {
 					System.err.println("Problems while running the structural aligner program. Error "+e.getMessage()+"\nExiting");
 					System.exit(1);
-				} catch (StructAlignmentError e) {
+				} catch (StructAlignmentException e) {
 					System.err.println("Problems while running the structural aligner program. Error "+e.getMessage()+"\nExiting");
 					System.exit(1);
 				}
@@ -375,7 +375,7 @@ public class RunAll {
 			try {
 				// we load from file and don't check its contents yet, the GraphAverager will do that later
 				target2templatesAln = new MultipleSequenceAlignment(target2templatesFile.getAbsolutePath(),"FASTA");
-			} catch (AlignmentConstructionError e) {
+			} catch (AlignmentConstructionException e) {
 				System.err.println("Couldn't construct the alignment from given file "+target2templatesFile+". Error: "+e.getMessage());
 				System.exit(1);
 			} catch (IOException e) {
@@ -404,7 +404,7 @@ public class RunAll {
 				String ctStr = DEFAULT_CONTACT_TYPES[i].replace("/", ":");
 				ga.getAverageGraph().writeToFile(new File(outDir,baseName+"."+ctStr+"_"+DEFAULT_CUTOFFS[i]+".avrgd.cm").getAbsolutePath());
 			}
-		} catch (GraphAveragerError e) {
+		} catch (GraphAveragerException e) {
 			System.err.println("Problems performing graph averaging. Error: "+e.getMessage()+"\nCan't continue with reconstruction");
 			System.exit(1);
 		} catch (IOException e) {
@@ -532,7 +532,7 @@ public class RunAll {
 		MultipleSequenceAlignment al;
 		try {
 			al = new MultipleSequenceAlignment(tags, seqs);
-		} catch (AlignmentConstructionError e) {
+		} catch (AlignmentConstructionException e) {
 			// this shouldn't happen
 			al = null;
 			System.err.println("Unexpected error: "+e.getMessage());
