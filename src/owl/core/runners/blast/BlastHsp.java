@@ -1,9 +1,13 @@
 package owl.core.runners.blast;
 
+import java.io.Serializable;
+
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 
-public class BlastHsp {
+public class BlastHsp implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	private BlastHit parent;
 	private int aliLength;

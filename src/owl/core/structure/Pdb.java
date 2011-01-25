@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,8 +66,10 @@ import java.sql.Statement;
  * A single chain PDB protein structure
  * 
  */
-public class Pdb implements HasFeatures {
+public class Pdb implements HasFeatures, Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	/*------------------------------------  constants ---------------------------------------------*/
 	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
 	public static final String DEFAULT_CHAIN   = "A";		// used when constructing models, this will be the chain assigned to them
@@ -104,12 +107,12 @@ public class Pdb implements HasFeatures {
 	protected double rSym;
 	
 	// sequence features (annotations)
-	protected SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
-	protected Scop scop;								// the scop annotation for this pdb object
-	protected EC ec;									// the ec annotation for this pdb object
-	protected CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
+	protected transient SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
+	protected transient Scop scop;								// the scop annotation for this pdb object
+	protected transient EC ec;									// the ec annotation for this pdb object
+	protected transient CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
 	
-	private Map<FeatureType, Collection<Feature>> features; // all other features. Eventually all features above should be implemented by using  
+	private transient Map<FeatureType, Collection<Feature>> features; // all other features. Eventually all features above should be implemented by using  
 															// this object and the HasFeature interface
 	
 	// identifiers

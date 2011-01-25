@@ -1,5 +1,6 @@
 package owl.core.structure;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +24,9 @@ import javax.vecmath.Vector3d;
  * @author duarte_j
  * @see SymoplibParser
  */
-public final class SpaceGroup {
+public final class SpaceGroup implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	public enum BravaisLattice {
 		

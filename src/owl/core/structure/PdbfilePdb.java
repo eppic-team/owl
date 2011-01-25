@@ -27,6 +27,8 @@ import owl.core.util.FileFormatError;
  */
 public class PdbfilePdb extends Pdb {
 	
+	private static final long serialVersionUID = 1L;
+
 	private static final String NULL_chainCode = "A";
 	// the regex to use for selecting an atom based on its alt code: either a space or an A are valid
 	private static final String ALTCODEREGEX = "[ A]";

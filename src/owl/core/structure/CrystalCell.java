@@ -1,5 +1,6 @@
 package owl.core.structure;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -15,7 +16,9 @@ import javax.vecmath.Vector3d;
  * @author duarte_j
  *
  */
-public class CrystalCell {
+public class CrystalCell implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	private double a;
 	private double b;

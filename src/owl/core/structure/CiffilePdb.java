@@ -30,6 +30,8 @@ import owl.core.util.FileFormatError;
  */
 public class CiffilePdb extends Pdb {
 
+	private static final long serialVersionUID = 1L;
+
 	/*------------------------------ constants ------------------------------*/
 	public static final String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
 	public static final String CIF_FILE_EXTENSION = ".cif.gz";
@@ -61,7 +63,7 @@ public class CiffilePdb extends Pdb {
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
 	private TreeMap<Integer,Long[]> loopelements2contentOffset;    // begin and end line index of each loop element
 	
-	private RandomAccessFile fcif;
+	private transient RandomAccessFile fcif;
  
 	private boolean fieldsTitlesRead;
 	

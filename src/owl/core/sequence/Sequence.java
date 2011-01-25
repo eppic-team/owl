@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -20,7 +21,9 @@ import owl.core.util.FileFormatError;
  * Presenting our sequence object(!). Provides method for reading and writing
  * sequences in Fasta format.
  */
-public class Sequence {
+public class Sequence implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	/*------------------------------ constants ------------------------------*/
 	

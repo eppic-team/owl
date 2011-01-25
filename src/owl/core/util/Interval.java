@@ -1,4 +1,5 @@
 package owl.core.util;
+import java.io.Serializable;
 import java.lang.Comparable;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -8,8 +9,10 @@ import java.util.regex.Pattern;
  * Class representing an integer interval with a beginning 
  * and an end integer
  */
-public class Interval implements Comparable<Interval> {
+public class Interval implements Comparable<Interval>, Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	public int beg;
 	public int end;
 

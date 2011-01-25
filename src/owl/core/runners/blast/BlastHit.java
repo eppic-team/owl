@@ -1,5 +1,6 @@
 package owl.core.runners.blast;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -16,8 +17,10 @@ import java.util.regex.Pattern;
  * alignments of the subject to the query.
  * 
  */
-public class BlastHit implements Iterable<BlastHsp> {
+public class BlastHit implements Iterable<BlastHsp>, Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	public static final int OUTPUT_LENGTH = 80;
 	private static final String ID_REGEX = "pdb\\|(\\d\\w\\w\\w)\\|(\\w)";
 	

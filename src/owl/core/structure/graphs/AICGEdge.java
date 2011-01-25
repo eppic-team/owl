@@ -1,6 +1,10 @@
 package owl.core.structure.graphs;
 
-public class AICGEdge {
+import java.io.Serializable;
+
+public class AICGEdge implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	private double distance;
 	

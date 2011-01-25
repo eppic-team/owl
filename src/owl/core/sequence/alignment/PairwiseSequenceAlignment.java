@@ -1,6 +1,7 @@
 package owl.core.sequence.alignment;
 
 import java.io.PrintStream;
+import java.io.Serializable;
 
 import jaligner.Alignment;
 import jaligner.Sequence;
@@ -18,7 +19,9 @@ import jaligner.util.*;
  * @author Henning Stehr
  *
  */
-public class PairwiseSequenceAlignment {
+public class PairwiseSequenceAlignment implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	/*--------------------------- type definitions --------------------------*/
 
@@ -48,7 +51,7 @@ public class PairwiseSequenceAlignment {
 	private int					identity;			// sequence identity score
 	private int					similarity;			// sequence similarity score
 	private float				score;				// alignment score
-	private Alignment			alignment;			// alignment class from JAligner
+	private transient Alignment	alignment;			// alignment class from JAligner
 
 	private int[]				one2two;			// mapping of sequence indices of sequence 1 to sequence 2
 	private int[]				two2one;			// mapping of sequence indices of sequence 2 to sequence 1

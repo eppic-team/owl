@@ -25,10 +25,12 @@ import owl.core.util.MySQLConnection;
  */
 public class PdbasePdb extends Pdb {
 
+	private static final long serialVersionUID = 1L;
+
 	private final static String DEFAULT_PDBASE_DB="pdbase";
 
 	private String db;				// the pdbase db from which we have taken the data
-	private MySQLConnection conn;
+	private transient MySQLConnection conn;
 	
 	public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
 	

@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,7 +39,9 @@ import owl.core.util.MySQLConnection;
  * 
  * @author		Henning Stehr, Jose Duarte, Lars Petzold
  */
-public class MultipleSequenceAlignment {
+public class MultipleSequenceAlignment implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	/*------------------------------ constants ------------------------------*/	
 
@@ -58,7 +61,7 @@ public class MultipleSequenceAlignment {
 	private TreeMap<Integer,int[]> mapAlign2Seq; // map of seq index to arrays mapping alignment serials to sequence serials 
 	private TreeMap<Integer,int[]> mapSeq2Align; // map of seq index to arrays mapping sequence serials to alignment serials
 	
-	private TreeMap<String, SecondaryStructure> secStructAnnotation;
+	private transient TreeMap<String, SecondaryStructure> secStructAnnotation;
 	
 	/*----------------------------- constructors ----------------------------*/
 	

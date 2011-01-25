@@ -1,5 +1,6 @@
 package owl.core.sequence;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +18,10 @@ import owl.core.structure.AminoAcid;
  * @author duarte_j
  *
  */
-public class ProteinToCDSMatch {
+public class ProteinToCDSMatch implements Serializable{
+
+	private static final long serialVersionUID = 1L;
+
 
 	private static final float PERFECT_MATCH_THRESHOLD = 99.99999f;
 	

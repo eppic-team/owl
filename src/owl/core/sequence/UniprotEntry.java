@@ -2,6 +2,7 @@ package owl.core.sequence;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,8 +41,10 @@ import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
  * @author duarte_j
  *
  */
-public class UniprotEntry implements HasFeatures {
+public class UniprotEntry implements HasFeatures, Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	private static final Log LOGGER = LogFactory.getLog(UniprotEntry.class);
 	
 	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
@@ -59,7 +62,7 @@ public class UniprotEntry implements HasFeatures {
 	private boolean  repCDScached;
 	private ProteinToCDSMatch representativeCDS; // cached after running getRepresentativeCDS()
 
-	private Map<FeatureType, Collection<Feature>> features;
+	private transient Map<FeatureType, Collection<Feature>> features;
 	
 	public UniprotEntry(String uniprotId){
 		this.uniId = uniprotId;

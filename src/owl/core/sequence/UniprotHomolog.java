@@ -1,5 +1,7 @@
 package owl.core.sequence;
 
+import java.io.Serializable;
+
 import owl.core.runners.blast.BlastHit;
 
 /**
@@ -11,9 +13,11 @@ import owl.core.runners.blast.BlastHit;
  * @author duarte_j
  *
  */
-public class UniprotHomolog {
+public class UniprotHomolog implements Serializable {
 	
 	
+	private static final long serialVersionUID = 1L;
+
 	private BlastHit blastHit;
 	private UniprotEntry uniprotEntry;
 	

@@ -4,14 +4,17 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 
 import javax.vecmath.Matrix4d;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
 
-public class ChainInterface implements Comparable<ChainInterface> {
+public class ChainInterface implements Comparable<ChainInterface>, Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	public static final String TYPE_PROTEIN = "Protein";
 
 	private int id;

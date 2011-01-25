@@ -1,5 +1,7 @@
 package owl.core.sequence;
 
+import java.io.Serializable;
+
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 
 /**
@@ -11,7 +13,10 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
  * @author duarte_j
  *
  */
-public class TranslatedFrame implements Comparable<TranslatedFrame> {
+public class TranslatedFrame implements Comparable<TranslatedFrame>, Serializable {
+
+	private static final long serialVersionUID = 1L;
+	
 	private Sequence sequence; // the translated sequence (protein)
 	private PairwiseSequenceAlignment psa; // the alignment between the the reference protein (1) sequence and the translated sequence (2)
 	private ReadingFrame rf;

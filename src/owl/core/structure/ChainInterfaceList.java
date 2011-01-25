@@ -1,10 +1,18 @@
 package owl.core.structure;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
 
 /**
  * A list of all the interfaces of a crystal structure (a PdbAsymUnit)
@@ -13,8 +21,10 @@ import java.util.List;
  * @author duarte_j
  *
  */
-public class ChainInterfaceList implements Iterable<ChainInterface>{
+public class ChainInterfaceList implements Iterable<ChainInterface>, Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	public enum AsaCalcMethod {
 		INTERNAL("internal"),NACCESS("naccess"),PISA("pisa");
 		
@@ -152,4 +162,21 @@ public class ChainInterfaceList implements Iterable<ChainInterface>{
 			interf.printTabular(ps);
 		}
 	}
+
+    public void serialize(File serializedFile) throws IOException {
+        FileOutputStream fileOut = new FileOutputStream(serializedFile);
+        ObjectOutputStream out = new ObjectOutputStream(fileOut);
+        out.writeObject(this);
+        out.close();
+        fileOut.close();
+    }
+
+    public static ChainInterfaceList readFromFile(File serialized) throws IOException, ClassNotFoundException {
+    	FileInputStream fileIn = new FileInputStream(serialized);
+    	ObjectInputStream in = new ObjectInputStream(fileIn);
+    	ChainInterfaceList interfSc = (ChainInterfaceList) in.readObject();
+    	in.close();
+    	fileIn.close();
+    	return interfSc;
+    }
 }

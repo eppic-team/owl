@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -57,7 +58,9 @@ import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
  * @author duarte_j
  *
  */
-public class UniprotHomologList implements Iterable<UniprotHomolog>{
+public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	/*------------------------ constants --------------------------*/
 	

@@ -1,12 +1,16 @@
 package owl.core.structure.features;
 
+import java.io.Serializable;
+
 import owl.core.util.Interval;
 
 /**
  * A particular secondary structure element within a protein structure
  */
-public class SecStrucElement {
+public class SecStrucElement implements Serializable {
 	
+	private static final long serialVersionUID = 1L;
+
 	/*------------------------------ constants ------------------------------*/
 	public enum ReducedState { THREESTATE, FOURSTATE, EIGHTSTATE };
 	// four state secondary structure types
