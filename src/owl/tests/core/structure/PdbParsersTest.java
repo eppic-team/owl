@@ -46,6 +46,8 @@ public class PdbParsersTest {
 	private static final String LISTFILE = "src/owl/tests/core/structure/data/cullpdb_20";
 	private static final String PDBASE_DB = "pdbase";
 	
+	private static final String TINKERPDBFILE = "src/owl/tests/core/structure/data/1bxyA_tinker.pdb";
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 	}
@@ -62,6 +64,15 @@ public class PdbParsersTest {
 	public void tearDown() throws Exception {
 	}
 
+	@Test
+	public void testSpecialPDBFiles() throws PdbLoadError {
+		// testing some special PDB files
+		
+		// tinker file (no occupancy or bfactors)
+		Pdb pdb = new PdbfilePdb(TINKERPDBFILE);
+		pdb.load(Pdb.NULL_CHAIN_CODE);		
+	}
+	
 	@Test
 	public void testCIFagainstPDBASE() throws FileFormatError, PdbaseInconsistencyException, SQLException, IOException {
 
@@ -213,6 +224,7 @@ public class PdbParsersTest {
 	
 	@Test
 	public void testPdbfileParser() throws IOException, SQLException {
+		// testing a list of PDB files from PDB
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
@@ -348,8 +360,9 @@ public class PdbParsersTest {
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
 		PdbParsersTest pdbTest = new PdbParsersTest();
+		pdbTest.testSpecialPDBFiles();
 		//pdbTest.testCIFagainstPDBASE();
-		pdbTest.testPdbfileParser();
+		//pdbTest.testPdbfileParser();
 	}
 
 }
