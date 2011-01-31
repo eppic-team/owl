@@ -62,13 +62,13 @@ public class UniProtConnection {
 
 	/**
 	 * Gets a list of Uniprot entries as an Iterator given a list of Uniprot identifiers.
+	 * If any of the input entries can not be retrieved through JAPI then they will be
+	 * missing in the returned iterator. The user must check for those. 
 	 * @param idsList a list of uniprot ids
 	 * @return
 	 */
 	public EntryIterator<UniProtEntry> getMultipleEntries(List<String> idsList) {
-
 	    Query query = UniProtQueryBuilder.buildIDListQuery(idsList);
-
 	    return uniProtQueryService.getEntryIterator(query);
 	}
 	

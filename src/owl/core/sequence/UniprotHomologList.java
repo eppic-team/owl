@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -83,9 +84,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	
 	private UniprotEntry ref;						 // the uniprot entry to which the homologs refer
 	private List<UniprotHomolog> list; 				 // the list of homologs
-	private Map<String,List<UniprotHomolog>> lookup; // to speed up searches (uniprot ids to Homologs lists) 
-													 // it's a list because blast can hit a single uniprot in multiple regions (for us
-													 // that's multiple BlastHits)
+	private Map<String,UniprotHomolog> lookup; // to speed up searches (uniprot ids to Homologs)
+													 // (used to be lists of homologs as we considered multi-matches of the 
+													 // same uniprot as different BlastHits, but not anymore since we introduced 
+													 // BlastHsps)
 	private double idCutoff; 						 // the identity cutoff (see restrictToMinIdAndCoverage() )
 	private double qCoverageCutoff;					 // the query coverage cutoff (see restrictToMinIdAndCoverage() )
 	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
@@ -193,16 +195,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * Initialises the lookup map (for speeding up lookups of homologs by uniprot ids)
 	 */
 	private void initialiseMap() {
-		this.lookup = new HashMap<String, List<UniprotHomolog>>();
+		this.lookup = new HashMap<String, UniprotHomolog>();
 		for (UniprotHomolog hom:this) {
-			if (lookup.containsKey(hom.getUniId())) {
-				lookup.get(hom.getUniId()).add(hom);	
-			} else {
-				List<UniprotHomolog> list = new ArrayList<UniprotHomolog>();
-				list.add(hom);
-				lookup.put(hom.getUniId(), list);
-			}
-			
+			lookup.put(hom.getUniId(), hom);
 		}
 	}
 	
@@ -244,48 +239,67 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		}
 		EntryIterator<UniProtEntry> entries = uniprotConn.getMultipleEntries(uniprotIds);
 
+		HashSet<String> returnedUniIds = new HashSet<String>();
+		
 		for (UniProtEntry entry:entries) {
-			List<UniprotHomolog> homs = this.getHomolog(entry.getPrimaryUniProtAccession().getValue());
-			for (UniprotHomolog hom:homs) {
-				hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
-				
-				List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
-				if (ncbiTaxIds.size()>1) {
-					LOGGER.warn("More than one taxonomy id for uniprot entry "+hom.getUniId());
+			String uniId = entry.getPrimaryUniProtAccession().getValue();
+			returnedUniIds.add(uniId);
+			UniprotHomolog hom = this.getHomolog(uniId);
+
+			hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
+
+			List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
+			if (ncbiTaxIds.size()>1) {
+				LOGGER.warn("More than one taxonomy id for uniprot entry "+hom.getUniId());
+			}
+			hom.getUniprotEntry().setTaxId(ncbiTaxIds.get(0).getValue());
+			List<String> taxons = new ArrayList<String>();
+			for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
+				taxons.add(ncbiTaxon.getValue());
+			}
+			hom.getUniprotEntry().setTaxons(taxons);
+
+			Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
+			List<String> emblCdsIds = new ArrayList<String>();
+			Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
+			for(Embl ref:emblrefs) {
+				String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
+				if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
+					String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
+					//emblCdsIds.add(emblCdsId);
+					tmpEmblCdsIdsSet.add(emblCdsId);
 				}
-				hom.getUniprotEntry().setTaxId(ncbiTaxIds.get(0).getValue());
-				List<String> taxons = new ArrayList<String>();
-				for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
-					taxons.add(ncbiTaxon.getValue());
-				}
-				hom.getUniprotEntry().setTaxons(taxons);
-				
-				Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
-				List<String> emblCdsIds = new ArrayList<String>();
-				Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
-				for(Embl ref:emblrefs) {
-					String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
-					if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
-						String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-						//emblCdsIds.add(emblCdsId);
-						tmpEmblCdsIdsSet.add(emblCdsId);
-					}
-				}
-				emblCdsIds.addAll(tmpEmblCdsIdsSet); // we use the set to be sure there are no duplicates (it does happen sometimes)
-				hom.getUniprotEntry().setEmblCdsIds(emblCdsIds);
-				
-				List<Organelle> orglls = entry.getOrganelles();
-				if (orglls.size()>0) {
-					hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType().getValue());
-					if (orglls.size()>1) {
-						for (Organelle orgll:orglls){ 
-							if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
-								LOGGER.warn("Different gene encoding organelles for Uniprot "+hom.getUniId());
-							}
+			}
+			emblCdsIds.addAll(tmpEmblCdsIdsSet); // we use the set to be sure there are no duplicates (it does happen sometimes)
+			hom.getUniprotEntry().setEmblCdsIds(emblCdsIds);
+
+			List<Organelle> orglls = entry.getOrganelles();
+			if (orglls.size()>0) {
+				hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType().getValue());
+				if (orglls.size()>1) {
+					for (Organelle orgll:orglls){ 
+						if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
+							LOGGER.warn("Different gene encoding organelles for Uniprot "+hom.getUniId());
 						}
 					}
 				}
 			}
+		}
+		// now we check if the query to uniprot JAPI did really return all requested uniprot ids
+		boolean allIdsReturned = true;
+		Iterator<UniprotHomolog> it = this.iterator(); 
+		while (it.hasNext()) {
+			UniprotHomolog hom = it.next();
+			if (!returnedUniIds.contains(hom.getUniId())) {
+				allIdsReturned = false;
+				LOGGER.warn("Information for uniprot ID "+hom.getUniId()+" could not be retrieved with the Uniprot JAPI. Will remove this id from the homologs list.");
+				it.remove();
+			}
+		}
+		
+		// and update the lookup table if necessary
+		if (!allIdsReturned) {
+			initialiseMap();
 		}
 	}
 	
@@ -343,7 +357,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @param uniprotId
 	 * @return
 	 */
-	public List<UniprotHomolog> getHomolog(String uniprotId) {
+	public UniprotHomolog getHomolog(String uniprotId) {
 		return this.lookup.get(uniprotId);
 	}
 	
