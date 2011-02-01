@@ -1,16 +1,20 @@
 import gnu.getopt.Getopt;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
-import owl.core.structure.TemplateList;
 import owl.core.util.MySQLConnection;
 
 
@@ -18,9 +22,13 @@ import owl.core.util.MySQLConnection;
 public class dumpseq {
 	/*------------------------------ constants ------------------------------*/
 	
-	public static final String			PDB_DB = "pdbase";
+	private static final String			PDB_DB = "pdbase";
 
-	public static final String			GAP_CHARACTER = "-";
+	private static final String IDS_REGEX1 = "^(\\d\\w\\w\\w)(\\w)";
+	private static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
+	private static final String IDS_REGEX3 = "^(\\d\\w\\w\\w)\\s+(\\w)";
+	private static final String IDS_REGEX4 = "^(\\d\\w\\w\\w)";
+
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -101,7 +109,7 @@ public class dumpseq {
 
 
 		if (!listfile.equals("")) {	
-			pdbIds = TemplateList.readIdsListFile(new File(listfile));
+			pdbIds = readIdsListFile(new File(listfile));
 		}
 
 		int numPdbs = 0;
@@ -115,55 +123,72 @@ public class dumpseq {
 
 		for (int i=0;i<pdbIds.length;i++) {
 			String pdbCode = null;
-			String pdbChainCode = null;
+			String[] pdbChainCodes = null;
 			if (pdbIds[i].length()==4) {
 				pdbCode = pdbIds[i];
 			} else if (pdbIds[i].length()==5){
 				pdbCode = pdbIds[i].substring(0, 4);
-				pdbChainCode = pdbIds[i].substring(4);
+				pdbChainCodes = new String[1];
+				pdbChainCodes[0] = pdbIds[i].substring(4);
 			} else {
 				System.err.println("The string "+pdbIds[i]+" doesn't look like a PDB id. Skipping");
 				continue;
 			}
+			
+
+			Pdb pdb = null;
 			try {
-
-				Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-				if (pdbChainCode==null) {
-					pdbChainCode = pdb.getChains()[0];
-				} 
-				pdb.load(pdbChainCode);
-				
-				String sequence = pdb.getSequence();
-
-				File outputFile = new File(outputDir,pdbCode+pdbChainCode+".fasta");
-				
-				if (!stdout && oneOutputFile==null) {
-					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
+				pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+				if (pdbChainCodes==null) {
+					pdbChainCodes = pdb.getChains();
 				}
-				
-				if (fastaHeader) { 
-					Out.println(">"+pdbCode+pdbChainCode);
-				}
-				
-				Out.println(sequence);
-
-				if (!stdout && oneOutputFile==null) {
-					Out.close();
-				}
-				
-				if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
-					System.out.println("Wrote "+pdbCode+pdbChainCode+".fasta");
-				}
-
-				numPdbs++;
-
-			} catch (PdbLoadError e) {
-				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
+				continue;
 			} catch (SQLException e) {
-				System.err.println("SQL error for structure "+pdbCode+pdbChainCode+", error: "+e.getMessage());
+				System.err.println("SQL error for structure "+pdbCode+", error: "+e.getMessage());
+				continue;
+			} catch (PdbLoadError e) {
+				System.err.println("Error loading pdb data for " + pdbCode +", specific error: "+e.getMessage());
+				continue;
 			}
+
+			for (String pdbChainCode:pdbChainCodes) {
+
+				try {
+					pdb.load(pdbChainCode);
+
+					String sequence = pdb.getSequence();
+
+					File outputFile = new File(outputDir,pdbCode+pdbChainCode+".fasta");
+
+					if (!stdout && oneOutputFile==null) {
+						Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
+					}
+
+					if (fastaHeader) { 
+						Out.println(">"+pdbCode+pdbChainCode);
+					}
+
+					Out.println(sequence);
+
+					if (!stdout && oneOutputFile==null) {
+						Out.close();
+					}
+
+					if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
+						System.out.println("Wrote "+pdbCode+pdbChainCode+".fasta");
+					}
+
+					numPdbs++;
+				} catch (PdbLoadError e) {
+					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
+				}
+
+			}
+
+
+
 
 		}
 
@@ -179,5 +204,58 @@ public class dumpseq {
 
 	} 
 		
+
+	/**
+	 * Reads a list file containing a list of pdb codes and chain codes in 3 possible formats:
+	 * - 1 column pdbCodes+chainCodes, e.g. 1bxyA
+	 * - 1 column underscore-separated pdbCodes and chainCodes, e.g. 1bxy_A
+	 * - 2 colums tab/spaces-separated pdbCodes and chainCodes, e.g. 1bxy A or 1bxy   A
+	 * See the IDS_REGEX constants of this class for the regex that we are using.
+	 * A mix of the formats is also tolerated.
+	 * Chain codes can only be a 1 letter code (so we must use an "A" for NULL codes)
+	 * @param listFile
+	 * @return an array of pdbCodes(lower case)+chainCodes(conserving case) in the format 1bxyA or pdbCodes only e.g. 1bxy
+	 * @throws IOException
+	 */
+	public static String[] readIdsListFile(File listFile) throws IOException {
+		ArrayList<String> codesAL = new ArrayList<String>(); 
+
+		BufferedReader fileIn = new BufferedReader(new FileReader(listFile));
+		String line;
+		int lineCount=0;
+		while((line = fileIn.readLine()) != null) {
+			lineCount++;
+			if (line.length()!=0 && !line.startsWith("#")) {
+				Pattern p1 = Pattern.compile(IDS_REGEX1);
+				Matcher m1 = p1.matcher(line);
+				Pattern p2 = Pattern.compile(IDS_REGEX2);
+				Matcher m2 = p2.matcher(line);
+				Pattern p3 = Pattern.compile(IDS_REGEX3);
+				Matcher m3 = p3.matcher(line);				
+				Pattern p4 = Pattern.compile(IDS_REGEX4);
+				Matcher m4 = p4.matcher(line);
+				
+				if (m1.matches()) {
+					codesAL.add(m1.group(1).toLowerCase()+m1.group(2));
+				} 
+				else if (m2.matches()) {
+					codesAL.add(m2.group(1).toLowerCase()+m2.group(2));
+				} 
+				else if (m3.matches()){
+					codesAL.add(m3.group(1).toLowerCase()+m3.group(2));
+				}
+				else if (m4.matches()) {
+					codesAL.add(m4.group(1));
+				}
+				else {
+					System.err.println("Line "+lineCount+" in list file "+listFile+" is not in any of the recognised pdbCode+chainCode formats");
+				}
+			
+			}
+		}
+		String[] codes = new String[codesAL.size()];
+		codesAL.toArray(codes);
+		return codes;
+	}
 
 }
