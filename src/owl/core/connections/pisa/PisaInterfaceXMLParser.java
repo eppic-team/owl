@@ -37,7 +37,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String TYPE_TAG = "type";
 	private static final String INT_AREA_TAG = "int_area";
 	private static final String	INT_SOLV_EN_TAG = "int_solv_en";
-	//private static final String	PVALUE_TAG = "pvalue";
+	private static final String	PVALUE_TAG = "pvalue";
 	private static final String CHAIN_ID_TAG = "chain_id";
 	private static final String CLASS_TAG = "class";
 	
@@ -160,8 +160,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(INT_SOLV_EN_TAG)){
 					initValueReading();
-				//} else if (name.equals(PVALUE_TAG)){
-				//	initValueReading();
+				} else if (name.equals(PVALUE_TAG)){
+					initValueReading();
 				} else if (name.equals(MOLECULE_TAG)) {
 					inMolecule = true;
 					currentPisaMolecule = new PisaMolecule();
@@ -250,8 +250,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					currentPisaInterface.setInterfaceArea(Double.parseDouble(flushValue()));
 				} else if (name.equals(INT_SOLV_EN_TAG)){
 					currentPisaInterface.setSolvEnergy(Double.parseDouble(flushValue()));
-				//} else if (name.equals(PVALUE_TAG)){
-				//	currentPisaInterface.setSolvEnergyPvalue(Double.parseDouble(flushValue()));
+				} else if (name.equals(PVALUE_TAG)){
+					currentPisaInterface.setSolvEnergyPvalue(Double.parseDouble(flushValue()));
 				} 
 				
 			}
