@@ -6,6 +6,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Properties;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -27,6 +28,7 @@ import owl.core.structure.Residue;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
+import owl.tests.TestsSetup;
 
 
 
@@ -38,12 +40,16 @@ public class TinkerRunnerTest {
 	private static final String CT = "Cb";
 	private static final double CUTOFF = 8;
 	
-	private static final String TINKERBINDIR = "/project/StruPPi/Software/tinker/bin";
-	private static final String DISTGEOM_EXE = "distgeom.32.static.maxatm40000";
-	private static final String PRMFILE = "/project/StruPPi/Software/tinker/amber/amber99.prm";
+	private static String TINKERBINDIR;
+	private static String DISTGEOM_EXE;
+	private static String PRMFILE;
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		Properties p = TestsSetup.readPaths();
+		TINKERBINDIR = p.getProperty("TINKERBINDIR");
+		DISTGEOM_EXE = p.getProperty("DISTGEOM_EXE");
+		PRMFILE = p.getProperty("PRMFILE");
 	}
 
 	@AfterClass
