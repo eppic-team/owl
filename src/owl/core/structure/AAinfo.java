@@ -440,21 +440,5 @@ public class AAinfo {
 	public static Set<String> getAtomsForCTAndRes(String ct, String aa) {
 		return cts.get(ct).get(aa);
 	} 
-	
-	/**
-	 * Gets the identifier for gap-characters in three-letter-code-sequences. 
-	 * @return a three letter code representation of the gap character.
-	 */
-	public static String getGapCharacterThreeLetter() {
-	    return "GAP";
-	}
-	
-	/**
-	 * Returns the one letter representation of a gap in a protein sequence
-	 * @return a one letter representation of a gap in a protein sequence
-	 */
-	public static char getGapCharacterOneLetter() {
-	    return '-';
-	}
-	
+		
 }
