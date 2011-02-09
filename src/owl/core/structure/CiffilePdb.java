@@ -552,7 +552,7 @@ public class CiffilePdb extends Pdb {
 				if (AminoAcid.isStandardAA(res_type)){
 					sequence+=AminoAcid.three2one(res_type);
 				} else {
-					sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
+					sequence+=AminoAcid.XXX.getOneLetterCode();
 				}
 				// pdbresser2resser
 				pdbresser2resser.put(pdb_res_serial_with_icode,res_serial);

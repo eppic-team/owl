@@ -9,6 +9,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -209,7 +210,7 @@ public class DbRIGraph extends RIGraph {
 			checkCount++;
 			int num=rsst.getInt(1);
 			String res=rsst.getString(2);
-			RIGNode node = new RIGNode(num,AAinfo.oneletter2threeletter(res),secondaryStructure.getSecStrucElement(num));
+			RIGNode node = new RIGNode(num,AminoAcid.one2three(res.charAt(0)),secondaryStructure.getSecStrucElement(num));
 			this.addVertex(node); // this takes care of updating the serials2nodes map
 		}
 				

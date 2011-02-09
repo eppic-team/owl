@@ -98,8 +98,8 @@ public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 				Integer fVal = pair.getFirst(), sVal = pair.getSecond();
 				int first = pdb.getResSerFromAtomSer(fVal.intValue()), secon = pdb.getResSerFromAtomSer(sVal.intValue());
 				Character c1  = new Character(seq.charAt(first-1)), c2 = new Character(seq.charAt(secon-1));				
-				addVertex(new RIGNode(first,AAinfo.oneletter2threeletter(c1.toString())));
-				addVertex(new RIGNode(secon,AAinfo.oneletter2threeletter(c2.toString())));
+				addVertex(new RIGNode(first,AminoAcid.one2three(c1)));
+				addVertex(new RIGNode(secon,AminoAcid.one2three(c2)));
 				addEdgeIJ(first,secon);
 			}
 		}

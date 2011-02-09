@@ -1,6 +1,6 @@
 package owl.core.structure.graphs;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.features.SecStrucElement;
 
 /**
@@ -45,7 +45,7 @@ public class RIGNode {
 	}
 	
 	public String toString() {
-		return residueSerial+AAinfo.threeletter2oneletter(residueType);
+		return residueSerial+""+AminoAcid.three2one(residueType);
 	}
 	
 	/**

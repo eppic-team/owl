@@ -14,6 +14,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 import owl.embed.contactmaps.Individuals;
 
 import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
@@ -175,8 +176,8 @@ public class ConePeeler extends RIGraph {
 			for(Pair<Integer> pair: distMap.keySet()){
 				if(distMap.get(pair).doubleValue()<=cutOff){
 					int fVal = pair.getFirst().intValue(), sVal = pair.getSecond().intValue();
-					RIGNode node1 = new RIGNode(fVal,AAinfo.oneletter2threeletter(Character.toString(seq.charAt(fVal-1))));
-					RIGNode node2 = new RIGNode(sVal,AAinfo.oneletter2threeletter(Character.toString(seq.charAt(sVal-1))));
+					RIGNode node1 = new RIGNode(fVal,AminoAcid.one2three(seq.charAt(fVal-1)));
+					RIGNode node2 = new RIGNode(sVal,AminoAcid.one2three(seq.charAt(sVal-1)));
 					addVertex(node1);addVertex(node2); addEdgeIJ(fVal,sVal);
 				}
 			}

@@ -2,7 +2,7 @@ package owl.core.structure.graphs;
 
 import java.io.*;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.util.FileFormatError;
 
@@ -53,8 +53,7 @@ public class CaspRRFileRIGraph extends RIGraph {
 		if (sequence == null || sequence.equals("")) throw new FileFormatError("No sequence found in CASP RR file " + fileName);
 		this.fullLength = sequence.length();
 		for (int i=0;i<sequence.length();i++){
-			String letter = String.valueOf(sequence.charAt(i));
-			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(letter));
+			RIGNode node = new RIGNode(i+1,AminoAcid.one2three(sequence.charAt(i)));
 			this.addVertex(node); // this takes care of updating the serials2nodes map
 		}
 

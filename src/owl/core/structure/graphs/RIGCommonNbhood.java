@@ -3,7 +3,7 @@ package owl.core.structure.graphs;
 import java.util.TreeMap;
 import java.util.Collections;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 
 public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 	
@@ -42,7 +42,7 @@ public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
 				motif+=gap;
-				motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());
+				motif+=AminoAcid.three2one(this.get(i).getResidueType());
 				gapSize=0;
 				gap="";
 			} else if (i==iNode.getResidueSerial()){
@@ -69,7 +69,7 @@ public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 		int max=Math.max(Math.max(iNode.getResidueSerial(),jNode.getResidueSerial()), Collections.max(this.keySet()));
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
-				motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());	
+				motif+=AminoAcid.three2one(this.get(i).getResidueType());	
 			} else if (i==iNode.getResidueSerial()){
 				motif+="x";
 			} else if (i==jNode.getResidueSerial()){
@@ -87,7 +87,7 @@ public class RIGCommonNbhood extends TreeMap<Integer,RIGNode> {
 		int max=Math.max(Math.max(iNode.getResidueSerial(),jNode.getResidueSerial()), Collections.max(this.keySet()));
 		for (int i=min;i<=max;i++){
 			if (this.containsKey(i)){
-				motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());	
+				motif+=AminoAcid.three2one(this.get(i).getResidueType());	
 			} else if (i==iNode.getResidueSerial()){
 				motif+="x";
 			} else if (i==jNode.getResidueSerial()){

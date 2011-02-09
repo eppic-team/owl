@@ -23,7 +23,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.CrystalCell;
 import owl.core.structure.Pdb;
@@ -292,7 +292,7 @@ public class PdbParsersTest {
 						String seq = pdbfilePdb.getSequence();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
 							Assert.assertEquals(pdbfilePdb.getResTypeFromResSerial(resser), 
-												AAinfo.oneletter2threeletter(String.valueOf(seq.charAt(resser-1))));
+												AminoAcid.one2three(seq.charAt(resser-1)));
 							// at least 1 atom per observed residue
 							Assert.assertTrue(pdbfilePdb.getResidue(resser).getNumAtoms()>0);
 							// at least the CA atom must be present, doesn't work for all, e.g. 2cioB residue 80

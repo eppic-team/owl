@@ -22,6 +22,7 @@ import java.util.TreeSet;
 import javax.vecmath.GMatrix;
 
 import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -70,7 +71,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
 		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
 		for(int i=0; i < sequence.length(); i++) {
-			RIGNode node = new RIGNode(i+1,AAinfo.oneletter2threeletter(Character.toString(sequence.charAt(i))));
+			RIGNode node = new RIGNode(i+1,AminoAcid.one2three(sequence.charAt(i)));
 			this.addVertex(node); // this also updates the serials2nodes map
 		}
 	}
@@ -543,7 +544,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		stmt = conn.createStatement();
 		for (int resser:this.getSerials()) {			
 			RIGNode node = this.getNodeFromSerial(resser);
-			String res = AAinfo.threeletter2oneletter(node.getResidueType());
+			String res = Character.toString(AminoAcid.three2one(node.getResidueType()));
 			RIGNbhood nbh = this.getNbhood(node);
 			String secStructType = null;
 			String secStructId = null;
@@ -608,8 +609,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		for (RIGEdge cont:getEdges()){
 			RIGNode i_node = getEndpoints(cont).getFirst();
 			RIGNode j_node = getEndpoints(cont).getSecond();
-			String i_res = AAinfo.threeletter2oneletter(i_node.getResidueType());
-			String j_res = AAinfo.threeletter2oneletter(j_node.getResidueType());
+			char i_res = AminoAcid.three2one(i_node.getResidueType());
+			char j_res = AminoAcid.three2one(j_node.getResidueType());
 
 			String i_secStructType = null;
 			String i_secStructId = null;
@@ -789,7 +790,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		PrintStream nodesOut = new PrintStream(new FileOutputStream(graphid+"_nodes.txt"));
 		for (int resser:this.getSerials()) {			
 			RIGNode node = this.getNodeFromSerial(resser);
-			String res = AAinfo.threeletter2oneletter(node.getResidueType());
+			String res = Character.toString(AminoAcid.three2one(node.getResidueType()));
 			RIGNbhood nbh = this.getNbhood(node);			
 			String secStructType = "\\N";
 			String secStructId = "\\N";
@@ -860,8 +861,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		for (RIGEdge cont:getEdges()){
 			RIGNode i_node = getEndpoints(cont).getFirst();
 			RIGNode j_node = getEndpoints(cont).getSecond();
-			String i_res = AAinfo.threeletter2oneletter(i_node.getResidueType());
-			String j_res = AAinfo.threeletter2oneletter(j_node.getResidueType());
+			char i_res = AminoAcid.three2one(i_node.getResidueType());
+			char j_res = AminoAcid.three2one(j_node.getResidueType());
 			
 			String i_secStructType = "\\N";
 			String i_secStructId = "\\N";
@@ -1122,7 +1123,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out = new PrintStream(new FileOutputStream(filePrefix+"nodes.txt"));
 		for (int resser:this.getSerials()) {
 			RIGNode node = this.getNodeFromSerial(resser);
-			String res = AAinfo.threeletter2oneletter(node.getResidueType());
+			String res = Character.toString(AminoAcid.three2one(node.getResidueType()));
 			Out.printf(Locale.US,resser+"\t"+chainCode+"\t"+resser+"\t"+res+"\t"+degree(node)+"\t"+degree(node)+"\n");
 			
 		}

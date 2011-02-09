@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.util.FileFormatError;
 
@@ -145,7 +145,7 @@ public class FileRIGraph extends RIGraph {
 			int maxResSer = Collections.max(allserials);
 			sequence = "";
 			for (int resser=1;resser<=maxResSer;resser++) {
-				sequence+=AAinfo.UNKNOWN_UNOBSERVED_RES_ONE_LETTER;
+				sequence+=AminoAcid.XXX.getOneLetterCode();
 			}
 		}
 		
@@ -159,8 +159,7 @@ public class FileRIGraph extends RIGraph {
 		for (int serial:allserials){
 			if (serial>sequence.length()) 
 				throw new FileFormatError("Residue serial "+serial+" found in edges list of contact map file "+contactsfile+" is bigger than length of sequence");
-			String letter = String.valueOf(sequence.charAt(serial-1));
-			RIGNode node = new RIGNode(serial,AAinfo.oneletter2threeletter(letter));
+			RIGNode node = new RIGNode(serial,AminoAcid.one2three(sequence.charAt(serial-1)));
 			this.addVertex(node);
 		}
 

@@ -15,7 +15,7 @@ import javax.vecmath.Vector3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Residue;
 import owl.core.structure.features.SecStrucElement;
 import owl.gmbp.CMPdb_sphoxel;
@@ -139,8 +139,8 @@ public class RIGGeometry {
 //			System.out.println("TransRotCoord Cartesian: "+coord.x+","+coord.y+","+coord.z
 //					+" SPH: "+coord_sph.x+","+coord_sph.y+","+coord_sph.z);
 //			System.out.printf("TransRotCoord i->j Cartesian: %s Spherical: %s   j->i Cartesian: %s Spherical: %s \n", coord_J, coord_sph_J, coord_I, coord_sph_I);
-			char iResT = AAinfo.threeletter2oneletter(iResType).charAt(0);
-			char jResT = AAinfo.threeletter2oneletter(jResType).charAt(0);
+			char iResT = AminoAcid.three2one(iResType);
+			char jResT = AminoAcid.three2one(jResType);
 			char iSS, jSS;
 			SecStrucElement ssElem = iNode.getSecStrucElement();
 			if (ssElem == null)

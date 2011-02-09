@@ -311,7 +311,7 @@ public class PdbfilePdb extends Pdb {
 							if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
 								sequence+= AminoAcid.three2one(line.substring(i, i+3));
 							} else {
-								sequence+= AAinfo.NONSTANDARD_AA_ONE_LETTER;
+								sequence+= AminoAcid.XXX.getOneLetterCode();
 							}
 						}
 					}
@@ -494,7 +494,7 @@ public class PdbfilePdb extends Pdb {
 				if (this.containsResidue(resser)) {
 					sequence += this.getResidue(resser).getAaType().getOneLetterCode();
 				} else {
-					sequence += AAinfo.UNKNOWN_UNOBSERVED_RES_ONE_LETTER;
+					sequence += AminoAcid.XXX.getOneLetterCode();
 				}
 			}
 			// 3) we set fullLength

@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.TreeMap;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.util.MySQLConnection;
 
 
@@ -69,16 +69,16 @@ public class NbhoodBackgrnd {
 		System.out.println("Hashing...");
 		hash = new HashMap<String, ArrayList<RIGNbhood>>();
 		for (RIGNbhood bckgrdNbh:allNbhoods) {
-			for (String aa1:AAinfo.getAAs()) {
-				for (String aa2:AAinfo.getAAs()) {
-					if (aa2.compareTo(aa1)>=0 && bckgrdNbh.containsResType(aa1) && bckgrdNbh.containsResType(aa2)) {
+			for (AminoAcid aa1:AminoAcid.getAllStandardAAs()) {
+				for (AminoAcid aa2:AminoAcid.getAllStandardAAs()) {
+					if (aa2.getThreeLetterCode().compareTo(aa1.getThreeLetterCode())>=0 && bckgrdNbh.containsResType(aa1.getThreeLetterCode()) && bckgrdNbh.containsResType(aa2.getThreeLetterCode())) {
 						//ResPair pair = new ResPair(aa1,aa2);
-						if (hash.containsKey(aa1+aa2)) {
-							hash.get(aa1+aa2).add(bckgrdNbh);
+						if (hash.containsKey(aa1.getThreeLetterCode()+aa2.getThreeLetterCode())) {
+							hash.get(aa1.getThreeLetterCode()+aa2.getThreeLetterCode()).add(bckgrdNbh);
 						} else {
 							ArrayList<RIGNbhood> al = new ArrayList<RIGNbhood>();
 							al.add(bckgrdNbh);
-							hash.put(aa1+aa2, al);
+							hash.put(aa1.getThreeLetterCode()+aa2.getThreeLetterCode(), al);
 						}
 					}
 				}
@@ -105,8 +105,8 @@ public class NbhoodBackgrnd {
 			if (nbh.match(bckgrdNbh)) {
 				countTotal++;
 				int i = 0;
-				for (String aa:AAinfo.getAAs()) {
-					if (aa.equals(bckgrdNbh.getCentralResidue().getResidueType())) {
+				for (AminoAcid aa:AminoAcid.getAllStandardAAs()) {
+					if (aa.getThreeLetterCode().equals(bckgrdNbh.getCentralResidue().getResidueType())) {
 						countPerAA[i]++;
 					}
 					i++;
@@ -115,11 +115,11 @@ public class NbhoodBackgrnd {
 		}
 		TreeMap<String,Double> dist = new TreeMap<String, Double>();
 		int i =0 ;
-		for (String aa:AAinfo.getAAs()) {
+		for (AminoAcid aa:AminoAcid.getAllStandardAAs()) {
 			if (countTotal!=0) {
-				dist.put(aa,(double) countPerAA[i]/countTotal);
+				dist.put(aa.getThreeLetterCode(),(double) countPerAA[i]/countTotal);
 			} else {
-				dist.put(aa,0.0); // we assign 0 as the frequency when there's no observations at all (countTotal = 0)
+				dist.put(aa.getThreeLetterCode(),0.0); // we assign 0 as the frequency when there's no observations at all (countTotal = 0)
 			}
 			i++;
 		}

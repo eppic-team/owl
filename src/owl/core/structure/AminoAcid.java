@@ -1,6 +1,7 @@
 package owl.core.structure;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -37,10 +38,10 @@ public enum AminoAcid {
 	 ALA ( 1, "Alanine",       'A', "ALA",  1, -0.20, true,  false, false, false, false, false, false, true,  true ,  3,  3,  2,  1,  2,  1), 
 	 ARG ( 2, "Arginine",      'R', "ARG",  7,  1.43, false, false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2), 
 	 ASN ( 3, "Asparagine",    'N', "ASN",  4,  0.69, false, false, false, true,  false, false, false, true,  false, 12,  8,  6,  4,  4,  2),
-	 ASP ( 4, "Aspartic acid", 'D', "ASP",  4,  0.72, false, false, false, true,  true,  false, true,  true,  false, 11,  8,  6,  5,  4,  2),
+	 ASP ( 4, "Aspartic Acid", 'D', "ASP",  4,  0.72, false, false, false, true,  true,  false, true,  true,  false, 11,  8,  6,  5,  4,  2),
 	 CYS ( 5, "Cysteine",      'C', "CYS",  2, -0.67, true,  false, false, true,  false, false, false, true,  false,  2,  2,  1,  1,  1,  1),
 	 GLN ( 6, "Glutamine",     'Q', "GLN",  5,  0.74, false, false, false, true,  false, false, false, false, false, 13,  8,  6,  4,  4,  2),
-	 GLU ( 7, "Glutamic acid", 'E', "GLU",  5,  1.09, false, false, false, true,  true,  false, true,  false, false, 10,  8,  6,  5,  4,  2),
+	 GLU ( 7, "Glutamic Acid", 'E', "GLU",  5,  1.09, false, false, false, true,  true,  false, true,  false, false, 10,  8,  6,  5,  4,  2),
 	 GLY ( 8, "Glycine",       'G', "GLY",  0, -0.06, true,  false, false, false, false, false, false, true,  true ,  4,  4,  2,  2,  2,  1),
 	 HIS ( 9, "Histidine",     'H', "HIS",  6, -0.04, true,  true,  false, true,  true,  true,  false, false, false, 15, 10,  8,  3,  4,  2),
 	 ILE (10, "Isoleucine",    'I', "ILE",  4, -0.74, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
@@ -95,6 +96,7 @@ public enum AminoAcid {
 	private static HashMap<Character, AminoAcid> one2aa = initOne2aa();
 	private static HashMap<String, AminoAcid> three2aa = initThree2aa();
 	private static HashMap<Integer, AminoAcid> num2aa = initNum2aa();
+	private static HashMap<String, AminoAcid> full2aa = initFull2aa();
 	private static HashMap<Integer, List<AminoAcid>> red15toaa = initRedAlphIdx2aalist(15);
 	private static HashMap<Integer, List<AminoAcid>> red10toaa = initRedAlphIdx2aalist(10);
 	private static HashMap<Integer, List<AminoAcid>> red8toaa = initRedAlphIdx2aalist(8);
@@ -135,10 +137,21 @@ public enum AminoAcid {
 	}
 	
 	/*---------------------- standard methods --------------------------*/
-	public int getNumber() { return this.number; }
-	public String getName() { return this.name; }
-	public char getOneLetterCode() { return this.oneLetterCode; }
-	public String getThreeLetterCode() { return this.threeLetterCode; }
+	public int getNumber() { 
+		return this.number; 
+	}
+	
+	public String getName() { 
+		return this.name; 
+	}
+	
+	public char getOneLetterCode() { 
+		return this.oneLetterCode; 
+	}
+	
+	public String getThreeLetterCode() { 
+		return this.threeLetterCode; 
+	}
 	
 	/**
 	 * Returns the number of side chain heavy (non-Hydrogen) atoms for this
@@ -298,6 +311,15 @@ public enum AminoAcid {
 	}
 	
 	/**
+	 * Get amino acid object by full aminoacid name
+	 * @param fullName the full name of an amino acid with first letter capitalised (e.g. "Alanine" or "Aspartic Acid") 
+	 * @return an amino acid object of the given type or null if full name is invalid
+	 */
+	public static AminoAcid getByFullName(String fullName) {
+		return full2aa.get(fullName);
+	}
+	
+	/**
 	 * Get amino acids in ascending order of hydrophobicity.
 	 * @return an array containing the amino acids in order of hydrophobicity
 	 */
@@ -412,6 +434,20 @@ public enum AminoAcid {
 		return false;
 	}
 	
+	/**
+	 * Returns a list of all 20 standard amino acids as a Collection of AminoAcid objects.
+	 * @return
+	 */
+	public static Collection<AminoAcid> getAllStandardAAs() {
+		Collection<AminoAcid> list = new ArrayList<AminoAcid>();
+		for (AminoAcid aa:AminoAcid.values()) {
+			if (aa.getNumber()<21 && aa.getNumber()>0) {
+				list.add(aa);
+			}
+		}
+		return list;
+	}
+	
 	/*----------------------- private methods --------------------------*/
 	/**
 	 * initialize static map to get amino acid by its ordinal number
@@ -487,6 +523,14 @@ public enum AminoAcid {
 		}
 		return three2aa;
 	}	
+	
+	private static HashMap<String, AminoAcid> initFull2aa()	{
+		HashMap<String, AminoAcid> full2aa = new HashMap<String, AminoAcid>();
+		for (AminoAcid aa:AminoAcid.values()) {
+			full2aa.put(aa.getName(),aa);
+		}
+		return full2aa;
+	}
 	
 	/*--------------------------- main ---------------------------------*/
 	

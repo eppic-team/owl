@@ -88,11 +88,6 @@ public class AminoAcidTest {
 				// check validation methods
 				assertTrue(AminoAcid.isStandardAA(aa.getOneLetterCode()));
 				assertTrue(AminoAcid.isStandardAA(aa.getThreeLetterCode()));
-				AAinfo.isValidAA(aa.getThreeLetterCode());
-				// compare 3 to 1 translation to AAinfo
-				assertEquals(AAinfo.threeletter2oneletter(aa.getThreeLetterCode()),String.valueOf(aa.getOneLetterCode()));
-				// compare 1 to 3 translation to AAinfo
-				assertEquals(AAinfo.oneletter2threeletter(String.valueOf(aa.getOneLetterCode())),aa.getThreeLetterCode());
 			}
 		}
 	}

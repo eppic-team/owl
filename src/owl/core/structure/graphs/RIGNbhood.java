@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.TreeMap;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 
 
 /**
@@ -199,7 +199,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 		for (int i=this.firstKey();i<=this.lastKey();i++) {
 			if (this.containsKey(i)){
 				if (i!=centralResidue.getResidueSerial()){
-					motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());
+					motif+=AminoAcid.three2one(this.get(i).getResidueType());
 				} else {
 					motif+=centralLetter;
 				}
@@ -218,7 +218,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 			if (this.containsKey(i)){
 				if (i!=centralResidue.getResidueSerial()){
 					motif+=gap;
-					motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());
+					motif+=AminoAcid.three2one(this.get(i).getResidueType());
 					gapSize=0;
 					gap="";
 				} else {
@@ -239,7 +239,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 		String motif="";
 		for (int i:this.keySet()) {
 			if (i!=centralResidue.getResidueSerial()){
-				motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());
+				motif+=AminoAcid.three2one(this.get(i).getResidueType());
 			} else {
 				motif+=centralLetter;
 			}
@@ -255,7 +255,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 				RIGEdge edge = graph.findEdge(centralResidue,this.get(i));
 				double weight = edge.getWeight();
 				if (weight>0) { // SC dominated
-					motif+=AAinfo.threeletter2oneletter(this.get(i).getResidueType());
+					motif+=AminoAcid.three2one(this.get(i).getResidueType());
 				} else if (weight<0) { //BB dominated
 					// for the sec structure we take the "seen" node (so not the central but the other), following Michael's convention
 					char ssType = this.get(i).getSecStrucElement().getType();
@@ -291,7 +291,7 @@ public class RIGNbhood extends TreeMap<Integer,RIGNode> {
 		String ressers="";
 		for (int resser:this.keySet()){
 			if (resser!=centralResidue.getResidueSerial()) {
-				ressers += AAinfo.threeletter2oneletter(this.get(resser).getResidueType());
+				ressers += AminoAcid.three2one(this.get(resser).getResidueType());
 			} else {
 				ressers += 'x';
 			}

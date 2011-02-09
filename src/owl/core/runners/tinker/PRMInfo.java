@@ -7,7 +7,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
 
 
@@ -102,10 +101,11 @@ public class PRMInfo {
 				atomName = "O";
 			}
 			
-			for (String name:AAinfo.getAAFullNames()) {
+			for (AminoAcid aa:AminoAcid.getAllStandardAAs()) {
+			//for (String name:AAinfo.getAAFullNames()) {
 				// here we can't just call AAinfo.isValidFullName as we test only if the string STARTS like a full amino acid name
 				// this is because some aminoacid names are 1 word and some 2 words (e.g. Aspartic Acid) 
-				if(molName.startsWith(name)) molName=AAinfo.fullname2threeletter(name);
+				if(molName.startsWith(aa.getName())) molName=aa.getThreeLetterCode();
 			}
 			
 			if (AminoAcid.isStandardAA(molName.substring(0, 3))) {

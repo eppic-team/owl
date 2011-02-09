@@ -14,10 +14,9 @@ import java.util.regex.Pattern;
 
 
 /**
- * Class with static methods to get aminoacids and contact type information
+ * Class with static methods to get contact type information
  * example usage:
  *  AAinfo.isValidContactType("Cg"); // returns true
- *  AAinfo.three2oneletter("ALA"); // returns "A"
  *  
  * The contact types and aas2atoms data are defined in separate text file contactTypes.dat
  * New contact types can be added simply by editing the file 
@@ -47,28 +46,13 @@ public class AAinfo {
 	// if two adjacent CAs are more than this distance apart, we assume a chain break (value taken from Casp assessment)
 	public static final double DIST_CHAIN_BREAK=4.5;
 
-	// 1/3 letter code we assign to nonstandard aas to use in sequence
-	public static final String NONSTANDARD_AA_ONE_LETTER="X";
-	public static final String NONSTANDARD_AA_THREE_LETTER="XXX";
-	
-	// 1/3 letter code for unknown unobserved residues (used when reading from pdb file with no SEQRES and we have to introduce gaps)
-	public static final String UNKNOWN_UNOBSERVED_RES_ONE_LETTER = "X"; 
-	public static final String UNKNOWN_UNOBSERVED_RES_THREE_LETTER = "XXX";
-	
-	
 	/*----------------------- "member" variables ---------------------------*/
 	private final static Map<String,Double> lowerBoundDistances = initialiseLowerBoundDistances(); 
-	
-	private final static Map<String,String> one2threeletter = initialiseOne2threeletter();
-	private final static Map<String,String> three2oneletter = initialiseThree2oneletter();
-	private final static Set<String> aas = initialiseAAs();
 	
 	private final static Map<String,ContactType> cts = initialiseCTsFromFile();
 	
 	private final static Map<String,Set<String>> aas2heavyAtoms = initialiseAas2heavyAtoms(); // grabs the data from the cts map above 
 	private final static Map<String,Set<String>> aas2atoms = initialiseAas2atoms(); // grabs the data from the cts map above
-	
-	private final static Map<String,String> fullname2threeletter = initialiseFullNames2Threeletter();
 	
 	private final static Map<String,double[]> aapairs2bounds = initialiseAapairs2BoundsFromFile();
 	
@@ -80,110 +64,6 @@ public class AAinfo {
 		lowerBoundDistances.put("Cg", DIST_MIN);
 		lowerBoundDistances.put("C", DIST_MIN_CA);
 		return lowerBoundDistances;
-	}
-	
-	private static Map<String,String> initialiseOne2threeletter() {
-		Map<String,String> one2threeletter = new HashMap<String,String>();
-		one2threeletter.put("C", "CYS");
-		one2threeletter.put("D", "ASP");
-		one2threeletter.put("S", "SER");
-		one2threeletter.put("Q", "GLN");
-		one2threeletter.put("K", "LYS");
-		one2threeletter.put("I", "ILE");
-		one2threeletter.put("P", "PRO");
-		one2threeletter.put("T", "THR");
-		one2threeletter.put("F", "PHE");
-		one2threeletter.put("A", "ALA");
-		one2threeletter.put("G", "GLY");
-		one2threeletter.put("H", "HIS");
-		one2threeletter.put("E", "GLU");
-		one2threeletter.put("L", "LEU");
-		one2threeletter.put("R", "ARG");
-		one2threeletter.put("W", "TRP");
-		one2threeletter.put("V", "VAL");
-		one2threeletter.put("N", "ASN");
-		one2threeletter.put("Y", "TYR");
-		one2threeletter.put("M", "MET");
-		one2threeletter.put(NONSTANDARD_AA_ONE_LETTER, NONSTANDARD_AA_THREE_LETTER);
-		one2threeletter.put(UNKNOWN_UNOBSERVED_RES_ONE_LETTER, UNKNOWN_UNOBSERVED_RES_THREE_LETTER);
-		return one2threeletter;
-	}
-	
-	private static Map<String,String> initialiseThree2oneletter() {
-		Map<String,String> three2oneletter = new HashMap<String,String>();
-		three2oneletter.put("CYS", "C");
-		three2oneletter.put("ASP", "D");
-		three2oneletter.put("SER", "S");
-		three2oneletter.put("GLN", "Q");
-		three2oneletter.put("LYS", "K");
-		three2oneletter.put("ILE", "I");
-		three2oneletter.put("PRO", "P");
-		three2oneletter.put("THR", "T");
-		three2oneletter.put("PHE", "F");
-		three2oneletter.put("ALA", "A");
-		three2oneletter.put("GLY", "G");
-		three2oneletter.put("HIS", "H");
-		three2oneletter.put("GLU", "E");
-		three2oneletter.put("LEU", "L");
-		three2oneletter.put("ARG", "R");
-		three2oneletter.put("TRP", "W");
-		three2oneletter.put("VAL", "V");
-		three2oneletter.put("ASN", "N");
-		three2oneletter.put("TYR", "Y");
-		three2oneletter.put("MET", "M");
-		three2oneletter.put(NONSTANDARD_AA_THREE_LETTER, NONSTANDARD_AA_ONE_LETTER);
-		three2oneletter.put(UNKNOWN_UNOBSERVED_RES_THREE_LETTER, UNKNOWN_UNOBSERVED_RES_ONE_LETTER);
-		return three2oneletter;
-	}
-	
-	private static Map<String,String> initialiseFullNames2Threeletter() {
-		Map<String,String> fullnames2threeletter = new HashMap<String,String>();
-		fullnames2threeletter.put("Alanine","ALA");
-		fullnames2threeletter.put("Arginine","ARG");
-		fullnames2threeletter.put("Asparagine","ASN");
-		fullnames2threeletter.put("Aspartic Acid","ASP");
-		fullnames2threeletter.put("Cysteine","CYS");
-		fullnames2threeletter.put("Glutamic Acid","GLU");
-		fullnames2threeletter.put("Glutamine","GLN");
-		fullnames2threeletter.put("Glycine","GLY");
-		fullnames2threeletter.put("Histidine","HIS");
-		fullnames2threeletter.put("Isoleucine","ILE");
-		fullnames2threeletter.put("Leucine","LEU");
-		fullnames2threeletter.put("Lysine","LYS");
-		fullnames2threeletter.put("Methionine","MET");
-		fullnames2threeletter.put("Phenylalanine","PHE");
-		fullnames2threeletter.put("Proline","PRO");
-		fullnames2threeletter.put("Serine","SER");
-		fullnames2threeletter.put("Threonine","THR");
-		fullnames2threeletter.put("Tryptophan","TRP");
-		fullnames2threeletter.put("Tyrosine","TYR");
-		fullnames2threeletter.put("Valine","VAL");
-		return fullnames2threeletter;
-	}
-	
-	private static Set<String> initialiseAAs() {
-		Set<String> aas = new TreeSet<String>();
-		aas.add("TRP");
-		aas.add("CYS");
-		aas.add("GLN");
-		aas.add("ALA");
-		aas.add("VAL");
-		aas.add("LEU");
-		aas.add("ASP");
-		aas.add("SER");
-		aas.add("PRO");
-		aas.add("THR");
-		aas.add("PHE");
-		aas.add("ARG");
-		aas.add("LYS");
-		aas.add("MET");
-		aas.add("HIS");
-		aas.add("GLY");
-		aas.add("ILE");
-		aas.add("ASN");
-		aas.add("GLU");
-		aas.add("TYR");
-		return aas;
 	}
 	
 	private static Map<String,Set<String>> initialiseAas2heavyAtoms() {
@@ -290,22 +170,6 @@ public class AAinfo {
 	}
 	
 	/*----------------------- public methods ---------------------------*/
-	
-	/**
-	 * Given a three letter code returns true if it corresponds to a standard aminoacid
-	 * @return
-	 */
-	public static boolean isValidAA(String three) {
-		return aas.contains(three);
-	}
-	
-	/**
-	 * Gets all three letter code standard aminoacids in a Set
-	 * @return
-	 */
-	public static Set<String> getAAs() {
-		return aas;
-	}
 	
 	/**
 	 * Gets all contact type names in a Set
@@ -433,9 +297,9 @@ public class AAinfo {
 		String[] inputCts = ct.split("[+/]");
 		for(int i=0;i<(inputCts.length-1);i++) {
 			for(int j=(i+1);j<inputCts.length;j++) {
-				for(String aa : aas) {
-					for (String atom : cts.get(inputCts[j]).get(aa)) {
-						if (cts.get(inputCts[i]).get(aa).contains(atom)) return true;
+				for(AminoAcid aa : AminoAcid.getAllStandardAAs()) {
+					for (String atom : cts.get(inputCts[j]).get(aa.getThreeLetterCode())) {
+						if (cts.get(inputCts[i]).get(aa.getThreeLetterCode()).contains(atom)) return true;
 					}
 				}
 			}
@@ -495,54 +359,6 @@ public class AAinfo {
 			return aapairs2bounds.get(minAA+"_"+maxAA)[1];
 		}
 		return -1.0;
-	}
-	
-	/**
-	 * Converts from one letter aminoacid codes to three letter codes
-	 * If invalid input returns null
-	 * @param one
-	 * @return
-	 */
-	public static String oneletter2threeletter(String one) {
-		return one2threeletter.get(one);
-	}
-	
-	/**
-	 * Converts from three letter aminoacid codes to one letter codes
-	 * If invalid input returns null
-	 * @param three
-	 * @return
-	 */
-	public static String threeletter2oneletter(String three) {
-		return three2oneletter.get(three);
-	}
-	
-	/**
-	 * Converts from aminoacid full names (capitalised first letter, rest lower case) 
-	 * to three letter codes
-	 * @param full
-	 * @return
-	 */
-	public static String fullname2threeletter(String full){
-		return fullname2threeletter.get(full);
-	}
-	
-	/**
-	 * Returns true if given String is a valid aminoacid name
-	 * (first letter capitalised, rest lower case)
-	 * @param full
-	 * @return
-	 */
-	public static boolean isValidFullName(String full) {
-		return fullname2threeletter.keySet().contains(full);
-	}
-	
-	/**
-	 * Returns all aminoacid full names in a Set
-	 * @return
-	 */
-	public static Set<String> getAAFullNames(){
-		return fullname2threeletter.keySet();
 	}
 	
 	/**

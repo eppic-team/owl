@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.graphs.RIGNbhood;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
@@ -110,10 +110,10 @@ public class DeltaRank {
 		nbi = nbhoodi.getNeighbors();
 		nbi.add(nodeJ);
 		nbhoodiAfter = new RIGNbhood(nodeI, nbi);
-		String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodi.getNbString()+"') -	" +
-					 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodiAfter.getNbString()+"')) +" +
-					 	"((SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodj.getNbString()+"') -	" +
-							 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodjAfter.getNbString()+"')),-100);";
+		String sql = "SELECT IFNULL(((SELECT LOCATE('"+AminoAcid.three2one(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodi.getNbString()+"') -	" +
+					 	"(SELECT LOCATE('"+AminoAcid.three2one(nodeI.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodiAfter.getNbString()+"')) +" +
+					 	"((SELECT LOCATE('"+AminoAcid.three2one(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodj.getNbString()+"') -	" +
+							 	"(SELECT LOCATE('"+AminoAcid.three2one(nodeJ.getResidueType())+"',rvector) from "+db+".vectors where nbstring='"+nbhoodjAfter.getNbString()+"')),-100);";
 		try {
 			stm = conn.createStatement();
 			res = stm.executeQuery(sql);
@@ -248,8 +248,8 @@ public class DeltaRank {
 			node = graph.getNodeFromSerial(i);
 			if (node == null) { continue; }
 			nbhood = graph.getNbhood(node);
-			String sql = "SELECT IFNULL(((SELECT LOCATE('"+AAinfo.threeletter2oneletter(node.getResidueType())+"',rvector) from mw.vectors where nbstring='x') -	" +
-		 	"(SELECT LOCATE('"+AAinfo.threeletter2oneletter(node.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhood.getNbString()+"')),-100);";
+			String sql = "SELECT IFNULL(((SELECT LOCATE('"+AminoAcid.three2one(node.getResidueType())+"',rvector) from mw.vectors where nbstring='x') -	" +
+		 	"(SELECT LOCATE('"+AminoAcid.three2one(node.getResidueType())+"',rvector) from mw.vectors where nbstring='"+nbhood.getNbString()+"')),-100);";
 			try {
 				stm = conn.createStatement();
 				res = stm.executeQuery(sql);

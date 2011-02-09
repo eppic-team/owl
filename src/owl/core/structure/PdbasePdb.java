@@ -499,7 +499,7 @@ public class PdbasePdb extends Pdb {
         	if (AminoAcid.isStandardAA(res_type)){
         		sequence+=AminoAcid.three2one(res_type);
         	} else {
-        		sequence+=AAinfo.NONSTANDARD_AA_ONE_LETTER;
+        		sequence+=AminoAcid.XXX.getOneLetterCode();
         	}
         } 
         if (count==0) {

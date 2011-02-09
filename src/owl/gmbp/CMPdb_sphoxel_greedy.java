@@ -15,6 +15,7 @@ import javax.vecmath.Vector3d;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
@@ -796,8 +797,8 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 				}
 				System.out.println();
 				// create Table
-				greedy.setIRes(AAinfo.threeletter2oneletter(iResType).charAt(0)); //('T');
-				greedy.setJRes(AAinfo.threeletter2oneletter(jResType).charAt(0)); //('A');			
+				greedy.setIRes(AminoAcid.three2one(iResType)); //('T');
+				greedy.setJRes(AminoAcid.three2one(jResType)); //('A');			
 				greedy.setNbhsRes(nbhsRes); //.nbhsRes = new char[]{'V','P','F','T','G','R','I','I','A'};
 				greedy.setNbhsSer(nbSerials); // .nbSerials = new int[]{62,64,65,85,86,270,271,272,273};
 				greedy.setDiffSSType(diffSST);

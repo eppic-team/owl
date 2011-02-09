@@ -967,8 +967,8 @@ public class Individuals extends RIGraph {
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
 			int f_val = pair.getFirst().intValue(), s_val = pair.getSecond().intValue();
-			String aa1 = AAinfo.oneletter2threeletter(Character.toString(seq.charAt(f_val - 1)));
-			String aa2 = AAinfo.oneletter2threeletter(Character.toString(seq.charAt(s_val - 1)));
+			String aa1 = AminoAcid.one2three(seq.charAt(f_val - 1));
+			String aa2 = AminoAcid.one2three(seq.charAt(s_val - 1));
 			addVertex(new RIGNode(f_val,aa1));
 			addVertex(new RIGNode(s_val,aa2));
 			addEdgeIJ(f_val,s_val);
@@ -1333,8 +1333,8 @@ public class Individuals extends RIGraph {
 		Iterator<Pair<Integer>> i = getHashSet().iterator();
 		while(i.hasNext()) {
 			Pair<Integer> pair = i.next();
-			String aa1 = AAinfo.oneletter2threeletter(Character.toString(aa.charAt(pair.getFirst().intValue() - 1)));
-			String aa2 = AAinfo.oneletter2threeletter(Character.toString(aa.charAt(pair.getSecond().intValue() - 1)));
+			String aa1 = AminoAcid.one2three(aa.charAt(pair.getFirst().intValue() - 1));
+			String aa2 = AminoAcid.one2three(aa.charAt(pair.getSecond().intValue() - 1));
 			graph.addVertex(new RIGNode(pair.getFirst(), aa1));
 			graph.addVertex(new RIGNode(pair.getSecond(), aa2));
 			graph.addEdgeIJ(pair.getFirst(), pair.getSecond());
