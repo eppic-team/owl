@@ -8,7 +8,7 @@ import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.AminoAcid;
 import owl.core.structure.Atom;
 import owl.core.structure.Pdb;
 import owl.core.structure.Residue;
@@ -61,7 +61,7 @@ public class GmbpGeometry {
 		if (pdb.hasCoordinates(resser, "CA") && pdb.hasCoordinates(resser, "C") && pdb.hasCoordinates(resser, "N")) {
 			
 			// Generic code to extract the coordinates from the present amino acid 
-			Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type);
+			Set<String> atoms = AminoAcid.getAtoms(res_type);
 			for (String atom:atoms) {
 				if (pdb.hasCoordinates(resser, atom)) {// Making sure the text-book atom indeed exists! 	
 					atom_coord.put(atom, pdb.getAtomCoord(resser, atom));
@@ -193,7 +193,7 @@ public class GmbpGeometry {
 		
 		Vector3d new_origin = new Vector3d (atom_coord.get("CA")); //Defining the ORIGIN
 
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type);
+		Set<String> atoms = AminoAcid.getAtoms(res_type);
 
 		// Recomputing the coordinates/vectors with the new origin
 		HashMap<String,Vector3d> atom_coord_rotated = new HashMap<String, Vector3d>();
@@ -213,7 +213,7 @@ public class GmbpGeometry {
 		
 		Vector3d new_origin = new Vector3d (atom_coord.get("CA")); //Defining the ORIGIN
 
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type);
+		Set<String> atoms = AminoAcid.getAtoms(res_type);
 
 		// Recomputing the coordinates/vectors with the new origin
 		HashMap<String,Vector3d> atom_coord_rotated = new HashMap<String, Vector3d>();
@@ -231,7 +231,7 @@ public class GmbpGeometry {
 		// Method for getting the coordinates of the neighboring residue, "translated (shifted)" to wrt the central residue (origin).
 		// NOTE: The reference origin is passed on as a parameter. 
 
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type_nbr);
+		Set<String> atoms = AminoAcid.getAtoms(res_type_nbr);
 
 		// Recomputing the coordinates/vectors with the new origin
 		HashMap<String,Vector3d> atom_coord_rotated = new HashMap<String, Vector3d>();
@@ -248,7 +248,7 @@ public class GmbpGeometry {
 		// Method for getting the coordinates of the neighboring residue, "translated (shifted)" to wrt the central residue (origin).
 		// NOTE: The reference origin is passed on as a parameter. 
 
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type_nbr);
+		Set<String> atoms = AminoAcid.getAtoms(res_type_nbr);
 
 		// Recomputing the coordinates/vectors with the new origin
 		HashMap<String,Vector3d> atom_coord_rotated = new HashMap<String, Vector3d>();
@@ -265,7 +265,7 @@ public class GmbpGeometry {
 	private static HashMap<String,Vector3d> getCoordAfterRotation (Residue res, String res_type, HashMap<String,Vector3d> atom_coord_rotated, Matrix4d RotMatrix_4d) {
 		//Method to return coordinates after a certain transformation (as specified by a Matrix4d operator).
 		
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type);	
+		Set<String> atoms = AminoAcid.getAtoms(res_type);	
 		//=========== PERFORMING THE FIRST ROTATION WITH theta01 ANGLE ========//
 		// Computing the vectors in the rotated frame of reference
 		for (String atom:atoms) {
@@ -280,7 +280,7 @@ public class GmbpGeometry {
 	private static HashMap<String,Vector3d> getCoordAfterRotation (int resser, String res_type, Pdb pdb, HashMap<String,Vector3d> atom_coord_rotated, Matrix4d RotMatrix_4d) {
 		//Method to return coordinates after a certain transformation (as specified by a Matrix4d operator).
 		
-		Set<String> atoms = AAinfo.getAtomsForCTAndRes("ALL", res_type);	
+		Set<String> atoms = AminoAcid.getAtoms(res_type);	
 		//=========== PERFORMING THE FIRST ROTATION WITH theta01 ANGLE ========//
 		// Computing the vectors in the rotated frame of reference
 		for (String atom:atoms) {

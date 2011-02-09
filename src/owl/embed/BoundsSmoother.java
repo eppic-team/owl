@@ -7,7 +7,7 @@ import java.util.Random;
 
 import org.apache.commons.collections15.Transformer;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.ContactType;
 
 import Jama.Matrix;
 
@@ -33,7 +33,7 @@ import edu.uci.ics.jung.graph.util.EdgeType;
  */
 public class BoundsSmoother {
 	
-	private static final double HARD_SPHERES_BOUND = AAinfo.DIST_MIN_CA ;
+	private static final double HARD_SPHERES_BOUND = ContactType.DIST_MIN_CA ;
 	
 	private static final boolean DEBUG = false;
 	private static final long DEBUG_SEED = 123456;

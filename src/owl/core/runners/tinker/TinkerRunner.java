@@ -31,7 +31,7 @@ import org.ggf.drmaa.Session;
 import org.ggf.drmaa.SessionFactory;
 
 import owl.core.runners.MaxClusterRunner;
-import owl.core.structure.AAinfo;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
@@ -1750,7 +1750,7 @@ public class TinkerRunner {
 		if (!graph.getSequence().equals(reconstructedPdb.getSequence())) {
 			throw new IllegalArgumentException("Given graph and reconstructedPdb don't have identical sequence.");
 		}
-		if (!AAinfo.isValidSingleAtomContactType(ct)) {
+		if (!ContactType.isValidSingleAtomContactType(ct)) {
 			throw new IllegalArgumentException("Given contact type "+ct+" is invalid for getting violations. Only single atom contact types are supported.");
 		}
 		IntPairSet edgeSet = new IntPairSet();
@@ -1759,8 +1759,8 @@ public class TinkerRunner {
 			Pair<RIGNode> nodePair = graph.getEndpoints(edge);
 			int i = nodePair.getFirst().getResidueSerial();
 			int j = nodePair.getSecond().getResidueSerial();
-			Set<String> iatoms = AAinfo.getAtomsForCTAndRes(ct, nodePair.getFirst().getResidueType());
-			Set<String> jatoms = AAinfo.getAtomsForCTAndRes(ct, nodePair.getSecond().getResidueType());
+			Set<String> iatoms = ContactType.getAtomsForCTAndRes(ct, nodePair.getFirst().getResidueType());
+			Set<String> jatoms = ContactType.getAtomsForCTAndRes(ct, nodePair.getSecond().getResidueType());
 			// iatoms and jatoms have only 1 member (we are forcing ct to be single atom) so this is not an iteration
 			for (String iatom:iatoms) {  
 				for (String jatom:jatoms) {

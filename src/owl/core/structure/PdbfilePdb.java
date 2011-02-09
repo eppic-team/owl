@@ -450,7 +450,7 @@ public class PdbfilePdb extends Pdb {
 							if (!this.containsResidue(res_serial)) {
 								this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type),res_serial,this));
 							}
-							if (AAinfo.isValidAtomWithOXT(res_type,atom)){
+							if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
 								Residue residue = this.getResidue(res_serial);
 								residue.addAtom(new Atom(atomserial, atom, coords, residue,occupancy,bfactor));
 							}

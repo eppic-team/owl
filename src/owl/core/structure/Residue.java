@@ -314,7 +314,7 @@ public class Residue implements Iterable<Atom>, Serializable {
 	 */
 	public Residue getReducedResidue(String ct) {
 		Residue reducedResidue = new Residue(this.getAaType(), this.getSerial(), this.getParentPdb());
-		Set<String> atomCodes = AAinfo.getAtomsForCTAndRes(ct, this.getAaType().getThreeLetterCode());
+		Set<String> atomCodes = ContactType.getAtomsForCTAndRes(ct, this.getAaType().getThreeLetterCode());
 		for (String atomCode:atomCodes) {
 			if (this.containsAtom(atomCode)) {
 				reducedResidue.addAtom(this.getAtom(atomCode));

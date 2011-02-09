@@ -11,8 +11,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbfilePdb;
@@ -109,9 +109,9 @@ public class ConstraintsMaker {
 				// we set a flag and use GLY for the totalNumAtoms (we still need the totalNumAtoms to be
 				// able to keep track of on which residue we are on)
 				inUNKres = true;
-				totalNumAtoms = AAinfo.getNumberAtoms("GLY");
+				totalNumAtoms = AminoAcid.getNumberAtoms("GLY");
 			} else {
-				totalNumAtoms = AAinfo.getNumberAtoms(resFromSeq);
+				totalNumAtoms = AminoAcid.getNumberAtoms(resFromSeq);
 			}
 			
 			// when current atom counts coincides with the totalNumAtoms this residue type should have (Hydrogens excluded) 
@@ -220,7 +220,7 @@ public class ConstraintsMaker {
 		if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
 			throw new IllegalArgumentException("ALL is not a valid contact type for creating constraints.");
 		}
-		if (!AAinfo.isValidContactType(i_ct) || !AAinfo.isValidContactType(j_ct)) {
+		if (!ContactType.isValidContactType(i_ct) || !ContactType.isValidContactType(j_ct)) {
 			throw new IllegalArgumentException("Either "+i_ct+" or "+j_ct+" are not valid contact types");
 		}
 		
@@ -235,13 +235,13 @@ public class ConstraintsMaker {
 				// we have to skip contacts that involve non standard aminoacids
 				continue;
 			}
-			Set<String> i_atoms = AAinfo.getAtomsForCTAndRes(i_ct, i_res);
-			Set<String> j_atoms = AAinfo.getAtomsForCTAndRes(j_ct, j_res);
+			Set<String> i_atoms = ContactType.getAtomsForCTAndRes(i_ct, i_res);
+			Set<String> j_atoms = ContactType.getAtomsForCTAndRes(j_ct, j_res);
 
 			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+			double dist_min = (ContactType.getLowerBoundDistance(i_ct,i_res,j_res)+ContactType.getLowerBoundDistance(j_ct,i_res,j_res))/2;
 			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
-			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
+			double dist_max = ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
 			for (String i_atom:i_atoms) {
 				for (String j_atom:j_atoms) {
@@ -320,7 +320,7 @@ public class ConstraintsMaker {
 		if (i_ct.equals("ALL") || j_ct.equals("ALL")) {
 			throw new IllegalArgumentException("ALL is not a valid contact type for creating constraints.");
 		}
-		if (!AAinfo.isValidContactType(i_ct) || !AAinfo.isValidContactType(j_ct)) {
+		if (!ContactType.isValidContactType(i_ct) || !ContactType.isValidContactType(j_ct)) {
 			throw new IllegalArgumentException("Either "+i_ct+" or "+j_ct+" are not valid contact types");
 		}
 		
@@ -335,13 +335,13 @@ public class ConstraintsMaker {
 			return;
 		}
 		
-		Set<String> i_atoms = AAinfo.getAtomsForCTAndRes(i_ct, i_res);
-		Set<String> j_atoms = AAinfo.getAtomsForCTAndRes(j_ct, j_res);
+		Set<String> i_atoms = ContactType.getAtomsForCTAndRes(i_ct, i_res);
+		Set<String> j_atoms = ContactType.getAtomsForCTAndRes(j_ct, j_res);
 
 		// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-		double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+		double dist_min = (ContactType.getLowerBoundDistance(i_ct,i_res,j_res)+ContactType.getLowerBoundDistance(j_ct,i_res,j_res))/2;
 		// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
-		double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+graph.getCutoff();
+		double dist_max = ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+graph.getCutoff();
 		
 		for (String i_atom:i_atoms) {
 			for (String j_atom:j_atoms) {

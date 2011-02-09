@@ -9,7 +9,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
 
 
@@ -82,7 +81,7 @@ public class AminoAcidTest {
 			if(aa == AminoAcid.XXX || aa == AminoAcid.STP) {
 				assertEquals(-1,aa.getNumberOfAtoms());
 			} else {	
-				assertEquals(AAinfo.getNumberAtoms(aa.getThreeLetterCode()),aa.getNumberOfAtoms() + 4);
+				assertEquals(AminoAcid.getNumberAtoms(aa.getThreeLetterCode()),aa.getNumberOfAtoms() + 4);
 			}
 			if (aa!=AminoAcid.XXX && aa!=AminoAcid.STP) {
 				// check validation methods

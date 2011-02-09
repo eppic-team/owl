@@ -264,7 +264,7 @@ public class PdbTest {
 		Pdb pdb2 = new PdbfilePdb(TEST_PDB_FILE_2);
 		pdb2.load(TEST_CHAIN_2);
 		
-		String[] cts = {"Ca", "Cb", "ALL", "BB", "SC", "Cg"};
+		String[] cts = {"Ca", "Cb", "ALL", "BB", "SC"};
 		for (String ct:cts) {
 			Assert.assertEquals(0.0,pdb1.rmsd(pdb1p, ct),0.0001);
 			Assert.assertEquals(0.0,pdb1p.rmsd(pdb1, ct),0.0001);			
@@ -518,6 +518,6 @@ public class PdbTest {
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
 		PdbTest pdbTest = new PdbTest();
-		pdbTest.testGetAllPhiPsi();
+		pdbTest.testRmsd();
 	}
 }

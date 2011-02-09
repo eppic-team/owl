@@ -8,8 +8,8 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -276,7 +276,7 @@ public class DbRIGraph extends RIGraph {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, directed) && weighted) {
+		if (ContactType.isValidMultiAtomContactType(contactType, directed) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
@@ -338,7 +338,7 @@ public class DbRIGraph extends RIGraph {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, directed) && weighted) {
+		if (ContactType.isValidMultiAtomContactType(contactType, directed) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}

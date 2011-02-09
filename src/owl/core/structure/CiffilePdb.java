@@ -499,7 +499,7 @@ public class CiffilePdb extends Pdb {
 					if(!this.containsResidue(atomLine.res_serial)) {
 						this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(atomLine.res_type),atomLine.res_serial,this));
 					}
-					if (AAinfo.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
+					if (AminoAcid.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
 						Residue residue = this.getResidue(atomLine.res_serial);
 						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.coords,residue,atomLine.occupancy,atomLine.bfactor));
 					}

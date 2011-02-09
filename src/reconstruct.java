@@ -16,9 +16,9 @@ import java.util.regex.Pattern;
 
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
-import owl.core.structure.AAinfo;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.ConformationsNotSameSizeException;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
@@ -468,7 +468,7 @@ public class reconstruct {
 		
 		// checking contact types
 		for (String ct: cts) {
-			if (!AAinfo.isValidContactType(ct) || ct.contains("ALL")) {
+			if (!ContactType.isValidContactType(ct) || ct.contains("ALL")) {
 				System.err.println("Invalid contact type specified. Exiting");
 				System.exit(1);
 			}

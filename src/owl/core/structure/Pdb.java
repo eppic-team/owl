@@ -1067,7 +1067,7 @@ public class Pdb implements HasFeatures, Serializable {
 		//- remove the check for adding parallel atomic edges if crossed
 		//- add atomic edges in both directions if !crossed
 		//- make sure in getRIGraph for undirected graphs not to double-count atomic edges
-		if (directed && AAinfo.isOverlapping(ct)) {
+		if (directed && ContactType.isOverlapping(ct)) {
 			throw new IllegalArgumentException("Contact type "+ct+" is overlapping. Generating directed graphs for it is unsupported");
 		}
 		

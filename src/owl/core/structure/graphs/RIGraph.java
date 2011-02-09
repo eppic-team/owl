@@ -21,8 +21,8 @@ import java.util.TreeSet;
 
 import javax.vecmath.GMatrix;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -460,7 +460,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 			ctStr = "BB+SC+BB/SC";
 		}
 		
-		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
+		if (ContactType.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}
@@ -706,7 +706,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		if (ctStr.equals("ALL")) {
 			ctStr = "BB+SC+BB/SC";
 		}
-		if (AAinfo.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
+		if (ContactType.isValidMultiAtomContactType(contactType, isDirected()) && weighted) {
 			CW = ctStr;
 			weightedStr = "1";
 		}

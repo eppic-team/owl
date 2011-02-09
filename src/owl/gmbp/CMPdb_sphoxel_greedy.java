@@ -14,7 +14,6 @@ import javax.vecmath.Vector3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadError;

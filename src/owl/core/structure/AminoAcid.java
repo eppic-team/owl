@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Package:		proteinstructure
@@ -448,6 +449,76 @@ public enum AminoAcid {
 		return list;
 	}
 	
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
+	 * Doesn't consider OXT to be a valid atom for any aminoacid
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidHeavyAtom(String aa, String atom) {
+		return ContactType.getCTByName("ALL").isValidAtom(aa, atom);
+	}
+
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
+	 * Considers OXT to be a valid atom for all aminoacids
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidHeavyAtomWithOXT(String aa, String atom) {
+		if (atom.equals("OXT")) return true;
+		return isValidHeavyAtom(aa, atom);
+	}
+
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
+ 	 * Doesn't consider OXT to be a valid atom for any aminoacid
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidAtom(String aa, String atom) {
+		return ContactType.getCTByName("ALL_H").isValidAtom(aa, atom);
+	}
+	
+	/**
+	 * Given a three letter code aminoacid and an atom name say whether 
+	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
+	 * Considers OXT to be a valid atom for all aminoacids 
+	 * @param aa
+	 * @param atom
+	 * @return
+	 */
+	public static boolean isValidAtomWithOXT(String aa, String atom) {
+		if (atom.equals("OXT")) return true;
+		return isValidAtom(aa, atom);
+	}
+	
+	/**
+	 * Gets all (non-Hydrogen) atoms given a three letter code aminoacid
+	 * @param aa
+	 * @return
+	 */
+	public static Set<String> getAtoms(String aa) {
+		return ContactType.getCTByName("ALL").getAtoms(aa);
+	}
+	
+	/**
+	 * Gets the number of non-Hydrogen atoms given a three letter code aminoacid
+	 * @param aa
+	 * @return
+	 * @throws NullPointerException if aa not a valid 3 letter code standard aminoacid
+	 */
+	public static int getNumberAtoms(String aa) {
+		return ContactType.getCTByName("ALL").getAtoms(aa).size();
+	}
+
+	
 	/*----------------------- private methods --------------------------*/
 	/**
 	 * initialize static map to get amino acid by its ordinal number
@@ -621,7 +692,7 @@ public enum AminoAcid {
 					break; 					
 				}
 			} else {	
-				if(aa.getNumberOfAtoms() + 4 != AAinfo.getNumberAtoms(aa.getThreeLetterCode())) {
+				if(aa.getNumberOfAtoms() + 4 != getNumberAtoms(aa.getThreeLetterCode())) {
 					System.err.printf("Number of atoms reported for %s do not agree\n", aa.getName());
 					ok = false; 
 					break; 

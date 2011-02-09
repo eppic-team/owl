@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.AAinfo;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.util.FileFormatError;
@@ -242,7 +241,7 @@ public abstract class Scorer {
 	protected static void initAtomMap(HashMap<String,Integer> types2indices, HashMap<Integer,String> indices2types) {
 		int i=0;
 		for (AminoAcid aa:AminoAcid.getAllStandardAAs()) {
-			for (String atom:AAinfo.getAtomsForCTAndRes("ALL", aa.getThreeLetterCode())) {
+			for (String atom:AminoAcid.getAtoms(aa.getThreeLetterCode())) {
 				types2indices.put(aa.getThreeLetterCode()+atom,i);
 				i++;				
 			}

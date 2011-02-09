@@ -4,7 +4,7 @@ import java.io.File;
 
 import javax.vecmath.Vector3d;
 
-import owl.core.structure.AAinfo;
+import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGEdge;
@@ -146,7 +146,7 @@ public class Reconstructer {
 			j_ct = ct.split("/")[1];
 		}
 		
-		if (!AAinfo.isValidSingleAtomContactType(i_ct) || !AAinfo.isValidSingleAtomContactType(j_ct)){
+		if (!ContactType.isValidSingleAtomContactType(i_ct) || !ContactType.isValidSingleAtomContactType(j_ct)){
 			throw new IllegalArgumentException("Contact type "+i_ct+" or "+j_ct+" is not valid for reconstruction");
 		}
 		
@@ -156,9 +156,9 @@ public class Reconstructer {
 			String j_res = pair.getSecond().getResidueType();
 
 			// as dist_min we take the average of the two dist mins, if i_ct and j_ct are the same then this will be the same as dist_min for ct
-			double dist_min = (AAinfo.getLowerBoundDistance(i_ct,i_res,j_res)+AAinfo.getLowerBoundDistance(j_ct,i_res,j_res))/2;
+			double dist_min = (ContactType.getLowerBoundDistance(i_ct,i_res,j_res)+ContactType.getLowerBoundDistance(j_ct,i_res,j_res))/2;
 			// for single atom contact types getUpperBoundDistance and getLowerBoundDistance will return 0 thus for those cases dist_max = cutoff
-			double dist_max = AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+AAinfo.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
+			double dist_max = ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+ContactType.getUpperBoundDistance(i_ct, i_res, j_res)/2+cutoff;
 			
 			if (pair.getSecond().getResidueSerial()>pair.getFirst().getResidueSerial()+1) { //we don't add the first diagonal, we add it later as contiguous CA constraints 
 				bounds[pair.getFirst().getResidueSerial()-1][pair.getSecond().getResidueSerial()-1] = new Bound(dist_min, dist_max);
