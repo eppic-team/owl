@@ -228,7 +228,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * by using the remote Uniprot API
 	 * @throws UniprotVerMisMatchException 
 	 */
-	public void retrieveUniprotKBData() throws UniprotVerMisMatchException {
+	public void retrieveUniprotKBData() throws UniprotVerMisMatchException, IOException {
 		UniProtConnection uniprotConn = new UniProtConnection();
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
 			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
@@ -244,6 +244,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		for (UniProtEntry entry:entries) {
 			String uniId = entry.getPrimaryUniProtAccession().getValue();
 			returnedUniIds.add(uniId);
+			if (!this.lookup.containsKey(uniId)) {
+				// this happens if the JAPI/server are really broken and return records that we didn't ask for (actually happened on the 09.02.2011!!!)
+				throw new IOException("Uniprot JAPI server returned unexpected records.");
+			}
 			UniprotHomolog hom = this.getHomolog(uniId);
 
 			hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getUniId(),entry.getSequence().getValue()));
