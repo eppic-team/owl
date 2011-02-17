@@ -1,12 +1,8 @@
 package owl.core.structure;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 
@@ -508,20 +504,4 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return zoomingUsed;
 	}
 	
-    public void serialize(File serializedFile) throws IOException {
-        FileOutputStream fileOut = new FileOutputStream(serializedFile);
-        ObjectOutputStream out = new ObjectOutputStream(fileOut);
-        out.writeObject(this);
-        out.close();
-        fileOut.close();
-    }
-
-    public static ChainInterface readFromFile(File serialized) throws IOException, ClassNotFoundException {
-    	FileInputStream fileIn = new FileInputStream(serialized);
-    	ObjectInputStream in = new ObjectInputStream(fileIn);
-    	ChainInterface interfSc = (ChainInterface) in.readObject();
-    	in.close();
-    	fileIn.close();
-    	return interfSc;
-    }
 }
