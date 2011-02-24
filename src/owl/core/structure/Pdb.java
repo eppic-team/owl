@@ -297,6 +297,20 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
+	 * Returns true if the given chain exists, false otherwise.
+	 * To check for the empty chain, use Pdb.NULL_CHAIN_CODE.
+	 * @throws PdbLoadError if chain list could not be retrieved
+	 * @see getChains()
+	 */
+	public boolean hasChain(String chain) throws PdbLoadError {
+		String[] chains = this.getChains();
+		for (int i = 0; i < chains.length; i++) {
+			if(chain.equals(chains[i])) return true;
+		}
+		return false;
+	}
+	
+	/**
 	 * Initialises the residues to an empty map. 
 	 */
 	protected void initialiseResidues() {
