@@ -1,0 +1,33 @@
+graph: {
+layoutalgorithm:forcedir
+     attraction:80
+      repulsion:300
+        gravity:5.0
+
+color:white
+
+node.shape:circle
+node.width:60
+node.height:60
+node.color:white
+node.textcolor:black
+
+node: { 
+	title: "48225587"
+	label: "1b63A"
+	color: white
+      }
+node: { 
+	title: "48407278"
+	label: "1h7sA"
+	color: white
+      }
+
+edge.arrowstyle:none
+edge.linestyle:continuous
+edge.arrowsize:20
+edge.thickness:2
+edge.color:blue
+
+
+}   // end Graph
