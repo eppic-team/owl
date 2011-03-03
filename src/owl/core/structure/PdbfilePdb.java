@@ -67,7 +67,6 @@ public class PdbfilePdb extends Pdb {
 			this.chainCode=pdbChainCode;
 			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 
-			this.sequence = ""; // we initialize to blank so we can append to the string in read_pdb_data_from_file
 			parse();
 			
 			secondaryStructure.setSequence(this.sequence);
@@ -189,7 +188,7 @@ public class PdbfilePdb extends Pdb {
 		// we set chainCodeStr (for regex) to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use " " (Pdb.NULL_CHAIN_CODE is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
-		
+		this.sequence = ""; // we will put here the sequence we find (either from SEQRES or ATOM lines)
 		int lastResSerial = 0; // we store the last residue serial read from the ATOM lines to check for correct ascending order
 		int lastAtomSerial = -1; // same for atoms
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
@@ -239,7 +238,8 @@ public class PdbfilePdb extends Pdb {
 			}
 			// EXPDTA
 			if (line.startsWith("EXPDTA")) {
-				expMethod = line.substring(6, line.length()).trim();
+				 String exp = line.substring(6, line.length()).trim();
+				 expMethod = exp.split(";\\s")[0]; // in some (strange) cases there are several exp methods, we simply take first, e.g. 2krl
 			}
 			// REMARK 3 (for resolution)
 			if (line.startsWith("REMARK   3   RESOLUTION RANGE HIGH")){
@@ -395,16 +395,17 @@ public class PdbfilePdb extends Pdb {
 			m = p.matcher(line);
 			if (m.find()){
 				try {
-					//                                 serial    atom       altcode     restype      chain 	   res_ser icode  x     y     z    occ  bfac
-					Pattern pl = Pattern.compile("^.{6}(.....).(....)"+ALTCODEREGEX+"(...).{1}"+chainCodeStr+"(.{4})(.).{3}(.{8})(.{8})(.{8})(?:(.{6})(.{6}))?",
-												Pattern.CASE_INSENSITIVE);
-					Matcher ml = pl.matcher(line);
-					if (ml.find()) {
+					if (line.length()<54) {
+						// the least we admit is a PDB file with coordinates up to z
+						fpdb.close();
+						throw new FileFormatError("ATOM/HETATM line is too short to contain the minimum fields required. PDB file "+pdbfile+" at line "+linecount);
+					}
+					if (line.substring(16, 17).matches(ALTCODEREGEX) && line.substring(21, 22).matches(chainCodeStr)) {
 						empty=false;
-						int atomserial=Integer.parseInt(ml.group(1).trim());
-						String atom = ml.group(2).trim();
-						String res_type = ml.group(3).trim();
-						int res_serial = Integer.parseInt(ml.group(4).trim());
+						int atomserial=Integer.parseInt(line.substring(6,11).trim());
+						String atom = line.substring(12,16).trim();
+						String res_type = line.substring(17,20).trim();
+						int res_serial = Integer.parseInt(line.substring(22,26).trim());
 						if (res_serial<1) {
 							fpdb.close();
 							throw new FileFormatError("A residue serial <=0 was found in the ATOM lines of PDB file "+pdbfile);
@@ -419,21 +420,24 @@ public class PdbfilePdb extends Pdb {
 						}
 						lastResSerial = res_serial;
 						lastAtomSerial = atomserial;
-						String iCode = ml.group(5);
+						String iCode = line.substring(26,27);
 						if (!iCode.equals(" ")) {
 							fpdb.close();
 							throw new FileFormatError("PDB file "+pdbfile+" contains insertion codes. Please use cif file instead.");
 						}
-						double x = Double.parseDouble(ml.group(6).trim());
-						double y = Double.parseDouble(ml.group(7).trim());
-						double z = Double.parseDouble(ml.group(8).trim());
+						double x = Double.parseDouble(line.substring(30,38).trim());
+						double y = Double.parseDouble(line.substring(38,46).trim());
+						double z = Double.parseDouble(line.substring(46,54).trim());
 						Point3d coords = new Point3d(x,y,z);
 						double occupancy = Atom.DEFAULT_OCCUPANCY;
-						if (ml.group(9)!=null)
-							occupancy = Double.parseDouble(ml.group(9).trim());
+						if (line.length()>=60)
+							occupancy = Double.parseDouble(line.substring(54,60).trim());
 						double bfactor = Atom.DEFAULT_B_FACTOR;
-						if (ml.group(10)!=null)
-							bfactor = Double.parseDouble(ml.group(10).trim());
+						if (line.length()>=66)
+							bfactor = Double.parseDouble(line.substring(60,66).trim());
+						String element = null;
+						if (line.length()>=78)
+							element = line.substring(76,78).trim();
 	
 						if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
 							// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
@@ -452,28 +456,26 @@ public class PdbfilePdb extends Pdb {
 							}
 							if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
 								Residue residue = this.getResidue(res_serial);
-								residue.addAtom(new Atom(atomserial, atom, coords, residue,occupancy,bfactor));
+								residue.addAtom(new Atom(atomserial, atom, element, coords, residue,occupancy,bfactor));
 							}
 						}
 	
 					}
 				} catch(NumberFormatException e) {
 					fpdb.close();
-					throw new FileFormatError("Wrong number format in PDB file "+pdbfile+": " + e.getMessage());
+					throw new FileFormatError("Wrong number format in PDB file "+pdbfile+" at line "+linecount+". Error: " + e.getMessage());
 				}
 				
 			}
 		}
 		fpdb.close();
 		if (empty) {
-			fpdb.close();
 			throw new PdbChainCodeNotFoundException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 
-		// we check also that resser2restype is not empty: happens when all residues in chain are non-standard
+		// we check also that there was at least one observed residue for the chain
 		if (this.getObsLength()==0) {
-			fpdb.close();
-			throw new FileFormatError("No standard aminoacids found for given chain in ATOM lines of PDB file "+pdbfile);
+			throw new FileFormatError("No residues found for given chain in ATOM/HETATM lines of PDB file "+pdbfile);
 		}
 		
 		if (!hasSeqRes){ // no SEQRES could be read
@@ -486,8 +488,8 @@ public class PdbfilePdb extends Pdb {
 						"A gap of size "+(minResSer-1)+" will be inserted at the beginning of the sequence.");
 			}
 			
-			// 2) we take the sequence from the resser2restype Map, 
-			// we assume the numbering is correct: we introduce non-observed gaps whenever we don't have the resser in resser2restype, 
+			// 2) we take the sequence from the residues Map, 
+			// we assume the numbering is correct: we introduce non-observed gaps whenever we don't have the resser in residues, 
 			// that only misses non-observed gaps at end of chain which we can't know about
 			sequence = "";
 			for (int resser=1;resser<=getMaxObsResSerial();resser++) {
@@ -497,24 +499,18 @@ public class PdbfilePdb extends Pdb {
 					sequence += AminoAcid.XXX.getOneLetterCode();
 				}
 			}
-			// 3) we set fullLength
-			fullLength = sequence.length(); 
 			
 		} else { // we could read the sequence from SEQRES
 			// 1) we check that the sequences from ATOM lines and SEQRES coincide (except for unobserved residues)
 			for (int resser:getAllSortedResSerials()) {
 				// before checking the sequence matching we need to be sure that the resser is not out of the range of the SEQRES sequence length 
 				if (resser>sequence.length()) {
-					fpdb.close();
 					throw new FileFormatError("Residue serial "+resser+" from ATOM line is bigger than SEQRES sequence length. Incorrect residue numbering in PDB file "+pdbfile);
 				}
 				if (sequence.charAt(resser-1)!=this.getResidue(resser).getAaType().getOneLetterCode()) {
-					fpdb.close();
 					throw new FileFormatError("Sequences from ATOM lines and SEQRES do not match for position "+resser+". Incorrect residue numbering in PDB file "+pdbfile);
 				}
 			}
-			// 2) we set fullLength
-			fullLength = sequence.length();
 		}
 	}
 	
@@ -548,7 +544,6 @@ public class PdbfilePdb extends Pdb {
 			}
 		}
 		this.sequence = seq;
-		fullLength = sequence.length();
 	}
 	
 	/**

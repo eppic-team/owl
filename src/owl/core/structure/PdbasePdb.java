@@ -115,7 +115,6 @@ public class PdbasePdb extends Pdb {
 			this.alt_locs_sql_str=getAtomAltLocs();
 			
 			this.sequence = readSeq();
-			this.fullLength = sequence.length();
 			
 			this.readAtomData(); 
 
@@ -438,7 +437,7 @@ public class PdbasePdb extends Pdb {
 	private void readAtomData() throws PdbaseInconsistencyException, SQLException{
 		// NOTE: label_entity_key not really needed since there can be only one entity_key
 		// per entry_key,asym_id combination
-		String sql = "SELECT id, label_atom_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
+		String sql = "SELECT id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
 				" FROM "+db+".atom_site " +
 				" WHERE entry_key="+entrykey +
 				" AND label_asym_id='"+asymid+"' " +
@@ -454,21 +453,22 @@ public class PdbasePdb extends Pdb {
 
 			int atomserial = rsst.getInt(1); 			// atomserial
 			String atom = rsst.getString(2).trim();  	// atom
-			String res_type = rsst.getString(3).trim();	// res_type
-			int res_serial = rsst.getInt(4);			// res_serial
-			double x = rsst.getDouble(5);				// x
-			double y = rsst.getDouble(6);				// y
-			double z = rsst.getDouble(7);				// z
+			String element = rsst.getString(3).trim();  //element
+			String res_type = rsst.getString(4).trim();	// res_type
+			int res_serial = rsst.getInt(5);			// res_serial
+			double x = rsst.getDouble(6);				// x
+			double y = rsst.getDouble(7);				// y
+			double z = rsst.getDouble(8);				// z
 			Point3d coords = new Point3d(x, y, z);
-			double occupancy = rsst.getDouble(8);       // occupancy
-			double bfactor = rsst.getDouble(9);         // bfactor
+			double occupancy = rsst.getDouble(9);       // occupancy
+			double bfactor = rsst.getDouble(10);        // bfactor
 			if (AminoAcid.isStandardAA(res_type)) {
 				if (!this.containsResidue(res_serial)) { 
 					this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, this));
 				}
 				if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
 					Residue residue = this.getResidue(res_serial);
-					residue.addAtom(new Atom(atomserial, atom,coords,residue,occupancy,bfactor));
+					residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
 				}
 			}
 

@@ -132,7 +132,7 @@ public class ConstraintsMaker {
 				if (!inUNKres) {
 					atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
 					int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);
-					if (!pdb.getResTypeFromResSerial(pdbResSerial).equals(res)){
+					if (!pdb.getResidue(pdbResSerial).getAaType().getThreeLetterCode().equals(res)){
 						// sanity check, shouldn't happen at all
 						System.err.println("error! res types don't match for res serial "+pdbResSerial+" res type "+res);
 					}

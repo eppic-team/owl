@@ -180,7 +180,6 @@ public class PdbParsersTest {
 					Assert.assertEquals(pdbasePdb.getResSerFromPdbResSer(pdbresser), ciffilePdb.getResSerFromPdbResSer(pdbresser));
 								
 					Assert.assertEquals(pdbasePdb.getResidue(resser).getAaType(),ciffilePdb.getResidue(resser).getAaType());
-					Assert.assertEquals(pdbasePdb.getResTypeFromResSerial(resser), ciffilePdb.getResTypeFromResSerial(resser));
 				}
 
 				for (int resser:ciffilePdb.getAllSortedResSerials()) {
@@ -188,7 +187,6 @@ public class PdbParsersTest {
 					String pdbresser = ciffilePdb.getPdbResSerFromResSer(resser);
 					Assert.assertEquals(ciffilePdb.getResSerFromPdbResSer(pdbresser), pdbasePdb.getResSerFromPdbResSer(pdbresser));
 					
-					Assert.assertEquals(ciffilePdb.getResTypeFromResSerial(resser), pdbasePdb.getResTypeFromResSerial(resser));
 				}
 				
 				// secondary structure
@@ -291,7 +289,7 @@ public class PdbParsersTest {
 						Assert.assertEquals(pdbasePdb.getObsSequence(), pdbfilePdb.getObsSequence());
 						String seq = pdbfilePdb.getSequence();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
-							Assert.assertEquals(pdbfilePdb.getResTypeFromResSerial(resser), 
+							Assert.assertEquals(pdbfilePdb.getResidue(resser).getAaType().getThreeLetterCode(), 
 												AminoAcid.one2three(seq.charAt(resser-1)));
 							// at least 1 atom per observed residue
 							Assert.assertTrue(pdbfilePdb.getResidue(resser).getNumAtoms()>0);

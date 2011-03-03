@@ -13,6 +13,7 @@ import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadError;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.Residue;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
 import owl.core.structure.features.SecStrucElement;
@@ -134,7 +135,8 @@ public class mapMutations {
 			int pos = mutations[i];
 			boolean exposed = pdb.getAllRsaFromResSerial(pos) > EXPOSURE_CUTOFF;
 			char ssState = pdb.getSecondaryStructure().getSecStrucElement(pos).getType();
-			System.out.printf("Position %d :                    %s %s\n", pos, pdb.getResTypeFromResSerial(pos), getMutChemPropStr(AminoAcid.getByThreeLetterCode(pdb.getResTypeFromResSerial(pos)), newAA));
+			Residue residue = pdb.getResidue(pos);
+			System.out.printf("Position %d :                    %s %s\n", pos, residue.getAaType().getThreeLetterCode(), getMutChemPropStr(residue.getAaType(), newAA));
 			System.out.printf("Relative surface accessibility :  %2.0f%% (%s)\n", pdb.getAllRsaFromResSerial(pos), exposed?"exposed":"buried");
 			System.out.printf("Secondary structure state:        %3s (%s)\n", ssState, SecStrucElement.getTypeDescription(ssState));
 			System.out.printf("Distance from center:             %3d\n", sp.getDistance(c, rig.getNodeFromSerial(pos)));
@@ -180,7 +182,7 @@ public class mapMutations {
 	 * @param set
 	 * @return
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public static int minDistFromSet(RIGraph rig, int source, Distance distances, Set<Integer> set) {
 		int min = Integer.MAX_VALUE;
 		for(int setRes:set) {
@@ -199,7 +201,7 @@ public class mapMutations {
 	 * @return the number of a most central node or -1 if no node was found
 	 */
 	@SuppressWarnings("unchecked")
-	public static int getCentralNode(RIGraph rig, Distance distances) {
+	public static int getCentralNode(RIGraph rig, @SuppressWarnings("rawtypes") Distance distances) {
 		int center = -1;
 		double min = Double.MAX_VALUE;
 		for(RIGNode n:rig.getVertices()) {

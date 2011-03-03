@@ -76,16 +76,18 @@ public class CiffilePdb extends Pdb {
 		public String labelAltId;
 		public int atomserial;
 		public String atom;
+		public String element;
 		public String res_type;
 		public int res_serial;
 		public Point3d coords;
 		public double occupancy;
 		public double bfactor;
 
-		public AtomLine(String labelAltId, int atomserial, String atom, String res_type, int res_serial, Point3d coords, double occupancy, double bfactor) {
+		public AtomLine(String labelAltId, int atomserial, String atom, String element, String res_type, int res_serial, Point3d coords, double occupancy, double bfactor) {
 			this.labelAltId = labelAltId;
 			this.atomserial = atomserial;
 			this.atom = atom;
+			this.element = element;
 			this.res_type = res_type;
 			this.res_serial = res_serial;
 			this.coords = coords;
@@ -178,7 +180,6 @@ public class CiffilePdb extends Pdb {
 			parseCifFile();
 			fcif.close();
 
-			this.fullLength = sequence.length();		
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("CIFfile");
 				this.initialiseResiduesSecStruct();
@@ -398,9 +399,31 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readExpMethod() {
-		String expMethWithQuotes = fields2values.get(exptl+".method").trim();
-		this.expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
+	private void readExpMethod() throws IOException, FileFormatError {
+
+		if (!loopElements.contains(ids2elements.get(exptl))){  
+			String expMethWithQuotes = fields2values.get(exptl+".method").trim();
+			this.expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
+		} else {
+			// normally _exptl.method is a single value element, but in some cases, e.g. 2krl, the _exptl.method is a loop element
+			// in those cases we simply take the first value appearing (condition recordCount==1)
+			Long[] intExptl = loopelements2contentOffset.get(ids2elements.get(exptl));
+			int methodIdx = fields2indices.get(exptl+".method");
+			int numberFields = ids2fieldsIdx.get(exptl);
+			int recordCount = 0;
+			fcif.seek(intExptl[0]);
+			while(fcif.getFilePointer()<intExptl[1]) {
+				recordCount++; 
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
+				}
+				if (recordCount==1) {
+					this.expMethod = tokens[methodIdx];
+				}
+			}
+		}
+		
 	}
 	
 	private void readQparams() {
@@ -438,6 +461,21 @@ public class CiffilePdb extends Pdb {
 		TreeSet<String> labelAltIds = new TreeSet<String>(); // to store the alt location ids (label_alt_id) (the default char "." is not stored)
 		
 		Long[] intAtomSite = loopelements2contentOffset.get(ids2elements.get(atomSiteId));
+		int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
+		int idIdx = fields2indices.get(atomSiteId+".id");
+		int typeSymbolIdx = fields2indices.get(atomSiteId+".type_symbol");
+		int labelAtomIdIdx = fields2indices.get(atomSiteId+".label_atom_id");
+		int labelAltIdIdx = fields2indices.get(atomSiteId+".label_alt_id");
+		int labelCompIdIdx = fields2indices.get(atomSiteId+".label_comp_id");
+		int labelAsymIdIdx = fields2indices.get(atomSiteId+".label_asym_id");
+		int labelSeqIdIdx = fields2indices.get(atomSiteId+".label_seq_id");
+		int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
+		int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
+		int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
+		int occupancyIdx = fields2indices.get(atomSiteId+".occupancy");
+		int bIsoOrEquivIdx = fields2indices.get(atomSiteId+".B_iso_or_equiv");
+		int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
+		int numberFields = ids2fieldsIdx.get(atomSiteId);
 		
 		int recordCount = 0;
 		
@@ -445,23 +483,9 @@ public class CiffilePdb extends Pdb {
 		while(fcif.getFilePointer()<intAtomSite[1]) {
 			recordCount++;
 
-			int groupPdbIdx = fields2indices.get(atomSiteId+".group_PDB");
-			int idIdx = fields2indices.get(atomSiteId+".id");
-			int labelAtomIdIdx = fields2indices.get(atomSiteId+".label_atom_id");
-			int labelAltIdIdx = fields2indices.get(atomSiteId+".label_alt_id");
-			int labelCompIdIdx = fields2indices.get(atomSiteId+".label_comp_id");
-			int labelAsymIdIdx = fields2indices.get(atomSiteId+".label_asym_id");
-			int labelSeqIdIdx = fields2indices.get(atomSiteId+".label_seq_id");
-			int cartnXIdx = fields2indices.get(atomSiteId+".Cartn_x");
-			int cartnYIdx = fields2indices.get(atomSiteId+".Cartn_y");
-			int cartnZIdx = fields2indices.get(atomSiteId+".Cartn_z");
-			int occupancyIdx = fields2indices.get(atomSiteId+".occupancy");
-			int bIsoOrEquivIdx = fields2indices.get(atomSiteId+".B_iso_or_equiv");
-			int pdbxPDBModelNumIdx = fields2indices.get(atomSiteId+".pdbx_PDB_model_num");
 			// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12, occupancy=13, B_iso_or_equiv=14
 			//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
 			//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
-			int numberFields = ids2fieldsIdx.get(atomSiteId);
 			String[] tokens = tokeniseFields(numberFields);
 			if (tokens.length!=numberFields) {
 				throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+ " of CIF file "+cifFile);
@@ -473,6 +497,7 @@ public class CiffilePdb extends Pdb {
 				String labelAltId = tokens[labelAltIdIdx];
 				if (!labelAltId.equals(".")) labelAltIds.add(labelAltId);
 				int atomserial=Integer.parseInt(tokens[idIdx]); // id
+				String element = tokens[typeSymbolIdx]; // type_symbol
 				String atom = tokens[labelAtomIdIdx]; // label_atom_id
 				String res_type = tokens[labelCompIdIdx]; // label_comp_id
 				int res_serial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
@@ -482,7 +507,7 @@ public class CiffilePdb extends Pdb {
 				Point3d coords = new Point3d(x,y,z);
 				double occupancy = Double.parseDouble(tokens[occupancyIdx]); // occupancy
 				double bfactor = Double.parseDouble(tokens[bIsoOrEquivIdx]); // bfactor
-				atomLinesData.add(new AtomLine(labelAltId, atomserial, atom, res_type, res_serial, coords, occupancy, bfactor));
+				atomLinesData.add(new AtomLine(labelAltId, atomserial, atom, element, res_type, res_serial, coords, occupancy, bfactor));
 			}
 		}
 		if (atomLinesData.isEmpty()) { // no atom data was found for given pdb chain code and model
@@ -501,7 +526,7 @@ public class CiffilePdb extends Pdb {
 					}
 					if (AminoAcid.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
 						Residue residue = this.getResidue(atomLine.res_serial);
-						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.coords,residue,atomLine.occupancy,atomLine.bfactor));
+						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.element,atomLine.coords,residue,atomLine.occupancy,atomLine.bfactor));
 					}
 				}
 			}
@@ -516,6 +541,14 @@ public class CiffilePdb extends Pdb {
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr="A";
 		
 		Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
+		int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
+		int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
+		//int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
+		int pdbSeqNumIdx = fields2indices.get(pdbxPolySeqId+".pdb_seq_num");
+		int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
+		int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
+		int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
+		int numberFields = ids2fieldsIdx.get(pdbxPolySeqId);
 		
 		int recordCount=0;
 		
@@ -523,17 +556,9 @@ public class CiffilePdb extends Pdb {
 		while(fcif.getFilePointer()<intPdbxPoly[1]) {
 			recordCount++; 
 
-			int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
-			int seqIdIdx = fields2indices.get(pdbxPolySeqId+".seq_id");
-			//int authSeqNumIdx = fields2indices.get(pdbxPolySeqId+".auth_seq_num");
-			int pdbSeqNumIdx = fields2indices.get(pdbxPolySeqId+".pdb_seq_num");
-			int pdbInsCodeIdx = fields2indices.get(pdbxPolySeqId+".pdb_ins_code");
-			int monIdIdx = fields2indices.get(pdbxPolySeqId+".mon_id");
-			int pdbStrandIdIdx = fields2indices.get(pdbxPolySeqId+".pdb_strand_id");
 			// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
 			// 0 1 2     3 4   5   6     7   8 910
 			// A 1 1   ASP 1   1   1   ASP ASP A .
-			int numberFields = ids2fieldsIdx.get(pdbxPolySeqId);
 			String[] tokens = tokeniseFields(numberFields);
 			if (tokens.length!=numberFields) {
 				throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
@@ -619,6 +644,12 @@ public class CiffilePdb extends Pdb {
 		}
 				
 		if (intStructConf!=null) {
+			int idIdx = fields2indices.get(structConfId+".id");
+			int begLabelAsymIdIdx = fields2indices.get(structConfId+".beg_label_asym_id");
+			int begLabelSeqIdIdx = fields2indices.get(structConfId+".beg_label_seq_id");
+			int endLabelSeqIdIdx = fields2indices.get(structConfId+".end_label_seq_id");
+			int numFields = ids2fieldsIdx.get(structConfId);
+			
 			int recordCount=0;
 			
 			fcif.seek(intStructConf[0]);
@@ -626,14 +657,9 @@ public class CiffilePdb extends Pdb {
 				recordCount++;
 				// struct_conf (optional element), HELIX and TURN secondary structure
 
-				int idIdx = fields2indices.get(structConfId+".id");
-				int begLabelAsymIdIdx = fields2indices.get(structConfId+".beg_label_asym_id");
-				int begLabelSeqIdIdx = fields2indices.get(structConfId+".beg_label_seq_id");
-				int endLabelSeqIdIdx = fields2indices.get(structConfId+".end_label_seq_id");
 				//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
 				//     0       1  2    3 4 5   6   7 8  9 10  111213    1415 16 1718 19
 				//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
-				int numFields = ids2fieldsIdx.get(structConfId);
 				String[] tokens = tokeniseFields(numFields);
 				if (tokens.length!=numFields) {
 					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structConfId+" of CIF file "+cifFile);
@@ -664,21 +690,22 @@ public class CiffilePdb extends Pdb {
 			}
 		}
 		if (intStructSheet!=null) {
+			int sheetIdIdx = fields2indices.get(structSheetId+".sheet_id");
+			int idIdx = fields2indices.get(structSheetId+".id");
+			int begLabelAsymIdIdx = fields2indices.get(structSheetId+".beg_label_asym_id");
+			int begLabelSeqIdIdx = fields2indices.get(structSheetId+".beg_label_seq_id");
+			int endLabelSeqIdIdx = fields2indices.get(structSheetId+".end_label_seq_id");
+			int numFields = ids2fieldsIdx.get(structSheetId);
+			
 			int recordCount=0;
 			
 			fcif.seek(intStructSheet[0]);
 			while(fcif.getFilePointer()<intStructSheet[1]) {
 				recordCount++;
 				// struct_sheet_range (optional element), SHEETs
-				int sheetIdIdx = fields2indices.get(structSheetId+".sheet_id");
-				int idIdx = fields2indices.get(structSheetId+".id");
-				int begLabelAsymIdIdx = fields2indices.get(structSheetId+".beg_label_asym_id");
-				int begLabelSeqIdIdx = fields2indices.get(structSheetId+".beg_label_seq_id");
-				int endLabelSeqIdIdx = fields2indices.get(structSheetId+".end_label_seq_id");
 				//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
 				//0 1   2 3  4 5   6 7  8 910  1112 13  1415 16
 				//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
-				int numFields = ids2fieldsIdx.get(structSheetId);
 				String[] tokens = tokeniseFields(numFields);
 				if (tokens.length!=numFields) {
 					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structSheetId+" of CIF file "+cifFile);

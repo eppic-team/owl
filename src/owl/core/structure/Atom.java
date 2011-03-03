@@ -17,6 +17,8 @@ public class Atom implements Serializable {
 
 	public static final double DEFAULT_B_FACTOR  = 0.00;		// default value if no b-factor is given
 	public static final double DEFAULT_OCCUPANCY = 1.00;		// default value if no occupancy is given
+		
+	private static final Pattern ATOM_TYPE_PATTERN = Pattern.compile("^(\\w)\\w*$");
 	
 	
 	private AtomType type;
@@ -38,29 +40,38 @@ public class Atom implements Serializable {
 	 * its coordinates and the parentResidue.
 	 * @param serial
 	 * @param code
+	 * @param element the element as it appears in last column of PDB file (1 or 2 letters both capitals)
 	 * @param coords
 	 * @param parentResidue
 	 * @param occupancy
 	 * @param bfactor
 	 */
-	public Atom(int serial, String code, Point3d coords, Residue parentResidue, double occupancy, double bfactor) {
+	public Atom(int serial, String code, String element, Point3d coords, Residue parentResidue, double occupancy, double bfactor) {
 		this.serial = serial;
 		this.code = code;
 		this.coords = coords;
 		this.parentResidue = parentResidue;
 		this.bfactor = bfactor;
 		this.occupancy = occupancy;
-		// getting atom type from code. This works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
-		Pattern p = Pattern.compile("^(\\w)\\w*$");
-		Matcher m = p.matcher(code);
-		if (m.matches()) {
-			this.type = AtomType.getBySymbol(m.group(1));
+		if (element!=null) {
+			this.type = AtomType.getBySymbol(element);
 			if (type==null) {
-				System.err.println("Warning! Can not recognise atom type "+m.group(1)+" parsed from atom code "+code+" serial "+serial);
+				System.err.println("Warning! Can not recognise atom element "+element+" with atom code "+code+" and serial "+serial);
 			}
-		} else {
-			System.err.println("Warning! The atom code "+code+" with serial "+serial+" is not of the standard form! Can't assign an atom type for it!");
+		} else { // if we couldn't parse an atom type (e.g. not present in PDB file) we still try to get the element from the atom code
+			// getting atom type from code. This works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
+			Matcher m = ATOM_TYPE_PATTERN.matcher(code);
+			if (m.matches()) {
+				this.type = AtomType.getBySymbol(m.group(1));
+			}
 		}
+	}
+	
+	/**
+	 * Constructs an empty atom. 
+	 */
+	private Atom() {
+		
 	}
 	
 	/**
@@ -172,8 +183,12 @@ public class Atom implements Serializable {
 	 * @return
 	 */
 	public Atom copy(Residue parentResidue) {
-		Atom newAtom = new Atom(this.serial,this.code,new Point3d(this.coords),parentResidue,DEFAULT_OCCUPANCY,DEFAULT_B_FACTOR);
+		Atom newAtom = new Atom();
+		newAtom.serial = this.serial;
+		newAtom.code = this.code;
 		newAtom.type = this.type;
+		newAtom.coords = new Point3d(this.coords);
+		newAtom.parentResidue = parentResidue;
 		newAtom.bfactor = this.bfactor;
 		newAtom.occupancy = this.occupancy;
 		return newAtom;

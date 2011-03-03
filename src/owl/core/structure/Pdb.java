@@ -91,8 +91,6 @@ public class Pdb implements HasFeatures, Serializable {
 	private TreeMap<Integer, Atom>    atomser2atom;		// atom serials to Atom object references, we keep this is as a separate map to speed up searches
 	protected TreeMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
 	protected TreeMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
-	protected int fullLength; 							// length of full sequence as it appears in SEQRES field 
-														// to get observed length use method getObsLength()
 	
 	// experimental method
 	protected String expMethod;							// x-ray crystallograpy, NMR, etc.
@@ -185,7 +183,6 @@ public class Pdb implements HasFeatures, Serializable {
 		this.rSym = -1;
 
 		this.sequence = sequence;
-		this.fullLength = sequence.length();
 		this.initialiseResidues();
 		this.resser2pdbresser = new TreeMap<Integer, String>();
 		this.pdbresser2resser = new TreeMap<String, Integer>();
@@ -235,7 +232,6 @@ public class Pdb implements HasFeatures, Serializable {
 		}
 		
 		this.sequence = sequence;
-		this.fullLength = sequence.length();
 		this.initialiseResidues();
 		this.resser2pdbresser = new TreeMap<Integer, String>();
 		this.pdbresser2resser = new TreeMap<String, Integer>();
@@ -253,7 +249,8 @@ public class Pdb implements HasFeatures, Serializable {
 		
 		int i = 0;
 		for (Residue residue:this.residues.values()) {
-			residue.addAtom(new Atom(i+1, atom, new Point3d(coords[i]), residue, Atom.DEFAULT_OCCUPANCY, Atom.DEFAULT_B_FACTOR));
+			// the element is set to first letter of given atom code, that will work only for atoms in standard aas (C,H,S,N,O)
+			residue.addAtom(new Atom(i+1, atom, String.valueOf(atom.charAt(0)), new Point3d(coords[i]), residue, Atom.DEFAULT_OCCUPANCY, Atom.DEFAULT_B_FACTOR));
 			i++;
 		}
 		this.initialiseMaps();
@@ -822,11 +819,11 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 
 	/** 
-	 * Returns the number of residues in the sequence of this protein.
+	 * Returns the number of residues in the SEQRES sequence of this protein.
 	 * @return number of residues in the full sequence
 	 */
 	public int getFullLength() {
-		return fullLength;
+		return sequence.length();
 	}
 
 	/**
@@ -834,7 +831,11 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return number of atoms
 	 */
 	public int getNumAtoms() {
-		return atomser2atom.size();
+		int numAtoms = 0;
+		for (Residue residue:this.getResidues().values()) {
+			numAtoms+=residue.getNumAtoms();
+		}
+		return numAtoms;
 	}
 	
 	/**
@@ -1328,19 +1329,6 @@ public class Pdb implements HasFeatures, Serializable {
 	 */
 	public int getResSerFromAtomSer(int atomser){
 		return atomser2atom.get(atomser).getParentResSerial();
-	}
-
-	/**
-	 * Convenience method to get residue type (3-letter code) from residue serial.
-	 * It is also possible to use {@link #getResidue(int)} and from that get any
-	 * other residue properties.
-	 * @param resser
-	 * @return
-	 * @throws NullPointerException if residue serial not present in this Pdb instance
-	 * or if residue serial is unobserved. Use {@link #hasCoordinates(int)} to check 
-	 */
-	public String getResTypeFromResSerial(int resser) {
-		return getResidue(resser).getAaType().getThreeLetterCode();
 	}
 
 	/**
@@ -2374,8 +2362,6 @@ public class Pdb implements HasFeatures, Serializable {
 			newSequence += sequence.substring((region.beg-1),region.end);
 		}
 		sequence = newSequence;
-		fullLength = sequence.length();
-		
 	}
 	
 	/**
@@ -2723,7 +2709,7 @@ public class Pdb implements HasFeatures, Serializable {
 		TreeMap<Integer,Character> unobserved = new TreeMap<Integer,Character>();
 
 		// detect all unobserved residues
-		for(int i = 1; i <= fullLength; ++i) {
+		for(int i = 1; i <= getFullLength(); ++i) {
 			if(!residues.containsKey(i)) {
 				unobserved.put(i,sequence.charAt(i-1));
 			}
@@ -2770,7 +2756,6 @@ public class Pdb implements HasFeatures, Serializable {
 		newPdb.rSym = this.rSym;
 		
 		newPdb.sequence = this.sequence;
-		newPdb.fullLength = this.fullLength;
 		newPdb.secondaryStructure = this.secondaryStructure.copy();
 		if (this.scop!=null) newPdb.scop = this.scop.copy();
 		if (this.ec!=null) newPdb.ec = this.ec.copy();

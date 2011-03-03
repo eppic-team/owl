@@ -16,6 +16,7 @@ import java.util.zip.GZIPInputStream;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
+import owl.core.structure.Residue;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
 
@@ -83,7 +84,8 @@ public class CSAConnection {
 					// only if the pdb residue type is a standard AA
 					if (AminoAcid.isStandardAA(curResType)) {
 						// only if the pdb residue type agrees with our residue type
-						if (pdb.getResTypeFromResSerial(pdb.getResSerFromPdbResSer(curPdbResSerial)).equals(curResType)) {
+						Residue residue = pdb.getResidue(pdb.getResSerFromPdbResSer(curPdbResSerial));
+						if (residue.getAaType().getThreeLetterCode().equals(curResType)) {
 							// each time the site changes except for the first site of a chain,
 							// add the site to the set
 							if ((curSiteId != prevSiteId) & (prevSiteId != -1)) {
