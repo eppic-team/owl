@@ -29,7 +29,6 @@ import owl.core.structure.CrystalCell;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbaseInconsistencyException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
@@ -74,7 +73,7 @@ public class PdbParsersTest {
 	}
 	
 	@Test
-	public void testCIFagainstPDBASE() throws FileFormatException, PdbaseInconsistencyException, SQLException, IOException {
+	public void testCIFagainstPDBASE() throws FileFormatException, SQLException, IOException {
 
 		MySQLConnection conn = new MySQLConnection();
 		

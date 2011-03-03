@@ -89,9 +89,7 @@ public class PdbfilePdb extends Pdb {
 			throw new PdbLoadException(e);
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
-		} catch (PdbChainCodeNotFoundException e) {
-			throw new PdbLoadException(e);
-		}
+		} 
 	}
 	
 	/**
@@ -172,16 +170,15 @@ public class PdbfilePdb extends Pdb {
 	 * - SEQRES present and sequence doesn't coincide with ATOM lines sequence
 	 * - all residues are non-standard for given chain (0 observed residues)
 	 * We never renumber the residues: we take them as they are and check all of the above
-	 * @param pdbfile the PDB file name
 	 * @throws IOException
 	 * @throws FileFormatException if file is empty, if file is a CASP TS file 
 	 * and no TARGET line found, if sequences from ATOM lines and SEQRES do not coincide, 
 	 * if an insertion code is found, if a residue number<=0 found, if ATOM lines are not 
 	 * in residue ascending order, if 0 observed residues are found for given chain
-	 * @throws PdbChainCodeNotFoundException if no ATOM lines are found for given 
-	 * pdbChainCode and model
+	 * @throws PdbLoadException if no ATOM lines are found for given 
+	 * pdbChainCode and model or the space group found is not recognised
 	 */
-	private void parse() throws IOException, FileFormatException, PdbChainCodeNotFoundException, PdbLoadException {
+	private void parse() throws IOException, FileFormatException, PdbLoadException { 
 		Pattern p;
 		Matcher m;
 		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
@@ -470,7 +467,7 @@ public class PdbfilePdb extends Pdb {
 		}
 		fpdb.close();
 		if (empty) {
-			throw new PdbChainCodeNotFoundException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbLoadException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 
 		// we check also that there was at least one observed residue for the chain

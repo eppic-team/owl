@@ -198,9 +198,7 @@ public class CiffilePdb extends Pdb {
 			throw new PdbLoadException(e);
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
-		} catch (PdbChainCodeNotFoundException e) {
-			throw new PdbLoadException(e);
-		}
+		} 
 
 	}
 	
@@ -291,7 +289,7 @@ public class CiffilePdb extends Pdb {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private void parseCifFile() throws IOException, FileFormatException, PdbChainCodeNotFoundException, PdbLoadException {
+	private void parseCifFile() throws IOException, FileFormatException, PdbLoadException {
 		
 		if (!fieldsTitlesRead) {
 			readFieldsTitles();
@@ -455,7 +453,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readAtomSite() throws IOException, PdbChainCodeNotFoundException, FileFormatException {
+	private void readAtomSite() throws IOException, FileFormatException, PdbLoadException {
 		
 		ArrayList<AtomLine>	atomLinesData = new ArrayList<AtomLine>(); // to temporarily store all data from atom lines, we keep then only the ones matching the alt locations that we want
 		TreeSet<String> labelAltIds = new TreeSet<String>(); // to store the alt location ids (label_alt_id) (the default char "." is not stored)
@@ -511,7 +509,7 @@ public class CiffilePdb extends Pdb {
 			}
 		}
 		if (atomLinesData.isEmpty()) { // no atom data was found for given pdb chain code and model
-			throw new PdbChainCodeNotFoundException("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbLoadException("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
 		
 		String firstAltCode = null;

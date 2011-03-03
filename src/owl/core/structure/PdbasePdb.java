@@ -137,11 +137,7 @@ public class PdbasePdb extends Pdb {
 			
 		} catch (SQLException e) {
 			throw new PdbLoadException(e);
-		} catch (PdbChainCodeNotFoundException e) {
-			throw new PdbLoadException(e);
-		} catch (PdbaseInconsistencyException e) {
-			throw new PdbLoadException(e);
-		}
+		} 
 
 	}
 	
@@ -227,10 +223,10 @@ public class PdbasePdb extends Pdb {
 	/**
 	 * Gets the asym_id given a pdb_strand_id (from field pdbChainCode) and entry_key (from field entrykey)
 	 * @return
-	 * @throws PdbChainCodeNotFoundException
+	 * @throws PdbLoadException
 	 * @throws SQLException
 	 */
-	private String getAsymId() throws PdbChainCodeNotFoundException, SQLException {
+	private String getAsymId() throws PdbLoadException, SQLException {
 		String asymid = null;
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
@@ -251,7 +247,7 @@ public class PdbasePdb extends Pdb {
 			asymid = rsst.getString(1);
 		} else {
 			//System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-			throw new PdbChainCodeNotFoundException("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+			throw new PdbLoadException("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
 		}
 		rsst.close();
 		stmt.close();
@@ -262,10 +258,10 @@ public class PdbasePdb extends Pdb {
 	/**
 	 * Gets the pdb_strand_id given an asym_id (from field asymid) and entry_key (from field entrykey)
 	 * @return
-	 * @throws PdbChainCodeNotFoundException
+	 * @throws PdbLoadException
 	 * @throws SQLException
 	 */
-	private String getPdbStrandId() throws PdbChainCodeNotFoundException, SQLException {
+	private String getPdbStrandId() throws PdbLoadException, SQLException {
 		String pdbstrandid = null;
 		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
 		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
@@ -280,7 +276,7 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			pdbstrandid = rsst.getString(1);
 		} else {
-			throw new PdbChainCodeNotFoundException("No pdb_strand_id match for entry_key="+entrykey+", asym_id="+asymid);
+			throw new PdbLoadException("No pdb_strand_id match for entry_key="+entrykey+", asym_id="+asymid);
 		}
 		rsst.close();
 		stmt.close();
@@ -290,7 +286,7 @@ public class PdbasePdb extends Pdb {
 	
 	// NOTE: Entity key not really needed since there can be only one entity_key
 	// per entry_key,asym_id combination 
-	private int getEntityKey() throws PdbaseInconsistencyException, SQLException {
+	private int getEntityKey() throws PdbLoadException, SQLException {
 		String sql="SELECT entity_key " +
 				" FROM "+db+".struct_asym " +
 				" WHERE entry_key="+ entrykey +
@@ -301,17 +297,17 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			entitykey = rsst.getInt(1);
 			if (! rsst.isLast()) {
-				throw new PdbaseInconsistencyException("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
+				throw new PdbLoadException("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
 			}
 		} else {
-			throw new PdbaseInconsistencyException("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
+			throw new PdbLoadException("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
 		}
 		rsst.close();
 		stmt.close();
 		return entitykey;
 	}
 	
-	private String getAtomAltLocs() throws PdbaseInconsistencyException, SQLException{
+	private String getAtomAltLocs() throws PdbLoadException, SQLException{
 		ArrayList<String> alt_ids = new ArrayList<String>();
 		String alt_loc_field="label_alt_id";
 		String sql = "SELECT DISTINCT " + alt_loc_field + 
@@ -330,7 +326,7 @@ public class PdbasePdb extends Pdb {
 		}
 		if (count>0){
 			if (! alt_ids.contains(".")){ 
-				throw new PdbaseInconsistencyException("alt_codes exist for entry_key "+entrykey+" but there is no default value '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
+				throw new PdbLoadException("alt_codes exist for entry_key "+entrykey+" but there is no default value '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
 			}
 			if (count==1) {
 				alt_locs_sql_str = alt_loc_field+"='.'";
@@ -341,7 +337,7 @@ public class PdbasePdb extends Pdb {
 				alt_locs_sql_str = "("+alt_loc_field+"='.' OR "+alt_loc_field+"='"+lowest_alt_id+"')";
 			}
 		} else {
-			throw new PdbaseInconsistencyException("No records returned from atom_site table for entry_key="+entrykey+", entity_key="+entitykey+", asym_id="+asymid+", model_num="+model);
+			throw new PdbLoadException("No records returned from atom_site table for entry_key="+entrykey+", entity_key="+entitykey+", asym_id="+asymid+", model_num="+model);
 		} 
 
 		rsst.close();
@@ -434,7 +430,7 @@ public class PdbasePdb extends Pdb {
 		stmt.close();		
 	}
 	
-	private void readAtomData() throws PdbaseInconsistencyException, SQLException{
+	private void readAtomData() throws PdbLoadException, SQLException{
 		// NOTE: label_entity_key not really needed since there can be only one entity_key
 		// per entry_key,asym_id combination
 		String sql = "SELECT id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
@@ -474,13 +470,13 @@ public class PdbasePdb extends Pdb {
 
 		}
 		if (count==0){
-			throw new PdbaseInconsistencyException("atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
+			throw new PdbLoadException("Atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
 		}
 		rsst.close();
 		stmt.close();
 	}
 	
-	private String readSeq() throws PdbaseInconsistencyException, SQLException{
+	private String readSeq() throws PdbLoadException, SQLException{
 		String sequence="";
 
         // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
@@ -503,7 +499,7 @@ public class PdbasePdb extends Pdb {
         	}
         } 
         if (count==0) {
-        	throw new PdbaseInconsistencyException("No sequence data match for entry_key="+entrykey+", asym_id="+asymid);
+        	throw new PdbLoadException("No sequence data match for entry_key="+entrykey+", asym_id="+asymid);
         }
         rsst.close();
         stmt.close();
@@ -511,7 +507,7 @@ public class PdbasePdb extends Pdb {
 		return sequence;
 	}
 	
-	private TreeMap<String,Integer> getRessersMapping() throws PdbaseInconsistencyException, SQLException{
+	private TreeMap<String,Integer> getRessersMapping() throws PdbLoadException, SQLException{
 		String pdbstrandid=pdbChainCode;
 		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
 			pdbstrandid="A";
@@ -535,7 +531,7 @@ public class PdbasePdb extends Pdb {
 			map.put(pdbresser, resser);
 		} 
 		if (count==0) {
-			throw new PdbaseInconsistencyException("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
+			throw new PdbLoadException("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
 		}
 		rsst.close();
 		stmt.close();
