@@ -32,14 +32,17 @@ public enum AtomType {
 	Na(11, 22.990, 2.27, "NA", "Sodium", false),
 	Mg(12, 23.985, 1.73, "MG", "Magnesium",false),
 	Cl(17, 34.969, 1.75, "CL", "Chlorine",false),
+	K (19, 38.964, 2.75, "K",  "Potassium",false),
 	Ca(20, 39.962, 2.00, "CA", "Calcium",false),
 	Mn(25, 54.938, 2.00, "MN", "Manganese",false),
 	Fe(26, 53.940, 2.00, "FE", "Iron",false),
 	Co(27, 58.933, 2.00, "CO", "Cobalt",false),
+	Ni(28, 57.935, 1.63, "NI", "Nickel",false),
 	Cu(29, 62.930, 1.40, "CU", "Copper",false),
 	Zn(30, 63.929, 1.39, "ZN", "Zinc",false),
 	Se(34, 73.922, 1.90, "SE", "Selenium",false),
 	Br(35, 78.918, 1.85, "BR", "Bromine",false),
+	Mo(42, 91.907, 2.00, "MO", "Molybdenum",false),
 	Cd(48,105.906, 1.58, "CD", "Cadmium",false),
 	I (53,126.904, 1.98,  "I", "Iodine",false);
 	
