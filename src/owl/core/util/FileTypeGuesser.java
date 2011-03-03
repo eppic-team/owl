@@ -40,7 +40,7 @@ public class FileTypeGuesser {
 	
 	// signatures for the files in order as above
 	private static final String[] FILE_SIGNATURES  = {
-		"HEADER.*",
+		"(?:HEADER|SEQRES|CRYST1).*",
 		"ATOM\\s+.*",
 		"PFRMAT\\s+TS.*",
 		"PFRMAT\\s+RR.*",

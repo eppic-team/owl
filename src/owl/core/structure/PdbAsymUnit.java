@@ -90,7 +90,7 @@ public class PdbAsymUnit {
 		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
-		if (type==FileTypeGuesser.PDB_FILE) {
+		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE) {
 			loadFromPdbFile(pdbSourceFile);
 		} else if (type==FileTypeGuesser.CIF_FILE) {
 			loadFromCifFile(pdbSourceFile);
