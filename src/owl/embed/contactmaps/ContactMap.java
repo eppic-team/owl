@@ -6,7 +6,7 @@ import java.util.*;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
@@ -56,13 +56,13 @@ public class ContactMap {
 	
 	public ContactMap (){};
 	
-	public ContactMap (String pdb_code, int max_pot) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMap (String pdb_code, int max_pot) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		contact_coverage = 0.1;
 		max_potence = max_pot;
 		setContactMap(pdb_code);
 	}
 	
-	public ContactMap (String pdb_code, int max_pot, double contact) throws SQLException, PdbCodeNotFoundException, PdbLoadError, ContactMatrixException{
+	public ContactMap (String pdb_code, int max_pot, double contact) throws SQLException, PdbCodeNotFoundException, PdbLoadException, ContactMatrixException{
 		if(contact > 0.0 && contact < 1.0) contact_coverage = contact;
 		else throw new ContactMatrixException("Parameter 'contact' must be element in the open unit intervall, but was set to :"+contact+"!");
 		max_potence = max_pot;
@@ -73,11 +73,11 @@ public class ContactMap {
 		setContactMaps(cm);
 	}
 	
-	public ContactMap (int max_pot, String path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMap (int max_pot, String path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setContactMap(max_pot,path,0.1);
 	}
 	
-	public ContactMap (int max_pot, String path, double contact) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMap (int max_pot, String path, double contact) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setContactMap(max_pot,path, contact);
 	}
 
@@ -94,7 +94,7 @@ public class ContactMap {
 		setContactMaps(in);
 	}
 	
-	public void setContactMap (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setContactMap (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(pdb_code, "pdbase_20090728", conn);
 		pdb.load("A");
@@ -128,7 +128,7 @@ public class ContactMap {
 		setSensitivity();
 	}
 	
-	public void setContactMap (int max_pot, String path, double contact) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError, ContactMatrixException {
+	public void setContactMap (int max_pot, String path, double contact) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException, ContactMatrixException {
 		if(contact > 0.0 && contact < 1.0) contact_coverage = contact;
 		else throw new ContactMatrixException("Parameter 'contact' must be element in the open unit intervall, but was set to :"+contact+"!");
 		max_potence = max_pot;
@@ -412,7 +412,7 @@ public class ContactMap {
 		else throw new NullPointerException ("The contact map field must be initialized before calling this method.");
 	}
 	
-	public Individuals convertToIndividuals () throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Individuals convertToIndividuals () throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		if(mat != null && square != null && rig != null){
 			HashSet<Pair<Integer>> pairs = convertToHashSet(mat.getIndexPairs());
 			Individuals in = new Individuals ();
@@ -430,7 +430,7 @@ public class ContactMap {
 		else throw new NullPointerException ("Fields must be initialized before calling this method!");
 	}
 	
-	public Individuals convertToIndividuals (SparseMatrix mat) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Individuals convertToIndividuals (SparseMatrix mat) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		if(mat != null&& rig != null){
 			Set<Pair<Integer>> pairs = mat.getIndexPairs();
 			HashSet<Pair<Integer>> hash = new HashSet<Pair<Integer>>();
@@ -552,7 +552,7 @@ public class ContactMap {
 		return newset;
 	}
 	
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, FileNotFoundException, IOException{
 		/*String dir      = "/project/StruPPi/gabriel/Arbeiten/";
 		String addname1 = "cmEvolver/"; 
 		ContactMap cm = new ContactMap ("1bkr",11);

@@ -8,7 +8,7 @@ import javax.vecmath.Vector3d;
 
 import owl.core.structure.Atom;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
 
@@ -25,9 +25,9 @@ public class Gmbp_Geom {
 	// ---- MAIN for TestPurposes
 	/**
 	 * @param args
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 */
-	public static void main(String[] args) throws PdbLoadError {
+	public static void main(String[] args) throws PdbLoadException {
 		// TODO Auto-generated method stub
 
 		GmbpGeometry gmbp = new GmbpGeometry();

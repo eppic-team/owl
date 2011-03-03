@@ -16,7 +16,7 @@ import owl.embed.contactmaps.Individuals;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGCommonNbhood;
 import owl.core.structure.graphs.RIGEdge;
@@ -81,9 +81,9 @@ public class ConePeeler extends RIGraph {
 	 * <tt>cutOff</tt>.
 	 * @param pdb a Pdb instance representing the protein
 	 * @param cutOff the cutoff distance
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	protected ConePeeler (Pdb pdb, double cutOff) throws PdbLoadError{
+	protected ConePeeler (Pdb pdb, double cutOff) throws PdbLoadException{
 		super();
 		structure = new Pdb(pdb.getSequence());
 		structure.load(pdb.getChainCode());
@@ -147,7 +147,7 @@ public class ConePeeler extends RIGraph {
 		catch(PdbCodeNotFoundException e){
 			throw new ConePeelerException (e.getMessage());
 		}
-		catch(PdbLoadError e){
+		catch(PdbLoadException e){
 			throw new ConePeelerException (e.getMessage());
 		}
 	}
@@ -357,7 +357,7 @@ public class ConePeeler extends RIGraph {
 	 * @return the minimal set as an RIGraph 
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
 	public static RIGraph getMinSubset (RIGraph graph) throws ConePeelerException {
 		ConePeeler cone = new ConePeeler (graph);
@@ -407,7 +407,7 @@ public class ConePeeler extends RIGraph {
 	public static RIGraph getMinSubset (String pdbCode, String chainCode, String db) throws ConePeelerException{
 		return getMinSubset(pdbCode,chainCode,db,3);
 	}
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
+	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException{
 		RIGraph subset = getMinSubset("1bkr","A","pdbase_20090728",8.0,1);
 		String output = "/project/StruPPi/gabriel/Arbeiten/ConePeeler/1bkr1bkr-31.indi";
 		Individuals in2 = new Individuals (output);

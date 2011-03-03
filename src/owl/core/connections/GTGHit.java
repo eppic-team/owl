@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 
@@ -111,9 +111,9 @@ public class GTGHit {
 	 * @return false if sequences don't match, true if they do
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public boolean checkSubjectSequence(MySQLConnection conn, String pdbaseDb) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public boolean checkSubjectSequence(MySQLConnection conn, String pdbaseDb) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		if (subjectSequence.equals("")) {
 			System.err.println("Subject sequence is empty");
 			return false;
@@ -166,9 +166,9 @@ public class GTGHit {
 	 * @param pdbaseDb
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		if (subjectStart==0 && subjectEnd ==0 ) return; // subject start and end not known: nothing to do
 		
 		String pdbCode = subjectId.substring(0, 4);

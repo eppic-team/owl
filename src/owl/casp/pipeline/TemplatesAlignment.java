@@ -8,7 +8,7 @@ import java.io.PrintStream;
 import java.sql.SQLException;
 
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.PaulStructAligner;
 import owl.core.structure.alignment.StructAlignmentException;
@@ -139,7 +139,7 @@ public class TemplatesAlignment {
 		} catch (IOException e) {
 			System.err.println("Couldn't read templates file "+templatesFile+". Error: "+e.getMessage());
 			System.exit(1);
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			System.err.println("Problems getting PDB data of templates from file "+templatesFile+". Error: "+e.getMessage());
 			System.exit(1);
 		} catch (SQLException e) {

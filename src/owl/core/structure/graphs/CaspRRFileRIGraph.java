@@ -4,7 +4,7 @@ import java.io.*;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 
@@ -21,9 +21,9 @@ public class CaspRRFileRIGraph extends RIGraph {
 	 * Constructs a RIGraph object based on a Casp contact prediction file.
 	 * @param fileName the contact prediction file
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	public CaspRRFileRIGraph (String fileName) throws IOException, FileFormatError{
+	public CaspRRFileRIGraph (String fileName) throws IOException, FileFormatException{
 		super();
 		this.contactType=ProtStructGraph.NO_CONTACT_TYPE;
 		this.distCutoff=ProtStructGraph.NO_CUTOFF;
@@ -36,10 +36,10 @@ public class CaspRRFileRIGraph extends RIGraph {
 		
 	}
 
-	private void readFromCaspRRFile(String fileName) throws FileNotFoundException, IOException, FileFormatError {
+	private void readFromCaspRRFile(String fileName) throws FileNotFoundException, IOException, FileFormatException {
 		CaspRRFileData rrData = new CaspRRFileData();
 		File inFile = new File(fileName);
-		if(!CaspRRFileData.isValidCaspRRFile(inFile)) throw new FileFormatError(fileName + " is not a valid casp contact prediction file.");
+		if(!CaspRRFileData.isValidCaspRRFile(inFile)) throw new FileFormatException(fileName + " is not a valid casp contact prediction file.");
 		rrData.readFromFile(new File(fileName));
 		
 		// convert meta data
@@ -50,7 +50,7 @@ public class CaspRRFileRIGraph extends RIGraph {
 		this.caspModelNum = rrData.modelNum;
 		
 		// add vertices
-		if (sequence == null || sequence.equals("")) throw new FileFormatError("No sequence found in CASP RR file " + fileName);
+		if (sequence == null || sequence.equals("")) throw new FileFormatException("No sequence found in CASP RR file " + fileName);
 		this.fullLength = sequence.length();
 		for (int i=0;i<sequence.length();i++){
 			RIGNode node = new RIGNode(i+1,AminoAcid.one2three(sequence.charAt(i)));
@@ -64,11 +64,11 @@ public class CaspRRFileRIGraph extends RIGraph {
 		// add edges
 		for(CaspRRFileData.RRContact cont:rrData.getContacts()) {
 			if(cont.minDist != 0) 
-				throw new FileFormatError("Non-zero minimum distance value in CASP RR file " + fileName + ".");		
+				throw new FileFormatException("Non-zero minimum distance value in CASP RR file " + fileName + ".");		
 			if(this.distCutoff != cont.maxDist) 
-				throw new FileFormatError("Distance cutoffs in CASP RR file " + fileName + " are not equal.");
+				throw new FileFormatException("Distance cutoffs in CASP RR file " + fileName + " are not equal.");
 			if (cont.i>=cont.j) 
-				throw new FileFormatError("Contact "+cont.i+"-"+cont.j+" specified with i>j in CASP RR file " + fileName+". Only j>i contacts are allowed in CASP RR files.");
+				throw new FileFormatException("Contact "+cont.i+"-"+cont.j+" specified with i>j in CASP RR file " + fileName+". Only j>i contacts are allowed in CASP RR files.");
 			this.addEdge(new RIGEdge(cont.weight), getNodeFromSerial(cont.i), getNodeFromSerial(cont.j), EdgeType.UNDIRECTED);
 		}
 	}

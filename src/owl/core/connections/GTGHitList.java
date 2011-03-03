@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.util.MySQLConnection;
 
@@ -55,10 +55,10 @@ public class GTGHitList implements Iterable<GTGHit> {
 	 * @param pdbaseDb
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 * @see GTGHit.reassignSubjectSerials
 	 */
-	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	public void reassignSubjectSerials(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		for (GTGHit hit: this) {
 			hit.reassignSubjectSerials(conn, pdbaseDb);
 		}	

@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeMap;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.RegexFileFilter;
 
 
@@ -101,7 +101,7 @@ public class GenerateSummaries {
 							decoy2scoresetspermethod.put(set.getDecoyName(),map);
 						}
 						decoy2scoresetspermethod.get(set.getDecoyName()).put(set.getScoringMethod().getId(), set);
-					} catch (FileFormatError e) {
+					} catch (FileFormatException e) {
 						System.err.println(e.getMessage());
 						continue;
 					}

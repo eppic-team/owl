@@ -10,12 +10,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.CaspRRFileRIGraph;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 /**
@@ -129,7 +129,7 @@ public class scoreAllModelsWithRanks {
 			PdbfilePdb answerPdb = new PdbfilePdb(answer.getPath());
 			try {
 				answerPdb.load(answerPdb.getChains()[0]);
-			} catch (PdbLoadError e1) {
+			} catch (PdbLoadException e1) {
 				System.err.println("Error: Could not load Pdb file " + answerPdb + ": " + e1.getMessage() + ". Skipping target.");
 				continue;
 			}
@@ -156,7 +156,7 @@ public class scoreAllModelsWithRanks {
 			} catch (IOException e2) {
 				System.err.println("Error: Could not load RR file " + pred + ": " + e2.getMessage() + ". Skipping target.");
 				continue;
-			} catch (FileFormatError e2) {
+			} catch (FileFormatException e2) {
 				System.err.println("Error: Could not load RR file " + pred + ": " + e2.getMessage() + ". Skipping target.");
 				continue;
 			}
@@ -189,7 +189,7 @@ public class scoreAllModelsWithRanks {
 					idx++;
 					ModelScore modScore = getModelScore(idx, targetName, modelName, modelGraph, nativeGraph);
 					modelScores.add(modScore);				
-				} catch (PdbLoadError e1) {
+				} catch (PdbLoadException e1) {
 					System.err.println("Error: Could not load Pdb file " + model + ": " + e1.getMessage() + ". Ignoring");
 				}				
 				

@@ -11,7 +11,7 @@ import owl.core.runners.TcoffeeRunner;
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 public class TargetToTemplatesAlignment {
@@ -106,7 +106,7 @@ public class TargetToTemplatesAlignment {
 		} catch (IOException e) {
 			System.err.println("Problem while reading sequence file "+seqFile+". Error: "+e.getMessage());
 			System.exit(1);
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Problem while reading sequence file "+seqFile+". Error: "+e.getMessage());
 			System.exit(1);
 		}
@@ -117,7 +117,7 @@ public class TargetToTemplatesAlignment {
 		} catch (IOException e) {
 			System.err.println("Problem while reading templates alignment file "+tempsAlnFile+". Error: "+e.getMessage());
 			System.exit(1);
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Problem while reading templates alignment file "+tempsAlnFile+". Error: "+e.getMessage());
 			System.exit(1);			
 		} catch (AlignmentConstructionException e) {

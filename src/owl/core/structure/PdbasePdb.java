@@ -47,9 +47,9 @@ public class PdbasePdb extends Pdb {
 	 * @param pdbCode
 	 * @throws SQLException  
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection());
 	}
 
@@ -61,9 +61,9 @@ public class PdbasePdb extends Pdb {
 	 * @param conn
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
 		this.db=db;
 		
@@ -82,9 +82,9 @@ public class PdbasePdb extends Pdb {
 	 * for given pdbChainCode and modelSerial
 	 * @param pdbChainCode
 	 * @param modelSerial
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError {
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException {
 		load(pdbChainCode, modelSerial, ChainCodeType.PDB_CHAIN_CODE);
 	}
 	
@@ -96,9 +96,9 @@ public class PdbasePdb extends Pdb {
 	 * @param chainCode
 	 * @param modelSerial
 	 * @param ccType
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void load(String chainCode, int modelSerial, ChainCodeType ccType) throws PdbLoadError {
+	public void load(String chainCode, int modelSerial, ChainCodeType ccType) throws PdbLoadException {
 		try {
 			this.initialiseResidues();
 			this.model = modelSerial;
@@ -136,11 +136,11 @@ public class PdbasePdb extends Pdb {
 			dataLoaded = true;
 			
 		} catch (SQLException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		} catch (PdbChainCodeNotFoundException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		} catch (PdbaseInconsistencyException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		}
 
 	}
@@ -149,7 +149,7 @@ public class PdbasePdb extends Pdb {
 	 * Returns all PDB chain codes for this entry in pdbase 
 	 * @return array with all pdb chain codes
 	 */
-	public String[] getChains()	throws PdbLoadError {
+	public String[] getChains()	throws PdbLoadException {
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
@@ -161,7 +161,7 @@ public class PdbasePdb extends Pdb {
 			rsst.close();
 			stmt.close();
 		} catch (SQLException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -175,7 +175,7 @@ public class PdbasePdb extends Pdb {
 	 * Returns all model serials for this entry in pdbase
 	 * @return array with all model serials
 	 */
-	public Integer[] getModels() throws PdbLoadError {
+	public Integer[] getModels() throws PdbLoadException {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
@@ -188,7 +188,7 @@ public class PdbasePdb extends Pdb {
 			stmt.close();
 	
 		} catch (SQLException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		}
 		
 		if (models.isEmpty()) return null;		
@@ -350,7 +350,7 @@ public class PdbasePdb extends Pdb {
 		return alt_locs_sql_str;
 	}
 	
-	private void readCrystalData() throws SQLException, PdbLoadError {
+	private void readCrystalData() throws SQLException, PdbLoadException {
 		String sql = "SELECT space_group_name_h_m " +
 				" FROM "+db+".symmetry " +
 				" WHERE entry_key="+entrykey;
@@ -364,7 +364,7 @@ public class PdbasePdb extends Pdb {
 			// for some pdb entries (e.g. NMRs) there's no crystal information at all
 			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 			if (spaceGroup==null) {
-				throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
+				throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 			}
 		}
 

@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 
@@ -190,9 +190,9 @@ public abstract class TypeScorer extends Scorer {
 	 * Reads the scoring matrix from a file.
 	 * @param scMatFile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatError {
+	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatException {
 		ArrayList<Integer> entityCountsAL = new ArrayList<Integer>();
 		ArrayList<ArrayList<Double>> scoringMatAL = new ArrayList<ArrayList<Double>>();
 		this.indices2types = new HashMap<Integer, String>();
@@ -279,7 +279,7 @@ public abstract class TypeScorer extends Scorer {
 			this.entityCounts[i] = entityCountsAL.get(i);
 		}
 		if (scoringMatAL.size()!=scoringMatAL.get(0).size()) {
-			throw new FileFormatError("Size of matrix rows and columns don't match: "+scoringMatAL.size()+" "+scoringMatAL.get(0).size());
+			throw new FileFormatException("Size of matrix rows and columns don't match: "+scoringMatAL.size()+" "+scoringMatAL.get(0).size());
 		}
 		this.scoringMat = new double[scoringMatAL.size()][scoringMatAL.get(0).size()];
 		for (int i=0;i<scoringMatAL.size();i++) {

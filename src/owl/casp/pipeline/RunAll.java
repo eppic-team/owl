@@ -22,11 +22,11 @@ import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.StructAlignmentException;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
@@ -268,7 +268,7 @@ public class RunAll {
 			try {
 				templates = ts.run();
 
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println("Input sequence file doesn't conform to FASTA format. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
 			} catch (BlastError e) {
@@ -295,7 +295,7 @@ public class RunAll {
 			} catch (IOException e) {
 				System.err.println("Couldn't read templates or sequence file. Error: "+e.getMessage());
 				System.exit(1);
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println("Couldn't read input sequence file. Error: "+e.getMessage());
 				System.exit(1);
 			}
@@ -305,7 +305,7 @@ public class RunAll {
 			} catch (SQLException e) {
 				System.err.println("Problems getting PDB data for templates alignment. Error: "+e.getMessage()+"\nCan't continue");
 				System.exit(1);			
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Problems getting PDB data for templates alignment. Error: "+e.getMessage()+"\nCan't continue");
 				System.exit(1);			
 			}
@@ -381,7 +381,7 @@ public class RunAll {
 			} catch (IOException e) {
 				System.err.println("Couldn't read the alignment from given file "+target2templatesFile+". Error: "+e.getMessage());
 				System.exit(1);
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println("Wrong format of target to template alignment file "+target2templatesFile+". Error: "+e.getMessage());
 				System.exit(1);
 			}

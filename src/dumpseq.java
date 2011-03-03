@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 
@@ -148,7 +148,7 @@ public class dumpseq {
 			} catch (SQLException e) {
 				System.err.println("SQL error for structure "+pdbCode+", error: "+e.getMessage());
 				continue;
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error loading pdb data for " + pdbCode +", specific error: "+e.getMessage());
 				continue;
 			}
@@ -181,7 +181,7 @@ public class dumpseq {
 					}
 
 					numPdbs++;
-				} catch (PdbLoadError e) {
+				} catch (PdbLoadException e) {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				}
 

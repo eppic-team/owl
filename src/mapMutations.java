@@ -10,7 +10,7 @@ import owl.core.runners.NaccessRunner;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
@@ -295,7 +295,7 @@ public class mapMutations {
 				String[] chains = pdb.getChains();
 				System.out.println("Loading chain " + chains[0]);
 				pdb.load(chains[0]);
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
@@ -314,14 +314,14 @@ public class mapMutations {
 
 							chainCode = pdb.getChains()[0];
 						}
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);
 					}
 					try {
 						System.out.println("Loading chain " + chainCode);
 						pdb.load(pdb.getChains()[0]);
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);
 					}

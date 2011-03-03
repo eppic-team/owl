@@ -28,12 +28,12 @@ import owl.core.structure.CiffilePdb;
 import owl.core.structure.CrystalCell;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbaseInconsistencyException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -65,7 +65,7 @@ public class PdbParsersTest {
 	}
 
 	@Test
-	public void testSpecialPDBFiles() throws PdbLoadError {
+	public void testSpecialPDBFiles() throws PdbLoadException {
 		// testing some special PDB files
 		
 		// tinker file (no occupancy or bfactors)
@@ -74,7 +74,7 @@ public class PdbParsersTest {
 	}
 	
 	@Test
-	public void testCIFagainstPDBASE() throws FileFormatError, PdbaseInconsistencyException, SQLException, IOException {
+	public void testCIFagainstPDBASE() throws FileFormatException, PdbaseInconsistencyException, SQLException, IOException {
 
 		MySQLConnection conn = new MySQLConnection();
 		
@@ -209,7 +209,7 @@ public class PdbParsersTest {
 				System.err.println("File missing. "+e.getMessage());
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("pdb code not found in pdbase");
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("pdb load error, cause: "+e.getMessage());
 			}
 
@@ -320,7 +320,7 @@ public class PdbParsersTest {
 				
 			} catch (FileNotFoundException e){
 				System.err.println("File missing. "+e.getMessage());
-			}catch (PdbLoadError e) {
+			}catch (PdbLoadException e) {
 				System.err.println("pdb load error, cause: "+e.getMessage());
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("pdb code not found in pdbase");			

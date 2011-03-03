@@ -9,7 +9,7 @@ import org.apache.commons.collections15.Transformer;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 
 import edu.uci.ics.jung.graph.Graph;
@@ -102,7 +102,7 @@ public class GraphIOGDLFile<V,E> {
 	
 	
 	// tester
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException {
+	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
 		Pdb pdb = new PdbasePdb("1bxy");
 		pdb.load("A");
 		RIGraph graph = pdb.getRIGraph("Ca", 8);

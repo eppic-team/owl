@@ -5,7 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -22,15 +22,15 @@ public class BlastTabularParser {
 	 * To get the parsed values use {@link #getHits()}
 	 * @param blastOutFile
 	 * @throws IOException if I/O error while reading the file
-	 * @throws FileFormatError if given file doesn't follow blast's tabular 
+	 * @throws FileFormatException if given file doesn't follow blast's tabular 
 	 * output format
 	 */
-	public BlastTabularParser(File blastOutFile) throws IOException, FileFormatError {
+	public BlastTabularParser(File blastOutFile) throws IOException, FileFormatException {
 		this.blastOutFile = blastOutFile;
 		this.parse();
 	}
 	
-	private void parse() throws IOException, FileFormatError {
+	private void parse() throws IOException, FileFormatException {
 		hits = new BlastHitList();
 		String lastSubjectId = null;
 		BlastHit currentHit = null;
@@ -43,7 +43,7 @@ public class BlastTabularParser {
 			
 			String[] fields = line.split("\t");
 			if (fields.length!=12) 
-				throw new FileFormatError("Blast output file "+blastOutFile+" doesn't seem to have the right format at line "+lineCount);
+				throw new FileFormatException("Blast output file "+blastOutFile+" doesn't seem to have the right format at line "+lineCount);
 			
 			BlastHsp hsp = new BlastHsp(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],fields[6],fields[7],fields[8],fields[9],fields[10],fields[11]);
 			String subjectId = fields[1].trim();

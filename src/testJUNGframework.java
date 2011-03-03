@@ -11,7 +11,7 @@ import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNbhood;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 import edu.uci.ics.jung.graph.util.EdgeType;
@@ -21,7 +21,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 public class testJUNGframework {
 
-	public static void main(String[] args) throws FileFormatError, PdbLoadError, SQLException, PdbCodeNotFoundException {
+	public static void main(String[] args) throws FileFormatException, PdbLoadException, SQLException, PdbCodeNotFoundException {
 		Pdb pdb = new PdbasePdb("7adh");
 		pdb.load("A");
 		

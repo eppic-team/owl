@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -145,9 +145,9 @@ public class Sequence implements Serializable {
 	 * Creates a new sequence object by parsing the given Fasta file.
 	 * @param fastaFile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	public void readFromFastaFile(File fastaFile) throws IOException, FileFormatError {
+	public void readFromFastaFile(File fastaFile) throws IOException, FileFormatException {
 		BufferedReader fileIn = new BufferedReader(new FileReader(fastaFile));
 		String nextLine;
 		// read sequences
@@ -160,7 +160,7 @@ public class Sequence implements Serializable {
 			}
 		}
 		if (seq.contains(" ")) {
-			throw new FileFormatError("The sequence in FASTA file "+fastaFile+" contains spaces.");
+			throw new FileFormatException("The sequence in FASTA file "+fastaFile+" contains spaces.");
 		}
 	}
 	
@@ -282,7 +282,7 @@ public class Sequence implements Serializable {
 	 * @return
 	 * @throws IOException
 	 */
-	public static List<Sequence> readSeqs(File seqsFile, Pattern fastaHeaderRegex) throws IOException, FileFormatError {
+	public static List<Sequence> readSeqs(File seqsFile, Pattern fastaHeaderRegex) throws IOException, FileFormatException {
 		if (fastaHeaderRegex==null) fastaHeaderRegex = FASTAHEADER_REGEX;
 		List<Sequence> list = new ArrayList<Sequence>();
 		BufferedReader br = new BufferedReader(new FileReader(seqsFile));
@@ -302,7 +302,7 @@ public class Sequence implements Serializable {
 					seq = new StringBuffer();
 					lastTag = currentTag;
 				} else {
-					throw new FileFormatError("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
+					throw new FileFormatException("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
 				}
 			} else {
 				seq.append(line.trim());

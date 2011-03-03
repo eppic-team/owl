@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.*;
 
@@ -24,7 +24,7 @@ public class HelloAGLappe {
 	/**
 	 * @param args
 	 */
-	public static void main(String[] args) throws PdbLoadError, IOException, SQLException, PdbCodeNotFoundException {
+	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, PdbCodeNotFoundException {
 		String cType = "Ca"; // contact type like "Ca"/"Cb"/"ALL"
 		double cutoff = 8.0; 
 		String myCode = args[0]; 

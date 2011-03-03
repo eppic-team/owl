@@ -261,25 +261,25 @@ public class Pdb implements HasFeatures, Serializable {
 	// to work around that we implement them here just throwing an error if they are called at all
 	// because in fact it's an error to call them!
 	
-	public void load(String pdbChainCode, int model) throws PdbLoadError {
-		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	public void load(String pdbChainCode, int model) throws PdbLoadException {
+		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
 	}
 	
-	public String[] getChains() throws PdbLoadError {
-		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	public String[] getChains() throws PdbLoadException {
+		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
 	}
 	
-	public Integer[] getModels() throws PdbLoadError {
-		throw new PdbLoadError("Fatal error. This method shouldn't be called. This is a bug!");
+	public Integer[] getModels() throws PdbLoadException {
+		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
 	}
 
 	// this method doesn't actually call load(String,int) above but rather the overridden ones in subclasses
 	/**
 	 * Load (from file/db) the given pdbChainCode and the default model {@link #DEFAULT_MODEL}
 	 * @param pdbChainCode
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode) throws PdbLoadError {
+	public void load(String pdbChainCode) throws PdbLoadException {
 		load(pdbChainCode, DEFAULT_MODEL);
 	}
 	
@@ -296,10 +296,10 @@ public class Pdb implements HasFeatures, Serializable {
 	/**
 	 * Returns true if the given chain exists, false otherwise.
 	 * To check for the empty chain, use Pdb.NULL_CHAIN_CODE.
-	 * @throws PdbLoadError if chain list could not be retrieved
+	 * @throws PdbLoadException if chain list could not be retrieved
 	 * @see getChains()
 	 */
-	public boolean hasChain(String chain) throws PdbLoadError {
+	public boolean hasChain(String chain) throws PdbLoadException {
 		String[] chains = this.getChains();
 		for (int i = 0; i < chains.length; i++) {
 			if(chain.equals(chains[i])) return true;
@@ -2846,7 +2846,7 @@ public class Pdb implements HasFeatures, Serializable {
 					if(!silent) System.out.println("Loading chain " + chain);
 					pdb.load(chain);
 				}
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
@@ -2865,7 +2865,7 @@ public class Pdb implements HasFeatures, Serializable {
 
 							chainCode = pdb.getChains()[0];
 						}
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
 						if(exit) System.exit(1);
 					}
@@ -2873,7 +2873,7 @@ public class Pdb implements HasFeatures, Serializable {
 					try {
 						if(!silent) System.out.println("Loading chain " + chainCode);
 						pdb.load(chainCode);
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
 						if(exit) System.exit(1);
 					}

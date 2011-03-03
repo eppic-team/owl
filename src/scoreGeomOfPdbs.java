@@ -13,7 +13,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.casp.benchmarking.Benchmarking;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.decoyScoring.GeomScorer;
 
@@ -201,7 +201,7 @@ public class scoreGeomOfPdbs {
 						Pdb pdb = new PdbfilePdb(dir+proteinId);
 						try {
 							pdb.load(pdbChainCode,modNo);
-						} catch (PdbLoadError e) {
+						} catch (PdbLoadException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 							continue;

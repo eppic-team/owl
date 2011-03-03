@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 
@@ -206,9 +206,9 @@ public abstract class TripletScorer extends Scorer {
 	 * Reads the scoring matrix from a file.
 	 * @param scMatFile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatError {
+	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatException {
 		ArrayList<Integer> entityCountsAL = new ArrayList<Integer>();
 		ArrayList<ArrayList<ArrayList<Double>>> scoringMatAL = new ArrayList<ArrayList<ArrayList<Double>>>();
 		this.indices2types = new HashMap<Integer, String>();
@@ -307,7 +307,7 @@ public abstract class TripletScorer extends Scorer {
 			this.entityCounts[i] = entityCountsAL.get(i);
 		}
 		if (numEntities!=scoringMatAL.get(0).size() || numEntities!=scoringMatAL.get(0).get(0).size()) {
-			throw new FileFormatError("Dimensions of 3d matrix don't match: I "+numEntities+", J "+scoringMatAL.get(0).size()+", K "+scoringMatAL.get(0).get(0).size());
+			throw new FileFormatException("Dimensions of 3d matrix don't match: I "+numEntities+", J "+scoringMatAL.get(0).size()+", K "+scoringMatAL.get(0).get(0).size());
 		}
 		this.scoringMat = new double[numEntities][numEntities][numEntities];
 		for (int i=0;i<numEntities;i++) {

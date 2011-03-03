@@ -91,7 +91,7 @@ public class Template {
 	 * @param conn
 	 * @param pdbaseDb
 	 */
-	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		
 		if (type==Type.DB) {
 			String pdbCode = id.substring(0, 4);

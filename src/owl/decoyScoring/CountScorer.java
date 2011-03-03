@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 
@@ -165,9 +165,9 @@ public abstract class CountScorer extends Scorer {
 	 * Reads the scoring matrix from a file.
 	 * @param scMatFile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatError {
+	protected void readScMatFromFile(File scMatFile) throws IOException, FileFormatException {
 		ArrayList<Integer> binCountsAL = new ArrayList<Integer>();
 		ArrayList<ArrayList<Double>> scoringMatAL = new ArrayList<ArrayList<Double>>();
 		this.indices2types = new HashMap<Integer, String>();

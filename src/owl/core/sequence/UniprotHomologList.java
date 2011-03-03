@@ -39,7 +39,7 @@ import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
@@ -425,7 +425,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		
 		try {
 			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" does not seem to be in the right format.");
 			System.err.println("Error: "+e.getMessage());
 			System.exit(1);
@@ -855,7 +855,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			LOGGER.warn("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
 			try {
 				sr.parseResultsFile(resultsFile, this.ref.getRepresentativeCDS().getCDSName());
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				LOGGER.warn("Cached output selecton file "+resultsFile+" does not seem to be in the righ format");
 				LOGGER.warn(e.getMessage());
 				LOGGER.warn("Running selecton and overwritting the file.");

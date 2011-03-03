@@ -5,7 +5,7 @@ import java.util.*;
 import java.io.*;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 
 //import embed.SparseMatrix;
 
@@ -45,7 +45,7 @@ public class ContactMapEvolver {
 	private double av_sensit3;			//sensitivity test: true positives/(true positives + false positives)
 										//in contact map powered 3
 	
-	public ContactMapEvolver (int numb_of_in, String pdb_code, int steps) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMapEvolver (int numb_of_in, String pdb_code, int steps) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setInitialPop(numb_of_in, pdb_code, steps);
 	}
 	
@@ -78,7 +78,7 @@ public class ContactMapEvolver {
 		setAverageSensitivity();
 	}
 	
-	public void setInitialPop (int numb_of_in, String pdb_code, int steps) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setInitialPop (int numb_of_in, String pdb_code, int steps) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		pop  = new ContactMap [numb_of_in];
 		size = numb_of_in;
 		setPdb(pdb_code);
@@ -267,7 +267,7 @@ public class ContactMapEvolver {
 		else throw new NullPointerException ("Population and indexer fields must be initialized before calling this method!");		
 	}
 	
-	public void writeToFile (String dir_name, String file_name) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
+	public void writeToFile (String dir_name, String file_name) throws SQLException, PdbCodeNotFoundException, PdbLoadException, FileNotFoundException, IOException{
 		File file = new File(dir_name);
 		if(!file.exists()) file.mkdirs();
 		Individuals[] indar = new Individuals[size];
@@ -356,7 +356,7 @@ public class ContactMapEvolver {
 		SparseMatrix mat = map.get(new Integer(i));
 	}*/
 	
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, FileNotFoundException, IOException{
 		ContactMapEvolver ev  = new ContactMapEvolver (100,"1bkr",20);
 		ContactMapEvolver off = new ContactMapEvolver (ev);
 		//String dir_name = "/project/StruPPi/gabriel/Arbeiten/cmEvolver/evo_run/";

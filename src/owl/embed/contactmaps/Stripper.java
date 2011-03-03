@@ -41,18 +41,18 @@ public class Stripper {
 		unstrip_array = new HashMap<Integer,Individuals> ();
 	}
 	
-	public Stripper (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Stripper (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setUnStripper(pdb_code, 100);
 	}
 	
-	public Stripper (String pdb_code, int num_of_runs) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Stripper (String pdb_code, int num_of_runs) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setUnStripper(pdb_code, num_of_runs);
 	}
 	
 	/*-----------------------------------------void-------------------------------------------*/
 	
 	
-	public void setUnStripper (String protein_PDB_code, int num_of_runs) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setUnStripper (String protein_PDB_code, int num_of_runs) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
 		protein = new PdbasePdb (protein_PDB_code, database, conn);
 		protein.load("A");
@@ -68,7 +68,7 @@ public class Stripper {
 		conn.close();
 	}
 	
-	public void deselectContacts () throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public void deselectContacts () throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		if(unstrip_array != null){
 			int cycles = num_of_cycles;
 			for(int i = 1; i <= cycles; i++){
@@ -176,7 +176,7 @@ public class Stripper {
 	/*-----------------------------------------statics---------------------------------------*/
 	
 	
-	public static Individuals reconstructIndi (Individuals in, HashSet<Pair<Integer>> set) throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public static Individuals reconstructIndi (Individuals in, HashSet<Pair<Integer>> set) throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		Individuals newindi = new Individuals (in);
 		newindi.storer(set);
 		newindi.setEntries(set);
@@ -216,7 +216,7 @@ public class Stripper {
 		return new HashSet<Pair<Integer>> (set);
 	}
 	
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException{
 		String[] prots = {"1bkr","1e0l","1e6k","1onl"};
 		int[][] contacts = {{31,660},{4,171},{29,798},{39,816}};
 		for(int i = 0; i < prots.length;i++){

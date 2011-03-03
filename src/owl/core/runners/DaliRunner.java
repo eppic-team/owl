@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
-import owl.core.util.FileFormatError;
+import owl.core.structure.PdbLoadException;
+import owl.core.util.FileFormatException;
 
 /**
  * A class for performing DALI Structural alignments via a locally installed DALI executable
@@ -75,7 +75,7 @@ public class DaliRunner {
 	 * with corresponding gaps in the other sequence.  
 	 * @param fileName a DALI html-formatted output file containing the CLUSTAL-like structure alignment
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
 	
   private void correctFileDALIFormat(String fileName) throws IOException, AlignmentConstructionException {
@@ -199,12 +199,12 @@ public class DaliRunner {
 	/**
 	 * Main (Test) method
 	 * @throws IOException 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws InterruptedException 
-	 * @throws FileFormatError 
+	 * @throws FileFormatException 
 	 */
 	
-	public static void main(String[] args) throws IOException, PdbLoadError, InterruptedException {
+	public static void main(String[] args) throws IOException, PdbLoadException, InterruptedException {
 		
 
 	}

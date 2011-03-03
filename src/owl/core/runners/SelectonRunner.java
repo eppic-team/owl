@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 import owl.core.sequence.GeneticCodeType;
 import owl.core.structure.AminoAcid;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 /**
  * Class to run the selecton program for identification of site-specific positive selection
@@ -85,7 +85,7 @@ public class SelectonRunner {
 		}
 		try {
 			parseResultsFile(resultsFile, refSequenceName);
-		} catch(FileFormatError e) {
+		} catch(FileFormatException e) {
 			System.err.println("Unexpected error. Selecton output file "+resultsFile+" is not in the expected format.");
 			System.err.println(e.getMessage());
 			System.exit(1);
@@ -99,10 +99,10 @@ public class SelectonRunner {
 	 * @param sequenceName the name (FASTA tag) of the reference sequence passed with the
 	 * -q option to selecton
 	 * @throws IOException
-	 * @throws FileFormatError if sequence serials not sequential, unknown aminoacid code 
+	 * @throws FileFormatException if sequence serials not sequential, unknown aminoacid code 
 	 * or sequence reference name given not matching the one in the file
 	 */
-	public void parseResultsFile(File resultsFile, String sequenceName) throws IOException, FileFormatError {
+	public void parseResultsFile(File resultsFile, String sequenceName) throws IOException, FileFormatException {
 		kaksRatios = new ArrayList<Double>();
 		BufferedReader br = new BufferedReader(new FileReader(resultsFile));
 		String line;
@@ -117,7 +117,7 @@ public class SelectonRunner {
 				if (m.matches()) {
 					seqName = m.group(1).trim();
 					if (!seqName.equals(sequenceName)) {
-						throw new FileFormatError("The reference sequence name in output selecton file "+resultsFile+" ("+seqName+") does not coincide with the expected sequence name "+sequenceName);
+						throw new FileFormatException("The reference sequence name in output selecton file "+resultsFile+" ("+seqName+") does not coincide with the expected sequence name "+sequenceName);
 					}
 				}
 				continue;
@@ -125,18 +125,18 @@ public class SelectonRunner {
 			String[] tokens = line.split("\\s+");
 			int serial = Integer.parseInt(tokens[0]);
 			if (lastSerial+1!=serial) {
-				throw new FileFormatError("Aminoacids in the selecton results file "+resultsFile+" are not sequentially numbered at line "+lineCount);
+				throw new FileFormatException("Aminoacids in the selecton results file "+resultsFile+" are not sequentially numbered at line "+lineCount);
 			}
 			AminoAcid aa = AminoAcid.getByOneLetterCode(tokens[1].toCharArray()[0]);
 			if (aa==null) {
-				throw new FileFormatError("Unknown amino acid one letter code in selecton results file "+resultsFile+" at line "+lineCount);
+				throw new FileFormatException("Unknown amino acid one letter code in selecton results file "+resultsFile+" at line "+lineCount);
 			}
 			kaksRatios.add(Double.parseDouble(tokens[2]));
 			lastSerial = serial;
 		}
 		br.close();
 		if (seqName==null) {
-			throw new FileFormatError("Could not find a sequence name in selecton results file "+resultsFile);
+			throw new FileFormatException("Could not find a sequence name in selecton results file "+resultsFile);
 		}
 	}
 	

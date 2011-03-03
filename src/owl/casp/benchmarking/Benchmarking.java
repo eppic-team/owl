@@ -9,7 +9,7 @@ import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.MaxClusterRunner.MaxClusterRow;
 import owl.core.runners.MaxClusterRunner.ScoreType;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGraph;
@@ -112,7 +112,7 @@ public class Benchmarking {
 		PdbfilePdb pdb = new PdbfilePdb(model.getPath());
 		try {
 			pdb.load(pdb.getChains()[0]);
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			throw new IOException(e.getMessage());
 		}		
 		RIGraph predGraph = pdb.getRIGraph("Cb", 8.0);
@@ -122,7 +122,7 @@ public class Benchmarking {
 		PdbfilePdb pdb2 = new PdbfilePdb(answer.getPath());
 		try {
 			pdb2.load(pdb2.getChains()[0]);
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			throw new IOException(e.getMessage());
 		}		
 		RIGraph nativeGraph = pdb2.getRIGraph("Cb", 8.0);
@@ -272,14 +272,14 @@ public class Benchmarking {
 						// add row to resultTable
 						resultTable.add(resultRow);
 						idx++;
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						//e.printStackTrace();
 					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			e.printStackTrace();
 		}
 		if(resultTable != null) {

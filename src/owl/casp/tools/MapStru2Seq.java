@@ -14,9 +14,9 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAli
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -71,7 +71,7 @@ public class MapStru2Seq {
 		} catch (PdbCodeNotFoundException e1) {
 			System.err.println(e1.getMessage());
 			System.exit(1);
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
@@ -80,7 +80,7 @@ public class MapStru2Seq {
 		Sequence seq = new Sequence();		
 		try {
 			seq.readFromFastaFile(new File(seqFileName));
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 

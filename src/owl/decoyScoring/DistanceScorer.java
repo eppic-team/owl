@@ -18,13 +18,13 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.AIGEdge;
 import owl.core.structure.graphs.AIGNode;
 import owl.core.structure.graphs.AIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -76,7 +76,7 @@ public class DistanceScorer extends Scorer {
 		this.conn = new MySQLConnection();
 	}
 	
-	public DistanceScorer(File countsFile) throws IOException, FileFormatError {
+	public DistanceScorer(File countsFile) throws IOException, FileFormatException {
 		this.scoringMethod = ScoringMethod.ATOMDISTANCEDEP;
 
 		this.types2indices = new HashMap<String, Integer>();
@@ -112,7 +112,7 @@ public class DistanceScorer extends Scorer {
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load pdb "+pdbCode);
 				continue;
 			}
@@ -259,7 +259,7 @@ public class DistanceScorer extends Scorer {
 		pw.close();
 	}
 	
-	public void readCountsFromFile(File file) throws IOException, FileFormatError {
+	public void readCountsFromFile(File file) throws IOException, FileFormatException {
 		Scorer.initAtomMap(types2indices, indices2types);
 		
 		BufferedReader br = new BufferedReader(new FileReader(file));
@@ -309,7 +309,7 @@ public class DistanceScorer extends Scorer {
 			}
 			if (!line.startsWith("#")) {
 				String[] tokens = line.split("\\s");
-				if (tokens.length!=4) throw new FileFormatError("Counts file "+file+" has incorrect number of columns in line "+lineCount);
+				if (tokens.length!=4) throw new FileFormatException("Counts file "+file+" has incorrect number of columns in line "+lineCount);
 				int i = types2indices.get(tokens[0]);
 				int j = types2indices.get(tokens[1]);
 				int k = Integer.parseInt(tokens[2]);
@@ -319,7 +319,7 @@ public class DistanceScorer extends Scorer {
 		}
 		
 		if (cutoff!=distanceBins[distanceBins.length-1]) {
-			throw new FileFormatError("Cutoff line doesn't coincide with last value in distance bins line in counts file "+file);
+			throw new FileFormatException("Cutoff line doesn't coincide with last value in distance bins line in counts file "+file);
 		}
 		br.close();
 	}

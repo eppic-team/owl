@@ -8,7 +8,7 @@ import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 public class ContactMapHelloWorld {
 	
@@ -17,10 +17,10 @@ public class ContactMapHelloWorld {
 	 * reports on all contacts in a if they exist in b.
 	 * @param args requires path and filenames of two contact maps as command line parameters
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @author matthias winkelmann
 	 */
-	public static void main(String[] args) throws IOException, FileFormatError {
+	public static void main(String[] args) throws IOException, FileFormatException {
 		
 		// loading the contact maps into graph objects
 		

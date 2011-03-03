@@ -5,7 +5,7 @@ import java.io.IOException;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.graphs.AIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 public class AtomCombinedScorer extends Scorer {
@@ -16,7 +16,7 @@ public class AtomCombinedScorer extends Scorer {
 	private double countWeight;
 	private double typeWeight;
 
-	public AtomCombinedScorer(File scMatType, File scMatCount, double typeWeight, double countWeight) throws IOException, FileFormatError {
+	public AtomCombinedScorer(File scMatType, File scMatCount, double typeWeight, double countWeight) throws IOException, FileFormatException {
 		
 
 		this.typeScorer = new AtomTypeScorer(scMatType);

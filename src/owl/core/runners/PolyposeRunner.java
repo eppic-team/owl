@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import javax.vecmath.Matrix3d;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 
 /**
@@ -343,7 +343,7 @@ public class PolyposeRunner {
 			try {
 				pdb.load("A");
 				pdbs.add(pdb);
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error loading structure: " + e.getMessage());
 			}
 		}

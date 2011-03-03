@@ -133,7 +133,7 @@ public class Individuals extends RIGraph {
 	/**
 	 * one parameter constructor, reads instance of Individuals as input parameter
 	 * @param in
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 */
@@ -143,7 +143,7 @@ public class Individuals extends RIGraph {
 		//setFullContactMap(in);
 	}
 	
-	public Individuals (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public Individuals (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		super();
 		setIndis(in, contactset);
 	}
@@ -151,12 +151,12 @@ public class Individuals extends RIGraph {
 	/**
 	 * one parameter constructor, reads instance of RIGraph as input parameter
 	 * @param rig
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 * @throws Exception
 	 */
-	public Individuals (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	public Individuals (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		super();
 		setIndis(rig);
 	}
@@ -172,9 +172,9 @@ public class Individuals extends RIGraph {
 	 * @throws NullPointerException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, int val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadError  {
+	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, int val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadException  {
 		super();
 		setIndis(rig, conn, rand, val);
 		//conn.close();
@@ -191,9 +191,9 @@ public class Individuals extends RIGraph {
 	 * @throws NullPointerException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, double val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadError  {
+	public Individuals (RIGraph rig, MySQLConnection conn, boolean rand, double val) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadException  {
 		super();
 		setIndis(rig, conn, rand, val);
 		//conn.close();
@@ -220,9 +220,9 @@ public class Individuals extends RIGraph {
 	 * @throws IOException
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public Individuals (String file) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Individuals (String file) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		super();
 		File testfile = new File (file);
 		if(testfile.exists()){
@@ -234,7 +234,7 @@ public class Individuals extends RIGraph {
 		}
 	}
 	
-	public Individuals (String pdb, double cont_percent, boolean random) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public Individuals (String pdb, double cont_percent, boolean random) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection();
 		Pdb prt = new PdbasePdb(pdb,pdbaseDb,conn);
 		prt.load(prt.getChainCode());
@@ -271,9 +271,9 @@ public class Individuals extends RIGraph {
 	 * @param contactset
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void setIndis (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public void setIndis (Individuals in, HashSet<Pair<Integer>> contactset) throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		setName(in.getName());
 		setCutoff(di);
 		setContactType(ct);
@@ -428,14 +428,14 @@ public class Individuals extends RIGraph {
 	/**
 	 * setter, converts a RIGraph instance to a Individuals instance
 	 * @param rig
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 */
-	public void setIndis (RIGraph rig) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public void setIndis (RIGraph rig) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		areFullCMandDMinit(rig);
 		setCutoff(di);
 		setContactType(ct);
@@ -470,9 +470,9 @@ public class Individuals extends RIGraph {
 	 * @throws NullPointerException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, int NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadError  {
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, int NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadException  {
 		areFullCMandDMinit(rig);
 		setName(rig.getPdbCode());
 		setCutoff(di);
@@ -531,9 +531,9 @@ public class Individuals extends RIGraph {
 	 * @throws NullPointerException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, double NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadError  {
+	public void setIndis (RIGraph rig, MySQLConnection conn, boolean randomize, double NumCont) throws ArrayIndexOutOfBoundsException, NullPointerException, PdbCodeNotFoundException, SQLException, PdbLoadException  {
 		areFullCMandDMinit(rig);
 		setName(rig.getPdbCode());
 		setCutoff(di);
@@ -630,9 +630,9 @@ public class Individuals extends RIGraph {
 	 * @throws IOException
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void setIndis(String file_path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setIndis(String file_path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		File file = new File (file_path);
 		if(file.exists()){
 			//check, whether the file exists
@@ -765,12 +765,12 @@ public class Individuals extends RIGraph {
 	 * setter, sets the instance variable CMError using Scorer.getCMError(Bound[][], RIGraph) method
 	 * @param bound
 	 * @param rig
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
 	 * @throws Exception
 	 */
-	public void setCMError (Bound[][] bound, RIGraph rig) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public void setCMError (Bound[][] bound, RIGraph rig) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		CMError = getCMError(bound,rig);
 	}
 	
@@ -804,9 +804,9 @@ public class Individuals extends RIGraph {
 	 * order to compute the 'CMError' and 'DMError' 
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void setErrorValues () throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public void setErrorValues () throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		RIGraph rig = reconstructGraph();
 		Bound[][] bound = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		double[] error = calcErrors(bound);
@@ -947,9 +947,9 @@ public class Individuals extends RIGraph {
 	 * @param rig an RIGraph instance
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void areFullCMandDMinit (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void areFullCMandDMinit (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		if(fullcontactmap == null){
 			setFullContactMap(rig);
 		}
@@ -1243,10 +1243,10 @@ public class Individuals extends RIGraph {
 	 * @return new_indi
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 * 
 	 */
-	public Individuals breedIndis (Individuals in2) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
+	public Individuals breedIndis (Individuals in2) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IllegalArgumentException {
 		Individuals new_indi = new Individuals();
 		//a new instance of Individuals class, with all fields set to null
 		
@@ -1347,7 +1347,7 @@ public class Individuals extends RIGraph {
 		return graph;
 	}
 	
-	public Individuals sampleSubset (RIGraph rig, int numOfContacts) throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public Individuals sampleSubset (RIGraph rig, int numOfContacts) throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		Distiller dist = new Distiller (rig);
 		Bound[][] bounds = dist.sampleSubset(numOfContacts);
 		HashSet<Pair<Integer>> sample = new HashSet<Pair<Integer>> (2*numOfContacts);
@@ -1376,9 +1376,9 @@ public class Individuals extends RIGraph {
 	 * @param in an Individuals instance
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static final void setFullContactMap (Individuals in) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static final void setFullContactMap (Individuals in) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		String pdbCode = in.getName();
 
 		//initializing String variable for chain code, only monomeric proteins excepted 
@@ -1413,9 +1413,9 @@ public class Individuals extends RIGraph {
 	 * @param rig an RIGraph instance
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	protected static final void setFullContactMap (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	protected static final void setFullContactMap (RIGraph rig) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		if(rig != null){
 			String pdbCode = rig.getPdbCode();
 
@@ -1467,7 +1467,7 @@ public class Individuals extends RIGraph {
 	 * @return
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 */
 	public static double getCMError(Bound[][] sparseBounds, RIGraph fullContactMap) {
 		Bound[][] cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
@@ -1555,9 +1555,9 @@ public class Individuals extends RIGraph {
 	 * @throws NullPointerException
 	 * @throws ArrayIndexOutOfBoundsException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static Individuals randomSets (RIGraph input, MySQLConnection conn, double percent) throws NullPointerException, ArrayIndexOutOfBoundsException, PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public static Individuals randomSets (RIGraph input, MySQLConnection conn, double percent) throws NullPointerException, ArrayIndexOutOfBoundsException, PdbCodeNotFoundException, SQLException, PdbLoadException{
 		Distiller dist = new Distiller(input);
 		Bound[][] subset = dist.sampleSubset((int) (input.getEdgeCount()*percent));
 		Individuals in = new Individuals(subset, input.getPdbCode(), distMap(getFullProt(input, conn)));
@@ -1572,12 +1572,12 @@ public class Individuals extends RIGraph {
 	 * @return subset
 	 * @throws Exception
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 * @throws PdbCodeNotFoundException
 	 * @throws NullPointerException
 	 * @throws ArrayIndexOutOfBoundsException
 	 */
-	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn) throws SQLException, PdbLoadError, PdbCodeNotFoundException, NullPointerException, ArrayIndexOutOfBoundsException {
+	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn) throws SQLException, PdbLoadException, PdbCodeNotFoundException, NullPointerException, ArrayIndexOutOfBoundsException {
 		double cuto = input.getCutoff();
 		String ct = input.getContactType();
 		Pdb prot = getFullProt(input, conn);
@@ -1597,12 +1597,12 @@ public class Individuals extends RIGraph {
 	 * @param NumCont
 	 * @return
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 * @throws PdbCodeNotFoundException
 	 * @throws NullPointerException
 	 * @throws ArrayIndexOutOfBoundsException
 	 */
-	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn, int NumCont) throws SQLException, PdbLoadError, PdbCodeNotFoundException, NullPointerException {
+	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn, int NumCont) throws SQLException, PdbLoadException, PdbCodeNotFoundException, NullPointerException {
 		double cuto = input.getCutoff();
 		String ct = input.getContactType();
 		Pdb prot = getFullProt(input, conn);
@@ -1638,9 +1638,9 @@ public class Individuals extends RIGraph {
 	 * @return prot
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static Pdb getFullProt (RIGraph rig, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static Pdb getFullProt (RIGraph rig, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		String pdbCode = rig.getPdbCode();
 		String pdbaseDb = "pdbase_20090728";
 		Pdb prot = new PdbasePdb(pdbCode, pdbaseDb, conn);
@@ -1725,9 +1725,9 @@ public class Individuals extends RIGraph {
 	 * @return
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static HashSet<Individuals> localOptimizing (Individuals in) throws PdbCodeNotFoundException, SQLException, PdbLoadError{
+	public static HashSet<Individuals> localOptimizing (Individuals in) throws PdbCodeNotFoundException, SQLException, PdbLoadException{
 		int[][] contacts = SortIntArray.converter(in.getHashSet());
 		HashSet<Pair<Integer>> copy = in.getHashSet();
 		int length = contacts.length, prot_length = in.getSequence().length();
@@ -1783,9 +1783,9 @@ public class Individuals extends RIGraph {
 	 * @throws IOException
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static void findLocalOptimum () throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static void findLocalOptimum () throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		String dir = "/project/StruPPi/gabriel/Arbeiten/run_231009/run_two/1e0l/1e0l/deme0/temp2/1e0l0-4.indi";
 		Individuals starter = new Individuals (dir);
 		Individuals[] pop = convertToArray(localOptimizing(starter));

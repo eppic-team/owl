@@ -33,7 +33,7 @@ import org.ggf.drmaa.SessionFactory;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
@@ -1410,7 +1410,7 @@ public class TinkerRunner {
 		ConstraintsMaker cm = null;
 		try {
 			cm = new ConstraintsMaker(pdbFile,xyzFile,prmFile,DEFAULT_FF_FILE_TYPE,keyFile);
-		} catch(PdbLoadError e) {
+		} catch(PdbLoadException e) {
 			throw new TinkerError(e);
 		}
 		for(RIGraph graph:graphs) {
@@ -1508,7 +1508,7 @@ public class TinkerRunner {
 			PdbfilePdb pdb = new PdbfilePdb(file.getAbsolutePath());
 			try {
 				pdb.load(Pdb.NULL_CHAIN_CODE);
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				throw new TinkerError(e);
 			} 
 			ensemble.addRIG(pdb.getRIGraph(graph.getContactType(), graph.getCutoff()));
@@ -1571,7 +1571,7 @@ public class TinkerRunner {
 		try {
 			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath());
 			resultPdb.load(DEFAULT_RECONSTR_CHAIN_CODE); 
-		} catch(PdbLoadError e) {
+		} catch(PdbLoadException e) {
 			throw new TinkerError(e);
 		}
 		

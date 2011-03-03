@@ -14,7 +14,7 @@ import owl.core.structure.Pdb;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -178,7 +178,7 @@ public class PaulStructAligner implements StructAligner {
 			this.paulLog.flush();
 			throw new StructAlignmentException(e);
 		}
-		catch (FileFormatError e) {
+		catch (FileFormatException e) {
 			this.cleanUp(base);
 			this.paulLog.flush();
 			throw new StructAlignmentException(e);

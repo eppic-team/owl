@@ -2,7 +2,7 @@ import java.io.*;
 
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -38,7 +38,7 @@ public class addSeq2Mcma {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (AlignmentConstructionException e) {

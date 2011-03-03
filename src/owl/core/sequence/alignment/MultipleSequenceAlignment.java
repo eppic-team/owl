@@ -21,12 +21,12 @@ import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -70,10 +70,10 @@ public class MultipleSequenceAlignment implements Serializable {
 	 * @param fileName
 	 * @param format, one of {@link #PIRFORMAT}, {@link #FASTAFORMAT},  {@link #DALIFORMAT} or {@link #CLUSTALFORMAT}
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws AlignmentConstructionException 
 	 */
-	public MultipleSequenceAlignment(String fileName, String format) throws IOException, FileFormatError, AlignmentConstructionException {
+	public MultipleSequenceAlignment(String fileName, String format) throws IOException, FileFormatException, AlignmentConstructionException {
 		if (format.equals(PIRFORMAT)){
 			readFilePIRFormat(fileName);
 		} else if (format.equals(FASTAFORMAT)){
@@ -243,7 +243,7 @@ public class MultipleSequenceAlignment implements Serializable {
 		}
 	}
 	
-	private void readFilePIRFormat(String fileName) throws IOException, FileFormatError {
+	private void readFilePIRFormat(String fileName) throws IOException, FileFormatException {
 		String 	nextLine = "",
 				currentSeq = "",
 				currentSeqTag = "";
@@ -272,7 +272,7 @@ public class MultipleSequenceAlignment implements Serializable {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for PIR format
-					throw new FileFormatError("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+					throw new FileFormatException("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
 				}
 				if(nextLine.charAt(0) == '*') {				// finish last sequence
 					seqsAL.add(currentSeq);
@@ -300,12 +300,12 @@ public class MultipleSequenceAlignment implements Serializable {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-		    throw new FileFormatError("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
+		    throw new FileFormatException("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
 		}
 		
 	}
 
-	private void readFileFastaFormat(String fileName) throws IOException, FileFormatError {
+	private void readFileFastaFormat(String fileName) throws IOException, FileFormatException {
 		String 	nextLine = "",
 				currentSeq = "",
 				lastSeqTag = "";
@@ -332,7 +332,7 @@ public class MultipleSequenceAlignment implements Serializable {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for FASTA format
-					throw new FileFormatError("First non-empty line of FASTA file "+fileName+" does not seem to be a FASTA header.");
+					throw new FileFormatException("First non-empty line of FASTA file "+fileName+" does not seem to be a FASTA header.");
 				}
 				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
 				Matcher m = p.matcher(nextLine);
@@ -363,12 +363,12 @@ public class MultipleSequenceAlignment implements Serializable {
 		
 		// if no fasta headers found, file format is wrong
 		if(!foundFastaHeader) {
-		    throw new FileFormatError("File does not conform with FASTA file format (could not find any FASTA header in the file).",fileName,lineNum);
+		    throw new FileFormatException("File does not conform with FASTA file format (could not find any FASTA header in the file).",fileName,lineNum);
 		}
 		
 	}
     
-	private void readFileClustalFormat(String fileName) throws IOException, FileFormatError {
+	private void readFileClustalFormat(String fileName) throws IOException, FileFormatException {
 		// open file
 		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
 
@@ -386,7 +386,7 @@ public class MultipleSequenceAlignment implements Serializable {
 		    ++lineNum;
 			if (lineNum == 1) {
 				if (!line.startsWith("CLUSTAL"))
-					throw new FileFormatError("File "+fileName+" does not conform with CLUSTAL format (first line does not start with CLUSTAL)");
+					throw new FileFormatException("File "+fileName+" does not conform with CLUSTAL format (first line does not start with CLUSTAL)");
 				continue;
 			}
 			line = line.trim();
@@ -1152,7 +1152,7 @@ public class MultipleSequenceAlignment implements Serializable {
 					pdb.load(m.group(2));
 					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 					secStruct = pdb.getSecondaryStructure();
-				} catch (PdbLoadError e) {
+				} catch (PdbLoadException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
 				} catch (SQLException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
@@ -1322,9 +1322,9 @@ public class MultipleSequenceAlignment implements Serializable {
     /** 
      * to test the class 
      * @throws IOException 
-     * @throws FileFormatError 
+     * @throws FileFormatException 
      * @throws AlignmentConstructionException */
-    public static void main(String[] args) throws IOException, FileFormatError, AlignmentConstructionException {
+    public static void main(String[] args) throws IOException, FileFormatException, AlignmentConstructionException {
     	if (args.length<1){
     		System.err.println("Must provide FASTA file name as argument");
     		System.exit(1);

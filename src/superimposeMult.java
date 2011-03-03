@@ -10,10 +10,10 @@ import java.util.TreeMap;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.alignment.StructureAlignmentEvaluator;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -67,7 +67,7 @@ public class superimposeMult {
 					 Pdb pdb = new PdbfilePdb(line);
 					 pdb.load(chain);
 					 tag2pdb.put(tag,pdb);
-				 } catch (PdbLoadError e) {
+				 } catch (PdbLoadException e) {
 					 System.err.println("Error reading from file " + line + ": " + e.getMessage());
 				 }
 			 }
@@ -84,7 +84,7 @@ public class superimposeMult {
 		 MultipleSequenceAlignment al = null;
 		 try {
 			 al = new MultipleSequenceAlignment(alignmentFileName, MultipleSequenceAlignment.FASTAFORMAT);
-		 } catch (FileFormatError e) {
+		 } catch (FileFormatException e) {
 			 System.err.println("Error loading alignment " + alignmentFileName + ": " + e.getMessage());
 			 System.exit(1);
 		 } catch (AlignmentConstructionException e) {

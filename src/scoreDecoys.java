@@ -8,9 +8,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 import owl.decoyScoring.DecoyScore;
@@ -32,7 +32,7 @@ public class scoreDecoys {
 	private static final double TYPE_WEIGHT = 1.0;
 	private static final double COUNT_WEIGHT = 1.0;
 	
-	public static void main(String[] args) throws IOException, FileFormatError, SQLException {
+	public static void main(String[] args) throws IOException, FileFormatException, SQLException {
 
 		String help = 
 			"\nScores a set of decoy sets \n" +
@@ -157,7 +157,7 @@ public class scoreDecoys {
 						pdb.load(chains[0]);
 						System.out.print(".");
 						
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						System.out.print("x");
 						if (DEBUG) System.err.println("\nCouldn't load "+file+". Error: "+e.getMessage());
 						continue;

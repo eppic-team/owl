@@ -5,7 +5,7 @@ import java.sql.Statement;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
@@ -79,7 +79,7 @@ public class benchmarkGraphAlgorithm {
 					System.out.println();
 
 					
-				} catch (PdbLoadError e) {
+				} catch (PdbLoadException e) {
 					System.out.println("pdb load error in " + pdbCode + chainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundException e) {
 					e.printStackTrace();

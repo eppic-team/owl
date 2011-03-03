@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -35,9 +35,9 @@ public class FileRIGraph extends RIGraph {
 	 * If the contacts file doesn't have the sequence then the RIGraph object won't have sequence or residue types in RIGNodes
 	 * @param contactsfile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	public FileRIGraph (String contactsfile) throws IOException, FileFormatError{
+	public FileRIGraph (String contactsfile) throws IOException, FileFormatException{
 		this(contactsfile, false);
 	}
 
@@ -47,9 +47,9 @@ public class FileRIGraph extends RIGraph {
 	 * @param contactsfile
 	 * @param simple true if we want to read file in "simple" format, i.e. only a list of edges, false if file in OWL format
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	public FileRIGraph (String contactsfile, boolean simple) throws IOException, FileFormatError{
+	public FileRIGraph (String contactsfile, boolean simple) throws IOException, FileFormatException{
 		super();
 		this.simple = simple;
 		this.contactType=ProtStructGraph.NO_CONTACT_TYPE;
@@ -67,10 +67,10 @@ public class FileRIGraph extends RIGraph {
 	 * Parses the graph file reading identifiers, sequence and edges
 	 * @param contactsfile
 	 * @throws IOException
-	 * @throws FileFormatError if file does not start with #AGLAPPE or #CMVIEW or #OWL 
+	 * @throws FileFormatException if file does not start with #AGLAPPE or #CMVIEW or #OWL 
 	 * if file format not the right version, if sequence is not present
 	 */
-	private void readFromFile (String contactsfile) throws IOException, FileFormatError {
+	private void readFromFile (String contactsfile) throws IOException, FileFormatException {
 		HashMap<Pair<Integer>,Double> contacts2weights = new HashMap<Pair<Integer>,Double>();
 		HashSet<Integer> allserials = new HashSet<Integer>();
 		BufferedReader fcont = new BufferedReader(new FileReader(new File(contactsfile)));
@@ -83,10 +83,10 @@ public class FileRIGraph extends RIGraph {
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
-						throw new FileFormatError("Contact map file "+contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
+						throw new FileFormatException("Contact map file "+contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 					}
 				} else if (linecount==1){ // #AGLAPPE/#CMVIEW/#OWL not found in first line
-					throw new FileFormatError(contactsfile+" is not a valid contact map file");
+					throw new FileFormatException(contactsfile+" is not a valid contact map file");
 				}
 				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");
 				Matcher ms = ps.matcher(line);
@@ -151,14 +151,14 @@ public class FileRIGraph extends RIGraph {
 		
 		// if we didn't find a sequence we throw format exception
 		if (sequence==null) {
-			throw new FileFormatError("No sequence present in contact map file "+contactsfile);
+			throw new FileFormatException("No sequence present in contact map file "+contactsfile);
 		}
 
 		// populating this RIGraph with nodes and setting fullLength
 		this.fullLength = sequence.length();
 		for (int serial:allserials){
 			if (serial>sequence.length()) 
-				throw new FileFormatError("Residue serial "+serial+" found in edges list of contact map file "+contactsfile+" is bigger than length of sequence");
+				throw new FileFormatException("Residue serial "+serial+" found in edges list of contact map file "+contactsfile+" is bigger than length of sequence");
 			RIGNode node = new RIGNode(serial,AminoAcid.one2three(sequence.charAt(serial-1)));
 			this.addVertex(node);
 		}

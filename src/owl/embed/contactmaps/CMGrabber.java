@@ -6,7 +6,7 @@ import java.util.*;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
@@ -245,7 +245,7 @@ public class CMGrabber {
 	 * the 'PML' sub-directory of directory denoted by the field <code>path</code>. This file can be
 	 * executed from command line or directly in PyMol.
 	 */
-	public void printToFile () throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void printToFile () throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		File test = new File (path + "PML/");
 		if(!test.exists()){					//check, whether the denoted directory exists
 			
@@ -348,10 +348,10 @@ public class CMGrabber {
 	 * does not create a PDB file, if a file having the same name already exists.
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 * @throws IOException
 	 */
-	public void dumpToPDBFile () throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException{
+	public void dumpToPDBFile () throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException{
 		String title = new String (pdb_dir + name + ".pdb");
 		File pdbfile = new File (title);
 		if(!pdbfile.exists()){
@@ -836,7 +836,7 @@ public class CMGrabber {
 		else throw new IllegalArgumentException ("No such directory!");
 	}
 	
-	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		String[] pdbs = {"1bkr","1e0l","1e6k","1o8w","1odd","1onl","1pzc","1r9h","1sha","1ugm"};
 		String dir    = "/project/StruPPi/gabriel/Arbeiten/180310/run0";
 		for(int i = 0; i < 5; i++){

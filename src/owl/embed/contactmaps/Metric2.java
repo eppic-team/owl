@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 
 import edu.uci.ics.jung.graph.util.*;
 
@@ -104,7 +104,7 @@ public class Metric2 {
 		printer.close();
 	}
 	
-	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadError{
+	public static void main (String[] args) throws SQLException, IOException, PdbCodeNotFoundException, PdbLoadException{
 		Demes p = new Demes(5,0,5,0,"dummy");
 		Metric2 met = new Metric2(p);
 		met.printToFile();

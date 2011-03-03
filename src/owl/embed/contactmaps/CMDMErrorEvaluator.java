@@ -4,7 +4,7 @@ import java.io.*;
 import java.sql.SQLException;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.util.RegexFileFilter;
 
 
@@ -21,14 +21,14 @@ public class CMDMErrorEvaluator implements Runnable {
 	
 	public Species[] population;
 	
-	public CMDMErrorEvaluator (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public CMDMErrorEvaluator (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setCMDMErrorEval(dir,20,30,0.0003);	
 	}
 	
-	public CMDMErrorEvaluator (String dir, int size) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public CMDMErrorEvaluator (String dir, int size) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setCMDMErrorEval (dir,size,30,0.0003);
 	}
-	public void setCMDMErrorEval (String dir, int size, int evosteps, double threshold) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setCMDMErrorEval (String dir, int size, int evosteps, double threshold) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		path = new String (dir);
 		File dirs = new File (dir);
 		File[] cmap_list = dirs.listFiles(new RegexFileFilter (".*.cmap"));
@@ -75,7 +75,7 @@ public class CMDMErrorEvaluator implements Runnable {
 				System.err.println("Some severe error concerning the PDB code occurred...");
 				System.exit(1);
 				//e.printStackTrace();
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				//e.printStackTrace();
 				
 			} catch (IOException e) {
@@ -95,7 +95,7 @@ public class CMDMErrorEvaluator implements Runnable {
 				System.err.println("Some severe error concerning the PDB code occurred...");
 				System.exit(1);
 				//e.printStackTrace();
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				//e.printStackTrace();
 				
 			} catch (IOException e) {
@@ -117,7 +117,7 @@ public class CMDMErrorEvaluator implements Runnable {
 		return dir_test;
 	}
 
-	public static void main (String[] args) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static void main (String[] args) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		int argument_length = args.length;
 		boolean[] isdirectory = onlyDirectory(args);
 		if(argument_length > 0){

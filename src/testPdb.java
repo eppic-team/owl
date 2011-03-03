@@ -16,7 +16,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public class testPdb {
 
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, IOException {
+	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
 		
 		String pdbCode="1bxy";
 		String pdbChainCode="A";

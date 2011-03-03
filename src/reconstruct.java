@@ -21,13 +21,13 @@ import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -391,7 +391,7 @@ public class reconstruct {
 					}
 				}
 
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
 				System.exit(1);
 			} catch (PdbCodeNotFoundException e) {
@@ -456,7 +456,7 @@ public class reconstruct {
 						}
 					}
 				}
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println("Contact Map file has wrong formatting: "+e.getMessage());
 				System.exit(1);
 			} catch (IOException e) {

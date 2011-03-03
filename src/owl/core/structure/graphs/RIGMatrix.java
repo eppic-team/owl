@@ -14,7 +14,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.RIGNode;
@@ -46,7 +46,7 @@ public class RIGMatrix {
 	
 	public RIGMatrix (){};//Zero-constructor
 	
-	public RIGMatrix (String pdbCode, String chainCode) throws SQLException, PdbCodeNotFoundException, PdbLoadError{//
+	public RIGMatrix (String pdbCode, String chainCode) throws SQLException, PdbCodeNotFoundException, PdbLoadException{//
 		this();
 		setPdbId(pdbCode);
 		setChainCode(chainCode);
@@ -153,7 +153,7 @@ public class RIGMatrix {
 	} // end of constructor loadfromCmapFile
 
 	
-	public void loadFromPDBase() throws SQLException, PdbCodeNotFoundException, PdbLoadError{ 
+	public void loadFromPDBase() throws SQLException, PdbCodeNotFoundException, PdbLoadException{ 
 		// pdbID, chainCode, ct & cutoff have to be pre-set for this to work properly
 		// pass them as parameters and convert back as constructor method ? 
 		// throw errors ? 
@@ -697,9 +697,9 @@ public class RIGMatrix {
 	 * @return the CMError
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 */
-	public double CMError() throws SQLException, PdbCodeNotFoundException, PdbLoadError {
+	public double CMError() throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		RIGraph rig = convert2RIGraph();
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(rig.getPdbCode(),DEF_DB,conn);
@@ -759,7 +759,7 @@ public class RIGMatrix {
 	 * create subset S (several alternative Methods, seq.separation, per diagonal, uniform noise etc ...
 	 * score i.e. sum(deltaRank * CNSize) for entries in S, whole Matrix, CNSize > 3 or > avg.  
 	 */
-	public static void main(String[] args) throws PdbLoadError, IOException, SQLException, PdbCodeNotFoundException, NumberFormatException {
+	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, PdbCodeNotFoundException, NumberFormatException {
 		MySQLConnection conn;
 		conn = new MySQLConnection( "localhost", "lappe", "apple", "mw");
 		String cType = "Cb"; // contact type like "Ca"/"Cb"/"ALL"

@@ -8,10 +8,10 @@ import owl.core.runners.DsspRunner;
 import owl.core.sequence.Sequence;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecStrucElement;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.GraphAveragerException;
@@ -160,7 +160,7 @@ public class RIGEnsemble {
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
-						} catch(PdbLoadError e) {
+						} catch(PdbLoadException e) {
 							System.err.println("Error loading pdb structure " + file.getPath() + ":" + e.getMessage());
 							//System.exit(1);
 						}
@@ -174,7 +174,7 @@ public class RIGEnsemble {
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
-						} catch(PdbLoadError e) {
+						} catch(PdbLoadException e) {
 							System.err.println("Error loading pdb structure: " + e.getMessage());
 							//System.exit(1);
 						}
@@ -185,7 +185,7 @@ public class RIGEnsemble {
 							this.addRIG(graph);
 							this.addFileName(filename);
 							fr++;
-						} catch (FileFormatError e) {
+						} catch (FileFormatException e) {
 							System.err.println("Error loading from contact map file: " + e.getMessage());
 							//System.exit(1);
 						}
@@ -196,7 +196,7 @@ public class RIGEnsemble {
 								this.addRIG(graph);
 								this.addFileName(filename);
 								fr++;
-							} catch (FileFormatError e) {
+							} catch (FileFormatException e) {
 								System.err.println("Error loading from RR file: " + e.getMessage());
 								//System.exit(1);
 							}
@@ -214,7 +214,7 @@ public class RIGEnsemble {
 	 * @param file the input file
 	 * @return the number of models read
 	 */
-	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadError {
+	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadException {
 		return loadFromMultiModelFile(file, null);
 	}
 	
@@ -224,7 +224,7 @@ public class RIGEnsemble {
 	 * @param the chain to be read; if null, the first chain in the file
 	 * @return the number of models read
 	 */
-	public int loadFromMultiModelFile(File file, String chain) throws IOException, PdbLoadError {
+	public int loadFromMultiModelFile(File file, String chain) throws IOException, PdbLoadException {
 		// for each model in file, generate a graph
 		Pdb pdb;
 		RIGraph graph;
@@ -428,7 +428,7 @@ public class RIGEnsemble {
 			commonSequence = new Sequence();
 			try {
 				commonSequence.readFromFastaFile(new File(seqFileName));
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println("Failed to read from Fasta file " + seqFileName + ":" + e.getMessage());
 				System.exit(1);
 			}

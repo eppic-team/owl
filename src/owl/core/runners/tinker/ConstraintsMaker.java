@@ -14,7 +14,7 @@ import java.util.TreeMap;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
@@ -58,9 +58,9 @@ public class ConstraintsMaker {
 	 * @param keyFile output tinker restraints file
 	 * @throws FileNotFoundException if one of the files was not found
 	 * @throws IOException if something went wrong while reading from or writing to files
-	 * @throws PdbLoadError if the PDB file could not be read
+	 * @throws PdbLoadException if the PDB file could not be read
 	 */
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile) throws FileNotFoundException, IOException, PdbLoadError {
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile) throws FileNotFoundException, IOException, PdbLoadException {
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 

@@ -4,13 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 public class ContactMapOverDir {
 
@@ -34,10 +34,10 @@ public class ContactMapOverDir {
 	 * and calculating the CMO for each model in a given workdirectory 
 	 * @param args requires path and filenames of two contact maps as command line parameters
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @author matthias winkelmann, Michael Lappe
 	 */
-	public static void main(String[] args) throws IOException, FileFormatError {
+	public static void main(String[] args) throws IOException, FileFormatException {
 		String workdir = args[0]; // attn : dirname should include / in the end s.t. workdir + filename = absolute filename 	
 		String cmpfile = args[1];
 		String chains[]; 
@@ -71,7 +71,7 @@ public class ContactMapOverDir {
 					try {
 						chains = modPDB.getChains(); 
 						modPDB.load(chains[0]);  // load the first (and only) chain 
-					} catch ( PdbLoadError e ) {
+					} catch ( PdbLoadException e ) {
 						System.err.println(">>> "+e.getMessage()); 
 						continue; 
 					} // end try/catch 

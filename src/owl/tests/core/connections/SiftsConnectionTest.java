@@ -24,7 +24,7 @@ import owl.core.features.OverlappingFeatureException;
 import owl.core.features.SiftsFeature;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 
@@ -90,7 +90,7 @@ public class SiftsConnectionTest {
 			} catch (NoMatchFoundException e) {
 				System.err.println(e.getMessage());
 				continue;
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println(e.getMessage());
 			}
 		}

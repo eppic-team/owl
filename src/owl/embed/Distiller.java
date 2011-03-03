@@ -13,7 +13,7 @@ import java.util.TreeSet;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
@@ -121,11 +121,11 @@ public class Distiller {
 	 * {@link #getMinErrorSetScore()}. Write all scores out with {@link #writeScores(PrintStream)}
 	 * @param numSamples
 	 * @param contactsToSample fraction of total contacts we want to be selected for the subset 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
 	 */
-	public void distillRandomSampling(int numSamples, double contactsToSample) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public void distillRandomSampling(int numSamples, double contactsToSample) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		 
 		allSampledSets = new ArrayList<SetScore>();		
 

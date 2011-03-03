@@ -4,7 +4,7 @@ import java.io.IOException;
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 
@@ -26,7 +26,7 @@ public class alignSeq {
 		Sequence seq1 = new Sequence();
 		try {
 			seq1.readFromFastaFile(fa1);
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Error reading from file " + fa1 + ": " + e.getMessage());
 			System.exit(2);
 		} catch (IOException e) {
@@ -39,7 +39,7 @@ public class alignSeq {
 		Sequence seq2 = new Sequence();
 		try {
 			seq2.readFromFastaFile(fa2);
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Error reading from file " + fa2 + ": " + e.getMessage());
 			System.exit(3);
 		} catch (IOException e) {

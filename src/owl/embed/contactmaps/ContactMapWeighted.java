@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.embed.SparseMatrix;
 
 import edu.uci.ics.jung.graph.util.Pair;
@@ -19,7 +19,7 @@ public class ContactMapWeighted extends ContactMap {
 	
 	private HashSet<Pair<Integer>> poss;
 	
-	public ContactMapWeighted (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMapWeighted (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		super();
 		super.setContactMap(pdb_code);
 		setWeightedContactMap();
@@ -83,7 +83,7 @@ public class ContactMapWeighted extends ContactMap {
 		return new HashSet<Pair<Integer>> (negs);
 	}
 	
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError, FileNotFoundException, IOException{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, FileNotFoundException, IOException{
 		String dir      = "/project/StruPPi/gabriel/Arbeiten/";
 		String addname1 = "cmEvolver/"; 
 		ContactMapWeighted cmh = new ContactMapWeighted ("1bkr");

@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 
@@ -47,7 +47,7 @@ public class DecoyScoreSetsGroup {
 		for (File file:files) {
 			try {
 				setsGroup.add(new DecoyScoreSet(file));
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				System.err.println(e.getMessage());
 				continue;
 			} catch (IOException e) {

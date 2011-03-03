@@ -14,7 +14,7 @@ import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecStrucElement;
@@ -299,7 +299,7 @@ public class genDbGraph {
 						}
 					}
 					
-				} catch (PdbLoadError e) {
+				} catch (PdbLoadException e) {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
@@ -409,7 +409,7 @@ public class genDbGraph {
 				
 			} catch (SQLException e) {
 				System.err.println("Couldn't write graph to db, error: "+e.getMessage());
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
 			} 
 			

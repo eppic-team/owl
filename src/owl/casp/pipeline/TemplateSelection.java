@@ -29,10 +29,10 @@ import owl.core.runners.blast.BlastUtils;
 import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.Sequence;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -334,7 +334,7 @@ public class TemplateSelection {
 			BlastUtils.writeClusterGraph(templates, conn, PDBASE_DB, new File(outDir,baseName+"."+suffix+".gdl"), new File(outDir,baseName+"."+suffix+".matrix"), similarityGraphRmsdCutoff);
 		} catch (IOException e){
 			System.err.println("Error while getting rmsds  for cluster graph file: "+e.getMessage());
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			System.err.println("Error while getting PDB data for cluster graph file: "+e.getMessage());
 		} catch (SQLException e) {
 			System.err.println("Error while getting PDB data for cluster graph file: "+e.getMessage());	
@@ -367,7 +367,7 @@ public class TemplateSelection {
 		} catch (IOException e) {
 			System.err.println("Error while parsing GTG file: "+e.getMessage());
 			return new GTGHitList();
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			System.err.println("Error while parsing GTG file: "+e.getMessage());
 			return new GTGHitList();			
 		}
@@ -409,7 +409,7 @@ public class TemplateSelection {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());
 		} catch (PdbCodeNotFoundException e) {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			System.err.println("Error while reassigning serials for GTG matches: "+e.getMessage());
 		}
 		
@@ -533,7 +533,7 @@ public class TemplateSelection {
 		} catch (SQLException e) {
 			System.err.println("Couldn't get SCOP identifiers. Error "+e.getMessage());
 			pdbDataAvailable = false;
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			System.err.println("Couldn't get SCOP identifiers. Error "+e.getMessage());
 			pdbDataAvailable = false;
 		}
@@ -673,9 +673,9 @@ public class TemplateSelection {
 	 * @return the selected templates
 	 * @throws BlastError if blast fails to run
 	 * @throws IOException if I/O problems while running blast or psipred or writing results
-	 * @throws FileFormatError if input sequence file not in FASTA format
+	 * @throws FileFormatException if input sequence file not in FASTA format
 	 */
-	public TemplateList run() throws BlastError, IOException, FileFormatError {
+	public TemplateList run() throws BlastError, IOException, FileFormatException {
 		// getting query sequence for the length
 		inputSequence = new Sequence();
 		inputSequence.readFromFastaFile(inputSeqFile);

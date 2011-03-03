@@ -5,7 +5,7 @@ import java.util.*;
 import java.io.*;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.util.RegexFileFilter;
 
 import edu.uci.ics.jung.graph.util.Pair;
@@ -405,7 +405,7 @@ public class NbhStringRanker extends owl.core.util.MySQLConnection {
 		return new String (content);
 	}
 	
-	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static void main (String[] args) throws FileNotFoundException, IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		String dira  = "/project/StruPPi/gabriel/Arbeiten/run_031209/2nd_run/";
 		String dirb  = "/deme0/";
 		String dirc  = "/sathyas_set_"; 
@@ -499,7 +499,7 @@ public class NbhStringRanker extends owl.core.util.MySQLConnection {
 		 * chain codes etc. from a contact map file, in order to convert them to a neighborhood String.
 		 * @param dir a String instance denoting a directory
 		 */
-		public NhbString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
+		public NhbString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException, IllegalArgumentException {
 			setNeighbourhoodString(dir);
 		}
 		
@@ -513,12 +513,12 @@ public class NbhStringRanker extends owl.core.util.MySQLConnection {
 		 * @throws IOException
 		 * @throws SQLException
 		 * @throws PdbCodeNotFoundException
-		 * @throws PdbLoadError
+		 * @throws PdbLoadException
 		 * @throws IllegalArgumentException if the denoted director does not exist
 		 * @throws
 		 *  
 		 */
-		public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
+		public void setNeighbourhoodString (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException, IllegalArgumentException {
 			File is_f = new File(dir);
 			if(is_f.exists()){
 				path = new String(dir);
@@ -612,10 +612,10 @@ public class NbhStringRanker extends owl.core.util.MySQLConnection {
 		 * @throws IOException
 		 * @throws SQLException
 		 * @throws PdbCodeNotFoundException
-		 * @throws PdbLoadError
+		 * @throws PdbLoadException
 		 * @throws IllegalArgumentException
 		 */
-		public void setFileSys (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError, IllegalArgumentException {
+		public void setFileSys (String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException, IllegalArgumentException {
 			File file = new File (dir);
 			if(file.exists() && file.isDirectory()){
 				String[] file_f = Individuals.file_extension;
@@ -778,7 +778,7 @@ public class NbhStringRanker extends owl.core.util.MySQLConnection {
 			return new String (content);
 		}
 		
-		public Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+		public Individuals[] getIndividualsFirstAndLast(String dir) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 			Individuals[] first_n_last = new Individuals[2];
 			File file = new File(dir);
 			if(Individuals.containsReadableFiles(file)){

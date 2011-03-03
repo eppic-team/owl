@@ -16,7 +16,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
 import owl.core.structure.graphs.RIGEdge;
@@ -729,7 +729,7 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 		int modNr = 1;
 		try {
 			pdb.load("A",modNr);
-		} catch (PdbLoadError e) {
+		} catch (PdbLoadException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

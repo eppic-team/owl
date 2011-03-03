@@ -5,7 +5,7 @@ import java.util.HashMap;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 
@@ -86,7 +86,7 @@ public class writeSASAtoBFactor {
 				String[] chains = pdb.getChains();
 				System.out.println("Loading chain " + chains[0]);
 				pdb.load(chains[0]);
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
@@ -105,7 +105,7 @@ public class writeSASAtoBFactor {
 
 							chainCode = pdb.getChains()[0];
 						}
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);
 					}
@@ -113,7 +113,7 @@ public class writeSASAtoBFactor {
 					try {
 						System.out.println("Loading chain " + chainCode);
 						pdb.load(pdb.getChains()[0]);
-					} catch (PdbLoadError e) {
+					} catch (PdbLoadException e) {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);
 					}

@@ -8,8 +8,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
-import owl.core.util.FileFormatError;
+import owl.core.structure.PdbLoadException;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -31,12 +31,12 @@ public class GTGParser {
 	 * @param gtgOutputFile
 	 * @throws IOException
 	 */
-	public GTGParser(File gtgOutputFile) throws IOException, FileFormatError {
+	public GTGParser(File gtgOutputFile) throws IOException, FileFormatException {
 		this.gtgOutputFile = gtgOutputFile;
 		this.parse();
 	}
 	
-	private void parse() throws IOException, FileFormatError {
+	private void parse() throws IOException, FileFormatException {
 		BufferedReader br = new BufferedReader(new FileReader(gtgOutputFile));
 		String line;
 		int hitCounter = 0;
@@ -83,14 +83,14 @@ public class GTGParser {
 			} else {
 				if (hits.size()==0) {
 					// at this point hits should have at least one member from the 1st header read, if not first line is not a header: wrong format
-					throw new FileFormatError("GTG file seems to have wrong format: first line wasn't a header.");
+					throw new FileFormatException("GTG file seems to have wrong format: first line wasn't a header.");
 				}
 				if (!line.startsWith(hits.getByRank(hits.size()).queryId)) {
-					throw new FileFormatError("Line "+lineCount+" doesn't start with a query id");
+					throw new FileFormatException("Line "+lineCount+" doesn't start with a query id");
 				}
 				String[] fields = line.split("\\t");
 				if (fields.length!=5) {
-					throw new FileFormatError("Line "+lineCount+" of GTG file "+gtgOutputFile+" seems to be incorrectly formatted");
+					throw new FileFormatException("Line "+lineCount+" of GTG file "+gtgOutputFile+" seems to be incorrectly formatted");
 				}
 				int querySerial = Integer.parseInt(fields[2]);
 				int subjectSerial = Integer.parseInt(fields[3]);
@@ -158,7 +158,7 @@ public class GTGParser {
 			try {
 				hit.checkSubjectSequence(conn, pdbaseDb);
 				hit.reassignSubjectSerials(conn, pdbaseDb);
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println(e.getMessage());
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println(e.getMessage());

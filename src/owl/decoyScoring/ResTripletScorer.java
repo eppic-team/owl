@@ -12,12 +12,12 @@ import java.util.HashMap;
 
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.Triplet;
 
@@ -69,9 +69,9 @@ public class ResTripletScorer extends TripletScorer {
 	 * and some other necessary fields will be read from the file.
 	 * @param scMatFile
 	 * @throws IOException
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 */
-	public ResTripletScorer(File scMatFile) throws IOException, FileFormatError  {
+	public ResTripletScorer(File scMatFile) throws IOException, FileFormatException  {
 		this.scoringMethod = ScoringMethod.RESTRIPLET;
 		readScMatFromFile(scMatFile);
 	}
@@ -97,7 +97,7 @@ public class ResTripletScorer extends TripletScorer {
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb "+pdbCode);
 				continue;
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load pdb "+pdbCode);
 				continue;
 			}

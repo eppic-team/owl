@@ -24,12 +24,12 @@ public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 	HashMap<Integer,HashSet<Pair<Integer>>> conePeeled;
 	private int peeledCounter;
 	
-	public ContactMatrix (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public ContactMatrix (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		super();
 		setFields(pdb_code);
 	}
 	
-	public void setFields (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public void setFields (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(pdb_code, "pdbase_20090728", conn);
 		pdb.load("A");
@@ -183,7 +183,7 @@ public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 		return array;
 	}
 
-	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public static void main (String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		ContactMatrix cm = new ContactMatrix("1bkr");
 		Pair<Integer>[] ar = cm.getOrderedIndexPairs(10);
 		for(int i = 0; i < ar.length; i++){

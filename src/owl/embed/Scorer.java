@@ -10,7 +10,7 @@ import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 
@@ -66,7 +66,7 @@ public class Scorer {
 	 * @return
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 */
 	public static double getCMError(Bound[][] sparseBounds, RIGraph fullContactMap) {
 		Bound[][] cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
@@ -83,7 +83,7 @@ public class Scorer {
 		return sumDev/(double) fullContactMap.getFullLength(); 
 	}
 	
-	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		MySQLConnection conn = new MySQLConnection ();
 		Pdb pdb = new PdbasePdb(fullContactMap.getPdbCode(), "pdbase_20090728", conn);
 		pdb.load(fullContactMap.getChainCode());
@@ -112,11 +112,11 @@ public class Scorer {
 	 * @param subset
 	 * @param fullContactMap
 	 * @return
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
 	 */
-	public static double getCMError(RIGraph subset, RIGraph fullContactMap) throws PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static double getCMError(RIGraph subset, RIGraph fullContactMap) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		
 		//initializing Bound array instance using class 'Reconstructer' method 'convertRIGraphToBoundsMatrix()' 
 		Bound[][] subsetBounds = Reconstructer.convertRIGraphToBoundsMatrix(subset);
@@ -134,13 +134,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static double getCMError(File rigFile, String pdbaseDb, MySQLConnection conn, boolean randomsampling) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static double getCMError(File rigFile, String pdbaseDb, MySQLConnection conn, boolean randomsampling) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 
 		//new instance of class RIGraph created using File instance 'rigFile' 
 		RIGraph graph = new FileRIGraph(rigFile.getAbsolutePath());
@@ -208,13 +208,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static double getDMError (File test, String pdbaseDb, MySQLConnection conn, boolean randsampling) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static double getDMError (File test, String pdbaseDb, MySQLConnection conn, boolean randsampling) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 		RIGraph sub = new FileRIGraph(test.getAbsolutePath());
 		//initializing String variable for PDB code of RIGraph instance 'graph'
 		String pdbCode = sub.getPdbCode();
@@ -328,13 +328,13 @@ public class Scorer {
 	 * @param conn database access
 	 * @param runs number of subsets to be sampled
 	 * @return stats mean value and standard deviation
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static double[] averageDMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {	
+	public static double[] averageDMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {	
 		double[] list = new double[runs];
 		double average = 0.0;
 		boolean bool = true;
@@ -355,13 +355,13 @@ public class Scorer {
 	 * @param conn
 	 * @param runs
 	 * @return stats
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static double[] averageCMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static double[] averageCMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 		boolean bool = true;
 		double[] list = new double[runs];
 		double average = 0.0;
@@ -396,13 +396,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static void outputDMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static void outputDMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 		boolean bool = false;
 		double value = getDMError(test, pdbaseDb, conn, bool);
 		double[] values = averageDMRandom(test, pdbaseDb, conn, runs);
@@ -420,13 +420,13 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws FileFormatError
+	 * @throws FileFormatException
 	 * @throws IOException
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public static void outputCMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatError, IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public static void outputCMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 		boolean bool = false;
 		double value = getCMError(test, pdbaseDb, conn, bool);
 		double[] values = new double[averageCMRandom(test, pdbaseDb, conn, runs).length];

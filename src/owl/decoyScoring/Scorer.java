@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -105,10 +105,10 @@ public abstract class Scorer {
 	 * @param scMatFile
 	 * @return
 	 * @throws IOException
-	 * @throws FileFormatError if no header found in file or type of scoring matrix file
+	 * @throws FileFormatException if no header found in file or type of scoring matrix file
 	 * not recognised
 	 */
-	public static Scorer readScoreMatFromFile(File scMatFile) throws IOException, FileFormatError {
+	public static Scorer readScoreMatFromFile(File scMatFile) throws IOException, FileFormatException {
 		BufferedReader br = new BufferedReader(new FileReader(scMatFile));
 		String line;
 		while ((line=br.readLine())!=null) {
@@ -131,10 +131,10 @@ public abstract class Scorer {
 				} else if (method.equals(ScoringMethod.ATOMDISTANCEDEP.getDescription())){
 					return new DistanceScorer(scMatFile);
 				} else {
-					throw new FileFormatError("Header #SCORE METHOD doesn't contain one of the recognized method descriptions");
+					throw new FileFormatException("Header #SCORE METHOD doesn't contain one of the recognized method descriptions");
 				}
 			} else {
-				throw new FileFormatError("File "+scMatFile+" doesn't contain a #SCORE METHOD header");
+				throw new FileFormatException("File "+scMatFile+" doesn't contain a #SCORE METHOD header");
 			}
 			
 		}
@@ -152,11 +152,11 @@ public abstract class Scorer {
 	 * @param countWeight
 	 * @return
 	 * @throws IOException
-	 * @throws FileFormatError if no header found in file or type of scoring matrix file
+	 * @throws FileFormatException if no header found in file or type of scoring matrix file
 	 * not recognised
 	 */
 	public static Scorer readScoreMatsFromFiles(File scMatFileType, File scMatFileCount, double typeWeight, double countWeight) 
-	throws IOException, FileFormatError {
+	throws IOException, FileFormatException {
 		
 		ScoringMethod typeMethod = null;
 		ScoringMethod countMethod = null;
@@ -175,10 +175,10 @@ public abstract class Scorer {
 					typeMethod = ScoringMethod.RESTYPE;
 					break;
 				} else {
-					throw new FileFormatError("File "+scMatFileType+" is not a type-based score matrix file");
+					throw new FileFormatException("File "+scMatFileType+" is not a type-based score matrix file");
 				}
 			} else {
-				throw new FileFormatError("File "+scMatFileType+" doesn't contain a #SCORE METHOD header");
+				throw new FileFormatException("File "+scMatFileType+" doesn't contain a #SCORE METHOD header");
 			}
 			
 		}
@@ -197,10 +197,10 @@ public abstract class Scorer {
 					countMethod = ScoringMethod.RESCOUNT;
 					break;
 				} else {
-					throw new FileFormatError("File "+scMatFileCount+" is not a count-based score matrix file");
+					throw new FileFormatException("File "+scMatFileCount+" is not a count-based score matrix file");
 				}
 			} else {
-				throw new FileFormatError("File "+scMatFileCount+" doesn't contain a #SCORE METHOD header");
+				throw new FileFormatException("File "+scMatFileCount+" doesn't contain a #SCORE METHOD header");
 			}
 			
 		}

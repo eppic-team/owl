@@ -16,7 +16,7 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.Statistics;
 
@@ -68,9 +68,9 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 * Constructs a DecoyScoreSet by reading the decoy scores from given file
 	 * @param decoySetScoreFile
 	 * @throws IOException
-	 * @throws FileFormatError if native structure can't be found in file
+	 * @throws FileFormatException if native structure can't be found in file
 	 */
-	public DecoyScoreSet(File decoySetScoreFile) throws IOException, FileFormatError {
+	public DecoyScoreSet(File decoySetScoreFile) throws IOException, FileFormatException {
 		set = new HashMap<String, DecoyScore>();
 		readFromFile(decoySetScoreFile);
 	}
@@ -218,9 +218,9 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 	 * Reads a decoy set scores file in our format. See {@link #writeToFile(File)}
 	 * @param file
 	 * @throws IOException
-	 * @throws FileFormatError if native structure can't be found in file
+	 * @throws FileFormatException if native structure can't be found in file
 	 */
-	public void readFromFile(File file) throws IOException, FileFormatError {
+	public void readFromFile(File file) throws IOException, FileFormatException {
 		BufferedReader br = new BufferedReader(new FileReader(file));
 		String line;
 		Pattern p = Pattern.compile("^(\\d\\w\\w\\w(-\\w)?)\\.pdb$");
@@ -275,7 +275,7 @@ public class DecoyScoreSet implements Iterable<DecoyScore> {
 		}
 		br.close();
 		if (!nativeFound)
-			throw new FileFormatError("Couldn't find native decoy in decoy set file "+file);
+			throw new FileFormatException("Couldn't find native decoy in decoy set file "+file);
 
 	}
 	

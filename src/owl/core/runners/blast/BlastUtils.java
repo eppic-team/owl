@@ -109,9 +109,9 @@ public class BlastUtils {
 	 * @param similarityGraphRmsdCutoff
 	 * @throws IOException if problems writing files or running maxcluster
 	 * @throws SQLException if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
-	 * @throws PdbLoadError if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
+	 * @throws PdbLoadException if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
 	 */
-	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, String pdbaseDb, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException, SQLException, PdbLoadError {
+	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, String pdbaseDb, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException, SQLException, PdbLoadException {
 		if (templates.size()<=1) return; // if templates empty or only 1 template there's nothing to compare
 		
 		if (!templates.isPdbDataLoaded()) {
@@ -191,7 +191,7 @@ public class BlastUtils {
 	 * Testing some of the methods in this class.
 	 * @param args
 	 */
-	public static void main(String[] args) throws IOException, SQLException, PdbLoadError {
+	public static void main(String[] args) throws IOException, SQLException, PdbLoadException {
 //		File blastOutput = new File("");
 //		File imgFile = new File("");
 //		try {

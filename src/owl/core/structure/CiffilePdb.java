@@ -20,7 +20,7 @@ import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -169,9 +169,9 @@ public class CiffilePdb extends Pdb {
 	 * for given pdbChainCode and modelSerial
 	 * @param pdbChainCode
 	 * @param modelSerial
-	 * @throws PdbLoadError
+	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode, int modelSerial) throws PdbLoadError{
+	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException{
 		try {
 			this.initialiseResidues();
 			this.model = modelSerial;
@@ -194,12 +194,12 @@ public class CiffilePdb extends Pdb {
 			this.initialiseMaps();
 			dataLoaded = true;
 			
-		} catch (FileFormatError e) {
-			throw new PdbLoadError(e);
+		} catch (FileFormatException e) {
+			throw new PdbLoadException(e);
 		} catch (IOException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		} catch (PdbChainCodeNotFoundException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		}
 
 	}
@@ -208,7 +208,7 @@ public class CiffilePdb extends Pdb {
 	 * Returns all PDB chain codes found in the cif file.
 	 * @return array with all pdb chain codes
 	 */
-	public String[] getChains() throws PdbLoadError {
+	public String[] getChains() throws PdbLoadException {
 		TreeSet<String> chains = new TreeSet<String>();
 	
 		try {
@@ -228,16 +228,16 @@ public class CiffilePdb extends Pdb {
 				int numberFields = ids2fieldsIdx.get(pdbxPolySeqId);
 				String[] tokens = tokeniseFields(numberFields);
 				if (tokens.length!=numberFields) {
-					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
 				}
 				chains.add(tokens[pdbStrandIdIdx]);
 			}
 			fcif.close();
 			
 		} catch (IOException e) {
-			throw new PdbLoadError(e);
-		} catch (FileFormatError e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
+		} catch (FileFormatException e) {
+			throw new PdbLoadException(e);
 		}
 		
 		if (chains.isEmpty()) return null;
@@ -251,7 +251,7 @@ public class CiffilePdb extends Pdb {
 	 * Returns all model serials found in the cif file.
 	 * @return array with all model serials
 	 */
-	public Integer[] getModels() throws PdbLoadError {
+	public Integer[] getModels() throws PdbLoadException {
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			fcif = new RandomAccessFile(cifFile,"r");
@@ -270,16 +270,16 @@ public class CiffilePdb extends Pdb {
 				int numberFields = ids2fieldsIdx.get(atomSiteId);
 				String[] tokens = tokeniseFields(numberFields);
 				if (tokens.length!=numberFields) {
-					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+" of CIF file "+cifFile);
 				}
 				models.add(Integer.parseInt(tokens[pdbxPDBModelNumIdx]));
 			}
 			fcif.close();
 			
 		} catch (IOException e) {
-			throw new PdbLoadError(e);
-		} catch (FileFormatError e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
+		} catch (FileFormatException e) {
+			throw new PdbLoadException(e);
 		}
 		
 		if (models.isEmpty()) return null;
@@ -291,7 +291,7 @@ public class CiffilePdb extends Pdb {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private void parseCifFile() throws IOException, FileFormatError, PdbChainCodeNotFoundException, PdbLoadError {
+	private void parseCifFile() throws IOException, FileFormatException, PdbChainCodeNotFoundException, PdbLoadException {
 		
 		if (!fieldsTitlesRead) {
 			readFieldsTitles();
@@ -309,7 +309,7 @@ public class CiffilePdb extends Pdb {
 
 	}
 	
-	private void readFieldsTitles() throws IOException, FileFormatError {
+	private void readFieldsTitles() throws IOException, FileFormatException {
 		// data structures to store the parsed fields
 		ids2elements = new TreeMap<String, Integer>();
 		fields2indices = new TreeMap<String,Integer>();
@@ -323,7 +323,7 @@ public class CiffilePdb extends Pdb {
 		line = fcif.readLine(); // read first line
 		Pattern p = Pattern.compile("^data_\\d\\w\\w\\w");
 		if (!p.matcher(line).find()){
-			throw new FileFormatError("The file "+cifFile+" doesn't seem to be a cif file");
+			throw new FileFormatException("The file "+cifFile+" doesn't seem to be a cif file");
 		}
 		int linecount = 1; // we have read one line already, we initialise count to 1
 		// we need to store the last line's byte offset (which indicates the beginning of this line) 
@@ -378,7 +378,7 @@ public class CiffilePdb extends Pdb {
 		return fields2values.get(entryId+".id").trim().toLowerCase();
 	}
 	
-	private void readCrystalData() throws PdbLoadError {
+	private void readCrystalData() throws PdbLoadException {
 		// cell and symmetry fields are optional, e.g. NMR entries don't have them at all
 		// we first see if the fields are there at all (enough with seeing if cell.length_a is there)
 		if (!fields2values.containsKey(cell+".length_a")) {
@@ -395,11 +395,11 @@ public class CiffilePdb extends Pdb {
 		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
 		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
-			throw new PdbLoadError("The space group found '"+sg+"' is not recognised as a standard space group");
+			throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 		}
 	}
 	
-	private void readExpMethod() throws IOException, FileFormatError {
+	private void readExpMethod() throws IOException, FileFormatException {
 
 		if (!loopElements.contains(ids2elements.get(exptl))){  
 			String expMethWithQuotes = fields2values.get(exptl+".method").trim();
@@ -416,7 +416,7 @@ public class CiffilePdb extends Pdb {
 				recordCount++; 
 				String[] tokens = tokeniseFields(numberFields);
 				if (tokens.length!=numberFields) {
-					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
 				}
 				if (recordCount==1) {
 					this.expMethod = tokens[methodIdx];
@@ -455,7 +455,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readAtomSite() throws IOException, PdbChainCodeNotFoundException, FileFormatError {
+	private void readAtomSite() throws IOException, PdbChainCodeNotFoundException, FileFormatException {
 		
 		ArrayList<AtomLine>	atomLinesData = new ArrayList<AtomLine>(); // to temporarily store all data from atom lines, we keep then only the ones matching the alt locations that we want
 		TreeSet<String> labelAltIds = new TreeSet<String>(); // to store the alt location ids (label_alt_id) (the default char "." is not stored)
@@ -488,7 +488,7 @@ public class CiffilePdb extends Pdb {
 			//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
 			String[] tokens = tokeniseFields(numberFields);
 			if (tokens.length!=numberFields) {
-				throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+ " of CIF file "+cifFile);
+				throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+ " of CIF file "+cifFile);
 			}
 			if (tokens[groupPdbIdx].equals("ATOM") && 
 				tokens[labelAsymIdIdx].equals(chainCode) && 
@@ -533,7 +533,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readPdbxPolySeq() throws IOException, FileFormatError {
+	private void readPdbxPolySeq() throws IOException, FileFormatException {
 		pdbresser2resser = new TreeMap<String, Integer>();
 		sequence = "";
 		
@@ -561,7 +561,7 @@ public class CiffilePdb extends Pdb {
 			// A 1 1   ASP 1   1   1   ASP ASP A .
 			String[] tokens = tokeniseFields(numberFields);
 			if (tokens.length!=numberFields) {
-				throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
+				throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
 			}
 			if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 				int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
@@ -586,7 +586,7 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readSecStructure() throws IOException, FileFormatError {
+	private void readSecStructure() throws IOException, FileFormatException {
 		secondaryStructure = new SecondaryStructure(this.sequence);
 		
 		// struct_conf element is optional
@@ -662,7 +662,7 @@ public class CiffilePdb extends Pdb {
 				//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
 				String[] tokens = tokeniseFields(numFields);
 				if (tokens.length!=numFields) {
-					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structConfId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+structConfId+" of CIF file "+cifFile);
 				}
 				if (tokens[begLabelAsymIdIdx].equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String id = tokens[idIdx];
@@ -708,7 +708,7 @@ public class CiffilePdb extends Pdb {
 				//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
 				String[] tokens = tokeniseFields(numFields);
 				if (tokens.length!=numFields) {
-					throw new FileFormatError("Incorrect number of fields for record "+recordCount+" in loop element "+structSheetId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+structSheetId+" of CIF file "+cifFile);
 				}
 				if (tokens[begLabelAsymIdIdx].equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String sheetid = tokens[sheetIdIdx];

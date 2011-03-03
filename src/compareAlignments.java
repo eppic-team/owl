@@ -6,7 +6,7 @@ import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 
 
@@ -36,7 +36,7 @@ public class compareAlignments {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (FileFormatError e) {
+		} catch (FileFormatException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (AlignmentConstructionException e) {

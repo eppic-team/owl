@@ -33,7 +33,7 @@ import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
@@ -43,7 +43,7 @@ import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -99,7 +99,7 @@ public class PdbTest {
 	}
 
 	@Test
-	public void testRunNaccess() throws IOException, PdbLoadError {
+	public void testRunNaccess() throws IOException, PdbLoadException {
 		
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
@@ -128,7 +128,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testASAcalcVsNaccess() throws IOException, PdbLoadError, SQLException {
+	public void testASAcalcVsNaccess() throws IOException, PdbLoadException, SQLException {
 		
 		System.out.println("Using "+NTHREADS+" CPUs for ASA calculations");
 		System.out.println("Matching of our ASA values against NACCESS's. Areas with disagreement >20% reported");
@@ -220,7 +220,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testConsurfConnection() throws IOException, PdbLoadError {
+	public void testConsurfConnection() throws IOException, PdbLoadException {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		ConsurfConnection consurfConn = new ConsurfConnection();
@@ -235,7 +235,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testRunDssp() throws PdbLoadError, IOException {
+	public void testRunDssp() throws PdbLoadException, IOException {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		Pdb pdbDsspAssigned = new PdbfilePdb(TEST_PDB_FILE_1);
@@ -256,7 +256,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testRmsd() throws PdbLoadError, ConformationsNotSameSizeException, IOException {
+	public void testRmsd() throws PdbLoadException, ConformationsNotSameSizeException, IOException {
 		Pdb pdb1 = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb1.load(TEST_CHAIN_1);
 		Pdb pdb1p = new PdbfilePdb(TEST_PDB_FILE_1);
@@ -287,7 +287,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetGraph() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadError, FileFormatError {
+	public void testGetGraph() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadException, FileFormatException {
 		// NOTE: to test we compare to previously calculated graphs with an older version of our software
 		//		In principle edges should coincide 100%. However there can be rounding problems that make one
 		//		version consider a border-case to be an edge or not. Indeed I've seen there is a difference 
@@ -385,7 +385,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testConstructors() throws PdbLoadError, ConformationsNotSameSizeException {
+	public void testConstructors() throws PdbLoadException, ConformationsNotSameSizeException {
 		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
 		pdb.load(TEST_CHAIN_1);
 		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
@@ -424,7 +424,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundException, PdbLoadError, AlignmentConstructionException {
+	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundException, PdbLoadException, AlignmentConstructionException {
 		
 		MySQLConnection conn = new MySQLConnection();
 		
@@ -496,7 +496,7 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadError {
+	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
 		MySQLConnection conn = new MySQLConnection();
 		for (String pdbId:pdbIds) {

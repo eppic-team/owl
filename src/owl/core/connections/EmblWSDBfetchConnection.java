@@ -19,7 +19,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import owl.core.sequence.Sequence;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 
 /**
  * Connection class with static methods to download EMBL data with EMBL's DB fetch
@@ -108,7 +108,7 @@ public class EmblWSDBfetchConnection {
 				} else {
 					allSeqs = new ArrayList<Sequence>();
 				}
-			} catch (FileFormatError e) {
+			} catch (FileFormatException e) {
 				allSeqs = new ArrayList<Sequence>();
 			}
 		}
@@ -286,7 +286,7 @@ public class EmblWSDBfetchConnection {
 	 * @return
 	 * @throws IOException
 	 */
-	private static SequenceCache readSeqs(File seqsFile, Pattern fastaHeaderRegex) throws IOException, FileFormatError {
+	private static SequenceCache readSeqs(File seqsFile, Pattern fastaHeaderRegex) throws IOException, FileFormatException {
 		List<Sequence> list = new ArrayList<Sequence>();
 		HashSet<String> notFoundIds = new HashSet<String>();
 		BufferedReader br = new BufferedReader(new FileReader(seqsFile));
@@ -313,7 +313,7 @@ public class EmblWSDBfetchConnection {
 					seq = new StringBuffer();
 					lastTag = currentTag;
 				} else {
-					throw new FileFormatError("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
+					throw new FileFormatException("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
 				}
 			} else {
 				seq.append(line.trim());

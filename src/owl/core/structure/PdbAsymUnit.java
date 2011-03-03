@@ -27,7 +27,7 @@ import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.structure.graphs.AICGraph;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
 import owl.core.util.MySQLConnection;
 
@@ -85,7 +85,7 @@ public class PdbAsymUnit {
 		this.transformId = 0;
 	}
 	
-	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatError, PdbLoadError {
+	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatException, PdbLoadException {
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
@@ -95,19 +95,19 @@ public class PdbAsymUnit {
 		} else if (type==FileTypeGuesser.CIF_FILE) {
 			loadFromCifFile(pdbSourceFile);
 		} else {
-			throw new FileFormatError("The given file does not seem to be neither a PDB file nor a mmCIF file");
+			throw new FileFormatException("The given file does not seem to be neither a PDB file nor a mmCIF file");
 		}
 		
 	}
 	
-	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundException {
+	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
 		chains = new TreeMap<String, Pdb>();
 		loadFromPdbase(pdbCode, conn, dbName);
 	}
 	
-	private void loadFromPdbFile(File pdbFile) throws PdbLoadError {
+	private void loadFromPdbFile(File pdbFile) throws PdbLoadException {
 		Pdb pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
 		String[] chainCodes = pdb.getChains();
 		for (int i=0;i<chainCodes.length;i++) {
@@ -127,7 +127,7 @@ public class PdbAsymUnit {
 		
 	}
 	
-	private void loadFromCifFile(File cifFile) throws PdbLoadError {
+	private void loadFromCifFile(File cifFile) throws PdbLoadException {
 		Pdb pdb = new CiffilePdb(cifFile);
 		String[] chainCodes = pdb.getChains();
 		for (int i=0;i<chainCodes.length;i++) {
@@ -147,7 +147,7 @@ public class PdbAsymUnit {
 		
 	}
 	
-	private void loadFromPdbase(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadError, PdbCodeNotFoundException {
+	private void loadFromPdbase(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
 		try {
 			Pdb pdb = new PdbasePdb(pdbCode,dbName,conn);
 			String[] chainCodes = pdb.getChains();
@@ -164,7 +164,7 @@ public class PdbAsymUnit {
 				}
 			}
 		} catch(SQLException e) {
-			throw new PdbLoadError(e);
+			throw new PdbLoadException(e);
 		}
 	}
 	

@@ -3,10 +3,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
-import owl.core.util.FileFormatError;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.decoyScoring.AtomTypeScorer;
 import owl.decoyScoring.ResTypeScorer;
@@ -26,7 +26,7 @@ public class scorePdbSet {
 	private static final File resScMatFile = new File("/project/StruPPi/jose/emp_potential/scoremat.res.cullpdb20");
 
 
-	public static void main(String[] args) throws SQLException, IOException, FileFormatError  {
+	public static void main(String[] args) throws SQLException, IOException, FileFormatException  {
 
 		File listFile = new File(args[0]);
 		
@@ -48,7 +48,7 @@ public class scorePdbSet {
 					continue;
 				}
 				System.out.printf("%5s\t%4d\t%7.2f\t%7.2f\n",pdbId,pdb.getObsLength(),resScorer.scoreIt(pdb),atomScorer.scoreIt(pdb));
-			} catch (PdbLoadError e) {
+			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load "+pdbId);
 				continue;
 			} catch (PdbCodeNotFoundException e) {

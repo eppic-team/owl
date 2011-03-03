@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadError;
+import owl.core.structure.PdbLoadException;
 
 import edu.uci.ics.jung.graph.util.*;
 
@@ -30,13 +30,13 @@ public class DistMatrix {
 	 * details, see the abovementioned method.
 	 * @param path a String denoting the absolute path of a file, that will be accepted by the <code>{@link Individuals#Individuals(String)}</code>
 	 * constructor 
-	 * @throws PdbLoadError 
+	 * @throws PdbLoadException 
 	 * @throws PdbCodeNotFoundException 
 	 * @throws SQLException 
 	 * @throws IOException 
 	 * 
 	 */
-	public DistMatrix(String path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+	public DistMatrix(String path) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
 		setDistMat(path, 3);
 		//calling the initial setter
 		
@@ -122,7 +122,7 @@ public class DistMatrix {
 	 * It is important to notice, that the used constructor <code>{@link Individuals#Individuals(String)}</code> may exit any run, if no such file exists or
 	 * the extension of the given file does not match the predefined extensions in the abovementioned class. See also: <code>{@link Individuals#Individuals(String)}</code>
 	 */
-    public void setDistMat(String path, int maxpotence) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+    public void setDistMat(String path, int maxpotence) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
         Individuals in = new Individuals (path);
         //the Individuals instance, since this class accepts only four types of contact map files, one should be
         //sure, what the extension of the denoted file is
@@ -471,7 +471,7 @@ public class DistMatrix {
     	return matrix;
     }
 
-    public static void main(String[] args) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadError{
+    public static void main(String[] args) throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException{
     	String dir = "/project/StruPPi/gabriel/Arbeiten/run_051109/1sha/Starter/starter01sha0-34.indi";
         DistMatrix dis = new DistMatrix(dir);
         System.out.println(dis.toString() + "Eigenvalue #1: " + dis.get3GreatestEigs()[0] + "\nEigenvalue #2: " + dis.get3GreatestEigs()[1] + "\nEigenvalue #3: " + dis.get3GreatestEigs()[2] + "\n");
