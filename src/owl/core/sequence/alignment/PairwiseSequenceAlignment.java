@@ -82,7 +82,7 @@ public class PairwiseSequenceAlignment implements Serializable {
 	 * sequences or reading the BLOSUM matrix
 	 */
 	public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2) throws PairwiseSequenceAlignmentException {
-		this(seq1, seq2, name1, name2, DEFAULT_GAP_OPEN_SCORE, DEFAULT_GAP_EXTEND_SCORE);
+		this(seq1, seq2, name1, name2, DEFAULT_GAP_OPEN_SCORE, DEFAULT_GAP_EXTEND_SCORE, DEFAULT_MATRIX_NAME);
 	}
 
 	/**
@@ -94,10 +94,11 @@ public class PairwiseSequenceAlignment implements Serializable {
 	 * @param name2
 	 * @param openScore Gap open score
 	 * @param extendScore Gap extend score
+	 * @param matrixName the matrix name, e.g. "BLOSUM50"
 	 * @throws PairwiseSequenceAlignmentException if problem occurs in parsing the 
 	 * sequences or reading the BLOSUM matrix
 	 */
-	public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2, float openScore, float extendScore) throws PairwiseSequenceAlignmentException {
+	public PairwiseSequenceAlignment(String seq1, String seq2, String name1, String name2, float openScore, float extendScore, String matrixName) throws PairwiseSequenceAlignmentException {
 
 		Sequence 	s1			= null;
 		Sequence 	s2			= null;
@@ -119,7 +120,6 @@ public class PairwiseSequenceAlignment implements Serializable {
 		}
 
 		// create alignment
-		String matrixName = DEFAULT_MATRIX_NAME;
 		try {
 			matrix = MatrixLoader.load(matrixName);
 		} catch(MatrixLoaderException e) {
@@ -276,8 +276,16 @@ public class PairwiseSequenceAlignment implements Serializable {
 	 * @param ps
 	 */
 	public void writeAlignment(PrintStream ps) {
+		ps.println(getAlignmentString());
+	}
+	
+	/**
+	 * Gets the alignment as a string
+	 * @return
+	 */
+	public String getAlignmentString() {
 		// actual alignment from JAligner
-		ps.println(new Pair().format(alignment));
+		return new Pair().format(alignment);
 	}
 	
 	/**

@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.regex.Matcher;
@@ -31,6 +32,7 @@ import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
 import owl.core.structure.PdbfilePdb;
+import owl.core.structure.Residue;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
@@ -57,6 +59,8 @@ public class PdbParsersTest {
 
 	@Before
 	public void setUp() throws Exception {
+		// to throw away jaligner logging
+		System.setProperty("java.util.logging.config.file","/dev/null");
 	}
 
 	@After
@@ -221,6 +225,8 @@ public class PdbParsersTest {
 	
 	@Test
 	public void testPdbfileParser() throws IOException, SQLException {
+		
+		ArrayList<String> warnings = new ArrayList<String>();
 		// testing a list of PDB files from PDB
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
 		String line;
@@ -294,6 +300,30 @@ public class PdbParsersTest {
 							Assert.assertTrue(pdbfilePdb.getResidue(resser).getNumAtoms()>0);
 							// at least the CA atom must be present, doesn't work for all, e.g. 2cioB residue 80
 							//Assert.assertNotNull(pdbfilePdb.getResidue(resser).getAtom("CA"));
+							
+							if (pdbasePdb.containsResidue(resser)) {
+								Residue pdbaseRes = pdbasePdb.getResidue(resser);
+								Residue pdbfileRes = pdbfilePdb.getResidue(resser);
+								Assert.assertEquals(pdbaseRes.getAaType(), pdbfileRes.getAaType());
+								Assert.assertEquals(pdbaseRes.getNumAtoms(), pdbfileRes.getNumAtoms());
+								Assert.assertEquals(pdbaseRes.getNumHeavyAtoms(), pdbfileRes.getNumHeavyAtoms());
+							} else { 							
+								// In some cases the alignment is ambiguous, see 2nwr at residues 191 onwards:
+								// SEQRES           151 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGM    200
+								//                      |||||||||||||||||||||||||||||||||||||||||      |||
+								// ATOM             150 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPG------GGM    193
+								// the cif file places the G on the left of the gap rather than on the right
+								// as we do (and they are right looking at the 3D coords)
+								// We could guess it from distances in 3D or so (at least for the 2nwr case) 
+								// but in general it's quite difficult to solve
+								// Anyway this is a special case (and doesn't have many important consequences). It 
+								// happens often enough (1 in a 100 or so)
+								// we still want to test for all other cases to make sure we are aligning well, 
+								// that's why here we only print a warning
+								System.err.println("Residue "+resser+" wrongly mapped in pdbfile vs pdbase (not observed in pdbase and observed in pdbfile)");
+								warnings.add(pdbCode+chain+": wronly mapped residue "+resser+", not observed in pdbase but observed in pdbfile");								
+							}
+
 						}
 
 						// info from atom serials
@@ -326,6 +356,10 @@ public class PdbParsersTest {
 			}
 		}
 		flist.close();
+		System.err.println("Warnings for: ");
+		for (String warning:warnings) {
+			System.err.println(warning);
+		}
 	}
 	
 	private static File unzipFile(File repoGzFile) throws FileNotFoundException {
@@ -357,9 +391,10 @@ public class PdbParsersTest {
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
 		PdbParsersTest pdbTest = new PdbParsersTest();
-		pdbTest.testSpecialPDBFiles();
+		pdbTest.setUp();
+		//pdbTest.testSpecialPDBFiles();
 		//pdbTest.testCIFagainstPDBASE();
-		//pdbTest.testPdbfileParser();
+		pdbTest.testPdbfileParser();
 	}
 
 }
