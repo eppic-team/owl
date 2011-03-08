@@ -36,6 +36,8 @@ public class PdbfilePdb extends Pdb {
 	private static final float	GAP_OPEN_SCORE =	0.2f; // default 10f
 	private static final float	GAP_EXTEND_SCORE =	0.1f; // default 0.5f
 	private static final String ALI_SCORING_MATRIX = "IDENTITY"; //so that we force matching of identities only
+
+	private static final Pattern INNER_GAPS_REGEX = Pattern.compile("\\w-+\\w");
 	
 	private static final String NULL_chainCode = "A";
 	
@@ -493,7 +495,7 @@ public class PdbfilePdb extends Pdb {
 	 * This happens when there are alt codes in the file but not used for all residues 
 	 * in the file, e.g. in 2heu several alt codes are present (A,B,C,D) but for some 
 	 * residues there's no A or no D atoms. This is not standard practice.
-	 * Our approach to alt codes is to take either blanks or the first one encountered in the file (usually 'A')
+	 * Our approach to alt codes is to take either blanks or 'A'
 	 */
 	private void checkForEmptyResidues() {
 		ArrayList<Residue> emptyResidues = new ArrayList<Residue>();
@@ -590,10 +592,13 @@ public class PdbfilePdb extends Pdb {
 			}
 
 
+			check3Dcontiguity(psa);
+			
 		} catch (PairwiseSequenceAlignmentException e) {
 			throw new PdbLoadException("Could not create alignment of SEQRES and ATOM lines sequences to realign them");
 		}
 		
+
 	}
 	
 	private boolean checkIfShifted() {
@@ -641,6 +646,7 @@ public class PdbfilePdb extends Pdb {
 		}
 		// if the above doesn't fail for any position, it means there was a shift, we renumber accordingly
 		if (aligned) {
+			//System.err.println("Shift found, renumbering");
 			for (Residue residue:tmpResiduesList) {
 				residue.setSerial(residue.getSerial()-shift+1);
 			}
@@ -649,6 +655,78 @@ public class PdbfilePdb extends Pdb {
 		return aligned;
 		
 		
+	}
+	
+	private void check3Dcontiguity(PairwiseSequenceAlignment psa) {
+		
+		// There are still ambiguities even if the alignment matches fully, e.g. 2ofz:
+		//SEQRES             1 MGSDKIHHHHHHNTASWFTALTQHGKEELRFPRGQGVPINTNSGPDDQIG     50
+        //                       |||||    |||||||||||||||||||||||||||||||||||||||
+        //ATOM               1 --SDKIH----HNTASWFTALTQHGKEELRFPRGQGVPINTNSGPDDQIG     44
+		// the H at both sides of the gap could be swapped to the other side (it's an alignment with the same score)
+		// in these cases we want to check for 3D contiguity to determine if the H in left belongs to right or
+		// the H in right belongs to left
+		// Letters can be different e.g.:
+		//SEQRES             1 MGSDKISGHHHGNTASWFTALTQHGKEELRFPRGQGVPINTNSGPDDQIG     50
+        //                       |||||    |||||||||||||||||||||||||||||||||||||||
+        //ATOM               1 --SDKIS----GNTASWFTALTQHGKEELRFPRGQGVPINTNSGPDDQIG     44
+		// in here the only possibility is that the right G can be swapped to the left
+		
+		// from our tests this method fixes entries: 2ofz and 1dki (without it one residue doesn't match to CIF)
+		
+		//psa.printAlignment();
+		String alignedAtomSeq = psa.getAlignedSequences()[1];
+		Matcher m = INNER_GAPS_REGEX.matcher(alignedAtomSeq);
+		while (m.find()) { // for each gap
+			//String gap = m.group(1);
+			
+			int leftSeqresIndex = m.start();
+			int rightSeqresIndex = m.end()-1;
+			
+			int leftAtomIndex = psa.getMapping1To2(leftSeqresIndex);
+			int rightAtomIndex = psa.getMapping1To2(rightSeqresIndex);
+
+			//System.err.println("gap: "+gap);
+			//System.err.println("aln: "+sequence.substring(m.start(),m.end()));
+			
+			Residue leftRes = tmpResiduesList.get(leftAtomIndex);
+			Residue rightRes = tmpResiduesList.get(rightAtomIndex);
+
+			char letterLeftSwapRes = sequence.charAt(leftSeqresIndex+1);
+			char letterRightSwapRes = sequence.charAt(rightSeqresIndex-1);
+			
+			// we only want to check if there is a possibility of swapping the residues flanking the gap (one of the 2 cases above)
+			if (leftRes.getAaType().getOneLetterCode()==letterRightSwapRes || rightRes.getAaType().getOneLetterCode()==letterLeftSwapRes) {
+				if (leftRes.isContiguous(rightRes)) { // if not there's nothing to do, they are correctly aligned
+					Residue leftResMin1 = null;
+					if (leftAtomIndex-1>0) {
+						leftResMin1 = tmpResiduesList.get(leftAtomIndex-1);
+					}					
+					Residue rightResPlus1 = null;
+					if (rightAtomIndex+1<tmpResiduesList.size()) {
+						rightResPlus1 = tmpResiduesList.get(rightAtomIndex+1);
+					}
+					if (leftResMin1!=null && leftResMin1.isContiguous(leftRes)) {
+						//System.err.println("right to left");
+						if (rightRes.getAaType().getOneLetterCode()==letterLeftSwapRes) {
+							//System.err.println("letters match! it's a right to left");
+							rightRes.setSerial(leftSeqresIndex+1+1); 
+						}
+					}
+					if (rightResPlus1!=null && rightRes.isContiguous(rightResPlus1)) {
+						//System.err.println("left to right");
+						if (leftRes.getAaType().getOneLetterCode()==letterRightSwapRes) {
+							//System.err.println("letters match! it's a left to right");
+							leftRes.setSerial(rightSeqresIndex-1+1);
+						}
+
+					}
+
+				}
+
+			}
+			
+		}
 	}
 	
 	

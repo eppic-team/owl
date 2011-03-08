@@ -390,6 +390,24 @@ public class Residue implements Iterable<Atom>, Serializable {
 		}
 	}
 	
+	/**
+	 * Tells whether this residue is contiguous in the chain to given i+1
+	 * residue, i.e. whether they form a peptide bond.
+	 * It tests whether this residue's C atom is below 1.4A of iPlus1Residue's N atom.
+	 * @param iPlus1Residue
+	 * @return true if they are contiguous, false otherwise or if this residue does 
+	 * not have a C atom or iPlus1residue does not have a N atom
+	 */
+	public boolean isContiguous(Residue iPlus1Residue) {
+		if (!this.containsAtom("C") || !iPlus1Residue.containsAtom("N")) {
+			return false;
+		}
+		if (this.getAtom("C").getCoords().distance(iPlus1Residue.getAtom("N").getCoords())<1.4) {
+			return true;
+		}
+		return false;
+	}
+	
 	public String toString() {
 		return this.getChainCode()+serial+aaType.getOneLetterCode();
 	}
