@@ -38,15 +38,16 @@ public class PdbfilePdb extends Pdb {
 	private static final String ALI_SCORING_MATRIX = "IDENTITY"; //so that we force matching of identities only
 	
 	private static final String NULL_chainCode = "A";
-	// the regex to use for selecting an atom based on its alt code: either a space or an A are valid
-	private static final String ALTCODEREGEX = "[ A]";
 	
 	private String pdbfile;
 	private boolean isCaspTS; // whether we are reading a CASP TS file (true) or a normal PDB file (false)
 	private boolean hasSeqRes; // whether we find a non-empty SEQRES field in this pdb file
 	
+	private boolean hasAltCodes;
+	
 	private ArrayList<Residue> tmpResiduesList; // the temp list to store the residues read from ATOM lines (need to keep them in order as they appear in file)
 	private HashMap<String,Residue> tmpResiduesMap; // the temp map of all seen pdb residue serials to residues (need it for fast searches)
+	
 	
 	/**
 	 * Constructs an empty Pdb object given a pdbfile name
@@ -71,6 +72,7 @@ public class PdbfilePdb extends Pdb {
 	 */
 	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException {
 		try {
+			hasAltCodes = false;
 			initialiseResidues();
 			this.model=modelSerial;
 			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
@@ -88,6 +90,10 @@ public class PdbfilePdb extends Pdb {
 
 			this.initialiseMaps(); //TODO revise, is the remapping of pdbresser2resser in this necessary?
 			dataLoaded = true;
+			
+			// so that the GC releases memory (hopefully) for the tmp residue objects
+			tmpResiduesList = null;
+			tmpResiduesMap = null;
 			
 		} catch (FileFormatException e) {
 			throw new PdbLoadException(e);
@@ -170,7 +176,7 @@ public class PdbfilePdb extends Pdb {
 	 * and reassign internal residue numbers.
 	 * @throws IOException
 	 * @throws FileFormatException if file is empty, if file is a CASP TS file 
-	 * and no TARGET line found, if 0 observed residues are found for given chain
+	 * and no TARGET line found
 	 * @throws PdbLoadException if no ATOM lines are found for given 
 	 * pdbChainCode and model or the space group found is not recognised
 	 */
@@ -179,12 +185,12 @@ public class PdbfilePdb extends Pdb {
 		tmpResiduesMap = new HashMap<String,Residue>();
 		Pattern p;
 		Matcher m;
-		boolean empty = true; // controls whether we don't find any atom line for given pdbChainCode and model
 		// we set chainCodeStr (for regex) to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use " " (Pdb.NULL_CHAIN_CODE is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
 		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		this.sequence = ""; // we will put here the sequence we find (either from SEQRES or ATOM lines)
-		int lastAtomSerial = -1; // same for atoms
+		int lastAtomSerial = -1;
+		int totalInsCodesFound = 0;
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -394,8 +400,7 @@ public class PdbfilePdb extends Pdb {
 						fpdb.close();
 						throw new FileFormatException("ATOM/HETATM line is too short to contain the minimum fields required. PDB file "+pdbfile+" at line "+linecount);
 					}
-					if (line.substring(16, 17).matches(ALTCODEREGEX) && line.substring(21, 22).matches(chainCodeStr)) {
-						empty=false;
+					if (line.substring(21, 22).matches(chainCodeStr)) {
 						int atomserial=Integer.parseInt(line.substring(6,11).trim());
 						String atom = line.substring(12,16).trim();
 						String res_type = line.substring(17,20).trim();
@@ -405,6 +410,8 @@ public class PdbfilePdb extends Pdb {
 							throw new FileFormatException("Atom serials do not occur in ascending order in PDB file " + pdbfile + "(atom=" + atomserial + ")");
 						}
 						lastAtomSerial = atomserial;
+						String altCode = line.substring(16, 17);
+						if (!altCode.equals(" ")) hasAltCodes = true;
 						double x = Double.parseDouble(line.substring(30,38).trim());
 						double y = Double.parseDouble(line.substring(38,46).trim());
 						double z = Double.parseDouble(line.substring(46,54).trim());
@@ -434,18 +441,31 @@ public class PdbfilePdb extends Pdb {
 							int resSerial = 0;
 							if (Character.isDigit(pdbResSerial.charAt(pdbResSerial.length()-1))) {
 								resSerial = Integer.parseInt(pdbResSerial);
-								// otherwise (if we do have an ins code, it stays 0 (we renumber later)
+							} else {
+								resSerial = Integer.parseInt(pdbResSerial.substring(0,pdbResSerial.length()-1));
+								if (!tmpResiduesMap.containsKey(pdbResSerial)) {
+									totalInsCodesFound++; // if it is the first time seen we increase counter
+									// the strategy of summing the totalInsCodesFound to the parsed number without ins code
+									// only works when pdbSerial is same as last with ins code e.g. 27 -> 27A (27+1) -> 27B (27+2), 
+									// doesn't work for 0A (0+1) -> 1B (1+2)
+									// in the latter case we simply use the wrong numbering and rely on realigning later
+								}
 							}
 
 							if (!tmpResiduesMap.containsKey(pdbResSerial)) {
-								Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type),resSerial,this); 
+								Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type),resSerial+totalInsCodesFound,this); 
 								tmpResiduesList.add(residue);
 								residue.setPdbSerial(pdbResSerial);
 								tmpResiduesMap.put(pdbResSerial,residue);
 							}
 							if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
 								Residue residue = tmpResiduesMap.get(pdbResSerial);
-								residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
+								// for alt codes we take either blanks or As
+								// this is slightly different from what we do in CifFile or Pdbase where we take either blanks or first (alphabetically) letter
+								// for some entries like 2imf there can be discrepancies (in that one there's no As but only B,C)
+								if (altCode.equals(" ") || altCode.equals("A")) {
+									residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
+								}
 							}
 						}
 
@@ -458,16 +478,35 @@ public class PdbfilePdb extends Pdb {
 			}
 		}
 		fpdb.close();
-		if (empty) {
+		// we check that there was at least one observed residue for the chain
+		if (tmpResiduesList.size()==0) {
 			throw new PdbLoadException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
 		}
-
-		// we check also that there was at least one observed residue for the chain
-		if (tmpResiduesList.size()==0) {
-			throw new FileFormatException("No residues found for given chain in ATOM/HETATM lines of PDB file "+pdbfile);
-		}
 		
+		checkForEmptyResidues();
 		checkSeqResMatching();
+	}
+	
+	/**
+	 * We need to check for residues that are in the ATOM lines but for which we 
+	 * did not find any valid atoms.
+	 * This happens when there are alt codes in the file but not used for all residues 
+	 * in the file, e.g. in 2heu several alt codes are present (A,B,C,D) but for some 
+	 * residues there's no A or no D atoms. This is not standard practice.
+	 * Our approach to alt codes is to take either blanks or the first one encountered in the file (usually 'A')
+	 */
+	private void checkForEmptyResidues() {
+		ArrayList<Residue> emptyResidues = new ArrayList<Residue>();
+		for (Residue residue:tmpResiduesList) {
+			if (residue.getNumAtoms()==0) {
+				emptyResidues.add(residue);
+			}
+		}
+		for (Residue emptyRes:emptyResidues) {
+			tmpResiduesList.remove(emptyRes);
+			tmpResiduesMap.remove(emptyRes.getPdbSerial());
+		}
+			
 	}
 	
 	private void checkSeqResMatching() throws PdbLoadException {
@@ -480,7 +519,6 @@ public class PdbfilePdb extends Pdb {
 			int newResSer = 1;
 			for (Residue residue:tmpResiduesList) {
 				sequence += residue.getAaType().getOneLetterCode();
-				this.addResidue(residue);
 				residue.setSerial(newResSer);
 				newResSer++;
 			}
@@ -503,13 +541,16 @@ public class PdbfilePdb extends Pdb {
 				}				
 			}
 			if (!aligned) {
-				reAlignSeqRes();
-			} else { // already aligned we simply fill the residues with existing numbering
-				for (Residue residue:tmpResiduesList){
-					this.addResidue(residue);
+				if (!checkIfShifted()) {
+					reAlignSeqRes();
 				}
-			}
+			} 
 		}
+		// now that we have realigned and renumbered we fill the final Pdb object
+		for (Residue residue:tmpResiduesList){
+			this.addResidue(residue);
+		}
+	
 		// finally we initialise the pdb 2 resser maps
 		this.resser2pdbresser = new TreeMap<Integer, String>();
 		this.pdbresser2resser = new TreeMap<String, Integer>();
@@ -546,13 +587,67 @@ public class PdbfilePdb extends Pdb {
 				int posInSeqRes = psa.getMapping2To1(i);
 				Residue res = tmpResiduesList.get(i);
 				res.setSerial(posInSeqRes+1);
-				this.addResidue(res);
 			}
 
 
 		} catch (PairwiseSequenceAlignmentException e) {
 			throw new PdbLoadException("Could not create alignment of SEQRES and ATOM lines sequences to realign them");
 		}
+		
+	}
+	
+	private boolean checkIfShifted() {
+		// strategy is to take first window residues and see if they match to seqres, 
+		// from that we know the offset and check the rest of sequence
+		// If the whole thing match then we renumber according to the found offset
+		// and fill the residues with addResidue
+		int window = 5;
+		String seqPattern = "";
+		int i = 0;
+		int lastResSerial = -1;
+		while (tmpResiduesList.size()>i && i<window) { 	// if ATOM sequence smaller than window we have to take only the first 1, 2, 3, 4 depending on size
+			Residue currentObsRes = tmpResiduesList.get(i);
+			if (lastResSerial!=-1 && (currentObsRes.getSerial()-lastResSerial)>1) {
+				// if there are gaps in the first window residues we consider them to be non-standard (hoping there are no inner gaps in the first window residues!)
+				// if unobserved residues are present in the first window residues (e.g. 2pvb) then this doesn't find the right shifting and we have to rely on alignment
+				for (int j=1;j<(currentObsRes.getSerial()-lastResSerial);j++) {
+					seqPattern+=AminoAcid.XXX.getOneLetterCode();
+				}
+			} 
+			seqPattern+=currentObsRes.getAaType().getOneLetterCode();
+			lastResSerial = currentObsRes.getSerial();
+			i++;
+		}
+		Pattern p = Pattern.compile(seqPattern);
+		Matcher m = p.matcher(this.sequence);
+		int offSet = -1;
+		if (m.find()) {
+			offSet = m.start();
+		} else {
+			return false; // couldn't find it, will continue with the alignment
+		}
+		int shift = tmpResiduesList.get(0).getSerial()-offSet;
+		boolean aligned = true;
+		for (Residue residue:tmpResiduesList) {
+			int seqIndex = residue.getSerial()-shift;
+			if (seqIndex<0 || seqIndex>=this.sequence.length()) {
+				aligned = false;
+				break;
+			}
+			if (residue.getAaType().getOneLetterCode()!=this.sequence.charAt(seqIndex)) {
+				aligned = false;
+				break;
+			}
+		}
+		// if the above doesn't fail for any position, it means there was a shift, we renumber accordingly
+		if (aligned) {
+			for (Residue residue:tmpResiduesList) {
+				residue.setSerial(residue.getSerial()-shift+1);
+			}
+		}
+		
+		return aligned;
+		
 		
 	}
 	
@@ -597,4 +692,11 @@ public class PdbfilePdb extends Pdb {
 		return pdbfile;
 	}
 	
+	/**
+	 * True if the PDB file contains alt codes for this chain, false otherwise.
+	 * @return
+	 */
+	public boolean hasAltCodes() {
+		return hasAltCodes;
+	}
 }

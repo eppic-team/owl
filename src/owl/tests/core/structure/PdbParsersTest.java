@@ -237,8 +237,8 @@ public class PdbParsersTest {
 			
 			System.out.println(pdbCode);
 			
-			Pdb pdbfilePdb = null;
-			Pdb pdbasePdb = null;
+			PdbfilePdb pdbfilePdb = null;
+			PdbasePdb pdbasePdb = null;
 			
 			try {
 				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
@@ -282,18 +282,44 @@ public class PdbParsersTest {
 						// exp data and quality parameters
 						Assert.assertEquals(pdbasePdb.getExpMethod(),pdbfilePdb.getExpMethod());
 						Assert.assertEquals(pdbasePdb.getResolution(),pdbfilePdb.getResolution(),0.01);
-						Assert.assertEquals(pdbasePdb.getRfree(),pdbfilePdb.getRfree(),0.01);
+						if (Math.abs(pdbasePdb.getRfree()-pdbfilePdb.getRfree())>0.01) {
+							// we can't assert because there's no consistency between pdbase and pdbfile, e.g. 1p1x
+							System.err.println(pdbCode+chain+": rfrees don't agree, pdbase "+
+									String.format("%4.2f", pdbasePdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getRfree()));
+							warnings.add(pdbCode+chain+": rfrees don't agree, pdbase "+
+									String.format("%4.2f", pdbasePdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getRfree()));
+						}
 						Assert.assertEquals(pdbasePdb.getRsym(),pdbfilePdb.getRsym(),0.001);
 
 						// sequence
 						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().length());
 						Assert.assertTrue(pdbfilePdb.getObsLength()==pdbfilePdb.getObsSequence().length());
 						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().length());
-						// we can't assert the sequences against pdbase because of some very weird entries. See http://pdbwiki.org/index.php/1ejg
+						// for some very weird entries the sequences won't coincide: see http://pdbwiki.org/index.php/1ejg
+						// also for some not so weird but sickly wrong PDB files: 1k55 (has a HETATM residue which is not shown in SEQRES)
+						// thus we can't assert for sequence
 						//Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
 						Assert.assertEquals(pdbasePdb.getObsSequence(), pdbfilePdb.getObsSequence());
 						String seq = pdbfilePdb.getSequence();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
+							if (!pdbasePdb.getPdbResSerFromResSer(resser).equals(pdbfilePdb.getPdbResSerFromResSer(resser))) {
+								// In some cases the alignment is ambiguous, see 2nwr at residues 191 onwards:
+								// SEQRES           151 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGM    200
+								//                      |||||||||||||||||||||||||||||||||||||||||      |||
+								// ATOM             150 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPG------GGM    193
+								// the cif file places the G on the left of the gap rather than on the right
+								// as we do (and they are right looking at the 3D coords)
+								// For these cases we are trying to rely on the order of the residue serials in ATOM (detecting whether they are shifted)
+								// Anyway some cases are still ambiguous: see 2iyv where pdbase (cif) since to have gotten 
+								// wrong the last HISs (or maybe not, didn't look at 3D) but pdbfile says the one with coords is 183, where pdbase says it's 182  
+								// That's why here we only print a warning (anyway it is only in rare cases that it happen)
+								System.err.println(pdbCode+chain+": resser " +resser+" maps to pdbresser "
+										+pdbasePdb.getPdbResSerFromResSer(resser)+" in pdbase and to pdbresser "
+										+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
+								warnings.add(pdbCode+chain+": resser " +resser+" maps to pdbresser "
+										+pdbasePdb.getPdbResSerFromResSer(resser)+" in pdbase and to pdbresser "
+										+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
+							}
 							Assert.assertEquals(pdbfilePdb.getResidue(resser).getAaType().getThreeLetterCode(), 
 												AminoAcid.one2three(seq.charAt(resser-1)));
 							// at least 1 atom per observed residue
@@ -301,27 +327,16 @@ public class PdbParsersTest {
 							// at least the CA atom must be present, doesn't work for all, e.g. 2cioB residue 80
 							//Assert.assertNotNull(pdbfilePdb.getResidue(resser).getAtom("CA"));
 							
-							if (pdbasePdb.containsResidue(resser)) {
+							if (pdbasePdb.containsResidue(resser)) { // we have to check for case where mapping of pdbfile and pdbase from resser to pdbresser don't coincide (we print warnings above for that)
 								Residue pdbaseRes = pdbasePdb.getResidue(resser);
 								Residue pdbfileRes = pdbfilePdb.getResidue(resser);
 								Assert.assertEquals(pdbaseRes.getAaType(), pdbfileRes.getAaType());
-								Assert.assertEquals(pdbaseRes.getNumAtoms(), pdbfileRes.getNumAtoms());
-								Assert.assertEquals(pdbaseRes.getNumHeavyAtoms(), pdbfileRes.getNumHeavyAtoms());
-							} else { 							
-								// In some cases the alignment is ambiguous, see 2nwr at residues 191 onwards:
-								// SEQRES           151 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGM    200
-								//                      |||||||||||||||||||||||||||||||||||||||||      |||
-								// ATOM             150 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPG------GGM    193
-								// the cif file places the G on the left of the gap rather than on the right
-								// as we do (and they are right looking at the 3D coords)
-								// We could guess it from distances in 3D or so (at least for the 2nwr case) 
-								// but in general it's quite difficult to solve
-								// Anyway this is a special case (and doesn't have many important consequences). It 
-								// happens often enough (1 in a 100 or so)
-								// we still want to test for all other cases to make sure we are aligning well, 
-								// that's why here we only print a warning
-								System.err.println("Residue "+resser+" wrongly mapped in pdbfile vs pdbase (not observed in pdbase and observed in pdbfile)");
-								warnings.add(pdbCode+chain+": wronly mapped residue "+resser+", not observed in pdbase but observed in pdbfile");								
+								if (!pdbfilePdb.hasAltCodes()) {
+									// if there are alt codes the strategies followed in CifFile/Pdbase are slightly different from Pdbfile
+									// because of that we can't compare (some cases like 2imf would fail)
+									Assert.assertEquals(pdbaseRes.getNumAtoms(), pdbfileRes.getNumAtoms());
+									Assert.assertEquals(pdbaseRes.getNumHeavyAtoms(), pdbfileRes.getNumHeavyAtoms());
+								}
 							}
 
 						}
@@ -356,7 +371,7 @@ public class PdbParsersTest {
 			}
 		}
 		flist.close();
-		System.err.println("Warnings for: ");
+		System.err.println("WARNINGS: ");
 		for (String warning:warnings) {
 			System.err.println(warning);
 		}
