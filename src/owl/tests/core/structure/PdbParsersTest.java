@@ -36,6 +36,7 @@ import owl.core.structure.Residue;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
+import owl.core.util.RegexFileFilter;
 
 
 public class PdbParsersTest {
@@ -44,10 +45,14 @@ public class PdbParsersTest {
 	private static final String CIFDIR="/nfs/data/dbs/pdb/data/structures/all/mmCIF/";
 	private static final String PDBDIR="/nfs/data/dbs/pdb/data/structures/all/pdb/";
 	
-	private static final String LISTFILE = "src/owl/tests/core/structure/data/cullpdb_20";
+	private static final String DATADIR = "src/owl/tests/core/structure/data";
+	
+	private static final String LISTFILE = DATADIR+"/cullpdb_20";
 	private static final String PDBASE_DB = "pdbase";
 	
-	private static final String TINKERPDBFILE = "src/owl/tests/core/structure/data/1bxyA_tinker.pdb";
+	private static final String TINKERPDBFILE = DATADIR+"/1bxyA_tinker.pdb";
+	
+	private static final String CASPTARBALL = DATADIR+"/T0515.tar.gz";
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -61,6 +66,8 @@ public class PdbParsersTest {
 	public void setUp() throws Exception {
 		// to throw away jaligner logging
 		System.setProperty("java.util.logging.config.file","/dev/null");
+		Process proc = Runtime.getRuntime().exec("tar -zxf "+CASPTARBALL+" -C "+System.getProperty("java.io.tmpdir"));
+		proc.waitFor();
 	}
 
 	@After
@@ -72,8 +79,29 @@ public class PdbParsersTest {
 		// testing some special PDB files
 		
 		// tinker file (no occupancy or bfactors)
+		System.out.println(TINKERPDBFILE);
 		Pdb pdb = new PdbfilePdb(TINKERPDBFILE);
-		pdb.load(Pdb.NULL_CHAIN_CODE);		
+		pdb.load(Pdb.NULL_CHAIN_CODE);
+		
+		// CASP TS server files (testing with server tar ball T0515 of CASP9)
+		File dir = new File(System.getProperty("java.io.tmpdir"),"T0515");
+		File[] files = dir.listFiles(new RegexFileFilter("T0515.*"));
+		
+		for (File caspFileName:files) {
+			System.out.println(caspFileName);
+			pdb = new PdbfilePdb(caspFileName.getAbsolutePath());
+			String[] chains = pdb.getChains();
+			Integer[] models = pdb.getModels();
+			for (int model:models) {
+				for (String chain:chains) {
+					try {
+						pdb.load(chain,model);
+					} catch (PdbLoadException e) {
+						System.err.println("Warning, pdb load exception: "+e.getMessage());
+					}
+				}
+			}
+		}
 	}
 	
 	@Test
@@ -407,7 +435,7 @@ public class PdbParsersTest {
 	public static void main(String[] args) throws Exception {
 		PdbParsersTest pdbTest = new PdbParsersTest();
 		pdbTest.setUp();
-		//pdbTest.testSpecialPDBFiles();
+		pdbTest.testSpecialPDBFiles();
 		//pdbTest.testCIFagainstPDBASE();
 		pdbTest.testPdbfileParser();
 	}

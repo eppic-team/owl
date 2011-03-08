@@ -419,14 +419,25 @@ public class PdbfilePdb extends Pdb {
 						double z = Double.parseDouble(line.substring(46,54).trim());
 						Point3d coords = new Point3d(x,y,z);
 						double occupancy = Atom.DEFAULT_OCCUPANCY;
-						if (line.length()>=60)
-							occupancy = Double.parseDouble(line.substring(54,60).trim());
+						if (line.length()>=60) {
+							String occupancyStr = line.substring(54,60).trim();
+							if (!occupancyStr.equals("")) {
+								occupancy = Double.parseDouble(occupancyStr);
+							}
+						}
 						double bfactor = Atom.DEFAULT_B_FACTOR;
-						if (line.length()>=66)
-							bfactor = Double.parseDouble(line.substring(60,66).trim());
+						if (line.length()>=66) {
+							String bfactorStr = line.substring(60,66).trim();
+							if (!bfactorStr.equals("")) {
+								bfactor = Double.parseDouble(bfactorStr);
+							}
+						}
 						String element = null;
-						if (line.length()>=78)
+						if (line.length()>=78) {
 							element = line.substring(76,78).trim();
+							if (element.equals("") || Character.isDigit(element.charAt(0)) || (element.length()==2 && Character.isDigit(element.charAt(1)))) 
+								element = null;
+						}
 	
 						if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
 							// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
