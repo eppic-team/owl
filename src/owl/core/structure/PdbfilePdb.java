@@ -525,15 +525,40 @@ public class PdbfilePdb extends Pdb {
 	private void checkSeqResMatching() throws PdbLoadException {
 
 		if (!hasSeqRes){ // no SEQRES could be read
-			
-			// we take the sequence from the residues Map
-			// and renumber
-			sequence = "";
-			int newResSer = 1;
+			boolean canUseResidueNumberingAsIs = true;
 			for (Residue residue:tmpResiduesList) {
-				sequence += residue.getAaType().getOneLetterCode();
-				residue.setSerial(newResSer);
-				newResSer++;
+				// negative or 0 residue numbers
+				if (residue.getSerial()<=0) {
+					canUseResidueNumberingAsIs = false;
+					break;
+				}
+				// insertion codes
+				if (!Character.isDigit(residue.getPdbSerial().charAt(residue.getPdbSerial().length()-1))) {
+					canUseResidueNumberingAsIs = false;
+					break;
+				}
+			}
+			
+			if (canUseResidueNumberingAsIs) {
+				// we take the residue serials to be a valid numbering and fill the unknown gaps with Xs
+				sequence = "";
+				for (int resser=1;resser<=tmpResiduesList.get(tmpResiduesList.size()-1).getSerial();resser++) {
+					if (tmpResiduesMap.containsKey(String.valueOf(resser))) {
+						sequence += tmpResiduesMap.get(String.valueOf(resser)).getAaType().getOneLetterCode();
+					} else {
+						sequence += AminoAcid.XXX.getOneLetterCode();
+					}
+				}
+			} else {
+				// we take the sequence from the residues Map
+				// and renumber
+				sequence = "";
+				int newResSer = 1;
+				for (Residue residue:tmpResiduesList) {
+					sequence += residue.getAaType().getOneLetterCode();
+					residue.setSerial(newResSer);
+					newResSer++;
+				}
 			}
 			
 		} else { // we could read the sequence from SEQRES
