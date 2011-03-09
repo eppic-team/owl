@@ -36,10 +36,10 @@ public class TcoffeeRunner {
 	 * @param seq the sequence object (its tag will be the one used in the output Alignment)
 	 * @param profile the multiple sequence alignment representing the profile to align to 
 	 * @return
-	 * @throws TcoffeeError if tcoffee fails to run
+	 * @throws TcoffeeException if tcoffee fails to run
 	 * @throws IOException if problem while reading/writing temp files needed to run tcoffee
 	 */
-	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile, File logFile) throws TcoffeeError, IOException {
+	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile, File logFile) throws TcoffeeException, IOException {
 		File inFile = File.createTempFile("tcof.", ".in");
 		if (!DEBUG) inFile.deleteOnExit();
 		seq.writeToFastaFile(inFile);
@@ -58,9 +58,9 @@ public class TcoffeeRunner {
 		try {
 			al = new MultipleSequenceAlignment(outFile.getAbsolutePath(), MultipleSequenceAlignment.CLUSTALFORMAT);
 		} catch (AlignmentConstructionException e) {
-			throw new TcoffeeError("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());			
+			throw new TcoffeeException("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());			
 		} catch (FileFormatException e) {
-			throw new TcoffeeError("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());
+			throw new TcoffeeException("Couldn't construct Alignment from Tcoffee output alignment "+outFile+". Error "+e.getMessage());
 		}
 		
 		return al;
@@ -76,9 +76,9 @@ public class TcoffeeRunner {
 	 * the profile to align to, if null no profile will be used
 	 * @param logFile all stdout/stderr of t_coffee will be logged, if null no logging at all (quiet mode)
 	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate) 
-	 * @throws TcoffeeError if t_coffee exits with non 0 status or an IOException occurs
+	 * @throws TcoffeeException if t_coffee exits with non 0 status or an IOException occurs
 	 */
-	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeError {
+	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeException {
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
@@ -103,7 +103,7 @@ public class TcoffeeRunner {
 				// throwing exception if exit state is not 0 
 				if (exitValue!=0) {
 					tcofLog.flush();
-					throw new TcoffeeError(tcofProg + " exited with value "+exitValue+". Revise log file "+logFile);
+					throw new TcoffeeException(tcofProg + " exited with value "+exitValue+". Revise log file "+logFile);
 				}
 			} catch (InterruptedException e) {
 				System.err.println("Unexpected error while waiting for "+tcofProg+" to exit. Error: "+e.getMessage());
@@ -113,7 +113,7 @@ public class TcoffeeRunner {
 			tcofLog.close();
 			
 		} catch (IOException e) {
-			throw new TcoffeeError("IO error while trying to run "+tcofProg+": "+e.getMessage());
+			throw new TcoffeeException("IO error while trying to run "+tcofProg+": "+e.getMessage());
 		}
 		
 		

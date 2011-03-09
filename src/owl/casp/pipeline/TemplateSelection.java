@@ -20,7 +20,7 @@ import org.xml.sax.SAXException;
 
 import owl.core.connections.GTGHitList;
 import owl.core.connections.GTGParser;
-import owl.core.runners.PsipredError;
+import owl.core.runners.PsipredException;
 import owl.core.runners.PsipredRunner;
 import owl.core.runners.blast.BlastError;
 import owl.core.runners.blast.BlastHitList;
@@ -311,10 +311,10 @@ public class TemplateSelection {
 	
 	/**
 	 * Runs psipred
-	 * @throws PsipredError
+	 * @throws PsipredException
 	 * @throws IOException
 	 */
-	private void doPsipred() throws PsipredError, IOException {
+	private void doPsipred() throws PsipredException, IOException {
 		System.out.println("Running psipred for secondary structure");
 		PsipredRunner psipred = new PsipredRunner(PSIPRED_HOMEDIR);
 		File outSs2File   = new File(outDir, baseName+PSIPRED_SS2_SUFFIX);
@@ -725,7 +725,7 @@ public class TemplateSelection {
 		if (psiblast && psipred) {
 			try {
 				doPsipred();
-			} catch (PsipredError e) {
+			} catch (PsipredException e) {
 				System.err.println("Psipred failed to run. Error: "+e.getMessage());
 				psipredSucceeded = false;
 			}

@@ -28,7 +28,7 @@ import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
 import owl.core.runners.SelectonRunner;
-import owl.core.runners.TcoffeeError;
+import owl.core.runners.TcoffeeException;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastError;
 import owl.core.runners.blast.BlastHit;
@@ -406,9 +406,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @param tcoffeeBin
 	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
 	 * @throws IOException
-	 * @throws TcoffeeError 
+	 * @throws TcoffeeException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeError {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeException {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");

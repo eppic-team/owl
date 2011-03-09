@@ -11,7 +11,7 @@ import java.util.TreeMap;
 
 import org.xml.sax.SAXException;
 
-import owl.core.runners.TcoffeeError;
+import owl.core.runners.TcoffeeException;
 import owl.core.runners.blast.BlastError;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
@@ -357,7 +357,7 @@ public class RunAll {
 				try {
 					System.out.println("Aligning target to templates");
 					target2templatesAln = tta.run();
-				} catch (TcoffeeError e) {
+				} catch (TcoffeeException e) {
 					System.err.println("Problems while running tcoffee for target to template alignment. Error "+e.getMessage()+"\nExiting");
 					System.exit(1);
 				} catch (IOException e) {

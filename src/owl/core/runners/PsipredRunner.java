@@ -45,7 +45,7 @@ public class PsipredRunner {
 		
 	}
 	
-	private void runPass1(File inMtxFile, File outSsFile) throws IOException, PsipredError {
+	private void runPass1(File inMtxFile, File outSsFile) throws IOException, PsipredException {
 		String cmdLine = pass1Prog + " "+ inMtxFile.getAbsolutePath() +" "+weights1Dat+" "+weights2Dat+" "+weights3Dat+" "+weights4Dat;
 		Process pass1Proc = Runtime.getRuntime().exec(cmdLine);
 		BufferedReader pass1Output = new BufferedReader(new InputStreamReader(pass1Proc.getInputStream()));
@@ -59,14 +59,14 @@ public class PsipredRunner {
 		try {
 			int exitValue = pass1Proc.waitFor();
 			if (exitValue>0) {
-				throw new PsipredError(PASS1_PROG + " exited with error value " + exitValue);
+				throw new PsipredException(PASS1_PROG + " exited with error value " + exitValue);
 			}
 		} catch (InterruptedException e) {
 			System.err.println("Unexpected error while running psipred: "+e.getMessage());
 		}
 	}
 	
-	private void runPass2(File inSsFile, File outSs2File, File outHorizFile) throws IOException, PsipredError {
+	private void runPass2(File inSsFile, File outSs2File, File outHorizFile) throws IOException, PsipredException {
 		String cmdLine = pass2Prog + " " + weightsP2Dat + " 1 1.0 1.0 "+ outSs2File.getAbsolutePath()+" "+ inSsFile.getAbsolutePath();
 		Process pass2Proc = Runtime.getRuntime().exec(cmdLine);
 		BufferedReader pass2Output = new BufferedReader(new InputStreamReader(pass2Proc.getInputStream()));
@@ -79,7 +79,7 @@ public class PsipredRunner {
 		try {
 			int exitValue = pass2Proc.waitFor();
 			if (exitValue>0) {
-				throw new PsipredError(PASS2_PROG + " exited with error value " + exitValue);
+				throw new PsipredException(PASS2_PROG + " exited with error value " + exitValue);
 			}
 		} catch (InterruptedException e) {
 			System.err.println("Unexpected error while running psipred: "+e.getMessage());
@@ -124,7 +124,7 @@ public class PsipredRunner {
 	 * @param blastChkFile
 	 * @param blastBinDir
 	 */
-	public void run(File inSeqFile, File outSs2File, File outHorizFile, File blastChkFile, String blastBinDir) throws IOException, PsipredError {
+	public void run(File inSeqFile, File outSs2File, File outHorizFile, File blastChkFile, String blastBinDir) throws IOException, PsipredException {
 		// copy seq file and chk profile file to tmp dir and get basename of chk file 
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		File tmpChkFile = new File(tmpDir,blastChkFile.getName());
@@ -147,7 +147,7 @@ public class PsipredRunner {
 		try {
 			blastRunner.runMakemat(tmpDir, basename);
 		} catch (BlastError e) {
-			throw new PsipredError("Makemat step of psipred failed to run, error: "+e.getMessage());
+			throw new PsipredException("Makemat step of psipred failed to run, error: "+e.getMessage());
 		}
 		// running psipred pass 1 and pass 2 with output of makemat (.mtx file)
 		File inMtxFile = new File(tmpDir,basename+".mtx");
