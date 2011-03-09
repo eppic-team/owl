@@ -12,7 +12,7 @@ import java.util.TreeMap;
 import org.xml.sax.SAXException;
 
 import owl.core.runners.TcoffeeException;
-import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastException;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastXMLParser;
@@ -271,12 +271,15 @@ public class RunAll {
 			} catch (FileFormatException e) {
 				System.err.println("Input sequence file doesn't conform to FASTA format. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
-			} catch (BlastError e) {
+			} catch (BlastException e) {
 				System.err.println("Blast failed to run. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
 			} catch (IOException e) {
 				System.err.println("Problem while reading/writing files for blast/psipred. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);			
+			} catch (InterruptedException e) {
+				System.err.println("Thread interrupted: "+e.getMessage());
+				System.exit(1);
 			}
 
 			if (ts.foundFullMatch()) {
@@ -362,6 +365,9 @@ public class RunAll {
 					System.exit(1);
 				} catch (IOException e) {
 					System.err.println("Problems while running tcoffee for target to template alignment. Error "+e.getMessage()+"\nExiting");
+					System.exit(1);
+				} catch (InterruptedException e) {
+					System.err.println("Thread was interrupted: "+e.getMessage());
 					System.exit(1);
 				}
 			}

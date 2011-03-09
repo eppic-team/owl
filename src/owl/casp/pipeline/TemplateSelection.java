@@ -22,7 +22,7 @@ import owl.core.connections.GTGHitList;
 import owl.core.connections.GTGParser;
 import owl.core.runners.PsipredException;
 import owl.core.runners.PsipredRunner;
-import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastException;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastUtils;
@@ -216,10 +216,11 @@ public class TemplateSelection {
 	 * Blast against PDB 
 	 * @return
 	 * @param queryLength
-	 * @throws BlastError
+	 * @throws BlastException
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	private BlastHitList doBlastAgainstPdb() throws BlastError, IOException {
+	private BlastHitList doBlastAgainstPdb() throws BlastException, IOException, InterruptedException {
 		System.out.println("### BLAST");
 		System.out.println("Blasting against PDB sequence db "+pdbBlastDb + "...");
 
@@ -261,10 +262,11 @@ public class TemplateSelection {
 	 * Psiblast against nr sequence database and then with the profile against PDB
 	 * @param queryLength
 	 * @return
-	 * @throws BlastError
+	 * @throws BlastException
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	private BlastHitList doPsiblastAgainstNrAndPdb() throws BlastError, IOException {
+	private BlastHitList doPsiblastAgainstNrAndPdb() throws BlastException, IOException, InterruptedException {
 		System.out.println("### PSI-BLAST");
 		System.out.println("Psi-blasting with maximum of "+maxIter+" iterations...");
 		
@@ -313,8 +315,9 @@ public class TemplateSelection {
 	 * Runs psipred
 	 * @throws PsipredException
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	private void doPsipred() throws PsipredException, IOException {
+	private void doPsipred() throws PsipredException, IOException, InterruptedException {
 		System.out.println("Running psipred for secondary structure");
 		PsipredRunner psipred = new PsipredRunner(PSIPRED_HOMEDIR);
 		File outSs2File   = new File(outDir, baseName+PSIPRED_SS2_SUFFIX);
@@ -671,11 +674,12 @@ public class TemplateSelection {
 	 * A few other files are also written: a gdl file with a cluster graph of the 
 	 * selected templates and several blast output files
 	 * @return the selected templates
-	 * @throws BlastError if blast fails to run
+	 * @throws BlastException if blast fails to run
 	 * @throws IOException if I/O problems while running blast or psipred or writing results
 	 * @throws FileFormatException if input sequence file not in FASTA format
+	 * @throws InterruptedException
 	 */
-	public TemplateList run() throws BlastError, IOException, FileFormatException {
+	public TemplateList run() throws BlastException, IOException, FileFormatException, InterruptedException {
 		// getting query sequence for the length
 		inputSequence = new Sequence();
 		inputSequence.readFromFastaFile(inputSeqFile);

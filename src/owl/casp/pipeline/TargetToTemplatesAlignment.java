@@ -36,7 +36,7 @@ public class TargetToTemplatesAlignment {
 		this.outDir = outDir;
 	}
 
-	public MultipleSequenceAlignment run() throws TcoffeeException, IOException {
+	public MultipleSequenceAlignment run() throws TcoffeeException, IOException, InterruptedException {
 		File tcofLogFile = new File(outDir, baseName+".tcof.log");
 		
 		TcoffeeRunner tcr = new TcoffeeRunner(TCOFPROG);
@@ -134,6 +134,9 @@ public class TargetToTemplatesAlignment {
 		} catch (IOException e) {
 			System.err.println("Problem while performing target to templates alignment. Error: "+e.getMessage());
 			System.exit(1);			
+		} catch (InterruptedException e) {
+			System.err.println("Thread was interrupted: "+e.getMessage());
+			System.exit(1);
 		}
 
 	}

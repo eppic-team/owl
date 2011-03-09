@@ -39,7 +39,7 @@ public class TcoffeeRunner {
 	 * @throws TcoffeeException if tcoffee fails to run
 	 * @throws IOException if problem while reading/writing temp files needed to run tcoffee
 	 */
-	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile, File logFile) throws TcoffeeException, IOException {
+	public MultipleSequenceAlignment alignSequence2Profile(Sequence seq, MultipleSequenceAlignment profile, File logFile) throws TcoffeeException, IOException, InterruptedException {
 		File inFile = File.createTempFile("tcof.", ".in");
 		if (!DEBUG) inFile.deleteOnExit();
 		seq.writeToFastaFile(inFile);
@@ -78,7 +78,7 @@ public class TcoffeeRunner {
 	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate) 
 	 * @throws TcoffeeException if t_coffee exits with non 0 status or an IOException occurs
 	 */
-	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeException {
+	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeException, InterruptedException {
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
@@ -97,17 +97,11 @@ public class TcoffeeRunner {
 			PrintWriter tcofLog = new PrintWriter(logFile);
 			
 			Process proc = Runtime.getRuntime().exec(cmdLine);
-
-			try {
-				int exitValue = proc.waitFor();
-				// throwing exception if exit state is not 0 
-				if (exitValue!=0) {
-					tcofLog.flush();
-					throw new TcoffeeException(tcofProg + " exited with value "+exitValue+". Revise log file "+logFile);
-				}
-			} catch (InterruptedException e) {
-				System.err.println("Unexpected error while waiting for "+tcofProg+" to exit. Error: "+e.getMessage());
-				System.exit(1);
+			int exitValue = proc.waitFor();
+			// throwing exception if exit state is not 0 
+			if (exitValue!=0) {
+				tcofLog.flush();
+				throw new TcoffeeException(tcofProg + " exited with value "+exitValue+". Revise log file "+logFile);
 			}
 
 			tcofLog.close();

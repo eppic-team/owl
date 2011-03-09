@@ -30,7 +30,7 @@ import owl.core.connections.UniProtConnection;
 import owl.core.runners.SelectonRunner;
 import owl.core.runners.TcoffeeException;
 import owl.core.runners.TcoffeeRunner;
-import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastException;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.runners.blast.BlastRunner;
@@ -116,10 +116,11 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @param blastNumThreads
 	 * @param cacheFile a file with the cached xml blast output file, if null blast will be always run
 	 * @throws IOException
-	 * @throws BlastError
+	 * @throws BlastException
 	 * @throws UniprotVerMisMatchException if uniprot versions of cacheFile given and blastDbDir do not coincide
+	 * @throws InterruptedException
 	 */
-	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastError, UniprotVerMisMatchException {
+	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastException, UniprotVerMisMatchException, InterruptedException {
 		File outBlast = null;
 		boolean fromCache = false;
 		if (cacheFile!=null && cacheFile.exists()) {
@@ -408,7 +409,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @throws IOException
 	 * @throws TcoffeeException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeException {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeException, InterruptedException {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");
@@ -843,7 +844,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @throws IOException
 	 */
 	public void computeKaKsRatiosSelecton(File selectonBin, File resultsFile, File logFile, File treeFile, File globalResultsFile, double epsilon) 
-	throws IOException {
+	throws IOException, InterruptedException {
 		kaksRatios = new ArrayList<Double>();
 		SelectonRunner sr = new SelectonRunner(selectonBin);
 		if(!resultsFile.exists()) {

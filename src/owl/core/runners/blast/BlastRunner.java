@@ -74,10 +74,11 @@ public class BlastRunner {
 	 * output type to another. So it is recommended to use it to get consistent results if one
 	 * wants no filtering.
 	 * @throws IOException
-	 * @throws BlastError if exit status of the program is not 0
+	 * @throws BlastException if exit status of the program is not 0
+	 * @throws InterruptedException
 	 */
 	public void runPsiBlast(File queryFile, String db, File outFile, int maxIter, File outProfileFile, File inProfileFile, int outputType, boolean noFiltering, int numThreads) 
-	throws IOException, BlastError {
+	throws IOException, BlastException, InterruptedException {
 		
 		checkIO(queryFile, db);
 		
@@ -90,13 +91,10 @@ public class BlastRunner {
 						outProfileOpt + inProfileOpt;
 		Process blastpgpProc = Runtime.getRuntime().exec(cmdLine);
 
-		try {
-			int exitValue = blastpgpProc.waitFor();
-			if (exitValue>0) {
-				throw new BlastError(BLASTALL_PROG + " exited with error value " + exitValue);
-			}
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while running blast: "+e.getMessage());
+
+		int exitValue = blastpgpProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(BLASTALL_PROG + " exited with error value " + exitValue);
 		}
 	}
 	
@@ -112,22 +110,21 @@ public class BlastRunner {
 	 * output type to another. So it is recommended to use it to get consistent results if one
 	 * wants no filtering.
 	 * @throws IOException
-	 * @throws BlastError if exit statis of the program is not 0
+	 * @throws BlastException if exit statis of the program is not 0
+	 * @throws InterruptedException
 	 */
-	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads) throws IOException, BlastError {
+	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads) 
+	throws IOException, BlastException, InterruptedException {
 		
 		checkIO(queryFile, db);
 		
 		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads);
 		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
 		
-		try {
-			int exitValue = blastallProc.waitFor();
-			if (exitValue>0) {
-				throw new BlastError(BLASTALL_PROG + " exited with error value " + exitValue);
-			}
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while running blast: "+e.getMessage());
+
+		int exitValue = blastallProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(BLASTALL_PROG + " exited with error value " + exitValue);
 		}
 	}
 	
@@ -142,9 +139,10 @@ public class BlastRunner {
 	 * output type to another. So it is recommended to use it to get consistent results if one
 	 * wants no filtering. 
 	 * @throws IOException
-	 * @throws BlastError
+	 * @throws BlastException
 	 */
-	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) throws IOException, BlastError {
+	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) 
+	throws IOException, BlastException, InterruptedException {
 		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads);
 	}
 	
@@ -153,17 +151,13 @@ public class BlastRunner {
 	 * @param workDir
 	 * @param basename
 	 */
-	public void runMakemat(String workDir, String basename) throws IOException, BlastError {
+	public void runMakemat(String workDir, String basename) throws IOException, BlastException, InterruptedException {
 		String cmdLine = makematProg + " "+workDir+" -P " + basename;
 		Process makematProc = Runtime.getRuntime().exec(cmdLine);
 		
-		try {
-			int exitValue = makematProc.waitFor();
-			if (exitValue>0) {
-				throw new BlastError(MAKEMAT_PROG + " exited with error value " + exitValue);
-			}
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while running blast: "+e.getMessage());
+		int exitValue = makematProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(MAKEMAT_PROG + " exited with error value " + exitValue);
 		}
 	}
 	

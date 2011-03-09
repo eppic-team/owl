@@ -44,8 +44,10 @@ public class SelectonRunner {
 	 * @param gcType the GeneticCodeType to be used by selecton
 	 * @param epsilon the epsilon value for selecton's likelihood optimization. The smaller the higher precision
 	 * @throws IOException
+	 * @throws InterruptedException
 	 */
-	public void run(File inputAlnFile, File resultsFile, File logFile, File treeFile, File colorBinFile, File globalResultsFile, String refSequenceName, GeneticCodeType gcType, double epsilon) throws IOException {
+	public void run(File inputAlnFile, File resultsFile, File logFile, File treeFile, File colorBinFile, File globalResultsFile, String refSequenceName, GeneticCodeType gcType, double epsilon) 
+	throws IOException, InterruptedException {
 		String prefix = "selecton";
 		if (logFile==null) {
 			logFile = File.createTempFile(prefix, ".log");
@@ -75,20 +77,14 @@ public class SelectonRunner {
 		"-c",colorBinFile.toString()};
 		Process selectonProc = Runtime.getRuntime().exec(cmdLine);
 
-		try {
-			int exitValue = selectonProc.waitFor();
-			if (exitValue>0) {
-				throw new IOException("Selecton exited with error value " + exitValue);
-			}
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while running blast: "+e.getMessage());
+		int exitValue = selectonProc.waitFor();
+		if (exitValue>0) {
+			throw new IOException("Selecton exited with error value " + exitValue);
 		}
 		try {
 			parseResultsFile(resultsFile, refSequenceName);
 		} catch(FileFormatException e) {
-			System.err.println("Unexpected error. Selecton output file "+resultsFile+" is not in the expected format.");
-			System.err.println(e.getMessage());
-			System.exit(1);
+			throw new IOException("Selecton output file "+resultsFile+" is not in the expected format: "+e.getMessage());
 		}
 	}
 	

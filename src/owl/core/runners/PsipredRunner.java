@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
-import owl.core.runners.blast.BlastError;
+import owl.core.runners.blast.BlastException;
 import owl.core.runners.blast.BlastRunner;
 
 /**
@@ -45,7 +45,7 @@ public class PsipredRunner {
 		
 	}
 	
-	private void runPass1(File inMtxFile, File outSsFile) throws IOException, PsipredException {
+	private void runPass1(File inMtxFile, File outSsFile) throws IOException, PsipredException, InterruptedException {
 		String cmdLine = pass1Prog + " "+ inMtxFile.getAbsolutePath() +" "+weights1Dat+" "+weights2Dat+" "+weights3Dat+" "+weights4Dat;
 		Process pass1Proc = Runtime.getRuntime().exec(cmdLine);
 		BufferedReader pass1Output = new BufferedReader(new InputStreamReader(pass1Proc.getInputStream()));
@@ -56,13 +56,9 @@ public class PsipredRunner {
 		}
 		out.close();
 		
-		try {
-			int exitValue = pass1Proc.waitFor();
-			if (exitValue>0) {
-				throw new PsipredException(PASS1_PROG + " exited with error value " + exitValue);
-			}
-		} catch (InterruptedException e) {
-			System.err.println("Unexpected error while running psipred: "+e.getMessage());
+		int exitValue = pass1Proc.waitFor();
+		if (exitValue>0) {
+			throw new PsipredException(PASS1_PROG + " exited with error value " + exitValue);
 		}
 	}
 	
@@ -124,7 +120,7 @@ public class PsipredRunner {
 	 * @param blastChkFile
 	 * @param blastBinDir
 	 */
-	public void run(File inSeqFile, File outSs2File, File outHorizFile, File blastChkFile, String blastBinDir) throws IOException, PsipredException {
+	public void run(File inSeqFile, File outSs2File, File outHorizFile, File blastChkFile, String blastBinDir) throws IOException, PsipredException, InterruptedException {
 		// copy seq file and chk profile file to tmp dir and get basename of chk file 
 		String tmpDir = System.getProperty("java.io.tmpdir");
 		File tmpChkFile = new File(tmpDir,blastChkFile.getName());
@@ -146,7 +142,7 @@ public class PsipredRunner {
 		BlastRunner blastRunner = new BlastRunner(blastBinDir, null);
 		try {
 			blastRunner.runMakemat(tmpDir, basename);
-		} catch (BlastError e) {
+		} catch (BlastException e) {
 			throw new PsipredException("Makemat step of psipred failed to run, error: "+e.getMessage());
 		}
 		// running psipred pass 1 and pass 2 with output of makemat (.mtx file)
