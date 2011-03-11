@@ -303,12 +303,12 @@ public class PdbTest {
 		File[] files = dir.listFiles(new RegexFileFilter("^\\d\\w\\w\\w\\w_.*\\.cm$"));
 		HashMap<String, RIGraph> refGraphs = new HashMap<String, RIGraph>();
 		for (File file:files) {
-			Pattern p = Pattern.compile("^(\\d\\w\\w\\w\\w)_([A-Za-z:]+)_(\\d\\.\\d)\\.cm$");
+			Pattern p = Pattern.compile("^(\\d\\w\\w\\w\\w)_([A-Za-z\\-]+)_(\\d\\.\\d)\\.cm$");
 			Matcher m = p.matcher(file.getName());
 			if (m.matches()) {
 				String pdbId = m.group(1);
 				String ct = m.group(2);
-				ct = ct.replace(":", "/");
+				ct = ct.replace("-", "/");
 				String cutoff = m.group(3);
 				refGraphs.put(pdbId+ct+cutoff,new FileRIGraph(file.getAbsolutePath()));
 			}
