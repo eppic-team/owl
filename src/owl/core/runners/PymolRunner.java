@@ -1,10 +1,8 @@
 package owl.core.runners;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
 import owl.core.structure.Pdb;
@@ -36,7 +34,9 @@ public class PymolRunner {
 	 * @throws PdbLoadException 
 	 * @throws IllegalArgumentException if heights length differs from widhts length
 	 */
-	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) throws IOException, InterruptedException, PdbLoadException {
+	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
+	throws IOException, InterruptedException, PdbLoadException {
+		
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
 			throw new IllegalArgumentException("The number of heights is different from the number of widths or the number of output png files");
 		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
@@ -49,13 +49,7 @@ public class PymolRunner {
 		new StreamGobbler("pymol_stderr", pymolProcess.getErrorStream()).start();
 
 		PrintWriter pymolIn = new PrintWriter(new BufferedOutputStream(pymolProcess.getOutputStream()));
-		
-		
-		InputStreamReader pymolOut = new InputStreamReader(new BufferedInputStream(pymolProcess.getInputStream()));
-		while (pymolOut.ready()) { 			
-			System.out.write(pymolOut.read());
-		}
-		
+				
 		pymolIn.println("load "+pdbFile.getAbsolutePath());
 		pymolIn.println("bg "+bgColor);
 		pymolIn.println("remove solvent");
@@ -72,7 +66,10 @@ public class PymolRunner {
 		
 		pymolIn.println("quit");
 		pymolIn.flush();
-		pymolProcess.waitFor();
+		int exit = pymolProcess.waitFor();
+		if (exit!=0) {
+			throw new IOException("Pymol exited with error status "+exit);
+		}
 	}
 	
 
