@@ -17,7 +17,7 @@ public class alignSeq {
 	 */
 	public static void main(String[] args) {
 		if(args.length < 2) {
-			System.out.println("Usage: alingPairwise seq1.fa seq2.fa");
+			System.out.println("Usage: alingSeq seq1.fa seq2.fa");
 			System.exit(1);
 		}
 		

@@ -51,6 +51,9 @@ public class MultipleSequenceAlignment implements Serializable {
 	public static final char GAPCHARACTER = '-';
 	private static final String FASTAHEADER_REGEX = "^>\\s*([a-zA-Z0-9_|\\-.]+)";
 	public static final String FASTAHEADER_CHAR = ">";
+	private static final String PIRHEADER_REGEX = "^>[A-Z0-9][A-Z0-9];([a-zA-Z0-9_|\\-.]+)";
+	public static final String PIRHEADER_CHAR = ">";
+	public static final String PIRSEQEND = "*";
 	/*--------------------------- member variables --------------------------*/		
 	
 	private String[] sequences;
@@ -211,6 +214,7 @@ public class MultipleSequenceAlignment implements Serializable {
 				
 		for (int i=0;i<sequences.length;i++){
 			String seq = sequences[i];
+			
 			int[] mapAl2Seq = new int[seq.length()+1];
 			int[] mapSeq2Al = new int[getSequenceNoGaps(indices2tags.get(i)).length()+1];
 			int seqIndex = 1;
@@ -247,7 +251,7 @@ public class MultipleSequenceAlignment implements Serializable {
 		String 	nextLine = "",
 				currentSeq = "",
 				currentSeqTag = "";
-		boolean foundFastaHeader = false;
+		boolean foundPirHeader = false;
 		int lineNum = 0;
 		int seqIndex = 0;
 		int nonEmptyLine = 0;
@@ -256,14 +260,11 @@ public class MultipleSequenceAlignment implements Serializable {
 
 		BufferedReader fileIn = new BufferedReader(new FileReader(fileName));
 
-		// read file  	
-
-
 		// otherwise initialize TreeMap of sequences and rewind file
 		ArrayList<String> seqsAL = new ArrayList<String>();
 		indices2tags = new TreeMap<Integer, String>();
 		tags2indices = new TreeMap<String, Integer>();
-		fileIn.reset();
+		//fileIn.reset();
 
 		// read sequences
 		while((nextLine = fileIn.readLine()) != null) {
@@ -271,21 +272,23 @@ public class MultipleSequenceAlignment implements Serializable {
 			nextLine = nextLine.trim();					    // remove whitespace
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
-				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for PIR format
-					throw new FileFormatException("First non-empty line of file "+fileName+" does not seem to be a FASTA header.");
+				if (nonEmptyLine==1 && !nextLine.startsWith(PIRHEADER_CHAR)) { // quick check for PIR format
+					throw new FileFormatException("First non-empty line of file "+fileName+" does not seem to be a PIR header.");
 				}
-				if(nextLine.charAt(0) == '*') {				// finish last sequence
+				if(nextLine.endsWith(PIRSEQEND)) {				// end of sequence
+					currentSeq += nextLine.substring(0, nextLine.length() - 1);
 					seqsAL.add(currentSeq);
 					indices2tags.put(seqIndex,currentSeqTag);
 					tags2indices.put(currentSeqTag,seqIndex);
+					seqIndex++;
 				} else {
-					Pattern p = Pattern.compile(FASTAHEADER_REGEX);
+					Pattern p = Pattern.compile(PIRHEADER_REGEX);
 					Matcher m = p.matcher(nextLine);
 					if (m.find()){				// start new sequence
+						fileIn.readLine();      // skip description line
 						currentSeq = "";						
 						currentSeqTag=m.group(1);
-						foundFastaHeader = true;
-						seqIndex++;
+						foundPirHeader = true;
 					} else {
 						currentSeq = currentSeq + nextLine;     // read sequence
 					}
@@ -298,9 +301,9 @@ public class MultipleSequenceAlignment implements Serializable {
 		
 		fileIn.close();
 		
-		// if no fasta headers found, file format is wrong
-		if(!foundFastaHeader) {
-		    throw new FileFormatException("File does not conform with Pir file format (could not detect any fasta header in the file).",fileName,(long)lineNum);
+		// if no pir headers found, file format is wrong
+		if(!foundPirHeader) {
+		    throw new FileFormatException("File does not conform with Pir file format (could not detect any Pir header in the file).",fileName,(long)lineNum);
 		}
 		
 	}
