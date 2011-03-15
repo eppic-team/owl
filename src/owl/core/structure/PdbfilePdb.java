@@ -80,7 +80,7 @@ public class PdbfilePdb extends Pdb {
 			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
 			// we set chainCode to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use "A"
 			this.chainCode=pdbChainCode;
-			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
+			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
 
 			parse();
 			
@@ -117,7 +117,7 @@ public class PdbfilePdb extends Pdb {
 				if (line.startsWith("ATOM")) {
 					if (line.length()>22) {
 						String chain = line.substring(21, 22);
-						if (chain.equals(" ")) chain=Pdb.NULL_CHAIN_CODE;
+						if (chain.equals(" ")) chain=PdbAsymUnit.NULL_CHAIN_CODE;
 						chains.add(chain);						 
 					}
 				}
@@ -161,7 +161,7 @@ public class PdbfilePdb extends Pdb {
 			throw new PdbLoadException("Wrong format for MODEL lines!");
 		}
 		
-		if (models.isEmpty()) models.add(DEFAULT_MODEL);//return null;		
+		if (models.isEmpty()) models.add(PdbAsymUnit.DEFAULT_MODEL);//return null;		
 		Integer[] modelsArray = new Integer[models.size()];
 		models.toArray(modelsArray);
 		return modelsArray;
@@ -189,12 +189,13 @@ public class PdbfilePdb extends Pdb {
 		Matcher m;
 		// we set chainCodeStr (for regex) to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use " " (Pdb.NULL_CHAIN_CODE is a blank chain code in pdb files)
 		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr=" ";
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr=" ";
+		this.title = "";
 		this.sequence = ""; // we will put here the sequence we find (either from SEQRES or ATOM lines)
 		int lastAtomSerial = -1;
 		int totalInsCodesFound = 0;
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
-		int thismodel=DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
+		int thismodel=PdbAsymUnit.DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		int linecount=0;
 		String line;
@@ -219,7 +220,7 @@ public class PdbfilePdb extends Pdb {
 					if(m.find()) {
 						// ok, it is
 						isCaspTS = true; 
-						pdbCode = NO_PDB_CODE;
+						pdbCode = PdbAsymUnit.NO_PDB_CODE;
 						// we try to read the TARGET from the next line, if there's no TARGET line appearing this is not respecting the format: exception
 						if((line = fpdb.readLine()) != null ) {
 							linecount++;
@@ -237,6 +238,16 @@ public class PdbfilePdb extends Pdb {
 						}
 					}
 				}
+			}
+			// TITLE
+			if (line.startsWith("TITLE")) {
+				if (!line.substring(8,10).equals("  ")) {
+					char lastChar = title.charAt(title.length()-1);
+					if (lastChar!='-') { 
+						this.title += " ";
+					}
+				}
+				this.title += line.substring(10,80).trim();
 			}
 			// EXPDTA
 			if (line.startsWith("EXPDTA")) {

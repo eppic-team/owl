@@ -33,6 +33,7 @@ import org.ggf.drmaa.SessionFactory;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
@@ -75,7 +76,7 @@ public class TinkerRunner {
 	
 	private static final PRMInfo.PRMType DEFAULT_FF_FILE_TYPE = PRMInfo.PRMType.amber;
 	
-	public static final String DEFAULT_RECONSTR_CHAIN_CODE = Pdb.NULL_CHAIN_CODE;
+	public static final String DEFAULT_RECONSTR_CHAIN_CODE = PdbAsymUnit.NULL_CHAIN_CODE;
 	
 	private static final String ANALYZE_ENERGY_MODE = "E"; // energy mode of analyze program, other valid modes are: A, L, D, M, P (see tinker's docs)
 	
@@ -1507,7 +1508,7 @@ public class TinkerRunner {
 		for (File file:getLastModelFiles()) {
 			PdbfilePdb pdb = new PdbfilePdb(file.getAbsolutePath());
 			try {
-				pdb.load(Pdb.NULL_CHAIN_CODE);
+				pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
 			} catch (PdbLoadException e) {
 				throw new TinkerError(e);
 			} 

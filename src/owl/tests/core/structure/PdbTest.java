@@ -32,6 +32,7 @@ import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
@@ -397,7 +398,7 @@ public class PdbTest {
 		}
 		Pdb model = new Pdb(pdb.getSequence(), conformation, "CA");
 		Assert.assertTrue(pdb.isDataLoaded()); // doesn't make much sense here but still good to test for sanity
-		Assert.assertEquals(Pdb.NO_PDB_CODE, model.getPdbCode());
+		Assert.assertEquals(PdbAsymUnit.NO_PDB_CODE, model.getPdbCode());
 		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getChainCode());
 		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getPdbChainCode());
 		Assert.assertEquals(pdb.getObsLength(), model.getObsLength());

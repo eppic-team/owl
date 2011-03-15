@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
@@ -53,7 +54,7 @@ public class benchmarkGraphAlgorithm {
 				chainCode = rs.getString(2);
 				
 				if(chainCode == null) {
-					chainCode = Pdb.NULL_CHAIN_CODE;
+					chainCode = PdbAsymUnit.NULL_CHAIN_CODE;
 				}
 				
 				numPdbs++;

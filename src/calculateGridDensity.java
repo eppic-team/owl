@@ -105,7 +105,7 @@ public class calculateGridDensity {
 				chainCode = rs.getString(2);
 				
 				if(chainCode == null) {
-					chainCode = Pdb.NULL_CHAIN_CODE;
+					chainCode = PdbAsymUnit.NULL_CHAIN_CODE;
 				}
 				numPdbs++;
 				

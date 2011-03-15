@@ -20,6 +20,7 @@ import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
@@ -78,7 +79,7 @@ public class TinkerRunnerTest {
 		
 		File outpdbfile = tr.getOutPdbFile(1);
 		Pdb outpdb = new PdbfilePdb(outpdbfile.getAbsolutePath());
-		outpdb.load(Pdb.NULL_CHAIN_CODE);
+		outpdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
 		assertEquals(pdb.getFullLength(),outpdb.getFullLength());
 		assertEquals(pdb.getSequence(),outpdb.getSequence());
 		

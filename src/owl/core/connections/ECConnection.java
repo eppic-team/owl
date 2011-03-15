@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.EC;
 import owl.core.structure.features.ECRegion;
 
@@ -62,7 +63,7 @@ public class ECConnection {
 			Matcher m = p.matcher(inputLine);
 			if (m.find()) {
 				String curPdbCode = inputLine.substring(0,9).trim();
-				String curPdbChainCode = (inputLine.charAt(11) == ' ')?Pdb.NULL_CHAIN_CODE:String.valueOf(inputLine.charAt(11));
+				String curPdbChainCode = (inputLine.charAt(11) == ' ')?PdbAsymUnit.NULL_CHAIN_CODE:String.valueOf(inputLine.charAt(11));
 				if (curPdbCode.equals(pdb.getPdbCode()) && curPdbChainCode.equals(pdb.getPdbChainCode())) {
 					startPdbResSer = inputLine.substring(20,26).trim();
 					endPdbResSer = inputLine.substring(27,33).trim();

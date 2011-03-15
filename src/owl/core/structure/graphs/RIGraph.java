@@ -24,6 +24,7 @@ import javax.vecmath.GMatrix;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.IntPairComparator;
@@ -66,7 +67,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		this.fullLength = sequence.length();
 		this.distCutoff=0;
 		this.contactType=null;
-		this.pdbCode=Pdb.NO_PDB_CODE;
+		this.pdbCode=PdbAsymUnit.NO_PDB_CODE;
 		this.chainCode=Pdb.NO_CHAIN_CODE;
 		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
 		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
@@ -494,7 +495,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
 			String pdbChainCodeStr = "'"+pdbChainCode+"'";
-			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) {
+			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) {
 				pdbChainCodeStr="NULL";
 			}
 			if (sid==null) {
@@ -740,7 +741,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		} else {			// no pdbCode + chainCode found, we insert them in chain_graph, thus assigning a new graph_id (pgraphid)
 			// we are inserting same number for num_obs_res and num_nodes (the difference would be the non-standard aas, but we can't get that number from this object at the moment)
 			String pdbChainCodeStr = "'"+pdbChainCode+"'";
-			if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) {
+			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) {
 				pdbChainCodeStr="NULL";
 			}
 			if (sid==null) {
@@ -951,7 +952,7 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		Out.println("#PDB: "+(pdbCode==null?"":pdbCode));
 		Out.println("#PDB CHAIN CODE: "+(pdbChainCode==null?"":pdbChainCode));
 		Out.println("#CHAIN: "+(chainCode==null?"":chainCode));
-		Out.println("#MODEL: "+(model==0?Pdb.DEFAULT_MODEL:model));
+		Out.println("#MODEL: "+(model==0?PdbAsymUnit.DEFAULT_MODEL:model));
 		Out.println("#CT: "+contactType);
 		Out.println("#CUTOFF: "+distCutoff);
 		

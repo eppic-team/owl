@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 
 
@@ -52,7 +53,7 @@ public class ConsurfConnection {
 		String pdbChainCode = pdb.getPdbChainCode();
 
 		// TODO: Check if url exists and if not do the same as for the offline case 
-		URL consurfhssp = new URL(consurfURLPrefix+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
+		URL consurfhssp = new URL(consurfURLPrefix+"HSSP_ML_"+pdbCode+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?"_":pdbChainCode)+"/pdb"+pdbCode+".gradesPE");
 		URLConnection ch = consurfhssp.openConnection();
 		return parseConsurfData(pdb, new BufferedReader(new InputStreamReader(ch.getInputStream())));
 	}
@@ -72,7 +73,7 @@ public class ConsurfConnection {
 		String pdbCode = pdb.getPdbCode();
 		String pdbChainCode = pdb.getPdbChainCode();
 
-		File consurfhssp = new File(consurfDir,pdbCode+(pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
+		File consurfhssp = new File(consurfDir,pdbCode+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?"_":pdbChainCode)+".grades");
 		if (!consurfhssp.exists() && pdbChainCode.equals("A")) {
 			System.out.println("consurf");
 			consurfhssp = new File(consurfDir,pdbCode+"_.grades");

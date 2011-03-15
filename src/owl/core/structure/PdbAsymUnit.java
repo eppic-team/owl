@@ -43,11 +43,24 @@ import owl.core.util.MySQLConnection;
  */
 public class PdbAsymUnit {
 	
+	/*------------------------------------  constants ---------------------------------------------*/
+	
+	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
+	
+	// to specify the NULL (blank in pdb file) chain code. 
+	// Should be safe now to change the value of this constant from "NULL" to something else,
+	// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
+	public static final String NULL_CHAIN_CODE = "NULL";	
+	
+	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
+
+
+	
 	private static final Matrix4d IDENTITY_TRANSFORM = new Matrix4d(1,0,0,0,
 																	0,1,0,0,
 																	0,0,1,0,
 																	0,0,0,1);
-	
+	/*------------------------------------  members -----------------------------------------------*/
 	private String pdbCode;
 	private int model;
 	private String title;
@@ -65,6 +78,10 @@ public class PdbAsymUnit {
 								// (does not count the translations: 2 equivalent asym units of 2 different cells will have the same identifier)
 								// i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
 								// goes from 1 to m (m=number of symmetry operations of the space group)
+
+
+
+
 	
 	/**
 	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.

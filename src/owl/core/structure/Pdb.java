@@ -70,13 +70,7 @@ public class Pdb implements HasFeatures, Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
-	/*------------------------------------  constants ---------------------------------------------*/
-	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
 	public static final String DEFAULT_CHAIN   = "A";		// used when constructing models, this will be the chain assigned to them
-	public static final String NULL_CHAIN_CODE = "NULL";	// to specify the NULL (blank in pdb file) chain code. 
-															// Should be safe now to change the value of this constant from "NULL" to something else,
-															// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
-	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
 	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
 	public static final String DEFAULT_CASP_TS_CHAINCODE = " "; // Casp TS format allows only empty chain codes
@@ -147,8 +141,8 @@ public class Pdb implements HasFeatures, Serializable {
 	public Pdb() {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = DEFAULT_MODEL;
-		this.pdbCode = NO_PDB_CODE;
+		this.model = PdbAsymUnit.DEFAULT_MODEL;
+		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
 		this.dataLoaded = false;
 		this.hasASA = false;
@@ -170,8 +164,8 @@ public class Pdb implements HasFeatures, Serializable {
 	public Pdb(String sequence) {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = DEFAULT_MODEL;
-		this.pdbCode = NO_PDB_CODE;
+		this.model = PdbAsymUnit.DEFAULT_MODEL;
+		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
 		this.dataLoaded = true;
 		this.hasASA = false;
@@ -215,8 +209,8 @@ public class Pdb implements HasFeatures, Serializable {
 	public Pdb(String sequence, Vector3d[] coords, String atom) {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = DEFAULT_MODEL;
-		this.pdbCode = NO_PDB_CODE;
+		this.model = PdbAsymUnit.DEFAULT_MODEL;
+		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
 		this.dataLoaded = true;
 		this.hasASA = false;
@@ -275,12 +269,12 @@ public class Pdb implements HasFeatures, Serializable {
 
 	// this method doesn't actually call load(String,int) above but rather the overridden ones in subclasses
 	/**
-	 * Load (from file/db) the given pdbChainCode and the default model {@link #DEFAULT_MODEL}
+	 * Load (from file/db) the given pdbChainCode and the default model {@link PdbAsymUnit#DEFAULT_MODEL}
 	 * @param pdbChainCode
 	 * @throws PdbLoadException
 	 */
 	public void load(String pdbChainCode) throws PdbLoadException {
-		load(pdbChainCode, DEFAULT_MODEL);
+		load(pdbChainCode, PdbAsymUnit.DEFAULT_MODEL);
 	}
 	
 	/*---------------------------------  public methods ----------------------------------------------*/
@@ -2088,7 +2082,7 @@ public class Pdb implements HasFeatures, Serializable {
 			}
 
 			sql = "INSERT IGNORE INTO "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid) " +
-			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals(NULL_CHAIN_CODE)?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
+			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
 			//System.out.println(sql);
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
@@ -2167,7 +2161,7 @@ public class Pdb implements HasFeatures, Serializable {
 				}
 			}
 			
-			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals(NULL_CHAIN_CODE)?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
+			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
 			
 		}
 		resOut.close();

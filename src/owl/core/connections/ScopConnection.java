@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.Scop;
 import owl.core.structure.features.ScopRegion;
 
@@ -38,7 +39,7 @@ public class ScopConnection {
 	public static void parseScop(Pdb pdb, String version, boolean online) throws IOException {
 		String pdbCode = pdb.getPdbCode();
 		// if this is not a pdb entry with a pdb code there's no SCOP id to get
-		if (pdbCode==null || pdbCode.equals(Pdb.NO_PDB_CODE)) return; 
+		if (pdbCode==null || pdbCode.equals(PdbAsymUnit.NO_PDB_CODE)) return; 
 		
 		String pdbChainCode = pdb.getPdbChainCode();
 		
@@ -65,11 +66,11 @@ public class ScopConnection {
 					Pattern p = Pattern.compile("^(-)|([a-zA-Z\\d]):(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|(-?\\d+[a-zA-Z]*)-(-?\\d+[a-zA-Z]*)|([a-zA-Z\\d]):");
 					Matcher m = p.matcher(regions[j]);
 					if (m.find()) {
-						if (((pdbChainCode.equals(Pdb.NULL_CHAIN_CODE) && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
+						if (((pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE) && ((m.group(1) != null && m.group(1).equals("-")) || m.group(5) != null))) || 
 								(m.group(2) != null && m.group(2).equals(pdbChainCode)) || 
 								(m.group(7) != null && m.group(7).equals(pdbChainCode)) ||
-								(m.group(2) != null && m.group(2).equals("A") && pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) ||
-								(m.group(7) != null && m.group(7).equals("A") && pdbChainCode.equals(Pdb.NULL_CHAIN_CODE))) {
+								(m.group(2) != null && m.group(2).equals("A") && pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) ||
+								(m.group(7) != null && m.group(7).equals("A") && pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE))) {
 							if (m.group(3) != null) {
 								startPdbResSer = m.group(3);
 								endPdbResSer = m.group(4);

@@ -14,6 +14,7 @@ import java.util.TreeMap;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
@@ -65,7 +66,7 @@ public class ConstraintsMaker {
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 
 		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-		this.pdb.load(Pdb.NULL_CHAIN_CODE);
+		this.pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
 		this.type = type;
 		
 		this.lastPdbResSerial_Atom = "";

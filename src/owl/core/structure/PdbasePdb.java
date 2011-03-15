@@ -70,8 +70,7 @@ public class PdbasePdb extends Pdb {
 		this.conn = conn;
 		
 		// this makes sure that we find the pdb code in the database
-		this.entrykey = getEntryKey();
-		this.title = getTitle(); // this is available once we have the entry key
+		this.entrykey = getEntryKey(); // also sets title
 		readCrystalData(); // sets spaceGroup and crystalCell
 		readExpMethod(); // sets expMethod
 		readQparams(); // sets resolution, rFree and rSym
@@ -229,7 +228,7 @@ public class PdbasePdb extends Pdb {
 	private String getAsymId() throws PdbLoadException, SQLException {
 		String asymid = null;
 		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
 		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
@@ -509,7 +508,7 @@ public class PdbasePdb extends Pdb {
 	
 	private TreeMap<String,Integer> getRessersMapping() throws PdbLoadException, SQLException{
 		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals(NULL_CHAIN_CODE)){
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
 			pdbstrandid="A";
 		}
 

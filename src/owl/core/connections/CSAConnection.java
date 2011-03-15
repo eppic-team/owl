@@ -16,6 +16,7 @@ import java.util.zip.GZIPInputStream;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
@@ -75,7 +76,7 @@ public class CSAConnection {
 		while ((inputLine = in.readLine()) != null) { 
 			String[] fields = inputLine.split(",");
 			curPdbCode = fields[0]; 
-			curPdbChainCode = (fields[3].equals(""))?Pdb.NULL_CHAIN_CODE:fields[3];
+			curPdbChainCode = (fields[3].equals(""))?PdbAsymUnit.NULL_CHAIN_CODE:fields[3];
 			if (curPdbCode.equals(pdb.getPdbCode())) {
 				if (curPdbChainCode.equals(pdb.getPdbChainCode())) {
 					curPdbResSerial = fields[4];
@@ -95,7 +96,7 @@ public class CSAConnection {
 							// create a new site
 							if ((curSiteId != prevSiteId) | (prevSiteId == -1)) {
 								String littEntryPdbCode = fields[7].substring(0,4);
-								String littEntryPdbChainCode = fields[7].substring(4).equals("")?Pdb.NULL_CHAIN_CODE:fields[7].substring(4);
+								String littEntryPdbChainCode = fields[7].substring(4).equals("")?PdbAsymUnit.NULL_CHAIN_CODE:fields[7].substring(4);
 								cs = new CatalyticSite(curSiteId, fields[6], littEntryPdbCode, littEntryPdbChainCode); 
 							}
 							// add the res to the site

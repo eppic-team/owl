@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.MySQLConnection;
@@ -258,7 +258,7 @@ public class DbRIGraph extends RIGraph {
         // (in the chain_graph table the internal chain identifier is called 'pchain_code')
 		int pgraphid=0;
 		String chainstr="='"+pdbChainCode+"' ";
-		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)){
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
 			chainstr=" IS NULL ";
 		}
 		
@@ -360,7 +360,7 @@ public class DbRIGraph extends RIGraph {
 			this.pdbCode=rsst.getString(3);
 			this.pdbChainCode=rsst.getString(4);
 			// java returns a null if the field is a database null, we want actually the Pdb.NULL_CHAIN_CODE string in that case
-			if (this.pdbChainCode==null) this.pdbChainCode=Pdb.NULL_CHAIN_CODE;
+			if (this.pdbChainCode==null) this.pdbChainCode=PdbAsymUnit.NULL_CHAIN_CODE;
 		}
 		if (check!=1){
 			System.err.println("No pgraph_id match or more than 1 match for scop id="+sid+", dist="+distCutoff);
@@ -432,7 +432,7 @@ public class DbRIGraph extends RIGraph {
 				pdbCode=rsst.getString(1);
 				pdbChainCode=rsst.getString(2);
 				// java returns a null if the field is a database null, we want actually the Pdb.NULL_CHAIN_CODE string in that case
-				if (pdbChainCode==null) pdbChainCode=Pdb.NULL_CHAIN_CODE;
+				if (pdbChainCode==null) pdbChainCode=PdbAsymUnit.NULL_CHAIN_CODE;
 				chainCode=rsst.getString(3);
 				model=rsst.getInt(4);
 				sid=rsst.getString(5);

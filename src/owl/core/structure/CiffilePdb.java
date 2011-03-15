@@ -45,6 +45,7 @@ public class CiffilePdb extends Pdb {
 
 	// fields we will read
 	private static final String entryId = "_entry";
+	private static final String structId = "_struct";
 	private static final String atomSiteId = "_atom_site";
 	private static final String pdbxPolySeqId = "_pdbx_poly_seq_scheme";
 	private static final String structConfId = "_struct_conf";
@@ -54,7 +55,7 @@ public class CiffilePdb extends Pdb {
 	private static final String exptl = "_exptl";
 	private static final String reflns = "_reflns";
 	private static final String refine = "_refine";
-	private static final String[] ids = {entryId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine};
+	private static final String[] ids = {entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -297,6 +298,7 @@ public class CiffilePdb extends Pdb {
 		// now reading separate elements separately using private methods
 		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
 		this.pdbCode = readPdbCode();
+		this.title = readTitle();
 		readCrystalData();
 		readExpMethod();
 		readQparams();
@@ -361,8 +363,12 @@ public class CiffilePdb extends Pdb {
 						Long[] interval = {lastLineOffset, currentOffset};
 						loopelements2contentOffset.put(element,interval);
 					} else {
-						//loopelements2content.put(element,loopelements2content.get(element)+line+"\n");
-						loopelements2contentOffset.get(element)[1]=currentOffset;
+						// condition in next line is a bad hack: needed to be able to also parse non-loop elements 
+						// with our tokeniser for elements that can span several lines (e.g. _struct.title) 
+						if (loopElements.contains(element)) {  
+							//loopelements2content.put(element,loopelements2content.get(element)+line+"\n");
+							loopelements2contentOffset.get(element)[1]=currentOffset;
+						}
 					}
 				}
 			}
@@ -374,6 +380,27 @@ public class CiffilePdb extends Pdb {
 	
 	private String readPdbCode(){
 		return fields2values.get(entryId+".id").trim().toLowerCase();
+	}
+	
+	private String readTitle() throws IOException, FileFormatException {
+		String title = fields2values.get(structId+".title").trim();
+		if (title.isEmpty()) { 
+			Long[] intStruct = loopelements2contentOffset.get(ids2elements.get(structId));
+			fcif.seek(intStruct[0]);
+			while(fcif.getFilePointer()<intStruct[1]) { 
+				String[] tokens = tokeniseFields(1);
+				if (tokens.length!=1) {
+					throw new FileFormatException("More than 1 field in element "+structId+" of CIF file "+cifFile);
+				}
+				title = tokens[0];
+			}
+		}
+
+		if (title.charAt(0)=='\'' && title.charAt(title.length()-1)=='\'') {
+			title = title.substring(1,title.length()-1);
+		}
+
+		return title;
 	}
 	
 	private void readCrystalData() throws PdbLoadException {
@@ -414,7 +441,7 @@ public class CiffilePdb extends Pdb {
 				recordCount++; 
 				String[] tokens = tokeniseFields(numberFields);
 				if (tokens.length!=numberFields) {
-					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxPolySeqId+" of CIF file "+cifFile);
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+exptl+" of CIF file "+cifFile);
 				}
 				if (recordCount==1) {
 					this.expMethod = tokens[methodIdx];
@@ -536,7 +563,7 @@ public class CiffilePdb extends Pdb {
 		sequence = "";
 		
 		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals(Pdb.NULL_CHAIN_CODE)) chainCodeStr="A";
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr="A";
 		
 		Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
 		int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
@@ -729,10 +756,6 @@ public class CiffilePdb extends Pdb {
 	 *  - free style with all characters allowed if something is quoted with \n; ;\n 
 	 * The java class StreamTokenizer could have done all this, but it was limited to do all that we needed to do
 	 *  
-	 *  
-	 * This method is black magic. I don't fully understand it myself as I write it.
-	 * If you need to come back to this and read it, good luck!!
-	 * 
 	 * @param numberTokens
 	 * @return
 	 */
@@ -744,27 +767,27 @@ public class CiffilePdb extends Pdb {
 		}
 		
 		int i = 0;
-		char lastChar=' ';
+		char lastChar = 0; // ' '
 		char quoteChar = 0;
 		while (true) {
 			char currentChar = (char)fcif.readByte();
 			
 			// '' quoting
-			if (quoteChar!=';' && currentChar=='\'' && (lastChar==' ' || lastChar=='\n')){
+			if (quoteChar!=';' && currentChar=='\'' && (lastChar==' ' || lastChar=='\n' || lastChar==0)){
 				quoteChar = '\'';
 			}
 			else if (quoteChar!=';' && currentChar==' ' && lastChar=='\''){
 				quoteChar = 0;
 			}
 			// "" quoting
-			if (quoteChar!=';' && currentChar=='"' && (lastChar==' ' || lastChar=='\n')){
+			if (quoteChar!=';' && currentChar=='"' && (lastChar==' ' || lastChar=='\n' || lastChar==0)){
 				quoteChar = '"';
 			}
 			else if (quoteChar!=';' && currentChar==' ' && lastChar=='"'){
 				quoteChar = 0;
 			}			
 			// ;; quoting (multi-line quoting)
-			if (quoteChar!=';' && currentChar==';' && lastChar=='\n'){
+			if (quoteChar!=';' && currentChar==';' && (lastChar=='\n' || lastChar==0)){ // was && lastChar=='\n'
 				quoteChar = ';';
 			}
 			else if (quoteChar==';' && currentChar==';' && lastChar=='\n'){

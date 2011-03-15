@@ -28,6 +28,7 @@ import owl.core.structure.AminoAcid;
 import owl.core.structure.CiffilePdb;
 import owl.core.structure.CrystalCell;
 import owl.core.structure.Pdb;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbasePdb;
@@ -81,7 +82,7 @@ public class PdbParsersTest {
 		// tinker file (no occupancy or bfactors)
 		System.out.println(TINKERPDBFILE);
 		Pdb pdb = new PdbfilePdb(TINKERPDBFILE);
-		pdb.load(Pdb.NULL_CHAIN_CODE);
+		pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
 		
 		// CASP TS server files (testing with server tar ball T0515 of CASP9)
 		File dir = new File(System.getProperty("java.io.tmpdir"),"T0515");
@@ -156,6 +157,8 @@ public class PdbParsersTest {
 				for (int model:ciffileModels) {
 					Assert.assertTrue(pdbaseModelsSet.contains(model));
 				}
+				// title
+				Assert.assertEquals(pdbasePdb.getTitle(),ciffilePdb.getTitle());
 				// crystal data
 				Assert.assertEquals(pdbasePdb.getSpaceGroup(), ciffilePdb.getSpaceGroup());
 				CrystalCell pdbaseCell = pdbasePdb.getCrystalCell();
@@ -293,6 +296,14 @@ public class PdbParsersTest {
 						Matcher m = p.matcher(pdbfilePdb.getPdbCode());
 						Assert.assertTrue(m.matches());
 						Assert.assertEquals(pdbasePdb.getPdbCode(), pdbfilePdb.getPdbCode());
+
+						// title 
+						// the capitalization is not consistent between pdb file and cif, 
+						// the spaces introduced between different lines are lost in pdb and thus also 
+						// not consistent with cif
+						// that's why we compare in lower case and stripping spaces
+						Assert.assertEquals(pdbasePdb.getTitle().toLowerCase().replaceAll(" ", ""), 
+								pdbfilePdb.getTitle().toLowerCase().replaceAll(" ",""));
 						
 						// chain codes coincide
 						Assert.assertEquals(chain,pdbfilePdb.getChainCode());
@@ -435,7 +446,7 @@ public class PdbParsersTest {
 	public static void main(String[] args) throws Exception {
 		PdbParsersTest pdbTest = new PdbParsersTest();
 		pdbTest.setUp();
-		pdbTest.testSpecialPDBFiles();
+		//pdbTest.testSpecialPDBFiles();
 		//pdbTest.testCIFagainstPDBASE();
 		pdbTest.testPdbfileParser();
 	}
