@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -24,6 +25,11 @@ public class pir2fasta {
 		String inputfilename = args[0];
 		String outputfilename = null;
 
+		if(!new File(inputfilename).canRead()) {
+			System.err.println("Error: Could not read from file " + inputfilename);
+			System.exit(1);
+		}
+		
 		PrintStream ps = System.out;
 		
 		if (args.length == 2){
