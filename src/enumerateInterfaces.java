@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.runners.PymolRunner;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
@@ -16,6 +17,9 @@ public class enumerateInterfaces {
 	private static final String LOCAL_CIF_DIR = "/nfs/data/dbs/pdb/data/structures/all/mmCIF";
 	private static final String BASENAME = "interf_enum";
 	private static final String TMPDIR = System.getProperty("java.io.tmpdir");
+	private static final File   PYMOL_EXE = new File("/usr/bin/pymol");
+	private static final int[] HEIGHTS = {300};
+	private static final int[] WIDTHS = {300};
 	
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
@@ -38,13 +42,16 @@ public class enumerateInterfaces {
 		
 		String help = 
 			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>]\n" +
-			"If -w specified PDB files for each interface will be written to given out dir\n\n";
+			"If -w specified PDB files for each interface will be written to given out dir\n" +
+			"If -l specified cartoon PNG images of each interface will be written to given \n" +
+			"out dir (must use -w also)\n\n";
 		
 		String pdbStr = null;
 		File writeDir = null;
 		int nThreads = NTHREADS;
+		boolean generatePngs = false;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:h?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -57,10 +64,16 @@ public class enumerateInterfaces {
 			case 't':
 				nThreads = Integer.parseInt(g.getOptarg());
 				break;
+			case 'l':
+				generatePngs = true;
+				break;
 			case 'h':
-			case '?':
 				System.out.println(help);
 				System.exit(0);
+				break;
+			case '?':
+				System.err.println(help);
+				System.exit(1);
 				break; // getopt() already printed an error
 			}
 		}
@@ -79,6 +92,11 @@ public class enumerateInterfaces {
 		
 		if (inputFile!=null && !inputFile.exists()){
 			System.err.println("Given file "+inputFile+" does not exist!");
+			System.exit(1);
+		}
+		
+		if (generatePngs==true && writeDir==null) {
+			System.err.println("Can't generate images if a write directory not specified (use -w)");
 			System.exit(1);
 		}
 
@@ -104,6 +122,7 @@ public class enumerateInterfaces {
 		
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 
+		PymolRunner pr = new PymolRunner(PYMOL_EXE);
 					
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
@@ -117,7 +136,12 @@ public class enumerateInterfaces {
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 		
 			if (writeDir!=null) {
-				interf.writeToPdbFile(new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb"));
+				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
+				File[] outPngFiles = {new File(writeDir,outBaseName+"."+(i+1)+".interface.png")};
+				interf.writeToPdbFile(pdbFile);
+				if (generatePngs) {
+					pr.generatePng(pdbFile, outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
+				}
 			}
 		}
 	}

@@ -12,7 +12,12 @@ import owl.core.util.StreamGobbler;
 
 public class PymolRunner {
 	
-	private static final String[] CHAIN_COLORS = {"green","cyan","yellow","white","lightblue","magenta"};
+	/**
+	 * We use 26 colors corresponding to chain letters A to Z (second 13 are repeated from first 13)
+	 */
+	private static final String[] CHAIN_COLORS = 
+	{"green","cyan","yellow","white","lightblue","magenta","red","orange","wheat","limon","salmon","palegreen","lightorange",
+	 "green","cyan","yellow","white","lightblue","magenta","red","orange","wheat","limon","salmon","palegreen","lightorange",};
 	
 	private File pymolExec;
 	
@@ -55,7 +60,17 @@ public class PymolRunner {
 		pymolIn.println("remove solvent");
 		pymolIn.println("as "+style);
 		for (int c=0;c<chains.length;c++) {
-			pymolIn.println("color "+CHAIN_COLORS[c%CHAIN_COLORS.length]+", "+molecName+" and chain "+chains[c]);
+			char letter = chains[c].charAt(0);
+			String color = null;
+			if (letter<'A' || letter>'Z') {
+				// if out of the range A-Z then we assign simply a color based on the chain index
+				color = CHAIN_COLORS[c%CHAIN_COLORS.length];
+			} else {
+				// A-Z correspond to ASCII codes 65 to 90. The letter ascii code modulo 65 gives an indexing of 0 (A) to 25 (Z)
+				// a given letter will always get the same color assigned
+				color = CHAIN_COLORS[letter%65];	
+			}
+			pymolIn.println("color "+color+", "+molecName+" and chain "+letter);
 		}
 
 		for (int i=0;i<heights.length;i++) {
