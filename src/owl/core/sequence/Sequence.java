@@ -37,29 +37,53 @@ public class Sequence implements Serializable {
 	public static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:\\.\\d+)?\\|.*$");
 	public static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:\\.\\d+)?.*$");
 	
+	public static final boolean PROT_SEQUENCE = true;
+	public static final boolean NUC_SEQUENCE = false;
+	
+	private static final Pattern NUCSEQ_REGEX = Pattern.compile("^[ACGTUX]+$");
+	private static final Pattern NOTNUCSEQ_REGEX = Pattern.compile("^X+$"); // if it is only Xs we call it protein (just a guess, but is the most usual case)
+	
 	/*--------------------------- member variables --------------------------*/
 	
 	private String name;
 	private String seq;
+	private boolean seqType; //use constants above: PROT_SEQUENCE and NUC_SEQUENCE
 	
 	/*----------------------------- constructors ----------------------------*/
 	
 	/** 
-	 * Creates a new empty sequence object
+	 * Creates a new empty sequence object (sequence type is set to protein)
 	 */
 	public Sequence() {
-		name = "";
-		seq = "";
+		this.name = "";
+		this.seq = "";
+		this.seqType = PROT_SEQUENCE;
 	}
 	
 	/**
 	 * Creates a new sequence object with the given name and the given sequence string.
+	 * The sequence type (nucleotide/protein) is guessed from the sequence.
+	 * The guessing will only work properly if the nucleotide sequence is composed 
+	 * exclusively of A, U, T, C, G and X. Otherwise it will be called a protein. 
+	 * If sequence is composed of X only (all unknown/non-standard residues) the type is 
+	 * set to protein.
 	 * @param name
 	 * @param seq
 	 */
 	public Sequence(String name, String seq) {
 		this.name = name;
 		this.seq = seq;
+		Matcher m = NUCSEQ_REGEX.matcher(seq);
+		Matcher m2 = NOTNUCSEQ_REGEX.matcher(seq);
+		if (m.matches()) {
+			if (!m2.matches()) {
+				this.seqType = NUC_SEQUENCE;
+			} else {
+				this.seqType = PROT_SEQUENCE;
+			}
+		} else {
+			this.seqType = PROT_SEQUENCE;
+		}
 	}
 
 	/*-------------------------- getters and setters ------------------------*/
@@ -130,6 +154,16 @@ public class Sequence implements Serializable {
 	 */
 	public int getLength() {
 		return this.seq.length();
+	}
+	
+	public boolean isProtein() {
+		if (seqType==PROT_SEQUENCE) return PROT_SEQUENCE;
+		else return NUC_SEQUENCE;
+	}
+	
+	public boolean isNucleotide() {
+		if (seqType==NUC_SEQUENCE) return NUC_SEQUENCE;
+		else return PROT_SEQUENCE;
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
