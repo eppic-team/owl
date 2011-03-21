@@ -141,7 +141,7 @@ public enum AminoAcid {
 	
 	/*---------------------- standard methods --------------------------*/
 	/**
-	 * Returns the integer id
+	 * Returns the integer id, e.g. 1 for Alanine, 0 for unknown, -1 for stop codon
 	 * @return the integer id
 	 */
 	public int getNumber() { 
@@ -157,7 +157,7 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Returns the IUPAC one letter code
+	 * Returns the IUPAC one letter code, e.g. 'A' for Alanine
 	 * @return the amino acid one letter code
 	 */	
 	public char getOneLetterCode() { 
@@ -165,7 +165,7 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Returns the IUPAC three letter code
+	 * Returns the IUPAC three letter code, e.g. "ALA" for Alanine
 	 * @return the amino acid three letter code
 	 */		
 	public String getThreeLetterCode() { 
@@ -463,6 +463,8 @@ public enum AminoAcid {
 		return aa==null?INVALID_ONE_LETTER_CODE:aa.getOneLetterCode();		
 	}	
 	
+	// information methods
+	
 	/**
 	 * Returns true if given string is the three-letter code of a standard aminoacid,
 	 * false otherwise
@@ -511,6 +513,25 @@ public enum AminoAcid {
 			}
 		}
 		return list;
+	}
+	
+	/**
+	 * Prints information about the reduced alphabets.
+	 */
+	public static void printReducedAlphabetInfo() {
+		int[] alphabets = {15, 10, 8, 6, 4, 2};
+		for (int numGroups:alphabets) {
+			System.out.println("Alphabet of "+numGroups+" groups");
+			for (int i=1;i<=numGroups;i++){
+				List<AminoAcid> list = AminoAcid.getByReducedAlphabetIndex(i, numGroups);
+				System.out.print(i+": ");
+				for (AminoAcid aa:list) {
+					System.out.print(aa.getOneLetterCode()+" ");
+				}
+				System.out.print("  ");
+			}
+			System.out.println();
+		}
 	}
 	
 	// information about atoms, currently implemented in class ContactType
@@ -781,19 +802,6 @@ public enum AminoAcid {
 		if(allright) System.out.println("All tests passed.");
 		else System.out.println("Some tests failed.");
 	
-		int[] alphabets = {15, 10, 8, 6, 4, 2};
-		for (int numGroups:alphabets) {
-			System.out.println("Alphabet of "+numGroups+" groups");
-			for (int i=1;i<=numGroups;i++){
-				List<AminoAcid> list = AminoAcid.getByReducedAlphabetIndex(i, numGroups);
-				System.out.print(i+": ");
-				for (AminoAcid aa:list) {
-					System.out.print(aa.getOneLetterCode()+" ");
-				}
-				System.out.print("  ");
-			}
-			System.out.println();
-		}
     }
 	
 }
