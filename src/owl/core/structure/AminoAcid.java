@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Package:		proteinstructure
+ * Package:		owl.core.structure
  * Class: 		AminoAcid
  * Author:		Henning Stehr, stehr@molgen.mpg.de
- * Date:		6/Feb/2006, updated 5/Jan/2009
+ * Date:		6/Feb/2006
  * 
  * An amino acid in a protein sequence. Each of the twenty naturally occuring 
  * amino acids is an instance of this class. Additionally, a placeholder 'X' for
@@ -26,7 +26,7 @@ import java.util.Set;
  * 
  * Changelog:
  * 2006/02/06 first created by HS
- * 2009/01/05 moved to package proteinstructure
+ * 2009/01/05 moved to package owl.core.structure
  * 2009/03/18 adding stop codon
  * 2010/05/02 adding reduced alphabets (JD)
  */
@@ -59,22 +59,23 @@ public enum AminoAcid {
 	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1),
 	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1);	 
 		
-	private int number;
+	private int number;				// we use this instead of ordinal() to define our own values, e.g. for STP
 	private String name;			
 	private char oneLetterCode;
-	private String threeLetterCode;
+	private String threeLetterCode; 
 	private int numberOfAtoms;		// number of heavy (non-Hydrogen) side chain atoms
-	private double hydrophobicity;
+	private double hydrophobicity;	// empirical hydrophibicity scale by Miller in kcal/mol
 	private boolean hydrophobic;
 	private boolean aromatic;	
 	private boolean aliphatic;		
 	private boolean polar;
 	private boolean charged;	
-	private boolean positive; 		// = basic (TODO: is H in this or not?)
+	private boolean positive; 		// = basic
 	private boolean negative; 		// = acidic	
 	private boolean small;	
 	private boolean tiny;
 	
+	// reduced alphabets as defined by  Murphy L.R. et al. 2000 Protein Engineering (especially Fig.1)
 	private int reduced15;
 	private int reduced10;
 	private int reduced8;
@@ -107,8 +108,9 @@ public enum AminoAcid {
 	
 	/* ---------------------- constructors -----------------------------*/
 	
-	AminoAcid(int number, String name, char one, String three, int atoms,
-			  double hydrophobicity, // empirical hydrophibicity scale by Miller in kcal/mol TODO: Use Kyte & Doolittle?
+	// only used internally to create enumeration instances
+	private AminoAcid(int number, String name, char one, String three, int atoms,
+			  double hydrophobicity,
 			  boolean hydrophobic, boolean aromatic, boolean aliphatic,
 			  boolean polar,       boolean charged,  boolean positive,
 			  boolean negative,    boolean small,    boolean tiny,
@@ -138,38 +140,103 @@ public enum AminoAcid {
 	}
 	
 	/*---------------------- standard methods --------------------------*/
+	/**
+	 * Returns the integer id
+	 * @return the integer id
+	 */
 	public int getNumber() { 
 		return this.number; 
 	}
 	
+	/**
+	 * Returns the full name, e.g. Phenylalanine
+	 * @return the full amino acid name
+	 */
 	public String getName() { 
 		return this.name; 
 	}
 	
+	/**
+	 * Returns the IUPAC one letter code
+	 * @return the amino acid one letter code
+	 */	
 	public char getOneLetterCode() { 
 		return this.oneLetterCode; 
 	}
 	
+	/**
+	 * Returns the IUPAC three letter code
+	 * @return the amino acid three letter code
+	 */		
 	public String getThreeLetterCode() { 
 		return this.threeLetterCode; 
 	}
 	
 	/**
 	 * Returns the number of side chain heavy (non-Hydrogen) atoms for this
-	 * AminoAcid 
+	 * AminoAcid.
 	 * @return number of side chain heavy atoms
 	 */
 	public int getNumberOfAtoms() {return this.numberOfAtoms; }
 	
+	/**
+	 * Returns the empirical hydrophibicity by Miller in kcal/mol
+	 * @return the empirical hydrophobicity value
+	 */
 	public double getHydrophobicity() {return this.hydrophobicity; }
+	
+	/**
+	 * Returns true for aromatic amino acids, false otherwise
+	 * @return true iff this amino acid is aromatic
+	 */	
 	public boolean isAromatic() { return this.aromatic; }
+	
+	/**
+	 * Returns true for hydrophobic amino acids, false otherwise
+	 * @return true iff this amino acid is hydrophobic
+	 */	
 	public boolean isHydrophobic() { return this.hydrophobic; }
+	
+	/**
+	 * Returns true for aliphatic amino acids, false otherwise
+	 * @return true iff this amino acid is aliphatic
+	 */	
 	public boolean isAliphatic() { return this.aliphatic; }
+	
+	/**
+	 * Returns true for small amino acids, false otherwise
+	 * @return true iff this amino acid is small
+	 */	
 	public boolean isSmall() { return this.small; }
+	
+	/**
+	 * Returns true for tiny amino acids, false otherwise
+	 * @return true iff this amino acid is tiny
+	 */	
 	public boolean isTiny() { return this.tiny; }
+	
+	/**
+	 * Returns true for positively charger amino acids, false otherwise
+	 * @return true iff this amino acid is positively charged
+	 */	
 	public boolean isPositive() { return this.positive; }
+	
+	/**
+	 * Returns true for polar amino acids, false otherwise
+	 * @return true iff this amino acid is polar
+	 */	
 	public boolean isPolar() { return this.polar; }
+	
+	/**
+	 * Returns true for charger amino acids, false otherwise
+	 * @return true iff this amino acid is charged
+	 */	
 	public boolean isCharged() { return this.charged; }
+	
+	/**
+	 * Returns true for negatively charged amino acids, false otherwise
+	 * @return true iff this amino acid is negatively charged
+	 */	
 	public boolean isNegative() { return this.negative; }
 	
 	/**
@@ -240,13 +307,11 @@ public enum AminoAcid {
 	}
 
 	/**
-	 * Returns true if this AminoAcid is one of the 20 standard amino acids
-	 * or false otherwise
-	 * @return true if this AminoAcid is one of the 20 standard amino acids
-	 * or false otherwise
+	 * Returns true for the 20 standard amino acids, false otherwise
+	 * @return true iff this is one of the 20 standard amino acids
 	 */
 	public boolean isStandardAA() {
-		return (this.getNumber()<21 && this.getNumber()>0);
+		return (this.getNumber()<=20 && this.getNumber()>=1);
 	}
 	
 	/*----------------------- static methods ---------------------------*/
@@ -254,8 +319,7 @@ public enum AminoAcid {
 	/**
 	 * Get amino acid object by number
 	 * @param num amino acid number (between 0 and 20) (e.g. 0 for Unknown, 1 for Alanine)
-	 * @return An amino acid object of the given type 
-	 * or null, if num is invalid
+	 * @return An amino acid object of the given type or null, if num is invalid
 	 */
 	public static AminoAcid getByNumber(int num) {
 		return num2aa.get(num);
@@ -264,7 +328,7 @@ public enum AminoAcid {
 	/**
 	 * Get AminoAcid object by index of the given reduced alphabet.
 	 * Valid alphabets are 20, 15, 10, 8, 6, 4, 2.
-	 * @param index
+	 * @param index the index in the specified reduced alphabet
 	 * @param reducedAlphabet one of 20, 15, 10, 8, 6, 4, 2
 	 * @return an amino acid object corresponding to the given index or null 
 	 * if index is invalid or reducedAlphabet is invalid
@@ -292,8 +356,8 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Get amino acid object by one letter code
-	 * @param one amino acid one letter code (e.g. "A" for Alanine)
+	 * Get amino acid object by IUPAC one letter code
+	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
 	 * @return An amino acid object of the given type 
 	 * or null, if one letter code is invalid
 	 */
@@ -302,7 +366,7 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Get amino acid object by three letter code
+	 * Get amino acid object by IUPAC three letter code
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
 	 * @return An amino acid object of the given type 
 	 * or null, if three letter code is invalid
@@ -339,8 +403,8 @@ public enum AminoAcid {
 	// conversion methods
 	
 	/**
-	 * convert amino acid one letter code to three letter code
-	 * @param one amino acid one letter code (e.g. "A" for Alanine)
+	 * Converts amino acid one letter code to three letter code
+	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
 	 * @return amino acid three letter code or null if input is invalid
 	 */
 	public static String one2three(char one) {
@@ -349,7 +413,7 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * convert amino acid three letter code to one letter code
+	 * Converts amino acid three letter code to one letter code
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
 	 * @return amino acid one letter code or '?' if input is invalid
 	 */
@@ -359,9 +423,9 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * convert amino acid three letter code to number
+	 * Converts amino acid three letter code to number
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
-	 * @return amino acid number (between 1 and 20) or -2 if input is invalid
+	 * @return amino acid number (between 1 and 20) or INVALID_AA_NUMBER if input is invalid
 	 */
 	public static int three2num(String three) {
 		AminoAcid aa = getByThreeLetterCode(three);
@@ -369,7 +433,7 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * convert amino acid number to three letter code 
+	 * Converts amino acid number to three letter code 
 	 * @param num amino acid number (between -1 and 20) (e.g. 1 for Alanine, -1 for stop codon)
 	 * @return amino acid three letter code or null if input is invalid  
 	 */
@@ -379,8 +443,8 @@ public enum AminoAcid {
 	}
 
 	/**
-	 * convert amino acid one letter code to number
-	 * @param one amino acid one letter code (e.g. "ALA" for Alanine)
+	 * Converts amino acid one letter code to number
+	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
 	 * @return amino acid number (between 1 and 20 or 0 for unknown type, -1 for stop codon) 
 	 * or -2 if input is invalid
 	 */
@@ -390,9 +454,9 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * convert amino acid number to one letter code 
+	 * Converts amino acid number to one letter code 
 	 * @param num amino acid number (between -1 and 20) (e.g. 1 for Alanine, -1 for stop codon, 0 for unknown)
-	 * @return amino acid one letter code or '?' if input is invalid  
+	 * @return amino acid one letter code or INVALID_ONE_LETTER_CODE if input is invalid  
 	 */
 	public static char num2one(int num) {
 		AminoAcid aa = getByNumber(num);
@@ -402,7 +466,7 @@ public enum AminoAcid {
 	/**
 	 * Returns true if given string is the three-letter code of a standard aminoacid,
 	 * false otherwise
-	 * @param three
+	 * @param three string to test
 	 * @return true if given string is the three-letter code of a standard aminoacid, 
 	 * false otherwise
 	 */
@@ -414,7 +478,7 @@ public enum AminoAcid {
 	/**
 	 * Returns true if given char is the one-letter code of a standard aminoacid,
 	 * false otherwise
-	 * @param one
+	 * @param one char to test
 	 * @return true if given char is the one-letter code of a standard aminoacid,
 	 * false otherwise
 	 */
@@ -424,9 +488,9 @@ public enum AminoAcid {
 	}
 
 	/**
-	 * Returns true if given num is a valid number of groups of a reduced alphabet.
-	 * @param num
-	 * @return
+	 * Checks whether a reduced alphabet of the given size exists
+	 * @param num number to test
+	 * @return true if given num is a valid number of groups of a reduced alphabet, false otherwise
 	 */
 	public static boolean isValidNumGroupsReducedAlphabet(int num) {
 		if (num==20 || num==15 || num==10 || num==8 || num==6 || num==4 || num==2) {
@@ -437,7 +501,7 @@ public enum AminoAcid {
 	
 	/**
 	 * Returns a list of all 20 standard amino acids as a Collection of AminoAcid objects.
-	 * @return
+	 * @return a collection of the 20 standard amino acids
 	 */
 	public static Collection<AminoAcid> getAllStandardAAs() {
 		Collection<AminoAcid> list = new ArrayList<AminoAcid>();
@@ -449,13 +513,16 @@ public enum AminoAcid {
 		return list;
 	}
 	
+	// information about atoms, currently implemented in class ContactType
+	
 	/**
-	 * Given a three letter code aminoacid and an atom name say whether 
-	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
-	 * Doesn't consider OXT to be a valid atom for any aminoacid
-	 * @param aa
-	 * @param atom
-	 * @return
+	 * Given a three letter code and an atom name checks whether 
+	 * the atom is a valid (non-Hydrogen) atom for that amino acid 
+	 * Doesn't consider OXT to be a valid atom for any amino acid
+	 * @param aa an amino acid three letter code
+	 * @param atom the atom name
+	 * @return true iff atom is valid for amino acid
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static boolean isValidHeavyAtom(String aa, String atom) {
 		return ContactType.getCTByName("ALL").isValidAtom(aa, atom);
@@ -465,9 +532,10 @@ public enum AminoAcid {
 	 * Given a three letter code aminoacid and an atom name say whether 
 	 * the atom is a valid (non-Hydrogen) atom for that aminoacid 
 	 * Considers OXT to be a valid atom for all aminoacids
-	 * @param aa
-	 * @param atom
-	 * @return
+	 * @param aa an amino acid three letter code
+	 * @param atom the atom name
+	 * @return true iff atom is valid for amino acid
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static boolean isValidHeavyAtomWithOXT(String aa, String atom) {
 		if (atom.equals("OXT")) return true;
@@ -478,9 +546,10 @@ public enum AminoAcid {
 	 * Given a three letter code aminoacid and an atom name say whether 
 	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
  	 * Doesn't consider OXT to be a valid atom for any aminoacid
-	 * @param aa
-	 * @param atom
-	 * @return
+	 * @param aa an amino acid three letter code
+	 * @param atom the atom name
+	 * @return true iff atom is valid for amino acid
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static boolean isValidAtom(String aa, String atom) {
 		return ContactType.getCTByName("ALL_H").isValidAtom(aa, atom);
@@ -490,9 +559,10 @@ public enum AminoAcid {
 	 * Given a three letter code aminoacid and an atom name say whether 
 	 * the atom is a valid atom (including Hydrogens) for that aminoacid 
 	 * Considers OXT to be a valid atom for all aminoacids 
-	 * @param aa
-	 * @param atom
-	 * @return
+	 * @param aa an amino acid three letter code
+	 * @param atom the atom name
+	 * @return true iff atom is valid for amino acid
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static boolean isValidAtomWithOXT(String aa, String atom) {
 		if (atom.equals("OXT")) return true;
@@ -500,9 +570,10 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Gets all (non-Hydrogen) atoms given a three letter code aminoacid
-	 * @param aa
-	 * @return
+	 * Gets all (non-Hydrogen) atoms given a three letter code
+	 * @param aa an amino acid three letter code
+	 * @return set of atom names for the given amino acid
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static Set<String> getAtoms(String aa) {
 		return ContactType.getCTByName("ALL").getAtoms(aa);
@@ -510,15 +581,14 @@ public enum AminoAcid {
 	
 	/**
 	 * Gets the number of non-Hydrogen atoms given a three letter code aminoacid
-	 * @param aa
-	 * @return
-	 * @throws NullPointerException if aa not a valid 3 letter code standard aminoacid
+	 * @param aa an amino acid three letter code
+	 * @return the number of heavy atoms for the given amino acid 
+	 * @throws NullPointerException if aa not a valid 3 letter code of a standard amino acid
 	 */
 	public static int getNumberAtoms(String aa) {
 		return ContactType.getCTByName("ALL").getAtoms(aa).size();
 	}
 
-	
 	/*----------------------- private methods --------------------------*/
 	/**
 	 * initialize static map to get amino acid by its ordinal number
@@ -594,7 +664,10 @@ public enum AminoAcid {
 		}
 		return three2aa;
 	}	
-	
+
+	/**
+	 * initialize static map to get amino acid by its full name
+	 */
 	private static HashMap<String, AminoAcid> initFull2aa()	{
 		HashMap<String, AminoAcid> full2aa = new HashMap<String, AminoAcid>();
 		for (AminoAcid aa:AminoAcid.values()) {
@@ -605,10 +678,9 @@ public enum AminoAcid {
 	
 	/*--------------------------- main ---------------------------------*/
 	
-    /*
-     * some test for class AminoAcid
+    /**
+     * some tests for class AminoAcid
      */
-	
 	public static void main(String[] args) {
 		
     	// iterate over all 20 amino acids
