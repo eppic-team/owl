@@ -47,7 +47,7 @@ public class StructureAlignmentEvaluator {
 	public StructureAlignmentEvaluator(MultipleSequenceAlignment al, TreeMap<String, Pdb> pdbs) throws IOException {
 		this.al = al;
 		this.pdbs = pdbs;
-		this.pr = new PolyposeRunner(CCP4_PATH, SHELL_PATH);		
+		this.pr = new PolyposeRunner(CCP4_PATH, SHELL_PATH);
 	}
 	
 	/*---------------------------- private methods --------------------------*/
@@ -134,7 +134,7 @@ public class StructureAlignmentEvaluator {
 	}
 	
 	/*---------------------------- public methods ---------------------------*/
-	
+		
 	/**
 	 * Transforms the given pdbs according to the minimum rmsd superposition on all conserved columns between start and end.
 	 * @return the rmsd of the superposition
@@ -323,11 +323,12 @@ public class StructureAlignmentEvaluator {
 		String line;
 		while((line = in.readLine()) != null) {
 			String tag = line.substring(line.length()-9, line.length()-4);
-			String chain = tag.substring(4,5);
+			//String chain = tag.substring(4,5);
 			//System.out.println(tag);
 			try {
 			Pdb pdb = new PdbfilePdb(line);
-			pdb.load(chain);
+			//old: pdb.load(chain);
+			pdb.load(pdb.getChains()[0]);	// always load first chain
 			tag2pdb.put(tag,pdb);
 			} catch (PdbLoadException e) {
 				System.err.println("Error reading from file " + line + ": " + e.getMessage());

@@ -11,6 +11,9 @@ import owl.core.util.MySQLConnection;
  */
 public class UniProtPdbRef {
 	
+	/*------------------------------ constants ------------------------------*/
+	public static final String SQL_CREATE_TABLE = "CREATE TABLE IF NOT EXISTS %s (gene_name varchar(30), sp_id varchar(6), pos_beg int, pos_end int, pdb_code char(4), chain_code char(1), type char(1), resol float)";
+	public static final String SQL_WRITE_TO_DB  = "INSERT INTO %s (gene_name,sp_id,pos_beg,pos_end,pdb_code,chain_code,type,resol) VALUES ('%s','%s',%d,%d,'%s','%s','%s',%.2f)";
 	/*--------------------------- member variables --------------------------*/
 	
 	// making all these public for easy access, sorry Niklaus Wirth ;)
@@ -50,8 +53,7 @@ public class UniProtPdbRef {
 	 */
 	public void writeToDb(MySQLConnection conn, String table) throws SQLException {
 		double resol = Double.isNaN(this.resolution)?-0:this.resolution;
-		String sql = "INSERT INTO %s (gene_name,sp_id,pos_beg,pos_end,pdb_code,chain_code,type,resol) VALUES ('%s','%s',%d,%d,'%s','%s','%s',%.2f)";
-		conn.executeSql(String.format(sql,table,this.geneName,this.uniprotId,this.begPos,this.endPos,this.pdbCode,this.chains[0].charAt(0),this.method.charAt(0),resol));
+		conn.executeSql(String.format(SQL_WRITE_TO_DB,table,this.geneName,this.uniprotId,this.begPos,this.endPos,this.pdbCode.toLowerCase(),this.chains[0].charAt(0),this.method.charAt(0),resol));
 	}
 	
 	/**
@@ -75,8 +77,7 @@ public class UniProtPdbRef {
 	 * @throws SQLException 
 	 */
 	public static void createDbTable(MySQLConnection conn, String table) throws SQLException {
-		String sql = "CREATE TABLE IF NOT EXISTS %s (gene_name varchar(30), sp_id varchar(6), pos_beg int, pos_end int, pdb_code char(4), chain_code char(1), type char(1), resol float)";
-		conn.executeSql(String.format(sql, table));
+		conn.executeSql(String.format(SQL_CREATE_TABLE, table));
 	}
 	
 }

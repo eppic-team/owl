@@ -13,6 +13,8 @@ import owl.core.util.Interval;
  */
 public class ConsensusInterval extends Interval {
 	
+	private static final long serialVersionUID = 1L;
+
 	private static final int MARGIN = 2; // margin for the restraints interval taken, if 0 then the interval taken for the restraint is min,max
 	
 	private int voteCount;

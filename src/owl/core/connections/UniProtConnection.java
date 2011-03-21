@@ -211,10 +211,14 @@ public class UniProtConnection {
 
 	    //Retrieve UniProt entry by its accession number
 	    try {
-	    	UniProtEntry entry = uniprot.getEntry("P12830"); // CDH1
-	    	System.out.println("entry = " + entry.getUniProtId().getValue());
+	    	String queryId = "P12830";
+	    	System.out.println("query = " + queryId);
+	    	UniProtEntry entry = uniprot.getEntry(queryId); // CDH1
 		    // print PDB cross references
 	    	if(entry != null) {
+		    	System.out.println("entry = " + entry.getUniProtId().getValue());
+		    	System.out.println("sp_id = " + entry.getPrimaryUniProtAccession().getValue());
+		    	
 	    		Collection<Pdb> refs = entry.getDatabaseCrossReferences(DatabaseType.PDB);
 	    		for(Pdb ref:refs) {
 	    			System.out.println(ref);

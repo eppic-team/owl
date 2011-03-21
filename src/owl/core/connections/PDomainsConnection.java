@@ -73,8 +73,8 @@ public class PDomainsConnection {
 		    	String param = m.group(1);
 		    	String val = m.group(2);
 		    	if(param.startsWith("domain")) { domainName = val; }
-		    	if(param.startsWith("start")) { start = Integer.parseInt(val); }
-		    	if(param.startsWith("end")) { end = Integer.parseInt(val); }
+		    	if(param.startsWith("start")) { start = Integer.parseInt(val); }	// pDomains reports cif positions!
+		    	if(param.startsWith("end")) { end = Integer.parseInt(val); }		// pDomains reports cif positions!
 		    	if(param.startsWith("method")) {
 		    		if(val.equals(method.toString())) {
 		    			// add new fragment

@@ -11,9 +11,11 @@ public class CatalSiteSet {
 
 	/*------------------------------ constants ------------------------------*/
 	
+	// TODO: This really has to be queried online!
 	//private static final String LATEST_VERSION = "2.2.7"; // default version
 	//public static final String LATEST_VERSION = "2.2.10"; // as of 2008-10-02
-	public static final String LATEST_VERSION = "2.2.11"; // as of 2009-08-07
+	//public static final String LATEST_VERSION = "2.2.11"; // as of 2009-08-07
+	public static final String LATEST_VERSION = "2.2.12"; // as of 2010-01-20
 	
 	/*--------------------------- member variables --------------------------*/
 	

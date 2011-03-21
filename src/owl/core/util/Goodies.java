@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -77,6 +78,36 @@ public class Goodies {
 		in.close();
 		out.close();
 
+	}
+	
+	/**
+	 * Another implementation of basic file copy. Supposedly faster by using channels (I havn't compared though).
+	 * Copies source file to dest file. Does not handle permissions etc.
+	 * Found here: http://stackoverflow.com/questions/106770/standard-concise-way-to-copy-a-file-in-java
+	 * @param srcFile
+	 * @param destFile
+	 * @throws IOException
+	 */
+	public static void copyFileFast(File sourceFile, File destFile) throws IOException {
+		 if(!destFile.exists()) {
+		  destFile.createNewFile();
+		 }
+
+		 FileChannel source = null;
+		 FileChannel destination = null;
+		 try {
+		  source = new FileInputStream(sourceFile).getChannel();
+		  destination = new FileOutputStream(destFile).getChannel();
+		  destination.transferFrom(source, 0, source.size());
+		 }
+		 finally {
+		  if(source != null) {
+		   source.close();
+		  }
+		  if(destination != null) {
+		   destination.close();
+		  }
+		}
 	}
 		
 	/**
