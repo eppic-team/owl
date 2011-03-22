@@ -37,12 +37,9 @@ public class dumpseq {
 		String help = "Usage, 2 options:\n" +
 				"1)  "+progName+" -i <listfile> \n" +
 				"2)  "+progName+" -p <pdbCode+chainCode> \n" +
-				"3)  "+progName+" -d <pdbdir> \n\n" +
 				" -i <file>       : file with list of pdbCodes+chainCodes\n"+
 				" -p <string>     : comma separated list of pdbCodes+chainCodes, e.g. -p 1bxyA,1josA\n" +
 				"                   If only pdbCode (no chainCode) specified, e.g. 1bxy then first chain will be taken\n"+
-				" -d <string>     : directory containing pdb files\n" +
-				"                   For each pdb file in the directory, the observed sequence of the first chain will be extracted\n" + 
 				" [-o] <dir>      : outputs one file per sequence in given directory. Default: current dir\n" +
 				" [-f] <file>     : one output file for all sequences\n"+
 				" [-s]            : outputs to stdout instead of file(s)\n" +
@@ -52,16 +49,14 @@ public class dumpseq {
 
 		String listfile = "";
 		String[] pdbIds = null;
-		String[] pdbfiles = null;
 		String pdbaseDb = PDB_DB;
-		String pdbDir = "";
 		String outputDir = ".";
 		File oneOutputFile = null;
 		boolean stdout = false;
 		boolean fastaHeader = true;
 		boolean observed = false;
 		
-		Getopt g = new Getopt(progName, args, "i:p:d:o:f:D:sNOh?");
+		Getopt g = new Getopt(progName, args, "i:p:o:f:D:sNOh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -70,9 +65,6 @@ public class dumpseq {
 				break;
 			case 'p':
 				pdbIds = g.getOptarg().split(",");
-				break;
-			case 'd':
-				pdbDir = g.getOptarg();
 				break;
 			case 'o':
 				outputDir = g.getOptarg();
@@ -100,37 +92,24 @@ public class dumpseq {
 			}
 		}
 
-		if (listfile.equals("") && pdbDir.equals("") && pdbIds==null){
+		if (listfile.equals("") && pdbIds==null){
 			System.err.println("Either a listfile or a pdb directory or some pdb codes/chain codes must be given");
 			System.err.println(help);
 			System.exit(1);
 		}
-		if (!listfile.equals("") && pdbIds!=null || !listfile.equals("") && !pdbDir.equals("") || !pdbDir.equals("") && pdbIds!=null) {
-			System.err.println("Options -p,  -i and -d are exclusive. Use only one of them");
+		if (!listfile.equals("") && pdbIds!=null) {
+			System.err.println("Options -p and  -i are exclusive. Use only one of them");
 			System.err.println(help);
 			System.exit(1);			
 		}
 		
 		MySQLConnection conn = null;		
 
-		if (pdbDir.equals("")){
-		  try{
-			  conn = new MySQLConnection();
-		  } catch (Exception e) {
-			  System.err.println("Error opening database connection. Exiting");
-			  System.exit(1);
-		  }
-		}
-		else{
-			File dir = new File(pdbDir);
-			String flist[] = dir.list();
-			
-			for (String fn:flist) {
-				if (fn.endsWith(".pdb")) {
-					
-				}
-					
-			}
+		try{
+			conn = new MySQLConnection();
+		} catch (Exception e) {
+			System.err.println("Error opening database connection. Exiting");
+			System.exit(1);
 		}
 
 		if (!listfile.equals("")) {	
