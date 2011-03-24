@@ -1,8 +1,9 @@
 package owl.core.util;
 
-import java.util.TreeMap;
-import javax.vecmath.Point3d;
+import java.util.ArrayList;
 import javax.vecmath.Point3i;
+
+import owl.core.structure.Atom;
 
 /**
  * A grid cell to be used in contact calculation via our geometric hashing algorithm.
@@ -12,59 +13,59 @@ import javax.vecmath.Point3i;
  */
 public class GridCell {
 	
+	
 	Point3i floor; // the floor of the cell, which identifies it
 	
-	private TreeMap<Integer,Point3d> iPoints;
-	private TreeMap<Integer,Point3d> jPoints;
+	
+	private ArrayList<Integer> iIndices;
+	private ArrayList<Integer> jIndices;
 	
 	public GridCell(Point3i floor){
 		this.floor=floor;
-		iPoints = new TreeMap<Integer, Point3d>();
-		jPoints = new TreeMap<Integer, Point3d>();
+		iIndices = new ArrayList<Integer>();
+		jIndices = new ArrayList<Integer>();
 	}
 	
-	public void put_i_Point(int serial, Point3d point){
-		iPoints.put(serial, point);
+	public void addIindex(int serial){
+		iIndices.add(serial);
 	}
 
-	public void put_j_Point(int serial, Point3d point){
-		jPoints.put(serial, point);
+	public void addJindex(int serial){
+		jIndices.add(serial);
 	}
 
-	public void getDistancesWithinCell(float[][] distMatrix, boolean crossed){ //we pass a reference to the distMatrix that we alter within this method
-		for (int i_serial:iPoints.keySet()) {
-			for (int j_serial:jPoints.keySet()) {
+	public void getDistancesWithinCell(float[][] distMatrix, Atom[] iAtoms, Atom[] jAtoms, boolean crossed){
+		for (int i:iIndices) {
+			for (int j:jIndices) {
 				if (!crossed) {
-					if (j_serial>i_serial) { 
+					if (j>i) { 
 						// this only works if previously we have made sure that atom serials are sequential from 0 to MAXATOMSERIAL
-						distMatrix[i_serial][j_serial] = (float)iPoints.get(i_serial).distance(jPoints.get(j_serial));
+						distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 					} 
 				} else {
-					// It would be nice to check if two atoms in the same box have the same serial.
+					// We could check if two atoms in the same cell have the same serial.
 					// This could happen when the 2 contact types (i/j) have overlapping atoms, e.g. ALL/BB
 					// The check is not strictly necessary, because distance in case i=j would be 0 (atom to itself). 
 					// It's just to make sure that there wouldn't be rounding problems in comparing to 0.0 in getAIgraph in Pdb
-					// However, serials here are the indices of distMatrix and not the actual atom serials and 
-					// this is why we cannot do the check.
-					distMatrix[i_serial][j_serial] = (float)iPoints.get(i_serial).distance(jPoints.get(j_serial));
+					distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 				}
 			}
 		}
 
 	}
 	
-	public void getDistancesToNeighborCell(GridCell nbBox ,float[][] distMatrix, boolean crossed){
-		for (int i_serial:iPoints.keySet()){
-			for (int j_serial:nbBox.jPoints.keySet()){
+	public void getDistancesToNeighborCell(GridCell nbBox ,float[][] distMatrix, Atom[] iAtoms, Atom[] jAtoms, boolean crossed){
+		for (int i:iIndices) {
+			for (int j:nbBox.jIndices) {
 				if (!crossed) {
-					if (j_serial>i_serial) {
+					if (j>i) {
 						// this only works if previously we have made sure that atom serials are sequential from 0 to MAXATOMSERIAL
-						if (distMatrix[i_serial][j_serial]==0.0f){ // i.e. if we haven't passed through this cell yet
-							distMatrix[i_serial][j_serial] = (float)iPoints.get(i_serial).distance(nbBox.jPoints.get(j_serial));
+						if (distMatrix[i][j]==0.0f){ // i.e. if we haven't passed through this cell yet
+							distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 						}
 					}
 				} else {
-					distMatrix[i_serial][j_serial] = (float)iPoints.get(i_serial).distance(nbBox.jPoints.get(j_serial));
+					distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 				}
 			}
 		}

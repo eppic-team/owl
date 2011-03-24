@@ -1,6 +1,5 @@
 package owl.core.util;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,17 +26,17 @@ public class Grid {
 	private double cutoff;
 	private int cellSize;
 	
-	private int[] iAtomSerials; // map from matrix indices to i atom serials
-	private int[] jAtomSerials; // map from matrix indices to j atom serials
-
+	private Atom[] iAtoms;
+	private Atom[] jAtoms;
+	
 	public Grid(double cutoff) {
 		this.cutoff = cutoff;
 		this.cells = new HashMap<Point3i,GridCell>();
 		this.cellSize = (int) Math.floor(cutoff*SCALE);
 	}
 	
-	public void putIatoms(Collection<Atom> atoms) {
-		this.iAtomSerials = new int[atoms.size()];
+	public void putIatoms(Atom[] atoms) {
+		iAtoms = atoms;
 		int i = 0;
 		for (Atom atom:atoms) {
 			Point3d coord = atom.getCoords();
@@ -47,20 +46,19 @@ public class Grid {
 			Point3i floor = new Point3i(floorX,floorY,floorZ);
 			if (cells.containsKey(floor)){
 				// we put the coords for atom i in its corresponding box (identified by floor)
-				cells.get(floor).put_i_Point(i, coord);
+				cells.get(floor).addIindex(i);
 			} else {
 				GridCell box = new GridCell(floor);
-				box.put_i_Point(i, coord);
+				box.addIindex(i);
 				cells.put(floor,box);
 			}
-			iAtomSerials[i] = atom.getSerial();
 			i++;
 		}
 
 	}
-	
-	public void putJatoms(Collection<Atom> atoms) {
-		this.jAtomSerials = new int[atoms.size()];
+
+	public void putJatoms(Atom[] atoms) {
+		jAtoms = atoms;
 		int j = 0;
 		for (Atom atom:atoms) {
 			Point3d coord = atom.getCoords();
@@ -70,13 +68,12 @@ public class Grid {
 			Point3i floor = new Point3i(floorX,floorY,floorZ);
 			if (cells.containsKey(floor)){
 				// we put the coords for atom i in its corresponding box (identified by floor)
-				cells.get(floor).put_j_Point(j, coord);
+				cells.get(floor).addJindex(j);
 			} else {
 				GridCell box = new GridCell(floor);
-				box.put_j_Point(j, coord);
+				box.addJindex(j);
 				cells.put(floor,box);
 			}
-			jAtomSerials[j] = atom.getSerial();
 			j++;
 		}
 		
@@ -94,11 +91,12 @@ public class Grid {
 	 */
 	public float[][] getDistMatrix(boolean crossed) {
 		// to minimise memory footprint we use floats
-		float[][]distMatrix = new float[iAtomSerials.length][jAtomSerials.length];
+		float[][]distMatrix = new float[iAtoms.length][jAtoms.length];
 
 		for (Point3i floor:cells.keySet()){ // for each cell
 			// distances of points within this cell
-			cells.get(floor).getDistancesWithinCell(distMatrix,crossed);
+			GridCell thisCell = cells.get(floor);
+			thisCell.getDistancesWithinCell(distMatrix,iAtoms,jAtoms,crossed);
 
 			//TODO should iterate only through half of the neighbours here 
 			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
@@ -108,7 +106,7 @@ public class Grid {
 						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
 							Point3i neighbor = new Point3i(x,y,z);
 							if (cells.containsKey(neighbor)){
-								cells.get(floor).getDistancesToNeighborCell(cells.get(neighbor),distMatrix,crossed);
+								thisCell.getDistancesToNeighborCell(cells.get(neighbor),distMatrix,iAtoms,jAtoms,crossed);
 							}
 						}
 					}
@@ -153,15 +151,6 @@ public class Grid {
 		// compensate for counting myself as a neighbour
 		if(cells.containsKey(floor)) nbs--;
 		return nbs;
-	}
-
-	
-	public int getAtomSerFromIidx(int i) {
-		return iAtomSerials[i];
-	}
-	
-	public int getAtomSerFromJidx(int j) {
-		return jAtomSerials[j];
 	}
 	
 	public double getCutoff() {

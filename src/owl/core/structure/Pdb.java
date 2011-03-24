@@ -383,7 +383,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Gets a new Map with atom serials to Atoms that contain only the atoms for the given 
+	 * Gets an array of Atoms that contain only the atoms for the given 
 	 * contact type and given interval set. 
 	 *
 	 * @param ct the contact type
@@ -391,12 +391,18 @@ public class Pdb implements HasFeatures, Serializable {
 	 * all residues taken
 	 * @return
 	 */
-	private TreeMap<Integer, Atom> getAtomsForCt(String ct, IntervalSet intervSet) {
+	private Atom[] getAtomsForCt(String ct, IntervalSet intervSet) {
 		TreeMap<Integer, Residue> reducedResidues = getReducedResidues(ct, intervSet);
-		TreeMap<Integer, Atom> atoms = new TreeMap<Integer, Atom>();
+		int totalAtoms = 0;
+		for (Residue residue:reducedResidues.values()) {
+			totalAtoms+=residue.getNumAtoms(); 
+		}
+		Atom[] atoms = new Atom[totalAtoms];
+		int i = 0;
 		for (Residue residue:reducedResidues.values()) {
 			for (Atom atom:residue.getAtoms()) {
-				atoms.put(atom.getSerial(), atom);
+				atoms[i]=atom;
+				i++;
 			}
 		}
 		return atoms;
@@ -924,9 +930,9 @@ public class Pdb implements HasFeatures, Serializable {
 	public HashMap<Pair<Integer>, Double> calcAtomDistMatrix(String ct){
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = new HashMap<Pair<Integer>,Double>();
 		if (!ct.contains("/")){
-			TreeMap<Integer,Atom> atoms = getAtomsForCt(ct, null);
-			for (Atom iAtom:atoms.values()){
-				for (Atom jAtom:atoms.values()){
+			Atom[] atoms = getAtomsForCt(ct, null);
+			for (Atom iAtom:atoms){
+				for (Atom jAtom:atoms){
 					int iAtomSer = iAtom.getSerial();
 					int jAtomSer = jAtom.getSerial();
 					if (jAtomSer>iAtomSer) {
@@ -938,10 +944,10 @@ public class Pdb implements HasFeatures, Serializable {
 		} else {
 			String i_ct = ct.split("/")[0];
 			String j_ct = ct.split("/")[1];
-			TreeMap<Integer,Atom> iAtoms = getAtomsForCt(i_ct,null);
-			TreeMap<Integer,Atom> jAtoms = getAtomsForCt(j_ct,null);
-			for (Atom iAtom:iAtoms.values()){
-				for (Atom jAtom:jAtoms.values()){
+			Atom[] iAtoms = getAtomsForCt(i_ct,null);
+			Atom[] jAtoms = getAtomsForCt(j_ct,null);
+			for (Atom iAtom:iAtoms){
+				for (Atom jAtom:jAtoms){
 					int iAtomSer = iAtom.getSerial();
 					int jAtomSer = jAtom.getSerial();
 					if (jAtomSer!=iAtomSer){
@@ -975,8 +981,8 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return
 	 */
 	private AIGraph getAIGraph(String ct, double cutoff){ 
-		TreeMap<Integer,Atom> iAtoms = null;
-		TreeMap<Integer,Atom> jAtoms = null;		// only relevant for asymetric edge types
+		Atom[] iAtoms = null;
+		Atom[] jAtoms = null;		// only relevant for asymetric edge types
 		boolean crossed = false;
 		if (!ct.contains("/")){
 			iAtoms = getAtomsForCt(ct, null);
@@ -990,11 +996,11 @@ public class Pdb implements HasFeatures, Serializable {
 		}
 
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(iAtoms.values());
+		grid.putIatoms(iAtoms);
 		if (crossed) {
-			grid.putJatoms(jAtoms.values());
+			grid.putJatoms(jAtoms);
 		} else {
-			grid.putJatoms(iAtoms.values());
+			grid.putJatoms(iAtoms);
 		}
 
 		float[][] distMatrix = grid.getDistMatrix(crossed);
@@ -1003,9 +1009,13 @@ public class Pdb implements HasFeatures, Serializable {
 		AIGraph graph = new AIGraph();
 		TreeMap<Integer,RIGNode> rignodemap = new TreeMap<Integer,RIGNode>();
 		TreeSet<Integer> atomSerials = new TreeSet<Integer>();
-		atomSerials.addAll(iAtoms.keySet());
+		for (Atom atom:iAtoms){
+			atomSerials.add(atom.getSerial());
+		}
 		if (jAtoms!=null){
-			atomSerials.addAll(jAtoms.keySet());
+			for (Atom atom:jAtoms) {
+				atomSerials.add(atom.getSerial());
+			}
 		}
 		// adding the AIGNodes (including parent RIGNode references)
 		SecondaryStructure secondaryStructureCopy = secondaryStructure.copy();
@@ -1046,13 +1056,13 @@ public class Pdb implements HasFeatures, Serializable {
 				// - cells for which we didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
 					if (!crossed) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(grid.getAtomSerFromIidx(i)), graph.getNodeFromSerial(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(iAtoms[i].getSerial()), graph.getNodeFromSerial(iAtoms[j].getSerial()), EdgeType.UNDIRECTED);
 					}
 					// This condition is to take care of crossed contact types that have overlapping sets of atoms: 
 					//   the matrix would contain both i,j and j,i but that's only 1 edge in the AIGraph
 					//TODO if our AIGraph didn't allow parallel edges, this extra check wouldn't be necessary
-					else if (!graph.containsEdgeIJ(grid.getAtomSerFromIidx(i), grid.getAtomSerFromJidx(j))) {
-						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(grid.getAtomSerFromIidx(i)), graph.getNodeFromSerial(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
+					else if (!graph.containsEdgeIJ(iAtoms[i].getSerial(), jAtoms[j].getSerial())) {
+						graph.addEdge(new AIGEdge(distMatrix[i][j]), graph.getNodeFromSerial(iAtoms[i].getSerial()), graph.getNodeFromSerial(jAtoms[j].getSerial()), EdgeType.UNDIRECTED);
 					}
 				}
 
@@ -1121,11 +1131,11 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
-		TreeMap<Integer,Atom> atoms = getAtomsForCt(ct, null);
+		Atom[] atoms = getAtomsForCt(ct, null);
 
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(atoms.values());
-		grid.putJatoms(atoms.values());
+		grid.putIatoms(atoms);
+		grid.putJatoms(atoms);
 
 		grid.countDensity(densityCount);
 		
@@ -1218,12 +1228,12 @@ public class Pdb implements HasFeatures, Serializable {
 	 * under the distance cutoff
 	 */
 	public AICGraph getAICGraph(Pdb other, String ct, double cutoff) {
-		TreeMap<Integer,Atom> thisAtoms = this.getAtomsForCt(ct, null);
-		TreeMap<Integer,Atom> otherAtoms = other.getAtomsForCt(ct, null);
+		Atom[] thisAtoms = this.getAtomsForCt(ct, null);
+		Atom[] otherAtoms = other.getAtomsForCt(ct, null);
 		
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(thisAtoms.values());
-		grid.putJatoms(otherAtoms.values());
+		grid.putIatoms(thisAtoms);
+		grid.putJatoms(otherAtoms);
 		
 		AICGraph graph = new AICGraph();
 
@@ -1234,7 +1244,7 @@ public class Pdb implements HasFeatures, Serializable {
 				// the condition distMatrix[i][j]!=0.0 takes care of skipping cells for which we 
 				// didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
 				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
-					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms.get(grid.getAtomSerFromIidx(i)), otherAtoms.get(grid.getAtomSerFromJidx(j)), EdgeType.UNDIRECTED);
+					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms[i], otherAtoms[j], EdgeType.UNDIRECTED);
 				}
 
 			}
