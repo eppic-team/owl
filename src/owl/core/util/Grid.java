@@ -1,10 +1,8 @@
 package owl.core.util;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.vecmath.Point3d;
-import javax.vecmath.Point3i;
 
 import owl.core.structure.Atom;
 
@@ -21,7 +19,7 @@ public class Grid {
 	
 	private static final int SCALE=100; // i.e. we use units of hundredths of Amstrongs (thus cutoffs can be specified with a maximum precission of 0.01A)
 	
-	private HashMap<Point3i,GridCell> cells; // the grid
+	private GridCell[][][] cells;
 	
 	private double cutoff;
 	private int cellSize;
@@ -29,54 +27,133 @@ public class Grid {
 	private Atom[] iAtoms;
 	private Atom[] jAtoms;
 	
+	private int[] bounds;
+	
 	public Grid(double cutoff) {
 		this.cutoff = cutoff;
-		this.cells = new HashMap<Point3i,GridCell>();
 		this.cellSize = (int) Math.floor(cutoff*SCALE);
 	}
 	
-	public void putIatoms(Atom[] atoms) {
-		iAtoms = atoms;
+	private int getFloor(double number) {
+		return (cellSize*((int)Math.floor(number*SCALE/cellSize)));
+	}
+	
+	private int xintgrid2xgridindex(int xgridDim) {
+		return (xgridDim-bounds[0])/cellSize;
+	}
+	
+	private int yintgrid2ygridindex(int ygridDim) {
+		return (ygridDim-bounds[1])/cellSize;
+	}
+	
+	private int zintgrid2zgridindex(int zgridDim) {
+		return (zgridDim-bounds[2])/cellSize;
+	}
+	
+	/**
+	 * Creates the grid based on the boundaries defined by all atoms given (iAtoms and jAtoms)
+	 * and places the atoms in their corresponding grid cells.
+	 * @param iAtoms
+	 * @param jAtoms
+	 */
+	public void fillGrid(Atom[] iAtoms, Atom[] jAtoms) {
+		this.iAtoms = iAtoms;
+		this.jAtoms = jAtoms;
+		
+		bounds = findGridBounds();
+		cells = new GridCell[1+(bounds[3]-bounds[0])/cellSize]
+		                    [1+(bounds[4]-bounds[1])/cellSize]
+		                    [1+(bounds[5]-bounds[2])/cellSize];
+		
 		int i = 0;
-		for (Atom atom:atoms) {
+		for (Atom atom:iAtoms) {
 			Point3d coord = atom.getCoords();
-			int floorX = cellSize*((int)Math.floor(coord.x*SCALE/cellSize));
-			int floorY = cellSize*((int)Math.floor(coord.y*SCALE/cellSize));
-			int floorZ = cellSize*((int)Math.floor(coord.z*SCALE/cellSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (cells.containsKey(floor)){
-				// we put the coords for atom i in its corresponding box (identified by floor)
-				cells.get(floor).addIindex(i);
-			} else {
-				GridCell box = new GridCell(floor);
-				box.addIindex(i);
-				cells.put(floor,box);
+			int xind = xintgrid2xgridindex(getFloor(coord.x));
+			int yind = yintgrid2ygridindex(getFloor(coord.y));
+			int zind = zintgrid2zgridindex(getFloor(coord.z));
+			if (cells[xind][yind][zind]==null) {
+				cells[xind][yind][zind] = new GridCell();
 			}
+			cells[xind][yind][zind].addIindex(i);
 			i++;
 		}
-
-	}
-
-	public void putJatoms(Atom[] atoms) {
-		jAtoms = atoms;
+		
 		int j = 0;
-		for (Atom atom:atoms) {
+		for (Atom atom:jAtoms) {
 			Point3d coord = atom.getCoords();
-			int floorX = cellSize*((int)Math.floor(coord.x*SCALE/cellSize));
-			int floorY = cellSize*((int)Math.floor(coord.y*SCALE/cellSize));
-			int floorZ = cellSize*((int)Math.floor(coord.z*SCALE/cellSize));
-			Point3i floor = new Point3i(floorX,floorY,floorZ);
-			if (cells.containsKey(floor)){
-				// we put the coords for atom i in its corresponding box (identified by floor)
-				cells.get(floor).addJindex(j);
-			} else {
-				GridCell box = new GridCell(floor);
-				box.addJindex(j);
-				cells.put(floor,box);
+			int xind = xintgrid2xgridindex(getFloor(coord.x));
+			int yind = yintgrid2ygridindex(getFloor(coord.y));
+			int zind = zintgrid2zgridindex(getFloor(coord.z));
+			if (cells[xind][yind][zind]==null) {
+				cells[xind][yind][zind] = new GridCell();
 			}
+			cells[xind][yind][zind].addJindex(j);
 			j++;
 		}
 		
+	}
+	
+	/**
+	 * Returns an int array of size 6:
+	 * - elements 0,1,2: minimum x,y,z of the iAtoms and jAtoms
+	 * - elements 3,4,5: maximum x,y,z of the iAtoms and jAtoms
+	 * @return
+	 */
+	private int[] findGridBounds() {
+		int[] bounds = new int[6];
+		int size = iAtoms.length;
+		if (jAtoms!=iAtoms) {
+			size += jAtoms.length;
+		}
+		double[] xs = new double[size];
+		double[] ys = new double[size];
+		double[] zs = new double[size];
+		int c = 0;
+		for (Atom atom:iAtoms) {
+			xs[c] = atom.getCoords().x;
+			ys[c] = atom.getCoords().y;
+			zs[c] = atom.getCoords().z;
+			c++;
+		}
+		if (jAtoms!=iAtoms) {
+			for (Atom atom:jAtoms) {
+				xs[c] = atom.getCoords().x;
+				ys[c] = atom.getCoords().y;
+				zs[c] = atom.getCoords().z;
+				c++;
+			}
+		}
+		double[] xminmax = getMinMax(xs);
+		double[] yminmax = getMinMax(ys);
+		double[] zminmax = getMinMax(zs);
+		bounds[0] = getFloor(xminmax[0]);
+		bounds[1] = getFloor(yminmax[0]);
+		bounds[2] = getFloor(zminmax[0]);
+		bounds[3] = getFloor(xminmax[1]);
+		bounds[4] = getFloor(yminmax[1]);
+		bounds[5] = getFloor(zminmax[1]);
+		return bounds;
+	}
+	
+	/**
+	 * Gets an array of size 2 with min and max values contained in given array
+	 * @param array
+	 * @return
+	 */
+	private double[] getMinMax(double[] array) {
+		double[] minmax = new double[2];
+		
+		double max = Double.MIN_VALUE;
+		double min = Double.MAX_VALUE;
+
+		for(double value : array) {
+			if(value > max) max = value;
+			if(value < min) min = value; 
+		}
+
+		minmax[0] = min;
+		minmax[1] = max;
+		return minmax;
 	}
 	
 	/**
@@ -92,62 +169,74 @@ public class Grid {
 	public float[][] getDistMatrix(boolean crossed) {
 		// to minimise memory footprint we use floats
 		float[][]distMatrix = new float[iAtoms.length][jAtoms.length];
-
-		for (Point3i floor:cells.keySet()){ // for each cell
-			// distances of points within this cell
-			GridCell thisCell = cells.get(floor);
-			thisCell.getDistancesWithinCell(distMatrix,iAtoms,jAtoms,crossed);
- 
-			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
-			for (int x=floor.x-cellSize;x<=floor.x+cellSize;x+=cellSize){
-				for (int y=floor.y-cellSize;y<=floor.y+cellSize;y+=cellSize){
-					for (int z=floor.z-cellSize;z<=floor.z+cellSize;z+=cellSize){
-						if ((x==floor.x) && (y==floor.y) && (z==floor.z)) continue; // skip this box
-						Point3i neighbor = new Point3i(x,y,z);
-						if (cells.containsKey(neighbor)){
-							thisCell.getDistancesToNeighborCell(cells.get(neighbor),distMatrix,iAtoms,jAtoms,crossed);
+		
+		for (int xind=0;xind<cells.length;xind++) {
+			for (int yind=0;yind<cells[xind].length;yind++) {
+				for (int zind=0;zind<cells[xind][yind].length;zind++) {
+					// distances of points within this cell
+					GridCell thisCell = cells[xind][yind][zind];
+					if (thisCell==null) continue;
+					thisCell.getDistancesWithinCell(distMatrix,iAtoms,jAtoms,crossed);
+					
+					// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
+					for (int x=xind-1;x<=xind+1;x++) {
+						for (int y=yind-1;y<=yind+1;y++) {
+							for (int z=zind-1;z<=zind+1;z++) {
+								if (x==xind && y==yind && z==zind) continue;
+								if (x>=0 && x<cells.length && y>=0 && y<cells[x].length && z>=0 && z<cells[x][y].length) {
+									if (cells[x][y][z] == null) continue;
+									thisCell.getDistancesToNeighborCell(cells[x][y][z],distMatrix,iAtoms,jAtoms,crossed);
+								}
+							}
 						}
 					}
 				}
-			} 
+			}
 		}
 		return distMatrix;
 	}
 	
 	public void countDensity(Map<Integer,Integer> densityCount) {
 		// count density
-		for(Point3i floor:cells.keySet()) {
-			//int size = boxes.get(floor).size();
-			int size = getNumGridNbs(floor, cellSize);	// count number of neighbouring grid cells with points in them
-			if(densityCount.containsKey(size)) {
-				int old = densityCount.get(size);
-				densityCount.put(size, ++old);
-			} else {
-				densityCount.put(size, 1);
+		
+		for (int xind=0;xind<cells.length;xind++) {
+			for (int yind=0;yind<cells[xind].length;yind++) {
+				for (int zind=0;zind<cells[xind][yind].length;zind++) {
+					if (cells[xind][yind][zind]==null) continue;
+					int size = getNumGridNbs(xind,yind,zind);	// count number of neighbouring grid cells with points in them
+					
+					if(densityCount.containsKey(size)) {
+						int old = densityCount.get(size);
+						densityCount.put(size, ++old);
+					} else {
+						densityCount.put(size, 1);
+					}
+				}
 			}
 		}
-
+		
 	}
 	
 	/** 
-	 * Returns the number of neighbours of given grid cell
-	 * @param floor the cell's floor
-	 * @param boxSize
+	 * Returns the number of neighbours of given grid cell (cells with points in them)
+	 * @param xind x index of cell
+	 * @param yind y index of cell
+	 * @param zind z index of cell
 	 * @return 
 	 */
-	private int getNumGridNbs(Point3i floor, int boxSize) {
-		Point3i neighbor;
+	private int getNumGridNbs(int xind,int yind,int zind) {
 		int nbs = 0;
-		for (int x=floor.x-boxSize;x<=floor.x+boxSize;x+=boxSize){
-			for (int y=floor.y-boxSize;y<=floor.y+boxSize;y+=boxSize){
-				for (int z=floor.z-boxSize;z<=floor.z+boxSize;z+=boxSize){
-					neighbor = new Point3i(x,y,z);
-					if (cells.containsKey(neighbor)) nbs++;
+		
+		for (int x=xind-1;x<=xind+1;x++) {
+			for (int y=yind-1;y<=yind+1;y++) {
+				for (int z=zind-1;z<=zind+1;z++) {
+					if (x==xind && y==yind && z==zind) continue;
+					if (x>=0 && x<cells.length && y>=0 && y<cells[x].length && z>=0 && z<cells[x][y].length) {
+						if (cells[x][y][z] != null) nbs++;
+					}
 				}
 			}
-		} 
-		// compensate for counting myself as a neighbour
-		if(cells.containsKey(floor)) nbs--;
+		}
 		return nbs;
 	}
 	

@@ -1,7 +1,6 @@
 package owl.core.util;
 
 import java.util.ArrayList;
-import javax.vecmath.Point3i;
 
 import owl.core.structure.Atom;
 
@@ -14,14 +13,10 @@ import owl.core.structure.Atom;
 public class GridCell {
 	
 	
-	Point3i floor; // the floor of the cell, which identifies it
-	
-	
 	private ArrayList<Integer> iIndices;
 	private ArrayList<Integer> jIndices;
 	
-	public GridCell(Point3i floor){
-		this.floor=floor;
+	public GridCell(){
 		iIndices = new ArrayList<Integer>();
 		jIndices = new ArrayList<Integer>();
 	}
@@ -32,6 +27,14 @@ public class GridCell {
 
 	public void addJindex(int serial){
 		jIndices.add(serial);
+	}
+	
+	public int getNumIindices() {
+		return iIndices.size();
+	}
+	
+	public int getNumJindices() {
+		return jIndices.size();
 	}
 
 	public void getDistancesWithinCell(float[][] distMatrix, Atom[] iAtoms, Atom[] jAtoms, boolean crossed){

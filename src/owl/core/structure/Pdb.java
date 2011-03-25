@@ -996,11 +996,11 @@ public class Pdb implements HasFeatures, Serializable {
 		}
 
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(iAtoms);
+		
 		if (crossed) {
-			grid.putJatoms(jAtoms);
+			grid.fillGrid(iAtoms, jAtoms);
 		} else {
-			grid.putJatoms(iAtoms);
+			grid.fillGrid(iAtoms, iAtoms);
 		}
 
 		float[][] distMatrix = grid.getDistMatrix(crossed);
@@ -1134,8 +1134,7 @@ public class Pdb implements HasFeatures, Serializable {
 		Atom[] atoms = getAtomsForCt(ct, null);
 
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(atoms);
-		grid.putJatoms(atoms);
+		grid.fillGrid(atoms, atoms);
 
 		grid.countDensity(densityCount);
 		
@@ -1232,8 +1231,7 @@ public class Pdb implements HasFeatures, Serializable {
 		Atom[] otherAtoms = other.getAtomsForCt(ct, null);
 		
 		Grid grid = new Grid(cutoff);
-		grid.putIatoms(thisAtoms);
-		grid.putJatoms(otherAtoms);
+		grid.fillGrid(thisAtoms,otherAtoms);
 		
 		AICGraph graph = new AICGraph();
 
