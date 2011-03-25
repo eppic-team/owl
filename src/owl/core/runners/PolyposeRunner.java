@@ -33,12 +33,12 @@ public class PolyposeRunner {
 	private static final String POLYPOSE_EXECUTABLE    = "/bin/polypose50";       // appended to ccp4_dir
 	private static final int    POLYPOSE_MAXCYCLE      = 10;
 	
-	// TODO: This is very dangerous! If multiple instances of this are running on the same machine the temp files will conflict!
-	private static final String POLYPOSE_LOG_FILE_NAME = "polypose.log";
-	private static final String TMP_SCRIPT_FILE_NAME   = "polypose.sh";
-	private static final String TMP_PARAM_FILE_NAME    = "polypose.params";
-	private static final String TMP_PDB_FILE_NAME      = "polypose.pdb";
-	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	private static final String TMP_FILE_PREFIX =			"polypose";
+	private static final String POLYPOSE_LOG_FILE_SUFFIX = 	".log";
+	private static final String TMP_SCRIPT_FILE_SUFFIX   = 	".sh";
+	private static final String TMP_PARAM_FILE_SUFFIX    = 	".params";
+	private static final String TMP_PDB_FILE_SUFFIX      = 	".pdb";
+	//private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
 	
 	/*--------------------------- member variables --------------------------*/
 	
@@ -58,9 +58,9 @@ public class PolyposeRunner {
 	public PolyposeRunner(String ccp4Path, String shellPath) throws IOException {
 		this.shell = new File(shellPath);
 		this.ccp4Dir = new File(ccp4Path);
-		this.tmpScriptFile = new File(TMP_DIR, TMP_SCRIPT_FILE_NAME);
-		this.tmpParamFile = new File(TMP_DIR, TMP_PARAM_FILE_NAME);
-		this.polyposeLog = new File(TMP_DIR, POLYPOSE_LOG_FILE_NAME);
+		this.tmpScriptFile = File.createTempFile(TMP_FILE_PREFIX, TMP_SCRIPT_FILE_SUFFIX);
+		this.tmpParamFile = File.createTempFile(TMP_FILE_PREFIX, TMP_PARAM_FILE_SUFFIX);
+		this.polyposeLog = File.createTempFile(TMP_FILE_PREFIX, POLYPOSE_LOG_FILE_SUFFIX);
 		
 		// mark temp files to be deleted on exit
 		//this.tmpScriptFile.deleteOnExit();
@@ -219,7 +219,7 @@ public class PolyposeRunner {
 			return;
 		}
 		
-		File tmpPdbFile = new File(TMP_DIR, TMP_PDB_FILE_NAME);
+		File tmpPdbFile = File.createTempFile(TMP_FILE_PREFIX, TMP_PDB_FILE_SUFFIX);
 		
 		int l = filenames.size();
 		if(positions.length != l) {
@@ -310,7 +310,7 @@ public class PolyposeRunner {
 		writeParamFile(positions);
 		
 		for(Pdb pdb:pdbs) {
-			file = new File(TMP_DIR, "polypose.temp" + filenum + ".pdb");	// TODO: AAARGH!
+			file = File.createTempFile("polypose_" + filenum + "_", ".pdb");
 			//file.deleteOnExit();
 			PrintStream out = new PrintStream(new FileOutputStream(file));
 			pdb.writeAtomLines(out);
