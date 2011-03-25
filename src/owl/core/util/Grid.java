@@ -97,17 +97,15 @@ public class Grid {
 			// distances of points within this cell
 			GridCell thisCell = cells.get(floor);
 			thisCell.getDistancesWithinCell(distMatrix,iAtoms,jAtoms,crossed);
-
-			//TODO should iterate only through half of the neighbours here 
+ 
 			// distances of points from this box to all neighbouring boxes: 26 iterations (26 neighbouring boxes)
 			for (int x=floor.x-cellSize;x<=floor.x+cellSize;x+=cellSize){
 				for (int y=floor.y-cellSize;y<=floor.y+cellSize;y+=cellSize){
 					for (int z=floor.z-cellSize;z<=floor.z+cellSize;z+=cellSize){
-						if (!((x==floor.x)&&(y==floor.y)&&(z==floor.z))) { // skip this box
-							Point3i neighbor = new Point3i(x,y,z);
-							if (cells.containsKey(neighbor)){
-								thisCell.getDistancesToNeighborCell(cells.get(neighbor),distMatrix,iAtoms,jAtoms,crossed);
-							}
+						if ((x==floor.x) && (y==floor.y) && (z==floor.z)) continue; // skip this box
+						Point3i neighbor = new Point3i(x,y,z);
+						if (cells.containsKey(neighbor)){
+							thisCell.getDistancesToNeighborCell(cells.get(neighbor),distMatrix,iAtoms,jAtoms,crossed);
 						}
 					}
 				}

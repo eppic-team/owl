@@ -60,9 +60,7 @@ public class GridCell {
 				if (!crossed) {
 					if (j>i) {
 						// this only works if previously we have made sure that atom serials are sequential from 0 to MAXATOMSERIAL
-						if (distMatrix[i][j]==0.0f){ // i.e. if we haven't passed through this cell yet
-							distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
-						}
+						distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 					}
 				} else {
 					distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
