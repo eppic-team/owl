@@ -865,7 +865,7 @@ public class PdbAsymUnit {
 	 * @throws IOException
 	 */
 	public static void grabCifFile(String localCifDir, String pdbFtpCifUrl, String pdbCode, File cifFile, boolean online) throws IOException {
-
+		pdbCode = pdbCode.toLowerCase();
 		String gzCifFileName = pdbCode+".cif.gz";
 		File gzCifFile = null;
 		if (!online) {	
