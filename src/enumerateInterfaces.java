@@ -41,17 +41,19 @@ public class enumerateInterfaces {
 
 		
 		String help = 
-			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>]\n" +
+			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>] [-l] [-d]\n" +
 			"If -w specified PDB files for each interface will be written to given out dir\n" +
 			"If -l specified cartoon PNG images of each interface will be written to given \n" +
-			"out dir (must use -w also)\n\n";
+			"out dir (must use -w also)\n" +
+			"Use -d for more verbose output for debugging\n\n";
 		
 		String pdbStr = null;
 		File writeDir = null;
 		int nThreads = NTHREADS;
 		boolean generatePngs = false;
+		boolean debug = false;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lh?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:ldh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -66,6 +68,9 @@ public class enumerateInterfaces {
 				break;
 			case 'l':
 				generatePngs = true;
+				break;
+			case 'd':
+				debug = true;
 				break;
 			case 'h':
 				System.out.println(help);
@@ -112,13 +117,15 @@ public class enumerateInterfaces {
 			outBaseName = inputFile.getName().substring(0, inputFile.getName().lastIndexOf("."));
 		}
 
+		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumChains()+" chains ("+pdb.getAllRepChains().size()+" sequence unique)");
 		System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
+		if (debug) System.out.println("Symmetry operators: "+pdb.getSpaceGroup().getNumOperators());
 		
 		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, debug);
 		long end = System.currentTimeMillis();
-		System.out.println("Done. Time "+(end-start)/1000+"s");
+		System.out.println("Total time for interface calculation: "+(end-start)/1000+"s");
 		
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 
