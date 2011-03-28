@@ -2451,6 +2451,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param m the rotation/translation matrix
 	 */
 	public void transform(Matrix4d m) {
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
 		for(int atomserial:getAllAtomSerials()) {
 			Point3d coords = getAtomCoord(atomserial);
 			m.transform(coords);
@@ -2520,6 +2521,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param axis
 	 */
 	public void transformToCenterAndAxis(Point3d center, Vector3d axis) {
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
 		// finding the rotation matrix to align z axis to the given inertia axis
 		Vector3d r = new Vector3d();
 		Vector3d k = new Vector3d(0,0,1);
@@ -2544,6 +2546,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param rotAngle the rotation angle in radians
 	 */
 	public void rotate(Vector3d rotAxis, double rotAngle) {
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
 		AxisAngle4d axisAngle = new AxisAngle4d(rotAxis, rotAngle);
 		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
 		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
@@ -2560,6 +2563,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Moves this structure such that the center of mass is at the origin using all atoms
 	 */
 	public void moveToOrigin() {
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
 		Vector3d sumVector = new Vector3d();
 		int numVectors = 0;
 		for(int atomserial:getAllAtomSerials()) {
@@ -2580,6 +2584,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Moves this structure such that the center of mass of the given subset of residues is at the origin using only CA atoms
 	 */
 	public void moveToOrigin(TreeSet<Integer> residues) {
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
 		Vector3d sumVector = new Vector3d();
 		int numVectors = 0;
 		for(int resser:residues) {
