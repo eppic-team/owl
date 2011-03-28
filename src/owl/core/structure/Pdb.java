@@ -133,6 +133,8 @@ public class Pdb implements HasFeatures, Serializable {
 	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 
+	private double[] bounds; 			// cached bounds (6 values, x,y,z min coordinates of chain and x,y,x max coordinates of chain) to speed up getAICGraph
+	
 	/*----------------------------------  constructors -----------------------------------------------*/
 
 	/**
@@ -406,6 +408,24 @@ public class Pdb implements HasFeatures, Serializable {
 			}
 		}
 		return atoms;
+	}
+	
+	/**
+	 * Gets an array with all atoms present in this chain.
+	 * Calculates also the bounds array so that it gets cached and can be used in {@link #getAICGraph(Pdb, double)}
+	 * @return
+	 */
+	protected Atom[] getAllAtoms() {
+		Atom[] atoms = new Atom[this.getNumAtoms()];
+		int i = 0;
+		for (Residue residue:residues.values()) {
+			for (Atom atom:residue.getAtoms()) {
+				atoms[i]=atom;
+				i++;
+			}
+		}
+		this.bounds = Grid.getCoordBounds(atoms);
+		return atoms;		
 	}
 	
 	/**
@@ -998,11 +1018,11 @@ public class Pdb implements HasFeatures, Serializable {
 		Grid grid = new Grid(cutoff);
 		
 		if (crossed) {
-			grid.fillGrid(iAtoms, jAtoms);
+			grid.addAtoms(iAtoms,jAtoms);
 		} else {
-			grid.fillGrid(iAtoms, iAtoms);
+			grid.addAtoms(iAtoms,iAtoms);
 		}
-
+		
 		float[][] distMatrix = grid.getDistMatrix(crossed);
 
 		// creating the AIGraph
@@ -1134,7 +1154,7 @@ public class Pdb implements HasFeatures, Serializable {
 		Atom[] atoms = getAtomsForCt(ct, null);
 
 		Grid grid = new Grid(cutoff);
-		grid.fillGrid(atoms, atoms);
+		grid.addAtoms(atoms,atoms);
 
 		grid.countDensity(densityCount);
 		
@@ -1214,24 +1234,23 @@ public class Pdb implements HasFeatures, Serializable {
 		return alignedDistMatrix;
 	}
 	// TODO: Version of this where already buffered distance matrices are passed as paremeters
-
+	
 	/**
 	 * Computes the atom interaction graph between this and given protein chain for all
-	 * atoms of contact type ct and given cutoff. 
+	 * atoms and given cutoff. 
 	 * A geometric hashing algorithm is used for fast contact computation (without needing 
 	 * to calculate full distance matrix) 
 	 * @param other
-	 * @param ct
 	 * @param cutoff
 	 * @return a graph containing one edge per atom interaction i.e. per atom pair falling 
 	 * under the distance cutoff
 	 */
-	public AICGraph getAICGraph(Pdb other, String ct, double cutoff) {
-		Atom[] thisAtoms = this.getAtomsForCt(ct, null);
-		Atom[] otherAtoms = other.getAtomsForCt(ct, null);
+	public AICGraph getAICGraph(Pdb other, double cutoff) {
+		Atom[] thisAtoms = this.getAllAtoms();
+		Atom[] otherAtoms = other.getAllAtoms();
 		
 		Grid grid = new Grid(cutoff);
-		grid.fillGrid(thisAtoms,otherAtoms);
+		grid.addAtoms(thisAtoms,bounds,otherAtoms,other.bounds);
 		
 		AICGraph graph = new AICGraph();
 

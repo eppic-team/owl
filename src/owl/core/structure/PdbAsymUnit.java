@@ -26,9 +26,13 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
+import edu.uci.ics.jung.graph.util.EdgeType;
+
+import owl.core.structure.graphs.AICGEdge;
 import owl.core.structure.graphs.AICGraph;
 import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
+import owl.core.util.Grid;
 import owl.core.util.MySQLConnection;
 
 /**
@@ -433,7 +437,8 @@ public class PdbAsymUnit {
 	 * that this chain has upon generation of all crystal symmetry objects. 
 	 * The interface areas and BSAs are calculated with either our implementation of the rolling
 	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
-	 * be passed)
+	 * be passed).
+	 * No debugging output is produced.
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
 	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
 	 * will be used
@@ -442,9 +447,28 @@ public class PdbAsymUnit {
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads) throws IOException {	
-		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
-		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads) throws IOException {
+		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, false);
+	}
+	
+	/**
+	 * Returns a sorted (decreasing area) list of all interfaces (any 2 atoms under cutoff) 
+	 * that this chain has upon generation of all crystal symmetry objects. 
+	 * The interface areas and BSAs are calculated with either our implementation of the rolling
+	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
+	 * be passed)
+	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
+	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
+	 * will be used
+	 * @param nSpherePoints
+	 * @param nThreads
+	 * @param if true debugging output will be produced
+	 * @return
+	 * @throws IOException when problems when running NACCESS (if NACCESS used)
+	 */
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean debug) throws IOException {	
+		// TODO For longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
+		// TODO Pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
@@ -453,43 +477,84 @@ public class PdbAsymUnit {
 		// 0. generate complete unit cell
 		PdbUnitCell cell = this.getUnitCell();
 		
+		long start = -1; 
+		long end = -1;
+		int trialCount = 0, countSkipped = 0, duplicatesCount1=0, duplicatesCount2=0, duplicatesCount3=0;
+		if (debug) {
+			trialCount = 0;
+			start= System.currentTimeMillis();
+			System.out.println("Interfaces within asymmetric unit");
+		}
 		// 1. interfaces within unit cell
 		// 1.1 within asymmetric unit
 		for (String iChainCode:this.getPdbChainCodes()) {
 			for (String jChainCode:this.getPdbChainCodes()) {
 				if (iChainCode.compareTo(jChainCode)<=0) continue;
-				//System.out.print(".");
+				if (debug) {
+					System.out.print(".");
+					trialCount++;
+				}
 				Pdb chaini = this.getChain(iChainCode);
 				Pdb chainj = this.getChain(jChainCode);
-				AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
+				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 				if (graph.getEdgeCount()>0) {
+					if (debug) System.out.print("x");
 					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 					Pdb chainiCopy = chaini.copy();
 					Pdb chainjCopy = chainj.copy();
-					set.add(new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM));
+					if (!set.add(new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM))) {
+						duplicatesCount1++;
+					}
 				}											
 			}
 		}
+		if (debug) {
+			end = System.currentTimeMillis();
+			System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
+		}
 
-		// 1.2 between the original asymmetric unit and the others resulting in applying the symmetry transformations
+		
+		if (debug) {
+			trialCount = 0;
+			start= System.currentTimeMillis();
+			System.out.println("Interfaces within the rest of the unit cell");
+		}
+		// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
 		for (int j=0;j<cell.getNumAsymUnits();j++) {
 			PdbAsymUnit jAsym = cell.getAsymUnit(j);
 			if (jAsym==this) continue; // we want to compare this to all others but not to itself
 			for (Pdb chaini:this.getAllChains()) {
 				for (Pdb chainj:jAsym.getAllChains()) {
-					AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
+					if (debug) {
+						System.out.print(".");
+						trialCount++;
+					}
+					AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 					if (graph.getEdgeCount()>0) {
+						if (debug) System.out.print("x");
 						// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 						Pdb chainiCopy = chaini.copy();
 						Pdb chainjCopy = chainj.copy();
 						ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
-						set.add(interf);
+						if (!set.add(interf)) {
+							duplicatesCount2++;
+						}
 					}													
 				}
 			}
 			
 		}
+		if (debug) {
+			end = System.currentTimeMillis();
+			System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
+		}
 		
+		if (debug) {
+			trialCount = 0;
+			start= System.currentTimeMillis();
+			int trials = this.getNumChains()*cell.getNumAsymUnits()*this.getNumChains()*26;
+			System.out.println("Interfaces between the original asym unit and the 26 neighbouring whole unit cells ("+trials+")");
+		}
 		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
 		for (int i=-1;i<=1;i++) {
 			for (int j=-1;j<=1;j++) {
@@ -498,7 +563,6 @@ public class PdbAsymUnit {
 					PdbUnitCell translated = cell.copy();
 					Vector3d trans = new Vector3d(i,j,k);
 					translated.doCrystalTranslation(trans);
-					
 					for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
 						Point3d sep = this.getCrystalSeparation(jAsym);
 						if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
@@ -506,8 +570,10 @@ public class PdbAsymUnit {
 							//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
 							//		sep.x,sep.y,sep.z,
 							//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
+							if (debug) countSkipped++;
 							continue;
 						}
+						
 						for (Pdb chainj:jAsym.getAllChains()) {
 							//try {
 							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
@@ -516,19 +582,33 @@ public class PdbAsymUnit {
 							//}
 
 							for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
-								AICGraph graph = chaini.getAICGraph(chainj, "ALL", cutoff);
+								if (debug) {
+									System.out.print(".");
+									trialCount++;
+								}
+								AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 								if (graph.getEdgeCount()>0) {
+									if (debug) System.out.print("x");
 									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 									Pdb chainiCopy = chaini.copy();
 									Pdb chainjCopy = chainj.copy();
 									ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
-									set.add(interf);
+									if (!set.add(interf)){
+										duplicatesCount3++;
+									}
 								}							
 							}
 						}
 					}
 				}
 			}
+		}
+		if (debug) {
+			end = System.currentTimeMillis();
+			System.out.println("\n"+trialCount+" trials done ("+
+					countSkipped+" branches skipped). Total "+(trialCount+countSkipped*this.getNumChains()*this.getNumChains())+
+					" trials. Time "+(end-start)/1000+"s");
+			System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
 		}
 		
 		// bsa calculation 
@@ -537,7 +617,10 @@ public class PdbAsymUnit {
 		// orientations! (can't really understand why!). Both NACCESS and our own implementation behave like that.
 		// That's why we calculate always for the 2 separate members of interface and the complex, otherwise 
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
-		//long start = System.currentTimeMillis();
+		if (debug) {
+			start= System.currentTimeMillis();
+			System.out.println("Calculating ASAs");
+		}
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
 			if (naccessExe!=null) {
@@ -546,8 +629,10 @@ public class PdbAsymUnit {
 				interf.calcSurfAccess(nSpherePoints, nThreads);
 			}
 		}
-		//long end = System.currentTimeMillis();
-		//System.out.println("ASA computation time: "+(end-start)/1000+" s");
+		if (debug) {
+			end = System.currentTimeMillis();
+			System.out.println("\nDone. Time "+(end-start)/1000+"s");
+		}
 		
 		// now that we have the areas we can put them into a list and sort them
 		ChainInterfaceList.AsaCalcMethod asaCalcMethod = ChainInterfaceList.AsaCalcMethod.INTERNAL;
@@ -635,6 +720,50 @@ public class PdbAsymUnit {
 				residue.setBsa(tot);
 			}
 		}		
+	}
+	
+	private Atom[] getAllAtoms() {
+		Atom[][] allAtoms = new Atom[this.getNumChains()][];
+		int numThisAtoms = 0;
+		int i = 0;
+		for (Pdb chain:this.getAllChains()) {
+			allAtoms[i] = chain.getAllAtoms();
+			numThisAtoms += allAtoms[i].length;
+			i++;
+		}
+		Atom[] thisAtoms = new Atom[numThisAtoms];
+		int k = 0;
+		for (i =0;i<this.getNumChains();i++) {
+			for (int j=0;j<allAtoms[i].length;j++) {
+				thisAtoms[k] = allAtoms[i][j];
+				k++;
+			}
+		}
+		return thisAtoms;		
+	}
+	
+	public AICGraph getAIAUGraph(PdbAsymUnit other, double cutoff) {
+		Atom[] thisAtoms = this.getAllAtoms();
+		Atom[] otherAtoms = other.getAllAtoms();
+		
+		Grid grid = new Grid(cutoff);
+		grid.addAtoms(thisAtoms,otherAtoms);
+		
+		AICGraph graph = new AICGraph();
+
+		float[][] distMatrix = grid.getDistMatrix(true);
+		
+		for (int i=0;i<distMatrix.length;i++){ 
+			for (int j=0;j<distMatrix[i].length;j++){
+				// the condition distMatrix[i][j]!=0.0 takes care of skipping cells for which we 
+				// didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
+				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
+					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms[i], otherAtoms[j], EdgeType.UNDIRECTED);
+				}
+
+			}
+		}
+		return graph;
 	}
 	
 	public int getNumAtoms() {

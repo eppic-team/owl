@@ -29,6 +29,8 @@ public class Grid {
 	private Atom[] jAtoms;
 	
 	private int[] bounds;
+	private int[] ibounds;
+	private int[] jbounds;
 	
 	private boolean noOverlap; // if the 2 sets of atoms are found not to overlap then this is set to true
 	
@@ -55,19 +57,65 @@ public class Grid {
 	}
 	
 	/**
-	 * Creates the grid based on the boundaries defined by all atoms given (iAtoms and jAtoms)
-	 * and places the atoms in their corresponding grid cells.
+	 * Adds the i and j atoms and fills the grid. Their bounds will be computed.
 	 * @param iAtoms
 	 * @param jAtoms
 	 */
-	public void fillGrid(Atom[] iAtoms, Atom[] jAtoms) {
+	public void addAtoms(Atom[] iAtoms, Atom[] jAtoms) {
+		addAtoms(iAtoms, null, jAtoms, null);
+	}
+	
+	/**
+	 * Adds the i and j atoms and fils the grid, passing their bounds (array of size 6 with x,y,z minima and x,y,z maxima)
+	 * This way the bounds don't need to be recomputed.
+	 * @param iAtoms
+	 * @param icoordbounds
+	 * @param jAtoms
+	 * @param jcoordbounds
+	 */
+	public void addAtoms(Atom[] iAtoms, double[] icoordbounds, Atom[] jAtoms, double[] jcoordbounds) {
 		this.iAtoms = iAtoms;
-		this.jAtoms = jAtoms;
+
+		if (icoordbounds!=null) {
+			this.ibounds = getIntBounds(icoordbounds);
+		} else {
+			this.ibounds = getIntBounds(getCoordBounds(iAtoms));
+		}
 		
-		if (!findGridBounds()) {
+		this.jAtoms = jAtoms;
+
+		if (jAtoms==iAtoms) {
+			this.jbounds=ibounds;
+		} else {
+			if (jcoordbounds!=null) {
+				this.jbounds = getIntBounds(jcoordbounds);
+			} else {
+				this.jbounds = getIntBounds(getCoordBounds(jAtoms));
+				
+			}
+		}
+
+		fillGrid();
+	}
+
+	/**
+	 * Creates the grid based on the boundaries defined by all atoms given (iAtoms and jAtoms)
+	 * and places the atoms in their corresponding grid cells.
+	 * Checks also if the i and j grid overlap, i.e. the enclosing bounds of 
+	 * the 2 grids (i and j) are no more than one cell size apart. If they don't
+	 * overlap then they are too far apart so there's nothing to calculate, we set
+	 * the noOverlap flag and then getDistMatrix will do no calculation at all.
+	 * @param iAtoms
+	 * @param jAtoms
+	 */
+	private void fillGrid() {
+
+		if (!checkGridsOverlap()) {
 			noOverlap = true;
 			return;
 		}
+		
+		findFullGridIntBounds();
 		
 		cells = new GridCell[1+(bounds[3]-bounds[0])/cellSize]
 		                    [1+(bounds[4]-bounds[1])/cellSize]
@@ -105,76 +153,36 @@ public class Grid {
 	 * Calculates an int array of size 6 into member variable bounds:
 	 * - elements 0,1,2: minimum x,y,z of the iAtoms and jAtoms
 	 * - elements 3,4,5: maximum x,y,z of the iAtoms and jAtoms
-	 * Checks also if the i and j grid overlap, i.e. the enclosing bounds
-	 * are no more than one cell size apart.
-	 * @return true if i and j grids overlap, false if they don't
 	 */
-	private boolean findGridBounds() {
+	private void findFullGridIntBounds() {
 		bounds = new int[6];
-		int[] ibounds = new int[6];
-		int[] jbounds = ibounds;
-		
-		// i
-		double[] xs = new double[iAtoms.length];
-		double[] ys = new double[iAtoms.length];
-		double[] zs = new double[iAtoms.length];
-		int c = 0;
-		for (Atom atom:iAtoms) {
-			xs[c] = atom.getCoords().x;
-			ys[c] = atom.getCoords().y;
-			zs[c] = atom.getCoords().z;
-			c++;
+		if (ibounds==jbounds) {
+			bounds = ibounds;
+		} else {
+			bounds[0] = Math.min(ibounds[0],jbounds[0]);
+			bounds[1] = Math.min(ibounds[1],jbounds[1]);
+			bounds[2] = Math.min(ibounds[2],jbounds[2]);
+			bounds[3] = Math.max(ibounds[3],jbounds[3]);
+			bounds[4] = Math.max(ibounds[4],jbounds[4]);
+			bounds[5] = Math.max(ibounds[5],jbounds[5]);
 		}
-		
-		double[] ixminmax = getMinMax(xs);
-		double[] iyminmax = getMinMax(ys);
-		double[] izminmax = getMinMax(zs);
-		ibounds[0] = getFloor(ixminmax[0]);
-		ibounds[1] = getFloor(iyminmax[0]);
-		ibounds[2] = getFloor(izminmax[0]);
-		ibounds[3] = getFloor(ixminmax[1]);
-		ibounds[4] = getFloor(iyminmax[1]);
-		ibounds[5] = getFloor(izminmax[1]);
+	}
 
-		double[] jxminmax = ixminmax;
-		double[] jyminmax = iyminmax;
-		double[] jzminmax = izminmax;
-		
-		if (jAtoms!=iAtoms) {
-			xs = new double[jAtoms.length];
-			ys = new double[jAtoms.length];
-			zs = new double[jAtoms.length];
-			c = 0;
-			for (Atom atom:jAtoms) {
-				xs[c] = atom.getCoords().x;
-				ys[c] = atom.getCoords().y;
-				zs[c] = atom.getCoords().z;
-				c++;
-			}
-			jxminmax = getMinMax(xs);
-			jyminmax = getMinMax(ys);
-			jzminmax = getMinMax(zs);
-			jbounds = new int[6];
-			jbounds[0] = getFloor(jxminmax[0]);
-			jbounds[1] = getFloor(jyminmax[0]);
-			jbounds[2] = getFloor(jzminmax[0]);
-			jbounds[3] = getFloor(jxminmax[1]);
-			jbounds[4] = getFloor(jyminmax[1]);
-			jbounds[5] = getFloor(jzminmax[1]);
-		}
-
-		if (!checkGridsOverlap(ibounds,jbounds)) {
-			return false;
-		}
-		
-		bounds[0] = Math.min(ibounds[0],jbounds[0]);
-		bounds[1] = Math.min(ibounds[1],jbounds[1]);
-		bounds[2] = Math.min(ibounds[2],jbounds[2]);
-		bounds[3] = Math.max(ibounds[3],jbounds[3]);
-		bounds[4] = Math.max(ibounds[4],jbounds[4]);
-		bounds[5] = Math.max(ibounds[5],jbounds[5]);
-		return true;
-
+	/**
+	 * Returns an int array of size 6 :
+	 * - elements 0,1,2: minimum x,y,z (in grid int coordinates) of the given atoms
+	 * - elements 3,4,5: maximum x,y,z (in grid int coordinates) of the given atoms
+	 * @return 
+	 */
+	private int[] getIntBounds(double[] coordbounds) {
+		int[] bs = new int[6];
+		bs[0] = getFloor(coordbounds[0]);
+		bs[1] = getFloor(coordbounds[1]);
+		bs[2] = getFloor(coordbounds[2]);
+		bs[3] = getFloor(coordbounds[3]);
+		bs[4] = getFloor(coordbounds[4]);
+		bs[5] = getFloor(coordbounds[5]);
+		return bs;
 	}
 	
 	/**
@@ -182,7 +190,7 @@ public class Grid {
 	 * @param array
 	 * @return
 	 */
-	private double[] getMinMax(double[] array) {
+	public static double[] getMinMax(double[] array) {
 		double[] minmax = new double[2];
 		
 		double max = Double.MIN_VALUE;
@@ -196,6 +204,37 @@ public class Grid {
 		minmax[0] = min;
 		minmax[1] = max;
 		return minmax;
+	}
+	
+	/**
+	 * Returns a double array of size 6 :
+	 * - elements 0,1,2: minimum x,y,z of the given atoms
+	 * - elements 3,4,5: maximum x,y,z of the given atoms
+	 * @param atoms
+	 * @return 
+	 */
+	public static double[] getCoordBounds(Atom[] atoms) {
+		double[] xs = new double[atoms.length];
+		double[] ys = new double[atoms.length];
+		double[] zs = new double[atoms.length];
+		int c = 0;
+		for (Atom atom:atoms) {
+			xs[c] = atom.getCoords().x;
+			ys[c] = atom.getCoords().y;
+			zs[c] = atom.getCoords().z;
+			c++;
+		}
+		double[] bs = new double[6];
+		double[] xminmax = getMinMax(xs);
+		double[] yminmax = getMinMax(ys);
+		double[] zminmax = getMinMax(zs);
+		bs[0] = xminmax[0];
+		bs[1] = yminmax[0];
+		bs[2] = zminmax[0];
+		bs[3] = xminmax[1];
+		bs[4] = yminmax[1];
+		bs[5] = zminmax[1];
+		return bs;
 	}
 	
 	private class Bound implements Comparable<Bound> {
@@ -214,7 +253,12 @@ public class Grid {
 		}
 	}
 	
-	private boolean checkGridsOverlap(int[] ibounds,int[] jbounds) {
+	/**
+	 * Returns true if grids i and j overlap, i.e. they are within
+	 * one cell size distance in one of their 3 dimensions.
+	 * @return
+	 */
+	private boolean checkGridsOverlap() {
 		if (ibounds==jbounds) return true;
 		// x dimension
 		if (!areOverlapping(ibounds[0],ibounds[3],jbounds[0],jbounds[3])) {
@@ -334,4 +378,5 @@ public class Grid {
 	public double getCutoff() {
 		return cutoff;
 	}
+	
 }

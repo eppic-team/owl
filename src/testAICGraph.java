@@ -29,7 +29,7 @@ public class testAICGraph {
 		System.out.println("Chain "+chain2+" # of obs res: "+chainB.getObsLength());
 		
 		
-		AICGraph graph = chainA.getAICGraph(chainB, "ALL", 3.0);
+		AICGraph graph = chainA.getAICGraph(chainB, 3.0);
 
 		System.out.println("Graph # edges: "+graph.getEdgeCount());
 		

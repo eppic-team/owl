@@ -2,6 +2,7 @@ package owl.tests.core.structure;
 
 import java.io.BufferedReader;
 //import java.io.File;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -28,10 +29,9 @@ import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.Pdb;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.Residue;
-import owl.core.util.MySQLConnection;
+import owl.core.util.FileFormatException;
 import owl.tests.TestsSetup;
 
 
@@ -40,10 +40,10 @@ public class PdbAsymUnitTest {
 	@SuppressWarnings("unused") // we keep it here since we might still want to use naccess for area calculations
 	private static String NACCESS_EXEC; 
 	
+	private static String LOCAL_CIF_DIR;
+	
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String LISTFILE = TESTDATADIR+"/testset_interfaces.txt";
-	
-	private static final String PDBASE_DB = "pdbase";
 	
 	private static final String PISA_INTERFACES_URL = "http://www.ebi.ac.uk/msd-srv/pisa/cgi-bin/interfaces.pisa?";
 	
@@ -65,6 +65,7 @@ public class PdbAsymUnitTest {
 	public static void setUpBeforeClass() throws Exception {
 		Properties p = TestsSetup.readPaths();
 		NACCESS_EXEC = p.getProperty("NACCESS_EXEC");
+		LOCAL_CIF_DIR = p.getProperty("LOCAL_CIF_DIR");
 	}
 
 	@AfterClass
@@ -82,7 +83,6 @@ public class PdbAsymUnitTest {
 	
 	@Test
 	public void testGetAllInterfaces() throws IOException, SQLException, SAXException {
-		MySQLConnection conn = new MySQLConnection();
 
 		List<String> pdbCodes = new ArrayList<String>();
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
@@ -105,14 +105,16 @@ public class PdbAsymUnitTest {
 		for (String pdbCode: pdbCodes) {
 					
 			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;
 			try {
-				pdb = new PdbAsymUnit(pdbCode, conn, PDBASE_DB);
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Missing PDB code "+pdbCode);
-				continue;
+				pdb = new PdbAsymUnit(cifFile);
 			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
 				System.err.println("PDB load error, cause: "+e.getMessage());
 				continue;
 			}
