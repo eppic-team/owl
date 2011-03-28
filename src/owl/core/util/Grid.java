@@ -1,6 +1,5 @@
 package owl.core.util;
 
-import java.util.Arrays;
 import java.util.Map;
 
 import javax.vecmath.Point3d;
@@ -28,9 +27,12 @@ public class Grid {
 	private Atom[] iAtoms;
 	private Atom[] jAtoms;
 	
+	// the bounds in int grid coordinates
 	private int[] bounds;
-	private int[] ibounds;
-	private int[] jbounds;
+	
+	// the i and j bounding boxes in original double coordinates
+	private BoundingBox ibounds;
+	private BoundingBox jbounds;
 	
 	private boolean noOverlap; // if the 2 sets of atoms are found not to overlap then this is set to true
 	
@@ -73,13 +75,13 @@ public class Grid {
 	 * @param jAtoms
 	 * @param jcoordbounds
 	 */
-	public void addAtoms(Atom[] iAtoms, double[] icoordbounds, Atom[] jAtoms, double[] jcoordbounds) {
+	public void addAtoms(Atom[] iAtoms, BoundingBox icoordbounds, Atom[] jAtoms, BoundingBox jcoordbounds) {
 		this.iAtoms = iAtoms;
 
 		if (icoordbounds!=null) {
-			this.ibounds = getIntBounds(icoordbounds);
+			this.ibounds = icoordbounds;
 		} else {
-			this.ibounds = getIntBounds(getCoordBounds(iAtoms));
+			this.ibounds = new BoundingBox(iAtoms);
 		}
 		
 		this.jAtoms = jAtoms;
@@ -88,13 +90,13 @@ public class Grid {
 			this.jbounds=ibounds;
 		} else {
 			if (jcoordbounds!=null) {
-				this.jbounds = getIntBounds(jcoordbounds);
+				this.jbounds = jcoordbounds;
 			} else {
-				this.jbounds = getIntBounds(getCoordBounds(jAtoms));
+				this.jbounds = new BoundingBox(jAtoms);
 				
 			}
 		}
-
+		
 		fillGrid();
 	}
 
@@ -110,7 +112,8 @@ public class Grid {
 	 */
 	private void fillGrid() {
 
-		if (!checkGridsOverlap()) {
+		if (!ibounds.overlaps(jbounds, cutoff)) {
+			//System.out.print("-");
 			noOverlap = true;
 			return;
 		}
@@ -155,16 +158,19 @@ public class Grid {
 	 * - elements 3,4,5: maximum x,y,z of the iAtoms and jAtoms
 	 */
 	private void findFullGridIntBounds() {
+		int[] iIntBounds = getIntBounds(ibounds);
+		
 		bounds = new int[6];
 		if (ibounds==jbounds) {
-			bounds = ibounds;
+			bounds = iIntBounds;
 		} else {
-			bounds[0] = Math.min(ibounds[0],jbounds[0]);
-			bounds[1] = Math.min(ibounds[1],jbounds[1]);
-			bounds[2] = Math.min(ibounds[2],jbounds[2]);
-			bounds[3] = Math.max(ibounds[3],jbounds[3]);
-			bounds[4] = Math.max(ibounds[4],jbounds[4]);
-			bounds[5] = Math.max(ibounds[5],jbounds[5]);
+			int[] jIntBounds = getIntBounds(jbounds);
+			bounds[0] = Math.min(iIntBounds[0],jIntBounds[0]);
+			bounds[1] = Math.min(iIntBounds[1],jIntBounds[1]);
+			bounds[2] = Math.min(iIntBounds[2],jIntBounds[2]);
+			bounds[3] = Math.max(iIntBounds[3],jIntBounds[3]);
+			bounds[4] = Math.max(iIntBounds[4],jIntBounds[4]);
+			bounds[5] = Math.max(iIntBounds[5],jIntBounds[5]);
 		}
 	}
 
@@ -174,118 +180,15 @@ public class Grid {
 	 * - elements 3,4,5: maximum x,y,z (in grid int coordinates) of the given atoms
 	 * @return 
 	 */
-	private int[] getIntBounds(double[] coordbounds) {
+	private int[] getIntBounds(BoundingBox coordbounds) {
 		int[] bs = new int[6];
-		bs[0] = getFloor(coordbounds[0]);
-		bs[1] = getFloor(coordbounds[1]);
-		bs[2] = getFloor(coordbounds[2]);
-		bs[3] = getFloor(coordbounds[3]);
-		bs[4] = getFloor(coordbounds[4]);
-		bs[5] = getFloor(coordbounds[5]);
+		bs[0] = getFloor(coordbounds.xmin);
+		bs[1] = getFloor(coordbounds.ymin);
+		bs[2] = getFloor(coordbounds.zmin);
+		bs[3] = getFloor(coordbounds.xmax);
+		bs[4] = getFloor(coordbounds.ymax);
+		bs[5] = getFloor(coordbounds.zmax);
 		return bs;
-	}
-	
-	/**
-	 * Gets an array of size 2 with min and max values contained in given array
-	 * @param array
-	 * @return
-	 */
-	public static double[] getMinMax(double[] array) {
-		double[] minmax = new double[2];
-		
-		double max = Double.MIN_VALUE;
-		double min = Double.MAX_VALUE;
-
-		for(double value : array) {
-			if(value > max) max = value;
-			if(value < min) min = value; 
-		}
-
-		minmax[0] = min;
-		minmax[1] = max;
-		return minmax;
-	}
-	
-	/**
-	 * Returns a double array of size 6 :
-	 * - elements 0,1,2: minimum x,y,z of the given atoms
-	 * - elements 3,4,5: maximum x,y,z of the given atoms
-	 * @param atoms
-	 * @return 
-	 */
-	public static double[] getCoordBounds(Atom[] atoms) {
-		double[] xs = new double[atoms.length];
-		double[] ys = new double[atoms.length];
-		double[] zs = new double[atoms.length];
-		int c = 0;
-		for (Atom atom:atoms) {
-			xs[c] = atom.getCoords().x;
-			ys[c] = atom.getCoords().y;
-			zs[c] = atom.getCoords().z;
-			c++;
-		}
-		double[] bs = new double[6];
-		double[] xminmax = getMinMax(xs);
-		double[] yminmax = getMinMax(ys);
-		double[] zminmax = getMinMax(zs);
-		bs[0] = xminmax[0];
-		bs[1] = yminmax[0];
-		bs[2] = zminmax[0];
-		bs[3] = xminmax[1];
-		bs[4] = yminmax[1];
-		bs[5] = zminmax[1];
-		return bs;
-	}
-	
-	private class Bound implements Comparable<Bound> {
-		int cardinal;
-		int value;
-		public Bound(int cardinal,int value) {
-			this.cardinal = cardinal;
-			this.value = value;
-		}
-		@Override
-		public int compareTo(Bound o) {
-			return new Integer(this.value).compareTo(o.value);
-		}
-		public String toString() {
-			return "["+cardinal+","+value+"]";
-		}
-	}
-	
-	/**
-	 * Returns true if grids i and j overlap, i.e. they are within
-	 * one cell size distance in one of their 3 dimensions.
-	 * @return
-	 */
-	private boolean checkGridsOverlap() {
-		if (ibounds==jbounds) return true;
-		// x dimension
-		if (!areOverlapping(ibounds[0],ibounds[3],jbounds[0],jbounds[3])) {
-			return false;
-		}		
-		// y dimension
-		if (!areOverlapping(ibounds[1],ibounds[4],jbounds[1],jbounds[4])) {
-			return false;
-		}		
-		// z dimension
-		if (!areOverlapping(ibounds[2],ibounds[5],jbounds[2],jbounds[5])) {
-			return false;
-		}		
-		return true;
-	}
-	
-	private boolean areOverlapping(int imin, int imax, int jmin, int jmax) {
-		Bound[] bounds = {new Bound(0,imin), new Bound(1,imax),
-				   		   new Bound(2,jmin), new Bound(3,jmax)};
-		Arrays.sort(bounds);
-		if ((bounds[0].cardinal==0 && bounds[1].cardinal==1)) {
-			if ((bounds[2].value-bounds[1].value)>cellSize) return false;
-		} else if (bounds[0].cardinal==2 && bounds[1].cardinal==3) {
-			if ((bounds[0].value-bounds[3].value)>cellSize) return false;
-		}
-		return true;
-			
 	}
 	
 	/**

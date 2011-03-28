@@ -47,6 +47,7 @@ import owl.core.structure.graphs.AIGNode;
 import owl.core.structure.graphs.AIGraph;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.BoundingBox;
 import owl.core.util.Grid;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
@@ -133,7 +134,7 @@ public class Pdb implements HasFeatures, Serializable {
 	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 
-	private double[] bounds; 			// cached bounds (6 values, x,y,z min coordinates of all atoms in chain and x,y,x max coordinates of all atoms in chain) to speed up getAICGraph
+	private BoundingBox bounds; 			// cached bounds (6 values, x,y,z min coordinates of all atoms in chain and x,y,x max coordinates of all atoms in chain) to speed up getAICGraph
 	
 	/*----------------------------------  constructors -----------------------------------------------*/
 
@@ -425,9 +426,18 @@ public class Pdb implements HasFeatures, Serializable {
 			}
 		}
 		if (this.bounds==null) {
-			this.bounds = Grid.getCoordBounds(atoms);
+			this.bounds = new BoundingBox(atoms);
 		}
 		return atoms;		
+	}
+	
+	protected BoundingBox getBoundingBox() {
+		if (bounds!=null) {
+			return bounds;
+		} else {
+			getAllAtoms();
+			return bounds;
+		}
 	}
 	
 	/**

@@ -30,6 +30,7 @@ import edu.uci.ics.jung.graph.util.EdgeType;
 
 import owl.core.structure.graphs.AICGEdge;
 import owl.core.structure.graphs.AICGraph;
+import owl.core.util.BoundingBox;
 import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
 import owl.core.util.Grid;
@@ -83,7 +84,7 @@ public class PdbAsymUnit {
 								// i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
 								// goes from 1 to m (m=number of symmetry operations of the space group)
 
-
+	private BoundingBox bounds; // cached bounds for speed up of interface calculations, filled in getAllAtoms()
 
 
 	
@@ -299,6 +300,7 @@ public class PdbAsymUnit {
 	}
 	
 	public void transform(Matrix4d m) {
+		this.bounds = null; // cached bounds must be reset whenever we transform the coordinates
 		for (Pdb pdb:this.chains.values()) {
 			pdb.transform(m);
 		}
@@ -358,6 +360,7 @@ public class PdbAsymUnit {
 	 * @param direction
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
+		this.bounds = null; //bounds must be reset whenever the coordinates are transformed
 		for (Pdb pdb:this.chains.values()) {
 			pdb.doCrystalTranslation(direction);
 		}		
@@ -563,17 +566,19 @@ public class PdbAsymUnit {
 					PdbUnitCell translated = cell.copy();
 					Vector3d trans = new Vector3d(i,j,k);
 					translated.doCrystalTranslation(trans);
+					
 					for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
 						Point3d sep = this.getCrystalSeparation(jAsym);
 						if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
-							//System.out.println("skipping:");
-							//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
-							//		sep.x,sep.y,sep.z,
-							//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
-							if (debug) countSkipped++;
+							if (debug) {
+								//System.out.println("\nskipping:");
+								//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
+								//		sep.x,sep.y,sep.z,
+								//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
+								countSkipped++;
+							}
 							continue;
 						}
-						
 						for (Pdb chainj:jAsym.getAllChains()) {
 							//try {
 							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
@@ -723,12 +728,15 @@ public class PdbAsymUnit {
 	}
 	
 	private Atom[] getAllAtoms() {
+ 
 		Atom[][] allAtoms = new Atom[this.getNumChains()][];
+		BoundingBox[] boxes = new BoundingBox[getNumChains()];
 		int numThisAtoms = 0;
 		int i = 0;
 		for (Pdb chain:this.getAllChains()) {
 			allAtoms[i] = chain.getAllAtoms();
 			numThisAtoms += allAtoms[i].length;
+			boxes[i] = chain.getBoundingBox();
 			i++;
 		}
 		Atom[] thisAtoms = new Atom[numThisAtoms];
@@ -739,7 +747,24 @@ public class PdbAsymUnit {
 				k++;
 			}
 		}
+		if (bounds==null) {
+			bounds = new BoundingBox(boxes); 
+		}
 		return thisAtoms;		
+	}
+	
+	protected BoundingBox getBoundingBox() {
+		if (bounds!=null) {
+			return bounds;
+		}
+		BoundingBox[] boxes = new BoundingBox[getNumChains()];
+		int i = 0;
+		for (Pdb chain:this.getAllChains()) {
+			boxes[i] = chain.getBoundingBox();
+			i++;
+		}
+		bounds = new BoundingBox(boxes);
+		return bounds;
 	}
 	
 	public AICGraph getAIAUGraph(PdbAsymUnit other, double cutoff) {
@@ -747,7 +772,7 @@ public class PdbAsymUnit {
 		Atom[] otherAtoms = other.getAllAtoms();
 		
 		Grid grid = new Grid(cutoff);
-		grid.addAtoms(thisAtoms,otherAtoms);
+		grid.addAtoms(thisAtoms,this.bounds,otherAtoms,other.bounds);
 		
 		AICGraph graph = new AICGraph();
 
