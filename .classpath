@@ -27,5 +27,14 @@
 	<classpathentry kind="lib" path="jars/uniprot/aopalliance.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/commons-httpclient.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/log4j.jar"/>
+	<classpathentry kind="lib" path="jars/commons-lang-2.5.jar"/>
+	<classpathentry kind="lib" path="jars/commons-math-1.2.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-awt-util.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-dom.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-ext.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-svg-dom.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-svggen.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-util.jar"/>
+	<classpathentry kind="lib" path="jars/batik/batik-xml.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
