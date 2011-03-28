@@ -1,4 +1,0 @@
-Name: OWLCommon
-Specification-Title: Common java libraries
-Specification-Version: 1.2.0
-Specification-Vendor: Otto Warburg Laboratory, MPI for Molecular Genetics, Berlin

@@ -1,7 +1,0 @@
-#maxHits:  5, eValCutoff:  1e-05, gtgCutoff:  1000
-   id	    blast	    eVal	 psiblast	    eVal	      GTG	   score	                       scop id	title
-1b63A	        1	 3.9e-55	        1	2.1e-118	        -	       -	           d.14.1.3, d.122.1.2	MUTL COMPLEXED WITH ADPNP
-1h7sA	        2	 1.5e-42	        2	 2.0e-98	        -	       -	           d.14.1.3, d.122.1.2	N-TERMINAL 40KDA FRAGMENT OF HUMAN PMS2
-1aj6A	        -	       -	        5	 9.7e-36	        -	       -	                     d.122.1.2	NOVOBIOCIN-RESISTANT MUTANT (R136H) OF THE N-TERMINAL 24 KDA FRAGMENT OF DNA GYRASE B COMPLEXED WITH NOVOBIOCIN AT 2.3 ANGSTROMS RESOLUTION
-1ei1A	        -	       -	        4	 4.9e-43	        -	       -	           d.14.1.3, d.122.1.2	DIMERIZATION OF E. COLI DNA GYRASE B PROVIDES A STRUCTURAL MECHANISM FOR ACTIVATING THE ATPASE CATALYTIC CENTER
-1s16A	        -	       -	        3	 1.6e-48	        -	       -	           d.14.1.3, d.122.1.2	Crystal Structure of E. coli Topoisomerase IV ParE 43kDa subunit complexed with ADPNP

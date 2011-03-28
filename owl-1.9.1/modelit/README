@@ -1,7 +1,0 @@
-This directory contains files for the ModelIt structure prediction server. It is our implementation of a
-contact-based homology modeling server. The server is written in PHP and is intended for intranet use only
-(i.e. it is not secure for internet use!).
-
-The server directory contains the PHP scripts and associated css and image files.
-The PHP scripts reference some of the shell scripts in the scripts directory so currently the server runs on Unix only.
-Also required are the java classes in owl.casp.*
