@@ -133,7 +133,7 @@ public class Pdb implements HasFeatures, Serializable {
 	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 
-	private double[] bounds; 			// cached bounds (6 values, x,y,z min coordinates of chain and x,y,x max coordinates of chain) to speed up getAICGraph
+	private double[] bounds; 			// cached bounds (6 values, x,y,z min coordinates of all atoms in chain and x,y,x max coordinates of all atoms in chain) to speed up getAICGraph
 	
 	/*----------------------------------  constructors -----------------------------------------------*/
 
@@ -416,7 +416,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return
 	 */
 	protected Atom[] getAllAtoms() {
-		Atom[] atoms = new Atom[this.getNumAtoms()];
+ 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		int i = 0;
 		for (Residue residue:residues.values()) {
 			for (Atom atom:residue.getAtoms()) {
@@ -424,7 +424,9 @@ public class Pdb implements HasFeatures, Serializable {
 				i++;
 			}
 		}
-		this.bounds = Grid.getCoordBounds(atoms);
+		if (this.bounds==null) {
+			this.bounds = Grid.getCoordBounds(atoms);
+		}
 		return atoms;		
 	}
 	
