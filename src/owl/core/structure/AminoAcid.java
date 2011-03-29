@@ -22,7 +22,7 @@ import java.util.Set;
  * Note: Currently, most classes in the package still use a simple string representation of
  * amino acids. Helper functions for these are provided in the class AAinfo.
  * 
- * See also: {@link AAinfo}
+ * See also: {@link AAinfo}, {@link ContactType}
  * 
  * Changelog:
  * 2006/02/06 first created by HS
@@ -108,7 +108,9 @@ public enum AminoAcid {
 	
 	/* ---------------------- constructors -----------------------------*/
 	
-	// only used internally to create enumeration instances
+	/**
+	 * Main constructor. Only used internally to create enumeration instances.
+	 */
 	private AminoAcid(int number, String name, char one, String three, int atoms,
 			  double hydrophobicity,
 			  boolean hydrophobic, boolean aromatic, boolean aliphatic,
@@ -326,6 +328,35 @@ public enum AminoAcid {
 	}	
 	
 	/**
+	 * Get amino acid object by IUPAC one letter code
+	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
+	 * @return An amino acid object of the given type 
+	 * or null, if one letter code is invalid
+	 */
+	public static AminoAcid getByOneLetterCode(char one) {
+		return one2aa.get(Character.toUpperCase(one));
+	}
+	
+	/**
+	 * Get amino acid object by IUPAC three letter code
+	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
+	 * @return An amino acid object of the given type 
+	 * or null, if three letter code is invalid
+	 */
+	public static AminoAcid getByThreeLetterCode(String three) {
+		return three2aa.get(three.toUpperCase());
+	}
+	
+	/**
+	 * Get amino acid object by full aminoacid name
+	 * @param fullName the full name of an amino acid with first letter capitalised (e.g. "Alanine" or "Aspartic Acid") 
+	 * @return an amino acid object of the given type or null if full name is invalid
+	 */
+	public static AminoAcid getByFullName(String fullName) {
+		return full2aa.get(fullName);
+	}
+	
+	/**
 	 * Get AminoAcid object by index of the given reduced alphabet.
 	 * Valid alphabets are 20, 15, 10, 8, 6, 4, 2.
 	 * @param index the index in the specified reduced alphabet
@@ -356,35 +387,6 @@ public enum AminoAcid {
 	}
 	
 	/**
-	 * Get amino acid object by IUPAC one letter code
-	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
-	 * @return An amino acid object of the given type 
-	 * or null, if one letter code is invalid
-	 */
-	public static AminoAcid getByOneLetterCode(char one) {
-		return one2aa.get(Character.toUpperCase(one));
-	}
-	
-	/**
-	 * Get amino acid object by IUPAC three letter code
-	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
-	 * @return An amino acid object of the given type 
-	 * or null, if three letter code is invalid
-	 */
-	public static AminoAcid getByThreeLetterCode(String three) {
-		return three2aa.get(three.toUpperCase());
-	}
-	
-	/**
-	 * Get amino acid object by full aminoacid name
-	 * @param fullName the full name of an amino acid with first letter capitalised (e.g. "Alanine" or "Aspartic Acid") 
-	 * @return an amino acid object of the given type or null if full name is invalid
-	 */
-	public static AminoAcid getByFullName(String fullName) {
-		return full2aa.get(fullName);
-	}
-	
-	/**
 	 * Get amino acids in ascending order of hydrophobicity.
 	 * @return an array containing the amino acids in order of hydrophobicity
 	 */
@@ -400,12 +402,26 @@ public enum AminoAcid {
 		return newValues;
 	}
 	
+	/**
+	 * Returns a list of all 20 standard amino acids as a Collection of AminoAcid objects.
+	 * @return a collection of the 20 standard amino acids
+	 */
+	public static Collection<AminoAcid> getAllStandardAAs() {
+		Collection<AminoAcid> list = new ArrayList<AminoAcid>();
+		for (AminoAcid aa:AminoAcid.values()) {
+			if (aa.getNumber()<21 && aa.getNumber()>0) {
+				list.add(aa);
+			}
+		}
+		return list;
+	}
+	
 	// conversion methods
 	
 	/**
 	 * Converts amino acid one letter code to three letter code
 	 * @param one amino acid one letter code (e.g. 'A' for Alanine)
-	 * @return amino acid three letter code or null if input is invalid
+	 * @return amino acid three letter code or INVALID_THREE_LETTER_CODE if input is invalid
 	 */
 	public static String one2three(char one) {
 		AminoAcid aa = getByOneLetterCode(one);
@@ -415,7 +431,7 @@ public enum AminoAcid {
 	/**
 	 * Converts amino acid three letter code to one letter code
 	 * @param three amino acid three letter code (e.g. "ALA" for Alanine)
-	 * @return amino acid one letter code or '?' if input is invalid
+	 * @return amino acid one letter code or INVALID_ONE_LETTER_CODE if input is invalid
 	 */
 	public static char three2one(String three) {
 		AminoAcid aa = getByThreeLetterCode(three);
@@ -499,20 +515,6 @@ public enum AminoAcid {
 			return true;
 		}
 		return false;
-	}
-	
-	/**
-	 * Returns a list of all 20 standard amino acids as a Collection of AminoAcid objects.
-	 * @return a collection of the 20 standard amino acids
-	 */
-	public static Collection<AminoAcid> getAllStandardAAs() {
-		Collection<AminoAcid> list = new ArrayList<AminoAcid>();
-		for (AminoAcid aa:AminoAcid.values()) {
-			if (aa.getNumber()<21 && aa.getNumber()>0) {
-				list.add(aa);
-			}
-		}
-		return list;
 	}
 	
 	/**

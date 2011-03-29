@@ -218,7 +218,7 @@ public class GraphAverager {
 	}
 	
 	/**
-	 * @return a randomly generated sequence tag
+	 * @return a dummy sequence tag
 	 */
 	private String makeDummyTag() {
 		return "dummyTag";

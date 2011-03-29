@@ -18,37 +18,59 @@ import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 
 /**
- * Connection class to query the JPred server from the Barton group in Dundee for secondary structure-, burial-
- * and coiled coil prediction. For secondary structure prediction you might also want to consider {@link PsipredRunner}.
+ * Package:		owl.core.connections
+ * Class: 		JPredConnection
+ * Author:		Henning Stehr, stehr@molgen.mpg.de
+ * Date:		21/Apr/2010
+ * 
+ * Connection class to query the JPred server of the Barton group in Dundee for secondary structure-, burial-
+ * and coiled coil prediction. Provides methods to set query parameters, submit the query and retrieve the
+ * results. Results of the last query are stored locally and can be obtained with the get... methods or saved
+ * to a file. 
+ * 
+ * Provides a main method to submit a JPred query from the command line.
+ *  
+ * For secondary structure prediction see also {@link PsipredRunner}.
  * The main difference (apart from the different method) is that this connection obviously depends on the availability
  * of the online resource. PsipredConnection works offline but requires different installed executables and an up-to-date
  * sequence database file.
- * @author stehr
+ * 
+ * Changelog:
+ * 2010/04/21 first created by HS
+ * 2010/04/26 new method getSecondaryStructurePredictionObject()
+ * 2010/07/05 new method setTimeout()
  */
 public class JPredConnection {
 
-	// constants
-	public static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
+	/*------------------------------ constants ------------------------------*/
 	
-	static final String SUBMIT_URL	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/jpred_form?seq=%s&input=seq&pdb=on"; //&queryName=%s";
-	static final String CHECK_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?%s";
-	static final String CHECK_URL2 	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?keywords=%s";
+	// server URLs for sending queries and retrieving results
+	static final String SUBMIT_URL	  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/jpred_form?seq=%s&input=seq&pdb=on";
+	static final String CHECK_URL_1   = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?%s";
+	static final String CHECK_URL_2   = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog?keywords=%s";
 	static final String RESULT_URL 	  = "http://www.compbio.dundee.ac.uk/www-jpred/results/%s/%s.concise";
+	
+	// regular expressions to parse result pages
 	static final String REGEX_ERROR   = "(Error - \\w+)";
 	static final String REGEX_STATUS  = "Job Status";
 	static final String REGEX_STAT_1  = "Your job is next to be submitted";
 	static final String REGEX_STAT_2  = "Your job [(]<b>\\w+</b>[)] started";
 	static final String REGEX_JOB_ID  = "http://www.compbio.dundee.ac.uk/www-jpred/cgi-bin/chklog[?](\\w+)";
 	static final String REGEX_RESULT  = "http://www.compbio.dundee.ac.uk/www-jpred/results/%s/%s.results.html";
-	static final File TEMP_DIR 	  	  = new File(System.getProperty("java.io.tmpdir"));
-	static final File DEBUG_FILE_1    = new File(TEMP_DIR, "jpred_submit.log");	// file created during online query in debug mode
-	static final File DEBUG_FILE_2    = new File(TEMP_DIR, "jpred_status.log"); // file created during online query in debug mode
-	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // file created during online query in debug mode
 	
-	static final int TIMEOUT = 180;		// default waiting for results timeout in seconds
+	// files created in debug mode
+	static final File TEMP_DIR 	  	  = new File(System.getProperty("java.io.tmpdir"));
+	static final File DEBUG_FILE_1    = new File(TEMP_DIR, "jpred_submit.log"); // server answer for submission
+	static final File DEBUG_FILE_2    = new File(TEMP_DIR, "jpred_status.log"); // server answer for status query
+	static final File DEBUG_FILE_3    = new File(TEMP_DIR, "jpred_result.log"); // server answer for result retrieval
+	
+	static final int TIMEOUT = 180;		// default waiting-for-results timeout in seconds, can be overriden with setTimeout()
 	static final int INTERVAL = 10; 	// result checking interval in seconds
 	
-	// members
+	public static final String SAMPLE_QUERY  = "APAFSVSPASGASDGQSVSVSVAAAGETYYIAQCAPVGGQDACNPATATSFTTDASGA";
+	
+	/*--------------------------- member variables --------------------------*/
+	
 	HashMap<String,String[]> resultMap;			// stores the results of the last query
 	boolean debug;								// if true, output debug information to stdout
 	JPredProgressRetriever progressRetriever;	// retriever for progress updates, may also be null
@@ -59,8 +81,10 @@ public class JPredConnection {
 												// if this is null, it will be ignored
 	private int timeout;						// the timeout after which connection to the server will be closed
 	
+	/*----------------------------- constructors ----------------------------*/
+	
 	/**
-	 * Create a new JPredConnection.
+	 * Creates a new JPredConnection. Use {@link submitQuery()} to send the query.
 	 */
 	public JPredConnection() {
 		resultMap = null;
@@ -69,12 +93,14 @@ public class JPredConnection {
 		stopNotifier = null;
 		this.timeout = TIMEOUT;
 	}
+		
+	/*---------------------------- public methods ---------------------------*/
 	
 	/**
 	 * Sets the debug mode flag to the given value.
 	 * In debug mode, some status information is printed to stdout and
 	 * log files will not be deleted on exit.
-	 * @param b
+	 * @param b the value to be set
 	 */
 	public void setDebugMode(boolean b) {
 		this.debug = b;
@@ -110,9 +136,9 @@ public class JPredConnection {
 	/**
 	 * Loads precomputed results from a text file in the JPred specific 'concise' format overwriting any
 	 * previously loaded results. The file is not checked for the correct format. If the format is incorrect,
-	 * the results of the method call are undefined. This is mainly used for testing with result files
+	 * the results of the method calls are undefined. This is mainly used for testing with result files
 	 * downloaded from JPred, so that the server does not need to be queried every time during debugging.
-	 * It can also be used to retrieve results saved using local method saveToConciseFile.
+	 * It can also be used to retrieve results saved using local method {@link saveToConciseFile()}.
 	 * @param inFile the concise file to be read from
 	 * @throws IOException if an i/o error occured during reading
 	 */
@@ -131,7 +157,7 @@ public class JPredConnection {
 	
 	/**
 	 * Stores the currently loaded results (e.g. obtained by submitQuery()) to a
-	 * text file in the JPred specific concise format.
+	 * text file in the JPred specific 'concise' format.
 	 * @param outFile the file to be written to
 	 * @throws IOException if an i/o error occured during writing or no results have been loaded
 	 */
@@ -151,18 +177,6 @@ public class JPredConnection {
 	}
 	
 	/**
-	 * Helper method for printResults for printing a single result line
-	 * @param key
-	 */
-	private void printResultLine(String key) {
-		System.out.println(">" + key);
-		for(String s: resultMap.get(key)) {
-			System.out.print(s);
-		}
-		System.out.println();
-	}
-	
-	/**
 	 * Prints the currently loaded results in Fasta format.
 	 */
 	public void printResults() {
@@ -170,7 +184,6 @@ public class JPredConnection {
 			System.err.println("Error: no results loaded.");
 			return;
 		}
-
 		printResultLine("align1;QUERY");
 		printResultLine("jnetpred");
 		printResultLine("JNETCONF");
@@ -185,7 +198,7 @@ public class JPredConnection {
 	/**
 	 * Submit a JPred query for the given sequence. JPred returns secondary structure-,
 	 * burial and coiled coil prediction results.
-	 * After successful completion the results are stored in this object and can be retrieved
+	 * After successful completion, the results are stored in this object and can be retrieved
 	 * with the different get... methods.
 	 * @param seq the sequence to submit to the server
 	 * @throws IOException
@@ -261,7 +274,7 @@ public class JPredConnection {
 			}
 			
 			// check job status
-			URL checkUrl = new URL(String.format(CHECK_URL, jobId));
+			URL checkUrl = new URL(String.format(CHECK_URL_1, jobId));
 			if(debug) System.out.println("Checking job status...");
 			if(progressRetriever != null) progressRetriever.setStatus(Status.CHECKING);
 			BufferedReader in2 = new BufferedReader(new InputStreamReader(checkUrl.openStream()));
@@ -454,12 +467,28 @@ public class JPredConnection {
 	public String getCoiledCoilPrediction28() {
 		return resultMap==null?null:compressString(resultMap.get("Lupas_28"));
 	}
+
+	/*---------------------------- private methods --------------------------*/
+	
+	/**
+	 * Helper function for printResults, prints a single result line for the given key
+	 * @param key
+	 */
+	private void printResultLine(String key) {
+		System.out.println(">" + key);
+		for(String s: resultMap.get(key)) {
+			System.out.print(s);
+		}
+		System.out.println();
+	}
 	
 	/**
 	 * Helper function to convert a string array which contains only char entries to a string.
 	 * For every entry the first character is taken such that if the input array contains only
 	 * single letter strings, the desired result is achieved. Otherwise the result may not be
 	 * useful.
+	 * @param arr the array of strings to be compressed
+	 * @return the compressed string
 	 */
 	private String compressString(String[] arr) {
 		StringBuffer b = new StringBuffer(arr.length);
@@ -469,32 +498,30 @@ public class JPredConnection {
 		return b.toString();
 	}
 	
-	public static void main(String[] args) throws IOException {
+	/*--------------------------------- main --------------------------------*/
+	
+	/**
+	 * Queries the JPred server for secondary structure-, burial- and coiled-coil
+	 * predictions for the given protein sequence.
+	 */
+	public static void main(String[] args) {
 		
-		// submit request
 		if(args.length < 1) {
-			System.out.println("Usage: jpred <sequence>");
+			System.out.println("Usage: JPredConnection <sequence>");
 			System.exit(1);
 		}
-		
-		// submit query
+	
 		String seq = args[0];
 		JPredConnection conn = new JPredConnection();
 		conn.setDebugMode(true);
-		conn.submitQuery(seq);
-		
-		// print results
-		conn.printResults();
-		
-		// test
-		File testFile = new File("jpred.out");
-		File testFile2 = new File("jpred.test");
-		conn.saveToConciseFile(testFile);
-		conn.loadFromConciseFile(testFile);
-		conn.saveToConciseFile(testFile2);	// if everything is ok, then these two files and DEBUG_FILE_3 should be the same
-		
+		try {
+			
+			conn.submitQuery(seq);
+			conn.printResults();
+			
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
 	}
-	
-
-	
 }
