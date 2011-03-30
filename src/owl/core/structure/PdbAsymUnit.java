@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.net.URL;
 import java.net.URLConnection;
 import java.sql.SQLException;
@@ -43,10 +44,12 @@ import owl.core.util.MySQLConnection;
  * @author duarte_j
  *
  */
-public class PdbAsymUnit implements Iterable<PdbChain> {
+public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	
 	/*------------------------------------  constants ---------------------------------------------*/
 	
+	private static final long serialVersionUID = 1L;
+
 	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
 	
 	// to specify the NULL (blank in pdb file) chain code. 

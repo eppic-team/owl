@@ -1,5 +1,6 @@
 package owl.core.util;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 import owl.core.structure.Atom;
@@ -12,8 +13,10 @@ import owl.core.structure.Atom;
  * @author duarte_j
  *
  */
-public class BoundingBox {
+public class BoundingBox implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+	
 	double xmin;
 	double xmax;
 	double ymin;
