@@ -32,15 +32,15 @@ import org.ggf.drmaa.SessionFactory;
 
 import owl.core.runners.MaxClusterRunner;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.IntPairSet;
 import owl.core.util.actionTools.TinkerStatusNotifier;
 import owl.graphAveraging.ConsensusSquare;
@@ -1163,7 +1163,7 @@ public class TinkerRunner {
 	// reconstruction
 	
 	/** 
-	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object
+	 * Reconstructs the given graph(s) and returns a putative good model as a PdbChain object
 	 * using the default forceConstant.
 	 * The model is picked based on the number of bound violations reported by Tinker.
 	 * See reconstruct() for more details.
@@ -1176,17 +1176,18 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @throws FileFormatException 
 	 * @returns A pdb object containing the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
-	throws TinkerError, IOException {
+	public PdbChain reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
+	throws TinkerError, IOException, FileFormatException {
 		
 		return reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, 
 				DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, parallel);
 	}	
 	
 	/** 
-	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object
+	 * Reconstructs the given graph(s) and returns a putative good model as a PdbChain object
 	 * using the default forceConstant.
 	 * The model is picked based on the number of bound violations reported by Tinker.
 	 * See reconstruct() for more details.
@@ -1199,17 +1200,18 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @throws FileFormatException 
 	 * @returns A pdb object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
-	throws TinkerError, IOException {
+	public PdbChain reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean parallel) 
+	throws TinkerError, IOException, FileFormatException {
 		
 		return reconstructFast(sequence, graphs, phiPsiConsensus, forceTransOmega,
 				numberOfModels, DEFAULT_FORCECONSTANT_DISTANCE, DEFAULT_FORCECONSTANT_TORSION, parallel);
 	}
 
 	/** 
-	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * Reconstructs the given graph(s) and returns a putative good model as a PdbChain object.
 	 * The model is picked based on the number of bound violations reported by Tinker.
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
@@ -1223,13 +1225,14 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
-	 * @returns a Pdb object containg the generated structure
+	 * @throws FileFormatException 
+	 * @returns a PdbChain object containg the generated structure
 	 */
-	public Pdb reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
+	public PdbChain reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		
-		Pdb resultPdb = null;
+		PdbChain resultPdb = null;
 		
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
 		boolean cleanUp = true;						
@@ -1244,7 +1247,7 @@ public class TinkerRunner {
 	}
 	
 	/** 
-	 * Reconstructs the given graph(s) and returns a putative good model as a Pdb object.
+	 * Reconstructs the given graph(s) and returns a putative good model as a PdbChain object.
 	 * The model is picked based on the number of bound violations reported by Tinker.
 	 * See reconstruct() for more details.
 	 * @param sequence sequence of the structure to be generated
@@ -1258,13 +1261,14 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
-	 * @returns a Pdb object containg the generated structure
+	 * @throws FileFormatException 
+	 * @returns a PdbChain object containg the generated structure
 	 */
-	public Pdb reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
+	public PdbChain reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		
-		Pdb resultPdb = null;
+		PdbChain resultPdb = null;
 		
 		String outputDir = tmpDir;
 		String baseName = Long.toString(System.currentTimeMillis());	// some hopefully unique basename
@@ -1299,11 +1303,12 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @throws FileFormatException 
 	 */
 	public void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, 
 			int numberOfModels, double forceConstantDist, double forceConsantTorsion, 
 			String outputDir, String baseName, boolean cleanUp, boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		
 		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, numberOfModels, forceConstantDist, forceConsantTorsion, true, outputDir, baseName, cleanUp, parallel);
 	}
@@ -1330,11 +1335,12 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work) 
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @throws FileFormatException 
 	 */	
 	public void reconstructFast(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,  
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
 			String outputDir, String baseName, boolean cleanUp, boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		
 		reconstruct(sequence, graphs, phiPsiConsensus, forceTransOmega, 
 				numberOfModels, 
@@ -1364,12 +1370,13 @@ public class TinkerRunner {
 	 * @param parallel whether to run the parallel version or not (needs a sun grid engine cluster to work)
 	 * @throws TinkerError  if reconstruction fails because of problems with Tinker
 	 * @throws IOException  if some temporary or result file could not be accessed
+	 * @throws FileFormatException 
 	 */
 	private void reconstruct(String sequence, RIGraph[] graphs, TreeMap<Integer, ConsensusSquare> phiPsiConsensus, boolean forceTransOmega,
 			int numberOfModels, double forceConstantDist, double forceConstantTorsion, 
 			boolean annealing, String outputDir, String baseName, boolean cleanUp, 
 			boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		
 		if (!annealing) dgeomParams = DGEOM_DEFAULT_PARAMS+REFINE_VIA_MINIMIZATION;
 		this.forceConstant = forceConstantDist; 
@@ -1486,9 +1493,10 @@ public class TinkerRunner {
 	 * @return
 	 * @throws IOException 
 	 * @throws TinkerError 
+	 * @throws FileFormatException 
 	 */
 	public RIGraph geometrizeContactMap(RIGraph graph, TreeMap<Integer,ConsensusSquare> phiPsiConsensus, boolean forceTransOmega, int numberOfModels, boolean fastReconstruct, String outputDir, String baseName, boolean parallel) 
-	throws TinkerError, IOException {
+	throws TinkerError, IOException, FileFormatException {
 		boolean cleanUp = false;
 		if (outputDir == null || baseName == null) {
 			cleanUp = true;
@@ -1506,12 +1514,15 @@ public class TinkerRunner {
 		
 		RIGEnsemble ensemble = new RIGEnsemble(graph.getContactType(), graph.getCutoff());
 		for (File file:getLastModelFiles()) {
-			PdbfilePdb pdb = new PdbfilePdb(file.getAbsolutePath());
+			PdbAsymUnit fullpdb = null;
+			PdbChain pdb = null;
 			try {
-				pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
+				fullpdb = new PdbAsymUnit(file);
+				pdb = fullpdb.getChain(PdbAsymUnit.NULL_CHAIN_CODE);
 			} catch (PdbLoadException e) {
 				throw new TinkerError(e);
-			} 
+			} catch (FileFormatException e) {
+				throw new TinkerError(e);			} 
 			ensemble.addRIG(pdb.getRIGraph(graph.getContactType(), graph.getCutoff()));
 
 		}
@@ -1566,13 +1577,17 @@ public class TinkerRunner {
 	 * @param i the number of the model to be returned.
 	 * @return the generated structure as a pdb object
 	 */
-	public Pdb getStructure(int i) throws TinkerError {
-		Pdb resultPdb = null;
+	public PdbChain getStructure(int i) throws TinkerError {
+		PdbChain resultPdb = null;
 		File resultPdbFile = getOutPdbFile(i);
 		try {
-			resultPdb = new PdbfilePdb(resultPdbFile.getAbsolutePath());
-			resultPdb.load(DEFAULT_RECONSTR_CHAIN_CODE); 
+			PdbAsymUnit fullpdb = new PdbAsymUnit(resultPdbFile);
+			resultPdb = fullpdb.getChain(DEFAULT_RECONSTR_CHAIN_CODE); 
 		} catch(PdbLoadException e) {
+			throw new TinkerError(e);
+		} catch (IOException e) {
+			throw new TinkerError(e);
+		} catch (FileFormatException e) {
 			throw new TinkerError(e);
 		}
 		
@@ -1636,7 +1651,7 @@ public class TinkerRunner {
 	
 	/**
 	 * Returns a vector of model file objects for the last reconstruction run.
-	 * Note: To get a particular structures as a Pdb object, use getStructure();
+	 * Note: To get a particular structures as a PdbChain object, use getStructure();
 	 * @return a vector of file objects
 	 */
 	public Vector<File> getLastModelFiles() {
@@ -1744,11 +1759,11 @@ public class TinkerRunner {
 	 * and the output reconstructed structure.
 	 * @return
 	 */
-	public static IntPairSet getViolatedEdges(RIGraph graph, Pdb reconstructedPdb) {
+	public static IntPairSet getViolatedEdges(RIGraph graph, PdbChain reconstructedPdb) {
 		double cutoff = graph.getCutoff();
 		String ct = graph.getContactType();
 		
-		if (!graph.getSequence().equals(reconstructedPdb.getSequence())) {
+		if (!graph.getSequence().equals(reconstructedPdb.getSequence().getSeq())) {
 			throw new IllegalArgumentException("Given graph and reconstructedPdb don't have identical sequence.");
 		}
 		if (!ContactType.isValidSingleAtomContactType(ct)) {

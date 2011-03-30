@@ -31,12 +31,10 @@ import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeException;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecondaryStructure;
@@ -100,10 +98,10 @@ public class PdbTest {
 	}
 
 	@Test
-	public void testRunNaccess() throws IOException, PdbLoadException {
+	public void testRunNaccess() throws IOException, PdbLoadException, FileFormatException {
 		
-		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb.load(TEST_CHAIN_1);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
 		Assert.assertFalse(pdb.hasASA());
 		NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC), "");
 		naccRunner.runNaccess(pdb);
@@ -140,16 +138,16 @@ public class PdbTest {
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
 
-			Pdb theirs = null;
-			Pdb ours = null;
+			PdbChain theirs = null;
+			PdbChain ours = null;
 			try {
-				theirs = new PdbasePdb(pdbCode,PDBASE_DB,conn);
-				theirs.load(pdbChainCode);
+				PdbAsymUnit theirsFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+				theirs = theirsFull.getChain(pdbChainCode);
 				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC), "");
 				naccRunner.runNaccess(theirs);
 
-				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
-				ours.load(pdbChainCode);
+				PdbAsymUnit oursFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+				ours = oursFull.getChain(pdbChainCode);
 				long start = System.currentTimeMillis();
 				ours.calcASAs(960, NTHREADS);
 				long end = System.currentTimeMillis();
@@ -172,12 +170,13 @@ public class PdbTest {
 			System.out.println(pdbId);
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
-			Pdb ours = null;
+			PdbChain ours = null;
 			try {
-				ours = new PdbasePdb(pdbCode,PDBASE_DB,conn);
-				ours.load(pdbChainCode);
+				PdbAsymUnit oursFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+				ours = oursFull.getChain(pdbChainCode);
+
 				
-				Pdb rotated = ours.copy();
+				PdbChain rotated = ours.copy(oursFull);
 
 				rotated.rotate(new Vector3d(0,0,1), Math.PI/4.0);
 				System.out.println("960 sphere points");
@@ -200,7 +199,7 @@ public class PdbTest {
 		
 	}
 	
-	private void checkASAsMatch(Pdb theirs, Pdb ours, double toleranceSingleVal, double toleranceGlobal) {
+	private void checkASAsMatch(PdbChain theirs, PdbChain ours, double toleranceSingleVal, double toleranceGlobal) {
 		int misMatches = 0;
 		for (int resser:ours.getAllSortedResSerials()) {
 			Residue tRes = theirs.getResidue(resser);
@@ -221,9 +220,9 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testConsurfConnection() throws IOException, PdbLoadException {
-		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb.load(TEST_CHAIN_1);
+	public void testConsurfConnection() throws IOException, PdbLoadException, FileFormatException {
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
 		ConsurfConnection consurfConn = new ConsurfConnection();
 		consurfConn.getConsurfDataLocal(pdb, CONSURF_DIR);
 
@@ -236,11 +235,12 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testRunDssp() throws PdbLoadException, IOException {
-		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb.load(TEST_CHAIN_1);
-		Pdb pdbDsspAssigned = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdbDsspAssigned.load(TEST_CHAIN_1);
+	public void testRunDssp() throws PdbLoadException, IOException, FileFormatException {
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
+		
+		PdbAsymUnit dsspAssignedFullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdbDsspAssigned = dsspAssignedFullpdb.getChain(TEST_CHAIN_1);
 
 		SecondaryStructure secondaryStructure = DsspRunner.runDssp(pdb, DSSP_EXEC, "--");
 		pdbDsspAssigned.setSecondaryStructure(secondaryStructure);
@@ -257,13 +257,16 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testRmsd() throws PdbLoadException, ConformationsNotSameSizeException, IOException {
-		Pdb pdb1 = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb1.load(TEST_CHAIN_1);
-		Pdb pdb1p = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb1p.load(TEST_CHAIN_1);
-		Pdb pdb2 = new PdbfilePdb(TEST_PDB_FILE_2);
-		pdb2.load(TEST_CHAIN_2);
+	public void testRmsd() throws PdbLoadException, ConformationsNotSameSizeException, IOException, FileFormatException {
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb1 = fullpdb.getChain(TEST_CHAIN_1);
+
+		PdbAsymUnit fullpdb1p = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb1p = fullpdb1p.getChain(TEST_CHAIN_1);
+
+		PdbAsymUnit fullpdb2 = new PdbAsymUnit(new File(TEST_PDB_FILE_2));
+		PdbChain pdb2 = fullpdb2.getChain(TEST_CHAIN_2);
+
 		
 		String[] cts = {"Ca", "Cb", "ALL", "BB", "SC"};
 		for (String ct:cts) {
@@ -322,8 +325,8 @@ public class PdbTest {
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
 
-			Pdb pdb = new PdbasePdb(pdbCode,PDBASE_DB,conn);
-			pdb.load(pdbChainCode);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+			PdbChain pdb = fullpdb.getChain(pdbChainCode);
 			//System.out.println(pdb.get_length());
 			
 			for (int i=0;i<cts.length;i++) {
@@ -386,9 +389,9 @@ public class PdbTest {
 	}
 	
 	@Test
-	public void testConstructors() throws PdbLoadException, ConformationsNotSameSizeException {
-		Pdb pdb = new PdbfilePdb(TEST_PDB_FILE_1);
-		pdb.load(TEST_CHAIN_1);
+	public void testConstructors() throws PdbLoadException, ConformationsNotSameSizeException, IOException, FileFormatException {
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
+		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
 		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
 		int i=0;
 		for (int resser:pdb.getAllSortedResSerials()) {
@@ -396,11 +399,10 @@ public class PdbTest {
 			conformation[i]=new Vector3d(atom.getCoords());
 			i++;
 		}
-		Pdb model = new Pdb(pdb.getSequence(), conformation, "CA");
-		Assert.assertTrue(pdb.isDataLoaded()); // doesn't make much sense here but still good to test for sanity
+		PdbChain model = new PdbChain(pdb.getSequence(), conformation, "CA");
 		Assert.assertEquals(PdbAsymUnit.NO_PDB_CODE, model.getPdbCode());
-		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getChainCode());
-		Assert.assertEquals(Pdb.DEFAULT_CHAIN, model.getPdbChainCode());
+		Assert.assertEquals(PdbChain.DEFAULT_CHAIN, model.getChainCode());
+		Assert.assertEquals(PdbChain.DEFAULT_CHAIN, model.getPdbChainCode());
 		Assert.assertEquals(pdb.getObsLength(), model.getObsLength());
 		Assert.assertEquals(model.getObsLength(),model.getNumAtoms());
 		Assert.assertEquals(pdb.getFullLength(), model.getFullLength());
@@ -430,11 +432,12 @@ public class PdbTest {
 		MySQLConnection conn = new MySQLConnection();
 		
 		System.out.println("Loading pdb objects...");
-		Pdb pdb1 = new PdbasePdb(TEST_PDB_3,PDBASE_DB,conn);
-		pdb1.load(TEST_CHAIN_3);
+		PdbAsymUnit pdbfull1 = new PdbAsymUnit(TEST_PDB_3,conn,PDBASE_DB);
+		PdbChain pdb1 = pdbfull1.getChain(TEST_CHAIN_3);
 		Assert.assertNotNull(pdb1);
-		Pdb pdb2 = new PdbasePdb(TEST_PDB_4,PDBASE_DB,conn);
-		pdb2.load(TEST_CHAIN_4);
+		PdbAsymUnit pdbfull2 = new PdbAsymUnit(TEST_PDB_4,conn,PDBASE_DB);
+		PdbChain pdb2 = pdbfull2.getChain(TEST_CHAIN_4);
+
 		Assert.assertNotNull(pdb2);
 		
 		System.out.println("Calculating distance maps...");
@@ -447,7 +450,7 @@ public class PdbTest {
 		String name1 = TEST_PDB_3+TEST_CHAIN_3;
 		String name2 = TEST_PDB_4+TEST_CHAIN_4;
 		String[] tags = {name1, name2};
-		String[] seqs = {pdb1.getSequence(), pdb2.getSequence()};
+		String[] seqs = {pdb1.getSequence().getSeq(), pdb2.getSequence().getSeq()};
 		MultipleSequenceAlignment ali = new MultipleSequenceAlignment(tags, seqs);
 		
 		System.out.println("Calculating difference distance map...");
@@ -505,9 +508,9 @@ public class PdbTest {
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
 
-			Pdb pdb = new PdbasePdb(pdbCode,PDBASE_DB,conn);
-			pdb.load(pdbChainCode);
-			
+			PdbAsymUnit pdbfull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+			PdbChain pdb = pdbfull.getChain(pdbChainCode);
+
 			TreeMap<Integer,double[]> phipsi = pdb.getAllPhiPsi();
 			Assert.assertEquals(pdb.getObsLength(), phipsi.size());
 			// Can't do much asserting here, ideas?

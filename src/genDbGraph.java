@@ -12,13 +12,13 @@ import owl.core.connections.ECConnection;
 import owl.core.connections.ScopConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -220,9 +220,9 @@ public class genDbGraph {
 					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);	
-					//Pdb pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
-					pdb.load(pdbChainCode);					
+					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);	
+					//PdbChain pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
+					PdbChain pdb = fullpdb.getChain(pdbChainCode);					
 					try {
 						pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 						dssp = true;
@@ -327,8 +327,8 @@ public class genDbGraph {
 				
 				System.out.println("Getting chain "+pdbChainCode+" from pdb file "+pdbfile);
 				
-				Pdb pdb = new PdbfilePdb(pdbfile);
-				pdb.load(pdbChainCode);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(new File(pdbfile));
+				PdbChain pdb = fullpdb.getChain(pdbChainCode);
 				if (!pdb.hasSecondaryStructure()) {
 					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,DSSP_EXE, DSSP_PARAMS, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 				}
@@ -411,7 +411,9 @@ public class genDbGraph {
 				System.err.println("Couldn't write graph to db, error: "+e.getMessage());
 			} catch (PdbLoadException e) {
 				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
-			} 
+			} catch (FileFormatException e) {
+				System.err.println("Error loading from pdb file "+pdbfile+", specific error: "+e.getMessage());
+			}
 			
 			System.out.println("SUMMARY:"+pdbfile+"_"+pdbChainCode+" dssp:"+dssp+" scop:"+scop+" naccess:"+naccess+" consurf:"+consurf+" ec:"+ec+" csa:"+csa+ " graphs:"+numGraphs);
 

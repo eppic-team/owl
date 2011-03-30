@@ -1,8 +1,8 @@
 import java.io.File;
 
 import owl.core.runners.CalcSurfVolRunner;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.TemplateList;
 import owl.core.util.MySQLConnection;
 
@@ -30,8 +30,8 @@ public class calcVolsAndSurfs {
 			System.out.print(pdbId+"\t");
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
-			Pdb pdb = new PdbasePdb(pdbCode, "pdbase", conn);
-			pdb.load(pdbChainCode);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,"pdbase");
+			PdbChain pdb = fullpdb.getChain(pdbChainCode);
 			System.out.printf("%10.3f\t",CalcSurfVolRunner.calcVolume(pdb,CALCVOL_EXE, ""));
 			System.out.printf("%10.3f\n",CalcSurfVolRunner.calcSurface(pdb,CALCSURF_EXE, ""));
 		}

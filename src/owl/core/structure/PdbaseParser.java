@@ -18,133 +18,113 @@ import owl.core.util.MySQLConnection;
 
 
 /**
- * A single chain pdb protein structure loaded from a PDBASE database
+ * A PDB data reader from PDBASE database format. 
  * See http://openmms.sdsc.edu/OpenMMS-1.5.1_Std/openmms/docs/guides/PDBase.html 
- * to know what PDBASE is
  * 
  */
-public class PdbasePdb extends Pdb {
+public class PdbaseParser {
 
-	private static final long serialVersionUID = 1L;
-
-	private final static String DEFAULT_PDBASE_DB="pdbase";
+	public final static String DEFAULT_PDBASE_DB="pdbase";
 
 	private String db;				// the pdbase db from which we have taken the data
-	private transient MySQLConnection conn;
+	private MySQLConnection conn;
 	
-	public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
+	//public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
 	
+	private int model;
+	private String pdbChainCode;
+	
+	private String pdbCode;
 	private int entrykey;
 	private String asymid;
 	private int entitykey;
 	private String alt_locs_sql_str;
+	
+	private String[] chainsArray;
+	private Integer[] modelsArray;
+
 
 	/**
-	 * Constructs an empty Pdb object given pdb code
-	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)
-	 * MySQLConnection parameters are taken from the .my.cnf file
-	 * Database is taken from default pdbase database in PdbasePdb class: DEFAULT_PDBASE_DB
-	 * @param pdbCode
-	 * @throws SQLException  
-	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadException
-	 */
-	public PdbasePdb (String pdbCode) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
-		this(pdbCode, DEFAULT_PDBASE_DB, new MySQLConnection());
-	}
-
-	/**
-	 * Constructs an empty Pdb object given pdb code, source db and a MySQLConnection.
+	 * Constructs a pdbase reader given pdb code, source db and a MySQLConnection.
 	 * Data will be loaded from database upon call of load(pdbChainCode, modelSerial)  
 	 * @param pdbCode
 	 * @param db a pdbase database
 	 * @param conn
 	 * @throws SQLException 
 	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadException
 	 */
-	public PdbasePdb (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
-		this.pdbCode=pdbCode.toLowerCase();				// our convention: pdb codes are lower case
+	public PdbaseParser (String pdbCode, String db, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException {
 		this.db=db;
 		
 		this.conn = conn;
 		
-		// this makes sure that we find the pdb code in the database
-		this.entrykey = getEntryKey(); // also sets title
-		readCrystalData(); // sets spaceGroup and crystalCell
-		readExpMethod(); // sets expMethod
-		readQparams(); // sets resolution, rFree and rSym
+		this.pdbCode = pdbCode;
+		this.entrykey = getEntryKey(); 
 	}
 
 	/**
-	 * Loads PDB data (coordinates, sequence, etc.) from pdbase
-	 * for given pdbChainCode and modelSerial
+	 * Reads PDB data from pdbase given a chain code of type ccType.
 	 * @param pdbChainCode
 	 * @param modelSerial
 	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException {
-		load(pdbChainCode, modelSerial, ChainCodeType.PDB_CHAIN_CODE);
-	}
-	
-	/**
-	 * Loads PDB data from pdbase given a chain code of type ccType.
-	 * Two possible ccTypes: 
-	 *  - PDB_CHAIN_CODE the classic, author-assigned pdb code (pdb_strand_id in pdbase): the pdbChainCode member of Pdb class
-	 *  - CIF_CHAIN_CODE the cif chain code (asym_id in pdbase): the chainCode member of Pdb class
-	 * @param chainCode
-	 * @param modelSerial
-	 * @param ccType
-	 * @throws PdbLoadException
-	 */
-	public void load(String chainCode, int modelSerial, ChainCodeType ccType) throws PdbLoadException {
+	public PdbChain readChain(String pdbChainCode, int modelSerial) throws PdbLoadException {
+		PdbChain pdb = new PdbChain();
 		try {
-			this.initialiseResidues();
 			this.model = modelSerial;
-			if (ccType==ChainCodeType.PDB_CHAIN_CODE) {
-				this.pdbChainCode=chainCode;	// NOTE! pdb chain code are case sensitive!
-				this.asymid=getAsymId();		
-				this.chainCode = asymid;
-			} else if (ccType==ChainCodeType.CIF_CHAIN_CODE) {
-				this.chainCode = chainCode;
-				this.asymid = chainCode;
-				this.pdbChainCode = getPdbStrandId();
-			}
+			this.pdbChainCode=pdbChainCode;	// NOTE! pdb chain code are case sensitive!
+			pdb.setPdbChainCode(pdbChainCode);
+			
+			this.asymid=getAsymId();		
+			pdb.setChainCode(asymid);
+ 
 			this.entitykey=getEntityKey();
-			this.alt_locs_sql_str=getAtomAltLocs();
+			this.alt_locs_sql_str=getAtomAltLocs(pdb);
 			
-			this.sequence = readSeq();
+			pdb.setSequence(readSeq());
 			
-			this.readAtomData(); 
-
-			this.pdbresser2resser = getRessersMapping();
+			TreeMap<String,Integer> pdbresser2resser = getRessersMapping(); 
+			pdb.setPdbresser2resserMap(pdbresser2resser);
 			// we initialise resser2pdbresser from the pdbresser2resser TreeMap
-			this.resser2pdbresser = new TreeMap<Integer, String>();
+			TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
 			for (String pdbresser:pdbresser2resser.keySet()){
 				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
 			}
+			pdb.setResser2pdbresserMap(resser2pdbresser);
+
+			// this needs the info in the pdbress2resser maps
+			this.readAtomData(pdb);
 			
-			secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null
-			readSecStructure();
+			SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());	// create empty secondary structure first to make sure object is not null
+			readSecStructure(secondaryStructure);
+			pdb.setSecondaryStructure(secondaryStructure);
 			if(!secondaryStructure.isEmpty()) {
 				secondaryStructure.setComment("Pdbase");
-				this.initialiseResiduesSecStruct();
+				pdb.initialiseResiduesSecStruct();
 			}
 			
-			this.initialiseMaps();
-			dataLoaded = true;
+			pdb.initialiseMaps();
 			
 		} catch (SQLException e) {
 			throw new PdbLoadException(e);
 		} 
 
+		return pdb;
 	}
 	
 	/**
-	 * Returns all PDB chain codes for this entry in pdbase 
+	 * Returns all alphabetically sorted PDB chain codes for given pdbCode entry in pdbase
+	 * It caches the result so that next time called no loading has to be done.  
+	 * @param pdbCode
+	 * @param db
+	 * @param conn
 	 * @return array with all pdb chain codes
+	 * @throws PdbLoadException
 	 */
-	public String[] getChains()	throws PdbLoadException {
+	public String[] getChains() throws PdbLoadException {
+		if (chainsArray!=null) {
+			return chainsArray;
+		}
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
@@ -161,16 +141,24 @@ public class PdbasePdb extends Pdb {
 		
 		if (chains.isEmpty()) return null;
 		
-		String[] chainsArray = new String[chains.size()];
+		chainsArray = new String[chains.size()];
 		chains.toArray(chainsArray);
 		return chainsArray;
 	}
 	
 	/**
 	 * Returns all model serials for this entry in pdbase
+	 * It caches the result so that next time called no loading has to be done. 
+	 * @param pdbCode
+	 * @param db
+	 * @param conn
 	 * @return array with all model serials
+	 * @throws PdbLoadException 
 	 */
 	public Integer[] getModels() throws PdbLoadException {
+		if (modelsArray!=null) {
+			return modelsArray;
+		}
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
@@ -187,33 +175,34 @@ public class PdbasePdb extends Pdb {
 		}
 		
 		if (models.isEmpty()) return null;		
-		Integer[] modelsArray = new Integer[models.size()];
+		modelsArray = new Integer[models.size()];
 		models.toArray(modelsArray);
 		return modelsArray;
 	}
 	
 	/**
-	 * Finds the entry key for this structure in the database. If found, also sets the title variable for this entry.
+	 * Finds the entry key for this structure in the database. 
 	 * If not found, throws an exception.
-	 * @return the entry key.
+	 * @param pdbCode
+	 * @param db
+	 * @param conn
+	 * @return the entry key
 	 * @throws PdbCodeNotFoundException
 	 * @throws SQLException
 	 */
 	private int getEntryKey() throws PdbCodeNotFoundException, SQLException {
-		String sql="SELECT entry_key, title FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		int entrykey = -1;
+		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
-		String title = "";
 		if (rsst.next()) {
 			entrykey = rsst.getInt(1);
-			title = rsst.getString(2);
 			if (! rsst.isLast()) {
 				throw new PdbCodeNotFoundException("More than 1 entry_key match for accession_code="+pdbCode);					
 			}
 		} else {
 			throw new PdbCodeNotFoundException("No entry_key match for accession_code="+pdbCode);
 		}
-		this.title = title;
 		rsst.close();
 		stmt.close();
 		return entrykey;
@@ -256,32 +245,33 @@ public class PdbasePdb extends Pdb {
 
 	/**
 	 * Gets the pdb_strand_id given an asym_id (from field asymid) and entry_key (from field entrykey)
+	 * This is useful to get the pdbChainCode given the cif chain code. We don't use it anymore, thus is now commented out.
 	 * @return
 	 * @throws PdbLoadException
 	 * @throws SQLException
 	 */
-	private String getPdbStrandId() throws PdbLoadException, SQLException {
-		String pdbstrandid = null;
-		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
-		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
-		String sql="SELECT pdb_strand_id " +
-				" FROM "+db+".pdbx_poly_seq_scheme " +
-				" WHERE entry_key=" + entrykey +
-				" AND asym_id='"+asymid+"' " +
-				" LIMIT 1";
-
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
-		if (rsst.next()) {
-			pdbstrandid = rsst.getString(1);
-		} else {
-			throw new PdbLoadException("No pdb_strand_id match for entry_key="+entrykey+", asym_id="+asymid);
-		}
-		rsst.close();
-		stmt.close();
-
-		return pdbstrandid;	
-	}
+//	private String getPdbStrandId() throws PdbLoadException, SQLException {
+//		String pdbstrandid = null;
+//		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
+//		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
+//		String sql="SELECT pdb_strand_id " +
+//				" FROM "+db+".pdbx_poly_seq_scheme " +
+//				" WHERE entry_key=" + entrykey +
+//				" AND asym_id='"+asymid+"' " +
+//				" LIMIT 1";
+//
+//		Statement stmt = conn.createStatement();
+//		ResultSet rsst = stmt.executeQuery(sql);
+//		if (rsst.next()) {
+//			pdbstrandid = rsst.getString(1);
+//		} else {
+//			throw new PdbLoadException("No pdb_strand_id match for entry_key="+entrykey+", asym_id="+asymid);
+//		}
+//		rsst.close();
+//		stmt.close();
+//
+//		return pdbstrandid;	
+//	}
 	
 	// NOTE: Entity key not really needed since there can be only one entity_key
 	// per entry_key,asym_id combination 
@@ -306,7 +296,7 @@ public class PdbasePdb extends Pdb {
 		return entitykey;
 	}
 	
-	private String getAtomAltLocs() throws PdbLoadException, SQLException{
+	private String getAtomAltLocs(PdbChain pdb) throws PdbLoadException, SQLException{
 		ArrayList<String> alt_ids = new ArrayList<String>();
 		String alt_loc_field="label_alt_id";
 		String sql = "SELECT DISTINCT " + alt_loc_field + 
@@ -330,6 +320,7 @@ public class PdbasePdb extends Pdb {
 			if (count==1) {
 				alt_locs_sql_str = alt_loc_field+"='.'";
 			} else {
+				pdb.setHasAltCodes(true);
 				alt_ids.remove(".");
 				Collections.sort(alt_ids);
 				String lowest_alt_id = alt_ids.get(0);
@@ -345,30 +336,40 @@ public class PdbasePdb extends Pdb {
 		return alt_locs_sql_str;
 	}
 	
-	private void readCrystalData() throws SQLException, PdbLoadException {
+	protected SpaceGroup readSpaceGroup() throws SQLException, PdbLoadException {
 		String sql = "SELECT space_group_name_h_m " +
 				" FROM "+db+".symmetry " +
 				" WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
+		
+		SpaceGroup spaceGroup = null;
 		String sg = null;
 		if (rsst.next()) {
 			sg = rsst.getString(1);
 		}
 		if (sg!=null) {
 			// for some pdb entries (e.g. NMRs) there's no crystal information at all
-			this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+			spaceGroup = SymoplibParser.getSpaceGroup(sg);
 			if (spaceGroup==null) {
 				throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 			}
 		}
 
 		rsst.close();
+		stmt.close();
+		return spaceGroup;
+	}
+	
+	protected CrystalCell readCrystalCell () throws SQLException {
 		
-		sql = "SELECT cell_length_a, cell_length_b, cell_length_c, cell_angle_alpha, cell_angle_beta, cell_angle_gamma " +
+		String sql = "SELECT cell_length_a, cell_length_b, cell_length_c, cell_angle_alpha, cell_angle_beta, cell_angle_gamma " +
 			  " FROM "+db+".cell " +
 			  " WHERE entry_key="+entrykey;
-		rsst = stmt.executeQuery(sql);
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+
+		CrystalCell crystalCell = null;
 		if (rsst.next()) {
 			double a = rsst.getFloat(1);
 			double b = rsst.getFloat(2);
@@ -376,25 +377,33 @@ public class PdbasePdb extends Pdb {
 			double alpha = rsst.getFloat(4);
 			double beta = rsst.getFloat(5);
 			double gamma = rsst.getFloat(6);
-			this.crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+			crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 		}
 		rsst.close();
 		stmt.close();
-		
+		return crystalCell;
 	}
 	
-	private void readExpMethod() throws SQLException {
+	protected String readExpMethod() throws SQLException {
+		String expMethod = null;
 		String sql = "SELECT method FROM "+db+".exptl WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
-			this.expMethod=rsst.getString(1).trim();
+			expMethod = rsst.getString(1).trim();
 		}
 		rsst.close();
 		stmt.close();
+		return expMethod;
 	}
 	
-	private void readQparams() throws SQLException {
+	/**
+	 * Returns an array of size 3 with the quality parameters for a crystal structure: resolution, rFree and rSym
+	 * @return
+	 * @throws SQLException
+	 */
+	protected double[] readQparams() throws SQLException {
+		double[] qParams = {-1,-1,-1};
 		// NOTE that in case of non-xray structures no records will be present in refine or reflns and nothing will be set
 		
 		String sql = "SELECT ls_d_res_high, ls_r_factor_r_free FROM "+db+".refine WHERE entry_key="+entrykey;
@@ -403,11 +412,11 @@ public class PdbasePdb extends Pdb {
 		if (rsst.next()) {
 			double resol = rsst.getFloat(1);
 			if (resol<1000) { // for some reason there are a few 3.4e+38 in the db, which is basically a null
-				this.resolution = resol;
+				qParams[0] = resol;
 			}
 			double val =rsst.getFloat(2);
 			if (val<1000) { // for some reason there are lots of 3.4e+38 in the db, which is basically a null
-				this.rFree = val;
+				qParams[1] = val;
 			}
 		}
 		
@@ -420,16 +429,30 @@ public class PdbasePdb extends Pdb {
 			double rsymval = rsst.getFloat(1);
 			double rmergeval = rsst.getFloat(2);
 			if (rsymval<1000) {
-				this.rSym = rsymval;
+				qParams[2]=rsymval;
 			} else if (rmergeval<1000) {
-				this.rSym = rmergeval;
+				qParams[2]=rmergeval;
 			}
 		}
 		rsst.close();
-		stmt.close();		
+		stmt.close();
+		return qParams;
 	}
 	
-	private void readAtomData() throws PdbLoadException, SQLException{
+	protected String readTitle() throws SQLException {
+		String sql="SELECT title FROM "+db+".struct WHERE entry_key="+entrykey+"";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		String title = "";
+		if (rsst.next()) {
+			title = rsst.getString(1);
+		}
+		rsst.close();
+		stmt.close();
+		return title;
+	}
+	
+	private void readAtomData(PdbChain pdb) throws PdbLoadException, SQLException{
 		// NOTE: label_entity_key not really needed since there can be only one entity_key
 		// per entry_key,asym_id combination
 		String sql = "SELECT id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
@@ -458,11 +481,13 @@ public class PdbasePdb extends Pdb {
 			double occupancy = rsst.getDouble(9);       // occupancy
 			double bfactor = rsst.getDouble(10);        // bfactor
 			if (AminoAcid.isStandardAA(res_type)) {
-				if (!this.containsResidue(res_serial)) { 
-					this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, this));
+				if (!pdb.containsResidue(res_serial)) { 
+					Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, pdb);
+					residue.setPdbSerial(pdb.getPdbResSerFromResSer(res_serial));
+					pdb.addResidue(residue);
 				}
 				if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
-					Residue residue = this.getResidue(res_serial);
+					Residue residue = pdb.getResidue(res_serial);
 					residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
 				}
 			}
@@ -538,8 +563,7 @@ public class PdbasePdb extends Pdb {
 		return map;
 	}
 
-	private void readSecStructure() throws SQLException {
-		this.secondaryStructure = new SecondaryStructure(this.sequence);
+	private void readSecStructure(SecondaryStructure secondaryStructure) throws SQLException {
 		
 		// HELIX AND TURN -- struct_conf table
 		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +
@@ -602,23 +626,73 @@ public class PdbasePdb extends Pdb {
 	/**
 	 * Gets a mapping of observed residue serials (numbered from 1 to last 
 	 * observed residue, with no gaps) to internal residue serials (cif)
-	 * Can be called only after PDB data have been loaded (with {@link #load(String)})
 	 * This method is designed specifically to be used with GTGParser 
 	 * NOTE: the mapping might not be 100% perfect: we are not sure whether unobserved residues 
 	 * 		 always have auth_seq_num!='?'. So far it looks fine (tested with a few hundred PDB entries) 
 	 * @return
+	 * @param pdbCode
+	 * @param pdbChainCode
+	 * @param conn
+	 * @param pdbaseDb
 	 * @throws SQLException
+	 * @throws PdbCodeNotFoundException
+	 * @throws PdbLoadException
 	 */
-	public TreeMap<Integer,Integer> getObservedResMapping() throws SQLException{
+	public static TreeMap<Integer,Integer> getObservedResMapping(String pdbCode, String pdbChainCode, MySQLConnection conn, String pdbaseDb) 
+	throws SQLException, PdbCodeNotFoundException, PdbLoadException {
+		
+		// finding entry key
+		int entrykey = -1;
+		String sql="SELECT entry_key FROM "+pdbaseDb+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			entrykey = rsst.getInt(1);
+			if (! rsst.isLast()) {
+				throw new PdbCodeNotFoundException("More than 1 entry_key match for accession_code="+pdbCode);					
+			}
+		} else {
+			throw new PdbCodeNotFoundException("No entry_key match for accession_code="+pdbCode);
+		}
+		rsst.close();
+		stmt.close();
+		
+		// finding asymid
+		String asymid = null;
+		String pdbstrandid=pdbChainCode;
+		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
+			pdbstrandid="A";
+		}
+		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
+		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
+		// NOTE2: pdb_strand_id case sensitive!
+		sql="SELECT asym_id " +
+				" FROM "+pdbaseDb+".pdbx_poly_seq_scheme " +
+				" WHERE entry_key=" + entrykey +
+				" AND pdb_strand_id='"+pdbstrandid+"' " +
+				" LIMIT 1";
+
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
+		if (rsst.next()) {
+			asymid = rsst.getString(1);
+		} else {
+			//System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+			throw new PdbLoadException("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
+		}
+		rsst.close();
+		stmt.close();
+
+		// and finally getting mapping
 		TreeMap<Integer,Integer> map = new TreeMap<Integer, Integer>();
-		String sql = "SELECT seq_id " +
-					" FROM "+db+".pdbx_poly_seq_scheme"+
+		sql = "SELECT seq_id " +
+					" FROM "+pdbaseDb+".pdbx_poly_seq_scheme"+
 					" WHERE entry_key=" + entrykey +
 					" AND asym_id='"+asymid+"' " +
 					" AND auth_seq_num!='?' " + // this gives only observed residues
 					" ORDER BY seq_id+0";
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
+		stmt = conn.createStatement();
+		rsst = stmt.executeQuery(sql);
 		int serial = 0;
 		while (rsst.next()) {
 			serial++;

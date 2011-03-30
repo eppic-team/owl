@@ -3,11 +3,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 
@@ -22,7 +21,7 @@ public class benchmarkGraphAlgorithm {
 	public static String 			DB_COL_PDB = "accession_code";
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
-	public static String			PDB_DB = "pdbase_test";
+	public static String			PDB_DB = "pdbase";
 
 	public static String			PDB_CODE = "1tdr";
 	public static String			CHAIN_CODE = "B";
@@ -54,16 +53,16 @@ public class benchmarkGraphAlgorithm {
 				chainCode = rs.getString(2);
 				
 				if(chainCode == null) {
-					chainCode = PdbAsymUnit.NULL_CHAIN_CODE;
+					chainCode = "A";
 				}
 				
 				numPdbs++;
 				// get graphs
 			
-				Pdb pdb = null;
+				PdbChain pdb = null;
 				try {
-					pdb = new PdbasePdb(pdbCode, PDB_DB, conn);
-					pdb.load(chainCode);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDB_DB);
+					pdb = fullpdb.getChain(chainCode);
 					int length = pdb.getObsLength();
 					int atoms = pdb.getNumAtoms();
 
@@ -84,9 +83,7 @@ public class benchmarkGraphAlgorithm {
 					System.out.println("pdb load error in " + pdbCode + chainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundException e) {
 					e.printStackTrace();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}					
+				} 					
 				
 				
 				

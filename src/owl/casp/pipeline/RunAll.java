@@ -21,7 +21,7 @@ import owl.core.runners.tinker.TinkerRunner;
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.StructAlignmentException;
@@ -311,6 +311,9 @@ public class RunAll {
 			} catch (PdbLoadException e) {
 				System.err.println("Problems getting PDB data for templates alignment. Error: "+e.getMessage()+"\nCan't continue");
 				System.exit(1);			
+			} catch (IOException e) {
+				System.err.println("Problems getting PDB data for templates alignment. Error: "+e.getMessage()+"\nCan't continue");
+				System.exit(1);			
 			}
 		}
 		
@@ -437,7 +440,7 @@ public class RunAll {
 			}
 
 			
-			Pdb pdb = null;
+			PdbChain pdb = null;
 			try {
 				TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
 				if (parallel) System.out.println("Running distgeom in parallel through SGE");
@@ -449,6 +452,9 @@ public class RunAll {
 				System.err.println("Problem while running tinker for reconstruction. Error: "+e1.getMessage());
 				System.exit(1);
 			} catch (IOException e1) {
+				System.err.println("Problem while running tinker for reconstruction. Error: "+e1.getMessage());
+				System.exit(1);
+			} catch (FileFormatException e1) {
 				System.err.println("Problem while running tinker for reconstruction. Error: "+e1.getMessage());
 				System.exit(1);
 			}
@@ -489,7 +495,7 @@ public class RunAll {
 		if (!templates.getSource().equals(TemplateList.SRC_OTHER)) {
 			System.out.println("Target to template alignment from "+templates.getSource());
 			hit = templates.getTemplate(0).getBlastHit();
-			return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+			return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence().getSeq());
 		} else { // we've read templates from a file (-t option)
 			// we try to find the blast or psiblast alignments in the outdir, if one of them exists we use it
 			File blastFile = new File(outDir,baseName+TemplateSelection.PSIBLASTOUT_PDB_SUFFIX);
@@ -502,7 +508,7 @@ public class RunAll {
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from blast file "+blastFile);
 						hit = hits.getHit(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()));
-						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence().getSeq());
 					} 
 				} catch (SAXException e) {
 					System.err.println("Problem parsing blast xml file "+blastFile+". Can't use blast alignment. Error: "+e.getMessage());
@@ -519,7 +525,7 @@ public class RunAll {
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from psi-blast file "+psiblastFile);
 						hit = hits.getHit(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()));
-						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence());
+						return hit.getMaxScoringHsp().getAlignmentFullSeqsWithPDBTag(fullQuerySeq, templates.getTemplate(0).getPdb().getSequence().getSeq());
 					}
 				} catch (SAXException e) {
 					System.err.println("Problem parsing psi-blast xml file "+psiblastFile+". Can't use psi-blast alignment. Error: "+e.getMessage());
@@ -534,7 +540,7 @@ public class RunAll {
 		
 	private static MultipleSequenceAlignment getTrivialAlignment(TemplateList templates) {
 		String[] tags = {templates.getTemplate(0).getId()};
-		String[] seqs = {templates.getTemplate(0).getPdb().getSequence()};
+		String[] seqs = {templates.getTemplate(0).getPdb().getSequence().getSeq()};
 		MultipleSequenceAlignment al;
 		try {
 			al = new MultipleSequenceAlignment(tags, seqs);

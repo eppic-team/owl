@@ -13,8 +13,8 @@ import owl.core.runners.DsspRunner;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecStrucElement;
@@ -292,7 +292,7 @@ public class PhiPsiAverager {
 	 */
 	private class TemplateWithPhiPsi extends Template {
 		private TreeMap<Integer,double[]> phipsiAngles;
-		public TemplateWithPhiPsi (String id, Pdb pdb, TreeMap<Integer,double[]> phipsiAngles) {
+		public TemplateWithPhiPsi (String id, PdbChain pdb, TreeMap<Integer,double[]> phipsiAngles) {
 			super(id);
 			this.phipsiAngles = phipsiAngles;
 			this.setPdb(pdb);
@@ -369,7 +369,7 @@ public class PhiPsiAverager {
 				System.err.println("Sequence of template (from pdbase) "+template.getId()+" does not match sequence in alignment");
 				System.err.println("Trying to align sequences of alignment vs pdbase sequence: ");
 				try {
-					PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(template.getPdb().getSequence(),al.getSequenceNoGaps(template.getId()),"pdbase","alignment");
+					PairwiseSequenceAlignment alCheck = new PairwiseSequenceAlignment(template.getPdb().getSequence().getSeq(),al.getSequenceNoGaps(template.getId()),"pdbase","alignment");
 					alCheck.printAlignment();
 				} catch (PairwiseSequenceAlignmentException e) {
 					System.err.println("Error while creating alignment check, can't display an alignment. The 2 sequences are: ");
@@ -392,7 +392,7 @@ public class PhiPsiAverager {
 	 * @param margin
 	 * @return
 	 */
-	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForSS(Pdb pdb, int margin) {
+	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForSS(PdbChain pdb, int margin) {
 		IntervalSet intervals = new IntervalSet();
 		Iterator<SecStrucElement> itSecStr = pdb.getSecondaryStructure().iterator();
 		while (itSecStr.hasNext()) {
@@ -414,7 +414,7 @@ public class PhiPsiAverager {
 	 * @param intervals
 	 * @return
 	 */
-	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForInterval(Pdb pdb, int margin, IntervalSet intervals) {
+	public static TreeMap<Integer, ConsensusSquare> getPhiPsiForInterval(PdbChain pdb, int margin, IntervalSet intervals) {
 		 TreeMap<Integer, ConsensusSquare> phiPsis = new TreeMap<Integer, ConsensusSquare>();
 		 for (Interval interv:intervals) {
 			 for (int resser=interv.beg;resser<=interv.end;resser++) {
@@ -454,8 +454,8 @@ public class PhiPsiAverager {
 		//String targetTag = "T0396";
 
 		// set this to null if you don't have the pdb file of the target. 
-		//File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.reconstructed.pdb");
-		File targetPdbfile = null;
+		File targetPdbfile = new File("/project/StruPPi/CASP8/results/T0396/2hj3A/T0396.reconstructed.pdb");
+		//File targetPdbfile = null;
 
 		TemplateList templates = new TemplateList(templatesFile);
 		templates.loadPdbData(conn, pdbaseDb);
@@ -470,8 +470,8 @@ public class PhiPsiAverager {
 		// printing phi/psi for target
 		if (targetPdbfile!=null) {
 			System.out.println("TARGET from pdb file "+targetPdbfile);
-			Pdb pdb = new PdbfilePdb(targetPdbfile.getAbsolutePath());
-			pdb.load("A");
+			PdbAsymUnit fullpdb = new PdbAsymUnit(targetPdbfile);
+			PdbChain pdb = fullpdb.getChain("A");
 			pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, "/project/StruPPi/bin/dssp", "--"));
 			SecondaryStructure secStruct = pdb.getSecondaryStructure();
 			TreeMap<Integer,double[]> phipsiTarget = pdb.getAllPhiPsi();

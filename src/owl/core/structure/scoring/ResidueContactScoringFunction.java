@@ -1,7 +1,7 @@
 package owl.core.structure.scoring;
 
 import owl.core.sequence.Sequence;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
@@ -14,11 +14,11 @@ import owl.core.util.MySQLConnection;
  * used to get a score for the structure as a whole for applications like Decoy scoring.
  * 
  * The init function takes a sequence, a contact graph, secondary structure annotation 
- * and a Pdb object with 3d coordinates. The sequence object may not be null and has to be
- * consistent with the sequence the RIGraph, secondary structure and Pdb object are based on.
+ * and a PdbChain object with 3d coordinates. The sequence object may not be null and has to be
+ * consistent with the sequence the RIGraph, secondary structure and PdbChain object are based on.
  * The graph object may not be null but may contain no contacts. A scoring function may be
  * explicitly based on atomic coordinates or distances. In this case, the method
- * requiresCoordinates has to return true so that the calling application knows that the Pdb
+ * requiresCoordinates has to return true so that the calling application knows that the PdbChain
  * object may not be null. The secondary structure object may be null, so implementations
  * may use secondary structure information if given but also need to work in the absence of it.
  * 
@@ -57,12 +57,12 @@ public interface ResidueContactScoringFunction {
 	* such that scores can be quickly retrieved with getScore. Before this method is called, the results
 	* of all other method calls are undefined.
 	*/
-	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates, MySQLConnection conn);
+	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, PdbChain coordinates, MySQLConnection conn);
 
 	/**
 	* Notifies the ScoringFunction object that the underlying data has changed and scores have to be recalculated.
 	*/
-	public void updateData(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates);
+	public void updateData(Sequence sequence, RIGraph contacts, SecondaryStructure ss, PdbChain coordinates);
 
 	/**
 	* Returns the normalized score for contact (i,j). If (i,j) is not really a contact, should

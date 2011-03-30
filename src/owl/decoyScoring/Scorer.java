@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
@@ -43,13 +43,13 @@ public abstract class Scorer {
 
 	
 	/**
-	 * Assigns a score to the given Pdb structure based on a scoring matrix read from file
+	 * Assigns a score to the given PdbChain structure based on a scoring matrix read from file
 	 * through the appropriate constructor. 
 	 * Only contacts with a minimum of minSeqSep sequence separation will be considered.
 	 * @param pdb the structure to be scored
 	 * @return the score
 	 */
-	public abstract double scoreIt(Pdb pdb);
+	public abstract double scoreIt(PdbChain pdb);
 
 	/**
 	 * Returns the list file, i.e. the files with the list of pdbCode+pdbChainCode used for 
@@ -62,7 +62,7 @@ public abstract class Scorer {
 	
 	/**
 	 * Returns the number of structures used for compiling the scoring matrix (only the
-	 * ones that were actually used, i.e. that passed the quality checks. See {@link #isValidPdb(Pdb)})
+	 * ones that were actually used, i.e. that passed the quality checks. See {@link #isValidPdb(PdbChain)})
 	 * @return
 	 */
 	public int sizeOfTrainingSet() {
@@ -219,14 +219,14 @@ public abstract class Scorer {
 	}
 	
 	/**
-	 * Tells whether given Pdb passes the minimal checks to be valid
+	 * Tells whether given PdbChain passes the minimal checks to be valid
 	 * as a training set member (i.e. for compiling a scoring matrix). The checks are: 
-	 * observed length above {@value #MIN_VALID_CHAIN_LENGTH} and given Pdb is an
-	 * all-atom pdb (see Pdb.isAllAtom()) 
+	 * observed length above {@value #MIN_VALID_CHAIN_LENGTH} and given PdbChain is an
+	 * all-atom pdb (see PdbChain.isAllAtom()) 
 	 * @param pdb
 	 * @return
 	 */
-	public static boolean isValidPdb(Pdb pdb) {
+	public static boolean isValidPdb(PdbChain pdb) {
 		if (pdb.getObsLength()<=MIN_VALID_CHAIN_LENGTH) {
 			return false;
 		}

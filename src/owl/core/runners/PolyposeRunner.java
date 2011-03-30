@@ -8,9 +8,10 @@ import java.util.regex.Pattern;
 
 import javax.vecmath.Matrix3d;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
+import owl.core.util.FileFormatException;
 
 /**
  * Wrapper class to call the external tool Polypose from the CCP4 package.
@@ -300,7 +301,7 @@ public class PolyposeRunner {
 	 * @param positions an array of arrays of positions to be aligned
 	 * @return the rmsd of the calculated superimposition
 	 */
-	public double superimpose(Pdb[] pdbs, int[][] positions) throws IOException {
+	public double superimpose(PdbChain[] pdbs, int[][] positions) throws IOException {
 		double rmsd = -2;
 		File file;
 		ArrayList<String> filenames = new ArrayList<String>();
@@ -309,7 +310,7 @@ public class PolyposeRunner {
 		
 		writeParamFile(positions);
 		
-		for(Pdb pdb:pdbs) {
+		for(PdbChain pdb:pdbs) {
 			file = File.createTempFile("polypose_" + filenum + "_", ".pdb");
 			//file.deleteOnExit();
 			PrintStream out = new PrintStream(new FileOutputStream(file));
@@ -330,8 +331,8 @@ public class PolyposeRunner {
 	 */
 	public static void main(String[] args) {
 
-		ArrayList<Pdb> pdbs = new ArrayList<Pdb>();
-		Pdb[] dummy = new Pdb[1];
+		ArrayList<PdbChain> pdbs = new ArrayList<PdbChain>();
+		PdbChain[] dummy = new PdbChain[1];
 		String[] filenames = {"/project/StruPPi/CASP8/results/T0464/T0464.reconstructed.pdb",
 							  "/project/StruPPi/CASP8/results/T0464/1temp/T0464.reconstructed.pdb",
 							  "/project/StruPPi/CASP8/results/T0464/2temps/T0464.reconstructed.pdb"};
@@ -339,11 +340,15 @@ public class PolyposeRunner {
 		double rmsd = -1;
 		
 		for(String filename:filenames) {
-			Pdb pdb = new PdbfilePdb(filename);
 			try {
-				pdb.load("A");
+				PdbAsymUnit fullpdb = new PdbAsymUnit(new File(filename));
+				PdbChain pdb = fullpdb.getChain("A");
 				pdbs.add(pdb);
 			} catch (PdbLoadException e) {
+				System.err.println("Error loading structure: " + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Error loading structure: " + e.getMessage());
+			} catch (FileFormatException e) {
 				System.err.println("Error loading structure: " + e.getMessage());
 			}
 		}

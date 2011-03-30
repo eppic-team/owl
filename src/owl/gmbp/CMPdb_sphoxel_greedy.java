@@ -1,5 +1,6 @@
 package owl.gmbp;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -15,15 +16,16 @@ import javax.vecmath.Vector3d;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGGeometry;
 import owl.core.structure.graphs.RIGNbhood;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
@@ -725,11 +727,17 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 		RIGraph graph = null;
 		RIGGeometry graphGeom = null;
 		
-		Pdb pdb = new PdbfilePdb(proteinFN);
-		int modNr = 1;
+		PdbChain pdb = null;
 		try {
-			pdb.load("A",modNr);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(new File(proteinFN));
+			pdb = fullpdb.getChain("A");
 		} catch (PdbLoadException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileFormatException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

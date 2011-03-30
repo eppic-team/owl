@@ -2,6 +2,7 @@ import java.util.HashMap;
 
 import owl.core.structure.*;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.MySQLConnection;
 
 
 public class compareCMs {
@@ -23,10 +24,10 @@ public class compareCMs {
 
 		
 		System.out.println("loading structures from pdbase");
-		Pdb pdb1 = new PdbasePdb(pdbcode1);
-		pdb1.load(chaincode1);
-		Pdb pdb2 = new PdbasePdb(pdbcode2);
-		pdb2.load(chaincode2);
+		PdbAsymUnit fullpdb1 = new PdbAsymUnit(pdbcode1,new MySQLConnection(),"pdbase");
+		PdbChain pdb1 = fullpdb1.getChain(chaincode1);
+		PdbAsymUnit fullpdb2 = new PdbAsymUnit(pdbcode2,new MySQLConnection(),"pdbase");
+		PdbChain pdb2 = fullpdb2.getChain(chaincode2);
 
 		System.out.println("getting graphs");
 		RIGraph graph1 = pdb1.getRIGraph("ALL", 4.2);

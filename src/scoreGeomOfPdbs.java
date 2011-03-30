@@ -12,9 +12,10 @@ import java.util.Map.Entry;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.casp.benchmarking.Benchmarking;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
+import owl.core.util.FileFormatException;
 import owl.decoyScoring.GeomScorer;
 
 public class scoreGeomOfPdbs {
@@ -198,10 +199,15 @@ public class scoreGeomOfPdbs {
 					if (c=='1'||c=='2'||c=='3'||c=='4'||c=='5')
 						modNo = Integer.valueOf(String.valueOf(c)); //Integer.valueOf(proteinId.charAt(proteinId.length()-1));
 					if (modNo !=0 ){
-						Pdb pdb = new PdbfilePdb(dir+proteinId);
+						PdbChain pdb = null;
 						try {
-							pdb.load(pdbChainCode,modNo);
+							PdbAsymUnit fullpdb = new PdbAsymUnit(new File(dir+proteinId),modNo);
+							pdb = fullpdb.getChain(pdbChainCode);
 						} catch (PdbLoadException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+							continue;
+						} catch (FileFormatException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 							continue;
@@ -352,7 +358,7 @@ public class scoreGeomOfPdbs {
 //							if (c=='1'||c=='2'||c=='3'||c=='4'||c=='5')
 //								modNo = Integer.valueOf(String.valueOf(c)); //Integer.valueOf(proteinId.charAt(proteinId.length()-1));
 //							if (modNo !=0 ){
-//								Pdb pdb = new PdbfilePdb(dir+proteinId);
+//								PdbChain pdb = new PdbfilePdb(dir+proteinId);
 //								try {
 //									pdb.load(pdbChainCode,modNo);
 //								} catch (PdbLoadError e) {

@@ -10,6 +10,7 @@ import owl.core.connections.ScopConnection;
 import owl.core.runners.blast.BlastHit;
 import owl.core.structure.features.ScopRegion;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -36,7 +37,7 @@ public class Template {
 	private String scopSccsString;
 	private String titleString;
 	
-	private Pdb pdb;
+	private PdbChain pdb;
 	private RIGraph graph;
 
 	private Type type;
@@ -91,19 +92,24 @@ public class Template {
 	 * @param conn
 	 * @param pdbaseDb
 	 */
-	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
+	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
 		
 		if (type==Type.DB) {
 			String pdbCode = id.substring(0, 4);
 			String chain = id.substring(4);
 
-			pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-			pdb.load(chain);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, conn, pdbaseDb);
+			pdb = fullpdb.getChain(chain);
 		} 
 		else if (type==Type.FILE) {
-			pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-			String[] chains = pdb.getChains();
-			pdb.load(chains[0]);
+			PdbAsymUnit fullpdb = null;
+			try {
+				fullpdb = new PdbAsymUnit(pdbFile);
+			} catch (FileFormatException e) {
+				System.err.println("Unexpected error while reading pdb file "+pdbFile+": "+e.getMessage());
+				System.exit(1);
+			}
+			pdb = fullpdb.getFirstChain();
 		}
 
 	}
@@ -158,11 +164,11 @@ public class Template {
 	}
 	
 	/**  
-	 * Returns the Pdb object with the actual structure
+	 * Returns the PdbChain object with the actual structure
 	 * Use {@link #hasPdbData()} to check if this method can be called.
-	 * @return the Pdb object or null if PDB data are not loaded/present
+	 * @return the PdbChain object or null if PDB data are not loaded/present
 	 */
-	public Pdb getPdb() {
+	public PdbChain getPdb() {
 		return this.pdb;
 	}
 	
@@ -176,10 +182,10 @@ public class Template {
 	}
 	
 	/**
-	 * Sets the Pdb object of this template.
+	 * Sets the PdbChain object of this template.
 	 * @param pdb
 	 */
-	public void setPdb(Pdb pdb) {
+	public void setPdb(PdbChain pdb) {
 		this.pdb=pdb;
 	}
 	
@@ -188,7 +194,7 @@ public class Template {
 	 * @return
 	 */
 	public boolean hasPdbData() {
-		return (pdb!=null && pdb.isDataLoaded());
+		return (pdb!=null);
 	}
 	
 	/**
@@ -228,7 +234,7 @@ public class Template {
 			if (!this.hasPdbData()) {
 				throw new IllegalArgumentException("PDB data not loaded for this Template. Can't get PDB title.");
 			}
-			this.titleString = pdb.getTitle();
+			this.titleString = pdb.getParent().getTitle();
 		}
 		return this.titleString;
 	}

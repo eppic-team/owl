@@ -3,7 +3,7 @@ package owl.decoyScoring;
 import java.io.File;
 import java.io.IOException;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
 
@@ -49,7 +49,7 @@ public class ResCombinedScorer extends Scorer {
 	}
 
 	@Override
-	public double scoreIt(Pdb pdb) {
+	public double scoreIt(PdbChain pdb) {
 		RIGraph graph = pdb.getRIGraph(this.ct, this.cutoff);
 		int typeMinSeqSep = typeScorer.getMinSeqSep();
 		int countMinSeqSep = countScorer.getMinSeqSep();

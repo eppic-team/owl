@@ -2,15 +2,14 @@ import gnu.getopt.Getopt;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -141,9 +140,8 @@ public class genGraph {
 				try {
 					
 					//long start = System.currentTimeMillis();
-					
-					Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-					pdb.load(pdbChainCode);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+					PdbChain pdb = fullpdb.getChain(pdbChainCode);
 
 					// get graph
 					RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
@@ -169,9 +167,7 @@ public class genGraph {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Couldn't find pdb code "+pdbCode);
-				} catch (SQLException e) {
-					System.err.println("SQL error for structure "+pdbCode+pdbChainCode+", error: "+e.getMessage());
-				}
+				} 
 
 			}
 
@@ -182,12 +178,14 @@ public class genGraph {
 		} else {
 			File pdbFile = new File(pdbfile);
 			try {
-				Pdb pdb = new PdbfilePdb(pdbfile);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbFile);
+				PdbChain pdb = null;
 				if (pdbChainCode4file==null) {
-					pdbChainCode4file = pdb.getChains()[0];
+					pdb = fullpdb.getFirstChain();
+				} else {
+					pdb = fullpdb.getChain(pdbChainCode4file);
 				}
 
-				pdb.load(pdbChainCode4file);
 				RIGraph graph = pdb.getRIGraph(edgeType, cutoff);
 
 				String edgeTypeStr = edgeType.replaceAll("/", ":");
@@ -202,6 +200,8 @@ public class genGraph {
 				System.out.println("Wrote graph file "+outputFile.getAbsolutePath()+" from pdb file "+pdbFile);
 				
 			} catch (PdbLoadException e) {
+				System.err.println("Error loading from pdb file "+pdbFile+", specific error: "+e.getMessage());
+			} catch (FileFormatException e) {
 				System.err.println("Error loading from pdb file "+pdbFile+", specific error: "+e.getMessage());
 			}
 		}

@@ -1,5 +1,7 @@
 package owl.gmbp;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeMap;
 
@@ -7,10 +9,11 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 import owl.core.structure.Atom;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
+import owl.core.util.FileFormatException;
 
 public class Gmbp_Geom {
 	
@@ -26,16 +29,18 @@ public class Gmbp_Geom {
 	/**
 	 * @param args
 	 * @throws PdbLoadException 
+	 * @throws FileFormatException 
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws PdbLoadException {
+	public static void main(String[] args) throws PdbLoadException, IOException, FileFormatException {
 		// TODO Auto-generated method stub
 
 		GmbpGeometry gmbp = new GmbpGeometry();
 		
 		String str="A";
-//		Pdb proteinToLoad=new PdbfilePdb ("/home/belsare/Desktop/1E0L.pdb");
-		Pdb proteinToLoad=new PdbfilePdb ("/Users/vehlow/Documents/workspace/7ODC.pdb");
-		proteinToLoad.load(str, 1);
+//		PdbChain proteinToLoad=new PdbfilePdb ("/home/belsare/Desktop/1E0L.pdb");
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File("/Users/vehlow/Documents/workspace/7ODC.pdb"));
+		PdbChain proteinToLoad = fullpdb.getChain(str);
 		TreeMap<Integer, Residue> protein=new TreeMap<Integer, Residue>(proteinToLoad.getResidues());
 		
 		int resno=26;

@@ -74,8 +74,8 @@ public class CompareIndis extends Demes {
 			Individuals[] ar = new Individuals[size];
 			Set<Integer> keys = copy.keySet();
 			Iterator<Integer> it = keys.iterator();
-			Pdb pr = new PdbasePdb(pdb,"pdbase_20090728",conn);
-			pr.load("A");
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdb,conn,"pdbase_20090728");
+			PdbChain pr = fullpdb.getChain("A");
 			RIGraph rig = pr.getRIGraph("Ca", 9.0);
 			Individuals.setFullContactMap(rig);
 			while(it.hasNext()){

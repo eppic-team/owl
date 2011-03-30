@@ -3,8 +3,9 @@ package owl.core.structure.graphs;
 import org.apache.commons.collections15.Factory;
 import org.apache.commons.collections15.Transformer;
 
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
+import owl.core.util.MySQLConnection;
 
 import edu.uci.ics.jung.algorithms.shortestpath.PrimMinimumSpanningTree;
 
@@ -66,9 +67,8 @@ public class RIGraphMinSpanningTree {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		
-		Pdb pdb = new PdbasePdb("1bxy");
-		pdb.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit("1bxy", new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain("A");
 		RIGraph graph = pdb.getRIGraph("Cb", 8);
 		
 		System.out.println("Vertex count: "+graph.getVertexCount());

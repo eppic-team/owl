@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 
 /**
  * Class to run the calc-volume and calc-surface programs:
@@ -29,7 +29,7 @@ public class CalcSurfVolRunner {
 	 * @param calcParameters
 	 * @return
 	 */
-	public static double calcSurface(Pdb pdb, String calcExecutable, String calcParameters) throws IOException {
+	public static double calcSurface(PdbChain pdb, String calcExecutable, String calcParameters) throws IOException {
 		String line;
 		double surface = 0;
 		
@@ -56,7 +56,7 @@ public class CalcSurfVolRunner {
 	 * @param calcParameters
 	 * @return
 	 */
-	public static double calcVolume(Pdb pdb, String calcExecutable, String calcParameters) throws IOException {
+	public static double calcVolume(PdbChain pdb, String calcExecutable, String calcParameters) throws IOException {
 		String line;
 		double vol = 0;
 		File pdbFile = new File(TMP_DIR,pdb.getPdbCode()+pdb.getChainCode()+"_"+System.currentTimeMillis()+".pdb");

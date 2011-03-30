@@ -7,7 +7,7 @@ import java.util.List;
 
 import javax.vecmath.Matrix4d;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.Residue;
 
 public class PisaMolecule implements Iterable<PisaResidue> {
@@ -144,7 +144,7 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 * PisaResidues
 	 * @param pdb
 	 */
-	public void setAsaAndBsas(Pdb pdb) {
+	public void setAsaAndBsas(PdbChain pdb) {
 		for (PisaResidue pisaRes:this) {
 			int resSerial = pdb.getResSerFromPdbResSer(pisaRes.getPdbResSer());
 			if (pdb.containsResidue(resSerial)) {

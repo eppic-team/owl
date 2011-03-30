@@ -3,7 +3,7 @@ package owl.casp.benchmarking;
 import java.io.File;
 import java.sql.SQLException;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
@@ -38,7 +38,7 @@ public class updateTargetTable {
 				String target = n.substring(0,5);
 				System.out.println(target);
 				
-				Pdb pdb = Pdb.readStructureOrNull(f.getPath());
+				PdbChain pdb = PdbChain.readStructureOrNull(f.getPath());
 				if(pdb == null) {
 					System.err.println("Error. Could not read file " + s);
 				} else {

@@ -16,14 +16,12 @@ import java.util.regex.Pattern;
 
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
-import owl.core.structure.CiffilePdb;
 import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.FileRIGraph;
 import owl.core.structure.graphs.RIGraph;
@@ -351,33 +349,33 @@ public class reconstruct {
 		}
 				
 		// getting pdb data if a pdbId was specified 
-		Pdb pdb = null;
-		Pdb mPdb = null;
+		PdbChain pdb = null;
+		PdbChain mPdb = null;
 		String sequence = null;
 		File origPdbFile = null;
 		if (pdbId!=null) {
 			try {
 				if (refPdbFromFile) {
 					origPdbFile = new File(pdbId);
-					pdb = new PdbfilePdb(origPdbFile.getAbsolutePath());
-					pdb.load(pdb.getChains()[0]);
-					mPdb = new PdbfilePdb(origPdbFile.getAbsolutePath());
-					mPdb.load(pdb.getChains()[0]);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(origPdbFile);
+					pdb = fullpdb.getFirstChain();
+					mPdb = pdb.copy(fullpdb);
 					mPdb.mirror();
 				} else {
 					if (PDBASE_DB!=null) {
 						MySQLConnection conn = new MySQLConnection();
-						pdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
-						pdb.load(pdbChainCode);
-						mPdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
-						mPdb.load(pdbChainCode);
+						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+						pdb = fullpdb.getChain(pdbChainCode);
+						mPdb = pdb.copy(fullpdb);
 						mPdb.mirror();
 					} else {
 						System.out.println("Downloading PDB entry "+pdbCode+" from PDB's ftp");
-						pdb = new CiffilePdb(pdbCode,PDB_FTP_URL);
-						pdb.load(pdbChainCode);
-						mPdb = new CiffilePdb(pdbCode,PDB_FTP_URL);
-						mPdb.load(pdbChainCode);
+						File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+						cifFile.deleteOnExit();
+						PdbAsymUnit.grabCifFile(null, PDB_FTP_URL, pdbCode, cifFile, true);
+						PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+						pdb = fullpdb.getChain(pdbChainCode);
+						mPdb = pdb.copy(fullpdb);
 						mPdb.mirror();
 						System.out.println("Done");
 					}
@@ -403,9 +401,12 @@ public class reconstruct {
 			} catch (IOException e) {
 				System.err.println("Problems getting pdb data from PDB's ftp. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);				
+			} catch (FileFormatException e) {
+				System.err.println("Problems loading data from file. Error: "+e.getMessage()+"\nExiting");
+				System.exit(1);				
 			}
 
-			sequence = pdb.getSequence();
+			sequence = pdb.getSequence().getSeq();
 			
 			// checking that intervals given with -i are valid for this pdb
 			if (intervals!=null) {
@@ -531,6 +532,12 @@ public class reconstruct {
 				e.printStackTrace();
 			}
 			System.exit(1);
+		} catch (FileFormatException e) {
+			System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			if (debug) {
+				e.printStackTrace();
+			}
+			System.exit(1);
 		}
 				
 		double[] err = tr.getErrorFunctionVal();
@@ -554,7 +561,7 @@ public class reconstruct {
 		if (pdbId!=null) {
 			for (int i = 1; i<=n; i++) {
 				try {
-					Pdb outputPdb = tr.getStructure(i);
+					PdbChain outputPdb = tr.getStructure(i);
 					rmsds[i] = pdb.rmsd(outputPdb, "Ca");
 					mRmsds[i] = mPdb.rmsd(outputPdb, "Ca");
 				}

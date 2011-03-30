@@ -2,7 +2,7 @@ package owl.core.structure.scoring;
 
 import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGraph;
@@ -99,7 +99,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 	
 	
 	public void init(Sequence sequence, RIGraph contacts,
-			SecondaryStructure ss, Pdb coordinates, MySQLConnection conn) {
+			SecondaryStructure ss, PdbChain coordinates, MySQLConnection conn) {
 		this.sequence = sequence;
 		this.contacts = contacts;
 		// ignoring secondary structure and coordinates
@@ -108,7 +108,7 @@ public class HydrophobicPotential implements ResidueContactScoringFunction {
 	
 	
 	public void updateData(Sequence sequence, RIGraph contacts,
-			SecondaryStructure ss, Pdb coordinates) {
+			SecondaryStructure ss, PdbChain coordinates) {
 		// if data has changed, simply update the sequence and contacts variables
 		// no need to recalculate scores
 		this.sequence = sequence;

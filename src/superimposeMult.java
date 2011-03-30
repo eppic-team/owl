@@ -9,9 +9,9 @@ import java.util.TreeMap;
 
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.alignment.StructureAlignmentEvaluator;
 import owl.core.util.FileFormatException;
 
@@ -53,7 +53,7 @@ public class superimposeMult {
 			 System.exit(1);
 		 }
 
-		 TreeMap<String,Pdb> tag2pdb = new TreeMap<String,Pdb>();
+		 TreeMap<String,PdbChain> tag2pdb = new TreeMap<String,PdbChain>();
 		 
 		 // open list file
 		 try {
@@ -64,10 +64,12 @@ public class superimposeMult {
 				 String chain = tag.substring(4,5);
 				 //System.out.println(tag);
 				 try {
-					 Pdb pdb = new PdbfilePdb(line);
-					 pdb.load(chain);
+					 PdbAsymUnit fullpdb = new PdbAsymUnit(new File(line));
+					 PdbChain pdb = fullpdb.getChain(chain);
 					 tag2pdb.put(tag,pdb);
 				 } catch (PdbLoadException e) {
+					 System.err.println("Error reading from file " + line + ": " + e.getMessage());
+				 } catch (FileFormatException e) {
 					 System.err.println("Error reading from file " + line + ": " + e.getMessage());
 				 }
 			 }
@@ -127,7 +129,7 @@ public class superimposeMult {
 		 
 		 // write pdbs to files
 		 for(String tag:tag2pdb.keySet()) {
-			 Pdb pdb = tag2pdb.get(tag);
+			 PdbChain pdb = tag2pdb.get(tag);
 			 File outFile = new File(outDir,tag + ".pdb");
 			 try {
 				 System.out.println("Writing file " + outFile.getAbsolutePath());

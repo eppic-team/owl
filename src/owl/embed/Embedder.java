@@ -9,9 +9,10 @@ import java.util.TreeMap;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.util.Goodies;
+import owl.core.util.MySQLConnection;
 
 
 
@@ -306,8 +307,8 @@ public class Embedder {
 		String pdbChainCode = "A";
 		File outPdbFile = new File("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+".pdb");
 		
-		Pdb pdb = new PdbasePdb(pdbCode);
-		pdb.load(pdbChainCode);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		int n = pdb.getObsLength();
 		int ind = 0;
 		TreeMap<Integer, Integer> resser2ind = new TreeMap<Integer,Integer>();
@@ -332,7 +333,7 @@ public class Embedder {
 		System.out.println("Embedding...");
 		Embedder embedder = new Embedder(sqDistMatrix, masses, weights);
 		Vector3d[] embedding = embedder.embed(ScalingMethod.RADGYRATION);
-		Pdb pdbEmbedded = new Pdb(pdb.getSequence(),embedding, "CA");
+		PdbChain pdbEmbedded = new PdbChain(pdb.getSequence(),embedding, "CA");
 		
 		double rmsd = pdb.rmsd(pdbEmbedded, "Ca");
 		pdb.mirror();

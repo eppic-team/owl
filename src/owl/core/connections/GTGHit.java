@@ -5,9 +5,11 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbaseParser;
 import owl.core.util.MySQLConnection;
 
 
@@ -120,10 +122,10 @@ public class GTGHit {
 		}
 		String pdbCode = subjectId.substring(0, 4);
 		String pdbChainCode = subjectId.substring(4);
-		PdbasePdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-		pdb.load(pdbChainCode);
-		TreeMap<Integer, Integer> mapObsSerials2resser = pdb.getObservedResMapping();
-		String pdbaseSequence = pdb.getSequence();
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
+		TreeMap<Integer, Integer> mapObsSerials2resser = PdbaseParser.getObservedResMapping(pdbCode,pdbChainCode,conn,pdbaseDb);
+		String pdbaseSequence = pdb.getSequence().getSeq();
 		
 		for (int i=0; i<subjectSequence.length();i++) {
 			int indexInFullSeq = mapObsSerials2resser.get(i+1)-1;
@@ -173,9 +175,7 @@ public class GTGHit {
 		
 		String pdbCode = subjectId.substring(0, 4);
 		String pdbChainCode = subjectId.substring(4);
-		PdbasePdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-		pdb.load(pdbChainCode);
-		TreeMap<Integer, Integer> mapObsSerials2resser = pdb.getObservedResMapping();
+		TreeMap<Integer, Integer> mapObsSerials2resser = PdbaseParser.getObservedResMapping(pdbCode,pdbChainCode,conn,pdbaseDb);
 		
 		if (!mapObsSerials2resser.containsKey(subjectStart) || !mapObsSerials2resser.containsKey(subjectEnd)) {
 			System.err.println("Cannot map observed residue sequence serials to internal residue serials for "+subjectId+": either subject start or end serial are out of range");

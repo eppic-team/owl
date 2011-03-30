@@ -27,7 +27,7 @@ import owl.core.connections.pisa.PisaInterfaceList;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.Residue;
@@ -153,11 +153,11 @@ public class PdbAsymUnitTest {
 				
 				// asa/bsas of individual residues, we allow for some discrepancy from PISA
 				
-				Pdb myFirstMol = myInterf.getFirstMolecule();
+				PdbChain myFirstMol = myInterf.getFirstMolecule();
 				if (!myFirstMol.getPdbChainCode().equals(pisaInterf.getFirstMolecule().getPdbChainCode())) {
 					myFirstMol = myInterf.getSecondMolecule();
 				}
-				Pdb mySecondMol = myInterf.getSecondMolecule();
+				PdbChain mySecondMol = myInterf.getSecondMolecule();
 				if (!mySecondMol.getPdbChainCode().equals(pisaInterf.getSecondMolecule().getPdbChainCode())) {
 					mySecondMol = myInterf.getFirstMolecule();
 				}
@@ -208,7 +208,7 @@ public class PdbAsymUnitTest {
 	 * @param myMolecule
 	 * @return
 	 */
-	private static int[] checkResidues(Pdb pisaMolecule, Pdb myMolecule, boolean printPerRes) {
+	private static int[] checkResidues(PdbChain pisaMolecule, PdbChain myMolecule, boolean printPerRes) {
 		int a = 0;
 		int b = 0;
 		int t = 0;

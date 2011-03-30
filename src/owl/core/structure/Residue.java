@@ -49,7 +49,7 @@ public class Residue implements Iterable<Atom>, Serializable {
 	private int serial;
 	private String pdbSerial;
 	
-	private Pdb parentPdb;
+	private PdbChain parentPdb;
 	
 	private SecStrucElement ssElem;
 
@@ -80,7 +80,7 @@ public class Residue implements Iterable<Atom>, Serializable {
 	 * @param serial
 	 * @param parentPdb
 	 */
-	public Residue(AminoAcid aaType, int serial, Pdb parentPdb) {
+	public Residue(AminoAcid aaType, int serial, PdbChain parentPdb) {
 		atoms = new TreeMap<String, Atom>();
 		this.aaType = aaType;
 		this.serial = serial;
@@ -110,7 +110,7 @@ public class Residue implements Iterable<Atom>, Serializable {
 		if (this.containsAtom(atomCode)) {
 			return atoms.get(atomCode);
 		} else {
-			// we used to have this warning in the Pdb class, copied here to keep it where it should be
+			// we used to have this warning in the PdbChain class, copied here to keep it where it should be
 			//System.err.println("Couldn't find "+atomCode+" atom for resser="+this.getSerial()+" in protein "+pdbCode+" and chain "+chainCode+". Continuing without that atom for this resser.");
 			return null;
 		}
@@ -189,11 +189,11 @@ public class Residue implements Iterable<Atom>, Serializable {
 		return parentPdb.getPdbChainCode();
 	}
 
-	public Pdb getParentPdb() {
+	public PdbChain getParentPdb() {
 		return parentPdb;
 	}
 
-	public void setParentPdb(Pdb pdb) {
+	public void setParentPdb(PdbChain pdb) {
 		this.parentPdb = pdb;
 	}
 
@@ -420,7 +420,7 @@ public class Residue implements Iterable<Atom>, Serializable {
 	 * Returns a deep copy of this Residue
 	 * @return
 	 */
-	public Residue copy(Pdb parentPdb) {
+	public Residue copy(PdbChain parentPdb) {
 		Residue newResidue = new Residue(this.aaType, this.serial, parentPdb);
 		newResidue.pdbSerial = this.pdbSerial;
 		newResidue.consurfScore = this.consurfScore;

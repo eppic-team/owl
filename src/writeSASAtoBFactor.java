@@ -3,11 +3,12 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import owl.core.runners.NaccessRunner;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
+import owl.core.util.FileFormatException;
+import owl.core.util.MySQLConnection;
 
 
 /**
@@ -37,7 +38,7 @@ public class writeSASAtoBFactor {
 			cutoff = Double.parseDouble(args[2]);
 		}
 
-		Pdb pdb = readStructureOrExit(arg);
+		PdbChain pdb = readStructureOrExit(arg);
 				
 		// now we have a pdb structure
 		try {
@@ -74,19 +75,22 @@ public class writeSASAtoBFactor {
 	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
 	 * @return the structure object
 	 */
-	public static Pdb readStructureOrExit(String arg) {
-		Pdb pdb = null;
+	public static PdbChain readStructureOrExit(String arg) {
+		PdbChain pdb = null;
 		
 		// check if argument is a filename
 		File inFile = new File(arg);
 		if(inFile.canRead()) {
 			System.out.println("Reading file " + arg);
-			pdb = new PdbfilePdb(arg);
 			try {
-				String[] chains = pdb.getChains();
-				System.out.println("Loading chain " + chains[0]);
-				pdb.load(chains[0]);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(inFile);
+				System.out.println("Loading chain " + fullpdb.getFirstChain().getPdbChainCode());
+				pdb = fullpdb.getFirstChain();
 			} catch (PdbLoadException e) {
+				System.err.println("Error loading file " + arg + ":" + e.getMessage());
+			} catch (IOException e) {
+				System.err.println("Error loading file " + arg + ":" + e.getMessage());
+			} catch (FileFormatException e) {
 				System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
@@ -100,19 +104,13 @@ public class writeSASAtoBFactor {
 				try {
 					System.out.println("Loading pdb code " + pdbCode);
 					try {
-						pdb = new PdbasePdb(pdbCode);
+						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
 						if(chainCode.length() == 0) {
 
-							chainCode = pdb.getChains()[0];
+							chainCode = fullpdb.getFirstChain().getPdbChainCode();
 						}
-					} catch (PdbLoadException e) {
-						System.err.println("Error loading pdb structure:" + e.getMessage());
-						System.exit(1);
-					}
-
-					try {
 						System.out.println("Loading chain " + chainCode);
-						pdb.load(pdb.getChains()[0]);
+						pdb = fullpdb.getChain(chainCode);
 					} catch (PdbLoadException e) {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);

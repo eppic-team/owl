@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,15 +39,11 @@ import owl.core.util.MySQLConnection;
 
 /**
  * A protein crystal's asymmetric unit, i.e. a PDB entry.
- * Note that due to historical reasons this is called PdbAsymUnit and the single chain
- * object is called Pdb. 
- * 
- * TODO must refactor at some point, it would make a lot more sense to call this Pdb
  *  
  * @author duarte_j
  *
  */
-public class PdbAsymUnit {
+public class PdbAsymUnit implements Iterable<PdbChain> {
 	
 	/*------------------------------------  constants ---------------------------------------------*/
 	
@@ -70,49 +67,118 @@ public class PdbAsymUnit {
 	private int model;
 	private String title;
 	
-	private TreeMap<String, Pdb> chains;		// pdbChainCodes to Pdbs
-	private HashMap<String, String> chain2repChain; // a map of all pdb chain codes to the representative pdb chain code (the first chain alphabetically from the group of identical chains)
-	private HashMap<String,List<String>> repChain2members; // a map of representative pdb chain code to the members of the group of identical chains
-	
-	private CrystalCell crystalCell;
-	private SpaceGroup spaceGroup;
-	
-	private Matrix4d transform; // transformation matrix used to generate this asym unit (includes the possible translation from the original cell)
-	
-	private int transformId;    // and identifier of the space group transformation used (0 is identity i.e. original asymmetric unit) 
-								// (does not count the translations: 2 equivalent asym units of 2 different cells will have the same identifier)
-								// i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
-								// goes from 1 to m (m=number of symmetry operations of the space group)
-
-	private BoundingBox bounds; // cached bounds for speed up of interface calculations, filled in getAllAtoms()
-
-
+	/**
+	 * pdbChainCodes to Pdbs
+	 */
+	private TreeMap<String, PdbChain> chains;		
 	
 	/**
-	 * Constructs a new PdbAsymUnit with no chains and all meta-data information passed.
-	 * @param pdbCode
-	 * @param model
-	 * @param title
-	 * @param crystalCell
-	 * @param spaceGroup
+	 * A map of all pdb chain codes to the representative pdbChainCode
+	 * (the first chain alphabetically from the group of identical chains)
 	 */
-	public PdbAsymUnit(String pdbCode, int model, String title, CrystalCell crystalCell, SpaceGroup spaceGroup) {
-		this.pdbCode = pdbCode;
-		this.model = model;
-		this.title = title;
-		this.crystalCell = crystalCell;
-		this.spaceGroup = spaceGroup;
-		this.chains = new TreeMap<String, Pdb>();
+	private HashMap<String, String> chain2repChain;
+	
+	/**
+	 * A map of representative pdb chain code to the members of the 
+	 * group of identical chains
+	 */
+	private HashMap<String,List<String>> repChain2members; 
+	
+	/**
+	 * Experimental method: x-ray crystallograpy, NMR, etc.
+	 */
+	private String expMethod;
+	
+	// crystallographic data
+	
+	/**
+	 * The parameters of the crystal cell (in CRYST1 field in PDB files)
+	 */
+	private CrystalCell crystalCell;
+	
+	/**
+	 * The space group (in CRYST1 field in PDB files)
+	 */
+	private SpaceGroup spaceGroup;
+	
+	// quality data (for crystal structures), all 3 parameters initialised to -1 (for non-crystal structures they just don't apply)
+	private double resolution;					
+	private double rFree;
+	private double rSym;
+	private BoundingBox bounds; // cached bounds for speed up of interface calculations, filled in getAllAtoms()
+	
+	/**
+	 * Transformation matrix used to generate this asym unit (includes 
+	 * the possible translation from the original cell)
+	 */
+	private Matrix4d transform; 
+	
+	/**
+	 * An identifier of the space group transformation used (0 is identity i.e. original asymmetric unit) 
+	 * does not count the translations: 2 equivalent asym units of 2 different cells will have the same identifier)
+	 * i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
+	 * goes from 1 to m (m=number of symmetry operations of the space group)
+	 */
+	private int transformId;    
+
+
+	
+	/*------------------------------------  constructors -----------------------------------------------*/
+
+	/**
+	 * Constructs an empty PdbAsymUnit with default meta-data and no chains.
+	 */
+	public PdbAsymUnit() {
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		this.pdbCode = NO_PDB_CODE;
+		this.model = DEFAULT_MODEL;
+		this.title = null;
+		
+		this.chains = new TreeMap<String,PdbChain>();
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
+
 	}
 	
+	/**
+	 * Constructs a PdbAsymUnit by reading model {@value #DEFAULT_MODEL} for all chains 
+	 * from given pdbSourceFile. 
+	 * The pdbSourceFile can be in PDB or mmCIF format.
+	 * @param pdbSourceFile
+	 * @throws IOException if IO problems while reading PDB data from file
+	 * @throws FileFormatException if given file is not in PDB or mmCIF format
+	 * @throws PdbLoadException if problems while loading the PDB data from file
+	 */
 	public PdbAsymUnit(File pdbSourceFile) throws IOException, FileFormatException, PdbLoadException {
+		this(pdbSourceFile, DEFAULT_MODEL);
+	}
+	
+	/**
+	 * Constructs a PdbAsymUnit by reading given model for all chains 
+	 * from given pdbSourceFile. 
+	 * The pdbSourceFile can be in PDB or mmCIF format. 
+	 * @param pdbSourceFile
+	 * @param model
+	 * @throws IOException if IO problems while reading PDB data from file
+	 * @throws FileFormatException if given file is not in PDB or mmCIF format
+	 * @throws PdbLoadException if problems while loading the PDB data from file
+	 */
+	public PdbAsymUnit(File pdbSourceFile, int model) throws IOException, FileFormatException, PdbLoadException {
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		this.pdbCode = NO_PDB_CODE;
+		this.model = model;
+		this.title = null;
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
-		chains = new TreeMap<String, Pdb>();
+		chains = new TreeMap<String, PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
-		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE) {
+		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile);
 		} else if (type==FileTypeGuesser.CIF_FILE) {
 			loadFromCifFile(pdbSourceFile);
@@ -122,82 +188,136 @@ public class PdbAsymUnit {
 		
 	}
 	
+	/**
+	 * Constructs a PdbAsymUnit by reading model {@value #DEFAULT_MODEL} for all chains 
+	 * from given pdbase database. 
+	 * @param pdbCode
+	 * @param conn
+	 * @param dbName
+	 * @throws PdbLoadException
+	 * @throws PdbCodeNotFoundException
+	 */
 	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
+		this(pdbCode, DEFAULT_MODEL, conn, dbName);
+	}
+	
+	/**
+	 * Constructs a PdbAsymUnit by reading given model for all chains 
+	 * from given pdbase database. 
+	 * @param pdbCode
+	 * @param model
+	 * @param conn
+	 * @param dbName
+	 * @throws PdbLoadException
+	 * @throws PdbCodeNotFoundException
+	 */
+	public PdbAsymUnit(String pdbCode, int model, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
+		this.pdbCode = pdbCode.toLowerCase();
+		this.model = model;
+
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		this.title = null;
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
-		chains = new TreeMap<String, Pdb>();
-		loadFromPdbase(pdbCode, conn, dbName);
+		
+		chains = new TreeMap<String, PdbChain>();
+		loadFromPdbase(conn, dbName);
 	}
+	
+	/*----------------------------------  loader methods ----------------------------------------*/
 	
 	private void loadFromPdbFile(File pdbFile) throws PdbLoadException {
-		Pdb pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-		String[] chainCodes = pdb.getChains();
+		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
+		
+		String[] chainCodes = parser.getChains();
 		for (int i=0;i<chainCodes.length;i++) {
-			Pdb chain = new PdbfilePdb(pdbFile.getAbsolutePath());
-			chain.load(chainCodes[i]);
+			PdbChain chain = parser.readChain(chainCodes[i],model);
+			chain.setParent(this);
 			chains.put(chainCodes[i],chain);
-			if (i==0) {
-				this.pdbCode = chain.getPdbCode();
-				this.title = chain.getTitle();
-				this.model = chain.getModel();
-				this.crystalCell = chain.getCrystalCell();
-				this.spaceGroup = chain.getSpaceGroup();
-				
-			}
-
 		}
+		
+		this.pdbCode = parser.getPdbCode();
+		this.expMethod = parser.getExpMethod();
+		this.title = parser.getTitle();
+		this.crystalCell = parser.getCrystalCell();
+		this.spaceGroup = parser.getSpaceGroup();
+		this.resolution = parser.getResolution();
+		this.rFree = parser.getRfree();
+		this.rSym = parser.getRsym();
 		
 	}
 	
-	private void loadFromCifFile(File cifFile) throws PdbLoadException {
-		Pdb pdb = new CiffilePdb(cifFile);
-		String[] chainCodes = pdb.getChains();
+	private void loadFromCifFile(File cifFile) throws PdbLoadException, IOException, FileFormatException {
+		CiffileParser parser = new CiffileParser(cifFile);
+		this.pdbCode = parser.readPdbCode();
+		this.expMethod = parser.readExpMethod();
+		this.title = parser.readTitle();
+		this.crystalCell = parser.readCrystalCell();
+		this.spaceGroup = parser.readSpaceGroup();
+		double[] qParams = parser.readQparams();
+		this.resolution = qParams[0];
+		this.rFree = qParams[1];
+		this.rSym = qParams[2];
+		
+		String[] chainCodes = parser.getChains();
 		for (int i=0;i<chainCodes.length;i++) {
-			Pdb chain = new CiffilePdb(cifFile);
-			chain.load(chainCodes[i]);
+			PdbChain chain = parser.readChain(chainCodes[i],model);
+			chain.setParent(this);
 			chains.put(chainCodes[i],chain);
-			if (i==0) {
-				this.pdbCode = chain.getPdbCode();
-				this.title = chain.getTitle();
-				this.model = chain.getModel();
-				this.crystalCell = chain.getCrystalCell();
-				this.spaceGroup = chain.getSpaceGroup();
-				
-			}
-
 		}
+		parser.closeFile();
 		
 	}
 	
-	private void loadFromPdbase(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
+	private void loadFromPdbase(MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
 		try {
-			Pdb pdb = new PdbasePdb(pdbCode,dbName,conn);
-			String[] chainCodes = pdb.getChains();
+			PdbaseParser parser = new PdbaseParser(pdbCode,dbName,conn);
+			this.title = parser.readTitle();
+			this.expMethod = parser.readExpMethod();
+			this.crystalCell = parser.readCrystalCell();
+			this.spaceGroup = parser.readSpaceGroup();
+			double[] qParams = parser.readQparams();
+			this.resolution = qParams[0];
+			this.rFree = qParams[1];
+			this.rSym = qParams[2];
+
+			String[] chainCodes = parser.getChains();
 			for (int i=0;i<chainCodes.length;i++) {
-				Pdb chain = new PdbasePdb(pdbCode,dbName,conn);
-				chain.load(chainCodes[i]);
+				PdbChain chain = parser.readChain(chainCodes[i],model);
+				chain.setParent(this);
 				chains.put(chainCodes[i],chain);
-				if (i==0) {
-					this.pdbCode = chain.getPdbCode();
-					this.title = chain.getTitle();
-					this.model = chain.getModel();
-					this.crystalCell = chain.getCrystalCell();
-					this.spaceGroup = chain.getSpaceGroup();
-				}
 			}
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
 		}
 	}
 	
-	public Pdb getChain(String pdbChainCode) {
+	/*----------------------------------  public methods ----------------------------------------*/
+	
+	public PdbChain getChain(String pdbChainCode) {
 		return chains.get(pdbChainCode);
 	}
 	
-	public Collection<Pdb> getAllChains() {
+	/**
+	 * Returns the first chain (in ascending alphabetical order of the PDB chain codes)
+	 * of this PDB entry.
+	 * @return
+	 */
+	public PdbChain getFirstChain() {
+		return chains.firstEntry().getValue();
+	}
+	
+	public Collection<PdbChain> getAllChains() {
 		return chains.values();
 	}
 	
+	/**
+	 * Returns a sorted set of all PDB chain codes in this entry
+	 * @return
+	 */
 	public Set<String> getPdbChainCodes() {
 		return chains.keySet();
 	}
@@ -210,23 +330,91 @@ public class PdbAsymUnit {
 		return pdbCode;
 	}
 	
+	public void setPdbCode(String pdbCode) {
+		this.pdbCode = pdbCode;
+	}
+	
+	/**
+	 * Returns this PDB's title (may be null)
+	 * @return
+	 */
 	public String getTitle() {
 		return title;
+	}
+	
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	
+	public String getExpMethod() {
+		return this.expMethod;
+	}
+	
+	public void setExpMethod(String expMethod) {
+		this.expMethod = expMethod;
 	}
 	
 	public int getModel() {
 		return model;
 	}
 	
+	public void setModel(int model) {
+		this.model = model;
+	}
+	
 	public CrystalCell getCrystalCell() {
 		return crystalCell;
+	}
+	
+	public void setCrystalCell(CrystalCell crystalCell){
+		this.crystalCell = crystalCell;
 	}
 	
 	public SpaceGroup getSpaceGroup() {
 		return spaceGroup;
 	}
 	
-	public void setChain(String pdbChainCode, Pdb chain) {
+	public void setSpaceGroup(SpaceGroup spaceGroup) {
+		this.spaceGroup = spaceGroup;
+	}
+	
+	/**
+	 * Returns the resolution or -1 if does not apply
+	 * @return
+	 */
+	public double getResolution() {
+		return this.resolution;
+	}
+	
+	public void setResolution(double resolution) {
+		this.resolution = resolution;
+	}
+	
+	/**
+	 * Returns the R free value or -1 if does not apply or not available
+	 * @return
+	 */
+	public double getRfree() {
+		return this.rFree;
+	}
+	
+	public void setRfree(double rFree) {
+		this.rFree = rFree;
+	}
+	
+	/**
+	 * Returns the R sym/R merge value or -1 if does not apply or not available.
+	 * @return
+	 */
+	public double getRsym() {
+		return this.rSym;
+	}
+	
+	public void setRsym(double rSym) {
+		this.rSym = rSym;
+	}
+	
+	public void setChain(String pdbChainCode, PdbChain chain) {
 		chains.put(pdbChainCode, chain);
 	}
 	
@@ -237,21 +425,30 @@ public class PdbAsymUnit {
 	 * @return
 	 */
 	public boolean containsResidue(int resSerial, String pdbChainCode) {
-		if (!this.chains.containsKey(pdbChainCode)) {
+		if (!containsPdbChainCode(pdbChainCode)) {
 			return false;
 		}
 		return this.getChain(pdbChainCode).containsResidue(resSerial);
 	}
 	
 	/**
-	 * Tells whether given Pdb object is contained in this PdbAsymUnit.
-	 * At the moment the comparison will be done based on reference, if the Pdb.equals() is 
-	 * implemented then that will change.
+	 * Tells whether given PdbChain object is contained in this PdbAsymUnit.
+	 * Note that this depends on the implementation of PdbChain.equals(). If not 
+	 * implemented then the references are compared.
 	 * @param pdb
 	 * @return
 	 */
-	public boolean containsChain(Pdb pdb) {
+	public boolean containsChain(PdbChain pdb) {
 		return this.chains.values().contains(pdb);
+	}
+	
+	/**
+	 * Tells whether given PDB chain code is contained in this PdbAsymUnit.
+	 * @param pdbChainCode
+	 * @return
+	 */
+	public boolean containsPdbChainCode(String pdbChainCode) {
+		return this.chains.containsKey(pdbChainCode);
 	}
 	
 	/**
@@ -271,7 +468,7 @@ public class PdbAsymUnit {
 	public Point3d getCenterOfMass() {
 		Vector3d sumVector = new Vector3d();
 		int numAtoms = 0;
-		for (Pdb chain:this.chains.values()) {
+		for (PdbChain chain:this.chains.values()) {
 			for(int atomserial:chain.getAllAtomSerials()) {
 				Point3d coords = chain.getAtomCoord(atomserial);
 				sumVector.add(coords);
@@ -301,7 +498,7 @@ public class PdbAsymUnit {
 	
 	public void transform(Matrix4d m) {
 		this.bounds = null; // cached bounds must be reset whenever we transform the coordinates
-		for (Pdb pdb:this.chains.values()) {
+		for (PdbChain pdb:this.chains.values()) {
 			pdb.transform(m);
 		}
 	}
@@ -309,9 +506,18 @@ public class PdbAsymUnit {
 	public void transform(Matrix4d m, PdbAsymUnit pdb) {
 
 		for (String pdbChainCode:getPdbChainCodes()) {
-			Pdb newChain = this.getChain(pdbChainCode).copy();
+			PdbChain newChain = this.getChain(pdbChainCode).copy(pdb);
 			this.getChain(pdbChainCode).transform(m, newChain);
 			pdb.setChain(pdbChainCode, newChain);
+		}
+	}
+
+	/**
+	 * Mirror this Pdb structure by inverting through the origin.
+	 */
+	public void mirror() {
+		for (PdbChain chain:this.chains.values()){
+			chain.mirror();
 		}
 	}
 	
@@ -319,9 +525,14 @@ public class PdbAsymUnit {
 		List<PdbAsymUnit> syms = new ArrayList<PdbAsymUnit>();
 		int i = 1; // we start at 1 because we want to skip the identity
 		for (Matrix4d m:this.getTransformations()) {
-			PdbAsymUnit sym = new PdbAsymUnit(this.pdbCode, this.model, this.title, this.crystalCell, this.spaceGroup);
+			PdbAsymUnit sym = new PdbAsymUnit();
+			sym.setPdbCode(this.pdbCode);
+			sym.setModel(this.model);
+			sym.setTitle(this.title);
+			sym.setCrystalCell(this.crystalCell);
+			sym.setSpaceGroup(this.spaceGroup);
 			for (String pdbChainCode:getPdbChainCodes()) {
-				Pdb newChain = this.getChain(pdbChainCode).copy();
+				PdbChain newChain = this.getChain(pdbChainCode).copy(sym);
 				newChain.transform(m);
 				sym.setChain(pdbChainCode, newChain);
 			}
@@ -331,7 +542,7 @@ public class PdbAsymUnit {
 			Point3i sep = new Point3i((int)Math.round(sep3d.x),(int)Math.round(sep3d.y),(int)Math.round(sep3d.z));
 			if (!sep.equals(new Point3i(0,0,0))) {
 				// we don't use here doCrystalTranslation method because we don't want sym's transf member to be reset
-				for (Pdb pdb:sym.chains.values()) {
+				for (PdbChain pdb:sym.chains.values()) {
 					pdb.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
 				}	
 			}
@@ -361,7 +572,7 @@ public class PdbAsymUnit {
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
 		this.bounds = null; //bounds must be reset whenever the coordinates are transformed
-		for (Pdb pdb:this.chains.values()) {
+		for (PdbChain pdb:this.chains.values()) {
 			pdb.doCrystalTranslation(direction);
 		}		
 		transform.m03 = transform.m03+direction.x;
@@ -370,23 +581,54 @@ public class PdbAsymUnit {
 		// note that transformId doesn't change here. That's the whole point of having such an id: to identify equivalent crystal symmtry units  
 	}
 	
+	/**
+	 * Deep copies this PdbAsymUnit
+	 * @return
+	 */
 	public PdbAsymUnit copy() {
-		PdbAsymUnit newAsym = new PdbAsymUnit(this.pdbCode, this.model, this.title, this.crystalCell, this.spaceGroup);
+		PdbAsymUnit newAsym = new PdbAsymUnit();
+		newAsym.pdbCode = pdbCode;
+		newAsym.model = model;
+		newAsym.title = title;
+		newAsym.crystalCell = crystalCell;
+		newAsym.spaceGroup = spaceGroup;
+		newAsym.expMethod = expMethod;
+		newAsym.resolution = resolution;
+		newAsym.rFree = rFree;
+		newAsym.rSym = rSym;
+		
 		for (String pdbChainCode:getPdbChainCodes()){
-			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy());
+			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy(newAsym));
 		}
 		newAsym.setTransform(new Matrix4d(this.transform));
 		newAsym.setTransformId(this.getTransformId());
 		return newAsym;
 	}
 	
+	/**
+	 * Writes PDB data out in PDB file format.
+	 * @param outFile
+	 * @throws FileNotFoundException
+	 */
 	public void writeToPdbFile(File outFile) throws FileNotFoundException {
 		PrintStream ps = new PrintStream(outFile);
-		for (Pdb chain:getAllChains()) {
+		writePDBFileHeader(ps);
+		for (PdbChain chain:getAllChains()) {
 			chain.writeAtomLines(ps);
 		}
 		ps.close();
 	}
+	
+	/**
+	 * Writes to given PrintWriter the PDB file format HEADER line
+	 * @param out
+	 */
+	public void writePDBFileHeader(PrintStream out) {
+		out.printf("HEADER%56s",pdbCode);
+		out.println();
+	}
+	
+
 	
 	/**
 	 * Gets all symmetry transformation operators corresponding to this Pdb's space group 
@@ -395,7 +637,11 @@ public class PdbAsymUnit {
 	 * @return
 	 */	
 	public List<Matrix4d> getTransformations() {
-		return this.chains.firstEntry().getValue().getTransformations();
+		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
+		for (int i=1;i<this.getSpaceGroup().getNumOperators();i++) {
+			transfs.add(this.crystalCell.transfToOrthonormal(this.getSpaceGroup().getTransformation(i)));
+		}
+		return transfs;
 	}
 	
 	/**
@@ -434,7 +680,7 @@ public class PdbAsymUnit {
 	public void setTransformId(int id) {
 		this.transformId = id;
 	}
-	
+
 	/**
 	 * Returns a sorted (decreasing area) list of all interfaces (any 2 atoms under cutoff) 
 	 * that this chain has upon generation of all crystal symmetry objects. 
@@ -465,13 +711,13 @@ public class PdbAsymUnit {
 	 * will be used
 	 * @param nSpherePoints
 	 * @param nThreads
-	 * @param if true debugging output will be produced
+	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
 	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean debug) throws IOException {	
-		// TODO For longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
-		// TODO Pathological cases, 3hz3: one needs to go to the 2nd neighbour
+		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
+		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
@@ -497,14 +743,14 @@ public class PdbAsymUnit {
 					System.out.print(".");
 					trialCount++;
 				}
-				Pdb chaini = this.getChain(iChainCode);
-				Pdb chainj = this.getChain(jChainCode);
+				PdbChain chaini = this.getChain(iChainCode);
+				PdbChain chainj = this.getChain(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 				if (graph.getEdgeCount()>0) {
 					if (debug) System.out.print("x");
 					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-					Pdb chainiCopy = chaini.copy();
-					Pdb chainjCopy = chainj.copy();
+					PdbChain chainiCopy = chaini.copy(this);
+					PdbChain chainjCopy = chainj.copy(this);
 					if (!set.add(new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM))) {
 						duplicatesCount1++;
 					}
@@ -526,8 +772,8 @@ public class PdbAsymUnit {
 		for (int j=0;j<cell.getNumAsymUnits();j++) {
 			PdbAsymUnit jAsym = cell.getAsymUnit(j);
 			if (jAsym==this) continue; // we want to compare this to all others but not to itself
-			for (Pdb chaini:this.getAllChains()) {
-				for (Pdb chainj:jAsym.getAllChains()) {
+			for (PdbChain chaini:this.getAllChains()) {
+				for (PdbChain chainj:jAsym.getAllChains()) {
 					if (debug) {
 						System.out.print(".");
 						trialCount++;
@@ -536,8 +782,8 @@ public class PdbAsymUnit {
 					if (graph.getEdgeCount()>0) {
 						if (debug) System.out.print("x");
 						// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-						Pdb chainiCopy = chaini.copy();
-						Pdb chainjCopy = chainj.copy();
+						PdbChain chainiCopy = chaini.copy(this);
+						PdbChain chainjCopy = chainj.copy(jAsym);
 						ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
 						if (!set.add(interf)) {
 							duplicatesCount2++;
@@ -579,14 +825,14 @@ public class PdbAsymUnit {
 							}
 							continue;
 						}
-						for (Pdb chainj:jAsym.getAllChains()) {
+						for (PdbChain chainj:jAsym.getAllChains()) {
 							//try {
 							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
 							//} catch (FileNotFoundException e) {
 							//	e.printStackTrace();
 							//}
 
-							for (Pdb chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
+							for (PdbChain chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
 								if (debug) {
 									System.out.print(".");
 									trialCount++;
@@ -595,8 +841,8 @@ public class PdbAsymUnit {
 								if (graph.getEdgeCount()>0) {
 									if (debug) System.out.print("x");
 									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-									Pdb chainiCopy = chaini.copy();
-									Pdb chainjCopy = chainj.copy();
+									PdbChain chainiCopy = chaini.copy(this);
+									PdbChain chainjCopy = chainj.copy(jAsym);
 									ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
 									if (!set.add(interf)){
 										duplicatesCount3++;
@@ -652,6 +898,7 @@ public class PdbAsymUnit {
 			list.addInterface(interf);
 		}
 		list.sort(); // this sorts the returned list and assigns ids to the ChainInterface members
+		
 		return list;
 	}
 
@@ -667,7 +914,7 @@ public class PdbAsymUnit {
 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		
 		int i = 0;
-		for (Pdb pdb:this.getAllChains()) {
+		for (PdbChain pdb:this.getAllChains()) {
 			pdb.setAtomRadii();
 			for (int atomser: pdb.getAllAtomSerials()) {
 				atoms[i] = pdb.getAtom(atomser);
@@ -681,7 +928,7 @@ public class PdbAsymUnit {
 		}
 
 		// and finally sums per residue
-		for (Pdb pdb:this.getAllChains()) {
+		for (PdbChain pdb:this.getAllChains()) {
 			for (Residue residue: pdb.getResidues().values()) {
 				double tot = 0;
 				for (Atom atom:residue.getAtoms()) {
@@ -703,7 +950,7 @@ public class PdbAsymUnit {
 		Atom[] atoms = new Atom[this.getNumAtoms()];
 		
 		int i = 0;
-		for (Pdb pdb:this.getAllChains()) {
+		for (PdbChain pdb:this.getAllChains()) {
 			pdb.setAtomRadii();
 			for (int atomser: pdb.getAllAtomSerials()) {
 				atoms[i] = pdb.getAtom(atomser);
@@ -716,7 +963,7 @@ public class PdbAsymUnit {
 			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
 		}
 		// and finally sums per residue
-		for (Pdb pdb:this.getAllChains()) {
+		for (PdbChain pdb:this.getAllChains()) {
 			for (Residue residue: pdb.getResidues().values()) {
 				double tot = 0;
 				for (Atom atom:residue.getAtoms()) {
@@ -733,7 +980,7 @@ public class PdbAsymUnit {
 		BoundingBox[] boxes = new BoundingBox[getNumChains()];
 		int numThisAtoms = 0;
 		int i = 0;
-		for (Pdb chain:this.getAllChains()) {
+		for (PdbChain chain:this.getAllChains()) {
 			allAtoms[i] = chain.getAllAtoms();
 			numThisAtoms += allAtoms[i].length;
 			boxes[i] = chain.getBoundingBox();
@@ -759,7 +1006,7 @@ public class PdbAsymUnit {
 		}
 		BoundingBox[] boxes = new BoundingBox[getNumChains()];
 		int i = 0;
-		for (Pdb chain:this.getAllChains()) {
+		for (PdbChain chain:this.getAllChains()) {
 			boxes[i] = chain.getBoundingBox();
 			i++;
 		}
@@ -793,7 +1040,7 @@ public class PdbAsymUnit {
 	
 	public int getNumAtoms() {
 		int tot = 0;
-		for (Pdb pdb:this.getAllChains()) {
+		for (PdbChain pdb:this.getAllChains()) {
 			tot+=pdb.getNumAtoms();
 		}
 		return tot;
@@ -808,13 +1055,13 @@ public class PdbAsymUnit {
 		Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
 		// finding the entities (groups of identical chains)
 		for (String chain:this.chains.keySet()) {
-			Pdb pdb = getChain(chain);
+			PdbChain pdb = getChain(chain);
 			if (uniqSequences.containsKey(pdb.getSequence())) {
 				uniqSequences.get(pdb.getSequence()).add(chain);
 			} else {
 				List<String> list = new ArrayList<String>();
 				list.add(chain);
-				uniqSequences.put(pdb.getSequence(),list);
+				uniqSequences.put(pdb.getSequence().getSeq(),list);
 			}		
 		}
 		
@@ -879,6 +1126,8 @@ public class PdbAsymUnit {
 		return reps;
 	}
 	
+	/*--------------------------------------- static methods -----------------------------------------*/
+	
 	/**
 	 * Grabs and unzips a cif file from either the online PDB ftp or a local directory 
 	 * containing zipped cif files. The file is written to the given cifFile. 
@@ -922,4 +1171,12 @@ public class PdbAsymUnit {
 		zis.close();
 		os.close();
 	}
+
+	@Override
+	public Iterator<PdbChain> iterator() {
+		return chains.values().iterator();
+	}
+	
+
+
 }

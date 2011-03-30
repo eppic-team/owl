@@ -10,8 +10,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.CaspRRFileRIGraph;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGraph;
@@ -126,10 +127,18 @@ public class scoreAllModelsWithRanks {
 				System.err.println("Error: File " + answer + " not found. Skipping target.");
 				continue;
 			}
-			PdbfilePdb answerPdb = new PdbfilePdb(answer.getPath());
+			
+			PdbChain answerPdb = null;
 			try {
-				answerPdb.load(answerPdb.getChains()[0]);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(answer);
+				answerPdb = fullpdb.getFirstChain();
 			} catch (PdbLoadException e1) {
+				System.err.println("Error: Could not load Pdb file " + answerPdb + ": " + e1.getMessage() + ". Skipping target.");
+				continue;
+			} catch (IOException e1) {
+				System.err.println("Error: Could not load Pdb file " + answerPdb + ": " + e1.getMessage() + ". Skipping target.");
+				continue;
+			} catch (FileFormatException e1) {
 				System.err.println("Error: Could not load Pdb file " + answerPdb + ": " + e1.getMessage() + ". Skipping target.");
 				continue;
 			}
@@ -182,14 +191,19 @@ public class scoreAllModelsWithRanks {
 				String modelName = model.getName();
 				
 				// evaluate model
-				PdbfilePdb modelPdb = new PdbfilePdb(model.getPath());
+				PdbChain modelPdb = null;
 				try {
-					modelPdb.load(modelPdb.getChains()[0]);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(model);
+					modelPdb = fullpdb.getFirstChain();
 					RIGraph modelGraph = modelPdb.getRIGraph("Cb", 8.0);
 					idx++;
 					ModelScore modScore = getModelScore(idx, targetName, modelName, modelGraph, nativeGraph);
 					modelScores.add(modScore);				
 				} catch (PdbLoadException e1) {
+					System.err.println("Error: Could not load Pdb file " + model + ": " + e1.getMessage() + ". Ignoring");
+				} catch (IOException e1) {
+					System.err.println("Error: Could not load Pdb file " + model + ": " + e1.getMessage() + ". Ignoring");
+				} catch (FileFormatException e1) {
 					System.err.println("Error: Could not load Pdb file " + model + ": " + e1.getMessage() + ". Ignoring");
 				}				
 				

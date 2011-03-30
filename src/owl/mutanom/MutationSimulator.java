@@ -5,8 +5,8 @@ import java.util.*;
 
 import javax.vecmath.Point3d;
 
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbSet;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbChainSet;
 
 
 /**
@@ -58,7 +58,7 @@ public class MutationSimulator {
 	 * @param nodeIndices
 	 * @return
 	 */
-	public double getAverageDistance(Pdb pdb, Set<Integer> nodeIndices) {
+	public double getAverageDistance(PdbChain pdb, Set<Integer> nodeIndices) {
 		Vector<Integer> indices = new Vector<Integer>(nodeIndices);
 		double sumDist = 0;
 		int numDist = 0;
@@ -90,7 +90,7 @@ public class MutationSimulator {
 		TreeSet<Double> stats = new TreeSet<Double>();
 		for (int i = 0; i < Math.min(nProt, pdbCodes.size()); i++) {
 			// load pdb
-			Pdb pdb = Pdb.readStructureOrExit(pdbCodes.get(i));
+			PdbChain pdb = PdbChain.readStructureOrExit(pdbCodes.get(i));
 			Vector<Integer> observedResidues = new Vector<Integer>(pdb.getAllSortedResSerials());
 			// generate random subsets
 			for (int j = 0; j < nRandSets; j++) {
@@ -195,7 +195,7 @@ public class MutationSimulator {
 		System.out.println("Reading cullpdb_20...");
 		Collection<String> pdbCodes = null;
 		try {
-			pdbCodes = PdbSet.readCullPdb20List();
+			pdbCodes = PdbChainSet.readCullPdb20List();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

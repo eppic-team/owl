@@ -13,7 +13,7 @@ import owl.core.util.MySQLConnection;
  * Note that PDB objects are stored in memory. This is not feasible for large sets of
  * structures. In this case the provided static methods to read pdb+chain codes
  * or filenames can be used to process files individually. See also static methods
- * <code>Pdb.readStructureOrExit</code> and <code>Pdb.readStructureOrNull</code> for
+ * <code>PdbChain.readStructureOrExit</code> and <code>PdbChain.readStructureOrNull</code> for
  * loading individual structures.
  * 
  * See also: {@link TemplateList}, {@link RIGEnsemble}
@@ -21,29 +21,29 @@ import owl.core.util.MySQLConnection;
  * @date 2009-01-09
  *
  */
-public class PdbSet {
+public class PdbChainSet {
 
 	/*------------------------------ constants ------------------------------*/
 	private static final String CULLPDB_20_FILE = "/project/StruPPi/Databases/cullpdb/cullpdb_pc20_res1.6_R0.25_d090102_chains1498";
 
 	
 	/*--------------------------- member variables --------------------------*/
-	Collection<Pdb> pdbs;
+	Collection<PdbChain> pdbs;
 
 	/*----------------------------- constructors ----------------------------*/
 	/**
-	 * Creates an empty PdbSet.
+	 * Creates an empty PdbChainSet.
 	 */
-	public PdbSet() {
-		pdbs = new LinkedHashSet<Pdb>();
+	public PdbChainSet() {
+		pdbs = new LinkedHashSet<PdbChain>();
 	}
 
 	/**
 	 * Creates a new pdb set filled with the given pdb objects.
 	 * @param inPdbs a collection of pdb objects
 	 */
-	public PdbSet(Collection<Pdb> inPdbs) {
-		pdbs = new HashSet<Pdb>();
+	public PdbChainSet(Collection<PdbChain> inPdbs) {
+		pdbs = new HashSet<PdbChain>();
 		pdbs.addAll(inPdbs);
 	}
 
@@ -52,7 +52,7 @@ public class PdbSet {
 	/**
 	 * Returns a collection view of the pdb objects in this set.
 	 */
-	public Collection<Pdb> getPdbs() {
+	public Collection<PdbChain> getPdbs() {
 		return pdbs;
 	}
 
@@ -66,8 +66,9 @@ public class PdbSet {
 		for(String pdbChain:list) {
 			String pdbCode = pdbChain.substring(0, 4);
 			String chainCode = pdbChain.substring(4, 5);
-			Pdb pdb = new PdbasePdb(pdbCode);
-			pdb.load(chainCode);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),PdbaseParser.DEFAULT_PDBASE_DB);
+			PdbChain pdb = fullpdb.getChain(chainCode);
+			pdbs.add(pdb);
 			System.out.print(".");
 		}
 		System.out.println();
@@ -160,7 +161,7 @@ public class PdbSet {
 		System.out.println("Loading " + pdbCodes.size() + " structures...");
 		int n = 0;
 		for(String pdbCode:pdbCodes) {
-			Pdb pdb = Pdb.readStructureOrNull(pdbCode);
+			PdbChain pdb = PdbChain.readStructureOrNull(pdbCode);
 			if(pdb != null) {
 				System.out.println(pdb.getFullLength());
 				n++;

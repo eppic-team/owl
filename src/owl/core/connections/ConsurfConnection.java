@@ -11,7 +11,7 @@ import java.net.URLConnection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 
@@ -31,8 +31,8 @@ public class ConsurfConnection {
 
 
 	/**
-	 * Constructs a new ConsurfConnection. Use subsequently {@link #getConsurfDataFromWeb(Pdb, String)} or
-	 * {@link #getConsurfDataLocal(Pdb, String)} depending where one wants the data to be read from.
+	 * Constructs a new ConsurfConnection. Use subsequently {@link #getConsurfDataFromWeb(PdbChain, String)} or
+	 * {@link #getConsurfDataLocal(PdbChain, String)} depending where one wants the data to be read from.
 	 */
 	public ConsurfConnection() {
 		
@@ -40,13 +40,13 @@ public class ConsurfConnection {
 	
 	/**
 	 * Parses the consurf data from the consurf web site, updating the residues of the
-	 * given Pdb object with the consurf data 
+	 * given PdbChain object with the consurf data 
 	 * @param pdb
 	 * @param consurfURLPrefix a consurf URL prefix or null (default will be taken)
 	 * @return
 	 * @throws IOException
 	 */
-	public int getConsurfDataFromWeb(Pdb pdb, String consurfURLPrefix) throws IOException {
+	public int getConsurfDataFromWeb(PdbChain pdb, String consurfURLPrefix) throws IOException {
 		if (consurfURLPrefix==null) consurfURLPrefix = CONSURF_URL_PREFIX;
 		
 		String pdbCode = pdb.getPdbCode();
@@ -60,14 +60,14 @@ public class ConsurfConnection {
 	
 	/**
 	 * Parses the consurf data from a consurf local directory, updating the residues of the
-	 * given Pdb object with the consurf data 
+	 * given PdbChain object with the consurf data 
 	 * @param pdb
 	 * @param consurfDir a local directory with files with consurf data or null (default will be taken)
 	 * @return
 	 * @throws FileNotFoundException
 	 * @throws IOException
 	 */
-	public int getConsurfDataLocal(Pdb pdb, String consurfDir) throws FileNotFoundException, IOException {
+	public int getConsurfDataLocal(PdbChain pdb, String consurfDir) throws FileNotFoundException, IOException {
 		if (consurfDir==null) consurfDir = CONSURF_DIR;
 		
 		String pdbCode = pdb.getPdbCode();
@@ -83,11 +83,11 @@ public class ConsurfConnection {
 	
 	/**
 	 * Parses consurf data from the given BufferedReader updating the residues of the given
-	 * Pdb object with the consurf data
+	 * PdbChain object with the consurf data
 	 * @return the number of mistakes found while parsing consurf results
 	 * @throws IOException when something goes wrong with parsing the BufferedReader
 	 */
-	private int parseConsurfData(Pdb pdb, BufferedReader in) throws IOException {
+	private int parseConsurfData(PdbChain pdb, BufferedReader in) throws IOException {
 		
 		String inputLine;
 		Pattern p = Pattern.compile("^\\s+\\d+");

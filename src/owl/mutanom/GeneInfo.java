@@ -11,7 +11,7 @@ import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.MaxClusterRunner.ScoreType;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-//import owl.core.structure.Pdb;
+//import owl.core.structure.PdbChain;
 import owl.core.util.MySQLConnection;
 import owl.mutanom.core.Gene;
 import owl.mutanom.core.Substructure;

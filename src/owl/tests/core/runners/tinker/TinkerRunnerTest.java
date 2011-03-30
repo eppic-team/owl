@@ -19,14 +19,13 @@ import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.Atom;
 import owl.core.structure.ConformationsNotSameSizeException;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.Residue;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 import owl.tests.TestsSetup;
@@ -66,10 +65,10 @@ public class TinkerRunnerTest {
 	}
 	
 	@Test
-	public void testReconstruct() throws SQLException, PdbCodeNotFoundException, PdbLoadException, TinkerError, IOException, ConformationsNotSameSizeException {
+	public void testReconstruct() throws SQLException, PdbCodeNotFoundException, PdbLoadException, TinkerError, IOException, ConformationsNotSameSizeException, FileFormatException {
 		MySQLConnection conn = new MySQLConnection();
-		Pdb pdb = new PdbasePdb(PDB_CODE, PDBASE_DB,conn);
-		pdb.load(CHAIN);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(PDB_CODE,conn,PDBASE_DB);
+		PdbChain pdb = fullpdb.getChain(CHAIN);
 		RIGraph graph = pdb.getRIGraph(CT, CUTOFF);
 		RIGraph[] graphs = {graph};
 		TinkerRunner tr = new TinkerRunner(TINKERBINDIR,DISTGEOM_EXE,PRMFILE);
@@ -78,10 +77,10 @@ public class TinkerRunnerTest {
 				System.getProperty("java.io.tmpdir"), "reconstructTester"+PDB_CODE+CHAIN, true, false);
 		
 		File outpdbfile = tr.getOutPdbFile(1);
-		Pdb outpdb = new PdbfilePdb(outpdbfile.getAbsolutePath());
-		outpdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
+		PdbAsymUnit fulloutpdb = new PdbAsymUnit(outpdbfile);
+		PdbChain outpdb = fulloutpdb.getChain(PdbAsymUnit.NULL_CHAIN_CODE);
 		assertEquals(pdb.getFullLength(),outpdb.getFullLength());
-		assertEquals(pdb.getSequence(),outpdb.getSequence());
+		assertEquals(pdb.getSequence().getSeq(),outpdb.getSequence().getSeq());
 		
 		// checking atoms and that chirality is fine
 		for (int resser:outpdb.getAllSortedResSerials()) {

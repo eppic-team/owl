@@ -6,10 +6,11 @@ import java.util.*;
 
 import owl.core.runners.DsspRunner;
 import owl.core.sequence.Sequence;
-import owl.core.structure.CiffilePdb;
-import owl.core.structure.Pdb;
+import owl.core.structure.CiffileParser;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbfileParser;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
@@ -132,7 +133,7 @@ public class RIGEnsemble {
 		
 			// for each file in list, load or generate the graph (depending on file type)
 			File file;
-			Pdb pdb;
+			PdbChain pdb;
 			RIGraph graph;
 			int fr = 0;
 			for(String filename:files) {
@@ -146,13 +147,14 @@ public class RIGEnsemble {
 					case(FileTypeGuesser.RAW_PDB_FILE):
 					case(FileTypeGuesser.CASP_TS_FILE):
 						try {
-							pdb = new PdbfilePdb(file.getAbsolutePath());
-							String[] chains = pdb.getChains();
-							Integer[] models = pdb.getModels();
+							PdbfileParser parser = new PdbfileParser(file.getAbsolutePath());
+							String[] chains = parser.getChains();
+							Integer[] models = parser.getModels();
+							PdbAsymUnit fullpdb = new PdbAsymUnit(file,models[0]);
 							if(loadOnlyFirstModels && models[0] != 1) continue;
 							//System.out.println(filename + ":" + chains[0]);
-							pdb.load(chains[0], models[0]);	// load first chain and first model
-							if(commonSequence != null) ((PdbfilePdb) pdb).setSequence(commonSequence.getSeq());
+							pdb = fullpdb.getChain(chains[0]);	// load first chain and first model
+							if(commonSequence != null) pdb.setSequence(commonSequence);
 							if(dsspExecutable != null && dsspParams != null) {
 								pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, dsspParams, SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 							}
@@ -163,13 +165,16 @@ public class RIGEnsemble {
 						} catch(PdbLoadException e) {
 							System.err.println("Error loading pdb structure " + file.getPath() + ":" + e.getMessage());
 							//System.exit(1);
+						} catch (FileFormatException e) {
+							// this cannot happen: it happens if the FileTypeGuesser in PdbAsymUnit couldn't guess
+							// but here we are within a FileTypeGuesser case
+							System.err.println("Error loading pdb structure " + file.getPath() + ":" + e.getMessage());
 						}
 						break;
 					case(FileTypeGuesser.CIF_FILE):
 						try {
-							pdb = new CiffilePdb(file.getAbsolutePath());
-							String[] chains = pdb.getChains();
-							pdb.load(chains[0]);	// load first chain
+							PdbAsymUnit fullpdb = new PdbAsymUnit(file);
+							pdb = fullpdb.getFirstChain(); // load first chain
 							graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 							this.addRIG(graph);
 							this.addFileName(filename);
@@ -177,6 +182,10 @@ public class RIGEnsemble {
 						} catch(PdbLoadException e) {
 							System.err.println("Error loading pdb structure: " + e.getMessage());
 							//System.exit(1);
+						} catch (FileFormatException e) {
+							// this cannot happen: it happens if the FileTypeGuesser in PdbAsymUnit couldn't guess
+							// but here we are within a FileTypeGuesser case
+							System.err.println("Error loading pdb structure: " + e.getMessage());
 						}
 						break;
 					case(FileTypeGuesser.OWL_CM_FILE):
@@ -213,8 +222,11 @@ public class RIGEnsemble {
 	 * multiple chains, only the first one is read.
 	 * @param file the input file
 	 * @return the number of models read
+	 * @throws IOException
+	 * @throws PdbLoadException 
+	 * @throws FileFormatException 
 	 */
-	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadException {
+	public int loadFromMultiModelFile(File file) throws IOException, PdbLoadException, FileFormatException {
 		return loadFromMultiModelFile(file, null);
 	}
 	
@@ -223,10 +235,13 @@ public class RIGEnsemble {
 	 * @param file the input file (PDB or mmCIF)
 	 * @param the chain to be read; if null, the first chain in the file
 	 * @return the number of models read
+	 * @throws IOException
+	 * @throws PdbLoadException
+	 * @throws FileFormatException 
 	 */
-	public int loadFromMultiModelFile(File file, String chain) throws IOException, PdbLoadException {
+	public int loadFromMultiModelFile(File file, String chain) throws IOException, PdbLoadException, FileFormatException {
 		// for each model in file, generate a graph
-		Pdb pdb;
+		PdbChain pdb;
 		RIGraph graph;
 		Integer[] models;
 		String[] chains;
@@ -235,26 +250,43 @@ public class RIGEnsemble {
 		switch(fileType) {
 		case(FileTypeGuesser.PDB_FILE):
 		case(FileTypeGuesser.RAW_PDB_FILE):
-			pdb = new PdbfilePdb(file.getAbsolutePath());
-			models = pdb.getModels();
-			chains = pdb.getChains();
+			PdbfileParser pdbparser = new PdbfileParser(file.getAbsolutePath());
+			models = pdbparser.getModels();
+			chains = pdbparser.getChains();
 			if(chain==null) chain = chains[0];
 			for(int mod: models) {
 				//pdb = new PdbfilePdb(file.getAbsolutePath());
-				pdb.load(chain, mod);
+				PdbAsymUnit fullpdb = null;
+				try {
+					fullpdb = new PdbAsymUnit(file,mod);
+				} catch (FileFormatException e) {
+					// this cannot happen: it happens if the FileTypeGuesser in PdbAsymUnit couldn't guess
+					// but here we are within a FileTypeGuesser case
+					System.err.println(e.getMessage());
+				}
+				pdb = fullpdb.getChain(chain);
 				graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
 				mr++;
 			}
 			break;
 		case(FileTypeGuesser.CIF_FILE):
-			pdb = new CiffilePdb(file);
-			models = pdb.getModels();
-			chains = pdb.getChains();
+			CiffileParser cifparser = new CiffileParser(file);
+			models = cifparser.getModels();
+			chains = cifparser.getChains();
+			cifparser.closeFile();
 			chain = chains[0];
 			for(int mod: models) {
 				//pdb = new CiffilePdb(file.getAbsolutePath());
-				pdb.load(chain, mod);
+				PdbAsymUnit fullpdb = null;
+				try {
+					fullpdb = new PdbAsymUnit(file,mod);
+				} catch (FileFormatException e) {
+					// this cannot happen: it happens if the FileTypeGuesser in PdbAsymUnit couldn't guess
+					// but here we are within a FileTypeGuesser case
+					System.err.println(e.getMessage());
+				}
+				pdb = fullpdb.getChain(chain);
 				graph = pdb.getRIGraph(this.edgeType, this.distCutoff);
 				this.addRIG(graph);
 				mr++;

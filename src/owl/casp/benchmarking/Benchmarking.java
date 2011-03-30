@@ -8,11 +8,12 @@ import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.MaxClusterRunner.MaxClusterRow;
 import owl.core.runners.MaxClusterRunner.ScoreType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.StreamGobbler;
 
 
@@ -109,20 +110,26 @@ public class Benchmarking {
 		scores.gdt = score;
 		
 		// get model graph
-		PdbfilePdb pdb = new PdbfilePdb(model.getPath());
+		PdbChain pdb = null;
 		try {
-			pdb.load(pdb.getChains()[0]);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(model);
+			pdb = fullpdb.getFirstChain();
 		} catch (PdbLoadException e) {
+			throw new IOException(e.getMessage());
+		} catch (FileFormatException e) {
 			throw new IOException(e.getMessage());
 		}		
 		RIGraph predGraph = pdb.getRIGraph("Cb", 8.0);
 		pdb = null;	// collect garbage
 		
 		// get nativeGraph
-		PdbfilePdb pdb2 = new PdbfilePdb(answer.getPath());
+		PdbChain pdb2 = null;
 		try {
-			pdb2.load(pdb2.getChains()[0]);
+			PdbAsymUnit fullpdb2 = new PdbAsymUnit(answer);
+			pdb2 = fullpdb2.getFirstChain();
 		} catch (PdbLoadException e) {
+			throw new IOException(e.getMessage());
+		} catch (FileFormatException e) {
 			throw new IOException(e.getMessage());
 		}		
 		RIGraph nativeGraph = pdb2.getRIGraph("Cb", 8.0);
@@ -245,9 +252,10 @@ public class Benchmarking {
 		ArrayList<MaxClusterRow> resultTable = new ArrayList<MaxClusterRow>();
 
 		// load answer structure
-		Pdb answerPdb = new PdbfilePdb(answerFileName);
+		PdbChain answerPdb = null;
 		try {
-			answerPdb.load(answerPdb.getChains()[0]);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(new File(answerFileName));
+			answerPdb = fullpdb.getFirstChain();
 			// generate graph for answer file
 			RIGraph answerGraph = answerPdb.getRIGraph("Cb", 8.0);
 			// loop over list file
@@ -259,9 +267,10 @@ public class Benchmarking {
 				while((line=in.readLine()) != null) {
 					String fileName = line.trim();
 					// load structure
-					Pdb pdb = new PdbfilePdb(fileName);
+					PdbChain pdb = null;
 					try {
-						pdb.load(pdb.getChains()[0]);
+						PdbAsymUnit fullpdb2 = new PdbAsymUnit(new File(fileName));
+						pdb = fullpdb2.getFirstChain();
 						// generate graph
 						RIGraph rig = pdb.getRIGraph("Cb", 8.0);
 						// compare graph to answer
@@ -274,12 +283,18 @@ public class Benchmarking {
 						idx++;
 					} catch (PdbLoadException e) {
 						//e.printStackTrace();
+					} catch (FileFormatException e) {
+						//e.printStackTrace();
 					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		} catch (PdbLoadException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (FileFormatException e) {
 			e.printStackTrace();
 		}
 		if(resultTable != null) {

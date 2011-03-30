@@ -539,6 +539,9 @@ public class TemplateSelection {
 		} catch (PdbLoadException e) {
 			System.err.println("Couldn't get SCOP identifiers. Error "+e.getMessage());
 			pdbDataAvailable = false;
+		} catch (IOException e) {
+			System.err.println("Couldn't get SCOP identifiers. Error "+e.getMessage());
+			pdbDataAvailable = false;
 		}
 		
 		SummaryTable table = new SummaryTable();

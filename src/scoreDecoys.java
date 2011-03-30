@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
@@ -144,17 +144,18 @@ public class scoreDecoys {
 				}
 								
 				for (File file:files) {
-					Pdb pdb = new PdbfilePdb(file.getAbsolutePath());
+					
+					PdbChain pdb = null;
 
 					try {
-						String[] chains = pdb.getChains();
-						if (chains==null) {
+						PdbAsymUnit fullpdb = new PdbAsymUnit(file);
+						if (fullpdb.getNumChains()==0) { // TODO not sure if this works, didn't test it
 							System.out.print("x");
 							if (DEBUG) System.out.println("\nFile "+file+" doesn't contain any chain");
 							continue;
 						}
-						if (chains.length>1) System.out.println("\nWarning. More than one chain in "+file);
-						pdb.load(chains[0]);
+						if (fullpdb.getNumChains()>1) System.out.println("\nWarning. More than one chain in "+file);
+						pdb = fullpdb.getFirstChain();
 						System.out.print(".");
 						
 					} catch (PdbLoadException e) {

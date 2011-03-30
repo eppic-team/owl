@@ -11,6 +11,7 @@ import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.*;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
@@ -127,7 +128,7 @@ public class testGraphAverager {
 		
 		// local variables
 		String targetFileName = targetFile.getAbsolutePath();					// target file name
-		Pdb target = null;														// target structure
+		PdbChain target = null;														// target structure
 		RIGraph targetGraph = null;												// target graph
 		Vector<String> templateFileNames = new Vector<String>();				// vector of template file names
 		Vector<RIGraph> models = new Vector<RIGraph>();								// vector of template graphs
@@ -146,10 +147,16 @@ public class testGraphAverager {
 		// read target graph
 		if(verbose) System.out.println("Reading input files...");
 		try {
-			target = new PdbfilePdb(targetFile.getAbsolutePath());
-			target.load(chainCode);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(targetFile);
+			target = fullpdb.getChain(chainCode);
 			targetGraph = target.getRIGraph(contactType, distCutoff);
 		} catch(PdbLoadException e) {
+			System.err.println("Error while trying to load pdb data from file " + targetFile.getAbsolutePath()+", specific error: "+e.getMessage());
+			System.exit(1);
+		} catch (IOException e) {
+			System.err.println("Error while trying to load pdb data from file " + targetFile.getAbsolutePath()+", specific error: "+e.getMessage());
+			System.exit(1);
+		} catch (FileFormatException e) {
 			System.err.println("Error while trying to load pdb data from file " + targetFile.getAbsolutePath()+", specific error: "+e.getMessage());
 			System.exit(1);
 		}
@@ -159,7 +166,7 @@ public class testGraphAverager {
 			BufferedReader in = new BufferedReader(new FileReader(listFile));
 			String line;
 			File file;
-			Pdb pdb;
+			PdbChain pdb;
 			RIGraph graph;
 			while ((line =  in.readLine()  ) != null) {
 				file = new File(line);
@@ -169,12 +176,15 @@ public class testGraphAverager {
 				} else {
 					templateFileNames.add(line);
 					try {
-						pdb = new PdbfilePdb(file.getAbsolutePath());
-						pdb.load(pdb.getChains()[0]);
+						PdbAsymUnit fullpdb = new PdbAsymUnit(file);
+						pdb = fullpdb.getFirstChain();
 						graph = pdb.getRIGraph(contactType, distCutoff);
 						models.add(graph);
 						if(verbose) System.out.print(".");
 					} catch(PdbLoadException e) {
+						System.err.println("Error while trying to load pdb data from file " + file.getAbsolutePath()+", specific error: "+e.getMessage());
+						System.exit(1);
+					} catch (FileFormatException e) {
 						System.err.println("Error while trying to load pdb data from file " + file.getAbsolutePath()+", specific error: "+e.getMessage());
 						System.exit(1);
 					}
@@ -315,7 +325,7 @@ public class testGraphAverager {
 			}
 			
 			try {
-				Pdb resultPdb = tr.reconstruct(sequence, graphs, null, false, numberOfTinkerModels, false);
+				PdbChain resultPdb = tr.reconstruct(sequence, graphs, null, false, numberOfTinkerModels, false);
 				if(outputPredictedStructure) {
 					resultPdb.writeToPDBFile(outStructFile);
 					System.err.println("Output of reconstruction written to " + outStructFile);
@@ -323,6 +333,8 @@ public class testGraphAverager {
 			} catch (IOException e) {
 				System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
 			} catch (TinkerError e) {
+				System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
+			} catch (FileFormatException e) {
 				System.err.println("Error while running Tinker reconstruction: " + e.getMessage());
 			}	
 			

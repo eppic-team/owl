@@ -334,8 +334,9 @@ public class TemplateList implements Iterable<Template> {
 	 * @param pdbaseDb a pdbase db name or null if all Templates are to be read from file
 	 * @throws PdbLoadException
 	 * @throws SQLException
+	 * @throws IOException 
 	 */
-	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws PdbLoadException, SQLException {
+	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws PdbLoadException, SQLException, IOException {
 		for (Template template:this) {
 			try {
 				template.loadPdbData(conn, pdbaseDb);

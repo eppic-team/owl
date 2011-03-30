@@ -3,7 +3,7 @@ package owl.core.connections.pisa;
 import java.io.PrintStream;
 
 import owl.core.structure.ChainInterface;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 
 public class PisaInterface implements Comparable<PisaInterface> {
@@ -163,14 +163,14 @@ public class PisaInterface implements Comparable<PisaInterface> {
 		interf.setName(firstMolecule.getChainId()+"+"+secondMolecule.getChainId());
 		
 		if (firstMolecule.isProtein()) {
-			Pdb pdb1 = pdb.getChain(this.firstMolecule.getChainId()).copy();
+			PdbChain pdb1 = pdb.getChain(this.firstMolecule.getChainId()).copy(pdb);
 			pdb1.transform(firstMolecule.getTransfOrth());
 			// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
 			firstMolecule.setAsaAndBsas(pdb1);
 			interf.setFirstMolecule(pdb1);
 		}
 		if (secondMolecule.isProtein()) {
-			Pdb pdb2 = pdb.getChain(secondMolecule.getChainId()).copy();
+			PdbChain pdb2 = pdb.getChain(secondMolecule.getChainId()).copy(pdb);
 			pdb2.transform(secondMolecule.getTransfOrth());
 			// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
 			secondMolecule.setAsaAndBsas(pdb2);

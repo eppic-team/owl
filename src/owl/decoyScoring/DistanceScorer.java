@@ -16,10 +16,10 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.AIGEdge;
 import owl.core.structure.graphs.AIGNode;
@@ -98,10 +98,10 @@ public class DistanceScorer extends Scorer {
 		for (String id:TemplateList.readIdsListFile(listFile)) {
 			String pdbCode = id.substring(0,4);
 			String pdbChainCode = id.substring(4,5);
-			Pdb pdb = null;
+			PdbChain pdb = null;
 			try {
-				pdb = new PdbasePdb(pdbCode,DB,conn);
-				pdb.load(pdbChainCode);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,DB);
+				pdb = fullpdb.getChain(pdbChainCode);
 				if (!isValidPdb(pdb)) {
 					System.err.println(id+" didn't pass the quality checks to be included in training set");
 					continue;
@@ -208,7 +208,7 @@ public class DistanceScorer extends Scorer {
 	}
 	
 	@Override
-	public double scoreIt(Pdb pdb) {
+	public double scoreIt(PdbChain pdb) {
 		AIGraph graph = pdb.getAllAtomGraph(this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 		return scoreIt(graph);

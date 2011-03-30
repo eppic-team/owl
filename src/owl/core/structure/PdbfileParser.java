@@ -21,17 +21,15 @@ import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
 
 /**
- * A single chain PDB protein structure read from a PDB file or CASP TS file
+ * A PDB file format parser, reads PDB files or CASP TS files
  * The sequences will be read from both SEQRES and ATOM lines and aligned if
  * they don't match. The internal residue numbers will then match the SEQRES.
  * If only ATOM lines are present the ATOM line sequence will be used as SEQRES. 
  * Exceptions will be thrown when:
  * - all residues are non-standard for a given chain (0 observed residues)
  */
-public class PdbfilePdb extends Pdb {
+public class PdbfileParser {
 	
-	private static final long serialVersionUID = 1L;
-
 	// the values for the parameters of the alignment have been fine tuned, checking that it works with as many PDB files as possible
 	private static final float	GAP_OPEN_SCORE =	0.2f; // default 10f
 	private static final float	GAP_EXTEND_SCORE =	0.1f; // default 0.5f
@@ -45,53 +43,67 @@ public class PdbfilePdb extends Pdb {
 	private boolean isCaspTS; // whether we are reading a CASP TS file (true) or a normal PDB file (false)
 	private boolean hasSeqRes; // whether we find a non-empty SEQRES field in this pdb file
 	
-	private boolean hasAltCodes;
-	
 	private ArrayList<Residue> tmpResiduesList; // the temp list to store the residues read from ATOM lines (need to keep them in order as they appear in file)
 	private HashMap<String,Residue> tmpResiduesMap; // the temp map of all seen pdb residue serials to residues (need it for fast searches)
 	
+	private String pdbCode;
+	private String title;
+	private String expMethod;
+	private CrystalCell crystalCell;
+	private SpaceGroup spaceGroup;
+	private double resolution;
+	private double rFree;
+	private double rSym; 
+	
+	private int model;
+	
+	private String sequence;
+	
+	private String[] chainsArray;
+	private Integer[] modelsArray;
 	
 	/**
-	 * Constructs an empty Pdb object given a pdbfile name
-	 * Data will be loaded from pdb file upon call of load(pdbChainCode, modelSerial) 
+	 * Constructs a pdb file parser object given a pdbfile name
+	 * Use readChain(pdbChainCode, modelSerial) to generate PdbChain objects. 
 	 * @param pdbfile
 	 */
-	public PdbfilePdb (String pdbfile) {
+	public PdbfileParser (String pdbfile) {
 		this.pdbfile = pdbfile;
 		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
 		this.hasSeqRes = false; // we assume that there is no SEQRES in this pdb file, if SEQRES is found when reading we set it to true
 		
-		// we initialise the secondary structure to empty, if no sec structure info is found then it remains empty
-		this.secondaryStructure = new SecondaryStructure("");		
+		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+
 	}
 
 	/**
-	 * Loads PDB data (coordinates, sequence, etc.) from the PDB file
+	 * Reads PDB data (coordinates, sequence, etc.) from the PDB file
 	 * for given pdbChainCode and modelSerial
 	 * @param pdbChainCode
 	 * @param modelSerial
 	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException {
+	public PdbChain readChain(String pdbChainCode, int modelSerial) throws PdbLoadException {
+		
+		PdbChain pdb = new PdbChain();
 		try {
-			hasAltCodes = false;
-			initialiseResidues();
 			this.model=modelSerial;
-			this.pdbChainCode=pdbChainCode;			// NOTE! pdb chain codes are case sensitive!
-			// we set chainCode to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use "A"
-			this.chainCode=pdbChainCode;
-			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) this.chainCode=NULL_chainCode;
+			pdb.setPdbChainCode(pdbChainCode);			// NOTE! pdb chain codes are case sensitive!
+			// we set chainCode to pdbChainCode except for case PdbChain.NULL_CHAIN_CODE where we use "A"
+			pdb.setChainCode(pdbChainCode);
+			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) pdb.setChainCode(NULL_chainCode);
 
-			parse();
+			parse(pdb);
 			
-			secondaryStructure.setSequence(this.sequence);
-			if(!secondaryStructure.isEmpty()) {
-				secondaryStructure.setComment("Author");
-				this.initialiseResiduesSecStruct();
+			if(!pdb.getSecondaryStructure().isEmpty()) {
+				pdb.getSecondaryStructure().setComment("Author");
+				pdb.initialiseResiduesSecStruct();
 			}			
 
-			this.initialiseMaps(); //TODO revise, is the remapping of pdbresser2resser in this necessary?
-			dataLoaded = true;
+			pdb.initialiseMaps();
 			
 			// so that the GC releases memory (hopefully) for the tmp residue objects
 			tmpResiduesList = null;
@@ -102,13 +114,19 @@ public class PdbfilePdb extends Pdb {
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
 		} 
+		return pdb;
 	}
 	
 	/**
-	 * Returns all PDB chain codes present in the PDB file
+	 * Returns all alphabetically sorted PDB chain codes present in the PDB file by quickly parsing the chain 
+	 * info from the ATOM lines of the PDB file.
+	 * It caches the result so that next time called no parsing has to be done.
 	 * @return array with all pdb chain codes or null if no chains found
 	 */
 	public String[] getChains() throws PdbLoadException {
+		if (chainsArray!=null) {
+			return chainsArray;
+		}
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -129,16 +147,21 @@ public class PdbfilePdb extends Pdb {
 		
 		if (chains.isEmpty()) return null;
 		
-		String[] chainsArray = new String[chains.size()];
+		chainsArray = new String[chains.size()];
 		chains.toArray(chainsArray);
 		return chainsArray;
 	}
 	
 	/**
-	 * Returns all model serials present in the PDB file
+	 * Returns all model serials present in the PDB file by parsing the MODEL lines
+	 * of the PDB file.
+	 * It caches the result so that next time called no parsing has to be done. 
 	 * @return array with all model serials
 	 */
 	public Integer[] getModels() throws PdbLoadException {
+		if (modelsArray!=null) {
+			return modelsArray;
+		}
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
 			BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -162,15 +185,47 @@ public class PdbfilePdb extends Pdb {
 		}
 		
 		if (models.isEmpty()) models.add(PdbAsymUnit.DEFAULT_MODEL);//return null;		
-		Integer[] modelsArray = new Integer[models.size()];
+		modelsArray = new Integer[models.size()];
 		models.toArray(modelsArray);
 		return modelsArray;
+	}
+	
+	protected String getPdbCode() {
+		return pdbCode;
+	}
+	
+	protected String getTitle(){
+		return title;
+	}
+	
+	protected String getExpMethod() {
+		return expMethod;
+	}
+	
+	protected CrystalCell getCrystalCell() {
+		return crystalCell;
+	}
+	
+	protected SpaceGroup getSpaceGroup() {
+		return spaceGroup;
+	}
+	
+	protected double getResolution() {
+		return resolution;
+	}
+	
+	protected double getRfree() {
+		return rFree;
+	}
+	
+	protected double getRsym() {
+		return rSym;
 	}
 	
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
 	 * <code>chainCode</code> gets set to same as <code>pdbChainCode</code>, except if input chain code 
-	 * is Pdb.NULL_CHAIN_CODE then chainCode will be <code>NULL_chainCode</code>
+	 * is PdbChain.NULL_CHAIN_CODE then chainCode will be <code>NULL_chainCode</code>
 	 * <code>pdbCode</code> gets set to the one parsed in HEADER or to <code>NO_PDB_CODE</code> 
 	 * if not found
 	 * The sequence is either read from SEQRES if present or from the residues read from ATOM 
@@ -182,14 +237,15 @@ public class PdbfilePdb extends Pdb {
 	 * @throws PdbLoadException if no ATOM lines are found for given 
 	 * pdbChainCode and model or the space group found is not recognised
 	 */
-	private void parse() throws IOException, FileFormatException, PdbLoadException { 
+	private void parse(PdbChain pdb) throws IOException, FileFormatException, PdbLoadException { 
 		tmpResiduesList = new ArrayList<Residue>();
 		tmpResiduesMap = new HashMap<String,Residue>();
+		SecondaryStructure secondaryStructure = new SecondaryStructure("");
 		Pattern p;
 		Matcher m;
-		// we set chainCodeStr (for regex) to pdbChainCode except for case Pdb.NULL_CHAIN_CODE where we use " " (Pdb.NULL_CHAIN_CODE is a blank chain code in pdb files)
-		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr=" ";
+		// we set chainCodeStr (for regex) to pdbChainCode except for case PdbChain.NULL_CHAIN_CODE where we use " " (PdbChain.NULL_CHAIN_CODE is a blank chain code in pdb files)
+		String chainCodeStr=pdb.getPdbChainCode();
+		if (pdb.getPdbChainCode().equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		this.title = "";
 		this.sequence = ""; // we will put here the sequence we find (either from SEQRES or ATOM lines)
 		int lastAtomSerial = -1;
@@ -227,7 +283,7 @@ public class PdbfilePdb extends Pdb {
 							p = Pattern.compile("^TARGET\\s+[Tt](\\d+)");
 							m = p.matcher(line);
 							if (m.find()) {
-								this.targetNum = Integer.parseInt(m.group(1));
+								pdb.setTargetNum(Integer.parseInt(m.group(1)));
 							} else {
 								fpdb.close();
 								throw new FileFormatException("The CASP TS file "+pdbfile+" does not have a TARGET line");
@@ -400,8 +456,9 @@ public class PdbfilePdb extends Pdb {
 					//System.out.printf("%s ", parentList.getLast());
 				}
 				//System.out.printf("(%d) ", parentList.size());
-				this.caspParents = new String[0];
-				this.caspParents = parentList.toArray(this.caspParents);
+				String [] caspParents = new String[0];
+				caspParents = parentList.toArray(caspParents);
+				pdb.setCaspParents(caspParents);
 			}
 			// ATOM
 			p = Pattern.compile("^ATOM");
@@ -424,7 +481,7 @@ public class PdbfilePdb extends Pdb {
 						}
 						lastAtomSerial = atomserial;
 						String altCode = line.substring(16, 17);
-						if (!altCode.equals(" ")) hasAltCodes = true;
+						if (!altCode.equals(" ")) pdb.setHasAltCodes(true);
 						double x = Double.parseDouble(line.substring(30,38).trim());
 						double y = Double.parseDouble(line.substring(38,46).trim());
 						double z = Double.parseDouble(line.substring(46,54).trim());
@@ -477,7 +534,7 @@ public class PdbfilePdb extends Pdb {
 							}
 
 							if (!tmpResiduesMap.containsKey(pdbResSerial)) {
-								Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type),resSerial+totalInsCodesFound,this); 
+								Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type),resSerial+totalInsCodesFound,pdb); 
 								tmpResiduesList.add(residue);
 								residue.setPdbSerial(pdbResSerial);
 								tmpResiduesMap.put(pdbResSerial,residue);
@@ -504,11 +561,35 @@ public class PdbfilePdb extends Pdb {
 		fpdb.close();
 		// we check that there was at least one observed residue for the chain
 		if (tmpResiduesList.size()==0) {
-			throw new PdbLoadException("Couldn't find any ATOM line for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbLoadException("Couldn't find any ATOM line for given pdbChainCode: "+pdb.getPdbChainCode()+", model: "+model);
 		}
 		
 		checkForEmptyResidues();
 		checkSeqResMatching();
+		
+		
+		
+		// now that we have realigned and renumbered we fill the final PdbChain object
+		pdb.setSequence(sequence);
+		secondaryStructure.setSequence(sequence);
+		pdb.setSecondaryStructure(secondaryStructure);
+		
+		for (Residue residue:tmpResiduesList){
+			pdb.addResidue(residue);
+		}
+	
+		// finally we initialise the pdb 2 resser maps
+		TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
+		TreeMap<String,Integer> pdbresser2resser = new TreeMap<String, Integer>();
+		for (int i=0;i<sequence.length();i++) {
+			if (pdb.containsResidue(i+1)) {
+				Residue residue = pdb.getResidue(i+1);
+				resser2pdbresser.put(residue.getSerial(),residue.getPdbSerial());
+				pdbresser2resser.put(residue.getPdbSerial(),residue.getSerial());
+			} 
+		}
+		pdb.setResser2pdbresserMap(resser2pdbresser);
+		pdb.setPdbresser2resserMap(pdbresser2resser);
 	}
 	
 	/**
@@ -595,22 +676,6 @@ public class PdbfilePdb extends Pdb {
 				}
 			} 
 		}
-		// now that we have realigned and renumbered we fill the final Pdb object
-		for (Residue residue:tmpResiduesList){
-			this.addResidue(residue);
-		}
-	
-		// finally we initialise the pdb 2 resser maps
-		this.resser2pdbresser = new TreeMap<Integer, String>();
-		this.pdbresser2resser = new TreeMap<String, Integer>();
-		for (int i=0;i<sequence.length();i++) {
-			if (this.containsResidue(i+1)) {
-				Residue residue = getResidue(i+1);
-				resser2pdbresser.put(residue.getSerial(),residue.getPdbSerial());
-				pdbresser2resser.put(residue.getPdbSerial(),residue.getSerial());
-			} 
-		}
-
 	}
 	
 	private void reAlignSeqRes() throws PdbLoadException {
@@ -776,7 +841,6 @@ public class PdbfilePdb extends Pdb {
 		}
 	}
 	
-	
 	/**
 	 * Reformats a parent record in one of the various styles found in Casp files to our standard form
 	 * @param s the input parent string
@@ -793,35 +857,11 @@ public class PdbfilePdb extends Pdb {
 	}
 	
 	/**
-	 * Sets the sequence for this PdbasePdb object, overriding any current sequence information.
-	 * If the observed residues (those having 3d coordinates) do not match the new sequence,
-	 * an exception will be thrown.
-	 * @param seq the new sequence
-	 * @throws PdbLoadException if the given sequence does not match observed sequence from ATOM lines
-	 */
-	public void setSequence(String seq) throws PdbLoadException {
-		// we check that the sequences from ATOM lines and the new sequence coincide (except for unobserved residues)
-		for (int resser:getAllSortedResSerials()) {
-			if (seq.charAt(resser-1)!=this.getResidue(resser).getAaType().getOneLetterCode()) {
-				throw new PdbLoadException("Given sequence does not match observed sequence from ATOM lines for position "+resser+".");
-			}
-		}
-		this.sequence = seq;
-	}
-	
-	/**
-	 * Gets the PDB file name from which this Pdb is read from.
+	 * Gets the PDB file name from which this PdbChain is read from.
 	 * @return
 	 */
 	public String getPdbFileName() {
 		return pdbfile;
 	}
 	
-	/**
-	 * True if the PDB file contains alt codes for this chain, false otherwise.
-	 * @return
-	 */
-	public boolean hasAltCodes() {
-		return hasAltCodes;
-	}
 }

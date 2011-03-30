@@ -12,6 +12,7 @@ import owl.core.structure.graphs.RIGNbhood;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
+import owl.core.util.MySQLConnection;
 
 
 import edu.uci.ics.jung.graph.util.EdgeType;
@@ -22,8 +23,8 @@ import edu.uci.ics.jung.graph.util.Pair;
 public class testJUNGframework {
 
 	public static void main(String[] args) throws FileFormatException, PdbLoadException, SQLException, PdbCodeNotFoundException {
-		Pdb pdb = new PdbasePdb("7adh");
-		pdb.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit("7adh",new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain("A");
 		
 		RIGraph graph = pdb.getRIGraph("Ca", 8.0);
 		RIGraph graph2 = pdb.getRIGraph("Ca/Cg", 8.0);
@@ -152,10 +153,10 @@ public class testJUNGframework {
 		
 		// TEST copying of RIGraph objects and restrictRange methods
 		System.out.println("TEST copying of RIGraph objects");
-		Pdb pdb1 = new PdbasePdb("1bxy");
-		pdb1.load("A");
-		Pdb pdb2 = new PdbasePdb("1sha");
-		pdb2.load("A");
+		PdbAsymUnit fullpdb1 = new PdbAsymUnit("1bxy",new MySQLConnection(),"pdbase");
+		PdbChain pdb1 = fullpdb1.getChain("A");
+		PdbAsymUnit fullpdb2 = new PdbAsymUnit("1sha",new MySQLConnection(),"pdbase");
+		PdbChain pdb2 = fullpdb2.getChain("A");
 		RIGraph g1 = pdb1.getRIGraph("Ca", 8);
 		RIGraph g2 = pdb2.getRIGraph("Ca", 8);
 		System.out.println("g1: "+g1.getPdbCode()+" nodes: "+g1.getVertexCount()+" edges: "+g1.getEdgeCount());

@@ -236,8 +236,8 @@ public class Individuals extends RIGraph {
 	
 	public Individuals (String pdb, double cont_percent, boolean random) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection();
-		Pdb prt = new PdbasePdb(pdb,pdbaseDb,conn);
-		prt.load(prt.getChainCode());
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdb,conn,pdbaseDb);
+		PdbChain prt = fullpdb.getChain("A");
 		RIGraph rig = prt.getRIGraph(ct, di);
 		setIndis(rig,conn,random,cont_percent);		
 	}
@@ -543,7 +543,7 @@ public class Individuals extends RIGraph {
 		double cut = rig.getCutoff();
 		String ct = rig.getContactType();
 		int lengt = bound.length;
-		Pdb n = getFullProt(rig, conn);
+		PdbChain n = getFullProt(rig, conn);
 		RIGraph r = n.getRIGraph(ct, cut);
 		int edgec = r.getEdgeCount();
 		int edgepercent = (int) (NumCont/100.0*(double) edgec);
@@ -715,13 +715,14 @@ public class Individuals extends RIGraph {
 					//if no sequence was found
 					
 					MySQLConnection conn = new MySQLConnection ();
-					Pdb pdb = new PdbasePdb (getName(), "pdbase_20090728", conn);
-					setSequence(pdb.getSequence());
+					PdbAsymUnit fullpdb = new PdbAsymUnit(getName(),conn,"pdbase_20090728");
+					PdbChain pdb = fullpdb.getChain(chainCode);
+					setSequence(pdb.getSequence().getSeq());
 				}
 				if(fullcontactmap == null && fulldistancematrix == null){
 					MySQLConnection conn = new MySQLConnection ();
-					Pdb pdb = new PdbasePdb(getName(), "pdbase_20090728", conn);
-					pdb.load(chainCode);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(getName(),conn,"pdbase_20090728");
+					PdbChain pdb = fullpdb.getChain(chainCode);
 					RIGraph fullCM = pdb.getRIGraph("Ca", 9);
 					setFullContactMap(fullCM);
 				}
@@ -1372,7 +1373,7 @@ public class Individuals extends RIGraph {
 	
 	/**
 	 * setter: sets the constants <code>{@link #fullcontactmap}</code> and <code>{@link #fulldistancematrix}</code>, by getting all
-	 * necessary information from a <code>{@link Pdb}</code> instance.
+	 * necessary information from a <code>{@link PdbChain}</code> instance.
 	 * @param in an Individuals instance
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
@@ -1392,11 +1393,9 @@ public class Individuals extends RIGraph {
 		
 		MySQLConnection conn = new MySQLConnection();
 
-		//initializing Pdb instance 'pdb' using subclass 'PdbasePdb' constructor 
-		Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-
-		//loading PDB file of the same protein as specified by rigFile
-		pdb.load(pdbChainCode);
+		//initializing PdbChain instance 'pdb' 
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 
 		//initializing RIGraph instance with predefined parameters
 		fullcontactmap = pdb.getRIGraph(ct, cutoff);
@@ -1409,7 +1408,7 @@ public class Individuals extends RIGraph {
 	
 	/**
 	 * setter: sets the constants <code>{@link #fullcontactmap}</code> and <code>{@link #fulldistancematrix}</code>, by getting all
-	 * necessary information from a <code>{@link Pdb}</code> instance.
+	 * necessary information from a <code>{@link PdbChain}</code> instance.
 	 * @param rig an RIGraph instance
 	 * @throws SQLException
 	 * @throws PdbCodeNotFoundException
@@ -1430,11 +1429,9 @@ public class Individuals extends RIGraph {
 
 			MySQLConnection conn = new MySQLConnection();
 
-			//initializing Pdb instance 'pdb' using subclass 'PdbasePdb' constructor 
-			Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-
-			//loading PDB file of the same protein as specified by rigFile
-			pdb.load(pdbChainCode);
+			//initializing PdbChain instance 'pdb' 
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+			PdbChain pdb = fullpdb.getChain(pdbChainCode);
 
 			//initializing RIGraph instance with predefined parameters
 			fullcontactmap = pdb.getRIGraph(ct, cutoff);
@@ -1580,8 +1577,7 @@ public class Individuals extends RIGraph {
 	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn) throws SQLException, PdbLoadException, PdbCodeNotFoundException, NullPointerException, ArrayIndexOutOfBoundsException {
 		double cuto = input.getCutoff();
 		String ct = input.getContactType();
-		Pdb prot = getFullProt(input, conn);
-		prot.load(input.getPdbChainCode());
+		PdbChain prot = getFullProt(input, conn);
 		RIGraph full = prot.getRIGraph(ct, cuto);
 		int numOfConts = input.getEdgeCount();
 		Distiller dist = new Distiller(full);
@@ -1605,8 +1601,7 @@ public class Individuals extends RIGraph {
 	public static Bound[][] randomSet (RIGraph input, MySQLConnection conn, int NumCont) throws SQLException, PdbLoadException, PdbCodeNotFoundException, NullPointerException {
 		double cuto = input.getCutoff();
 		String ct = input.getContactType();
-		Pdb prot = getFullProt(input, conn);
-		prot.load(input.getPdbChainCode());
+		PdbChain prot = getFullProt(input, conn);
 		RIGraph full = prot.getRIGraph(ct, cuto);
 		int numOfConts = NumCont;
 		Distiller dist = new Distiller(full);
@@ -1632,7 +1627,7 @@ public class Individuals extends RIGraph {
 		return format;
 	}
 	/**
-	 * method to recover a complete Pdb instance
+	 * method to recover a complete PdbChain instance
 	 * @param rig
 	 * @param conn
 	 * @return prot
@@ -1640,11 +1635,11 @@ public class Individuals extends RIGraph {
 	 * @throws PdbCodeNotFoundException 
 	 * @throws PdbLoadException
 	 */
-	public static Pdb getFullProt (RIGraph rig, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static PdbChain getFullProt (RIGraph rig, MySQLConnection conn) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		String pdbCode = rig.getPdbCode();
 		String pdbaseDb = "pdbase_20090728";
-		Pdb prot = new PdbasePdb(pdbCode, pdbaseDb, conn);
-		prot.load(rig.getPdbChainCode());
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		PdbChain prot = fullpdb.getChain(rig.getPdbChainCode());
 		//conn.close();
 		return prot;
 	}
@@ -1654,7 +1649,7 @@ public class Individuals extends RIGraph {
 	 * @param prot
 	 * @return fullDistanceMap
 	 */
-	public static double[][] distMap (Pdb prot) {
+	public static double[][] distMap (PdbChain prot) {
 		Matrix fullDistanceMap = prot.calcDistMatrixJamaFormat("CA");
 		return fullDistanceMap.getArray();
 	}

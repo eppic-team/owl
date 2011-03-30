@@ -1,3 +1,5 @@
+package examples;
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
@@ -5,26 +7,28 @@ import owl.core.structure.*;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
+import owl.core.util.MySQLConnection;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
 
 /**
- * An example program for some of the classes in the proteinstructure package (Pdb, RIGraph, ...) 
- * Loads structure data from pdbase and pdb file and calculates graph dumping contacts to file 
+ * An example program for some of the classes in the owl.core.structure package (PdbChain, RIGraph, ...) 
+ * Loads structure data from pdbase and pdb file and calculates graph, writing contacts to file 
  * 
  */
 public class testPdb {
 
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
+	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException, FileFormatException {
 		
 		String pdbCode="1bxy";
 		String pdbChainCode="A";
 		
 		// data from pdbase database
 		System.out.println("loading structure from pdbase");
-		Pdb pdbFromPdbase = new PdbasePdb(pdbCode); // by default it goes to database "pdbase", a name for another pdbase database + a MySQLConnection can also be passed
-		pdbFromPdbase.load(pdbChainCode);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		PdbChain pdbFromPdbase = fullpdb.getChain(pdbChainCode);
 		System.out.println("dumping structure to pdb file");
 		pdbFromPdbase.writeToPDBFile("test_dump_from_pdbase.pdb");
 		// note that the chainCode is not necessarily the same as the pdbChainCode
@@ -45,10 +49,11 @@ public class testPdb {
 
 		// data from pdb file
 		System.out.println("reading from dumped pdb file");
-		Pdb pdbFromFile = new PdbfilePdb("test_dump_from_pdbase.pdb"); // we read from the file dumped from pdbase, note that dumped file contains internal chain identifier
-		pdbFromFile.load(chainCode);
+		// we read from the file dumped from pdbase, note that dumped file contains internal (CIF) chain identifier
+		PdbAsymUnit pdbFromFile = new PdbAsymUnit(new File("test_dump_from_pdbase.pdb"));
+		PdbChain chain = pdbFromFile.getChain(chainCode);
 		System.out.println("getting graph");
-		RIGraph graph2 = pdbFromFile.getRIGraph("ALL", 4.1);
+		RIGraph graph2 = chain.getRIGraph("ALL", 4.1);
 		System.out.println("writing graph to file");
 		graph2.writeToFile("test_pdb_from_file.cm");
 	}

@@ -8,7 +8,7 @@ import javax.vecmath.Point3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.structure.Atom;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGGeometry;
 import owl.core.structure.graphs.RIGNode;
@@ -59,7 +59,7 @@ public class GeomScorer extends Scorer {
 		this.minSeqSep = DEFAULT_MIN_SEQ_SEP;
 	}
 	
-	public double scoreIt(Pdb pdb) {
+	public double scoreIt(PdbChain pdb) {
 		RIGraph graph = pdb.getRIGraph(this.ct, this.cutoff);
 		graph.restrictContactsToMinRange(minSeqSep);
 //		switch (scoringFctType){
@@ -87,7 +87,7 @@ public class GeomScorer extends Scorer {
 //		}
 	}
 	
-	public double scoreIt(Pdb pdb, RIGraph graph){
+	public double scoreIt(PdbChain pdb, RIGraph graph){
 		int numEdges=0;
 				
 		for (RIGEdge edge:graph.getEdges()){
@@ -106,7 +106,7 @@ public class GeomScorer extends Scorer {
 		return numEdges;
 	}
 	
-	public double scoreIt(Pdb pdb, RIGraph graph, RIGGeometry graphGeom){
+	public double scoreIt(PdbChain pdb, RIGraph graph, RIGGeometry graphGeom){
 		double score=0;
 		int numSummedScores=0;
 		CMPdb_sphoxel sphoxel = null;

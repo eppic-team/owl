@@ -2,6 +2,7 @@
 package owl.core.structure.graphs;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -12,13 +13,13 @@ import javax.vecmath.GMatrix;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.embed.Bound;
 import owl.embed.Reconstructer;
@@ -158,8 +159,8 @@ public class RIGMatrix {
 		// pass them as parameters and convert back as constructor method ? 
 		// throw errors ? 
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(pdbId,DEF_DB,conn);
-		pdb.load(chainCode);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbId, conn, DEF_DB);
+		PdbChain pdb = fullpdb.getChain(chainCode);
 		RIGraph G = pdb.getRIGraph(ct, cutoff);
 		if(S==null) setSequence(G.getSequence());
 		M = new GMatrix(S.length,S.length);
@@ -702,9 +703,9 @@ public class RIGMatrix {
 	public double CMError() throws SQLException, PdbCodeNotFoundException, PdbLoadException {
 		RIGraph rig = convert2RIGraph();
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(rig.getPdbCode(),DEF_DB,conn);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(rig.getPdbCode(), conn, DEF_DB);
 		conn.close();
-		pdb.load(rig.getChainCode());
+		PdbChain pdb = fullpdb.getChain(rig.getChainCode());
 		RIGraph nat = pdb.getRIGraph(ct, cutoff);
 		Bound[][] spa = Reconstructer.convertRIGraphToBoundsMatrix(rig);
 		return Scorer.getCMError(spa, nat);
@@ -758,8 +759,9 @@ public class RIGMatrix {
 	 * load PDB -> orig. adj. Matrix 
 	 * create subset S (several alternative Methods, seq.separation, per diagonal, uniform noise etc ...
 	 * score i.e. sum(deltaRank * CNSize) for entries in S, whole Matrix, CNSize > 3 or > avg.  
+	 * @throws FileFormatException 
 	 */
-	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, PdbCodeNotFoundException, NumberFormatException {
+	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, PdbCodeNotFoundException, NumberFormatException, FileFormatException {
 		MySQLConnection conn;
 		conn = new MySQLConnection( "localhost", "lappe", "apple", "mw");
 		String cType = "Cb"; // contact type like "Ca"/"Cb"/"ALL"
@@ -770,9 +772,9 @@ public class RIGMatrix {
 		double fp=0.03, fn=0.87; 
 		// Load PDB structure from file 
 		System.out.println("Loading PDB "+myCode+" chain "+myChain+" from file "+infile+"."); 
-		Pdb original = new PdbfilePdb( infile);	
-		System.out.println("original Pdb object created.");
-		original.load( myChain); 
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(infile));
+		System.out.println("original PdbChain object created.");
+		PdbChain original = fullpdb.getChain(myChain); 
 		System.out.println("chain loaded.");
 		RIGraph origraph = original.getRIGraph(cType, cutoff);
 		System.out.println("Converted to RIG at contactDef("+cType+","+cutoff+")"); 	
@@ -837,7 +839,7 @@ public class RIGMatrix {
 		conn.close(); // closing the Database connection
 		/*
 		MySQLConnection con = new MySQLConnection();
-		Pdb pdb = new PdbasePdb("1bkr",DEF_DB, con);
+		PdbChain pdb = new PdbasePdb("1bkr",DEF_DB, con);
 		pdb.load("A");
 		RIGraph rig = pdb.getRIGraph("Ca",9.0);
 		con.close();

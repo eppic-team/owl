@@ -23,7 +23,7 @@ import javax.vecmath.GMatrix;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -68,8 +68,8 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		this.distCutoff=0;
 		this.contactType=null;
 		this.pdbCode=PdbAsymUnit.NO_PDB_CODE;
-		this.chainCode=Pdb.NO_CHAIN_CODE;
-		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
+		this.chainCode=PdbChain.NO_CHAIN_CODE;
+		this.pdbChainCode=PdbChain.NO_PDB_CHAIN_CODE;
 		this.singleModelsDb=DEFAULT_SINGLEMODELS_DB;
 		for(int i=0; i < sequence.length(); i++) {
 			RIGNode node = new RIGNode(i+1,AminoAcid.one2three(sequence.charAt(i)));

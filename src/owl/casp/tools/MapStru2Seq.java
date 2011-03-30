@@ -11,12 +11,12 @@ import java.sql.SQLException;
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.structure.CiffilePdb;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.util.FileFormatException;
+import owl.core.util.MySQLConnection;
 
 
 /**
@@ -27,6 +27,7 @@ import owl.core.util.FileFormatException;
  */
 public class MapStru2Seq {
 	
+	public static final String PDBASEDB = "pdbase";
 	public static final String DEFAULT_CHAIN_CODE = "A";
 	public static final boolean WRITE_REMARKS = true;
 	public static final boolean LOAD_FROM_DB = false;	// otherwise load from cif file directory below
@@ -56,22 +57,28 @@ public class MapStru2Seq {
 		}
 
 		// load pdb
-		Pdb pdb = null;
+		PdbChain pdb = null;
 		try {
 			if(LOAD_FROM_DB) {
 				// load from pdbase
-				pdb = new PdbasePdb(pdbCode);
-				pdb.load(chainCode);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),PDBASEDB);
+				pdb = fullpdb.getChain(chainCode);				
 			} else {
 				// load from ciffile directory
 				File cifFile = new File(CIF_FILE_DIR, pdbCode + ".cif");
-				pdb = new CiffilePdb(cifFile);
-				pdb.load(chainCode);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+				pdb = fullpdb.getChain(chainCode);				
 			}
 		} catch (PdbCodeNotFoundException e1) {
 			System.err.println(e1.getMessage());
 			System.exit(1);
 		} catch (PdbLoadException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.exit(1);
+		} catch (FileFormatException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);
 		}
@@ -91,7 +98,7 @@ public class MapStru2Seq {
 		
 		// do alignment
 		String s1 = seq.getSeq();
-		String s2 = pdb.getSequence();
+		String s2 = pdb.getSequence().getSeq();
 		PairwiseSequenceAlignment al = null;
 		try {
 			al = new PairwiseSequenceAlignment(s1,s2,"target","structure");

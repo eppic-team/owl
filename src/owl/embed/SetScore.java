@@ -6,8 +6,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
@@ -131,9 +131,9 @@ public class SetScore implements Comparable<SetScore>{
 		String pdbChainCode = "A";
 		String contactType = "Ca";
 		double cutoff = 8;
-		Pdb pdb = new PdbasePdb(pdbCode);
-		pdb.load(pdbChainCode);
-		String sequence = pdb.getSequence();
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
+		String sequence = pdb.getSequence().getSeq();
 		String fileName = pdbCode+pdbChainCode+"_ensemble_"+numBestSets+".cm";
 		
 		RIGraph graph = readEnsembleFromDB(db, scoresTable, subsetsTable, numBestSets, sequence, contactType, cutoff);

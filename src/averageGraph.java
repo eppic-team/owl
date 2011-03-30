@@ -11,8 +11,8 @@ import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.GraphComparisonResult;
@@ -69,7 +69,7 @@ public class averageGraph {
 		tags[0]=targetTag;
 		int i = 1;
 		for (Template template:templates) {
-			seqs[i] = template.getPdb().getSequence();
+			seqs[i] = template.getPdb().getSequence().getSeq();
 			tags[i] = template.getId();;
 			i++;
 		}	
@@ -329,13 +329,13 @@ public class averageGraph {
 		
 		String targetSeq = null;
 		String targetTag = null;
-		Pdb targetPdb = null;
+		PdbChain targetPdb = null;
 		
 		if (mode==Modes.BENCHMARK) {
 			// 1) benchmark: from a known structure sequence we repredict it based on template structures
-			targetPdb = new PdbasePdb(pdbCodeTarget);
-			targetPdb.load(pdbChainCodeTarget);
-			targetSeq = targetPdb.getSequence();
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCodeTarget,new MySQLConnection(),PDB_DB);
+			targetPdb = fullpdb.getChain(pdbChainCodeTarget);
+			targetSeq = targetPdb.getSequence().getSeq();
 			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
 		} else {
 			// 2) prediction: from a sequence with unknown structure, we predict the structure based on template structures
@@ -499,7 +499,7 @@ public class averageGraph {
 			
 			TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
 			
-			Pdb pdb = null;
+			PdbChain pdb = null;
 			if (keepModels) {
 				tr.reconstruct(targetSeq, consensusGraphs, phiPsiConsensus, forceTransOmega, numberTinkerModels, FORCE_CONSTANT_DIST, FORCE_CONSTANT_TORSION, outDir, basename, false, parallel);
 				pdb = tr.getStructure(tr.pickByLeastBoundViols());
@@ -520,7 +520,7 @@ public class averageGraph {
 				pdb.setCaspModelNum(1);
 				pdb.setCaspAuthorStr(caspAuthorStr);
 				pdb.setCaspMethodStr(readCaspMethodFromFile(caspMethodFile));
-				pdb.setParents(templates.getIds());
+				pdb.setCaspParents(templates.getIds());
 				pdb.writeToCaspTSFile(outcasptsfile);
 				System.out.println("Model written also to CASP TS file " + outcasptsfile);
 			}

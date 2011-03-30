@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbLoadException;
 import owl.core.util.FileFormatException;
 
@@ -25,8 +25,8 @@ import owl.core.util.FileFormatException;
 public class DaliRunner {	
 	
 	private static final String DALI_REGEX = "(Query|Sbjct)\\s+([a-zA-Z\\.]+)";
-	private Pdb first;
-	private Pdb second;
+	private PdbChain first;
+	private PdbChain second;
 	private File workdir;
 
 	/**
@@ -41,7 +41,7 @@ public class DaliRunner {
 	 * @throws AlignmentConstructionException
 	 */
 	
-	public DaliRunner(Pdb query, Pdb subj,String dali_executable, String tempdir) throws IOException, InterruptedException, AlignmentConstructionException {
+	public DaliRunner(PdbChain query, PdbChain subj,String dali_executable, String tempdir) throws IOException, InterruptedException, AlignmentConstructionException {
 		
 		first = query;
 		second = subj;

@@ -19,7 +19,7 @@ import owl.graphAveraging.ConsensusSquare;
 /** 
  * This class encapsulates the secondary structure annotation of a single protein chain.
  * Adapters for the following sources of secondary structure annotation have been implemented:
- * - PDB (see owl.core.structure.Pdb)
+ * - PDB (see owl.core.structure.PdbChain)
  * - DSSP (see owl.core.runners.DsspRunner)
  * - PsiPred (see owl.core.runners.PsipredRunner)
  * - JPred (see owl.core.connections.JPredConnection)

@@ -5,9 +5,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import owl.core.structure.Pdb;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbfileParser;
 import owl.core.util.StreamGobbler;
 
 public class PymolRunner {
@@ -45,8 +44,8 @@ public class PymolRunner {
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
 			throw new IllegalArgumentException("The number of heights is different from the number of widths or the number of output png files");
 		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
-		Pdb pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-		String[] chains = pdb.getChains();
+		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
+		String[] chains = parser.getChains();
 
 		Process pymolProcess = Runtime.getRuntime().exec(pymolExec+" -q -c -p");
 		

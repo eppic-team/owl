@@ -7,10 +7,11 @@ import java.sql.SQLException;
 
 import org.apache.commons.collections15.Transformer;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
+import owl.core.util.MySQLConnection;
 
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -103,8 +104,8 @@ public class GraphIOGDLFile<V,E> {
 	
 	// tester
 	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
-		Pdb pdb = new PdbasePdb("1bxy");
-		pdb.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit("1bxy", new MySQLConnection(), "pdbase");
+		PdbChain pdb = fullpdb.getChain("A");
 		RIGraph graph = pdb.getRIGraph("Ca", 8);
 		
 		String gdlfile = "test.gdl";

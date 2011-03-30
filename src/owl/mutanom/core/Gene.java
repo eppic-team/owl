@@ -1149,7 +1149,7 @@ public class Gene implements HasFeatures {
 					}
 					int uniPos = m.position;
 					int pdbPos = ss.mapUniprotResser2Cif(uniPos);
-					String pdbSeq = ss.pdb.getSequence();
+					String pdbSeq = ss.pdb.getSequence().getSeq();
 					AminoAcid mutAA = m.before;
 					if(pdbSeq.length() < pdbPos) {
 						System.err.printf("Error: Mutation %s%d at mapped position %d can not be found in sequence of length %d in %s %s (offset=%d)\n", mutAA.getOneLetterCode(), uniPos, pdbPos, pdbSeq.length(), ss.getPdbCode(), ss.getChainCode(), ss.offset);

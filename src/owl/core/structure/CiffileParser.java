@@ -24,13 +24,11 @@ import owl.core.util.FileFormatException;
 
 
 /**
- * A single chain pdb protein structure loaded from an mmCIF file or downloaded from the PDB FTP site 
+ * A mmCIF file format parser. 
  * 
  * @author		Jose Duarte
  */
-public class CiffilePdb extends Pdb {
-
-	private static final long serialVersionUID = 1L;
+public class CiffileParser {
 
 	/*------------------------------ constants ------------------------------*/
 	public static final String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
@@ -68,6 +66,11 @@ public class CiffilePdb extends Pdb {
  
 	private boolean fieldsTitlesRead;
 	
+	private int model;
+	
+	private String[] chainsArray;
+	private Integer[] modelsArray;
+
 	/*---------------------------- inner classes ----------------------------*/
 	
 	/**
@@ -99,26 +102,28 @@ public class CiffilePdb extends Pdb {
 	/*----------------------------- constructors ----------------------------*/
 	
 	/**
-	 * Constructs an empty Pdb object from online PDB given pdb code
+	 * Constructs a cif file parser from online PDB given pdb code
 	 * Data will be downloaded an stored in local file
-	 * but will only be loaded from local file upon call of load(pdbChainCode, modelSerial)  
+	 * but will only be loaded from local file upon call of readChain(pdbChainCode, modelSerial)  
 	 * The default PDB_FTP_URL is used.
 	 * @param pdbCode
 	 * @throws IOException  
+	 * @throws FileFormatException 
 	 */
-	public CiffilePdb(String pdbCode) throws IOException {
+	public CiffileParser(String pdbCode) throws IOException, FileFormatException {
 		this(pdbCode, PDB_FTP_URL);
 	}
 	
 	/**
-	 * Constructs an empty Pdb object from online PDB given pdb code and pdbFtpUrl
+	 * Constructs a cif file parser from online PDB given pdb code and pdbFtpUrl
 	 * Data will be downloaded an stored in local file
-	 * but will only be loaded from local file upon call of load(pdbChainCode, modelSerial)  
+	 * but will only be loaded from local file upon call of readChain(pdbChainCode, modelSerial)  
 	 * @param pdbCode
 	 * @param pdbFtpUrl
 	 * @throws IOException  
+	 * @throws FileFormatException 
 	 */
-	public CiffilePdb (String pdbCode, String pdbFtpUrl) throws IOException {
+	public CiffileParser (String pdbCode, String pdbFtpUrl) throws IOException, FileFormatException {
 		this.fieldsTitlesRead = false;
 		
 		// we store the file locally instead of reading directly from the ftp stream, so that the file can be cached locally in applications like CMView	
@@ -149,16 +154,22 @@ public class CiffilePdb extends Pdb {
 		zis.close();
 		os.close();
 		
+		fcif = new RandomAccessFile(cifFile,"r");
+		readFieldsTitles();
 	}
 	
 	/**
-	 * Constructs an empty Pdb object given cif file
-	 * Data will be loaded from file upon call of {@link #load(String, int)} 
+	 * Constructs a cif file parser object given cif file
+	 * Data will be loaded from file upon call of {@link #readChain(String, int)} 
 	 * @param ciffile
+	 * @throws FileFormatException 
+	 * @throws IOException 
 	 */
-	public CiffilePdb (File ciffile) {
+	public CiffileParser (File ciffile) throws IOException, FileFormatException {
 		this.cifFile = ciffile;
-		this.fieldsTitlesRead = false;		
+		this.fieldsTitlesRead = false;
+		fcif = new RandomAccessFile(cifFile,"r");
+		readFieldsTitles();
 	}
 	
 	public File getCifFile() {
@@ -166,34 +177,28 @@ public class CiffilePdb extends Pdb {
 	}
 	
 	/**
-	 * Loads PDB data (coordinates, sequence, etc.) from the cif file
+	 * Reads PDB data (coordinates, sequence, etc.) from the cif file
 	 * for given pdbChainCode and modelSerial
 	 * @param pdbChainCode
 	 * @param modelSerial
 	 * @throws PdbLoadException
 	 */
-	public void load(String pdbChainCode, int modelSerial) throws PdbLoadException{
+	public PdbChain readChain(String pdbChainCode, int modelSerial) throws PdbLoadException{
+		
+		this.model = modelSerial;
+		
+		PdbChain pdb = new PdbChain();
 		try {
-			this.initialiseResidues();
-			this.model = modelSerial;
-			this.pdbChainCode=pdbChainCode;				// NOTE! pdb chain codes are case sensitive
-			fcif = new RandomAccessFile(cifFile,"r");
-			parseCifFile();
-			fcif.close();
+			pdb.setPdbChainCode(pdbChainCode);	// NOTE! pdb chain codes are case sensitive
+			
+			parseCifFile(pdb);
 
-			if(!secondaryStructure.isEmpty()) {
-				secondaryStructure.setComment("CIFfile");
-				this.initialiseResiduesSecStruct();
+			if(!pdb.getSecondaryStructure().isEmpty()) {
+				pdb.getSecondaryStructure().setComment("CIFfile");
+				pdb.initialiseResiduesSecStruct();
 			}
 			
-			// we initialise resser2pdbresser from the pdbresser2resser TreeMap
-			this.resser2pdbresser = new TreeMap<Integer, String>();
-			for (String pdbresser:pdbresser2resser.keySet()){
-				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
-			}
-			
-			this.initialiseMaps();
-			dataLoaded = true;
+			pdb.initialiseMaps();
 			
 		} catch (FileFormatException e) {
 			throw new PdbLoadException(e);
@@ -201,17 +206,25 @@ public class CiffilePdb extends Pdb {
 			throw new PdbLoadException(e);
 		} 
 
+		return pdb;
+	}
+	
+	public void closeFile() throws IOException {
+		fcif.close();
 	}
 	
 	/**
-	 * Returns all PDB chain codes found in the cif file.
+	 * Returns all alphabetically sorted PDB chain codes found in the cif file.
+	 * It caches the result so that next time called no parsing has to be done. 
 	 * @return array with all pdb chain codes
 	 */
 	public String[] getChains() throws PdbLoadException {
+		if (chainsArray!=null) {
+			return chainsArray;
+		}
 		TreeSet<String> chains = new TreeSet<String>();
 	
 		try {
-			fcif = new RandomAccessFile(cifFile,"r");
 			if (!fieldsTitlesRead) {
 				readFieldsTitles();
 			}
@@ -231,7 +244,6 @@ public class CiffilePdb extends Pdb {
 				}
 				chains.add(tokens[pdbStrandIdIdx]);
 			}
-			fcif.close();
 			
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
@@ -241,19 +253,22 @@ public class CiffilePdb extends Pdb {
 		
 		if (chains.isEmpty()) return null;
 		
-		String[] chainsArray = new String[chains.size()];
+		chainsArray = new String[chains.size()];
 		chains.toArray(chainsArray);
 		return chainsArray;
 	}
 	
 	/**
 	 * Returns all model serials found in the cif file.
+	 * It caches the result so that next time called no parsing has to be done. 
 	 * @return array with all model serials
 	 */
 	public Integer[] getModels() throws PdbLoadException {
+		if (modelsArray!=null) {
+			return modelsArray;
+		}
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
-			fcif = new RandomAccessFile(cifFile,"r");
 			if (!fieldsTitlesRead) {
 				readFieldsTitles();
 			}
@@ -273,7 +288,6 @@ public class CiffilePdb extends Pdb {
 				}
 				models.add(Integer.parseInt(tokens[pdbxPDBModelNumIdx]));
 			}
-			fcif.close();
 			
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
@@ -283,29 +297,22 @@ public class CiffilePdb extends Pdb {
 		
 		if (models.isEmpty()) return null;
 		
-		Integer[] modelsArray = new Integer[models.size()];
+		modelsArray = new Integer[models.size()];
 		models.toArray(modelsArray);
 		return modelsArray;
 	}
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private void parseCifFile() throws IOException, FileFormatException, PdbLoadException {
+	private void parseCifFile(PdbChain pdb) throws IOException, FileFormatException, PdbLoadException {
 		
 		if (!fieldsTitlesRead) {
 			readFieldsTitles();
 		}		
-		// now reading separate elements separately using private methods
 		// the order in the elements in the file is not guaranteed, that's why (among other reasons) we have to use RandomAccessFile
-		this.pdbCode = readPdbCode();
-		this.title = readTitle();
-		readCrystalData();
-		readExpMethod();
-		readQparams();
-		readPdbxPolySeq(); // sets chainCode, sequence, pdbresser2resser		
-		readAtomSite(); // populates residues 		
-		secondaryStructure = new SecondaryStructure(this.sequence);	// create empty secondary structure first to make sure object is not null		
-		readSecStructure(); // populates secondaryStructure	
+		readPdbxPolySeq(pdb); // sets chainCode, sequence, pdbresser2resser, resser2pdbresser		
+		readAtomSite(pdb); // populates residues 				
+		readSecStructure(pdb); // populates secondaryStructure	
 
 	}
 	
@@ -378,11 +385,11 @@ public class CiffilePdb extends Pdb {
 		fieldsTitlesRead = true;
 	}
 	
-	private String readPdbCode(){
+	protected String readPdbCode(){
 		return fields2values.get(entryId+".id").trim().toLowerCase();
 	}
 	
-	private String readTitle() throws IOException, FileFormatException {
+	protected String readTitle() throws IOException, PdbLoadException {
 		String title = fields2values.get(structId+".title").trim();
 		if (title.isEmpty()) { 
 			Long[] intStruct = loopelements2contentOffset.get(ids2elements.get(structId));
@@ -390,7 +397,7 @@ public class CiffilePdb extends Pdb {
 			while(fcif.getFilePointer()<intStruct[1]) { 
 				String[] tokens = tokeniseFields(1);
 				if (tokens.length!=1) {
-					throw new FileFormatException("More than 1 field in element "+structId+" of CIF file "+cifFile);
+					throw new PdbLoadException("More than 1 field in element "+structId+" of CIF file "+cifFile);
 				}
 				title = tokens[0];
 			}
@@ -403,32 +410,43 @@ public class CiffilePdb extends Pdb {
 		return title;
 	}
 	
-	private void readCrystalData() throws PdbLoadException {
+	protected CrystalCell readCrystalCell() throws PdbLoadException {
 		// cell and symmetry fields are optional, e.g. NMR entries don't have them at all
-		// we first see if the fields are there at all (enough with seeing if cell.length_a is there)
+		// we first see if the fields are there at all 
 		if (!fields2values.containsKey(cell+".length_a")) {
-			return;
+			return null;
 		}
+		CrystalCell crystalCell = null;
 		double a = Double.parseDouble(fields2values.get(cell+".length_a").trim());
 		double b = Double.parseDouble(fields2values.get(cell+".length_b").trim());
 		double c = Double.parseDouble(fields2values.get(cell+".length_c").trim());
 		double alpha = Double.parseDouble(fields2values.get(cell+".angle_alpha").trim());
 		double beta = Double.parseDouble(fields2values.get(cell+".angle_beta").trim());
 		double gamma = Double.parseDouble(fields2values.get(cell+".angle_gamma").trim());
-		this.crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
-		
+		crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+		return crystalCell;
+	}
+	
+	protected SpaceGroup readSpaceGroup() throws PdbLoadException {
+		// cell and symmetry fields are optional, e.g. NMR entries don't have them at all
+		// we first see if the fields are there at all 
+		if (!fields2values.containsKey(symmetry+".space_group_name_H-M")) {
+			return null;
+		}		
+		SpaceGroup spaceGroup = null;
 		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
-		this.spaceGroup = SymoplibParser.getSpaceGroup(sg);
+		spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
 			throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 		}
+		return spaceGroup;
 	}
 	
-	private void readExpMethod() throws IOException, FileFormatException {
-
+	protected String readExpMethod() throws IOException, PdbLoadException {
+		String expMethod = null;
 		if (!loopElements.contains(ids2elements.get(exptl))){  
 			String expMethWithQuotes = fields2values.get(exptl+".method").trim();
-			this.expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
+			expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
 		} else {
 			// normally _exptl.method is a single value element, but in some cases, e.g. 2krl, the _exptl.method is a loop element
 			// in those cases we simply take the first value appearing (condition recordCount==1)
@@ -441,26 +459,31 @@ public class CiffilePdb extends Pdb {
 				recordCount++; 
 				String[] tokens = tokeniseFields(numberFields);
 				if (tokens.length!=numberFields) {
-					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+exptl+" of CIF file "+cifFile);
+					throw new PdbLoadException("Incorrect number of fields for record "+recordCount+" in loop element "+exptl+" of CIF file "+cifFile);
 				}
 				if (recordCount==1) {
-					this.expMethod = tokens[methodIdx];
+					expMethod = tokens[methodIdx];
 				}
 			}
 		}
-		
+		return expMethod;
 	}
 	
-	private void readQparams() {
+	/**
+	 * Returns an array of size 3 with the quality parameters for a crystal structure: resolution, rFree and rSym
+	 * @return
+	 */
+	protected double[] readQparams() {
+		double[] qParams = {-1,-1,-1};
 		// refine only present in xray structures
 		if (fields2values.containsKey(refine+".ls_d_res_high")) {
 			String resolStr = fields2values.get(refine+".ls_d_res_high").trim();
 			if (!resolStr.equals("?")) {
-				this.resolution = Double.parseDouble(resolStr);
+				qParams[0] = Double.parseDouble(resolStr);
 			}
 			String rfreeStr = fields2values.get(refine+".ls_R_factor_R_free").trim();
 			if (!rfreeStr.equals("?")) {
-				this.rFree = Double.parseDouble(rfreeStr);
+				qParams[1] = Double.parseDouble(rfreeStr);
 			}
 		}
 		if (fields2values.containsKey(reflns+".pdbx_Rsym_value")){
@@ -470,17 +493,18 @@ public class CiffilePdb extends Pdb {
 			// the right one (there's not much consensus in the field as to what's the 
 			// right thing to do anyway!)
 			if (!rsymvalStr.equals("?")) {
-				this.rSym = Double.parseDouble(rsymvalStr);
+				qParams[2] = Double.parseDouble(rsymvalStr);
 			}
 			if (!rmergevalStr.equals("?")) {
-				if (this.rSym==-1) {
-					this.rSym = Double.parseDouble(rmergevalStr);
+				if (qParams[2]==-1) {
+					qParams[2] = Double.parseDouble(rmergevalStr);
 				} 
 			}
 		}
+		return qParams;
 	}
 	
-	private void readAtomSite() throws IOException, FileFormatException, PdbLoadException {
+	private void readAtomSite(PdbChain pdb) throws IOException, FileFormatException, PdbLoadException {
 		
 		ArrayList<AtomLine>	atomLinesData = new ArrayList<AtomLine>(); // to temporarily store all data from atom lines, we keep then only the ones matching the alt locations that we want
 		TreeSet<String> labelAltIds = new TreeSet<String>(); // to store the alt location ids (label_alt_id) (the default char "." is not stored)
@@ -516,7 +540,7 @@ public class CiffilePdb extends Pdb {
 				throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+atomSiteId+ " of CIF file "+cifFile);
 			}
 			if (tokens[groupPdbIdx].equals("ATOM") && 
-				tokens[labelAsymIdIdx].equals(chainCode) && 
+				tokens[labelAsymIdIdx].equals(pdb.getChainCode()) && 
 				Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
 				
 				String labelAltId = tokens[labelAltIdIdx];
@@ -536,21 +560,24 @@ public class CiffilePdb extends Pdb {
 			}
 		}
 		if (atomLinesData.isEmpty()) { // no atom data was found for given pdb chain code and model
-			throw new PdbLoadException("Couldn't find _atom_site data for given pdbChainCode: "+pdbChainCode+", model: "+model);
+			throw new PdbLoadException("Couldn't find _atom_site data for given pdbChainCode: "+pdb.getPdbChainCode()+", model: "+model);
 		}
 		
 		String firstAltCode = null;
 		if (!labelAltIds.isEmpty()) {
 			firstAltCode = labelAltIds.first();
+			pdb.setHasAltCodes(true);
 		}
 		for (AtomLine atomLine:atomLinesData) {
 			if (atomLine.labelAltId.equals(".") || (firstAltCode!=null && atomLine.labelAltId.equals(firstAltCode))) {
 				if (AminoAcid.isStandardAA(atomLine.res_type)) {
-					if(!this.containsResidue(atomLine.res_serial)) {
-						this.addResidue(new Residue(AminoAcid.getByThreeLetterCode(atomLine.res_type),atomLine.res_serial,this));
+					if(!pdb.containsResidue(atomLine.res_serial)) {
+						Residue residue = new Residue(AminoAcid.getByThreeLetterCode(atomLine.res_type),atomLine.res_serial,pdb);
+						residue.setPdbSerial(pdb.getPdbResSerFromResSer(atomLine.res_serial));
+						pdb.addResidue(residue);
 					}
 					if (AminoAcid.isValidAtomWithOXT(atomLine.res_type,atomLine.atom)){
-						Residue residue = this.getResidue(atomLine.res_serial);
+						Residue residue = pdb.getResidue(atomLine.res_serial);
 						residue.addAtom(new Atom(atomLine.atomserial,atomLine.atom,atomLine.element,atomLine.coords,residue,atomLine.occupancy,atomLine.bfactor));
 					}
 				}
@@ -558,12 +585,12 @@ public class CiffilePdb extends Pdb {
 		}
 	}
 	
-	private void readPdbxPolySeq() throws IOException, FileFormatException {
-		pdbresser2resser = new TreeMap<String, Integer>();
-		sequence = "";
+	private void readPdbxPolySeq(PdbChain pdb) throws IOException, FileFormatException {
+		TreeMap<String,Integer> pdbresser2resser = new TreeMap<String, Integer>();
+		String sequence = "";
 		
-		String chainCodeStr=pdbChainCode;
-		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr="A";
+		String chainCodeStr=pdb.getPdbChainCode();
+		if (pdb.getPdbChainCode().equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr="A";
 		
 		Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
 		int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
@@ -590,7 +617,7 @@ public class CiffilePdb extends Pdb {
 			}
 			if (tokens[pdbStrandIdIdx].equals(chainCodeStr)) { // we can't rely on using chainCode, because the order of elements is not guranteed (pdbx_poly_seq_scheme doesn't always come after atom_site)
 				int res_serial = Integer.parseInt(tokens[seqIdIdx]); // seq_id
-				chainCode = tokens[asymIdIdx];
+				pdb.setChainCode(tokens[asymIdIdx]);
 				String pdb_res_serial = tokens[pdbSeqNumIdx]; // pdb_seq_num
 				String pdb_ins_code = tokens[pdbInsCodeIdx]; // pdb_ins_code
 				String pdb_res_serial_with_icode = pdb_res_serial;
@@ -609,10 +636,19 @@ public class CiffilePdb extends Pdb {
 
 			}
 		}
+		pdb.setSequence(sequence);
+		pdb.setPdbresser2resserMap(pdbresser2resser);
+		// we initialise resser2pdbresser from the pdbresser2resser TreeMap
+		TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
+		for (String pdbresser:pdbresser2resser.keySet()){
+			resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
+		}
+		pdb.setResser2pdbresserMap(resser2pdbresser);
 	}
 	
-	private void readSecStructure() throws IOException, FileFormatException {
-		secondaryStructure = new SecondaryStructure(this.sequence);
+	private void readSecStructure(PdbChain pdb) throws IOException, FileFormatException {
+		SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());
+		pdb.setSecondaryStructure(secondaryStructure);
 		
 		// struct_conf element is optional
 		Long[] intStructConf = null;
@@ -623,7 +659,7 @@ public class CiffilePdb extends Pdb {
 		// taking care of cases where struct_conf is not a loop element but a one value field
 		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
 			String begChainCode = fields2values.get(structConfId+".beg_label_asym_id").trim();
-			if (begChainCode.equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme			
+			if (begChainCode.equals(pdb.getChainCode())) { // chainCode has been set already in reading pdbx_poly_seq_scheme			
 				String id = fields2values.get(structConfId+".id").trim();
 				int beg = Integer.parseInt(fields2values.get(structConfId+".beg_label_seq_id").trim());
 				int end = Integer.parseInt(fields2values.get(structConfId+".end_label_seq_id").trim());
@@ -656,7 +692,7 @@ public class CiffilePdb extends Pdb {
 		// taking care of cases where struct_sheet_range is not a loop element but a one value field
 		if (ids2elements.containsKey(structSheetId) && !loopElements.contains(ids2elements.get(structSheetId))){
 			String begChainCode = fields2values.get(structSheetId+".beg_label_asym_id").trim();
-			if (begChainCode.equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
+			if (begChainCode.equals(pdb.getChainCode())){ // chainCode has been set already in reading pdbx_poly_seq_scheme
 				String sheetid = fields2values.get(structSheetId+".sheet_id").trim(); //tokens[sheetIdIdx];
 				int id = Integer.parseInt(fields2values.get(structSheetId+".id").trim()); //Integer.parseInt(tokens[idIdx]);
 				int beg = Integer.parseInt(fields2values.get(structSheetId+".beg_label_seq_id").trim()); //tokens[begLabelSeqIdIdx]);
@@ -689,7 +725,7 @@ public class CiffilePdb extends Pdb {
 				if (tokens.length!=numFields) {
 					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+structConfId+" of CIF file "+cifFile);
 				}
-				if (tokens[begLabelAsymIdIdx].equals(chainCode)) { // chainCode has been set already in reading pdbx_poly_seq_scheme
+				if (tokens[begLabelAsymIdIdx].equals(pdb.getChainCode())) { // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String id = tokens[idIdx];
 					Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
 					Matcher m = p.matcher(id);
@@ -735,7 +771,7 @@ public class CiffilePdb extends Pdb {
 				if (tokens.length!=numFields) {
 					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+structSheetId+" of CIF file "+cifFile);
 				}
-				if (tokens[begLabelAsymIdIdx].equals(chainCode)){ // chainCode has been set already in reading pdbx_poly_seq_scheme
+				if (tokens[begLabelAsymIdIdx].equals(pdb.getChainCode())){ // chainCode has been set already in reading pdbx_poly_seq_scheme
 					String sheetid = tokens[sheetIdIdx];
 					int id = Integer.parseInt(tokens[idIdx]);
 					int beg = Integer.parseInt(tokens[begLabelSeqIdIdx]);

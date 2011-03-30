@@ -6,15 +6,14 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 
 
@@ -98,7 +97,7 @@ public class dumpseq {
 			System.exit(1);
 		}
 		if (!listfile.equals("") && pdbIds!=null) {
-			System.err.println("Options -p and  -i are exclusive. Use only one of them");
+			System.err.println("Options -p and -i are exclusive. Use only one of them");
 			System.err.println(help);
 			System.exit(1);			
 		}
@@ -111,6 +110,7 @@ public class dumpseq {
 			System.err.println("Error opening database connection. Exiting");
 			System.exit(1);
 		}
+
 
 		if (!listfile.equals("")) {	
 			pdbIds = readIdsListFile(new File(listfile));
@@ -127,67 +127,58 @@ public class dumpseq {
 
 		for (int i=0;i<pdbIds.length;i++) {
 			String pdbCode = null;
-			String[] pdbChainCodes = null;
+			String pdbChainCode = null;
 			if (pdbIds[i].length()==4) {
 				pdbCode = pdbIds[i];
 			} else if (pdbIds[i].length()==5){
 				pdbCode = pdbIds[i].substring(0, 4);
-				pdbChainCodes = new String[1];
-				pdbChainCodes[0] = pdbIds[i].substring(4);
+				pdbChainCode = pdbIds[i].substring(4);
 			} else {
 				System.err.println("The string "+pdbIds[i]+" doesn't look like a PDB id. Skipping");
 				continue;
 			}
 			
 
-			Pdb pdb = null;
+			PdbAsymUnit pdb = null;
 			try {
-				pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-				if (pdbChainCodes==null) {
-					pdbChainCodes = pdb.getChains();
-				}
+				pdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
-				continue;
-			} catch (SQLException e) {
-				System.err.println("SQL error for structure "+pdbCode+", error: "+e.getMessage());
 				continue;
 			} catch (PdbLoadException e) {
 				System.err.println("Error loading pdb data for " + pdbCode +", specific error: "+e.getMessage());
 				continue;
 			}
 
-			for (String pdbChainCode:pdbChainCodes) {
-
-				try {
-					pdb.load(pdbChainCode);
-
-					String sequence= observed?pdb.getObsSequence():pdb.getSequence();
-
-					File outputFile = new File(outputDir,pdbCode+pdbChainCode+".fasta");
-
-					if (!stdout && oneOutputFile==null) {
-						Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
-					}
-
-					if (fastaHeader) { 
-						Out.println(">"+pdbCode+pdbChainCode);
-					}
-
-					Out.println(sequence);
-
-					if (!stdout && oneOutputFile==null) {
-						Out.close();
-					}
-
-					if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
-						System.out.println("Wrote "+pdbCode+pdbChainCode+".fasta");
-					}
-
-					numPdbs++;
-				} catch (PdbLoadException e) {
-					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
+			for (PdbChain chain:pdb.getAllChains()) {
+					
+				if (pdbChainCode!=null && !chain.getPdbChainCode().equals(pdbChainCode)) {
+					continue;
 				}
+
+				String sequence = observed?chain.getObsSequence():chain.getSequence().getSeq();
+
+				File outputFile = new File(outputDir,pdbCode+chain.getPdbChainCode()+".fasta");
+
+				if (!stdout && oneOutputFile==null) {
+					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
+				}
+
+				if (fastaHeader) { 
+					Out.println(">"+pdbCode+chain.getPdbChainCode());
+				}
+
+				Out.println(sequence);
+
+				if (!stdout && oneOutputFile==null) {
+					Out.close();
+				}
+
+				if (!stdout) { // if output of sequence is stdout, then we don't want to print anything else to stdout
+					System.out.println("Wrote "+pdbCode+chain.getPdbChainCode()+".fasta");
+				}
+
+				numPdbs++; 
 
 			}
 

@@ -4,12 +4,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.sql.SQLException;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.util.MySQLConnection;
 
@@ -122,18 +121,20 @@ public class dumppdb {
 			try {
 			
 
-				Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,modelSerial,conn,pdbaseDb);
+				PdbChain pdb = null;
 				if (pdbChainCode==null) {
-					pdbChainCode = pdb.getChains()[0];
+					pdb = fullpdb.getFirstChain();
+					pdbChainCode = pdb.getPdbChainCode();
 				} 
-				pdb.load(pdbChainCode, modelSerial);
+				pdb = fullpdb.getChain(pdbChainCode);
 				
 				File outputFile = new File(outputDir,pdbCode+pdbChainCode+".pdb");				
 				if (!stdout) {
 					Out = new PrintStream(new FileOutputStream(outputFile.getAbsolutePath()));
 				}
 
-				pdb.writePDBFileHeader(Out);
+				fullpdb.writePDBFileHeader(Out);
 				pdb.writeAtomLines(Out);
 				Out.println("END");
 				
@@ -151,9 +152,7 @@ public class dumppdb {
 				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+": "+e.getMessage());
 			} catch (PdbCodeNotFoundException e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
-			} catch (SQLException e) {
-				System.err.println("SQL error for structure "+pdbCode+pdbChainCode+": "+e.getMessage());
-			}
+			} 
 
 		}
 

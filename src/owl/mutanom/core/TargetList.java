@@ -953,7 +953,7 @@ public class TargetList {
 						System.err.println("Warning: Unable to map residue number " + uniPos + " from Uniprot to Pdb for " + g.geneName + " " + ss);
 					}
 					if(ss.pdb == null) {
-						System.err.println("Warning: No Pdb object loaded for " + g.geneName + " " + ss.toString());
+						System.err.println("Warning: No PdbChain object loaded for " + g.geneName + " " + ss.toString());
 						toRemove.add(m);
 					} else {
 						if(!ss.pdb.hasCoordinates(pdbPos)) toRemove.add(m);

@@ -52,7 +52,7 @@ public class FileTypeGuesser {
 	
 	// signatures for the files as above
 	private static final String[] FILE_SIGNATURES  = {
-		"(?:HEADER|SEQRES|CRYST1).*",
+		"(?:HEADER|SEQRES|CRYST1|REMARK).*",
 		"ATOM\\s+.*",
 		"PFRMAT\\s+TS.*",
 		"PFRMAT\\s+RR.*",

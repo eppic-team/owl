@@ -18,8 +18,8 @@ public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 		units.add(unit);
 	}
 	
-	public List<Pdb> getAllChains() {
-		List<Pdb> allChains = new ArrayList<Pdb>();
+	public List<PdbChain> getAllChains() {
+		List<PdbChain> allChains = new ArrayList<PdbChain>();
 		for (PdbAsymUnit unit:this) {
 			allChains.addAll(unit.getAllChains());
 		}

@@ -10,7 +10,7 @@ import java.io.PrintWriter;
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
@@ -89,7 +89,7 @@ public class PaulStructAligner implements StructAligner {
 	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentException, IOException {
+	public MultipleSequenceAlignment alignStructures(PdbChain[] pdbs, String[] tags) throws StructAlignmentException, IOException {
 		if (pdbs.length!=tags.length) {
 			throw new IllegalArgumentException("Given pdbs and tags have different sizes (pdbs "+pdbs.length+", tags "+tags.length+").");
 		}

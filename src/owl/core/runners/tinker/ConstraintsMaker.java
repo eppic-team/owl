@@ -13,14 +13,14 @@ import java.util.TreeMap;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.graphAveraging.ConsensusSquare;
 
 import edu.uci.ics.jung.graph.util.Pair;
@@ -40,7 +40,7 @@ public class ConstraintsMaker {
 	public static final int OMEGA_UPPER_BOUND = 178 + 5; // are gaussian distributed with mean 178 and stddev 5.5
 	
 	private File xyzFile;
-	private Pdb pdb;
+	private PdbChain pdb;
 	private PrintWriter fkey;
 	
 	private TreeMap<Integer,Integer> pdb2xyz;
@@ -60,13 +60,14 @@ public class ConstraintsMaker {
 	 * @throws FileNotFoundException if one of the files was not found
 	 * @throws IOException if something went wrong while reading from or writing to files
 	 * @throws PdbLoadException if the PDB file could not be read
+	 * @throws FileFormatException 
 	 */
-	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile) throws FileNotFoundException, IOException, PdbLoadException {
+	public ConstraintsMaker(File pdbFile, File xyzFile, File prmFile, PRMInfo.PRMType type, File keyFile) throws FileNotFoundException, IOException, PdbLoadException, FileFormatException {
 		this.xyzFile = xyzFile;
 		this.fkey = new PrintWriter(new FileOutputStream(keyFile));
 
-		this.pdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-		this.pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbFile);
+		this.pdb = fullpdb.getChain(PdbAsymUnit.NULL_CHAIN_CODE);
 		this.type = type;
 		
 		this.lastPdbResSerial_Atom = "";
@@ -81,7 +82,7 @@ public class ConstraintsMaker {
 		
 		int pdbResSerial = 1; // our pointer to the current pdb residue serial as we read the xyz file
 		
-		String sequence = pdb.getSequence();
+		String sequence = pdb.getSequence().getSeq();
 		int numAtoms = 0; // count of atoms per residue
 		String resFromSeq = ""; // 3 letter residue code that we take from the sequence
 				

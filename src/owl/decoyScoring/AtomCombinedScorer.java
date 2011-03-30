@@ -3,7 +3,7 @@ package owl.decoyScoring;
 import java.io.File;
 import java.io.IOException;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.graphs.AIGraph;
 import owl.core.util.FileFormatException;
 
@@ -50,7 +50,7 @@ public class AtomCombinedScorer extends Scorer {
 	}
 
 	@Override
-	public double scoreIt(Pdb pdb) {
+	public double scoreIt(PdbChain pdb) {
 		AIGraph graph = pdb.getAllAtomGraph(this.cutoff);
 		int typeMinSeqSep = typeScorer.getMinSeqSep();
 		int countMinSeqSep = countScorer.getMinSeqSep();

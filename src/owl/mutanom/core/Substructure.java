@@ -22,7 +22,7 @@ import owl.core.features.OverlappingFeatureException;
 import owl.core.runners.NaccessRunner;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
 import owl.core.structure.graphs.RIGraph;
@@ -62,7 +62,7 @@ public class Substructure {
 	int end;	// end position in Uniprot sequence
 	int offset;	// offset between residue numbers in uniprot sequence and residue numbers in Pdbase sequence
 				// this is a quick workaround for the problem that renumbered PDB files are not being processed
-				// correctly by the Pdb class. So instead, we load known structures from Pdbase and apply this
+				// correctly by the PdbChain class. So instead, we load known structures from Pdbase and apply this
 				// offset to locate the mutation in the structure. In the long run this should be replaced by
 				// a more general solution using an alignment. Update: Now we use the alignment, offset should not be used anymore!
 	SubstructureType type;
@@ -70,7 +70,7 @@ public class Substructure {
 	
 	// additional data which can be optionally loaded to enable further analysis
 	// each method which requires one of these is responsible for checking that the data has been loaded
-	Pdb pdb; // the actual coordinates (to be loaded with loadPdb...)
+	PdbChain pdb; // the actual coordinates (to be loaded with loadPdb...)
 	RIGraph graph; // the accompanying graph (to be loaded with loadGraph())
 	Map<FeatureType, Collection<Feature>> features; // to be loaded with loadFeatures()
 	
@@ -168,7 +168,7 @@ public class Substructure {
 		Map<Integer,Integer> cif2uni = new HashMap<Integer, Integer>();
 		Map<Integer,String> uni2pdb = new HashMap<Integer, String>();
 		Map<String,Integer> pdb2uni = new HashMap<String, Integer>();
-		String pdbSeq = this.pdb.getSequence().substring(cifBeg-1, cifEnd);
+		String pdbSeq = this.pdb.getSequence().getSeq().substring(cifBeg-1, cifEnd);
 		String uniSeq = uniprotSeq.substring(uniBeg-1, uniEnd);
 		try {
 			PairwiseSequenceAlignment al = new PairwiseSequenceAlignment(uniSeq, pdbSeq,"Uniprot","Pdb");
@@ -298,13 +298,13 @@ public class Substructure {
 	 * The Pdb object can be loaded with loadPdb...
 	 * @return the pdb object or null if it has not yet been loaded
 	 */
-	public Pdb getPdb() {
+	public PdbChain getPdb() {
 		return this.pdb;
 	}
 	
 	/**
 	 * Returns the RIGraph object associated with this substructure.
-	 * The Pdb object can be loaded with loadGraph().
+	 * The PdbChain object can be loaded with loadGraph().
 	 * @return the graph object or null if it has not yet been loaded
 	 */	
 	public RIGraph getGraph() {
@@ -367,7 +367,7 @@ public class Substructure {
 	}
 	
 	/**
-	 * @return true iff a RIG for this substructure has been loaded (requires Pdb to be loaded first)
+	 * @return true iff a RIG for this substructure has been loaded (requires PdbChain to be loaded first)
 	 */
 	public boolean isGraphLoaded() {
 		return this.graph != null;
@@ -379,7 +379,7 @@ public class Substructure {
 	 */
 	public void loadPdbFromFile(File pdbFile) {
 		// DEBUG: System.out.println("Loading file " + pdbFile);
-		this.pdb = Pdb.readStructureOrNull(pdbFile.toString(), this.chainCode);
+		this.pdb = PdbChain.readStructureOrNull(pdbFile.toString(), this.chainCode);
 		if(this.pdb != null) this.pdbFile = pdbFile; else System.err.println("Error loading PDB file " + pdbFile);
 	}
 	
@@ -388,7 +388,7 @@ public class Substructure {
 	 */
 	public void loadPdbFromDb() {
 		if(this.pdbCode != null && this.chainCode != null) {
-			this.pdb = Pdb.readStructureOrNull(this.pdbCode+this.chainCode);
+			this.pdb = PdbChain.readStructureOrNull(this.pdbCode+this.chainCode);
 			// DEBUG:
 //			if(this.pdbCode.equals("2ovr")) {
 //				System.out.println("Loading " + this.pdbCode + " " + this.chainCode);
@@ -407,7 +407,7 @@ public class Substructure {
 	
 	/**
 	 * Loads the residue interaction graph for this substructure.
-	 * Requires Pdb to be loaded first.
+	 * Requires PdbChain to be loaded first.
 	 */
 	public void loadGraph(String contactType, double cutoff) {
 		if(!isPdbLoaded()) {

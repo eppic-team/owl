@@ -41,12 +41,12 @@ public abstract class ProtStructGraph<V,E> extends SparseGraph<V,E> {
  	
 	protected String sequence;		// the full sequence (with unobserved residues and non-standard aas ='X')
 	protected String pdbCode;		// the lower-case pdb code
-	protected String pdbChainCode;	// The pdb chain code (upper case), i.e. the classic (author's) pdb code (Pdb.NULL_CHAIN_CODE if it is blank in original pdb file)
+	protected String pdbChainCode;	// The pdb chain code (upper case), i.e. the classic (author's) pdb code (PdbChain.NULL_CHAIN_CODE if it is blank in original pdb file)
 	protected String chainCode;		// Our internal chain identifier (upper case)
 									// - in reading from pdbase or from msdsd it will be set to the internal chain id (asym_id field for pdbase, pchain_id for msdsd)
-    								// - in reading from pdb file it coincides with pdbChainCode except for Pdb.NULL_CHAIN_CODE where we use "A"	
+    								// - in reading from pdb file it coincides with pdbChainCode except for PdbChain.NULL_CHAIN_CODE where we use "A"	
 	protected int model;			// model serial number (for NMR structures, for all others is 1)
-	protected String sid;			// the scop id if this ProtStructGraph comes from a Pdb object restricted to a SCOP domain
+	protected String sid;			// the scop id if this ProtStructGraph comes from a PdbChain object restricted to a SCOP domain
 	protected String comment;		// a user-defined comment field
 	
 	// optional fields for graphs based on casp predictions

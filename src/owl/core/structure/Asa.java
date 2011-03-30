@@ -1,5 +1,6 @@
 package owl.core.structure;
 
+import java.io.File;
 import java.util.ArrayList;
 
 import javax.vecmath.Point3d;
@@ -212,20 +213,22 @@ public class Asa {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		Pdb pdb = new PdbfilePdb(args[0]);
+		PdbAsymUnit pdb = new PdbAsymUnit(new File(args[0]));
 		int nThreads = Integer.parseInt(args[1]);
 		
-		pdb.load(pdb.getChains()[0]);
 		long start = System.currentTimeMillis();
 		pdb.calcASAs(9600,nThreads);
 		long end = System.currentTimeMillis();
 		
 		double tot = 0;
-		for (int resser:pdb.getAllSortedResSerials()) {
-			Residue res = pdb.getResidue(resser);
-			
-			System.out.printf("%3d\t%s\t%6.2f\n",res.getSerial(),res.getAaType().getThreeLetterCode(),res.getAsa());
-			tot+=res.getAsa();
+		
+		for (PdbChain chain:pdb.getAllChains()) {
+			for (int resser:chain.getAllSortedResSerials()) {
+				Residue res = chain.getResidue(resser);
+
+				System.out.printf("%3d\t%s\t%6.2f\n",res.getSerial(),res.getAaType().getThreeLetterCode(),res.getAsa());
+				tot+=res.getAsa();
+			}
 		}
 		System.out.printf("Total area: %9.2f\n",tot);
 		System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));

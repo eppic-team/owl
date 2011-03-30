@@ -31,8 +31,8 @@ public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 	
 	public void setFields (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(pdb_code, "pdbase_20090728", conn);
-		pdb.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdb_code,conn,"pdbase_20090728");
+		PdbChain pdb = fullpdb.getChain("A");
 		RIGraph rig = pdb.getRIGraph("Ca",9.0);
 		setPdbCode(rig.getPdbCode());
 		setSequence(rig.getSequence());
@@ -83,11 +83,11 @@ public class ContactMatrix extends owl.core.structure.graphs.RIGraph {
 	}
 	/**
 	 * Initial setter: initializes the vertex and edge map of the RIGraph superclass.
-	 * @param pdb the Pdb instance
+	 * @param pdb the PdbChain instance
 	 * @param cutOff the cut off distance
 	 */
-	public void setGraph(Pdb pdb, double cutOff){
-		String seq = pdb.getSequence();
+	public void setGraph(PdbChain pdb, double cutOff){
+		String seq = pdb.getSequence().getSeq();
 		HashMap<Pair<Integer>,Double> distMap = pdb.calcAtomDistMatrix("Ca");
 		Set<Pair<Integer>> keys = distMap.keySet();
 		Iterator<Pair<Integer>> it = keys.iterator();

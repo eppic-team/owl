@@ -14,7 +14,7 @@ import java.util.LinkedList;
 
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.mutanom.core.Gene;
 import owl.mutanom.core.Mutation;
 import owl.mutanom.core.Substructure;
@@ -52,7 +52,7 @@ public class FoldXRunner {
 	/**
 	 * Calculates the energy change of the given mutation on the given structure.
 	 */
-	public double getEnergyChangeUponMutation(Pdb pdb, Mutation m) {
+	public double getEnergyChangeUponMutation(PdbChain pdb, Mutation m) {
 		double result = 0.0;
 		return result;
 		
@@ -88,7 +88,7 @@ public class FoldXRunner {
 	 * @param pdb
 	 * @return
 	 */
-	public double getEnergy(Pdb pdb) {
+	public double getEnergy(PdbChain pdb) {
 		return 0;
 		
 		/*
@@ -120,7 +120,7 @@ public class FoldXRunner {
 	 * @param pdb
 	 * @return
 	 */
-	public Pdb repairStructure(Pdb pdb) {
+	public PdbChain repairStructure(PdbChain pdb) {
 		return null;
 		
 		/*
@@ -186,7 +186,7 @@ public class FoldXRunner {
 	 * @param pdb
 	 * @return
 	 */
-	public Pdb getMutatedStructure(Pdb pdb, Collection<Mutation> mutations) {
+	public PdbChain getMutatedStructure(PdbChain pdb, Collection<Mutation> mutations) {
 		return null;
 	}
 	

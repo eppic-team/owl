@@ -7,6 +7,7 @@ import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.*;
 import owl.core.structure.graphs.*;
+import owl.core.util.FileFormatException;
 
 /**
  * Takes a list of pdb files assuming that they are predictions of a single structure
@@ -47,7 +48,7 @@ public class rankModels {
 			BufferedReader in = new BufferedReader(new FileReader(listFile));
 			String line;
 			File file;
-			Pdb pdb;
+			PdbChain pdb;
 			RIGraph graph;
 			while ((line =  in.readLine()  ) != null) {
 				file = new File(line);
@@ -57,11 +58,14 @@ public class rankModels {
 				} else {
 					templateFileNames.add(line);
 					try {
-						pdb = new PdbfilePdb(file.getAbsolutePath());
-						pdb.load(pdb.getChains()[0]);
+						PdbAsymUnit fullpdb = new PdbAsymUnit(file);
+						pdb = fullpdb.getFirstChain();
 						graph = pdb.getRIGraph(contactType, distCutoff);
 						graphs.add(graph);
 					} catch(PdbLoadException e) {
+						System.err.println("Error loading pdb structure: " + e.getMessage());
+						System.exit(1);
+					} catch (FileFormatException e) {
 						System.err.println("Error loading pdb structure: " + e.getMessage());
 						System.exit(1);
 					}

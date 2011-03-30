@@ -61,5 +61,5 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		}
 		return true;
 	}
-	
+
 }

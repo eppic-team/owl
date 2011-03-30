@@ -6,7 +6,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -19,10 +18,10 @@ import java.util.regex.Pattern;
 import owl.core.runners.DsspRunner;
 import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -1149,15 +1148,13 @@ public class MultipleSequenceAlignment implements Serializable {
 			Pattern p = Pattern.compile("(\\d\\w\\w\\w)(\\w)");
 			Matcher m = p.matcher(tag);
 			if (m.matches()) {
-				PdbasePdb pdb = null;
+				PdbChain pdb = null;
 				try {
-					pdb = new PdbasePdb(m.group(1), pdbaseDb, conn);
-					pdb.load(m.group(2));
+					PdbAsymUnit fullpdb = new PdbAsymUnit(m.group(1),conn,pdbaseDb);
+					pdb = fullpdb.getChain(m.group(2));
 					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadException e) {
-					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
-				} catch (SQLException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
 				} catch (PdbCodeNotFoundException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());					
@@ -1184,7 +1181,7 @@ public class MultipleSequenceAlignment implements Serializable {
     		SecondaryStructure secStructure = new SecondaryStructure("");
     		if (templates.contains(tag)) {
     			if (templates.getTemplate(tag).hasPdbData()) {
-    				Pdb pdb =templates.getTemplate(tag).getPdb();
+    				PdbChain pdb =templates.getTemplate(tag).getPdb();
     				try {
     					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb,dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
     				} catch (IOException e) {

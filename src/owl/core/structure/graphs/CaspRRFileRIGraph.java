@@ -3,7 +3,7 @@ package owl.core.structure.graphs;
 import java.io.*;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.util.FileFormatException;
 
@@ -30,8 +30,8 @@ public class CaspRRFileRIGraph extends RIGraph {
 		this.distCutoff=ProtStructGraph.NO_CUTOFF;
 		// we initialise pdbCode, chainCode and pdbChainCode to corresponding constants (empty strings at the moment) since file doesn't specify then
 		this.pdbCode=PdbAsymUnit.NO_PDB_CODE;
-		this.chainCode=Pdb.NO_CHAIN_CODE;
-		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
+		this.chainCode=PdbChain.NO_CHAIN_CODE;
+		this.pdbChainCode=PdbChain.NO_PDB_CHAIN_CODE;
 		
 		readFromCaspRRFile(fileName);  
 		

@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import owl.core.runners.NaccessRunner;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 
 
 public class testNaccess {
@@ -14,8 +14,8 @@ public class testNaccess {
 	
 	public static void main(String[] args) throws IOException {
 		
-		Pdb p1 = Pdb.readStructureOrExit("3gftA");
-		Pdb p2 = Pdb.readStructureOrExit("2vukA");
+		PdbChain p1 = PdbChain.readStructureOrExit("3gftA");
+		PdbChain p2 = PdbChain.readStructureOrExit("2vukA");
 		
 		NaccessRunner nar = new NaccessRunner(new File(NACCESS_EXECUTABLE), NACCESS_PARAMETERS);
 		nar.runNaccess(p1);

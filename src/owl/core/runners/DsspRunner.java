@@ -7,7 +7,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.TreeMap;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
 
@@ -30,7 +30,7 @@ public class DsspRunner {
 	 * @param dsspParameters for current version of DSSP set this to "--" (two hyphens)
 	 * @return the secondary structure annotation object
 	 */
-	public static SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters) throws IOException {
+	public static SecondaryStructure runDssp(PdbChain pdb, String dsspExecutable, String dsspParameters) throws IOException {
 		return runDssp(pdb, dsspExecutable, dsspParameters, SecStrucElement.ReducedState.FOURSTATE, SecStrucElement.ReducedState.FOURSTATE);
 	}
 
@@ -43,7 +43,7 @@ public class DsspRunner {
 	 * @return the secondary structure annotation object 
 	 * @return
 	 */
-	public static SecondaryStructure runDssp(Pdb pdb, String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
+	public static SecondaryStructure runDssp(PdbChain pdb, String dsspExecutable, String dsspParameters, SecStrucElement.ReducedState state4Type, SecStrucElement.ReducedState state4Id) throws IOException {
 		String pdbCode = pdb.getPdbCode();
 		String chainCode = pdb.getChainCode();
 		
@@ -103,7 +103,7 @@ public class DsspRunner {
 		}
 
 		// assign secondary structure
-		SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence());
+		SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());
 		char lastType = SecStrucElement.getReducedStateTypeFromDsspType(ssTypes.get(ssTypes.firstKey()), state4Id);
 		int lastResSer = ssTypes.firstKey();
 		char lastSheet = sheetLabels.get(lastResSer);

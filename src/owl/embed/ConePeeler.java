@@ -14,10 +14,10 @@ import edu.uci.ics.jung.graph.util.Pair;
 import owl.embed.contactmaps.Individuals;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGCommonNbhood;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
@@ -38,9 +38,7 @@ import owl.core.util.MySQLConnection;
  */
 public class ConePeeler extends RIGraph {
 	private static final long serialVersionUID = 1L;
-	/** the default database*/
-	private static final String DEF_DB = "pdbase_20090728";
-	private static Pdb structure;
+	private static PdbChain structure;
 	/** the minimal sequence separation*/
 	private static int seqSep = 3;
 	/** the distance map, mapping all contacts onto their distance*/
@@ -75,19 +73,6 @@ public class ConePeeler extends RIGraph {
 	private ConePeeler (String pdbCode, String database, String chainCode, String contactType, double cutOff, int seqSep) throws ConePeelerException {
 		super();
 		setFields(pdbCode,database,chainCode,contactType,cutOff,seqSep);
-	}
-	/**
-	 * Two parameter constructor: constructs a RIGraph instance from the <tt>pdb</tt> instance, with the specified
-	 * <tt>cutOff</tt>.
-	 * @param pdb a Pdb instance representing the protein
-	 * @param cutOff the cutoff distance
-	 * @throws PdbLoadException
-	 */
-	protected ConePeeler (Pdb pdb, double cutOff) throws PdbLoadException{
-		super();
-		structure = new Pdb(pdb.getSequence());
-		structure.load(pdb.getChainCode());
-		setRIGraph(structure.getRIGraph("Ca", cutOff),3);
 	}
 	/**
 	 * One parameter constructor: uses the RIGraph instance <tt>rig</tt> to 
@@ -130,14 +115,14 @@ public class ConePeeler extends RIGraph {
 	private void setFields (String pdbCode, String database, String chainCode, String contactType, double cutOff, int seqSep) throws ConePeelerException {
 		try{
 		MySQLConnection conn = new MySQLConnection();
+		PdbAsymUnit fullpdb = null;
 		if(structure==null) {
-			if(database==null||database.length()==0) structure = new PdbasePdb(pdbCode,DEF_DB,conn);
-			else structure = new PdbasePdb(pdbCode,database,conn);
+			fullpdb = new PdbAsymUnit(pdbCode,conn,database);
 		}
 		else if(!pdbCode.matches(structure.getPdbCode()))
 			throw new ConePeelerException ("The pdb code of the constant structure field and the denoted pdb code do not match!");
 		System.out.println("Loading strucutre of "+pdbCode+" from database...");
-		structure.load(chainCode);
+		structure = fullpdb.getChain(chainCode);
 		setRIGraph(structure.getRIGraph(contactType, cutOff),3);
 		conn.close();
 		}

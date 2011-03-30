@@ -4,10 +4,10 @@ import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
 
@@ -356,8 +356,8 @@ public class CMGrabber {
 		File pdbfile = new File (title);
 		if(!pdbfile.exists()){
 			MySQLConnection conn = new MySQLConnection ();
-			Pdb pdb = new PdbasePdb(name, "pdbase_20090728", conn);
-			pdb.load("A");
+			PdbAsymUnit fullpdb = new PdbAsymUnit(name,conn,"pdbase_20090728");
+			PdbChain pdb = fullpdb.getChain("A");
 			pdb.writeToPDBFile(title);
 		}
 		else{

@@ -1,7 +1,7 @@
 import java.io.File;
 
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 
 
@@ -19,17 +19,15 @@ public class checkChirality {
 		}
 		
 		File file = new File(args[0]);
-		Pdb pdb = new PdbfilePdb(file.getAbsolutePath());
-		String[] chains = pdb.getChains();
+		PdbAsymUnit pdb = new PdbAsymUnit(file);
 		
-		for (String chain:chains) {
+		for (PdbChain chain:pdb.getAllChains()) {
 			System.out.println("Chain "+chain+". D-form residues:");
-			pdb.load(chain);
 			int dcount=0;
 			int lcount=0;
 			int ucount=0;
-			for (int resser:pdb.getAllSortedResSerials()) {
-				Residue res = pdb.getResidue(resser);
+			for (int resser:chain.getAllSortedResSerials()) {
+				Residue res = chain.getResidue(resser);
 				Residue.Chirality chir = res.getChirality();
 				if (chir == Residue.Chirality.D) {
 					//System.out.println(res+" "+chir.getAbbrev());

@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 
@@ -46,7 +46,7 @@ public class NaccessRunner {
 	 * @throws IOException if I/O problems running naccess or if it finishes with an 
 	 * error exit status
 	 */
-	public void runNaccess(Pdb pdb) throws IOException {
+	public void runNaccess(PdbChain pdb) throws IOException {
 
 		File tempDir = new File(System.getProperty("java.io.tmpdir"));
 		String prefix = ((pdb.getPdbCode()+pdb.getChainCode()).length() < 3)?"1xxx":(pdb.getPdbCode()+pdb.getChainCode());

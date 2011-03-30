@@ -22,8 +22,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private double interfaceArea;
 	private AICGraph graph;
 	
-	private Pdb firstMolecule;
-	private Pdb secondMolecule;
+	private PdbChain firstMolecule;
+	private PdbChain secondMolecule;
 	
 	private InterfaceRimCore[] firstRimCores;  // cached first molecule's rim and cores (indices as bsaToAsaCutoffs)
 	private InterfaceRimCore[] secondRimCores; // cached second molecule's rim and cores (indices as bsaToAsaCutoffs)
@@ -51,7 +51,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		
 	}
 	
-	public ChainInterface(Pdb firstMolecule, Pdb secondMolecule, AICGraph graph, Matrix4d firstTransf, Matrix4d secondTransf) {
+	public ChainInterface(PdbChain firstMolecule, PdbChain secondMolecule, AICGraph graph, Matrix4d firstTransf, Matrix4d secondTransf) {
 		this.firstMolecule = firstMolecule;
 		this.secondMolecule = secondMolecule;
 		this.graph = graph;
@@ -86,19 +86,19 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		this.interfaceArea = interfaceArea;
 	}
 	
-	public Pdb getFirstMolecule() {
+	public PdbChain getFirstMolecule() {
 		return firstMolecule;
 	}
 	
-	public void setFirstMolecule(Pdb firstMolecule) {
+	public void setFirstMolecule(PdbChain firstMolecule) {
 		this.firstMolecule = firstMolecule;
 	}
 	
-	public Pdb getSecondMolecule() {
+	public PdbChain getSecondMolecule() {
 		return secondMolecule;
 	}
 	
-	public void setSecondMolecule(Pdb secondMolecule) {
+	public void setSecondMolecule(PdbChain secondMolecule) {
 		this.secondMolecule = secondMolecule;
 	}
 	
@@ -124,7 +124,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 */
 	public Matrix4d getFirstTransfOrth(){
 		if (firstTransfOrth==null) {
-			firstTransfOrth = firstMolecule.getCrystalCell().transfToOrthonormal(firstTransf);
+			firstTransfOrth = firstMolecule.getParent().getCrystalCell().transfToOrthonormal(firstTransf);
 		}
 		return firstTransfOrth;
 	}
@@ -143,7 +143,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public Matrix4d getSecondTransfOrth() {
 		if (secondTransfOrth==null) {
-			secondTransfOrth = secondMolecule.getCrystalCell().transfToOrthonormal(secondTransf);
+			secondTransfOrth = secondMolecule.getParent().getCrystalCell().transfToOrthonormal(secondTransf);
 		}
 		return secondTransfOrth;
 	}
@@ -195,7 +195,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		
 		NaccessRunner nar = new NaccessRunner(naccessExecutable, "");
 		
-		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
+		PdbAsymUnit complex = new PdbAsymUnit();
+		complex.setPdbCode(firstMolecule.getPdbCode());
 		complex.setChain("A", firstMolecule);
 		complex.setChain("B", secondMolecule);
 		
@@ -234,7 +235,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		firstMolecule.calcASAs(nSpherePoints, nThreads);
 		secondMolecule.calcASAs(nSpherePoints, nThreads);
 		
-		PdbAsymUnit complex = new PdbAsymUnit(firstMolecule.getPdbCode(), 1, null, null, null);
+		PdbAsymUnit complex = new PdbAsymUnit();
+		complex.setPdbCode(firstMolecule.getPdbCode());
 		complex.setChain("A", firstMolecule);
 		complex.setChain("B", secondMolecule);
 
@@ -414,7 +416,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * Calculates residues in rim and core for all given bsaToAsaCutoffs, storing the 
 	 * lists in a cached array.
 	 * Use {@link #getFirstRimCores()} and {@link #getSecondRimCores()} to retrieve them.
-	 * (see getRimAndCore in {@link Pdb})
+	 * (see getRimAndCore in {@link PdbChain})
 	 * If either of the 2 molecules of this interface is not a protein, the map will be empty for it. 
 	 * @param bsaToAsaCutoffs
 	 * @return

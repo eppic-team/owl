@@ -49,7 +49,7 @@ public class GridCell {
 					// We could check if two atoms in the same cell have the same serial.
 					// This could happen when the 2 contact types (i/j) have overlapping atoms, e.g. ALL/BB
 					// The check is not strictly necessary, because distance in case i=j would be 0 (atom to itself). 
-					// It's just to make sure that there wouldn't be rounding problems in comparing to 0.0 in getAIgraph in Pdb
+					// It's just to make sure that there wouldn't be rounding problems in comparing to 0.0 in getAIgraph in PdbChain
 					distMatrix[i][j] = (float)iAtoms[i].getCoords().distance(jAtoms[j].getCoords());
 				}
 			}

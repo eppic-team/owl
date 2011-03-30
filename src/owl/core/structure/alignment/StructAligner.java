@@ -3,7 +3,7 @@ package owl.core.structure.alignment;
 import java.io.IOException;
 
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
 
@@ -35,7 +35,7 @@ public interface StructAligner {
 	 * @throws StructAlignmentException if a problem occurs while running the structural alignment
 	 * @throws IOException
 	 */
-	public MultipleSequenceAlignment alignStructures(Pdb[] pdbs, String[] tags) throws StructAlignmentException, IOException;
+	public MultipleSequenceAlignment alignStructures(PdbChain[] pdbs, String[] tags) throws StructAlignmentException, IOException;
 	
 	/**
 	 * Performs structural alignment of the given contact maps (graphs)

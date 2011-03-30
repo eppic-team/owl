@@ -5,10 +5,10 @@ import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
@@ -185,8 +185,8 @@ public class Demes {
 	 */
 	public Demes (Individuals starter, int size) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(starter.getName(), pdbaseDb, conn);
-		pdb.load(starter.getChainCode());
+		PdbAsymUnit fullpdb = new PdbAsymUnit(starter.getName(),conn,pdbaseDb);
+		PdbChain pdb = fullpdb.getChain(starter.getChainCode());
 		RIGraph rig = pdb.getRIGraph("Ca", 9.0);
 		pop = new Individuals[size];
 		for(int i = 0; i < size; i++){
@@ -740,8 +740,8 @@ public class Demes {
 					String[] tokens = line.split(" ");
 					String pdbCode=tokens[0];
 					String pdbChainCode=tokens[1];
-					Pdb pdb = new PdbasePdb(pdbCode, "pdbase_20090728", conn);
-					pdb.load(pdbChainCode);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,"pdbase_20090728");
+					PdbChain pdb = fullpdb.getChain(pdbChainCode);
 					fullCM = pdb.getRIGraph("Ca", 9);
 					break;//counter++;
 				}
@@ -1078,8 +1078,8 @@ public class Demes {
 	public void setDemes (String pdb_code, String pdb_db, int size, double percent) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IllegalArgumentException {
 		if(size > 0 && (percent <= 100.0 && percent > 0.0) ){
 			MySQLConnection conn = new MySQLConnection ();
-			Pdb pdb = new PdbasePdb(pdb_code, pdb_db, conn);
-			pdb.load("A");
+			PdbAsymUnit fullpdb = new PdbAsymUnit(pdb_code,conn,pdb_db);
+			PdbChain pdb = fullpdb.getChain("A");
 			RIGraph rig = pdb.getRIGraph("Ca", 9.0);
 			pop = new Individuals [size];
 			for(int i = 0; i < size; i++){

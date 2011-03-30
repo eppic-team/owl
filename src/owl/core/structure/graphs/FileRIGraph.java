@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.util.FileFormatException;
 
@@ -57,8 +57,8 @@ public class FileRIGraph extends RIGraph {
 		this.distCutoff=ProtStructGraph.NO_CUTOFF;
 		// we initialise pdbCode, chainCode and pdbChainCode to corresponding constants (empty strings at the moment) in case the file doesn't specify then
 		this.pdbCode=PdbAsymUnit.NO_PDB_CODE;
-		this.chainCode=Pdb.NO_CHAIN_CODE;
-		this.pdbChainCode=Pdb.NO_PDB_CHAIN_CODE;
+		this.chainCode=PdbChain.NO_CHAIN_CODE;
+		this.pdbChainCode=PdbChain.NO_PDB_CHAIN_CODE;
 		
 		readFromFile(contactsfile);  
 		

@@ -7,8 +7,8 @@ import org.apache.commons.math.distribution.BinomialDistribution;
 import org.apache.commons.math.distribution.BinomialDistributionImpl;
 
 import owl.core.runners.NaccessRunner;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbSet;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbChainSet;
 import owl.core.util.Pair;
 
 
@@ -92,10 +92,10 @@ public class MutationTools {
 	 * For a set of pdbs, count the fraction of residues which are exposed.
 	 * @param pdbs
 	 */
-	public static double countFractionExposed(PdbSet pdbs) {
+	public static double countFractionExposed(PdbChainSet pdbs) {
 		int exposed = 0;
 		int buried = 0;
-		for(Pdb pdb:pdbs.getPdbs()) {
+		for(PdbChain pdb:pdbs.getPdbs()) {
 			System.out.print(".");
 			try {
 				NaccessRunner nar = new NaccessRunner(new File(NACCESS_EXECUTABLE), NACCESS_PARAMETERS);
@@ -121,7 +121,7 @@ public class MutationTools {
 		int exposed = 0;
 		
 		for(String pdbCode:list) {
-			Pdb pdb = Pdb.readStructureOrExit(pdbCode);
+			PdbChain pdb = PdbChain.readStructureOrExit(pdbCode);
 			Pair<Integer,Integer> pair = countBuriedAndExposed(pdb);
 			buried += pair.getFirst();
 			exposed += pair.getSecond();
@@ -130,7 +130,7 @@ public class MutationTools {
 		
 	}
 	
-	public static Pair<Integer,Integer> countBuriedAndExposed(Pdb pdb) {
+	public static Pair<Integer,Integer> countBuriedAndExposed(PdbChain pdb) {
 		int exposed = 0;
 		int buried = 0;	
 		System.out.print(".");
@@ -185,7 +185,7 @@ public class MutationTools {
 //		System.out.println("Reading cullpdb_20...");
 //		Collection<String> pdbCodes = null;
 //		try {
-//			pdbCodes = PdbSet.readCullPdb20List();
+//			pdbCodes = PdbChainSet.readCullPdb20List();
 //		} catch (IOException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();

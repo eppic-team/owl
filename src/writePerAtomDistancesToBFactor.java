@@ -3,7 +3,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.TreeSet;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 
 
 
@@ -33,8 +33,8 @@ public class writePerAtomDistancesToBFactor {
 		if(!new File(arg2).canRead()) {
 			System.err.println("Can not read file " + arg2);
 		}
-		Pdb pdb1 = Pdb.readStructureOrExit(arg1);
-		Pdb pdb2 = Pdb.readStructureOrExit(arg2);
+		PdbChain pdb1 = PdbChain.readStructureOrExit(arg1);
+		PdbChain pdb2 = PdbChain.readStructureOrExit(arg2);
 		
 		HashMap<Integer, Double> distances = pdb1.getPerAtomDistances(pdb2);
 		pdb1.setBFactorsPerAtom(distances);

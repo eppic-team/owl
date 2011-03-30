@@ -359,7 +359,7 @@ public class DbRIGraph extends RIGraph {
 			this.chainCode=rsst.getString(2);
 			this.pdbCode=rsst.getString(3);
 			this.pdbChainCode=rsst.getString(4);
-			// java returns a null if the field is a database null, we want actually the Pdb.NULL_CHAIN_CODE string in that case
+			// java returns a null if the field is a database null, we want actually the PdbChain.NULL_CHAIN_CODE string in that case
 			if (this.pdbChainCode==null) this.pdbChainCode=PdbAsymUnit.NULL_CHAIN_CODE;
 		}
 		if (check!=1){
@@ -431,7 +431,7 @@ public class DbRIGraph extends RIGraph {
 				check++;
 				pdbCode=rsst.getString(1);
 				pdbChainCode=rsst.getString(2);
-				// java returns a null if the field is a database null, we want actually the Pdb.NULL_CHAIN_CODE string in that case
+				// java returns a null if the field is a database null, we want actually the PdbChain.NULL_CHAIN_CODE string in that case
 				if (pdbChainCode==null) pdbChainCode=PdbAsymUnit.NULL_CHAIN_CODE;
 				chainCode=rsst.getString(3);
 				model=rsst.getInt(4);

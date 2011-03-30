@@ -10,13 +10,14 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PolResidue;
 import owl.core.structure.Polymer;
 import owl.core.structure.Residue;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
+import owl.core.util.MySQLConnection;
 
 //import proteinstructure.PdbfilePdb;
 
@@ -65,7 +66,7 @@ public class analyseHistone {
 	private static final Set<String> resisetD = getResiSet("D",1,29,123,125);
 	private static final Set<String> resisetH = getResiSet("H",1,29,123,125);
 
-	// the core residues as interval sets (for the Pdb objects)
+	// the core residues as interval sets (for the PdbChain objects)
 	private static final IntervalSet coreH3 = getIntervalSet(38,132);
 	private static final IntervalSet coreH4 = getIntervalSet(27,94);
 	private static final IntervalSet coreH2A = getIntervalSet(16,117);
@@ -115,25 +116,18 @@ public class analyseHistone {
 		mol.removeResidues(resisetG);
 		mol.removeResidues(resisetH); 
 		
-		// Reading the pdb file again with our normal Pdb objects (one per chain, no DNA)
+		// Reading the pdb file again with our normal PdbChain objects (one per chain, no DNA)
 		// We do this to extract the positions of the side chains of ARG and LYS after transforming the molecules in the same way as mol
-		Pdb completeChainA = new PdbasePdb(pdbCode);
-		completeChainA.load("A");
-		Pdb completeChainB = new PdbasePdb(pdbCode);
-		completeChainB.load("B");
-		Pdb completeChainC = new PdbasePdb(pdbCode);
-		completeChainC.load("C");
-		Pdb completeChainD = new PdbasePdb(pdbCode);
-		completeChainD.load("D");
-		Pdb completeChainE = new PdbasePdb(pdbCode);
-		completeChainE.load("E");
-		Pdb completeChainF = new PdbasePdb(pdbCode);
-		completeChainF.load("F");
-		Pdb completeChainG = new PdbasePdb(pdbCode);
-		completeChainG.load("G");
-		Pdb completeChainH = new PdbasePdb(pdbCode);
-		completeChainH.load("H");
-		Pdb[] pdbs = {completeChainA, completeChainB, completeChainC, completeChainD, completeChainE, completeChainF, completeChainG, completeChainH};
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),"pdbase");
+		PdbChain completeChainA = fullpdb.getChain("A");
+		PdbChain completeChainB = fullpdb.getChain("B");
+		PdbChain completeChainC = fullpdb.getChain("C");
+		PdbChain completeChainD = fullpdb.getChain("D");
+		PdbChain completeChainE = fullpdb.getChain("E");
+		PdbChain completeChainF = fullpdb.getChain("F");
+		PdbChain completeChainG = fullpdb.getChain("G");
+		PdbChain completeChainH = fullpdb.getChain("H");
+		PdbChain[] pdbs = {completeChainA, completeChainB, completeChainC, completeChainD, completeChainE, completeChainF, completeChainG, completeChainH};
 		
 		// removing tails
 		completeChainA.restrictToIntervalSet(coreH3);
@@ -157,8 +151,8 @@ public class analyseHistone {
 		
 		// changing reference frame to origin center of mass and biggest inertial axis lying on the z axis
 		mol.transformRefFrameToCenterAndAxis(centerOfMass, axis);
-		// doing the same to the individual Pdb complete chains
-		for (Pdb pdb:pdbs) {
+		// doing the same to the individual PdbChain complete chains
+		for (PdbChain pdb:pdbs) {
 			pdb.transformToCenterAndAxis(centerOfMass, axis);
 		}
 		
@@ -172,8 +166,8 @@ public class analyseHistone {
 		// sanity check: coords of ref residue should have now y=0
 		//System.out.println("coordinates of reference residue G42 after rotating: "+refResCoords);
 		
-		// we do the same rotation on the individual Pdb complete chains
-		for (Pdb pdb:pdbs) {
+		// we do the same rotation on the individual PdbChain complete chains
+		for (PdbChain pdb:pdbs) {
 			pdb.rotate(zaxis, rotAngle);
 		}
 		
@@ -189,7 +183,7 @@ public class analyseHistone {
 		//projectOnCylinder(lysResidues, outLys);
 		outLys.println("res\tdist\tz\ttheta");
 		System.out.println("res\tdist\tz\ttheta");
-		for (Pdb pdb:pdbs) {
+		for (PdbChain pdb:pdbs) {
 			ArrayList<Residue> lysResidues = pdb.getResiduesOfType(AminoAcid.LYS);
 			projectOnCylinderPdb(lysResidues, outLys, AminoAcid.LYS);
 		}
@@ -200,7 +194,7 @@ public class analyseHistone {
 		//projectOnCylinder(argResidues, outArg);
 		outArg.println("res\tdist\tz\ttheta");
 		System.out.println("res\tdist\tz\ttheta");
-		for (Pdb pdb:pdbs) {
+		for (PdbChain pdb:pdbs) {
 			ArrayList<Residue> argResidues = pdb.getResiduesOfType(AminoAcid.ARG);
 			projectOnCylinderPdb(argResidues, outArg, AminoAcid.ARG);
 		}
@@ -232,7 +226,7 @@ public class analyseHistone {
 		
 		// sanity check: writing the pdbs to file to examine them
 		PrintStream ps = new PrintStream(checkPdbFile);
-		for (Pdb pdb:pdbs) {
+		for (PdbChain pdb:pdbs) {
 			pdb.writeAtomLines(ps);
 		}
 		ps.close();

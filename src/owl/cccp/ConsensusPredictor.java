@@ -13,7 +13,7 @@ import java.util.*;
 import org.ggf.drmaa.DrmaaException;
 
 import owl.core.util.FileFormatException;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.structure.features.SecondaryStructure;
@@ -242,7 +242,7 @@ public class ConsensusPredictor {
 	 * @param predGraph the contact prediction based on which the structure will be reconstructed
 	 * @return a prediction of the 3D structure
 	 */	
-	public Pdb get3DPrediction(RIGraph predGraph) throws IOException {
+	public PdbChain get3DPrediction(RIGraph predGraph) throws IOException {
 		return get3DPrediction(predGraph, null);
 	}
 	
@@ -253,7 +253,7 @@ public class ConsensusPredictor {
 	 * @param ss the secondary structure object used for the reconstruction, needs to match predGraph's sequence
 	 * @return a prediction of the 3D structure
 	 */
-	public Pdb get3DPrediction(RIGraph predGraph, SecondaryStructure ss) throws IOException {
+	public PdbChain get3DPrediction(RIGraph predGraph, SecondaryStructure ss) throws IOException {
 		RIGraph[] rigs = {predGraph};
 		TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_FILE);
 		TreeMap<Integer,ConsensusSquare> angleConstraints = null;
@@ -265,7 +265,7 @@ public class ConsensusPredictor {
 		}
 		//PhiPsiAverager ppa = new PhiPsiAverager(null,null);	// TODO: Create alignment, pass PDBs
 		//TreeMap<Integer,ConsensusSquare> angleConstraints = ppa.getConsensusPhiPsi(0.5, 20);
-		Pdb pdb = null;
+		PdbChain pdb = null;
 		try {
 			if(params.tinkerFastMode) {
 				pdb = tr.reconstructFast(seq.getSeq(), rigs, angleConstraints, params.forceTransOmega, params.numTinkerModels, params.useParallelTinker);
@@ -273,6 +273,8 @@ public class ConsensusPredictor {
 				pdb = tr.reconstruct(seq.getSeq(), rigs, angleConstraints, params.forceTransOmega, params.numTinkerModels, 100, 1, params.useParallelTinker);
 			}
 		} catch (TinkerError e) {
+			throw new IOException(e.getMessage());
+		} catch (FileFormatException e) {
 			throw new IOException(e.getMessage());
 		}
 		return pdb;
@@ -427,7 +429,7 @@ public class ConsensusPredictor {
 	public void writeCaspQA2File(GlobalQualities glQuals, LocalQualities locQuals, File outFile) {
 	}
 	
-	public void writeCaspTSFile(Pdb pred, File outFile) throws IOException {
+	public void writeCaspTSFile(PdbChain pred, File outFile) throws IOException {
 		int targetNum = Integer.parseInt(this.getTargetName().substring(1)); // note: target tag must be like T0100, otherwise this fails!
 		pred.setTargetNum(targetNum);
 		pred.setCaspModelNum(1);
@@ -514,7 +516,7 @@ public class ConsensusPredictor {
 			System.out.println("Reconstructing " + params.numTinkerModels + " models...");			
 		}
 		File tsFile = new File(outDir, target + ".ts");
-		Pdb struPred = null;
+		PdbChain struPred = null;
 		if(params.useDsspConsensusSecondaryStructure) {
 			struPred = this.get3DPrediction(contPred2, consSS);	// use file with median number of contacts and consensus secondary structure
 		} else {
@@ -532,7 +534,7 @@ public class ConsensusPredictor {
 //				System.out.println("Reconstructing " + params.numTinkerModels + " models...");			
 //			}
 //			File tsFile2 = new File(outDir, target + ".2.ts");
-//			Pdb struPred2 = this.get3DPrediction(contPred2);	// use file with median number of contacts and consensus secondary structure
+//			PdbChain struPred2 = this.get3DPrediction(contPred2);	// use file with median number of contacts and consensus secondary structure
 //			this.writeCaspTSFile(struPred2, tsFile2);
 //			System.out.println("3D prediction written to " + tsFile2.getPath());
 //		}

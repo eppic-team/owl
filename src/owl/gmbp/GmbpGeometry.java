@@ -10,7 +10,7 @@ import javax.vecmath.Vector3d;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Atom;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.Residue;
 
 public class GmbpGeometry {
@@ -52,7 +52,7 @@ public class GmbpGeometry {
 	 * @param pdb
 	 * @return coordinates for all atoms
 	 */
-	public static HashMap<String,Point3d> getTheResidueCoord (int resser, String res_type, Pdb pdb) {
+	public static HashMap<String,Point3d> getTheResidueCoord (int resser, String res_type, PdbChain pdb) {
 		//Method to return the coordinates of specific residue. 
 		
 		HashMap<String,Point3d> atom_coord = new HashMap<String, Point3d>();
@@ -149,7 +149,7 @@ public class GmbpGeometry {
 	}
 	
 	@SuppressWarnings("unused")
-	private static HashMap<String,Vector3d> getNeighborsTransRotatedCoord (int resser_i, String res_type_i, int resser_j, String res_type_j, Pdb pdb, Boolean toRotate) {
+	private static HashMap<String,Vector3d> getNeighborsTransRotatedCoord (int resser_i, String res_type_i, int resser_j, String res_type_j, PdbChain pdb, Boolean toRotate) {
 		// METHOD for finding the transformed coordinates of the neighboring residue of a 'node'
 		// Doing it according to the EDGE-LIST
 
@@ -207,7 +207,7 @@ public class GmbpGeometry {
 
 		return atom_coord_rotated;
 	}
-	private static HashMap<String,Vector3d> getTranslatedCoord (int resser, String res_type, Pdb pdb, HashMap<String,Point3d> atom_coord) {	
+	private static HashMap<String,Vector3d> getTranslatedCoord (int resser, String res_type, PdbChain pdb, HashMap<String,Point3d> atom_coord) {	
 		// Method for getting the coordinates "translated (shifted)" to the new-origin
 		// NOTE: The origin is extracted from the available coordinates. Origin defined as the coordinates of CA atom. 
 		
@@ -244,7 +244,7 @@ public class GmbpGeometry {
 
 		return atom_coord_rotated;
 	}	
-	private static HashMap<String,Vector3d> getTranslatedCoordNbr (int resser_nbr, String res_type_nbr, Pdb pdb, HashMap<String,Point3d> atom_coord, Vector3d new_origin) {	
+	private static HashMap<String,Vector3d> getTranslatedCoordNbr (int resser_nbr, String res_type_nbr, PdbChain pdb, HashMap<String,Point3d> atom_coord, Vector3d new_origin) {	
 		// Method for getting the coordinates of the neighboring residue, "translated (shifted)" to wrt the central residue (origin).
 		// NOTE: The reference origin is passed on as a parameter. 
 
@@ -277,7 +277,7 @@ public class GmbpGeometry {
 
 		return atom_coord_rotated;
 	}
-	private static HashMap<String,Vector3d> getCoordAfterRotation (int resser, String res_type, Pdb pdb, HashMap<String,Vector3d> atom_coord_rotated, Matrix4d RotMatrix_4d) {
+	private static HashMap<String,Vector3d> getCoordAfterRotation (int resser, String res_type, PdbChain pdb, HashMap<String,Vector3d> atom_coord_rotated, Matrix4d RotMatrix_4d) {
 		//Method to return coordinates after a certain transformation (as specified by a Matrix4d operator).
 		
 		Set<String> atoms = AminoAcid.getAtoms(res_type);	

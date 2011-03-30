@@ -17,9 +17,9 @@ import javax.vecmath.Vector3d;
 import owl.core.runners.PolyposeRunner;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.util.FileFormatException;
 
 /**
@@ -37,14 +37,14 @@ public class StructureAlignmentEvaluator {
 	
 	/*--------------------------- member variables --------------------------*/
 	MultipleSequenceAlignment al;
-	TreeMap<String, Pdb> pdbs;
+	TreeMap<String, PdbChain> pdbs;
 	PolyposeRunner pr;
 	TreeSet<Integer> conservedCols;
 	TreeSet<Integer> conservedCore;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
-	public StructureAlignmentEvaluator(MultipleSequenceAlignment al, TreeMap<String, Pdb> pdbs) throws IOException {
+	public StructureAlignmentEvaluator(MultipleSequenceAlignment al, TreeMap<String, PdbChain> pdbs) throws IOException {
 		this.al = al;
 		this.pdbs = pdbs;
 		this.pr = new PolyposeRunner(CCP4_PATH, SHELL_PATH);
@@ -58,11 +58,11 @@ public class StructureAlignmentEvaluator {
 	private double getRMSD(TreeSet<Integer> cols) {
 		double rmsd = -1.0;
 		int[][] positions = new int[pdbs.size()][cols.size()];
-		Pdb[] pdbArr = new Pdb[pdbs.size()];
+		PdbChain[] pdbArr = new PdbChain[pdbs.size()];
 		int idx = 0;
 		for(String tag:pdbs.keySet()) {
 			// add pdb
-			Pdb pdb = pdbs.get(tag);
+			PdbChain pdb = pdbs.get(tag);
 			pdbArr[idx] = pdb;
 			// add positions
 			TreeSet<Integer> newCols = alSet2SeqSet(cols, tag);
@@ -92,11 +92,11 @@ public class StructureAlignmentEvaluator {
 		Matrix3d[] matrices = null;
 		//double rmsd = -1.0;
 		int[][] positions = new int[pdbs.size()][cols.size()];
-		Pdb[] pdbArr = new Pdb[pdbs.size()];
+		PdbChain[] pdbArr = new PdbChain[pdbs.size()];
 		int idx = 0;
 		for(String tag:pdbs.keySet()) {
 			// add pdb
-			Pdb pdb = pdbs.get(tag);
+			PdbChain pdb = pdbs.get(tag);
 			pdbArr[idx] = pdb;
 			// add positions
 			TreeSet<Integer> newCols = alSet2SeqSet(cols, tag);
@@ -156,7 +156,7 @@ public class StructureAlignmentEvaluator {
 		int c = 0;
 		Vector3d zeros = new Vector3d();
 		for (String tag:this.pdbs.keySet()) {	// this has to be the same oder as used in getRotationMatrices
-			Pdb pdb = this.pdbs.get(tag);
+			PdbChain pdb = this.pdbs.get(tag);
 			// get set of positions in sequence
 			TreeSet<Integer> seqPositions = alSet2SeqSet(conservedCore, tag);			
 			pdb.moveToOrigin(seqPositions);
@@ -302,7 +302,7 @@ public class StructureAlignmentEvaluator {
 		alignmentFileName = args[0];
 		listFileName = args[1];
 		
-		TreeMap<String,Pdb> tag2pdb = new TreeMap<String,Pdb>();
+		TreeMap<String,PdbChain> tag2pdb = new TreeMap<String,PdbChain>();
 		
 		// open log file
 		PrintStream log = System.out;
@@ -326,13 +326,14 @@ public class StructureAlignmentEvaluator {
 			//String chain = tag.substring(4,5);
 			//System.out.println(tag);
 			try {
-			Pdb pdb = new PdbfilePdb(line);
-			//old: pdb.load(chain);
-			pdb.load(pdb.getChains()[0]);	// always load first chain
-			tag2pdb.put(tag,pdb);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(new File(line));
+				//old: pdb.load(chain);
+				PdbChain pdb = fullpdb.getFirstChain();	// always load first chain
+				tag2pdb.put(tag,pdb);
 			} catch (PdbLoadException e) {
 				System.err.println("Error reading from file " + line + ": " + e.getMessage());
-			}
+			} catch (FileFormatException e) {
+				System.err.println("Error reading from file " + line + ": " + e.getMessage());			}
 		}
 		in.close();
 		} catch (FileNotFoundException e) {

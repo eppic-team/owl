@@ -4,7 +4,7 @@ import owl.core.structure.graphs.RIGMatrix;
 import java.sql.SQLException;
 
 import owl.core.sequence.Sequence;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
@@ -41,7 +41,7 @@ public class DRToThree implements ResidueContactScoringFunction {
 	}
 
 	
-	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, Pdb coordinates, MySQLConnection conn) {
+	public void init(Sequence sequence, RIGraph contacts, SecondaryStructure ss, PdbChain coordinates, MySQLConnection conn) {
 		contactMatrix = new RIGMatrix(contacts);
 		this.conn = conn;
 		try {
@@ -59,7 +59,7 @@ public class DRToThree implements ResidueContactScoringFunction {
 
 	
 	public void updateData(Sequence sequence, RIGraph contacts,
-			SecondaryStructure ss, Pdb coordinates) {
+			SecondaryStructure ss, PdbChain coordinates) {
 		contactMatrix = new RIGMatrix(contacts);
 		try {
 			this.scoreSet(3);

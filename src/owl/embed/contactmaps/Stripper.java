@@ -29,14 +29,14 @@ public class Stripper {
 	
 	private int num_of_cycles;
 	
-	private Pdb protein;
+	private PdbChain protein;
 	
 	private RIGraph prot_graph;
 	
 	private HashMap<Integer,Individuals> unstrip_array;
 	
 	public Stripper (){
-		protein = new Pdb();
+		protein = new PdbChain();
 		prot_graph = new RIGraph ();
 		unstrip_array = new HashMap<Integer,Individuals> ();
 	}
@@ -54,8 +54,8 @@ public class Stripper {
 	
 	public void setUnStripper (String protein_PDB_code, int num_of_runs) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
-		protein = new PdbasePdb (protein_PDB_code, database, conn);
-		protein.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit(protein_PDB_code, conn, database);
+		protein = fullpdb.getChain("A");
 		prot_graph = new RIGraph ();
 		prot_graph = protein.getRIGraph("Ca", 9.0);
 		unstrip_array = new HashMap<Integer,Individuals> (num_of_runs * 2);

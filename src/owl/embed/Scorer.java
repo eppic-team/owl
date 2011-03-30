@@ -85,8 +85,8 @@ public class Scorer {
 	
 	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(fullContactMap.getPdbCode(), "pdbase_20090728", conn);
-		pdb.load(fullContactMap.getChainCode());
+		PdbAsymUnit fullpdb = new PdbAsymUnit(fullContactMap.getPdbCode(),conn,"pdbase_20090728");
+		PdbChain pdb = fullpdb.getChain(fullContactMap.getChainCode());
 		Matrix distmat = pdb.calcDistMatrixJamaFormat("Ca");
 		Bound[][] cmapBounds = convertRIGraphToBounds(fullContactMap,distmat.getArray());//Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
 		// infer bounds for all pairs through triangle inequality
@@ -160,11 +160,11 @@ public class Scorer {
 		//initializing double variable for cutoff length
 		double cutoff = graph.getCutoff();
 
-		//initializing Pdb instance 'pdb' using subclass 'PdbasePdb' constructor 
-		Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
+		//initializing PdbChain instance 'pdb' 
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
 
-		//loading PDB file of the same protein as specified by rigFile
-		pdb.load(pdbChainCode);
+		//getting chain 
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 
 		//initializing RIGraph instance with predefined parameters
 		RIGraph fullContactMap = pdb.getRIGraph(ct, cutoff);
@@ -228,11 +228,9 @@ public class Scorer {
 		//initializing double variable for cutoff length
 		//double cutoff = sub.getCutoff();
 		
-		//initializing Pdb instance 'pdb' using subclass 'PdbasePdb' constructor 
-		Pdb pdb = new PdbasePdb(pdbCode, pdbaseDb, conn);
-			
-		//loading PDB file of the same protein as specified by rigFile
-		pdb.load(pdbChainCode);
+		//initializing PdbChain instance 'pdb' using subclass 'PdbasePdb' constructor
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		
 		Matrix fullDistanceMap = pdb.calcDistMatrixJamaFormat(ct);
 		double[][] dm = fullDistanceMap.getArray();

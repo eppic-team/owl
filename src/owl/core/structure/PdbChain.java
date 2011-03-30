@@ -6,11 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,11 +26,7 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-import owl.core.features.Feature;
-import owl.core.features.FeatureType;
-import owl.core.features.HasFeatures;
-import owl.core.features.InvalidFeatureCoordinatesException;
-import owl.core.features.OverlappingFeatureException;
+import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.EC;
@@ -64,10 +58,10 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * A single chain PDB protein structure
+ * A single chain of a PDB protein structure
  * 
  */
-public class Pdb implements HasFeatures, Serializable {
+public class PdbChain implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -81,112 +75,86 @@ public class Pdb implements HasFeatures, Serializable {
 		
 	/*-------------------------------------  members ---------------------------------------------*/
 
+	// the asym unit parent
+	private PdbAsymUnit parent;
+	
 	// atom/residue data
 	private TreeMap<Integer, Residue> residues;			// residue serials to residue object references (only observed residues)
 	private TreeMap<Integer, Atom>    atomser2atom;		// atom serials to Atom object references, we keep this is as a separate map to speed up searches
-	protected TreeMap<Integer,String> resser2pdbresser; // internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
-	protected TreeMap<String,Integer> pdbresser2resser; // pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
+	private TreeMap<Integer,String> resser2pdbresser;	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
+	private TreeMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
 	
-	// experimental method
-	protected String expMethod;							// x-ray crystallograpy, NMR, etc.
-	
-	// crystallographic data
-	protected SpaceGroup spaceGroup;					// the space group (in CRYST1 field in PDB files)
-	protected CrystalCell crystalCell;					// the parameters of the crystal cell (in CRYST1 field in PDB files)
-	
-	// quality data (for crystal structures)
-	protected double resolution;						// all 3 parameters initialised to -1 (for non-crystal structures they just don't apply)
-	protected double rFree;
-	protected double rSym;
-	
-	// sequence features (annotations)
-	protected transient SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
-	protected transient Scop scop;								// the scop annotation for this pdb object
-	protected transient EC ec;									// the ec annotation for this pdb object
-	protected transient CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
-	
-	private transient Map<FeatureType, Collection<Feature>> features; // all other features. Eventually all features above should be implemented by using  
-															// this object and the HasFeature interface
-	
-	// identifiers
-	protected String sequence; 			// full sequence as it appears in SEQRES field
-	protected String pdbCode;			// the 4 letters PDB code. By convention we always use lower case. 
-	protected String pdbChainCode;		// Given "external" pdb chain code, i.e. the classic (author's) pdb code 
-										// If it is blank in original PDB file then it is: Pdb.NULL_CHAIN_CODE
-	protected String chainCode;			// Our internal chain identifier:
+	private Sequence sequence; 							// full sequence as it appears in SEQRES field
+
+	// identifiers 
+	private String pdbChainCode;		// Given "external" pdb chain code, i.e. the classic (author's) pdb code 
+										// If it is blank in original PDB file then it is: PdbChain.NULL_CHAIN_CODE
+	private String chainCode;			// Our internal chain identifier:
 										// - in reading from pdbase/cif file it will be set to the cif chain id (asym_id field)
 										// - in reading from PDB file it coincides with pdbChainCode except for 
-										//   Pdb.NULL_CHAIN_CODE where we use "A"
-	protected int model;  				// the model serial for NMR structures
-	protected String title;				// the title of the structure (e.g. from the PDB)
-	protected String sid;				// the scop id if Pdb has been restricted (restrictToScopDomain)
+										//   PdbChain.NULL_CHAIN_CODE where we use "A"
+
+	private String sid;					// the scop id if PdbChain has been restricted (restrictToScopDomain)	
+	
+	// sequence features (annotations)
+	private transient SecondaryStructure secondaryStructure;	// the secondary structure annotation for this pdb object (should never be null)
+	private transient Scop scop;								// the scop annotation for this pdb object
+	private transient EC ec;									// the ec annotation for this pdb object
+	private transient CatalSiteSet catalSiteSet;				// the catalytic site annotation for this pdb object
+	
 	
 	// optional fields for structures based on casp predictions
-	protected int targetNum;
-	protected int caspModelNum;
-	protected String caspAuthorStr;
-	protected String caspMethodStr;
-	protected int groupNum;
-	protected String[] caspParents;		// optional list of parents used for modelling, may be null
+	private int targetNum;
+	private int caspModelNum;
+	private String caspAuthorStr;
+	private String caspMethodStr;
+	private int groupNum;
+	private String[] caspParents;		// optional list of parents used for modelling, may be null
 
-	// flags
-	protected boolean dataLoaded;		// true if this object has been loaded with pdb data, false when is empty
 	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
+	
+	private boolean hasAltCodes;		// true if while parsing this chain we found alt codes (we don't store them)
 
-	private BoundingBox bounds; 			// cached bounds (6 values, x,y,z min coordinates of all atoms in chain and x,y,x max coordinates of all atoms in chain) to speed up getAICGraph
+	private BoundingBox bounds; 		// cached bounding box (calculated in getAllAtoms() from old atoms in chain) to speed up getAICGraph()
 	
 	/*----------------------------------  constructors -----------------------------------------------*/
 
 	/**
-	 * Constructs an empty Pdb with no sequence, no residues and no atoms 
+	 * Constructs an empty PdbChain with no sequence, no residues and no atoms 
 	 */
-	public Pdb() {
+	public PdbChain() {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = PdbAsymUnit.DEFAULT_MODEL;
-		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
-		this.dataLoaded = false;
 		this.hasASA = false;
 		this.hasBfactors = false;
-		
-		this.expMethod = null;
-		this.resolution = -1;
-		this.rFree = -1;
-		this.rSym = -1;
-		
+		this.hasAltCodes = false;
+				
 		this.initialiseResidues();
 	}
 	
 	/**
-	 * Constructs a Pdb for given sequence with empty residues (residues with no atoms)
+	 * Constructs a PdbChain for given sequence with empty residues (residues with no atoms)
 	 * @param sequence
 	 * @throws IllegalArgumentException if sequence contains invalid characters
 	 */
-	public Pdb(String sequence) {
+	public PdbChain(Sequence sequence) {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = PdbAsymUnit.DEFAULT_MODEL;
-		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
-		this.dataLoaded = true;
 		this.hasASA = false;
 		this.hasBfactors = false;
-
-		this.expMethod = null;
-		this.resolution = -1;
-		this.rFree = -1;
-		this.rSym = -1;
+		this.hasAltCodes = false;
 
 		this.sequence = sequence;
 		this.initialiseResidues();
 		this.resser2pdbresser = new TreeMap<Integer, String>();
 		this.pdbresser2resser = new TreeMap<String, Integer>();
 
-		for (int i=0;i<sequence.length();i++) {
+		for (int i=0;i<sequence.getLength();i++) {
 			int resser = i+1;
-			char one = sequence.charAt(i);
+			char one = sequence.getSeq().charAt(i);
 			if (!AminoAcid.isStandardAA(one)) {
 				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
 			}
@@ -200,7 +168,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Constructs a Pdb for given sequence setting coordinates of the given atom type to 
+	 * Constructs a PdbChain for given sequence setting coordinates of the given atom type to 
 	 * the given coordinates coords
 	 * @param sequence
 	 * @param coords the array of all coordinates, must be ordered as the sequence and be
@@ -209,22 +177,15 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @throws IllegalArgumentException if sequence contains invalid characters or if array
 	 * of coordinates is of different length as sequence
 	 */
-	public Pdb(String sequence, Vector3d[] coords, String atom) {
+	public PdbChain(Sequence sequence, Vector3d[] coords, String atom) {
 		this.chainCode = DEFAULT_CHAIN;
 		this.pdbChainCode = DEFAULT_CHAIN;
-		this.model = PdbAsymUnit.DEFAULT_MODEL;
-		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		
-		this.dataLoaded = true;
 		this.hasASA = false;
 		this.hasBfactors = false;
+		this.hasAltCodes = false;
 		
-		this.expMethod = null;
-		this.resolution = -1;
-		this.rFree = -1;
-		this.rSym = -1;
-
-		if (coords.length!=sequence.length()) {
+		if (coords.length!=sequence.getLength()) {
 			throw new IllegalArgumentException("Array of coordinates is not of same length as given sequence");
 		}
 		
@@ -233,9 +194,9 @@ public class Pdb implements HasFeatures, Serializable {
 		this.resser2pdbresser = new TreeMap<Integer, String>();
 		this.pdbresser2resser = new TreeMap<String, Integer>();
 
-		for (int i=0;i<sequence.length();i++) {
+		for (int i=0;i<sequence.getLength();i++) {
 			int resser = i+1;
-			char one = sequence.charAt(i);
+			char one = sequence.getSeq().charAt(i);
 			if (!AminoAcid.isStandardAA(one)) {
 				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
 			}
@@ -253,57 +214,8 @@ public class Pdb implements HasFeatures, Serializable {
 		this.initialiseMaps();
 	}
 	
-	/*-------------------------   methods to be overriden by subclasses  -----------------------------*/
-	// these methods should really be abstract, but we can't as Pdb is not an abstract class anymore
-	// to work around that we implement them here just throwing an error if they are called at all
-	// because in fact it's an error to call them!
-	
-	public void load(String pdbChainCode, int model) throws PdbLoadException {
-		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
-	}
-	
-	public String[] getChains() throws PdbLoadException {
-		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
-	}
-	
-	public Integer[] getModels() throws PdbLoadException {
-		throw new PdbLoadException("Fatal error. This method shouldn't be called. This is a bug!");
-	}
-
-	// this method doesn't actually call load(String,int) above but rather the overridden ones in subclasses
-	/**
-	 * Load (from file/db) the given pdbChainCode and the default model {@link PdbAsymUnit#DEFAULT_MODEL}
-	 * @param pdbChainCode
-	 * @throws PdbLoadException
-	 */
-	public void load(String pdbChainCode) throws PdbLoadException {
-		load(pdbChainCode, PdbAsymUnit.DEFAULT_MODEL);
-	}
-	
 	/*---------------------------------  public methods ----------------------------------------------*/
 
-	/**
-	 * Returns true if this Pdb has been loaded with pdb data (i.e. when 
-	 * load(pdbChainCode) has been called), false if it is empty
-	 */
-	public boolean isDataLoaded() {
-		return dataLoaded;
-	}
-	
-	/**
-	 * Returns true if the given chain exists, false otherwise.
-	 * To check for the empty chain, use Pdb.NULL_CHAIN_CODE.
-	 * @throws PdbLoadException if chain list could not be retrieved
-	 * @see getChains()
-	 */
-	public boolean hasChain(String chain) throws PdbLoadException {
-		String[] chains = this.getChains();
-		for (int i = 0; i < chains.length; i++) {
-			if(chain.equals(chains[i])) return true;
-		}
-		return false;
-	}
-	
 	/**
 	 * Initialises the residues to an empty map. 
 	 */
@@ -312,7 +224,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Adds a residue to this Pdb
+	 * Adds a residue to this PdbChain
 	 * @param residue
 	 */
 	public void addResidue(Residue residue) {
@@ -332,7 +244,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Tells whether residue of given residue number is a (observed) residue in this Pdb
+	 * Tells whether residue of given residue number is a (observed) residue in this PdbChain
 	 * instance. See also {@link #hasCoordinates(int)}
 	 * @param resSerial
 	 * @return
@@ -373,7 +285,7 @@ public class Pdb implements HasFeatures, Serializable {
 				for (int resser=interv.beg;resser<=interv.end;resser++) {
 					Residue residue = getResidue(resser);
 					if (residue==null) 
-						throw new IllegalArgumentException("Invalid interval specified, residue "+resser+" is not part of this Pdb");
+						throw new IllegalArgumentException("Invalid interval specified, residue "+resser+" is not part of this PdbChain");
 					reducedResidues.put(resser,residue.getReducedResidue(ct));
 				}
 			}
@@ -394,7 +306,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * all residues taken
 	 * @return
 	 */
-	private Atom[] getAtomsForCt(String ct, IntervalSet intervSet) {
+	protected Atom[] getAtomsForCt(String ct, IntervalSet intervSet) {
 		TreeMap<Integer, Residue> reducedResidues = getReducedResidues(ct, intervSet);
 		int totalAtoms = 0;
 		for (Residue residue:reducedResidues.values()) {
@@ -413,7 +325,7 @@ public class Pdb implements HasFeatures, Serializable {
 	
 	/**
 	 * Gets an array with all atoms present in this chain.
-	 * Calculates also the bounds array so that it gets cached and can be used in {@link #getAICGraph(Pdb, double)}
+	 * Calculates also the bounds array so that it gets cached and can be used in {@link #getAICGraph(PdbChain, double)}
 	 * @return
 	 */
 	protected Atom[] getAllAtoms() {
@@ -451,16 +363,12 @@ public class Pdb implements HasFeatures, Serializable {
 	
 	/**
 	 * Populates the atomser2atom map (from the Residues and Atoms objects)
-	 * and the pdbResSerials of the Residue objects from resser2pdbresser map
 	 */
 	protected void initialiseMaps() {
 		atomser2atom = new TreeMap<Integer, Atom>();
 		for (Residue residue:residues.values()) {
 			for (Atom atom:residue.getAtoms()) {
 				atomser2atom.put(atom.getSerial(), atom);
-			}
-			if (resser2pdbresser.containsKey(residue.getSerial())) {
-				residue.setPdbSerial(getPdbResSerFromResSer(residue.getSerial()));
 			}
 		}
 		
@@ -479,7 +387,7 @@ public class Pdb implements HasFeatures, Serializable {
 				} else {
 					// we don't warn because this does happen really often!
 					//System.err.println("Warning: the residue serial "+resser+" can't be assigned with the secondary structure element "+
-					//		ssElem.getId()+" with interval "+ssElem.getInterval()+" because it's not present in this Pdb (e.g. it's not observed)");
+					//		ssElem.getId()+" with interval "+ssElem.getInterval()+" because it's not present in this PdbChain (e.g. it's not observed)");
 				}
 			}			
 		}
@@ -576,7 +484,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Sets the VdW radius values of all Atoms of this Pdb. 
+	 * Sets the VdW radius values of all Atoms of this PdbChain. 
 	 * Use subsequently Atom.getRadius() to get the value.
 	 * This uses the AtomRadii parser of the vdw.radii resource file.
 	 */
@@ -633,7 +541,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param referencePdb the reference structures to compare to
 	 * @return the per atom distances between this and the reference structure
 	 */
-	public HashMap<Integer, Double> getPerAtomDistances(Pdb referencePdb) {
+	public HashMap<Integer, Double> getPerAtomDistances(PdbChain referencePdb) {
 		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
 		
 		// first set all distances to the default value, so that the map contains the full set of atoms
@@ -671,7 +579,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Assigns b-factor values to all atoms for the given residues.
 	 * @param bfactorsPerResidue a map of residue serials to b-factors
 	 * @throws IllegalArgumentException when residue serials given in input are not
-	 * present in this Pdb instance
+	 * present in this PdbChain instance
 	 */
 	public void setBFactorsPerResidue(HashMap<Integer, Double> bfactorsPerResidue) {
 		for(int resser:bfactorsPerResidue.keySet()) {
@@ -682,28 +590,10 @@ public class Pdb implements HasFeatures, Serializable {
 					atom.setBfactor(bfactor);
 				}
 			} else {
-				System.err.println("Warning! Can't assign bfactor for residue serial "+resser+", it is not present in this Pdb instance, pdbCode "+pdbCode+", pdbChainCode "+pdbChainCode);
+				System.err.println("Warning! Can't assign bfactor for residue serial "+resser+", it is not present in this PdbChain instance, pdbCode "+getPdbCode()+", pdbChainCode "+pdbChainCode);
 			}
 		}
 		hasBfactors = true;
-	}
-	
-	/**
-	 * Writes to given PrintWriter the PDB file format HEADER line
-	 * @param Out
-	 */
-	public void writePDBFileHeader(PrintStream Out) {
-		String source = "";
-		if (this instanceof CiffilePdb) {
-			source = ((CiffilePdb) this).getCifFile().getAbsolutePath();
-		} else if (this instanceof PdbfilePdb) {
-			source = ((PdbfilePdb) this).getPdbFileName();
-		} else if (this instanceof PdbasePdb){
-			source = ((PdbasePdb) this).getDb();
-		} else {
-			source = "model";
-		}
-		Out.println("HEADER  Source: "+source+". "+pdbCode+", chain='"+chainCode+"', model="+model);		
 	}
 	
 	/**
@@ -791,15 +681,13 @@ public class Pdb implements HasFeatures, Serializable {
 
 	/**
 	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
-	 * The residue serials written are the internal ones.
-	 * The chain dumped is the value of the chainCode variable, i.e. our internal
-	 * chain identifier for Pdb objects 
+	 * The residue serials written correspond to the SEQRES sequence (as cif does).
+	 * The chain dumped is the value of the cif chain code (chainCode variable)
 	 * @param outfile
 	 * @throws FileNotFoundException
 	 */
 	public void writeToPDBFile(String outfile) throws FileNotFoundException {
 		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		writePDBFileHeader(Out);
 		writeAtomLines(Out);
 		Out.println("END");
 		Out.close();
@@ -827,7 +715,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Dump the full sequence of this Pdb object in FASTA file format
+	 * Dump the full sequence of this PdbChain object in FASTA file format
 	 * The FASTA tag is written as the concatenation of pdbCode and pdbChainCode
 	 * @param seqfile
 	 * @throws IOException if file can't be written
@@ -835,9 +723,9 @@ public class Pdb implements HasFeatures, Serializable {
 	public void writeSeqToFasta(String seqfile) throws IOException {
 		PrintStream Out = new PrintStream(new FileOutputStream(seqfile));
 		int len = 80;
-		Out.println(">"+pdbCode+pdbChainCode);
-		for(int i=0; i<sequence.length(); i+=len) {
-			Out.println(sequence.substring(i, Math.min(i+len,sequence.length())));
+		Out.println(">"+getPdbCode()+pdbChainCode);
+		for(int i=0; i<sequence.getLength(); i+=len) {
+			Out.println(sequence.getSeq().substring(i, Math.min(i+len,sequence.getLength())));
 		}		
 		Out.close();
 	}
@@ -855,7 +743,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return number of residues in the full sequence
 	 */
 	public int getFullLength() {
-		return sequence.length();
+		return sequence.getLength();
 	}
 
 	/**
@@ -994,7 +882,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Calculates the radius of gyration of this Pdb 
+	 * Calculates the radius of gyration of this PdbChain 
 	 * (defined as half of the maximum distance between any 2 CA atoms)
 	 * @return
 	 */
@@ -1004,7 +892,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Get the graph for given contact type and cutoff for this Pdb object.
+	 * Get the graph for given contact type and cutoff for this PdbChain object.
 	 * Returns a Graph object with the contacts
 	 * A geometric hashing algorithm is used for fast contact computation (without needing 
 	 * to calculate full distance matrix)
@@ -1065,11 +953,11 @@ public class Pdb implements HasFeatures, Serializable {
 		
 		graph.setSecondaryStructure(secondaryStructureCopy);
 		graph.setCutoff(cutoff);
-		graph.setSequence(sequence);
-		graph.setPdbCode(pdbCode);
+		graph.setSequence(sequence.getSeq());
+		graph.setPdbCode(getPdbCode());
 		graph.setChainCode(chainCode);
 		graph.setPdbChainCode(pdbChainCode);
-		graph.setModel(model);
+		graph.setModel(parent.getModel());
 		graph.setSid(sid);
 		graph.setTargetNum(targetNum);
 		graph.setGroupNum(groupNum);
@@ -1187,7 +1075,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param name2  sequence tag og the second structure in the alignment
 	 * @return the difference distance map
 	 */
-	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, Pdb pdb2, String contactType2, MultipleSequenceAlignment ali, String name1, String name2) {
+	public HashMap<Pair<Integer>,Double> getDiffDistMap(String contactType1, PdbChain pdb2, String contactType2, MultipleSequenceAlignment ali, String name1, String name2) {
 
 		HashMap<Pair<Integer>,Double> otherDistMatrix = pdb2.calcDistMatrix(contactType2);
 		HashMap<Pair<Integer>,Double> thisDistMatrix = this.calcDistMatrix(contactType1);
@@ -1257,7 +1145,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return a graph containing one edge per atom interaction i.e. per atom pair falling 
 	 * under the distance cutoff
 	 */
-	public AICGraph getAICGraph(Pdb other, double cutoff) {
+	public AICGraph getAICGraph(PdbChain other, double cutoff) {
 		Atom[] thisAtoms = this.getAllAtoms();
 		Atom[] otherAtoms = other.getAllAtoms();
 		
@@ -1285,7 +1173,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Gets the Consurf-HSSP score given an internal residue serial
 	 * @param resser
 	 * @return
-	 * @throws NullPointerException if residue serial not present in this Pdb instance
+	 * @throws NullPointerException if residue serial not present in this PdbChain instance
 	 */
 	public Double getConsurfhsspScoreFromResSerial(int resser){
 		return getResidue(resser).getConsurfScore();
@@ -1294,7 +1182,7 @@ public class Pdb implements HasFeatures, Serializable {
 	/**
 	 * Gets the Consurf-HSSP color rsa given an internal residue serial
 	 * @param resser
-	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
 	 * @return
 	 */
 	public Integer getConsurfhsspColorFromResSerial(int resser){
@@ -1305,7 +1193,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Gets the all atoms rsa given an internal residue serial
 	 * @param resser
 	 * @return the rsa or null if rsa has not been calculated yet or the residue number cannot be found
-	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
 	 */
 	public Double getAllRsaFromResSerial(int resser){
 		if (hasASA()) {
@@ -1319,7 +1207,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Gets the sc rsa given an internal residue serial
 	 * @param resser
 	 * @return
-	 * @throws NullPointerException if residue serial not present in this Pdb instance 
+	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
 	 */
 	public Double getScRsaFromResSerial(int resser){
 		if (hasASA()) {
@@ -1372,7 +1260,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param resser
 	 * @param atomCode
 	 * @return the atom serial
-	 * @throws NullPointerException if residue serial not present in this Pdb 
+	 * @throws NullPointerException if residue serial not present in this PdbChain 
 	 * instance or if no atom of given type exists for given residue
 	 */
 	public int getAtomSerFromResSerAndAtom(int resser, String atomCode) {
@@ -1383,7 +1271,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Returns the set of all atom serials for observed atoms of the given residue serial.
 	 * @param resser the residue serial
 	 * @return an ordered set of serials of the (observed) atoms in this residue
-	 * @throws NullPointerException if given residue serial not present in this Pdb
+	 * @throws NullPointerException if given residue serial not present in this PdbChain
 	 * instance
 	 */
 	public Set<Integer> getAtomSersFromResSer(int resser) {
@@ -1395,7 +1283,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Checks whether this Pdb is an all-atom one (disregarding Hydrogens), i.e. is not a 
+	 * Checks whether this PdbChain is an all-atom one (disregarding Hydrogens), i.e. is not a 
 	 * CA only or BB only or has no other major group of atoms missing.
 	 * Even PDB structures with all atoms can still have missing atoms for some residues, 
 	 * here what we check is that the average number of (non-Hydrogen) atoms per residue is above the 
@@ -1443,7 +1331,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Returns true if this Pdb has been restricted to a specific SCOP domain 
+	 * Returns true if this PdbChain has been restricted to a specific SCOP domain 
 	 * @return
 	 */
 	public boolean isRestrictedToScopDomain() {
@@ -1451,66 +1339,11 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Returns the sid of this Pdb 
+	 * Returns the sid of this PdbChain 
 	 * It is set when restrictToScopDomain is run
 	 */
 	public String getSid() {
 		return sid;
-	}
-	
-	/**
-	 * @return the title of this pdb object (may be null).
-	 */
-	public String getTitle() {
-		return this.title;
-	}
-	
-	/**
-	 * Sets the title for this pdb object (may be null).
-	 * @param title the new title
-	 */
-	public void setTitle(String title) {
-		this.title = title;
-	}
-	
-	public SpaceGroup getSpaceGroup() {
-		return this.spaceGroup;
-	}
-	
-	public CrystalCell getCrystalCell() {
-		return this.crystalCell;
-	}
-	
-	/**
-	 * Returns the experimental method, e.g. "X-RAY DIFFRACTION" or "SOLUTION NMR"
-	 * @return
-	 */
-	public String getExpMethod() {
-		return this.expMethod;
-	}
-	
-	/**
-	 * Returns the resolution or -1 if does not apply
-	 * @return
-	 */
-	public double getResolution() {
-		return this.resolution;
-	}
-	
-	/**
-	 * Returns the R free value or -1 if does not apply or not available
-	 * @return
-	 */
-	public double getRfree() {
-		return this.rFree;
-	}
-	
-	/**
-	 * Returns the R sym/R merge value or -1 if does not apply or not available.
-	 * @return
-	 */
-	public double getRsym() {
-		return this.rSym;
 	}
 	
 	/**
@@ -1586,28 +1419,43 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Gets the 4 letter pdb code identifying this structure
+	 * Returns the parent PdbAsymUnit to which this chain belongs
+	 * @return
+	 */
+	public PdbAsymUnit getParent() {
+		return this.parent;
+	}
+	
+	public void setParent(PdbAsymUnit parent) {
+		this.parent = parent;
+	}
+	
+	/**
+	 * Gets the 4 letter pdb code identifying this structure.
+	 * If this chain doesn't have a parent PDB entry it will return PdbAsymUnit.NO_PDB_CODE
 	 * @return
 	 */
 	public String getPdbCode() {
-		return this.pdbCode;
+		if (parent==null) {
+			return PdbAsymUnit.NO_PDB_CODE;
+		}
+		return this.parent.getPdbCode();
 	}
 
-	/**
-	 * Sets the 4 letter pdb code identifying this structure.
-	 * The input will always be converted to lower case
-	 * @param pdbCode
-	 */
-	public void setPdbCode(String pdbCode){
-		this.pdbCode = pdbCode.toLowerCase();
-	}
-	
 	/**
 	 * Gets the internal chain code (cif)
 	 * @return
 	 */
 	public String getChainCode(){
 		return this.chainCode;
+	}
+	
+	/**
+	 * Sets the internal chain code (cif)
+	 * @param chainCode
+	 */
+	public void setChainCode(String chainCode) {
+		this.chainCode = chainCode;
 	}
 
 	/**
@@ -1626,12 +1474,29 @@ public class Pdb implements HasFeatures, Serializable {
 		this.pdbChainCode = pdbChainCode;
 	}
 	
+	protected void setPdbresser2resserMap(TreeMap<String,Integer> pdbresser2resser){
+		this.pdbresser2resser = pdbresser2resser;
+	}
+	
+	protected void setResser2pdbresserMap(TreeMap<Integer,String> resser2pdbresser){
+		this.resser2pdbresser = resser2pdbresser;
+	}
+	
 	/**
-	 * Gets the model number of this Pdb 
+	 * Tells whether this chain contains atoms with alt codes. 
+	 * We don't store them but catch the case when we parse from PDB/mmCIF/pdbase
 	 * @return
 	 */
-	public int getModel() {
-		return this.model;
+	public boolean hasAltCodes(){
+		return hasAltCodes;
+	}
+	
+	/**
+	 * Sets the hasAltCodes field
+	 * @param hasAltCodes
+	 */
+	protected void setHasAltCodes(boolean hasAltCodes) {
+		this.hasAltCodes = hasAltCodes;
 	}
 	
 	/**
@@ -1687,7 +1552,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * The value is used when writing to Casp TS files or by the getParents() method.
 	 * @param parents an array of parent strings used in modelling this structure.
 	 */
-	public void setParents(String[] parents) {
+	public void setCaspParents(String[] parents) {
 		this.caspParents = parents;
 	}	
 	
@@ -1696,7 +1561,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * The value will be set when reading from Casp TS files or by the setParents method.
 	 * @return an array of parent strings or null if no parents have been specified.
 	 */
-	public String[] getParents() {
+	public String[] getCaspParents() {
 		return this.caspParents;
 	}
 	
@@ -1704,9 +1569,43 @@ public class Pdb implements HasFeatures, Serializable {
 	 * Gets the sequence
 	 * @return
 	 */
-	public String getSequence() {
+	public Sequence getSequence() {
 		return sequence;
 	}
+	
+	/**
+	 * Sets the sequence for the first time in this PdbChain. To use only from parser classes when there's no sequence set yet.
+	 * @param sequence
+	 */
+	protected void setSequence(String seq) {
+		this.sequence = new Sequence(getPdbCode()+this.pdbChainCode,seq);
+	}
+	
+	/**
+	 * Sets the sequence for this PdbChain, overriding any current sequence information.
+	 * If the observed residues (those having 3D coordinates) do not match the new sequence,
+	 * an exception will be thrown.
+	 * No coordinates or observed residues are modified.
+	 * @param seq the new sequence
+	 * @throws PdbLoadException if the given sequence does not match observed sequence from ATOM lines or if 
+	 * the given sequence is of different type than existing one (nucleotide/protein)
+	 */
+	public void setSequence(Sequence seq) throws PdbLoadException {
+		if ((seq.isNucleotide() && !this.sequence.isNucleotide()) || (seq.isProtein() && !this.sequence.isProtein())) {
+			throw new PdbLoadException("Given sequence is of a different type ("+(seq.isProtein()?"protein":"nucleotide")+") than current sequence ("
+					+(sequence.isProtein()?"protein":"nucleotide")+")");
+		}
+		// we check that the sequences from ATOM lines and the new sequence coincide (except for unobserved residues)
+		for (int resser:getAllSortedResSerials()) {
+			Residue residue = this.getResidue(resser);
+			char seqLetter = residue.getAaType().getOneLetterCode();
+			if (seq.getSeq().charAt(resser-1)!=seqLetter) {
+				throw new PdbLoadException("Given sequence does not match observed sequence from ATOM lines for position "+resser+".");
+			}
+		}
+		this.sequence = seq;
+	}
+
 	
 	/**
 	 * Gets the observed sequence, i.e. the sequence as it appears in the ATOM 
@@ -1723,16 +1622,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * True if this Pdb has the sequence field set to not blank 
-	 * @return
-	 */
-	public boolean hasSequence() {
-		if (sequence==null) return false;
-		return !sequence.equals("");
-	}
-	
-	/**
-	 * Returns true if this Pdb instance has been assigned atom b-factors 
+	 * Returns true if this PdbChain instance has been assigned atom b-factors 
 	 * @return
 	 */
 	public boolean hasBfactors() {
@@ -1741,7 +1631,7 @@ public class Pdb implements HasFeatures, Serializable {
 	
 	/**
 	 * Returns true if naccess has been run and thus ASA values are present
-	 * in this Pdb instance
+	 * in this PdbChain instance
 	 * @return
 	 */
 	public boolean hasASA() {
@@ -1772,7 +1662,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Returns the csa annotation object of this Pdb.
+	 * Returns the csa annotation object of this PdbChain.
 	 * @return
 	 */
 	public CatalSiteSet getCSA() {
@@ -1834,7 +1724,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 
 	/**
-	 * Returns the secondary structure annotation object of this Pdb.
+	 * Returns the secondary structure annotation object of this PdbChain.
 	 * @return
 	 */
 	public SecondaryStructure getSecondaryStructure() {
@@ -1842,7 +1732,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Sets the secondary structure annotation for this Pdb, overwriting the existing one. 
+	 * Sets the secondary structure annotation for this PdbChain, overwriting the existing one. 
 	 * @param secondaryStructure
 	 */
 	public void setSecondaryStructure(SecondaryStructure secondaryStructure) {
@@ -1853,7 +1743,7 @@ public class Pdb implements HasFeatures, Serializable {
 	// end of secondary structure related methods
 	
 	/**
-	 * Sets the catalitic site set annotation object of this Pdb
+	 * Sets the catalitic site set annotation object of this PdbChain
 	 * @param catalSiteSet
 	 */
 	public void setCatalSiteSet(CatalSiteSet catalSiteSet) {
@@ -1861,7 +1751,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 
 	/**
-	 * Sets the scop annotation object of this Pdb
+	 * Sets the scop annotation object of this PdbChain
 	 * @param scop
 	 */
 	public void setScop(Scop scop) {
@@ -1869,7 +1759,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Sets the EC annotation object of this Pdb
+	 * Sets the EC annotation object of this PdbChain
 	 * @param ec
 	 */
 	public void setEC(EC ec) {
@@ -1877,7 +1767,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
+	 * Calculates rmsd (on atoms given by ct) of this PdbChain object to otherPdb object
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
 	 * 
 	 * @param otherPdb
@@ -1885,12 +1775,12 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return
 	 * @throws ConformationsNotSameSizeException
 	 */
-	public double rmsd(Pdb otherPdb, String ct) throws ConformationsNotSameSizeException {
+	public double rmsd(PdbChain otherPdb, String ct) throws ConformationsNotSameSizeException {
 		return rmsd(otherPdb, ct, null);
 	}
 	
 	/**
-	 * Calculates rmsd (on atoms given by ct) of this Pdb object to otherPdb object
+	 * Calculates rmsd (on atoms given by ct) of this PdbChain object to otherPdb object
 	 * restricted only to the given set of intervals
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
 	 * 
@@ -1901,7 +1791,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @return
 	 * @throws ConformationsNotSameSizeException
 	 */
-	public double rmsd(Pdb otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeException {
+	public double rmsd(PdbChain otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeException {
 		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct,intervSet);
 		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
 
@@ -2121,7 +2011,7 @@ public class Pdb implements HasFeatures, Serializable {
 			}
 
 			sql = "INSERT IGNORE INTO "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid) " +
-			" VALUES ("+quote(pdbCode)+", "+quote(chainCode)+", "+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
+			" VALUES ("+quote(getPdbCode())+", "+quote(chainCode)+", "+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?quote("-"):quote(pdbChainCode))+","+resser+", "+quote(pdbresser)+", "+quote(resType)+", "+secStructType+", "+secStructId+", "+scopId+", "+sccs+", "+sunid+", "+orderIn+", "+domainType+", "+domainNumReg+", "+allRsa+", "+scRsa+", "+consurfhsspScore+","+consurfhsspColor+","+ecId+","+csaNums+","+csaChemFuncs+","+csaEvids+")";
 			//System.out.println(sql);
 			stmt = conn.createStatement();
 			stmt.executeUpdate(sql);
@@ -2143,7 +2033,7 @@ public class Pdb implements HasFeatures, Serializable {
 		
 		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 		
-		PrintStream resOut = new PrintStream(new FileOutputStream(pdbCode+chainCode+"_residues.txt"));
+		PrintStream resOut = new PrintStream(new FileOutputStream(getPdbCode()+chainCode+"_residues.txt"));
 		
 		for (int resser:getAllSortedResSerials()) {
 			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
@@ -2200,16 +2090,16 @@ public class Pdb implements HasFeatures, Serializable {
 				}
 			}
 			
-			resOut.println(pdbCode+"\t"+chainCode+"\t"+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
+			resOut.println(getPdbCode()+"\t"+chainCode+"\t"+(pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)?"-":pdbChainCode)+"\t"+resser+"\t"+pdbresser+"\t"+resType+"\t"+secStructType+"\t"+secStructId+"\t"+scopId+"\t"+sccs+"\t"+sunid+"\t"+orderIn+"\t"+domainType+"\t"+domainNumReg+"\t"+allRsa+"\t"+scRsa+"\t"+consurfhsspScore+"\t"+consurfhsspColor+"\t"+ecId+"\t"+csaNums+"\t"+csaChemFuncs+"\t"+csaEvids);
 			
 		}
 		resOut.close();
-		sql = "LOAD DATA LOCAL INFILE '"+pdbCode+chainCode+"_residues.txt' INTO TABLE "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid);";
+		sql = "LOAD DATA LOCAL INFILE '"+getPdbCode()+chainCode+"_residues.txt' INTO TABLE "+db+".pdb_residue_info (pdb_code, chain_code, pdb_chain_code, res_ser, pdb_res_ser, res_type, sstype, ssid, scop_id, sccs, sunid, order_in, domain_type, domain_num_reg, all_rsa, sc_rsa, consurfhssp_score, consurfhssp_color, ec, csa_site_nums, csa_chem_funcs, csa_evid);";
 		//System.out.println(sql);
 		stmt = conn.createStatement();
 		stmt.executeUpdate(sql);
 		stmt.close();
-		File fileToDelete = new File(pdbCode+chainCode+"_residues.txt");
+		File fileToDelete = new File(getPdbCode()+chainCode+"_residues.txt");
 		if (fileToDelete.exists()) {
 			fileToDelete.delete();
 		}
@@ -2351,7 +2241,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Restricts this Pdb object to residues within the given ScopRegions 
+	 * Restricts this PdbChain object to residues within the given ScopRegions 
 	 * @param scopRegions
 	 */
 	private void restrictToScopRegions (Vector<ScopRegion> scopRegions) {
@@ -2365,7 +2255,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Restricts this Pdb object to residues within the given IntervalSet
+	 * Restricts this PdbChain object to residues within the given IntervalSet
 	 * @param intervSet a set of internal residue serials
 	 */
 	public void restrictToIntervalSet(IntervalSet intervSet) {
@@ -2392,9 +2282,9 @@ public class Pdb implements HasFeatures, Serializable {
 		String newSequence = "";
 		while (regionsToKeep.hasNext()) {
 			Interval region = regionsToKeep.next();
-			newSequence += sequence.substring((region.beg-1),region.end);
+			newSequence += sequence.getSeq().substring((region.beg-1),region.end);
 		}
-		sequence = newSequence;
+		sequence = new Sequence(sequence.getName()+"_partial",newSequence);
 	}
 	
 	/**
@@ -2445,7 +2335,7 @@ public class Pdb implements HasFeatures, Serializable {
 	
 	
 	/**
-	 * Mirror this Pdb structure by inverting through the origin.
+	 * Mirror this PdbChain structure by inverting through the origin.
 	 */
 	public void mirror() {
 		for (int atomserial:getAllAtomSerials()){
@@ -2474,47 +2364,47 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param m the rotation/translation matrix
 	 * @param pdb
 	 */
-	public void transform(Matrix4d m, Pdb pdb) {
-		pdb = this.copy();
+	public void transform(Matrix4d m, PdbChain pdb) {
+		pdb = this.copy(this.parent);
 		pdb.transform(m);
 	}
 	
 	/**
-	 * Translates this Pdb to the given unit cell (direction).
-	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this Pdb to 
-	 * crystal cell (1,1,1), considering always this Pdb's cell to be (0,0,0)
+	 * Translates this PdbChain to the given unit cell (direction).
+	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this PdbChain to 
+	 * crystal cell (1,1,1), considering always this PdbChain's cell to be (0,0,0)
 	 * @param direction
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
-		this.transform(this.crystalCell.getTransform(direction));
+		this.transform(parent.getCrystalCell().getTransform(direction));
 	}
 	
 	/**
-	 * Tells wheter given Pdb's centre of mass is closer to this' centre of mass than twice 
+	 * Tells wheter given PdbChain's centre of mass is closer to this' centre of mass than twice 
 	 * the maximum diagonal dimension of the unit cell.
 	 * @param pdb
 	 * @return
 	 */
-	public boolean isCrystalNeighbor(Pdb pdb) {
+	public boolean isCrystalNeighbor(PdbChain pdb) {
 		Point3d thisCoM  = this.getCenterOfMass();
 		Point3d otherCoM = pdb.getCenterOfMass();
-		if (thisCoM.distance(otherCoM)<2.0*this.crystalCell.getMaxDimension()) {
+		if (thisCoM.distance(otherCoM)<2.0*parent.getCrystalCell().getMaxDimension()) {
 			return true;
 		}
 		return false;
 	}
 	
 	/**
-	 * Returns an integer triplet indicating the crystal coordinates of this Pdb with respect to the given one.
-	 * e.g. if given Pdb is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
+	 * Returns an integer triplet indicating the crystal coordinates of this PdbChain with respect to the given one.
+	 * e.g. if given PdbChain is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
 	 * @param pdb
 	 * @return
 	 */
-	public Point3i getCrystalSeparation(Pdb pdb) {
+	public Point3i getCrystalSeparation(PdbChain pdb) {
 		Point3d thisCoM  = this.getCenterOfMass();
 		Point3d otherCoM = pdb.getCenterOfMass();
-		crystalCell.getCrystalFromOrthCoords(thisCoM);
-		crystalCell.getCrystalFromOrthCoords(otherCoM);
+		parent.getCrystalCell().getCrystalFromOrthCoords(thisCoM);
+		parent.getCrystalCell().getCrystalFromOrthCoords(otherCoM);
 		double asep = otherCoM.x-thisCoM.x;
 		double bsep = otherCoM.y-thisCoM.y;
 		double csep = otherCoM.z-thisCoM.z;
@@ -2625,20 +2515,6 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Gets all symmetry transformation operators corresponding to this Pdb's space group 
-	 * (except for the identity) expressed in the orthonormal basis. Using PDB's axes 
-	 * convention (NCODE=1).
-	 * @return
-	 */
-	public List<Matrix4d> getTransformations() {
-		List<Matrix4d> transfs = new ArrayList<Matrix4d>();
-		for (int i=1;i<this.getSpaceGroup().getNumOperators();i++) {
-			transfs.add(this.crystalCell.transfToOrthonormal(this.getSpaceGroup().getTransformation(i)));
-		}
-		return transfs;
-	}	
-	
-	/**
 	 * Gets the phi angle in degrees for given residue serial
 	 * @param i
 	 * @return the phi angle or NaN if there are no coordinates for given i or i-1
@@ -2712,7 +2588,7 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 	
 	/**
-	 * Gets all phi/psi angles in degrees for this Pdb structure 
+	 * Gets all phi/psi angles in degrees for this PdbChain structure 
 	 * @return residue serials as keys, values arrays of 2 doubles: first phi angle, second psi angle 
 	 */
 	public TreeMap<Integer, double[]> getAllPhiPsi() {
@@ -2749,7 +2625,7 @@ public class Pdb implements HasFeatures, Serializable {
 		// detect all unobserved residues
 		for(int i = 1; i <= getFullLength(); ++i) {
 			if(!residues.containsKey(i)) {
-				unobserved.put(i,sequence.charAt(i-1));
+				unobserved.put(i,sequence.getSeq().charAt(i-1));
 			}
 		}
 		return unobserved;
@@ -2757,17 +2633,14 @@ public class Pdb implements HasFeatures, Serializable {
 	}
 
 	/**
-	 * Deep copies this Pdb object
-	 * TODO write a test for this!! This is a very delicate piece of code, likely to contain bugs!
+	 * Deep copies this PdbChain object
 	 * @return
 	 */
-	public Pdb copy() {
-		Pdb newPdb = new Pdb();
-		newPdb.pdbCode = this.pdbCode;
+	public PdbChain copy(PdbAsymUnit parent) {
+		PdbChain newPdb = new PdbChain();
+		newPdb.parent = parent;
 		newPdb.pdbChainCode = this.pdbChainCode;
 		newPdb.chainCode = this.chainCode;
-		newPdb.model = this.model;
-		newPdb.title = this.title;
 		newPdb.sid = this.sid;
 		newPdb.targetNum = this.targetNum;
 		newPdb.caspModelNum = this.caspModelNum;
@@ -2780,19 +2653,9 @@ public class Pdb implements HasFeatures, Serializable {
 			}
 		}
 		newPdb.groupNum = this.groupNum;
-		newPdb.dataLoaded = this.dataLoaded;
 		newPdb.hasASA = this.hasASA;
 		newPdb.hasBfactors = this.hasBfactors;
-		
-		newPdb.crystalCell = new CrystalCell(crystalCell.getA(),crystalCell.getB(),crystalCell.getC(),
-								 			 crystalCell.getAlpha(),crystalCell.getBeta(),crystalCell.getGamma());
-		newPdb.spaceGroup = spaceGroup; // this class is immutable, we don't really need to deep copy
-		
-		newPdb.expMethod = this.expMethod;
-		newPdb.resolution = this.resolution;
-		newPdb.rFree = this.rFree;
-		newPdb.rSym = this.rSym;
-		
+				
 		newPdb.sequence = this.sequence;
 		newPdb.secondaryStructure = this.secondaryStructure.copy();
 		if (this.scop!=null) newPdb.scop = this.scop.copy();
@@ -2822,7 +2685,9 @@ public class Pdb implements HasFeatures, Serializable {
 		return newPdb;
 	}
 	
-	/*---------------------------- static methods ---------------------------*/
+	
+
+	/*--------------------------------------- static methods -----------------------------------------*/
 	
 	/**
 	 * Loads a pdb structure where arg can be a pdbcode+chaincode or a pdb file name.
@@ -2830,7 +2695,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
 	 * @return the newly created pdb object
 	 */
-	public static Pdb readStructureOrExit(String arg) {
+	public static PdbChain readStructureOrExit(String arg) {
 		return readFromFileOrPdbCode(arg, true, true);
 	}
 	
@@ -2840,7 +2705,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
 	 * @return the newly created pdb object or null
 	 */	
-	public static Pdb readStructureOrNull(String arg) {
+	public static PdbChain readStructureOrNull(String arg) {
 		return readFromFileOrPdbCode(arg, false, true);		
 	}
 	
@@ -2850,7 +2715,7 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param chain
 	 * @return
 	 */
-	public static Pdb readStructureOrNull(String arg, String chain) {
+	public static PdbChain readStructureOrNull(String arg, String chain) {
 		// Not sure why in the following call the 'exit' parameter was set to true,
 		// I'm setting it to false beacuse otherwise it would cause the program to exit.
 		return readFromFileOrPdbCode(arg, chain, false, true);		
@@ -2858,7 +2723,7 @@ public class Pdb implements HasFeatures, Serializable {
 
 	/**
 	 * Loads a pdb structure given a pdbcode+chaincode or a pdb file name and chain code.
-	 * Common exceptions are caught internally. The behvaiour in case of an error is
+	 * Common exceptions are caught internally. The behaviour in case of an error is
 	 * specified by the parameters <code>exit</code> and <code>silent</code>.
 	 * Parameter chain code is only used if first parameter is a file, otherwise ignored.
 	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
@@ -2867,22 +2732,22 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param silent if false, error messages will be printed
 	 * @return the structure object
 	 */
-	public static Pdb readFromFileOrPdbCode(String arg, String chain, boolean exit, boolean silent) {
-		Pdb pdb = null;
+	public static PdbChain readFromFileOrPdbCode(String arg, String chain, boolean exit, boolean silent) {
+		PdbChain pdb = null;
 		
 		// check if argument is a filename
 		File inFile = new File(arg);
 		if(inFile.canRead()) {
 			if(!silent) System.out.println("Reading file " + arg);
-			pdb = new PdbfilePdb(arg);
+			PdbfileParser parser = new PdbfileParser(arg);
 			try {
 				if(chain == null) {
-					String[] chains = pdb.getChains();
+					String[] chains = parser.getChains();
 					if(!silent) System.out.println("Loading chain " + chains[0]);
-					pdb.load(chains[0]);
+					pdb = parser.readChain(chains[0], PdbAsymUnit.DEFAULT_MODEL);
 				} else {
 					if(!silent) System.out.println("Loading chain " + chain);
-					pdb.load(chain);
+					pdb = parser.readChain(chain, PdbAsymUnit.DEFAULT_MODEL);
 				}
 			} catch (PdbLoadException e) {
 				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
@@ -2897,11 +2762,12 @@ public class Pdb implements HasFeatures, Serializable {
 				String chainCode = arg.substring(4,5);
 				try {
 					if(!silent) System.out.println("Loading pdb code " + pdbCode);
+					PdbaseParser parser = new PdbaseParser(pdbCode,PdbaseParser.DEFAULT_PDBASE_DB,new MySQLConnection());
 					try {
-						pdb = new PdbasePdb(pdbCode);
+						
 						if(chainCode.length() == 0) {
 
-							chainCode = pdb.getChains()[0];
+							chainCode = parser.getChains()[0];
 						}
 					} catch (PdbLoadException e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
@@ -2910,7 +2776,7 @@ public class Pdb implements HasFeatures, Serializable {
 
 					try {
 						if(!silent) System.out.println("Loading chain " + chainCode);
-						pdb.load(chainCode);
+						pdb = parser.readChain(chainCode, PdbAsymUnit.DEFAULT_MODEL);
 					} catch (PdbLoadException e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
 						if(exit) System.exit(1);
@@ -2937,73 +2803,10 @@ public class Pdb implements HasFeatures, Serializable {
 	 * @param silent if false, error messages will be printed
 	 * @return the structure object
 	 */
-	public static Pdb readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
+	public static PdbChain readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
 		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
-	
-	/*------------------------ HasFeature interface implementation -----------------------*/
-	
-	public boolean addFeature(Feature feature) throws InvalidFeatureCoordinatesException,
-														OverlappingFeatureException {
 
-		boolean result = false;
-		FeatureType ft = feature.getType();	// will throw a null pointer exception if feature == null
-		if(this.features == null) {
-			this.features = new HashMap<FeatureType, Collection<Feature>>();
-		}
-		Collection<Feature> fc = this.features.get(ft);
-		if(fc==null) {
-			fc = new LinkedList<Feature>();
-			features.put(ft, fc);
-		}
-		IntervalSet intervSet = feature.getIntervalSet();
-		for (Interval interv:intervSet){
-			if (interv.beg<1 || interv.end>this.getFullLength())
-				throw new InvalidFeatureCoordinatesException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" contains invalid coordinates for this Pdb.\n"
-						+"Interval: "+interv+". Max residue serial for this Pdb: "+this.getFullLength());
-		}
-		for (Feature f:fc) {
-			if (intervSet.overlaps(f.getIntervalSet())) {
-				throw new OverlappingFeatureException("Feature being added "+feature.getDescription()+" of type "+feature.getType()+" overlaps existing feature "+f.getDescription()+" of type "+f.getType()+"\n" +
-						"New interval set: "+intervSet+". Existing interval set: "+f.getIntervalSet());
-			}
-		}
-		result = fc.add(feature);
-		return result;	
-	}
-
-	public Collection<FeatureType> getFeatureTypes() {
-		return features.keySet();
-	}
-
-	public Collection<Feature> getFeatures() {
-		Collection<Feature> allfeatures = new LinkedList<Feature>();
-		for (Collection<Feature> coll:features.values()) {
-			allfeatures.addAll(coll);
-		}
-		return allfeatures;
-	}
-
-	public Collection<Feature> getFeaturesForPositon(int position) {
-		Collection<Feature> result = new LinkedList<Feature>(); 
-		for(Feature f:this.getFeatures()) {
-			if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
-		}
-		return result;		
-	}
-
-	public Collection<Feature> getFeaturesOfType(FeatureType featureType) {
-		return features.get(featureType);
-	}
-
-	public Collection<Feature> getFeaturesOfTypeForPosition(FeatureType featureType, int position) {
-		Collection<Feature> result = new LinkedList<Feature>(); 
-		if(this.features.get(featureType) != null) {
-			for(Feature f:this.features.get(featureType)) {
-				if(f.getIntervalSet().getIntegerSet().contains(position)) result.add(f);
-			}
-		}
-		return result;
-	}
 }
+
 

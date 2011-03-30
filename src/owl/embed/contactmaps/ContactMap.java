@@ -4,10 +4,10 @@ import java.io.*;
 import java.sql.SQLException;
 import java.util.*;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
@@ -96,8 +96,8 @@ public class ContactMap {
 	
 	public void setContactMap (String pdb_code) throws SQLException, PdbCodeNotFoundException, PdbLoadException{
 		MySQLConnection conn = new MySQLConnection ();
-		Pdb pdb = new PdbasePdb(pdb_code, "pdbase_20090728", conn);
-		pdb.load("A");
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdb_code,conn,"pdbase_20090728");
+		PdbChain pdb = fullpdb.getChain("A");
 		rig = pdb.getRIGraph("Ca", 9);
 		int coverage  = (int) (((double) rig.getEdgeCount())*contact_coverage);
 		Bound[][] sparse = Individuals.randomSet(rig, conn, coverage);

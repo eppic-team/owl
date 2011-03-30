@@ -11,14 +11,15 @@ import java.util.Iterator;
 import java.util.Random;
 import java.util.TreeSet;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
+import owl.core.util.MySQLConnection;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.GraphAveragerException;
 
@@ -257,8 +258,8 @@ public class Distiller {
 		File edgesTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".subsets");
 		File scoresTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".scores");
 		
-		Pdb pdb = new PdbasePdb(pdbCode);
-		pdb.load(pdbChainCode);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		RIGraph graph = pdb.getRIGraph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());
 		

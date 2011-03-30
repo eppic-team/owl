@@ -4,6 +4,14 @@ import java.util.Arrays;
 
 import owl.core.structure.Atom;
 
+/**
+ * A bounding box for short cutting some geometrical calculations.
+ * 
+ * See http://en.wikipedia.org/wiki/Bounding_volume
+ * 
+ * @author duarte_j
+ *
+ */
 public class BoundingBox {
 
 	double xmin;
@@ -23,7 +31,7 @@ public class BoundingBox {
 	}
 
 	/**
-	 * Constructs a BoundinbBox by calculating maxs and mins of given array of atoms.
+	 * Constructs a BoundingBox by calculating maxs and mins of given array of atoms.
 	 * @param atoms 
 	 */
 	public BoundingBox (Atom[] atoms) {

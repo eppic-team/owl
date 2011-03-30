@@ -2,9 +2,10 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
 import owl.core.structure.TemplateList;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
@@ -42,8 +43,8 @@ public class scorePdbSet {
 			String pdbChainCode = pdbId.substring(4,5);
 		
 			try {
-				PdbasePdb pdb = new PdbasePdb(pdbCode,PDBASEDB,conn);
-				pdb.load(pdbChainCode);
+				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASEDB);
+				PdbChain pdb = fullpdb.getChain(pdbChainCode);
 				if (!Scorer.isValidPdb(pdb)) {
 					continue;
 				}

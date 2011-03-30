@@ -15,7 +15,7 @@ import java.net.URLConnection;
 import java.util.zip.GZIPInputStream;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 import owl.core.structure.features.CatalSiteSet;
@@ -34,7 +34,7 @@ public class CSAConnection {
 
 	/**
 	 * Queries the Catalytic Site Atlas (Porter et al. NAR 32: D129-D133, 2004) for the 
-	 * PDB code of the given Pdb object and sets its member variable <code>catalSiteSet</code> with the results.
+	 * PDB code of the given PdbChain object and sets its member variable <code>catalSiteSet</code> with the results.
 	 * If no entry is found,<code>catalSiteSet</code> is set to null.
 	 * @param pdb
 	 * @param version the CSA version to use (e.g. {@link CatalSiteSet.LATEST_VERSION})
@@ -42,7 +42,7 @@ public class CSAConnection {
 	 * @return number of errors (mismatching residues between this structure and the CSA annotation)
 	 * @throws IOException if local file or online database could not be read
 	 */
-	public static int parseCSA(Pdb pdb, String version, boolean online) throws IOException {
+	public static int parseCSA(PdbChain pdb, String version, boolean online) throws IOException {
 		BufferedReader in;
 		String inputLine;
 

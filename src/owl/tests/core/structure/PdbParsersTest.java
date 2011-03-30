@@ -25,14 +25,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.CiffilePdb;
+import owl.core.structure.CiffileParser;
 import owl.core.structure.CrystalCell;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbaseParser;
+import owl.core.structure.PdbfileParser;
 import owl.core.structure.Residue;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
@@ -76,13 +76,14 @@ public class PdbParsersTest {
 	}
 
 	@Test
-	public void testSpecialPDBFiles() throws PdbLoadException {
+	public void testSpecialPDBFiles() throws PdbLoadException, IOException, FileFormatException {
 		// testing some special PDB files
 		
 		// tinker file (no occupancy or bfactors)
 		System.out.println(TINKERPDBFILE);
-		Pdb pdb = new PdbfilePdb(TINKERPDBFILE);
-		pdb.load(PdbAsymUnit.NULL_CHAIN_CODE);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TINKERPDBFILE));
+		Assert.assertNotNull(fullpdb);
+		Assert.assertNotNull(fullpdb.getPdbCode());
 		
 		// CASP TS server files (testing with server tar ball T0515 of CASP9)
 		File dir = new File(System.getProperty("java.io.tmpdir"),"T0515");
@@ -90,17 +91,18 @@ public class PdbParsersTest {
 		
 		for (File caspFileName:files) {
 			System.out.println(caspFileName);
-			pdb = new PdbfilePdb(caspFileName.getAbsolutePath());
-			String[] chains = pdb.getChains();
-			Integer[] models = pdb.getModels();
+			PdbfileParser parser = new PdbfileParser(caspFileName.getAbsolutePath());
+			Integer[] models = parser.getModels();
+			 
+			
 			for (int model:models) {
-				for (String chain:chains) {
-					try {
-						pdb.load(chain,model);
-					} catch (PdbLoadException e) {
-						System.err.println("Warning, pdb load exception: "+e.getMessage());
-					}
-				}
+				try {
+					fullpdb = new PdbAsymUnit(caspFileName,model);
+					Assert.assertNotNull(fullpdb.getPdbCode());
+				} catch (PdbLoadException e) {
+					System.err.println("Warning, pdb load exception: "+e.getMessage());
+				} 
+				
 			}
 		}
 	}
@@ -121,24 +123,20 @@ public class PdbParsersTest {
 			
 			System.out.println(pdbCode+" "+pdbChainCode);
 			
-			Pdb ciffilePdb = null;
-			Pdb pdbasePdb = null;
+			PdbChain ciffilePdb = null;
+			PdbChain pdbasePdb = null;
 
 			try {
 				File cifFile = unzipFile(new File(CIFDIR,pdbCode+".cif.gz"));
-				ciffilePdb = new CiffilePdb(cifFile);
-				ciffilePdb.load(pdbChainCode);
-				
-				pdbasePdb = new PdbasePdb(pdbCode, PDBASE_DB, conn);
-				pdbasePdb.load(pdbChainCode);
-				
-				// asserting
 				
 				// getChains/getModels
-				String[] ciffileChains = ciffilePdb.getChains(); 
-				String[] pdbaseChains = pdbasePdb.getChains();
-				Integer[] ciffileModels = ciffilePdb.getModels(); 
-				Integer[] pdbaseModels = pdbasePdb.getModels();
+				PdbaseParser pdbaseParser = new PdbaseParser(pdbCode,PDBASE_DB,conn);
+				CiffileParser ciffileParser = new CiffileParser(cifFile);
+				String[] ciffileChains = ciffileParser.getChains(); 
+				String[] pdbaseChains = pdbaseParser.getChains();
+				Integer[] ciffileModels = ciffileParser.getModels(); 
+				ciffileParser.closeFile();
+				Integer[] pdbaseModels = pdbaseParser.getModels();
 				Assert.assertTrue(ciffileChains.length==pdbaseChains.length);
 				Assert.assertTrue(ciffileModels.length==pdbaseModels.length);
 				HashSet<String> ciffileChainsSet = new HashSet<String>(Arrays.asList(ciffileChains));
@@ -157,12 +155,22 @@ public class PdbParsersTest {
 				for (int model:ciffileModels) {
 					Assert.assertTrue(pdbaseModelsSet.contains(model));
 				}
+
+				// parsing the full files
+				PdbAsymUnit ciffileFullPdb = new PdbAsymUnit(cifFile);
+				ciffilePdb = ciffileFullPdb.getChain(pdbChainCode);
+				
+				PdbAsymUnit pdbaseFullPdb = new PdbAsymUnit(pdbCode,conn, PDBASE_DB);
+				pdbasePdb = pdbaseFullPdb.getChain(pdbChainCode);
+				
+				// asserting
+				
 				// title
-				Assert.assertEquals(pdbasePdb.getTitle(),ciffilePdb.getTitle());
+				Assert.assertEquals(pdbasePdb.getParent().getTitle(),ciffilePdb.getParent().getTitle());
 				// crystal data
-				Assert.assertEquals(pdbasePdb.getSpaceGroup(), ciffilePdb.getSpaceGroup());
-				CrystalCell pdbaseCell = pdbasePdb.getCrystalCell();
-				CrystalCell ciffileCell = ciffilePdb.getCrystalCell();
+				Assert.assertEquals(pdbasePdb.getParent().getSpaceGroup(), ciffilePdb.getParent().getSpaceGroup());
+				CrystalCell pdbaseCell = pdbasePdb.getParent().getCrystalCell();
+				CrystalCell ciffileCell = ciffilePdb.getParent().getCrystalCell();
 				if (pdbaseCell!=null && ciffileCell!=null) { // nulls will happen for NMR entries
 					Assert.assertEquals(pdbaseCell.getA(), ciffileCell.getA(), 0.001);
 					Assert.assertEquals(pdbaseCell.getB(), ciffileCell.getB(), 0.001);
@@ -173,25 +181,28 @@ public class PdbParsersTest {
 				}
 				
 				// exp data and quality parameters
-				Assert.assertEquals(pdbasePdb.getExpMethod(),ciffilePdb.getExpMethod());
-				Assert.assertEquals(pdbasePdb.getResolution(),ciffilePdb.getResolution(),0.0001);
-				Assert.assertEquals(pdbasePdb.getRfree(),ciffilePdb.getRfree(),0.0001);
-				Assert.assertEquals(pdbasePdb.getRsym(),ciffilePdb.getRsym(),0.0001);
+				Assert.assertEquals(pdbasePdb.getParent().getExpMethod(),ciffilePdb.getParent().getExpMethod());
+				Assert.assertEquals(pdbasePdb.getParent().getResolution(),ciffilePdb.getParent().getResolution(),0.0001);
+				Assert.assertEquals(pdbasePdb.getParent().getRfree(),ciffilePdb.getParent().getRfree(),0.0001);
+				Assert.assertEquals(pdbasePdb.getParent().getRsym(),ciffilePdb.getParent().getRsym(),0.0001);
 				
 				// identifiers
 				Assert.assertEquals(pdbasePdb.getPdbCode(), ciffilePdb.getPdbCode());
 				Assert.assertEquals(pdbasePdb.getChainCode(), ciffilePdb.getChainCode());
 				Assert.assertEquals(pdbasePdb.getPdbChainCode(), ciffilePdb.getPdbChainCode());
-				Assert.assertEquals(pdbasePdb.getModel(), ciffilePdb.getModel());
+				Assert.assertEquals(pdbasePdb.getParent().getModel(), ciffilePdb.getParent().getModel());
 
 				// sequences
-				Assert.assertEquals(pdbasePdb.getSequence(), ciffilePdb.getSequence());
+				Assert.assertEquals(pdbasePdb.getSequence().getSeq(), ciffilePdb.getSequence().getSeq());
 				Assert.assertEquals(pdbasePdb.getObsSequence(), ciffilePdb.getObsSequence());
 				
 				// lengths
 				Assert.assertEquals(pdbasePdb.getFullLength(), ciffilePdb.getFullLength());
 				Assert.assertEquals(pdbasePdb.getObsLength(), ciffilePdb.getObsLength());
 				Assert.assertEquals(pdbasePdb.getNumAtoms(), ciffilePdb.getNumAtoms());
+				
+				// has alt codes
+				Assert.assertEquals(pdbasePdb.hasAltCodes(),ciffilePdb.hasAltCodes());
 				
 				// info from atom serials 
 				for (int atomser:pdbasePdb.getAllAtomSerials()) {
@@ -255,7 +266,7 @@ public class PdbParsersTest {
 	}
 	
 	@Test
-	public void testPdbfileParser() throws IOException, SQLException {
+	public void testPdbfileParser() throws IOException, SQLException, FileFormatException {
 		
 		ArrayList<String> warnings = new ArrayList<String>();
 		// testing a list of PDB files from PDB
@@ -268,28 +279,26 @@ public class PdbParsersTest {
 			
 			System.out.println(pdbCode);
 			
-			PdbfilePdb pdbfilePdb = null;
-			PdbasePdb pdbasePdb = null;
+			PdbChain pdbfilePdb = null;
+			PdbChain pdbasePdb = null;
 			
 			try {
 				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
-				pdbfilePdb = new PdbfilePdb(pdbFile.getAbsolutePath());
-				pdbasePdb = new PdbasePdb(pdbCode);
-				String[] chains = pdbfilePdb.getChains();
-				// test getChains/getModels
-				Assert.assertTrue(chains.length>0);
-				Integer[] models = pdbfilePdb.getModels();
+				PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
+				Integer[] models = parser.getModels();
+
 				Assert.assertTrue(models.length>0);
-				Assert.assertFalse(pdbfilePdb.isDataLoaded());
 				
 				// loading all chains and all models
 				for (int model:models) {
 					System.out.println(model);
-					for (String chain:chains) {
-						pdbasePdb.load(chain);
+					PdbAsymUnit pdbfileFullpdb = new PdbAsymUnit(pdbFile,model);
+					PdbAsymUnit pdbaseFullpdb = new PdbAsymUnit(pdbCode,model,new MySQLConnection(),"pdbase");
+				 
+					for (String chain:pdbaseFullpdb.getPdbChainCodes()) {
+						pdbasePdb = pdbaseFullpdb.getChain(chain);
 						System.out.println(chain);
-						pdbfilePdb.load(chain,model);
-						Assert.assertTrue(pdbfilePdb.isDataLoaded());
+						pdbfilePdb = pdbfileFullpdb.getChain(chain);
 						
 						// pdbCode properly read
 						Pattern p = Pattern.compile("^\\d\\w\\w\\w$");
@@ -302,44 +311,53 @@ public class PdbParsersTest {
 						// the spaces introduced between different lines are lost in pdb and thus also 
 						// not consistent with cif
 						// that's why we compare in lower case and stripping spaces
-						Assert.assertEquals(pdbasePdb.getTitle().toLowerCase().replaceAll(" ", ""), 
-								pdbfilePdb.getTitle().toLowerCase().replaceAll(" ",""));
+						Assert.assertEquals(pdbasePdb.getParent().getTitle().toLowerCase().replaceAll(" ", ""), 
+								pdbfilePdb.getParent().getTitle().toLowerCase().replaceAll(" ",""));
 						
 						// chain codes coincide
 						Assert.assertEquals(chain,pdbfilePdb.getChainCode());
 						Assert.assertEquals(pdbfilePdb.getChainCode(), pdbfilePdb.getPdbChainCode());
 						Assert.assertEquals(pdbasePdb.getPdbChainCode(), pdbfilePdb.getPdbChainCode());
 						// model as input
-						Assert.assertEquals(model,pdbfilePdb.getModel());
+						Assert.assertEquals(model,pdbfilePdb.getParent().getModel());
 						
 						// crystal data
-						if (pdbasePdb.getSpaceGroup()!=null) {
-							Assert.assertEquals(pdbasePdb.getSpaceGroup().getId(),pdbfilePdb.getSpaceGroup().getId());
+						if (pdbasePdb.getParent().getSpaceGroup()!=null) {
+							Assert.assertEquals(pdbasePdb.getParent().getSpaceGroup().getId(),pdbfilePdb.getParent().getSpaceGroup().getId());
 						}
-						Assert.assertNotNull(pdbfilePdb.getCrystalCell());
+						Assert.assertNotNull(pdbfilePdb.getParent().getCrystalCell());
 						
 						// exp data and quality parameters
-						Assert.assertEquals(pdbasePdb.getExpMethod(),pdbfilePdb.getExpMethod());
-						Assert.assertEquals(pdbasePdb.getResolution(),pdbfilePdb.getResolution(),0.01);
-						if (Math.abs(pdbasePdb.getRfree()-pdbfilePdb.getRfree())>0.01) {
+						Assert.assertEquals(pdbasePdb.getParent().getExpMethod(),pdbfilePdb.getParent().getExpMethod());
+						Assert.assertEquals(pdbasePdb.getParent().getResolution(),pdbfilePdb.getParent().getResolution(),0.01);
+						if (Math.abs(pdbasePdb.getParent().getRfree()-pdbfilePdb.getParent().getRfree())>0.01) {
 							// we can't assert because there's no consistency between pdbase and pdbfile, e.g. 1p1x
 							System.err.println(pdbCode+chain+": rfrees don't agree, pdbase "+
-									String.format("%4.2f", pdbasePdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getRfree()));
+									String.format("%4.2f", pdbasePdb.getParent().getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getParent().getRfree()));
 							warnings.add(pdbCode+chain+": rfrees don't agree, pdbase "+
-									String.format("%4.2f", pdbasePdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getRfree()));
+									String.format("%4.2f", pdbasePdb.getParent().getRfree())+", pdbfile "+String.format("%4.2f",pdbfilePdb.getParent().getRfree()));
 						}
-						Assert.assertEquals(pdbasePdb.getRsym(),pdbfilePdb.getRsym(),0.001);
+						Assert.assertEquals(pdbasePdb.getParent().getRsym(),pdbfilePdb.getParent().getRsym(),0.001);
 
+						// has alt codes
+						// at the moment there can be a difference in finding alt codes in pdb file vs pdbase if the 
+						// alt codes are exclusively in the HETATMs (e.g. 2cxa): we catch that in pdbase but not in pdb file
+						// eventually we will fix that by also parsing HETATMs but for the moment we are only checking 
+						// if they coincide when the pdb file has alt codes
+						if (pdbfilePdb.hasAltCodes()) {
+							Assert.assertEquals(pdbasePdb.hasAltCodes(),pdbfilePdb.hasAltCodes());
+						}
+			
 						// sequence
-						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().length());
+						Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().getLength());
 						Assert.assertTrue(pdbfilePdb.getObsLength()==pdbfilePdb.getObsSequence().length());
-						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().length());
+						Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().getLength());
 						// for some very weird entries the sequences won't coincide: see http://pdbwiki.org/index.php/1ejg
 						// also for some not so weird but sickly wrong PDB files: 1k55 (has a HETATM residue which is not shown in SEQRES)
 						// thus we can't assert for sequence
 						//Assert.assertEquals(pdbasePdb.getSequence(), pdbfilePdb.getSequence());
 						Assert.assertEquals(pdbasePdb.getObsSequence(), pdbfilePdb.getObsSequence());
-						String seq = pdbfilePdb.getSequence();
+						String seq = pdbfilePdb.getSequence().getSeq();
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
 							if (!pdbasePdb.getPdbResSerFromResSer(resser).equals(pdbfilePdb.getPdbResSerFromResSer(resser))) {
 								// In some cases the alignment is ambiguous, see 2nwr at residues 191 onwards:
@@ -389,7 +407,7 @@ public class PdbParsersTest {
 						// sec structure
 						SecondaryStructure ss = pdbfilePdb.getSecondaryStructure();
 						Assert.assertNotNull(ss);
-						Assert.assertEquals(pdbfilePdb.getSequence(), ss.getSequence());
+						Assert.assertEquals(pdbfilePdb.getSequence().getSeq(), ss.getSequence());
 
 						for (int resser:pdbfilePdb.getAllSortedResSerials()) {
 							String resserMsg = "Failed for "+pdbCode+chain+" and resser "+resser;

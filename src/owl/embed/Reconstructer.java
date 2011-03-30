@@ -4,12 +4,14 @@ import java.io.File;
 
 import javax.vecmath.Vector3d;
 
+import owl.core.sequence.Sequence;
 import owl.core.structure.ContactType;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbasePdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.MySQLConnection;
 
 import Jama.Matrix;
 
@@ -27,7 +29,7 @@ public class Reconstructer {
 	
 	protected static final double BB_CA_DIST = 3.8;
 	private static final String EMBEDDING_ATOM_TYPE = "CA"; // this is the atom for which the embedded coordinates
-															// will be set in the Pdb models produced by reconstruct()
+															// will be set in the PdbChain models produced by reconstruct()
 															// It shouldn't be a constant but at the moment we are only supporting 
 															// reconstruction of Ca contact maps  
 	
@@ -66,7 +68,7 @@ public class Reconstructer {
 	}
 	
 	/**
-	 * Reconstructs the contact map given in constructor returning the desired number of Pdb
+	 * Reconstructs the contact map given in constructor returning the desired number of PdbChain
 	 * models, representing a sample of the conformational space of the contact map
 	 * @param numModels the desired number of models
 	 * @param metrize whether metrization is to be used or not. If not used a simple sampling 
@@ -75,9 +77,9 @@ public class Reconstructer {
 	 * @param debug if true the bounds matrices and sampled matrices are printed to stdout
 	 * @return
 	 */
-	public Pdb[] reconstruct(int numModels, boolean metrize, Embedder.ScalingMethod scalingMethod, boolean debug) {
+	public PdbChain[] reconstruct(int numModels, boolean metrize, Embedder.ScalingMethod scalingMethod, boolean debug) {
 		
-		Pdb[] models = new Pdb[numModels];
+		PdbChain[] models = new PdbChain[numModels];
 		
 		// BoundsSmoother makes its own copy of initialBounds so we are sure that the copy of initialBounds in this class is not modified
 		// and can potentially be reused (by calling again reconstruct)
@@ -112,7 +114,7 @@ public class Reconstructer {
 			
 			Embedder emb = new Embedder(matrix);
 			Vector3d[] embedding = emb.embed(scalingMethod);
-			models[model] = new Pdb(this.rig.getSequence(), embedding, EMBEDDING_ATOM_TYPE);
+			models[model] = new PdbChain(new Sequence(rig.getContactType(),this.rig.getSequence()), embedding, EMBEDDING_ATOM_TYPE);
 			
 		}
 		
@@ -231,17 +233,16 @@ public class Reconstructer {
 			String outDir, 
 			int numModels,Embedder.ScalingMethod scalingMethod, boolean metrize) 
 	throws Exception{
-		Pdb pdb = new PdbasePdb(pdbCode);
-		pdb.load(pdbChainCode);
-		Pdb pdbMirror = new PdbasePdb(pdbCode);
-		pdbMirror.load(pdbChainCode);
+		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		PdbChain pdb = fullpdb.getChain(pdbChainCode);
+		PdbChain pdbMirror = pdb.copy(pdb.getParent());
 		pdbMirror.mirror();
 
 		RIGraph graph = pdb.getRIGraph(ct, cutoff);
 		int numberContacts = graph.getEdgeCount();
 		int sizeHalfMatrix = (graph.getFullLength()*(graph.getFullLength()-1))/2;
 		Reconstructer rec = new Reconstructer(graph);
-		Pdb[] pdbs = rec.reconstruct(numModels, metrize, scalingMethod, debug);
+		PdbChain[] pdbs = rec.reconstruct(numModels, metrize, scalingMethod, debug);
 
 		System.out.println(pdbCode+pdbChainCode);
 		System.out.println("Total restraints: "+numberContacts+", total cells half matrix: "+sizeHalfMatrix);
@@ -250,7 +251,7 @@ public class Reconstructer {
 		System.out.println();
 		
 		int modelnum=1;
-		for (Pdb model:pdbs) {
+		for (PdbChain model:pdbs) {
 			
 			double rmsd = pdb.rmsd(model, "Ca");
 			double rmsdm = pdbMirror.rmsd(model, "Ca");

@@ -19,9 +19,9 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 import owl.core.util.FileFormatException;
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
+import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbfilePdb;
 import owl.core.structure.graphs.GraphComparisonResult;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
@@ -230,7 +230,7 @@ public class benchmarkCCCP {
 		return 0;
 	}
 		
-	public double get3Dscore(Pdb pred, Pdb real) {
+	public double get3Dscore(PdbChain pred, PdbChain real) {
 		return 0;
 	}
 	
@@ -402,10 +402,17 @@ public class benchmarkCCCP {
 			int seqLen = seq.getLength();
 			
 			// get native structure and graph
-			Pdb nativePdb = new PdbfilePdb(nativeFile.getAbsolutePath());
+			PdbChain nativePdb = null;
 			try {
-				nativePdb.load("A");
+				PdbAsymUnit fullpdb = new PdbAsymUnit(nativeFile);
+				nativePdb = fullpdb.getChain("A");
 			} catch (PdbLoadException e1) {
+				System.err.println("Failed to load native structure " + nativeFile.getAbsolutePath() + ". Skipping target.");
+				continue;
+			} catch (IOException e) {
+				System.err.println("Failed to load native structure " + nativeFile.getAbsolutePath() + ". Skipping target.");
+				continue;
+			} catch (FileFormatException e) {
 				System.err.println("Failed to load native structure " + nativeFile.getAbsolutePath() + ". Skipping target.");
 				continue;
 			}

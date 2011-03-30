@@ -1,18 +1,13 @@
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.*;
 
 import owl.core.connections.CSAConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Pdb;
-import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadException;
-import owl.core.structure.PdbasePdb;
-import owl.core.structure.PdbfilePdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.Residue;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
@@ -54,7 +49,7 @@ public class mapMutations {
 		}
 		
 		// read structure
-		Pdb pdb = readStructureOrExit(args[0]);
+		PdbChain pdb = PdbChain.readStructureOrExit(args[0]);
 		File outFile = new File(args[0] + ".png");
 		
 		// read mutated positions
@@ -221,7 +216,7 @@ public class mapMutations {
 		return center;
 	}
 	
-	public static void createImage(Pdb pdb, int[] positions, Collection<Integer> catalyticResidues, int center, File outFile) {
+	public static void createImage(PdbChain pdb, int[] positions, Collection<Integer> catalyticResidues, int center, File outFile) {
 				
 		try {
 			File scriptFile = File.createTempFile("temp", ".pml");
@@ -277,65 +272,6 @@ public class mapMutations {
 		}		
 	}
 	
-	/**
-	 * Loads a pdb structure where arg can be a pdbcode+chaincode or a pdb file name.
-	 * If something goes wrong, prints an error message and exits.
-	 * @param arg a pdbcode+chaincode (e.g. 1tdrB) or a pdb file name
-	 * @return the structure object
-	 */
-	public static Pdb readStructureOrExit(String arg) {
-		Pdb pdb = null;
-		
-		// check if argument is a filename
-		File inFile = new File(arg);
-		if(inFile.canRead()) {
-			System.out.println("Reading file " + arg);
-			pdb = new PdbfilePdb(arg);
-			try {
-				String[] chains = pdb.getChains();
-				System.out.println("Loading chain " + chains[0]);
-				pdb.load(chains[0]);
-			} catch (PdbLoadException e) {
-				System.err.println("Error loading file " + arg + ":" + e.getMessage());
-			}
-		} else {
-			// check if argument is a pdb code
-			if(arg.length() < 4 || arg.length() > 5) {
-				System.err.println(arg + "is neither a valid file name nor a valid pdb code");
-				System.exit(1);
-			} else {
-				String pdbCode = arg.substring(0,4);
-				String chainCode = arg.substring(4,5);
-				try {
-					System.out.println("Loading pdb code " + pdbCode);
-					try {
-						pdb = new PdbasePdb(pdbCode);
-						if(chainCode.length() == 0) {
 
-							chainCode = pdb.getChains()[0];
-						}
-					} catch (PdbLoadException e) {
-						System.err.println("Error loading pdb structure:" + e.getMessage());
-						System.exit(1);
-					}
-					try {
-						System.out.println("Loading chain " + chainCode);
-						pdb.load(pdb.getChains()[0]);
-					} catch (PdbLoadException e) {
-						System.err.println("Error loading pdb structure:" + e.getMessage());
-						System.exit(1);
-					}
-				} catch (SQLException e) {
-					System.err.println("Database error: " + e.getMessage());
-					System.exit(1);
-				} catch (PdbCodeNotFoundException e) {
-					System.err.println("Pdb code " + pdbCode + " not found in database.");
-					System.exit(1);
-				}
-
-			}
-		}
-		return pdb;
-	}
 	
 }

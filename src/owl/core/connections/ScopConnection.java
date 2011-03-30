@@ -10,7 +10,7 @@ import java.net.URLConnection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.Scop;
 import owl.core.structure.features.ScopRegion;
@@ -28,15 +28,15 @@ public class ScopConnection {
 
 
 	/**
-	 * Parses SCOP annotation for the PDB code of the given Pdb object, setting its
+	 * Parses SCOP annotation for the PDB code of the given PdbChain object, setting its
 	 * Scop member with SCOP annotation.
-	 * @param pdb the Pdb object for which we want Scop annotation
+	 * @param pdb the PdbChain object for which we want Scop annotation
 	 * @param version the SCOP version that we want to parse
 	 * @param online if true SCOP annotation will be taken from web, if false 
 	 * from local file
 	 * @throws IOException 
 	 */
-	public static void parseScop(Pdb pdb, String version, boolean online) throws IOException {
+	public static void parseScop(PdbChain pdb, String version, boolean online) throws IOException {
 		String pdbCode = pdb.getPdbCode();
 		// if this is not a pdb entry with a pdb code there's no SCOP id to get
 		if (pdbCode==null || pdbCode.equals(PdbAsymUnit.NO_PDB_CODE)) return; 

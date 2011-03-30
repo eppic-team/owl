@@ -10,7 +10,7 @@ import java.net.URLConnection;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.structure.Pdb;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.features.EC;
 import owl.core.structure.features.ECRegion;
@@ -35,13 +35,13 @@ public class ECConnection {
 
 	
 	/**
-	 * Parses local/remote PDB to EC mapping for the PDB code of the given Pdb object 
+	 * Parses local/remote PDB to EC mapping for the PDB code of the given PdbChain object 
 	 * and sets its EC annotation object 
 	 * @param pdb
 	 * @param online
 	 * @throws IOException
 	 */
-	public static void parseEC(Pdb pdb, boolean online) throws IOException {
+	public static void parseEC(PdbChain pdb, boolean online) throws IOException {
 
 		EC ec = new EC();	
 		ECRegion er = null;
