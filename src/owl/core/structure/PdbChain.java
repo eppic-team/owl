@@ -61,7 +61,7 @@ import java.sql.Statement;
  * A single chain of a PDB protein structure
  * 
  */
-public class PdbChain implements Serializable {
+public class PdbChain implements Serializable, Iterable<Residue> {
 
 	private static final long serialVersionUID = 1L;
 	
@@ -216,6 +216,11 @@ public class PdbChain implements Serializable {
 	
 	/*---------------------------------  public methods ----------------------------------------------*/
 
+	@Override
+	public Iterator<Residue> iterator() {
+		return residues.values().iterator();
+	}
+	
 	/**
 	 * Initialises the residues to an empty map. 
 	 */
@@ -2806,6 +2811,8 @@ public class PdbChain implements Serializable {
 	public static PdbChain readFromFileOrPdbCode(String arg, boolean exit, boolean silent) {
 		return readFromFileOrPdbCode(arg, null, exit, silent);
 	}
+
+
 
 }
 
