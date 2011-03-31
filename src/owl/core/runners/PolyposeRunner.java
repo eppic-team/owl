@@ -88,6 +88,13 @@ public class PolyposeRunner {
 		writeScriptFile();
 	}
 	
+	// destructor
+	protected void finalize() {
+		this.tmpScriptFile.delete();
+		this.tmpParamFile.delete();
+		this.polyposeLog.delete();
+	}
+	
 	/*---------------------------- private methods --------------------------*/
 	
 	/**
@@ -313,8 +320,8 @@ public class PolyposeRunner {
 		writeParamFile(positions);
 		
 		for(PdbChain pdb:pdbs) {
-			file = File.createTempFile("polypose_" + filenum + "_", ".pdb");
-			//file.deleteOnExit();
+			file = File.createTempFile(TMP_FILE_PREFIX + "_" + filenum + "_", TMP_PDB_FILE_SUFFIX);
+			file.deleteOnExit();
 			PrintStream out = new PrintStream(new FileOutputStream(file));
 			pdb.writeAtomLines(out);
 			out.close();
@@ -323,6 +330,13 @@ public class PolyposeRunner {
 		}
 		extractPositions(filenames, positions);
 		rmsd = executePolypose(filenames.toArray(dummy), this.tmpParamFile.getAbsolutePath());
+		
+		// clean up
+		this.tmpParamFile.delete();
+		for(String fn: filenames) {
+			new File(fn).delete();
+		}
+		
 		return rmsd;
 	}
 	
@@ -344,7 +358,7 @@ public class PolyposeRunner {
 		for(String filename:filenames) {
 			try {
 				PdbAsymUnit fullpdb = new PdbAsymUnit(new File(filename));
-				PdbChain pdb = fullpdb.getChain("A");
+				PdbChain pdb = fullpdb.getFirstChain();
 				pdbs.add(pdb);
 			} catch (PdbLoadException e) {
 				System.err.println("Error loading structure: " + e.getMessage());
