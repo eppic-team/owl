@@ -64,8 +64,9 @@ public class PolyposeRunner {
 		this.polyposeLog = File.createTempFile(TMP_FILE_PREFIX, POLYPOSE_LOG_FILE_SUFFIX);
 		
 		// mark temp files to be deleted on exit
-		//this.tmpScriptFile.deleteOnExit();
-		//this.tmpParamFile.deleteOnExit();
+		this.tmpScriptFile.deleteOnExit();
+		this.tmpParamFile.deleteOnExit();
+		this.polyposeLog.deleteOnExit();
 		
 		// make sure that polypose executable, setup script and /bin/sh exist
 		this.ccp4SetupScript = new File(this.ccp4Dir, CCP4_SETUP_SCRIPT_NAME);
@@ -221,6 +222,7 @@ public class PolyposeRunner {
 		}
 		
 		File tmpPdbFile = File.createTempFile(TMP_FILE_PREFIX, TMP_PDB_FILE_SUFFIX);
+		tmpPdbFile.deleteOnExit();
 		
 		int l = filenames.size();
 		if(positions.length != l) {
