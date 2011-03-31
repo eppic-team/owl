@@ -1059,8 +1059,8 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		// finding the entities (groups of identical chains)
 		for (String chain:this.chains.keySet()) {
 			PdbChain pdb = getChain(chain);
-			if (uniqSequences.containsKey(pdb.getSequence())) {
-				uniqSequences.get(pdb.getSequence()).add(chain);
+			if (uniqSequences.containsKey(pdb.getSequence().getSeq())) {
+				uniqSequences.get(pdb.getSequence().getSeq()).add(chain);
 			} else {
 				List<String> list = new ArrayList<String>();
 				list.add(chain);
