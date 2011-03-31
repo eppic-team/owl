@@ -863,6 +863,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 					countSkipped+" branches skipped). Total "+(trialCount+countSkipped*this.getNumChains()*this.getNumChains())+
 					" trials. Time "+(end-start)/1000+"s");
 			System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
+			System.out.println("Found "+set.size()+" interfaces.");
 		}
 		
 		// bsa calculation 
@@ -873,7 +874,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
 		if (debug) {
 			start= System.currentTimeMillis();
-			System.out.println("Calculating ASAs");
+			System.out.println("Calculating ASAs with "+nThreads+" threads and "+nSpherePoints+" sphere points");
 		}
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
