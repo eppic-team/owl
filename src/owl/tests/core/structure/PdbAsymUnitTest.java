@@ -80,20 +80,45 @@ public class PdbAsymUnitTest {
 	public void tearDown() throws Exception {
 	}
 
+	@Test
+	public void testGetAllRepChains() throws IOException {
+		List<String> pdbCodes = readListFile();
+		System.out.println("Checking unique and representative chains");
+		for (String pdbCode: pdbCodes) {
+			
+			System.out.println(pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+			List<String> repChains = pdb.getAllRepChains();
+			Assert.assertTrue(repChains.size()<=pdb.getNumChains() && repChains.size()>0);
+			List<String> allchains = new ArrayList<String>();
+			for (String repChain:repChains) {
+				List<String> chains = pdb.getSeqIdenticalGroup(repChain);
+				allchains.addAll(chains);
+			}
+			Assert.assertTrue(allchains.size()==pdb.getNumChains());
+			for (String pdbChainCode:pdb.getPdbChainCodes()) {
+				Assert.assertTrue(repChains.contains(pdb.getRepChain(pdbChainCode)));
+			}
+			
+		}
+	}
 	
 	@Test
 	public void testGetAllInterfaces() throws IOException, SQLException, SAXException {
 
-		List<String> pdbCodes = new ArrayList<String>();
-		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
-		String line;
-		while ((line = flist.readLine() ) != null ) {
-			if (line.startsWith("#")) continue;
-			if (line.isEmpty()) break;
-			String pdbCode = line.split("\\s+")[0].toLowerCase();
-			pdbCodes.add(pdbCode);
-		}
-		flist.close();
+		List<String> pdbCodes = readListFile();
 
 		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
 		
@@ -254,6 +279,20 @@ public class PdbAsymUnitTest {
 	 */
 	private static boolean checkCounts(int[] counts) {
 		return (counts[0]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]) && counts[1]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]));
+	}
+	
+	private static List<String> readListFile() throws IOException {
+		List<String> pdbCodes = new ArrayList<String>();
+		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
+		String line;
+		while ((line = flist.readLine() ) != null ) {
+			if (line.startsWith("#")) continue;
+			if (line.isEmpty()) break;
+			String pdbCode = line.split("\\s+")[0].toLowerCase();
+			pdbCodes.add(pdbCode);
+		}
+		flist.close();
+		return pdbCodes;
 	}
 	
 	// to debug the testing code (run as java program so that we can use normal debugger)
