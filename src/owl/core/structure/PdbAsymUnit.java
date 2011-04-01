@@ -704,8 +704,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	}
 	
 	/**
-	 * Returns a sorted (decreasing area) list of all interfaces (any 2 atoms under cutoff) 
-	 * that this chain has upon generation of all crystal symmetry objects. 
+	 * Returns a sorted (decreasing area) list of all interfaces that this PdbAsymUnit has upon 
+	 * generation of all crystal symmetry objects. An interface is defined as any pair of chains 
+	 * that contact, i.e. for which there is at least a pair of atoms (one from each chain) within 
+	 * the given cutoff distance.
 	 * The interface areas and BSAs are calculated with either our implementation of the rolling
 	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
 	 * be passed)
