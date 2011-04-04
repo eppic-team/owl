@@ -41,7 +41,7 @@ public class enumerateInterfaces {
 
 		
 		String help = 
-			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>] [-l] [-d]\n" +
+			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>] [-l] [-d] [-t num of threads]\n" +
 			"If -w specified PDB files for each interface will be written to given out dir\n" +
 			"If -l specified cartoon PNG images of each interface will be written to given \n" +
 			"out dir (must use -w also)\n" +
