@@ -37,7 +37,8 @@ public class PolyposeRunner {
 	// this will cause multiple jobs on the same machine to conflict but we
 	// found that it is much faster than the proper way of doing temp files
 	// which is commented out below (and throughout the code)
-	private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	// private static final String TMP_DIR = System.getProperty("java.io.tmpdir");
+	private static final String TMP_DIR = "/dev/shm/";
 	private static final String POLYPOSE_LOG_FILE = 	"polypose.log";
 	private static final String TMP_SCRIPT_FILE   = 	"polypose.sh";
 	private static final String TMP_PARAM_FILE    = 	"polypose.params";
