@@ -160,7 +160,7 @@ public class PolyposeRunner {
 			cmdLine += " XYZIN" + filenum + " " + filename;
 			filenum++;
 		}
-		System.out.println(cmdLine);
+		//System.out.println(cmdLine);
 		
 		// run polypose
 		Process p = Runtime.getRuntime().exec(cmdLine);
