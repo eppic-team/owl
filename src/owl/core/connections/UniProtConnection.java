@@ -94,7 +94,7 @@ public class UniProtConnection {
 	    System.out.print("Waiting for Blast result...");
 	    
 	    //Use this jobid to check the service to see if the job is complete
-	    while (!(uniProtQueryService.checkStatus(jobid) == JobStatus.DONE)) {
+	    while (!(uniProtQueryService.checkStatus(jobid) == JobStatus.FINISHED)) {
 		    try {
 		      //Sleep a bit before the next request
 		          System.out.print(".");
