@@ -11,6 +11,7 @@ import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Collection of small useful helper methods.
@@ -185,5 +186,22 @@ public class Goodies {
 		in.close();
 		fileIn.close();
 		return obj;
+	}
+	
+	/**
+	 * Unzips given gzFile into outFile
+	 * @param gzFile
+	 * @param outFile
+	 * @throws IOException
+	 */
+	public static void unzip(File gzFile, File outFile) throws IOException {
+		GZIPInputStream zis = new GZIPInputStream(new FileInputStream(gzFile));
+		FileOutputStream os = new FileOutputStream(outFile);
+		int b;
+		while ( (b=zis.read())!=-1) {
+			os.write(b);
+		}
+		zis.close();
+		os.close();
 	}
 }
