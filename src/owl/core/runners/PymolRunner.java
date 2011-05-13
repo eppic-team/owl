@@ -1,13 +1,12 @@
 package owl.core.runners;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfileParser;
-import owl.core.util.StreamGobbler;
 
 public class PymolRunner {
 	
@@ -39,7 +38,7 @@ public class PymolRunner {
 	 * @throws IllegalArgumentException if heights length differs from widhts length
 	 */
 	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
-	throws IOException, InterruptedException, PdbLoadException {
+	throws Exception {
 		
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
 			throw new IllegalArgumentException("The number of heights is different from the number of widths or the number of output png files");
@@ -47,17 +46,21 @@ public class PymolRunner {
 		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
 		String[] chains = parser.getChains();
 
-		Process pymolProcess = Runtime.getRuntime().exec(pymolExec+" -q -c -p");
-		
-		new StreamGobbler("pymol_stdout", pymolProcess.getInputStream()).start();
-		new StreamGobbler("pymol_stderr", pymolProcess.getErrorStream()).start();
+		List<String> command = new ArrayList<String>();
+		command.add(pymolExec.getName());
+		command.add("-q");
+		command.add("-c");
+		command.add("-p");
 
-		PrintWriter pymolIn = new PrintWriter(new BufferedOutputStream(pymolProcess.getOutputStream()));
-				
-		pymolIn.println("load "+pdbFile.getAbsolutePath());
-		pymolIn.println("bg "+bgColor);
-		pymolIn.println("remove solvent");
-		pymolIn.println("as "+style);
+		StringBuffer pymolScriptBuilder = new StringBuffer();
+		
+		pymolScriptBuilder.append("load "+pdbFile.getAbsolutePath() + ";");
+		
+		pymolScriptBuilder.append("bg "+bgColor + ";");
+		
+		pymolScriptBuilder.append("remove solvent;");
+		
+		pymolScriptBuilder.append("as "+style + ";");
 		for (int c=0;c<chains.length;c++) {
 			char letter = chains[c].charAt(0);
 			String color = null;
@@ -69,17 +72,23 @@ public class PymolRunner {
 				// a given letter will always get the same color assigned
 				color = CHAIN_COLORS[letter%65];	
 			}
-			pymolIn.println("color "+color+", "+molecName+" and chain "+letter);
+			pymolScriptBuilder.append("color "+color+", "+molecName+" and chain "+letter + ";");
 		}
 
 		for (int i=0;i<heights.length;i++) {
-			pymolIn.println("viewport "+heights[i]+","+widths[i]);
-			pymolIn.println("ray");
-			pymolIn.println("png "+outPngFiles[i].getAbsolutePath());
+			pymolScriptBuilder.append("viewport "+heights[i]+","+widths[i] + ";");
+			
+			pymolScriptBuilder.append("ray;");
+			
+			pymolScriptBuilder.append("png "+outPngFiles[i].getAbsolutePath() + ";");
 		}
 		
-		pymolIn.println("quit");
-		pymolIn.flush();
+		pymolScriptBuilder.append("quit;");
+		
+		command.add("-d");
+		command.add(pymolScriptBuilder.toString());
+		
+		Process pymolProcess = new ProcessBuilder(command).start();
 		int exit = pymolProcess.waitFor();
 		if (exit!=0) {
 			throw new IOException("Pymol exited with error status "+exit);
