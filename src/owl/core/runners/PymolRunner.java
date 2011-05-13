@@ -38,7 +38,7 @@ public class PymolRunner {
 	 * @throws IllegalArgumentException if heights length differs from widhts length
 	 */
 	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
-	throws Exception {
+	throws PdbLoadException, IOException, InterruptedException {
 		
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
 			throw new IllegalArgumentException("The number of heights is different from the number of widths or the number of output png files");
