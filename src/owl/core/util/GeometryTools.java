@@ -6,6 +6,10 @@ import java.util.*;
 import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 
+import Jama.EigenvalueDecomposition;
+import Jama.Matrix;
+
+import owl.core.structure.Atom;
 import owl.core.structure.BackboneCoords;
 
 /**
@@ -110,6 +114,65 @@ public class GeometryTools {
 	 */
 	public static char classifyByDistance(double distCa) {
 		return 'O';
+	}
+	
+	/**
+	 * Gets the momemt of inertia tensor for the given center point and set of atoms.
+	 * @param center
+	 * @param atoms
+	 * @return a 3x3 array with containing the moments of inertia tensor
+	 */
+	public static double[][] getMomentInertiaTensor(Point3d center, Atom[] atoms) {
+		double[][] tensor = new double[3][3];
+		for (Atom atom:atoms) {
+			Point3d coords = new Point3d(atom.getCoords());
+			coords.sub(center);
+			double m = atom.getType().getAtomicMass();
+			tensor[0][0] += m*(coords.y*coords.y+coords.z*coords.z); 
+			tensor[1][1] += m*(coords.x*coords.x+coords.z*coords.z);
+			tensor[2][2] += m*(coords.x*coords.x+coords.y*coords.y);
+			tensor[0][1] += -m*coords.x*coords.y;
+			tensor[0][2] += -m*coords.x*coords.z;
+			tensor[1][2] += -m*coords.y*coords.z;
+		}
+		tensor[1][0] = tensor[0][1];
+		tensor[2][0] = tensor[0][2];
+		tensor[2][1] = tensor[1][2];
+		return tensor;
+	}
+	
+	/**
+	 * Gets the principal moments of inertia, i.e. the result of diagonalizing the
+	 * moments of inertia tensor.
+	 * @param center
+	 * @param atoms
+	 * @return
+	 */
+	public static ArrayList<InertiaMomentAndAxis> getPrincipalMomentsInertia(Point3d center, Atom[] atoms) {
+		Matrix tensor = new Matrix(getMomentInertiaTensor(center,atoms));
+		EigenvalueDecomposition eig = tensor.eig();
+		Matrix eigVals = eig.getD();
+		Matrix eigVecs = eig.getV();
+		//eigVals.print(12, 3);
+		//eigVecs.print(12, 3);
+		ArrayList<InertiaMomentAndAxis> momentsAndAxes = new ArrayList<InertiaMomentAndAxis>();
+		for (int i=0;i<3;i++) {
+			momentsAndAxes.add(new InertiaMomentAndAxis(eigVals.get(i, i), new Vector3d(eigVecs.get(0, i), eigVecs.get(1, i), eigVecs.get(2, i))));
+		}
+		return momentsAndAxes;
+	}
+	
+	/**
+	 * Gets the inertia axis corresponding to the maximum principal moment of 
+	 * inertia.
+	 * @param center
+	 * @param atoms
+	 * @return
+	 */
+	public static Vector3d getBiggestInertiaAxis(Point3d center, Atom[] atoms) {
+		ArrayList<InertiaMomentAndAxis> momentsAndAxes = getPrincipalMomentsInertia(center,atoms);
+		Collections.sort(momentsAndAxes); // sorts in ascending order: biggest value is last
+		return momentsAndAxes.get(2).axis;
 	}
 	
 	/**
