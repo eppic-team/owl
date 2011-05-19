@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import owl.core.structure.AminoAcid;
+import owl.core.structure.AaResidue;
 import owl.core.structure.ContactType;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
@@ -134,7 +135,7 @@ public class ConstraintsMaker {
 				if (!inUNKres) {
 					atom = getCorrectedPdbAtomName(res,atom,pdbResSerial);
 					int pdbAtomSer = pdb.getAtomSerFromResSerAndAtom(pdbResSerial, atom);
-					if (!pdb.getResidue(pdbResSerial).getAaType().getThreeLetterCode().equals(res)){
+					if (!( ((AaResidue)pdb.getResidue(pdbResSerial)).getAaType().getThreeLetterCode().equals(res))){
 						// sanity check, shouldn't happen at all
 						System.err.println("error! res types don't match for res serial "+pdbResSerial+" res type "+res);
 					}
@@ -267,15 +268,7 @@ public class ConstraintsMaker {
 	
 	public void createPhiPsiConstraints(TreeMap<Integer,ConsensusSquare> phiPsiConsensus, double defaultForceConstantPhiPsi) {
 		for (int resser:phiPsiConsensus.keySet()) {
-			// we can't assign a phi angle for residue 1 or a psi for the last residue so we have to skip those
-			if (resser==1) continue;
-			if (resser==pdb.getFullLength()) continue;
-			if (!pdb.hasCoordinates(resser-1) || !pdb.hasCoordinates(resser) || !pdb.hasCoordinates(resser+1)) {
-				// Here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and 
-				// thus with coordinates for all residues
-				// BUT! if there were non-standard aas in the sequence, then our pdb object will not have coordinates for 
-				// those (the file does have the coordinates but we don't read non-standard aas).
-				// We thus have to check if resser or +1 or -1 are not there
+			if (!pdb.containsStdAaResidue(resser-1) || !pdb.containsStdAaResidue(resser) || !pdb.containsStdAaResidue(resser+1)) {
 				continue;
 			}
 			
@@ -385,15 +378,8 @@ public class ConstraintsMaker {
 	}
 	
 	public void createOmegaConstraints(double defaultForceConstantOmega) {
-		for (int resser:pdb.getAllSortedResSerials()) {
-			// we can't assign an omega angle for the last residue so we have to skip those
-			if (resser==pdb.getFullLength()) continue;
-			if (!pdb.hasCoordinates(resser) || !pdb.hasCoordinates(resser+1)) {
-				// Here we don't have to take care of unobserved as the pdb file we read is output of tinker's protein and 
-				// thus with coordinates for all residues
-				// BUT! if there were non-standard aas in the sequence, then our pdb object will not have coordinates for 
-				// those (the file does have the coordinates but we don't read non-standard aas).
-				// We thus have to check if resser or resser+1 are not there
+		for (int resser:pdb.getAllResSerials()) {
+			if (!pdb.containsStdAaResidue(resser) || !pdb.containsStdAaResidue(resser+1)) {
 				continue;
 			}
 			

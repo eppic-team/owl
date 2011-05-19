@@ -150,12 +150,12 @@ public class dumpseq {
 				continue;
 			}
 
-			for (PdbChain chain:pdb.getAllChains()) {
+			for (PdbChain chain:pdb.getPolyChains()) {
 					
 				if (pdbChainCode!=null && !chain.getPdbChainCode().equals(pdbChainCode)) {
 					continue;
 				}
-
+				
 				String sequence = observed?chain.getObsSequence():chain.getSequence().getSeq();
 
 				File outputFile = new File(outputDir,pdbCode+chain.getPdbChainCode()+".fasta");

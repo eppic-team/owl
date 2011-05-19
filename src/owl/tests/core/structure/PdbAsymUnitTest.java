@@ -27,6 +27,7 @@ import owl.core.connections.pisa.PisaInterfaceList;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.HetResidue;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
@@ -57,6 +58,7 @@ public class PdbAsymUnitTest {
 	// at least so many residues have to be in agreement within TOLERANCE above
 	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.90;
 
+	private static final boolean CONSIDER_HETATOMS = false;
 	private static final boolean PRINT_PER_RES = false; // whether to print areas agreement per residue or not
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
@@ -101,13 +103,13 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 			List<String> repChains = pdb.getAllRepChains();
-			Assert.assertTrue(repChains.size()<=pdb.getNumChains() && repChains.size()>0);
+			Assert.assertTrue(repChains.size()<=pdb.getNumPolyChains() && repChains.size()>0);
 			List<String> allchains = new ArrayList<String>();
 			for (String repChain:repChains) {
 				List<String> chains = pdb.getSeqIdenticalGroup(repChain);
 				allchains.addAll(chains);
 			}
-			Assert.assertTrue(allchains.size()==pdb.getNumChains());
+			Assert.assertTrue(allchains.size()==pdb.getNumPolyChains());
 			for (String pdbChainCode:pdb.getPdbChainCodes()) {
 				Assert.assertTrue(repChains.contains(pdb.getRepChain(pdbChainCode)));
 			}
@@ -152,7 +154,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
@@ -189,19 +191,19 @@ public class PdbAsymUnitTest {
 
 				
 				System.out.println("Chain 1");
-				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol, PRINT_PER_RES);
+				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol, PRINT_PER_RES, CONSIDER_HETATOMS);
 				int[] counts2 = null;
 				
 				if (checkCounts(counts1)) {
 					System.out.println("Chain 2");
-					counts2 = checkResidues(pisaInterf.getSecondMolecule(), mySecondMol, PRINT_PER_RES);
+					counts2 = checkResidues(pisaInterf.getSecondMolecule(), mySecondMol, PRINT_PER_RES, CONSIDER_HETATOMS);
 
 				} else {
 					System.out.println("Counts of first PISA chain to our first didn't match. Trying swapping chains.");
 					System.out.println("Chain 1");
-					counts1 = checkResidues(pisaInterf.getSecondMolecule(), myFirstMol, PRINT_PER_RES);
+					counts1 = checkResidues(pisaInterf.getSecondMolecule(), myFirstMol, PRINT_PER_RES, CONSIDER_HETATOMS);
 					System.out.println("Chain 2");
-					counts2 = checkResidues(pisaInterf.getFirstMolecule(), mySecondMol, PRINT_PER_RES);
+					counts2 = checkResidues(pisaInterf.getFirstMolecule(), mySecondMol, PRINT_PER_RES, CONSIDER_HETATOMS);
 				}
 				
 				if (!checkCounts(counts1) || !checkCounts(counts2)) {
@@ -233,23 +235,24 @@ public class PdbAsymUnitTest {
 	 * @param myMolecule
 	 * @return
 	 */
-	private static int[] checkResidues(PdbChain pisaMolecule, PdbChain myMolecule, boolean printPerRes) {
+	private static int[] checkResidues(PdbChain pisaMolecule, PdbChain myMolecule, boolean printPerRes, boolean hetAtom) {
 		int a = 0;
 		int b = 0;
 		int t = 0;
-		for (Residue residue:pisaMolecule.getResidues().values()) {
+		for (Residue residue:pisaMolecule) {
 			int resser = myMolecule.getResSerFromPdbResSer(residue.getPdbSerial());
 			double pisaAsa = residue.getAsa();
 			double pisaBsa = residue.getBsa();
 			Residue myRes = myMolecule.getResidue(resser);
 			if (myRes!=null) {
+				if (!hetAtom && (myRes instanceof HetResidue)) continue;
 				double myAsa = myRes.getAsa();
 				double myBsa = myRes.getBsa();
 				if (printPerRes) {
 					System.out.printf("%s\t%s\t%d\t%s\t%6.2f\t%6.2f\t%6.2f\t%6.2f\t",
-						residue.getPdbSerial(),residue.getAaType().getThreeLetterCode(),resser,myRes.getAaType().getThreeLetterCode(),pisaAsa,pisaBsa,myAsa,myBsa);
+						residue.getPdbSerial(),residue.getLongCode(),resser,myRes.getLongCode(),pisaAsa,pisaBsa,myAsa,myBsa);
 				}
-				Assert.assertEquals(residue.getAaType(),myRes.getAaType());
+				Assert.assertEquals(residue.getLongCode(),myRes.getLongCode());
 				if (deltaComp(pisaAsa, myAsa, pisaAsa*TOLERANCE_ASA)) {
 					if (printPerRes) System.out.print(" ");
 					a++;
@@ -298,6 +301,7 @@ public class PdbAsymUnitTest {
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
 		PdbAsymUnitTest pdbAUTest = new PdbAsymUnitTest();
+		setUpBeforeClass();
 		pdbAUTest.testGetAllInterfaces();
 	}
 

@@ -63,8 +63,8 @@ public class benchmarkGraphAlgorithm {
 				try {
 					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDB_DB);
 					pdb = fullpdb.getChain(chainCode);
-					int length = pdb.getObsLength();
-					int atoms = pdb.getNumAtoms();
+					int length = pdb.getStdAaObsLength();
+					int atoms = pdb.getNumStdAaHeavyAtoms();
 
 					// get graph
 					long start = System.currentTimeMillis();

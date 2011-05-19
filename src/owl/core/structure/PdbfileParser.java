@@ -26,9 +26,11 @@ import owl.core.util.FileFormatException;
  * they don't match. The internal residue numbers will then match the SEQRES.
  * If only ATOM lines are present the ATOM line sequence will be used as SEQRES. 
  * Exceptions will be thrown when:
- * - all residues are non-standard for a given chain (0 observed residues)
+ * - a chain contains 0 observed residues
  */
 public class PdbfileParser {
+	
+	private static boolean DEBUG = false;
 	
 	// the values for the parameters of the alignment have been fine tuned, checking that it works with as many PDB files as possible
 	private static final float	GAP_OPEN_SCORE =	0.2f; // default 10f
@@ -37,14 +39,14 @@ public class PdbfileParser {
 
 	private static final Pattern INNER_GAPS_REGEX = Pattern.compile("\\w-+\\w");
 	
-	private static final String NULL_chainCode = "A";
+	public static final String NULL_chainCode = "A";
 	
 	private String pdbfile;
 	private boolean isCaspTS; // whether we are reading a CASP TS file (true) or a normal PDB file (false)
 	private boolean hasSeqRes; // whether we find a non-empty SEQRES field in this pdb file
 	
-	private ArrayList<Residue> tmpResiduesList; // the temp list to store the residues read from ATOM lines (need to keep them in order as they appear in file)
-	private HashMap<String,Residue> tmpResiduesMap; // the temp map of all seen pdb residue serials to residues (need it for fast searches)
+	private HashMap<String,ArrayList<Residue>> tmpResiduesLists; // a map of pdb chain codes to the temp lists to store the residues read from ATOM lines (need to keep them in order as they appear in file)
+	private HashMap<String,HashMap<String,Residue>> tmpResiduesMaps; // a map of pdb chain codes to the temp maps of all seen pdb residue serials to residues (need it for fast searches)
 	
 	private String pdbCode;
 	private String title;
@@ -55,9 +57,12 @@ public class PdbfileParser {
 	private double rFree;
 	private double rSym; 
 	
+	private int caspTargetNum;
+	private String[] caspParents;
+	
 	private int model;
 	
-	private String sequence;
+	private HashMap<String,String> sequences;
 	
 	private String[] chainsArray;
 	private Integer[] modelsArray;
@@ -70,7 +75,6 @@ public class PdbfileParser {
 	public PdbfileParser (String pdbfile) {
 		this.pdbfile = pdbfile;
 		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
-		this.hasSeqRes = false; // we assume that there is no SEQRES in this pdb file, if SEQRES is found when reading we set it to true
 		
 		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
 		this.resolution = -1;
@@ -82,39 +86,31 @@ public class PdbfileParser {
 	/**
 	 * Reads PDB data (coordinates, sequence, etc.) from the PDB file
 	 * for given pdbChainCode and modelSerial
-	 * @param pdbChainCode
+	 * @param pdbAsymUnit
 	 * @param modelSerial
 	 * @throws PdbLoadException
 	 */
-	public PdbChain readChain(String pdbChainCode, int modelSerial) throws PdbLoadException {
+	public void readChains(PdbAsymUnit pdbAsymUnit, int modelSerial) throws PdbLoadException {
 		
-		PdbChain pdb = new PdbChain();
 		try {
 			this.model=modelSerial;
-			pdb.setPdbChainCode(pdbChainCode);			// NOTE! pdb chain codes are case sensitive!
-			// we set chainCode to pdbChainCode except for case PdbChain.NULL_CHAIN_CODE where we use "A"
-			pdb.setChainCode(pdbChainCode);
-			if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)) pdb.setChainCode(NULL_chainCode);
 
-			parse(pdb);
+			parse(pdbAsymUnit);
 			
-			if(!pdb.getSecondaryStructure().isEmpty()) {
-				pdb.getSecondaryStructure().setComment("Author");
-				pdb.initialiseResiduesSecStruct();
-			}			
-
-			pdb.initialiseMaps();
+			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
+				pdb.initialiseMaps();
+			}
 			
 			// so that the GC releases memory (hopefully) for the tmp residue objects
-			tmpResiduesList = null;
-			tmpResiduesMap = null;
+			tmpResiduesLists = null;
+			tmpResiduesMaps = null;
 			
 		} catch (FileFormatException e) {
 			throw new PdbLoadException(e);
 		} catch (IOException e) {
 			throw new PdbLoadException(e);
 		} 
-		return pdb;
+//		return pdb;
 	}
 	
 	/**
@@ -231,25 +227,25 @@ public class PdbfileParser {
 	 * The sequence is either read from SEQRES if present or from the residues read from ATOM 
 	 * lines. If the alignment given by the residue numbers does not match, then we realign
 	 * and reassign internal residue numbers.
+	 * @param pdbAsymUnit
 	 * @throws IOException
 	 * @throws FileFormatException if file is empty, if file is a CASP TS file 
 	 * and no TARGET line found
 	 * @throws PdbLoadException if no ATOM lines are found for given 
 	 * pdbChainCode and model or the space group found is not recognised
 	 */
-	private void parse(PdbChain pdb) throws IOException, FileFormatException, PdbLoadException { 
-		tmpResiduesList = new ArrayList<Residue>();
-		tmpResiduesMap = new HashMap<String,Residue>();
-		SecondaryStructure secondaryStructure = new SecondaryStructure("");
+	private void parse(PdbAsymUnit pdbAsymUnit) throws IOException, FileFormatException, PdbLoadException {
+		AtomLineList atomLines = new AtomLineList();
+		sequences = new HashMap<String,String>();
+		//HashMap<String,SecondaryStructure> secStructures = new HashMap<String,SecondaryStructure>();
+		ArrayList<SecStructureLine> secStructureLines = new ArrayList<SecStructureLine>();
+		tmpResiduesLists = new HashMap<String, ArrayList<Residue>>();
+		tmpResiduesMaps = new HashMap<String, HashMap<String,Residue>>();
 		Pattern p;
 		Matcher m;
-		// we set chainCodeStr (for regex) to pdbChainCode except for case PdbChain.NULL_CHAIN_CODE where we use " " (PdbChain.NULL_CHAIN_CODE is a blank chain code in pdb files)
-		String chainCodeStr=pdb.getPdbChainCode();
-		if (pdb.getPdbChainCode().equals(PdbAsymUnit.NULL_CHAIN_CODE)) chainCodeStr=" ";
 		this.title = "";
-		this.sequence = ""; // we will put here the sequence we find (either from SEQRES or ATOM lines)
+		boolean outOfPolyChain = false; // true when out of poly chain (after TER record seen), false again when an ATOM record found
 		int lastAtomSerial = -1;
-		int totalInsCodesFound = 0;
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		int thismodel=PdbAsymUnit.DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -283,7 +279,7 @@ public class PdbfileParser {
 							p = Pattern.compile("^TARGET\\s+[Tt](\\d+)");
 							m = p.matcher(line);
 							if (m.find()) {
-								pdb.setTargetNum(Integer.parseInt(m.group(1)));
+								caspTargetNum = Integer.parseInt(m.group(1));
 							} else {
 								fpdb.close();
 								throw new FileFormatException("The CASP TS file "+pdbfile+" does not have a TARGET line");
@@ -368,9 +364,12 @@ public class PdbfileParser {
 			}
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
-			p = Pattern.compile("^SEQRES.{5}"+chainCodeStr);
-			m = p.matcher(line);
-			if (m.find()){
+			if (line.startsWith("SEQRES")){
+				String chain = line.substring(11,12);
+				if (!sequences.containsKey(chain)) {
+					sequences.put(chain,"");
+				}
+				String sequence = sequences.get(chain);
 				for (int i=19;i<=67;i+=4) {
 					// most pdb files have blank spaces up to 80 characters, but some don't.
 					// because of that we need to check that (in the last line of SEQRES) the line is long enough
@@ -379,59 +378,47 @@ public class PdbfileParser {
 						if (!line.substring(i, i+3).equals("   ")) {
 							if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
 								sequence+= AminoAcid.three2one(line.substring(i, i+3));
+							} else if (Nucleotide.isStandardNuc(line.substring(i, i+3).trim())) {
+								sequence+=Nucleotide.getByCode(line.substring(i, i+3).trim()).getOneLetterCode();
 							} else {
-								sequence+= AminoAcid.XXX.getOneLetterCode();
+								sequence+=AminoAcid.XXX.getOneLetterCode();
 							}
 						}
 					}
 				}
-				if (!sequence.equals("")) {// if SEQRES was not empty then we have a sequence
+				sequences.put(chain,sequence);
+				// if SEQRES was not empty then we have sequences
+				if (!sequences.isEmpty()) {
 					hasSeqRes = true;
 				}
 			}
 			// SECONDARY STRUCTURE
 			// helix
 			//HELIX    1   1 LYS A   17  LEU A   26  1
-			//							helix ser				beg res ser					end res ser
-			p = Pattern.compile("^HELIX..(...).{9}"+chainCodeStr+".(....).{6}"+chainCodeStr+".(....)");
-			m = p.matcher(line);
-			if (m.find()){
-				int serial = Integer.valueOf(m.group(1).trim());
-				int beg = Integer.valueOf(m.group(2).trim());
-				int end = Integer.valueOf(m.group(3).trim());
-				String ssId = new Character(SecStrucElement.HELIX).toString()+serial;
-				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.HELIX,beg,end,ssId);
-				secondaryStructure.add(ssElem);
+			if (line.startsWith("HELIX")){
+				String begChain = line.substring(19,20);
+				String endChain = line.substring(31,32);
+				int serial = Integer.valueOf(line.substring(7,10).trim());
+				String beg = line.substring(21,26).trim();
+				String end = line.substring(33,38).trim();
+				secStructureLines.add(new SecStructureLine("HELIX", begChain, endChain, beg, end, serial, ""));
 			}
 			// sheet
 			//SHEET    2   A 5 ILE A  96  THR A  99 -1  N  LYS A  98   O  THR A 107
-			//                       strand ser sheet id			 beg res ser                 end res ser
-			p = Pattern.compile("^SHEET..(...).(...).{7}"+chainCodeStr+"(....).{6}"+chainCodeStr+"(....)");
-			m = p.matcher(line);
-			if (m.find()){
-				int strandSerial = Integer.valueOf(m.group(1).trim());
-				String sheetId = m.group(2).trim();
-				int beg = Integer.valueOf(m.group(3).trim());
-				int end = Integer.valueOf(m.group(4).trim());
-				String ssId = new Character(SecStrucElement.STRAND).toString()+sheetId+strandSerial;
-				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND,beg,end,ssId);
-				secondaryStructure.add(ssElem);
+			if (line.startsWith("SHEET")){
+				String begChain = line.substring(21,22);
+				String endChain = line.substring(32,33);
+				int strandSerial = Integer.valueOf(line.substring(7,10).trim());
+				String sheetId = line.substring(11,14).trim();
+				String beg = line.substring(22,27).trim();
+				String end = line.substring(33,38).trim();
+				secStructureLines.add(new SecStructureLine("SHEET", begChain, endChain, beg, end, strandSerial, sheetId));
 			}
-			// we've stored the sec structure info in the strands2begEnd and sheets2strands maps.
-			// the assignment to resser2secstruct is done when we reach the ATOM lines, see below
-			// turn
+			
 			//TURN     1 S1A GLY A  16  GLN A  18     SURFACE
 			//							turn ser				beg res ser					end res ser
-			p = Pattern.compile("^TURN...(...).{9}"+chainCodeStr+"(....).{6}"+chainCodeStr+"(....)");
-			m = p.matcher(line);
-			if (m.find()){
-				int serial = Integer.valueOf(m.group(1).trim());
-				int beg = Integer.valueOf(m.group(2).trim());
-				int end = Integer.valueOf(m.group(3).trim());
-				String ssId = new Character(SecStrucElement.TURN).toString()+serial;
-				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.TURN,beg,end,ssId);
-				secondaryStructure.add(ssElem);
-			}			
+			// turn has been deprecated (see PDB file format ver 3.20)
+			
 			// MODEL
 			// The model serial numbers should occur in columns 11-14 (official PDB format spec)
 			// Here we are less strict: we allow for the numbers to appear in any column after the MODEL keyword (with any number of spaces in between)
@@ -456,12 +443,14 @@ public class PdbfileParser {
 					//System.out.printf("%s ", parentList.getLast());
 				}
 				//System.out.printf("(%d) ", parentList.size());
-				String [] caspParents = new String[0];
+				caspParents = new String[0];
 				caspParents = parentList.toArray(caspParents);
-				pdb.setCaspParents(caspParents);
+			}
+			if (line.startsWith("TER ")) {
+				outOfPolyChain = true;
 			}
 			// ATOM
-			p = Pattern.compile("^ATOM");
+			p = Pattern.compile("^(ATOM|HETATM)");
 			m = p.matcher(line);
 			if (m.find()){
 				try {
@@ -470,18 +459,28 @@ public class PdbfileParser {
 						fpdb.close();
 						throw new FileFormatException("ATOM/HETATM line is too short to contain the minimum fields required. PDB file "+pdbfile+" at line "+linecount);
 					}
-					if (line.substring(21, 22).matches(chainCodeStr)) {
+					if (!line.substring(17,20).trim().equals("HOH")) {
+						if (m.group(1).equals("ATOM")) outOfPolyChain = false;
 						int atomserial=Integer.parseInt(line.substring(6,11).trim());
 						String atom = line.substring(12,16).trim();
 						String res_type = line.substring(17,20).trim();
-						String pdbResSerial = line.substring(22,27).trim();
+						String pdbChainCode = line.substring(21, 22);
+						String pdbResSerialField = line.substring(22,27).trim();
+						int pdbResSerial = 0;
+						String insCode = ".";
+						if (Character.isDigit(pdbResSerialField.charAt(pdbResSerialField.length()-1))) {
+							pdbResSerial = Integer.parseInt(pdbResSerialField);
+						} else {
+							pdbResSerial = Integer.parseInt(pdbResSerialField.substring(0,pdbResSerialField.length()-1));
+							insCode = pdbResSerialField.substring(pdbResSerialField.length()-1);
+						}
 						if(atomserial <= lastAtomSerial) {
 							fpdb.close();
 							throw new FileFormatException("Atom serials do not occur in ascending order in PDB file " + pdbfile + "(atom=" + atomserial + ")");
 						}
 						lastAtomSerial = atomserial;
 						String altCode = line.substring(16, 17);
-						if (!altCode.equals(" ")) pdb.setHasAltCodes(true);
+						if (altCode.equals(" ")) altCode=".";
 						double x = Double.parseDouble(line.substring(30,38).trim());
 						double y = Double.parseDouble(line.substring(38,46).trim());
 						double z = Double.parseDouble(line.substring(46,54).trim());
@@ -506,7 +505,6 @@ public class PdbfileParser {
 							if (element.equals("") || Character.isDigit(element.charAt(0)) || (element.length()==2 && Character.isDigit(element.charAt(1)))) 
 								element = null;
 						}
-	
 						if (isCaspTS && coords.equals(new Point3d(0.0,0.0,0.0))) {
 							// in CASP TS (0,0,0) coordinates are considered unobserved (see http://predictioncenter.org/casp7/doc/casp7-format.html)
 							if (!atomAtOriginSeen) {
@@ -517,39 +515,9 @@ public class PdbfileParser {
 								continue;
 							}
 						} 
-						
-						if (AminoAcid.isStandardAA(res_type)) {
-							int resSerial = 0;
-							if (Character.isDigit(pdbResSerial.charAt(pdbResSerial.length()-1))) {
-								resSerial = Integer.parseInt(pdbResSerial);
-							} else {
-								resSerial = Integer.parseInt(pdbResSerial.substring(0,pdbResSerial.length()-1));
-								if (!tmpResiduesMap.containsKey(pdbResSerial)) {
-									totalInsCodesFound++; // if it is the first time seen we increase counter
-									// the strategy of summing the totalInsCodesFound to the parsed number without ins code
-									// only works when pdbSerial is same as last with ins code e.g. 27 -> 27A (27+1) -> 27B (27+2), 
-									// doesn't work for 0A (0+1) -> 1B (1+2)
-									// in the latter case we simply use the wrong numbering and rely on realigning later
-								}
-							}
-
-							if (!tmpResiduesMap.containsKey(pdbResSerial)) {
-								Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type),resSerial+totalInsCodesFound,pdb); 
-								tmpResiduesList.add(residue);
-								residue.setPdbSerial(pdbResSerial);
-								tmpResiduesMap.put(pdbResSerial,residue);
-							}
-							if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
-								Residue residue = tmpResiduesMap.get(pdbResSerial);
-								// for alt codes we take either blanks or As
-								// this is slightly different from what we do in CifFile or Pdbase where we take either blanks or first (alphabetically) letter
-								// for some entries like 2imf there can be discrepancies (in that one there's no As but only B,C)
-								if (altCode.equals(" ") || altCode.equals("A")) {
-									residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
-								}
-							}
-						}
-
+						atomLines.addAtomLine(
+							new AtomLine(null, altCode, atomserial, atom, element, res_type, 0, pdbResSerial, insCode, coords, occupancy, bfactor, 
+									pdbChainCode, outOfPolyChain, m.group(1).equals("HETATM")));
 					}
 				} catch(NumberFormatException e) {
 					fpdb.close();
@@ -559,37 +527,183 @@ public class PdbfileParser {
 			}
 		}
 		fpdb.close();
-		// we check that there was at least one observed residue for the chain
-		if (tmpResiduesList.size()==0) {
-			throw new PdbLoadException("Couldn't find any ATOM line for given pdbChainCode: "+pdb.getPdbChainCode()+", model: "+model);
+		// we check that there was at least one observed residue
+		if (atomLines.isEmpty()) {
+			throw new PdbLoadException("Couldn't find any ATOM/HETATM line for model: "+model);
 		}
 		
-		checkForEmptyResidues();
-		checkSeqResMatching();
-		
-		
-		
-		// now that we have realigned and renumbered we fill the final PdbChain object
-		pdb.setSequence(sequence);
-		secondaryStructure.setSequence(sequence);
-		pdb.setSecondaryStructure(secondaryStructure);
-		
-		for (Residue residue:tmpResiduesList){
-			pdb.addResidue(residue);
+		atomLines.sortIntoChains(); // this assigns the labelAsymIds (chainCodes) and the isNonPoly fields and finds out the pdbchaincode2chaincode mapping
+		pdbAsymUnit.setPdbchaincode2chaincode(atomLines.getPdbChainCode2chainCode());
+		String altLoc = atomLines.getAtomAltLoc();
+
+		for (ArrayList<AtomLine> group:atomLines.getAtomLineGroups().values()) {
+			AtomLine firstAtomLine = group.get(0);
+			
+			PdbChain pdb = new PdbChain();
+			pdb.setChainCode(firstAtomLine.labelAsymId);
+			pdb.setPdbChainCode(firstAtomLine.authAsymId);
+			pdb.setParent(pdbAsymUnit);
+
+			if (firstAtomLine.isNonPoly) {
+				pdb.setIsNonPolyChain(true);
+				pdbAsymUnit.setNonPolyChain(firstAtomLine.labelAsymId,pdb);
+			} else {
+				pdb.setIsNonPolyChain(false);
+				pdbAsymUnit.setPolyChain(firstAtomLine.labelAsymId,pdb);
+				tmpResiduesLists.put(firstAtomLine.authAsymId, new ArrayList<Residue>());
+				tmpResiduesMaps.put(firstAtomLine.authAsymId, new HashMap<String,Residue>());
+			}
+			
+			for (AtomLine atomLine:group) {	
+				
+				// we read only the alt locs we want
+				if (altLoc!=null && !atomLine.labelAltId.equals(altLoc) && !atomLine.labelAltId.equals(".")) continue;
+
+				// creating the residues
+				if (atomLine.isNonPoly==false) {
+					// for polymer chains we don't add them yet to the chains but to the temp lists/maps
+					HashMap<String,Residue> tmpResiduesMap = tmpResiduesMaps.get(atomLine.authAsymId);
+					ArrayList<Residue> tmpResiduesList = tmpResiduesLists.get(atomLine.authAsymId);
+
+					if (!tmpResiduesMap.containsKey(atomLine.getPdbResSerialWithInsCode())) {
+						Residue residue = null;
+						int resSerial = atomLine.pdbResSerial+atomLines.getNumInsCodeForChain(atomLine.authAsymId);
+						if (AminoAcid.isStandardAA(atomLine.res_type)) {
+							residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), resSerial, pdbAsymUnit.getChain(atomLine.authAsymId));
+						} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
+							residue = new NucResidue(Nucleotide.getByCode(atomLine.res_type),resSerial,pdbAsymUnit.getChain(atomLine.authAsymId));
+						} else {
+							residue = new HetResidue(atomLine.res_type, resSerial, pdbAsymUnit.getChain(atomLine.authAsymId));
+						}
+						tmpResiduesList.add(residue);
+						residue.setPdbSerial(atomLine.getPdbResSerialWithInsCode());
+						Residue oldVal = tmpResiduesMap.put(atomLine.getPdbResSerialWithInsCode(),residue);
+						if (oldVal!=null) throw new PdbLoadException("Duplicate residue number for residue "+oldVal);
+
+					}
+					Residue residue = tmpResiduesMap.get(atomLine.getPdbResSerialWithInsCode());
+					residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element, atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
+
+
+				} else {
+					// for non-poly chains we add already residues to the chains (there's no realignment to do) 
+					pdb = pdbAsymUnit.getChainForChainCode(atomLine.labelAsymId);
+					if (!pdb.containsResidue(atomLine.pdbResSerial)) {
+						Residue residue = null;
+						if (AminoAcid.isStandardAA(atomLine.res_type)) {
+							residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), atomLine.pdbResSerial, pdb);
+						} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
+							residue = new NucResidue(Nucleotide.getByCode(atomLine.res_type),atomLine.pdbResSerial,pdb);
+						} else { 
+							residue = new HetResidue(atomLine.res_type,atomLine.pdbResSerial,pdb);
+						}
+						residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial));
+						pdb.addResidue(residue);
+					}
+					Residue residue = pdb.getResidue(atomLine.pdbResSerial);
+					residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element, atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
+				}
+			}
 		}
+
+		if (altLoc!=null) {
+			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
+				pdb.setHasAltCodes(true);
+			}
+		}
+		
+		for (String pdbChainCode:pdbAsymUnit.getPdbChainCodes()){
+			ArrayList<Residue> tmpResiduesList = tmpResiduesLists.get(pdbChainCode);
+			HashMap<String,Residue> tmpResiduesMap = tmpResiduesMaps.get(pdbChainCode);
+
+			checkForEmptyResidues(tmpResiduesList,tmpResiduesMap);
+			checkSeqResMatching(tmpResiduesList,tmpResiduesMap,pdbAsymUnit,pdbChainCode);
+
+			PdbChain pdb = pdbAsymUnit.getChain(pdbChainCode);
+			
+			boolean protein = false;
+			boolean nucleotide = false;
+			
+			for (Residue residue:tmpResiduesList){
+				if (residue instanceof AaResidue) protein = true;
+				if (residue instanceof NucResidue) nucleotide = true;
+				pdb.addResidue(residue);
+			}
+			
+			// now that we have realigned and renumbered we fill the final PdbChain object
+			if (protein && nucleotide) {
+				throw new PdbLoadException("Mix of protein and nucleotide sequences in chain");
+			}
+			if (!protein && !nucleotide) {
+				// in case where not a single std aa or nucleotide are found then we have a chain of Xs, we assume a protein
+				protein = true;
+			}
+			
+			pdb.setSequence(sequences.get(pdbChainCode), protein);
+			
+			
+			// finally we initialise the pdb 2 resser maps
+			TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
+			TreeMap<String,Integer> pdbresser2resser = new TreeMap<String, Integer>();
+			for (int i=0;i<sequences.get(pdbChainCode).length();i++) {
+				if (pdb.containsResidue(i+1)) {
+					Residue residue = pdb.getResidue(i+1);
+					resser2pdbresser.put(residue.getSerial(),residue.getPdbSerial());
+					pdbresser2resser.put(residue.getPdbSerial(),residue.getSerial());
+				} 
+			}
+			pdb.setResser2pdbresserMap(resser2pdbresser);
+			pdb.setPdbresser2resserMap(pdbresser2resser);
+
+			// we set casp members
+			pdb.setCaspParents(caspParents);
+			pdb.setTargetNum(caspTargetNum);
+			
+			// we initialise the secondary structure elements to blank and then we assign them if ss lines were read
+			SecondaryStructure secondaryStructure = new SecondaryStructure("");
+			if (hasSeqRes) {
+				secondaryStructure.setSequence(sequences.get(pdbChainCode));
+			}
+			pdb.setSecondaryStructure(secondaryStructure);
+		}
+		
+		// finally we assign the secondary structure from the parsed sec structure lines
+		int generatedSerial = 1; // we have to generate our own serials because some times those in PDB files are wrong (whilst they have been fixed in CIF!)
+		String lastType = null;
+		String lastId = null;
+		for (SecStructureLine ssline:secStructureLines) {
+			if (!ssline.begChain.equals(ssline.endChain)) 
+				throw new PdbLoadException(ssline.type+" element beg and end chain id differ for ss element with serial "+ssline.serial);
+			SecondaryStructure secStructure = pdbAsymUnit.getChain(ssline.begChain).getSecondaryStructure();
+			String ssId = "";
+			char secStructElem = 0;
+			int beg = pdbAsymUnit.getChain(ssline.begChain).getResSerFromPdbResSer(String.valueOf(ssline.begPdbChainCode));
+			int end = pdbAsymUnit.getChain(ssline.begChain).getResSerFromPdbResSer(String.valueOf(ssline.endPdbChainCode));
+			if ((lastType!=null && !lastType.equals(ssline.type)) || (lastId!=null && !lastId.equals(ssline.id))) {
+				generatedSerial = 1;
+			}
+			if (ssline.type.equals("HELIX")) {
+				ssId = new Character(SecStrucElement.HELIX).toString()+generatedSerial;//ssline.serial;
+				secStructElem = SecStrucElement.HELIX;
+			} else if (ssline.type.equals("SHEET")) {
+				ssId = new Character(SecStrucElement.STRAND).toString()+ssline.id+generatedSerial;//ssline.serial;
+				secStructElem = SecStrucElement.STRAND;
+			}
+			secStructure.add(new SecStrucElement(secStructElem,beg,end,ssId));
+			generatedSerial++;
+			lastType = ssline.type;
+			lastId = ssline.id;
+		}
+		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+			SecondaryStructure secStructure = pdb.getSecondaryStructure();
+			if (!secStructure.isEmpty()) {
+				secStructure.setComment("Author");
+			}
+			pdb.initialiseResiduesSecStruct();
+		}
+
 	
-		// finally we initialise the pdb 2 resser maps
-		TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
-		TreeMap<String,Integer> pdbresser2resser = new TreeMap<String, Integer>();
-		for (int i=0;i<sequence.length();i++) {
-			if (pdb.containsResidue(i+1)) {
-				Residue residue = pdb.getResidue(i+1);
-				resser2pdbresser.put(residue.getSerial(),residue.getPdbSerial());
-				pdbresser2resser.put(residue.getPdbSerial(),residue.getSerial());
-			} 
-		}
-		pdb.setResser2pdbresserMap(resser2pdbresser);
-		pdb.setPdbresser2resserMap(pdbresser2resser);
+
 	}
 	
 	/**
@@ -600,7 +714,7 @@ public class PdbfileParser {
 	 * residues there's no A or no D atoms. This is not standard practice.
 	 * Our approach to alt codes is to take either blanks or 'A'
 	 */
-	private void checkForEmptyResidues() {
+	private void checkForEmptyResidues(ArrayList<Residue> tmpResiduesList, HashMap<String,Residue> tmpResiduesMap) {
 		ArrayList<Residue> emptyResidues = new ArrayList<Residue>();
 		for (Residue residue:tmpResiduesList) {
 			if (residue.getNumAtoms()==0) {
@@ -611,10 +725,9 @@ public class PdbfileParser {
 			tmpResiduesList.remove(emptyRes);
 			tmpResiduesMap.remove(emptyRes.getPdbSerial());
 		}
-			
 	}
 	
-	private void checkSeqResMatching() throws PdbLoadException {
+	private void checkSeqResMatching(ArrayList<Residue> tmpResiduesList, HashMap<String,Residue> tmpResiduesMap, PdbAsymUnit pdbAsymUnit, String pdbChainCode) throws PdbLoadException {
 
 		if (!hasSeqRes){ // no SEQRES could be read
 			boolean canUseResidueNumberingAsIs = true;
@@ -633,60 +746,66 @@ public class PdbfileParser {
 			
 			if (canUseResidueNumberingAsIs) {
 				// we take the residue serials to be a valid numbering and fill the unknown gaps with Xs
-				sequence = "";
+				String sequence = "";
 				for (int resser=1;resser<=tmpResiduesList.get(tmpResiduesList.size()-1).getSerial();resser++) {
 					if (tmpResiduesMap.containsKey(String.valueOf(resser))) {
-						sequence += tmpResiduesMap.get(String.valueOf(resser)).getAaType().getOneLetterCode();
+						sequence += tmpResiduesMap.get(String.valueOf(resser)).getShortCode();
 					} else {
 						sequence += AminoAcid.XXX.getOneLetterCode();
 					}
 				}
+				sequences.put(pdbChainCode, sequence);
 			} else {
 				// we take the sequence from the residues Map
 				// and renumber
-				sequence = "";
+				String sequence = "";
 				int newResSer = 1;
 				for (Residue residue:tmpResiduesList) {
-					sequence += residue.getAaType().getOneLetterCode();
+					sequence += residue.getShortCode();
 					residue.setSerial(newResSer);
 					newResSer++;
 				}
+				sequences.put(pdbChainCode, sequence);
 			}
 			
 		} else { // we could read the sequence from SEQRES
 			boolean aligned = true;
-			if (tmpResiduesList.size()>sequence.length()) {
+			
+			if (tmpResiduesList.size()>sequences.get(pdbChainCode).length()) {
 				throw new PdbLoadException("The sequence from ATOM lines is longer than the SEQRES sequence.");
 			}
 			// we check that the sequences from ATOM lines and SEQRES coincide (except for unobserved residues)
 			for (Residue residue:tmpResiduesList) {
 				int resser = residue.getSerial();
-				if (resser<1 || resser>sequence.length()) {
+				if (resser<1 || resser>sequences.get(pdbChainCode).length()) {
 					aligned = false;
 					break;
 				}
-				if (residue.getAaType().getOneLetterCode()!=sequence.charAt(resser-1)){
+				if (residue.getShortCode()!=sequences.get(pdbChainCode).charAt(resser-1)){
 					aligned = false;
 					break;
 				}				
 			}
 			if (!aligned) {
-				if (!checkIfShifted()) {
-					reAlignSeqRes();
+				if (!checkIfShifted(tmpResiduesList,sequences.get(pdbChainCode))) {
+					reAlignSeqRes(tmpResiduesList,sequences.get(pdbChainCode));
 				}
 			} 
 		}
 	}
 	
-	private void reAlignSeqRes() throws PdbLoadException {
+	private void reAlignSeqRes(ArrayList<Residue> tmpResiduesList, String sequence) throws PdbLoadException {
 		String obsSequence = "";
 		for (Residue residue:tmpResiduesList) {
-			obsSequence += residue.getAaType().getOneLetterCode();
+			obsSequence += residue.getShortCode();
 		}
 		try {
 			PairwiseSequenceAlignment psa = new PairwiseSequenceAlignment(sequence, obsSequence, "SEQRES", "ATOM",
 					GAP_OPEN_SCORE,GAP_EXTEND_SCORE,ALI_SCORING_MATRIX);
-			//psa.printAlignment();
+			if (DEBUG) {
+				System.out.println("Realigning ATOM to SEQRES");
+				psa.printAlignment();
+			}
 			// 1st check: all positions of ATOM sequence are identical to a position in SEQRES
 			if (psa.getIdentity()!=obsSequence.length()) {
 				throw new PdbLoadException("The ATOM lines sequence does not align with identities for all its positions.\n"+psa.getAlignmentString());
@@ -703,8 +822,10 @@ public class PdbfileParser {
 				res.setSerial(posInSeqRes+1);
 			}
 
-
-			check3Dcontiguity(psa);
+			// the 3D contiguity check we can only do for amino acids and not for nucleotides
+			if (isProtein(tmpResiduesList)) {
+				check3Dcontiguity(psa,tmpResiduesList,sequence);
+			}
 			
 		} catch (PairwiseSequenceAlignmentException e) {
 			throw new PdbLoadException("Could not create alignment of SEQRES and ATOM lines sequences to realign them");
@@ -713,7 +834,15 @@ public class PdbfileParser {
 
 	}
 	
-	private boolean checkIfShifted() {
+	private boolean isProtein(ArrayList<Residue> tmpResiduesList) {
+		for (Residue res:tmpResiduesList){
+			if (res instanceof NucResidue) return false;
+		}
+		return true;
+	}
+	
+	private boolean checkIfShifted(ArrayList<Residue> tmpResiduesList, String sequence) {
+		if (DEBUG) System.out.println("Checking ATOM residue numbering is shifted");
 		// strategy is to take first window residues and see if they match to seqres, 
 		// from that we know the offset and check the rest of sequence
 		// If the whole thing match then we renumber according to the found offset
@@ -721,22 +850,13 @@ public class PdbfileParser {
 		int window = 5;
 		String seqPattern = "";
 		int i = 0;
-		int lastResSerial = -1;
 		while (tmpResiduesList.size()>i && i<window) { 	// if ATOM sequence smaller than window we have to take only the first 1, 2, 3, 4 depending on size
 			Residue currentObsRes = tmpResiduesList.get(i);
-			if (lastResSerial!=-1 && (currentObsRes.getSerial()-lastResSerial)>1) {
-				// if there are gaps in the first window residues we consider them to be non-standard (hoping there are no inner gaps in the first window residues!)
-				// if unobserved residues are present in the first window residues (e.g. 2pvb) then this doesn't find the right shifting and we have to rely on alignment
-				for (int j=1;j<(currentObsRes.getSerial()-lastResSerial);j++) {
-					seqPattern+=AminoAcid.XXX.getOneLetterCode();
-				}
-			} 
-			seqPattern+=currentObsRes.getAaType().getOneLetterCode();
-			lastResSerial = currentObsRes.getSerial();
+			seqPattern+=currentObsRes.getShortCode();
 			i++;
 		}
 		Pattern p = Pattern.compile(seqPattern);
-		Matcher m = p.matcher(this.sequence);
+		Matcher m = p.matcher(sequence);
 		int offSet = -1;
 		if (m.find()) {
 			offSet = m.start();
@@ -747,18 +867,18 @@ public class PdbfileParser {
 		boolean aligned = true;
 		for (Residue residue:tmpResiduesList) {
 			int seqIndex = residue.getSerial()-shift;
-			if (seqIndex<0 || seqIndex>=this.sequence.length()) {
+			if (seqIndex<0 || seqIndex>=sequence.length()) {
 				aligned = false;
 				break;
 			}
-			if (residue.getAaType().getOneLetterCode()!=this.sequence.charAt(seqIndex)) {
+			if (residue.getShortCode()!=sequence.charAt(seqIndex)) {
 				aligned = false;
 				break;
 			}
 		}
 		// if the above doesn't fail for any position, it means there was a shift, we renumber accordingly
-		if (aligned) {
-			//System.err.println("Shift found, renumbering");
+		if (aligned) {			
+			if (DEBUG) System.out.println("Shift of "+shift+" residues found, renumbering");
 			for (Residue residue:tmpResiduesList) {
 				residue.setSerial(residue.getSerial()-shift+1);
 			}
@@ -769,8 +889,8 @@ public class PdbfileParser {
 		
 	}
 	
-	private void check3Dcontiguity(PairwiseSequenceAlignment psa) {
-		
+	private void check3Dcontiguity(PairwiseSequenceAlignment psa,ArrayList<Residue> tmpResiduesList, String sequence) {
+		if (DEBUG) System.out.println("Checking 3D contiguity");
 		// There are still ambiguities even if the alignment matches fully, e.g. 2ofz:
 		//SEQRES             1 MGSDKIHHHHHHNTASWFTALTQHGKEELRFPRGQGVPINTNSGPDDQIG     50
         //                       |||||    |||||||||||||||||||||||||||||||||||||||
@@ -801,22 +921,30 @@ public class PdbfileParser {
 			//System.err.println("gap: "+gap);
 			//System.err.println("aln: "+sequence.substring(m.start(),m.end()));
 			
-			Residue leftRes = tmpResiduesList.get(leftAtomIndex);
-			Residue rightRes = tmpResiduesList.get(rightAtomIndex);
+			Residue leftResidue = (AaResidue)tmpResiduesList.get(leftAtomIndex);
+			Residue rightResidue = (AaResidue)tmpResiduesList.get(rightAtomIndex);
+			if (!(leftResidue instanceof AaResidue) || !(rightResidue instanceof AaResidue)) {
+				// one of them is not an amino acid, there's not much we can do
+				return;
+			}
 
+			AaResidue leftRes = (AaResidue) leftResidue;
+			AaResidue rightRes = (AaResidue) rightResidue;
+			
 			char letterLeftSwapRes = sequence.charAt(leftSeqresIndex+1);
 			char letterRightSwapRes = sequence.charAt(rightSeqresIndex-1);
 			
 			// we only want to check if there is a possibility of swapping the residues flanking the gap (one of the 2 cases above)
-			if (leftRes.getAaType().getOneLetterCode()==letterRightSwapRes || rightRes.getAaType().getOneLetterCode()==letterLeftSwapRes) {
+			if (leftRes.getShortCode()==letterRightSwapRes || rightRes.getShortCode()==letterLeftSwapRes) {
 				if (leftRes.isContiguous(rightRes)) { // if not there's nothing to do, they are correctly aligned
-					Residue leftResMin1 = null;
+					if (DEBUG) System.out.println("Possible 3D discontiguity found between residues "+leftRes+" and "+rightRes+". Will try to fix.");
+					AaResidue leftResMin1 = null;
 					if (leftAtomIndex-1>0) {
-						leftResMin1 = tmpResiduesList.get(leftAtomIndex-1);
+						leftResMin1 = (AaResidue)tmpResiduesList.get(leftAtomIndex-1);
 					}					
-					Residue rightResPlus1 = null;
+					AaResidue rightResPlus1 = null;
 					if (rightAtomIndex+1<tmpResiduesList.size()) {
-						rightResPlus1 = tmpResiduesList.get(rightAtomIndex+1);
+						rightResPlus1 = (AaResidue)tmpResiduesList.get(rightAtomIndex+1);
 					}
 					if (leftResMin1!=null && leftResMin1.isContiguous(leftRes)) {
 						//System.err.println("right to left");
@@ -840,7 +968,7 @@ public class PdbfileParser {
 			
 		}
 	}
-	
+		
 	/**
 	 * Reformats a parent record in one of the various styles found in Casp files to our standard form
 	 * @param s the input parent string

@@ -122,7 +122,7 @@ public class Atom implements Serializable {
 		return this.parentResidue.getSerial();
 	}
 
-	public void setParentResidue(Residue parentResidue) {
+	public void setParentResidue(AaResidue parentResidue) {
 		this.parentResidue = parentResidue;
 	}
 
@@ -195,7 +195,8 @@ public class Atom implements Serializable {
 	}
 	
 	/**
-	 * Equality based on same atom serial and same atom code.
+	 * Equality based on same atom serial and same atom code, same type 
+	 * of parent residue and same serial of parent residue.
 	 */
 	public boolean equals(Object other) {
 		if (!(other instanceof Atom)) return false;
@@ -206,7 +207,7 @@ public class Atom implements Serializable {
 		if (!this.code.equals(o.code)) {
 			return false;
 		}
-		if (!this.parentResidue.getAaType().equals(o.parentResidue.getAaType())) {
+		if (!this.parentResidue.getLongCode().equals(o.parentResidue.getLongCode())) {
 			return false;
 		}
 		if (this.parentResidue.getSerial()!=o.parentResidue.getSerial()) {
@@ -217,12 +218,12 @@ public class Atom implements Serializable {
 	}
 	
 	/**
-	 * Hash code based on serial and atom code.
+	 * Hash code based on serial, atom code, parent residue type and parent residue serial.
 	 */
 	public int hashCode() {
 		int hash = serial;
 	    hash = hash * 31 + code.hashCode();
-	    hash = hash * 31 + parentResidue.getAaType().getNumber();
+	    hash = hash * 31 + parentResidue.getLongCode().hashCode();
 	    hash = hash * 31 + parentResidue.getSerial();
 	    return hash;
 	}

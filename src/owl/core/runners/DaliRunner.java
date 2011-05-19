@@ -127,7 +127,7 @@ public class DaliRunner {
 	Entry<Integer, Character> missing; // the next missing residue that we have to insert
 	int entryKey;
 	int entryPos;
-	if (first.countUnobserved() > 0) {
+	if ((first.getFullLength()-first.getStdAaObsLength()) > 0) {
 	
 		TreeMap<Integer, Character> unobserved1 = first.getUnobservedResidues();
 		entryKey = 0;
@@ -141,10 +141,10 @@ public class DaliRunner {
 		
 	}
 	
-	if (second.countUnobserved() > 0) {
+	if ((second.getFullLength()-second.getStdAaObsLength()) > 0) {
 		entryKey = 0;
 		TreeMap<Integer, Character> unobserved2 = second.getUnobservedResidues();
-		System.out.println(second.countUnobserved());
+		System.out.println((second.getFullLength()-second.getStdAaObsLength()));
 		for (int i = 0; i < unobserved2.size();i++) {
 			missing = unobserved2.higherEntry(entryKey);
 			entryKey = missing.getKey();

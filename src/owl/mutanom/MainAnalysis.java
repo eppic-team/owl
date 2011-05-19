@@ -30,6 +30,7 @@ import owl.core.features.StructuralDomainType;
 //import owl.core.features.UniprotFeature;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.util.MySQLConnection;
 import owl.mutanom.core.Gene;
@@ -1058,10 +1059,10 @@ public class MainAnalysis {
 								Substructure ss = g.getSubstructure(iPos);
 								int iPdbPos = ss.mapUniprotResser2Cif(iPos);
 								int jPdbPos = ss.mapUniprotResser2Cif(jPos);
-								if(ss.getPdb().hasCoordinates(iPdbPos) && ss.getPdb().hasCoordinates(jPdbPos)) {
+								if(ss.getPdb().containsStdAaResidue(iPdbPos) && ss.getPdb().containsStdAaResidue(jPdbPos)) {
 									if(CLUSTERING_ATOM.equalsIgnoreCase("Centroid")) {									
-										Residue iRes = ss.getPdb().getResidue(iPdbPos);
-										Residue jRes = ss.getPdb().getResidue(jPdbPos);
+										AaResidue iRes = (AaResidue)ss.getPdb().getResidue(iPdbPos);
+										AaResidue jRes = (AaResidue)ss.getPdb().getResidue(jPdbPos);
 										Point3d px = iRes.getScCentroid();
 										Point3d py = jRes.getScCentroid();
 										if(px != null && py != null) {
@@ -1457,7 +1458,7 @@ public class MainAnalysis {
 		for(Gene g:targets.getTargets())
 			for(Substructure ss:g.getSubstructuresWithMutations()) {
 			//for(Substructure ss:g.getSubstructures()) {
-				for(int pos:ss.getPdb().getAllSortedResSerials()) {
+				for(int pos:ss.getPdb().getAllStdAaResSerials()) {
 					double rsa = getExposureFromDb(conn, ss.getPdbCode(), ss.getChainCode(), pos, singleChain);
 					if(rsa > exposureCutoff) numExposed++;
 					if(rsa <= exposureCutoff) numBuried++;
@@ -1480,8 +1481,8 @@ public class MainAnalysis {
 		for(Gene g:targets.getTargets())
 			for(Substructure ss:g.getSubstructuresWithMutations()) {
 			//for(Substructure ss:g.getSubstructures()) {
-				for(int pos:ss.getPdb().getAllSortedResSerials()) {
-					AminoAcid wtAa = ss.getPdb().getResidue(pos).getAaType();
+				for(int pos:ss.getPdb().getAllStdAaResSerials()) {
+					AminoAcid wtAa = ((AaResidue)ss.getPdb().getResidue(pos)).getAaType();
 					for(AminoAcid mutAa:AminoAcid.values()) {
 						if(mutAa != wtAa) {
 							double ddg = getDeltaDeltaGFromDb(conn, ss.getPdbCode(), ss.getChainCode(), pos, mutAa, singleChain);
@@ -1543,7 +1544,7 @@ public class MainAnalysis {
 		for(Gene g:targets.getTargets()) {
 			for(Mutation m:g.getMutations()) {
 				Substructure ss = g.getSubstructure(m.getPos());
-				if(ss != null && ss.getPdb().hasCoordinates(ss.mapUniprotResser2Cif(m.getPos()))) {
+				if(ss != null && ss.getPdb().containsStdAaResidue(ss.mapUniprotResser2Cif(m.getPos()))) {
 //					if(g.getGeneName().equals("PTEN") && m.position == 45) {
 //						System.out.println("!");
 //					}

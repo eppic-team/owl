@@ -406,7 +406,7 @@ public class PhiPsiAverager {
 	
 	/**
 	 * Returns a set of phi/psi angle constraints by taking phi/psi values
-	 * of the given structure only for residues in the given intervals.
+	 * of the given structure only for standard amino acid residues in the given intervals.
 	 * A margin is added to the exact values from the given structure so the
 	 * restraints will be phi+-margin, psi+-margin
 	 * @param pdb
@@ -419,7 +419,7 @@ public class PhiPsiAverager {
 		 for (Interval interv:intervals) {
 			 for (int resser=interv.beg;resser<=interv.end;resser++) {
 				 // we check at the same time resser, resser-1 and resser+1, thus we take both phi/psi angles or none
-				 if (pdb.hasCoordinates(resser) && pdb.hasCoordinates(resser-1) && pdb.hasCoordinates(resser+1)) {
+				 if (pdb.containsStdAaResidue(resser) && pdb.containsStdAaResidue(resser-1) && pdb.containsStdAaResidue(resser+1)) {
 					 int phi = (int) Math.round(pdb.getPhiAngle(resser));
 					 int psi = (int) Math.round(pdb.getPsiAngle(resser));
 					 ConsensusSquare consSquare = 

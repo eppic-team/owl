@@ -2,13 +2,12 @@ package owl.decoyScoring;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.TreeMap;
 
 import javax.vecmath.Point3d;
 
 import edu.uci.ics.jung.graph.util.Pair;
-import owl.core.structure.Atom;
 import owl.core.structure.PdbChain;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGGeometry;
 import owl.core.structure.graphs.RIGNode;
@@ -75,7 +74,7 @@ public class GeomScorer extends Scorer {
 			return scoreIt(pdb, graph);
 		}
 		else {
-			RIGGeometry graphGeom = new RIGGeometry(graph, pdb.getResidues());
+			RIGGeometry graphGeom = new RIGGeometry(graph, pdb);
 			return scoreIt(pdb, graph, graphGeom);
 		}
 //		if (scoreGeom){
@@ -127,28 +126,28 @@ public class GeomScorer extends Scorer {
 			int iNum = iNode.getResidueSerial();
 			int jNum = jNode.getResidueSerial();
 			
-			TreeMap<String,Atom> atomsI =pdb.getResidue(iNum).getAtomsMap();
-			TreeMap<String,Atom> atomsJ =pdb.getResidue(jNum).getAtomsMap();
+			AaResidue atomsI = (AaResidue)pdb.getResidue(iNum);
+			AaResidue atomsJ = (AaResidue)pdb.getResidue(jNum);
 			
-			if (atomsI.containsKey("CA") && atomsJ.containsKey("CA")){
-				Point3d iCoord=pdb.getResidue(iNum).getAtomsMap().get("CA").getCoords();
-				Point3d jCoord=pdb.getResidue(jNum).getAtomsMap().get("CA").getCoords();
+			if (atomsI.containsAtom("CA") && atomsJ.containsAtom("CA")){
+				Point3d iCoord=atomsI.getAtom("CA").getCoords();
+				Point3d jCoord=atomsJ.getAtom("CA").getCoords();
 				
 				double resDist=Math.sqrt((Math.pow((iCoord.x-jCoord.x), 2)+Math.pow((iCoord.y-jCoord.y), 2)+Math.pow((iCoord.z-jCoord.z), 2)));
 				
 				if (Math.abs(iNum-jNum)>this.directNbThres){
-					boolean inOnNorthernHem = graphGeom.isContactOnNorthernHemisphere(pdb.getResidue(iNum), pdb.getResidue(jNum));
+					boolean inOnNorthernHem = graphGeom.isContactOnNorthernHemisphere((AaResidue)pdb.getResidue(iNum), (AaResidue)pdb.getResidue(jNum));
 					if (archiveFN!=null){
 						try {
 							// position of j with respect to i
-							double val = graphGeom.getLogOddsScore(pdb.getResidue(iNum), pdb.getResidue(jNum), resDist, archiveFN);
+							double val = graphGeom.getLogOddsScore((AaResidue)pdb.getResidue(iNum), (AaResidue)pdb.getResidue(jNum), resDist, archiveFN);
 							val = testLOSforValidity(val, inOnNorthernHem);
 							if (val!=INVALID_LOS){
 								score += val;
 								numSummedScores++;
 							}
 							// position of i with respect to j
-							val = graphGeom.getLogOddsScore(pdb.getResidue(jNum), pdb.getResidue(iNum), resDist, archiveFN);
+							val = graphGeom.getLogOddsScore((AaResidue)pdb.getResidue(jNum),(AaResidue)pdb.getResidue(iNum), resDist, archiveFN);
 							val = testLOSforValidity(val, inOnNorthernHem);
 							if (val!=INVALID_LOS){
 								score += val;
@@ -163,13 +162,13 @@ public class GeomScorer extends Scorer {
 						}
 					} else{
 						try {
-							double val = sphoxel.getLogOddsScore(pdb.getResidue(iNum), pdb.getResidue(jNum), resDist, graphGeom);
+							double val = sphoxel.getLogOddsScore((AaResidue)pdb.getResidue(iNum), (AaResidue)pdb.getResidue(jNum), resDist, graphGeom);
 							val = testLOSforValidity(val, inOnNorthernHem);
 							if (val!=INVALID_LOS){
 								score += val;
 								numSummedScores++;
 							}
-							val = sphoxel.getLogOddsScore(pdb.getResidue(jNum), pdb.getResidue(iNum), resDist, graphGeom);
+							val = sphoxel.getLogOddsScore((AaResidue)pdb.getResidue(jNum), (AaResidue)pdb.getResidue(iNum), resDist, graphGeom);
 							val = testLOSforValidity(val, inOnNorthernHem);
 							if (val!=INVALID_LOS){
 								score += val;

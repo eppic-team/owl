@@ -227,7 +227,7 @@ public abstract class Scorer {
 	 * @return
 	 */
 	public static boolean isValidPdb(PdbChain pdb) {
-		if (pdb.getObsLength()<=MIN_VALID_CHAIN_LENGTH) {
+		if (pdb.getStdAaObsLength()<=MIN_VALID_CHAIN_LENGTH) {
 			return false;
 		}
 		return pdb.isAllAtom();

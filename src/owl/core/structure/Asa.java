@@ -217,16 +217,15 @@ public class Asa {
 		int nThreads = Integer.parseInt(args[1]);
 		
 		long start = System.currentTimeMillis();
-		pdb.calcASAs(9600,nThreads);
+		pdb.calcASAs(9600,nThreads,false);
 		long end = System.currentTimeMillis();
 		
 		double tot = 0;
 		
 		for (PdbChain chain:pdb.getAllChains()) {
-			for (int resser:chain.getAllSortedResSerials()) {
-				Residue res = chain.getResidue(resser);
+			for (Residue res:chain) {
 
-				System.out.printf("%3d\t%s\t%6.2f\n",res.getSerial(),res.getAaType().getThreeLetterCode(),res.getAsa());
+				System.out.printf("%3d\t%s\t%6.2f\n",res.getSerial(),res.getLongCode(),res.getAsa());
 				tot+=res.getAsa();
 			}
 		}

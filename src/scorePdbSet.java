@@ -48,7 +48,7 @@ public class scorePdbSet {
 				if (!Scorer.isValidPdb(pdb)) {
 					continue;
 				}
-				System.out.printf("%5s\t%4d\t%7.2f\t%7.2f\n",pdbId,pdb.getObsLength(),resScorer.scoreIt(pdb),atomScorer.scoreIt(pdb));
+				System.out.printf("%5s\t%4d\t%7.2f\t%7.2f\n",pdbId,pdb.getStdAaObsLength(),resScorer.scoreIt(pdb),atomScorer.scoreIt(pdb));
 			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load "+pdbId);
 				continue;

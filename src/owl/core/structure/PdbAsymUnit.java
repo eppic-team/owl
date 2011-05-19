@@ -16,11 +16,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
@@ -44,7 +44,7 @@ import owl.core.util.MySQLConnection;
  * @author duarte_j
  *
  */
-public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
+public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/*------------------------------------  constants ---------------------------------------------*/
 	
@@ -52,10 +52,9 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 
 	public static final int    DEFAULT_MODEL   = 1;			// default model serial (NMR structures)
 	
-	// to specify the NULL (blank in pdb file) chain code. 
-	// Should be safe now to change the value of this constant from "NULL" to something else,
-	// all hard coded "NULL" strings have been checked now (Jose svn rev. 609)
-	public static final String NULL_CHAIN_CODE = "NULL";	
+	// to specify the NULL (blank in pdb file) chain code
+	// NOTE: the value of this constant used to be "NULL"
+	public static final String NULL_CHAIN_CODE = "A";	
 	
 	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
 
@@ -71,18 +70,28 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	private String title;
 	
 	/**
-	 * pdbChainCodes to Pdbs
+	 * Polymer chains (peptide/nucleotide): chainCodes to PdbChains
 	 */
 	private TreeMap<String, PdbChain> chains;		
 	
 	/**
-	 * A map of all pdb chain codes to the representative pdbChainCode
+	 * Non-polymer chains (ligands and other het residues): chainCodes to PdbChains
+	 */
+	private TreeMap<String, PdbChain> nonPolyChains;
+	
+	/**
+	 * A map of pdbChainCodes to chainCodes of polymer chains. 
+	 */
+	private TreeMap<String, String> pdbchaincode2chaincode;
+	
+	/**
+	 * A map of all PDB chain codes to the representative pdbChainCode
 	 * (the first chain alphabetically from the group of identical chains)
 	 */
 	private HashMap<String, String> chain2repChain;
 	
 	/**
-	 * A map of representative pdb chain code to the members of the 
+	 * A map of representative PDB chain code to the members of the 
 	 * group of identical chains
 	 */
 	private HashMap<String,List<String>> repChain2members; 
@@ -141,6 +150,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.title = null;
 		
 		this.chains = new TreeMap<String,PdbChain>();
+		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
 
@@ -179,7 +189,8 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.title = null;
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
-		chains = new TreeMap<String, PdbChain>();
+		this.chains = new TreeMap<String, PdbChain>();
+		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile);
@@ -226,7 +237,9 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.transform = IDENTITY_TRANSFORM;
 		this.transformId = 0;
 		
-		chains = new TreeMap<String, PdbChain>();
+		this.chains = new TreeMap<String, PdbChain>();
+		this.nonPolyChains = new TreeMap<String,PdbChain>();
+
 		loadFromPdbase(conn, dbName);
 	}
 	
@@ -235,12 +248,14 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	private void loadFromPdbFile(File pdbFile) throws PdbLoadException {
 		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
 		
-		String[] chainCodes = parser.getChains();
-		for (int i=0;i<chainCodes.length;i++) {
-			PdbChain chain = parser.readChain(chainCodes[i],model);
-			chain.setParent(this);
-			chains.put(chainCodes[i],chain);
-		}
+//		String[] chainCodes = parser.getChains();
+//		for (int i=0;i<chainCodes.length;i++) {
+//			PdbChain chain = parser.readChain(chainCodes[i],model);
+//			chain.setParent(this);
+//			chains.put(chainCodes[i],chain);
+//		}
+		
+		parser.readChains(this,model);
 		
 		this.pdbCode = parser.getPdbCode();
 		this.expMethod = parser.getExpMethod();
@@ -251,6 +266,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.rFree = parser.getRfree();
 		this.rSym = parser.getRsym();
 		
+
 	}
 	
 	private void loadFromCifFile(File cifFile) throws PdbLoadException, IOException, FileFormatException {
@@ -265,14 +281,12 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.rFree = qParams[1];
 		this.rSym = qParams[2];
 		
-		String[] chainCodes = parser.getChains();
-		for (int i=0;i<chainCodes.length;i++) {
-			PdbChain chain = parser.readChain(chainCodes[i],model);
+		parser.readChains(this, model);
+		for (PdbChain chain:getAllChains()) {
 			chain.setParent(this);
-			chains.put(chainCodes[i],chain);
 		}
-		parser.closeFile();
-		
+
+		parser.closeFile();		
 	}
 	
 	private void loadFromPdbase(MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
@@ -287,12 +301,11 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 			this.rFree = qParams[1];
 			this.rSym = qParams[2];
 
-			String[] chainCodes = parser.getChains();
-			for (int i=0;i<chainCodes.length;i++) {
-				PdbChain chain = parser.readChain(chainCodes[i],model);
+			parser.readChains(this, model);
+			for (PdbChain chain:getAllChains()) {
 				chain.setParent(this);
-				chains.put(chainCodes[i],chain);
 			}
+						
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
 		}
@@ -300,32 +313,113 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	
 	/*----------------------------------  public methods ----------------------------------------*/
 	
+	/**
+	 * Gets a polymer chain given its PDB chain code or null if no such chain exists.
+	 * @return
+	 */
 	public PdbChain getChain(String pdbChainCode) {
-		return chains.get(pdbChainCode);
+		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
+		if (chainCode==null) {
+			return null;
+		} 
+		return chains.get(chainCode);
 	}
 	
 	/**
-	 * Returns the first chain (in ascending alphabetical order of the PDB chain codes)
+	 * Gets a chain (polymer/non-polymer) given its CIF chain code or null if no such chain exists.
+	 * @param chainCode
+	 * @return
+	 */
+	public PdbChain getChainForChainCode(String chainCode) {
+		if (chains.containsKey(chainCode)) return chains.get(chainCode);
+		if (nonPolyChains.containsKey(chainCode)) return nonPolyChains.get(chainCode);
+		return null;
+	}
+
+	/**
+	 * Returns the first polymer chain (in ascending alphabetical order of the PDB chain codes)
 	 * of this PDB entry.
 	 * @return
 	 */
 	public PdbChain getFirstChain() {
-		return chains.firstEntry().getValue();
+		String chainCode = pdbchaincode2chaincode.firstEntry().getValue();
+		return chains.get(chainCode);
 	}
 	
-	public Collection<PdbChain> getAllChains() {
+	/**
+	 * Returns a Collection of all polymer (peptide/nucleotide) chains
+	 * @return
+	 */
+	public Collection<PdbChain> getPolyChains() {
 		return chains.values();
 	}
 	
 	/**
-	 * Returns a sorted set of all PDB chain codes in this entry
+	 * Returns a Collection of all non-polymer (ligands and het residues) chains
+	 * @return
+	 */
+	public Collection<PdbChain> getNonPolyChains() {
+		return nonPolyChains.values();
+	}
+	
+	/**
+	 * Returns a Collection of all polymer and non-polymer chains of this asym unit
+	 * @return
+	 */
+	public Collection<PdbChain> getAllChains() {
+		Collection<PdbChain> all = new ArrayList<PdbChain>();
+		all.addAll(getPolyChains());
+		all.addAll(getNonPolyChains());
+		return all;
+	}
+	
+	/**
+	 * Returns a sorted set of all CIF chain codes in this entry
+	 * @return
+	 */
+	public Set<String> getChainCodes() {
+		Set<String> all = new TreeSet<String>();
+		all.addAll(chains.keySet());
+		all.addAll(nonPolyChains.keySet());
+		return all;
+	}
+	
+	/**
+	 * Returs a sorted set of all CIF chain codes of polymer chains in this entry
+	 * @return
+	 */
+	private Set<String> getPolyChainCodes() {
+		Set<String> all = new TreeSet<String>();
+		all.addAll(chains.keySet());
+		return all;		
+	}
+	
+	/**
+	 * Returns a sorted set of all PDB chain codes of polymer chains in this entry
 	 * @return
 	 */
 	public Set<String> getPdbChainCodes() {
-		return chains.keySet();
+		Set<String> all = new TreeSet<String>();
+		for (PdbChain chain:getPolyChains()) {
+			all.add(chain.getPdbChainCode());	
+		}
+		return all;		
 	}
 	
+	/**
+	 * Returns the total number of chains present in this asym unit. Includes both 
+	 * polymer (protein/nucleotide) and non-polymer (het residues only) chains
+	 * @return
+	 */
 	public int getNumChains() {
+		return chains.size()+nonPolyChains.size();
+	}
+	
+	/**
+	 * Returns the total number of polymer chains present in this asym unit.
+	 * @return
+	 */
+	public int getNumPolyChains() {
 		return chains.size();
 	}
 	
@@ -382,7 +476,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	}
 	
 	/**
-	 * Returns the resolution or -1 if does not apply
+	 * Returns the resolution or -1 if does not apply.
 	 * @return
 	 */
 	public double getResolution() {
@@ -417,25 +511,43 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		this.rSym = rSym;
 	}
 	
-	public void setChain(String pdbChainCode, PdbChain chain) {
-		chains.put(pdbChainCode, chain);
+	/**
+	 * Adds the given polymer chain with given CIF chain code to this asym unit.
+	 * @param chainCode
+	 * @param chain
+	 */
+	public void setPolyChain(String chainCode, PdbChain chain) {
+		chains.put(chainCode, chain);
 	}
 	
 	/**
-	 * Tells whether this PdbAsymUnit contains the given residue serial for the given pdbChainCode
+	 * Adds the given non-polymer chain with gicen CIF chain code to this asym unit. 
+	 * @param chainCode
+	 * @param chain
+	 */
+	public void setNonPolyChain(String chainCode, PdbChain chain) {
+		nonPolyChains.put(chainCode,chain);
+	}
+	
+	/**
+	 * Tells whether a polymer chain of this PdbAsymUnit contains a (observed) residue (standard amino acid,
+	 * het residue or nucleotide) with the given residue serial and given pdbChainCode
 	 * @param resSerial
 	 * @param pdbChainCode
 	 * @return
 	 */
 	public boolean containsResidue(int resSerial, String pdbChainCode) {
-		if (!containsPdbChainCode(pdbChainCode)) {
+		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
+		if (chainCode==null) return false;
+		
+		if (!containsPdbChainCode(chainCode)) {
 			return false;
 		}
-		return this.getChain(pdbChainCode).containsResidue(resSerial);
+		return this.getChain(chainCode).containsResidue(resSerial);
 	}
 	
 	/**
-	 * Tells whether given PdbChain object is contained in this PdbAsymUnit.
+	 * Tells whether given polymer PdbChain object is contained in this PdbAsymUnit.
 	 * Note that this depends on the implementation of PdbChain.equals(). If not 
 	 * implemented then the references are compared.
 	 * @param pdb
@@ -446,36 +558,72 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	}
 	
 	/**
-	 * Tells whether given PDB chain code is contained in this PdbAsymUnit.
+	 * Tells whether a polymer chain with given PDB chain code is contained in this PdbAsymUnit.
 	 * @param pdbChainCode
 	 * @return
 	 */
 	public boolean containsPdbChainCode(String pdbChainCode) {
-		return this.chains.containsKey(pdbChainCode);
+		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
+		if (chainCode==null) return false;
+		return this.chains.containsKey(chainCode);
+	}
+
+	/**
+	 * Tells whether a polymer or non-polymer chain with given CIF chain code is contained in this PdbAsymUnit.
+	 * @param pdbChainCode
+	 * @return
+	 */
+	public boolean containsChainCode(String chainCode) {
+		if (this.chains.containsKey(chainCode)) return true;
+		if (this.nonPolyChains.containsKey(chainCode)) return true;
+		return false;
+	}
+
+	public void setPdbchaincode2chaincode(TreeMap<String,String> pdbchaincode2chaincode) {
+		this.pdbchaincode2chaincode = pdbchaincode2chaincode;	
 	}
 	
 	/**
-	 * Returns the Residue for the given residue serial and pdbChainCode
+	 * Gets the CIF chain code corresponding to the given PDB chain code of a polymer (protein/nucleotide) chain.
+	 * If given PDB chain code is of a non-polymer chain, null will be returned.
+	 * @param pdbChainCode the PDB chain code
+	 * @return
+	 */
+	public String getChainCodeForPdbChainCode(String pdbChainCode) {
+		return this.pdbchaincode2chaincode.get(pdbChainCode);
+	}
+	
+	/**
+	 * Returns the Residue for the given residue serial and pdbChainCode of a polymer chain
 	 * @param resSerial
 	 * @param pdbChainCode
 	 * @return
-	 * @throws the Residue or null if the pdbChaiCode/resSerial combination not contained in this PdbAsymUnit
+	 * @throws the Residue or null if the pdbChainCode/resSerial combination not contained in this PdbAsymUnit
 	 */
 	public Residue getResidue(int resSerial, String pdbChainCode) {
-		if (!this.chains.containsKey(pdbChainCode)) {
+		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
+		if (chainCode==null) return null;
+		if (!this.chains.containsKey(chainCode)) {
 			return null;
 		}
-		return this.getChain(pdbChainCode).getResidue(resSerial);
+		return this.getChain(chainCode).getResidue(resSerial);
 	}
 	
+	/**
+	 * Returns the average coordinate of all atoms in this structure (disregarding atom masses)
+	 * Atoms of all chains (polymer/non-polymer) and of all kinds of residues (standard aminoacids, 
+	 * nucleotides, hets) are considered
+	 * @return
+	 */
 	public Point3d getCenterOfMass() {
 		Vector3d sumVector = new Vector3d();
 		int numAtoms = 0;
-		for (PdbChain chain:this.chains.values()) {
-			for(int atomserial:chain.getAllAtomSerials()) {
-				Point3d coords = chain.getAtomCoord(atomserial);
-				sumVector.add(coords);
-				numAtoms++;
+		for (PdbChain chain:getAllChains()) {
+			for (Residue residue:chain) {
+				for (Atom atom:residue) {
+					sumVector.add(atom.getCoords());
+					numAtoms++;
+				}
 			}
 		}
 		sumVector.scale(1.0/numAtoms);
@@ -499,45 +647,33 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		return new Point3d(asep,bsep,csep);
 	}
 	
+	/**
+	 * Transforms (rotation+translation) this structure in place as indicated by the given matrix. 
+	 * @param m
+	 */
 	public void transform(Matrix4d m) {
 		this.bounds = null; // cached bounds must be reset whenever we transform the coordinates
-		for (PdbChain pdb:this.chains.values()) {
+		for (PdbChain pdb:getAllChains()) {
 			pdb.transform(m);
 		}
 	}
 	
-	public void transform(Matrix4d m, PdbAsymUnit pdb) {
-
-		for (String pdbChainCode:getPdbChainCodes()) {
-			PdbChain newChain = this.getChain(pdbChainCode).copy(pdb);
-			this.getChain(pdbChainCode).transform(m, newChain);
-			pdb.setChain(pdbChainCode, newChain);
-		}
-	}
-
 	/**
-	 * Mirror this Pdb structure by inverting through the origin.
+	 * Mirror this structure by inverting through the origin.
 	 */
 	public void mirror() {
-		for (PdbChain chain:this.chains.values()){
+		for (PdbChain chain:getAllChains()){
 			chain.mirror();
 		}
 	}
 	
-	public List<PdbAsymUnit> getSymRelatedObjects() {
+	private List<PdbAsymUnit> getSymRelatedObjects() {
 		List<PdbAsymUnit> syms = new ArrayList<PdbAsymUnit>();
 		int i = 1; // we start at 1 because we want to skip the identity
 		for (Matrix4d m:this.getTransformations()) {
-			PdbAsymUnit sym = new PdbAsymUnit();
-			sym.setPdbCode(this.pdbCode);
-			sym.setModel(this.model);
-			sym.setTitle(this.title);
-			sym.setCrystalCell(this.crystalCell);
-			sym.setSpaceGroup(this.spaceGroup);
-			for (String pdbChainCode:getPdbChainCodes()) {
-				PdbChain newChain = this.getChain(pdbChainCode).copy(sym);
-				newChain.transform(m);
-				sym.setChain(pdbChainCode, newChain);
+			PdbAsymUnit sym = this.copy();
+			for (PdbChain chain:sym.getAllChains()) {
+				chain.transform(m);
 			}
 			// the transformed object might end up in another cell but we want it in the original cell
 			// that's why we check it now and translate if it wasn't
@@ -545,7 +681,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 			Point3i sep = new Point3i((int)Math.round(sep3d.x),(int)Math.round(sep3d.y),(int)Math.round(sep3d.z));
 			if (!sep.equals(new Point3i(0,0,0))) {
 				// we don't use here doCrystalTranslation method because we don't want sym's transf member to be reset
-				for (PdbChain pdb:sym.chains.values()) {
+				for (PdbChain pdb:sym.getAllChains()) {
 					pdb.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
 				}	
 			}
@@ -557,6 +693,11 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		return syms;
 	}
 	
+	/**
+	 * Generates all symmetry-related objects from this asym unit and returns the whole
+	 * unit cell (this asymmetric unit plus the symmetry-related objects)
+	 * @return
+	 */
 	public PdbUnitCell getUnitCell() {
 		PdbUnitCell cell = new PdbUnitCell();
 		List<PdbAsymUnit> syms = this.getSymRelatedObjects();
@@ -575,9 +716,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
 		this.bounds = null; //bounds must be reset whenever the coordinates are transformed
-		for (PdbChain pdb:this.chains.values()) {
+		for (PdbChain pdb:getAllChains()) {
 			pdb.doCrystalTranslation(direction);
 		}		
+
 		transform.m03 = transform.m03+direction.x;
 		transform.m13 = transform.m13+direction.y;
 		transform.m23 = transform.m23+direction.z;
@@ -600,9 +742,19 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		newAsym.rFree = rFree;
 		newAsym.rSym = rSym;
 		
-		for (String pdbChainCode:getPdbChainCodes()){
-			newAsym.setChain(pdbChainCode, this.getChain(pdbChainCode).copy(newAsym));
+		for (PdbChain chain:getPolyChains()){
+			newAsym.chains.put(chain.getChainCode(), chain.copy(newAsym));
 		}
+		for (PdbChain chain:getNonPolyChains()){
+			newAsym.nonPolyChains.put(chain.getChainCode(), chain.copy(newAsym));
+		}
+
+		newAsym.pdbchaincode2chaincode = new TreeMap<String, String>();
+		newAsym.pdbchaincode2chaincode.putAll(this.pdbchaincode2chaincode);
+		newAsym.chain2repChain = null;
+		newAsym.repChain2members = null;
+		newAsym.bounds = null;
+		
 		newAsym.setTransform(new Matrix4d(this.transform));
 		newAsym.setTransformId(this.getTransformId());
 		return newAsym;
@@ -696,11 +848,12 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * will be used
 	 * @param nSpherePoints
 	 * @param nThreads
+	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads) throws IOException {
-		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, false);
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms) throws IOException {
+		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, false);
 	}
 	
 	/**
@@ -716,11 +869,12 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * will be used
 	 * @param nSpherePoints
 	 * @param nThreads
+	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
 	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean debug) throws IOException {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean debug) throws IOException {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
@@ -741,8 +895,8 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		}
 		// 1. interfaces within unit cell
 		// 1.1 within asymmetric unit
-		for (String iChainCode:this.getPdbChainCodes()) {
-			for (String jChainCode:this.getPdbChainCodes()) {
+		for (String iChainCode:this.getPolyChainCodes()) {
+			for (String jChainCode:this.getPolyChainCodes()) {
 				if (iChainCode.compareTo(jChainCode)<=0) continue;
 				if (debug) {
 					System.out.print(".");
@@ -777,8 +931,8 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		for (int j=0;j<cell.getNumAsymUnits();j++) {
 			PdbAsymUnit jAsym = cell.getAsymUnit(j);
 			if (jAsym==this) continue; // we want to compare this to all others but not to itself
-			for (PdbChain chaini:this.getAllChains()) {
-				for (PdbChain chainj:jAsym.getAllChains()) {
+			for (PdbChain chaini:this.getPolyChains()) {
+				for (PdbChain chainj:jAsym.getPolyChains()) {
 					if (debug) {
 						System.out.print(".");
 						trialCount++;
@@ -830,14 +984,14 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 							}
 							continue;
 						}
-						for (PdbChain chainj:jAsym.getAllChains()) {
+						for (PdbChain chainj:jAsym.getPolyChains()) {
 							//try {
 							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
 							//} catch (FileNotFoundException e) {
 							//	e.printStackTrace();
 							//}
 
-							for (PdbChain chaini:this.getAllChains()) { // we only have to compare the original asymmetric unit to every full cell around
+							for (PdbChain chaini:this.getPolyChains()) { // we only have to compare the original asymmetric unit to every full cell around
 								if (debug) {
 									System.out.print(".");
 									trialCount++;
@@ -881,9 +1035,9 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		for (ChainInterface interf:set) {
 			//System.out.print(".");
 			if (naccessExe!=null) {
-				interf.calcSurfAccessNaccess(naccessExe);
+				interf.calcSurfAccessNaccess(naccessExe,hetAtoms);
 			} else {
-				interf.calcSurfAccess(nSpherePoints, nThreads);
+				interf.calcSurfAccess(nSpherePoints, nThreads,hetAtoms);
 			}
 		}
 		if (debug) {
@@ -915,16 +1069,25 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
 	 * @param nSpherePoints
 	 * @param nThreads
+	 * @param hetAtoms whether to consider hetAtoms or not for area calculations 
 	 */
-	public void calcASAs(int nSpherePoints, int nThreads) {
-		Atom[] atoms = new Atom[this.getNumAtoms()];
+	public void calcASAs(int nSpherePoints, int nThreads, boolean hetAtoms) {
 		
+		int numAtoms = this.getNumAtoms();
+		if (!hetAtoms) {
+			numAtoms = this.getNumNonHetAtoms();
+		}
+		Atom[] atoms = new Atom[numAtoms];
+
 		int i = 0;
-		for (PdbChain pdb:this.getAllChains()) {
+		for (PdbChain pdb:getAllChains()) {
 			pdb.setAtomRadii();
-			for (int atomser: pdb.getAllAtomSerials()) {
-				atoms[i] = pdb.getAtom(atomser);
-				i++;
+			for (Residue residue:pdb) {
+				if (!hetAtoms && (residue instanceof HetResidue)) continue;
+				for (Atom atom:residue) {
+					atoms[i] = atom;
+					i++;
+				}
 			}
 		}
 		
@@ -934,10 +1097,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		}
 
 		// and finally sums per residue
-		for (PdbChain pdb:this.getAllChains()) {
-			for (Residue residue: pdb.getResidues().values()) {
+		for (PdbChain pdb:getAllChains()) {
+			for (Residue residue: pdb) {
 				double tot = 0;
-				for (Atom atom:residue.getAtoms()) {
+				for (Atom atom:residue) {
 					tot+=atom.getAsa();
 				}
 				residue.setAsa(tot);
@@ -951,16 +1114,25 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * to compute the difference and set the bsa members of Atoms and Residues
 	 * @param nSpherePoints
 	 * @param nThreads
+	 * @param hetAtoms whether to consider hetAtoms or not for area calculations
 	 */
-	public void calcBSAs(int nSpherePoints, int nThreads) {
-		Atom[] atoms = new Atom[this.getNumAtoms()];
+	public void calcBSAs(int nSpherePoints, int nThreads, boolean hetAtoms) {
+		
+		int numAtoms = this.getNumAtoms();
+		if (!hetAtoms) {
+			numAtoms = this.getNumNonHetAtoms();
+		}
+		Atom[] atoms = new Atom[numAtoms];
 		
 		int i = 0;
-		for (PdbChain pdb:this.getAllChains()) {
+		for (PdbChain pdb:getAllChains()) {
 			pdb.setAtomRadii();
-			for (int atomser: pdb.getAllAtomSerials()) {
-				atoms[i] = pdb.getAtom(atomser);
-				i++;
+			for (Residue residue:pdb) {
+				if (!hetAtoms && (residue instanceof HetResidue)) continue;
+				for (Atom atom:residue) {
+					atoms[i] = atom;
+					i++;
+				}
 			}
 		}
 		
@@ -969,10 +1141,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
 		}
 		// and finally sums per residue
-		for (PdbChain pdb:this.getAllChains()) {
-			for (Residue residue: pdb.getResidues().values()) {
+		for (PdbChain pdb:getAllChains()) {
+			for (Residue residue: pdb) {
 				double tot = 0;
-				for (Atom atom:residue.getAtoms()) {
+				for (Atom atom:residue) {
 					tot+=atom.getBsa();
 				}
 				residue.setBsa(tot);
@@ -986,7 +1158,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		BoundingBox[] boxes = new BoundingBox[getNumChains()];
 		int numThisAtoms = 0;
 		int i = 0;
-		for (PdbChain chain:this.getAllChains()) {
+		for (PdbChain chain:getAllChains()) {
 			allAtoms[i] = chain.getAllAtoms();
 			numThisAtoms += allAtoms[i].length;
 			boxes[i] = chain.getBoundingBox();
@@ -1012,7 +1184,7 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		}
 		BoundingBox[] boxes = new BoundingBox[getNumChains()];
 		int i = 0;
-		for (PdbChain chain:this.getAllChains()) {
+		for (PdbChain chain:getAllChains()) {
 			boxes[i] = chain.getBoundingBox();
 			i++;
 		}
@@ -1044,12 +1216,40 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		return graph;
 	}
 	
+	/**
+	 * Returns number of atoms in the protein, including Hydrogens if they are present
+	 * Includes all chains (polymer/non-polymer) and all residues (standard aminoacids, 
+	 * non-standard aminoacids, nucleotides and hets) 
+	 * @return number of atoms
+	 */
 	public int getNumAtoms() {
 		int tot = 0;
-		for (PdbChain pdb:this.getAllChains()) {
+		for (PdbChain pdb:getPolyChains()) {
 			tot+=pdb.getNumAtoms();
 		}
+		for (PdbChain pdb:getNonPolyChains()) {
+			tot+=pdb.getNumAtoms();
+		}
+
 		return tot;
+	}
+	
+	/**
+	 * Returns number of atoms in the protein, including Hydrogens if they are present
+	 * Includes all chains (polymer/non-polymer) but only standard amino acids and nucleotides
+	 * (no het residues)
+	 * @return number of atoms
+	 */
+	public int getNumNonHetAtoms() {
+		int tot = 0;
+		for (PdbChain pdb:getPolyChains()) {
+			tot+=pdb.getNumNonHetAtoms();
+		}
+		for (PdbChain pdb:getNonPolyChains()) {
+			tot+=pdb.getNumNonHetAtoms();
+		}
+
+		return tot;		
 	}
 	
 	/**
@@ -1057,16 +1257,16 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * @see #getRepChain(String)
 	 */
 	private void initialiseRepChainsMaps() {
-		// map of sequences to list of chain codes
+		// map of sequences to list of PDB chain codes
 		Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
 		// finding the entities (groups of identical chains)
-		for (String chain:this.chains.keySet()) {
-			PdbChain pdb = getChain(chain);
+		for (PdbChain pdb:getPolyChains()) {
+			
 			if (uniqSequences.containsKey(pdb.getSequence().getSeq())) {
-				uniqSequences.get(pdb.getSequence().getSeq()).add(chain);
+				uniqSequences.get(pdb.getSequence().getSeq()).add(pdb.getPdbChainCode());
 			} else {
 				List<String> list = new ArrayList<String>();
-				list.add(chain);
+				list.add(pdb.getPdbChainCode());
 				uniqSequences.put(pdb.getSequence().getSeq(),list);
 			}		
 		}
@@ -1086,10 +1286,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 	 * Returns the representative chain's PDB chain code for the given PDB chain 
 	 * code, i.e. the first chain (alphabetically) that represents a set of 
 	 * sequence-identical chains.
-	 * A PDB entrity is composed of several chains, some of them can be identical in sequence
-	 * (an entity). For each of those groups (entities) we define a representative chain (the 
+	 * A PDB entry is composed of several chains, some of them can be identical in sequence
+	 * (an entity). For each of those groups (entities) we define a representative chain as (the 
 	 * first PDB chain code alphabetically). 
-	 * That's the chain returned here, given a particular chain.
+	 * That's the chain returned here, given any PDB chain code.
 	 * @param pdbChainCode the chain for which we want to get the representative chain
 	 * @return
 	 * @see {@link #getSeqIdenticalGroup(String)}
@@ -1178,10 +1378,10 @@ public class PdbAsymUnit implements Serializable, Iterable<PdbChain> {
 		os.close();
 	}
 
-	@Override
-	public Iterator<PdbChain> iterator() {
-		return chains.values().iterator();
-	}
+//	@Override
+//	public Iterator<PdbChain> iterator() {
+//		return chains.values().iterator();
+//	}
 	
 
 

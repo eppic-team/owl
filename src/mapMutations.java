@@ -9,6 +9,7 @@ import owl.core.runners.NaccessRunner;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.PdbChain;
 import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.features.CatalSiteSet;
 import owl.core.structure.features.CatalyticSite;
 import owl.core.structure.features.SecStrucElement;
@@ -56,8 +57,8 @@ public class mapMutations {
 		int[] mutations = new int[args.length-1];
 		for (int i = 1; i < args.length; i++) {
 			int pos = Integer.parseInt(args[i]);
-			if(pos > pdb.getObsLength()) {
-				System.err.println("Error: Position " + pos + " is bigger than length of protein (" + pdb.getObsLength() + "). Skipping.");
+			if(pos > pdb.getStdAaObsLength()) {
+				System.err.println("Error: Position " + pos + " is bigger than length of protein (" + pdb.getStdAaObsLength() + "). Skipping.");
 			} else {
 				mutations[i-1] = pos;
 			}
@@ -107,9 +108,9 @@ public class mapMutations {
 
 		// get set of surface residues
 		HashSet<Integer> surfaceResidues = new HashSet<Integer>();
-		for(int r:pdb.getAllSortedResSerials()) {
-			if(pdb.getAllRsaFromResSerial(r) > EXPOSURE_CUTOFF) {
-				surfaceResidues.add(r);
+		for (Residue residue:pdb) {
+			if ((residue instanceof AaResidue) && residue.getRsa() > EXPOSURE_CUTOFF){
+				surfaceResidues.add(residue.getSerial());
 			}
 		}
 		
@@ -130,7 +131,7 @@ public class mapMutations {
 			int pos = mutations[i];
 			boolean exposed = pdb.getAllRsaFromResSerial(pos) > EXPOSURE_CUTOFF;
 			char ssState = pdb.getSecondaryStructure().getSecStrucElement(pos).getType();
-			Residue residue = pdb.getResidue(pos);
+			AaResidue residue = (AaResidue)pdb.getResidue(pos);
 			System.out.printf("Position %d :                    %s %s\n", pos, residue.getAaType().getThreeLetterCode(), getMutChemPropStr(residue.getAaType(), newAA));
 			System.out.printf("Relative surface accessibility :  %2.0f%% (%s)\n", pdb.getAllRsaFromResSerial(pos), exposed?"exposed":"buried");
 			System.out.printf("Secondary structure state:        %3s (%s)\n", ssState, SecStrucElement.getTypeDescription(ssState));

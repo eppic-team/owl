@@ -104,6 +104,14 @@ public class SecStrucElement implements Serializable {
 	}
 	
 	/**
+	 * Sets the range of residue serials for this ss element.
+	 * @param interval
+	 */
+	public void setInterval(Interval interval) {
+		this.interval = interval;
+	}
+	
+	/**
 	 * Returns the sheet serial of this ss element if it is a strand
 	 * @return the sheet serial if this element is a strand and has a sheet 
 	 * serial assigned, 0 otherwise

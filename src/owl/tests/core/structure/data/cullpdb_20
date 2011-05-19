@@ -1,5 +1,18 @@
-# adding a NMR entry to the test set (1NMR), all others are xray. NMR might have special features we want to catch
-1NMR    A 
+# an NMR entry
+1NMR 
+# dna only
+1zf5
+# dna with a ligand
+292d
+# complex dna with prot
+3od8
+# rna only
+2krl
+# rna with prot
+2xfm
+# rna with ligand
+3mei
+# from here cullpdb20
 7ODC	A
 1WB4	A
 2H6F	B
@@ -752,7 +765,7 @@
 2HX0	A
 2P9W	A
 1QWN	A
-2BO9	B
+#2BO9	B # won't pass the pdb file to pdbase test comparison for chain names because (weirdly) a non-poly chain is embedded between 2 poly chains in the PDB file producing a different chain codes mapping
 1WCK	A
 1VCC	A
 1M0K	A

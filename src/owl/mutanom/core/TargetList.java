@@ -23,6 +23,7 @@ import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.AminoAcid;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
@@ -305,12 +306,12 @@ public class TargetList {
 				for(Mutation m:g.getMutations()) {
 					if(m.type == MutType.MISSENSE && g.getSubstructure(m.position) != null) {
 						Substructure ss = g.getSubstructure(m.position);
-						if(ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) {
+						if(ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) {
 							strMut++;
 							//int cosmicPos = g.mapUniprotPos2Cosmic(m.position);
 							//if(m.getWtAA() == AminoAcid.getByOneLetterCode(g.getCosmicSeq().charAt(cosmicPos-1))) {
 							//if(m.getWtAA() == AminoAcid.getByOneLetterCode(g.getUniprotSeq().charAt(m.position-1))) {
-							if(m.getWtAA() == ss.pdb.getResidue(ss.mapUniprotResser2Cif(m.position)).getAaType()) {
+							if(m.getWtAA() == ((AaResidue)ss.pdb.getResidue(ss.mapUniprotResser2Cif(m.position))).getAaType()) {
 								strMutMatch++;
 								mutatedMatchPositions.add(m.position);
 							}
@@ -328,7 +329,7 @@ public class TargetList {
 				for(Mutation m:g.getSNPs()) {
 					if(g.getSubstructure(m.position) != null) {
 						Substructure ss = g.getSubstructure(m.position);
-						if(ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) {
+						if(ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) {
 							strSnp++;
 						}
 					}
@@ -350,7 +351,7 @@ public class TargetList {
 			if(str > 0) {
 				for(Substructure ss:g.getSubstructures()) {
 					res += ss.getEndPos()-ss.getBegPos()+1;
-					strRes += ss.getPdb().getObsLength();
+					strRes += ss.getPdb().getStdAaObsLength();
 				}
 				//cov = 100.0 * res / len;
 				strCov = 100.0 * strRes / len;
@@ -579,7 +580,7 @@ public class TargetList {
 					if(!pdbChain.equals(cifChain)) {
 						System.err.println("Warning: pdb chain code " + pdbChain + " != cif chain code " + cifChain);
 					}
-					for(int p: ss.pdb.getAllSortedResSerials()) {	// only observed residues
+					for(int p: ss.pdb.getAllStdAaResSerials()) {	// only observed residues
 						//int pdbPos = Integer.parseInt(ss.pdb.getResidue(p).getPdbSerial());	// cif -> pdb serial
 						int cifPos = p;
 						int uniprotPos = ss.mapCifResser2Uniprot(p);
@@ -956,7 +957,7 @@ public class TargetList {
 						System.err.println("Warning: No PdbChain object loaded for " + g.geneName + " " + ss.toString());
 						toRemove.add(m);
 					} else {
-						if(!ss.pdb.hasCoordinates(pdbPos)) toRemove.add(m);
+						if(!ss.pdb.containsStdAaResidue(pdbPos)) toRemove.add(m);
 					}
 				}
 			}
@@ -1022,7 +1023,7 @@ public class TargetList {
 					// count number of observed mutations in this domain
 					int numMutations = 0;
 					for(Mutation m:g.getMutations()) {
-						if(intSet.contains(m.position) && ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) {
+						if(intSet.contains(m.position) && ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) {
 							if(ss != g.getSubstructure(m.position)) System.err.printf("Assertion failed: ss(%d)=%s%s != ss(%s)\n", m.position, ss.getPdbCode(),ss.getChainCode(), f.toString());
 							numMutations++;
 						}
@@ -1032,7 +1033,7 @@ public class TargetList {
 					Set<Integer> resSet = new TreeSet<Integer>();	// this will be the set of allowed positions from which to select at random
 					for(int i: intSet) {
 						int pdbPos = ss.mapUniprotResser2Cif(i);
-						if(ss.pdb.hasCoordinates(pdbPos)) resSet.add(pdbPos);
+						if(ss.pdb.containsStdAaResidue(pdbPos)) resSet.add(pdbPos);
 					}
 					Integer[] resArr = new Integer[resSet.size()];	// the same in array form so that random indices can be drawn
 					resArr = resSet.toArray(resArr);
@@ -1165,7 +1166,7 @@ public class TargetList {
 				for(Mutation m:muts) {
 					if(m.type == MutType.MISSENSE && g.getSubstructure(m.position) != null) {
 						Substructure ss = g.getSubstructure(m.position);
-						if(ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) {
+						if(ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) {
 							out.printf("%s\t%d\t%s\t%s\t%d\t%s\n", g.getGeneName(), m.position, m.before.getThreeLetterCode(), m.after.getThreeLetterCode(), m.mutId, m.dnaMutStr);
 						}
 					}
@@ -1244,7 +1245,7 @@ public class TargetList {
 						if(!pdbChain.equals(cifChain)) {
 							System.err.println("Warning: pdb chain code " + pdbChain + " != cif chain code " + cifChain);
 						}
-						for(int cifPos: ss.pdb.getAllSortedResSerials()) {	// only observed residues
+						for(int cifPos: ss.pdb.getAllStdAaResSerials()) {	// only observed residues
 							//int pdbPos = Integer.parseInt(ss.pdb.getResidue(p).getPdbSerial());	// cif -> pdb serial
 							int uniprotPos = ss.mapCifResser2Uniprot(cifPos);
 							//AminoAcid wtAa = ss.pdb.getResidue(p).getAaType();
@@ -1844,10 +1845,10 @@ public class TargetList {
 					}
 					in.close();
 					// write rsa values to database
-					for(int p: ss.pdb.getAllSortedResSerials()) {	// only observed residues
+					for(int p: ss.pdb.getAllStdAaResSerials()) {	// only observed residues
 						int pdbPos = Integer.parseInt(ss.pdb.getResidue(p).getPdbSerial());	// cif -> pdb serial
 						int cifPos = p;
-						AminoAcid wtAa = ss.pdb.getResidue(p).getAaType();		
+						AminoAcid wtAa = ((AaResidue)ss.pdb.getResidue(p)).getAaType();		
 //						String keySc = String.format("%s%04d%s",cifChain,cifPos,wtAa.getThreeLetterCode());
 //						if(!rsasSc.containsKey(keySc)) {
 //							System.err.println("Could not find RSA entry for " + pdbCode + " " + keySc);
@@ -1920,7 +1921,7 @@ public class TargetList {
 					if(!pdbChain.equals(cifChain)) {
 						System.err.println("Warning: pdb chain code " + pdbChain + " != cif chain code " + cifChain);
 					}
-					for(int p: ss.pdb.getAllSortedResSerials()) {	// only observed residues
+					for(int p: ss.pdb.getAllStdAaResSerials()) {	// only observed residues
 						//int pdbPos = Integer.parseInt(ss.pdb.getResidue(p).getPdbSerial());	// cif -> pdb serial
 						int cifPos = p;
 						int uniprotPos = ss.mapCifResser2Uniprot(p);
@@ -2035,12 +2036,12 @@ public class TargetList {
 					if(!pdbChain.equals(cifChain)) {
 						System.err.println("Warning: pdb chain code " + pdbChain + " != cif chain code " + cifChain);
 					}
-					for(int p: ss.pdb.getAllSortedResSerials()) {	// only observed residues
+					for(int p: ss.pdb.getAllStdAaResSerials()) {	// only observed residues
 						String pdbPos = "?";
 						String cifPos = "?";
 						pdbPos = ss.pdb.getResidue(p).getPdbSerial();	// cif -> pdb serial
 						cifPos = Integer.toString(p);
-						AminoAcid wtAa = ss.pdb.getResidue(p).getAaType();
+						AminoAcid wtAa = ((AaResidue)ss.pdb.getResidue(p)).getAaType();
 						String fileName = null;
 						if(useSingleChainPdbFiles) {
 							fileName = FoldXRunner.getJobName(pdbCode, pdbChain, cifPos) + ".txt";
@@ -2184,8 +2185,8 @@ public class TargetList {
 				String pdbCode = ss.pdb.getPdbCode();
 				String cifChain = ss.pdb.getChainCode();
 				String pdbChain = ss.pdb.getPdbChainCode();
-				for(int cifPos:ss.pdb.getAllSortedResSerials()) {
-					AminoAcid wtAa = ss.pdb.getResidue(cifPos).getAaType();
+				for(int cifPos:ss.pdb.getAllStdAaResSerials()) {
+					AminoAcid wtAa = ((AaResidue)ss.pdb.getResidue(cifPos)).getAaType();
 					int pdbPos = Integer.parseInt(ss.pdb.getResidue(cifPos).getPdbSerial());
 					String type = Character.toString(ss.getTypeChar());
 					conn.executeSql(String.format(sql, pdbCode, type, cifChain,cifPos,pdbChain,pdbPos,wtAa.getOneLetterCode()));

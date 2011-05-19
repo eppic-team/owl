@@ -14,7 +14,7 @@ import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PolResidue;
 import owl.core.structure.Polymer;
-import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
@@ -184,7 +184,7 @@ public class analyseHistone {
 		outLys.println("res\tdist\tz\ttheta");
 		System.out.println("res\tdist\tz\ttheta");
 		for (PdbChain pdb:pdbs) {
-			ArrayList<Residue> lysResidues = pdb.getResiduesOfType(AminoAcid.LYS);
+			ArrayList<AaResidue> lysResidues = pdb.getResiduesOfType(AminoAcid.LYS);
 			projectOnCylinderPdb(lysResidues, outLys, AminoAcid.LYS);
 		}
 		 
@@ -195,7 +195,7 @@ public class analyseHistone {
 		outArg.println("res\tdist\tz\ttheta");
 		System.out.println("res\tdist\tz\ttheta");
 		for (PdbChain pdb:pdbs) {
-			ArrayList<Residue> argResidues = pdb.getResiduesOfType(AminoAcid.ARG);
+			ArrayList<AaResidue> argResidues = pdb.getResiduesOfType(AminoAcid.ARG);
 			projectOnCylinderPdb(argResidues, outArg, AminoAcid.ARG);
 		}
 
@@ -272,7 +272,7 @@ public class analyseHistone {
 		}
 	}
 
-	private static void projectOnCylinderPdb(ArrayList<Residue> residues, PrintStream out, AminoAcid aa) {
+	private static void projectOnCylinderPdb(ArrayList<AaResidue> residues, PrintStream out, AminoAcid aa) {
 		
 		ArrayList<Double> zs = new ArrayList<Double>();
 		ArrayList<Double> thetas = new ArrayList<Double>();
@@ -281,7 +281,7 @@ public class analyseHistone {
 		// we take the x axis as reference to measure the theta angle
 		Vector3d iVec = new Vector3d(1,0,0); 
 		
-		for (Residue residue:residues) {
+		for (AaResidue residue:residues) {
 			String atom = null;
 			if (aa.equals(AminoAcid.LYS)) atom = LYS_SIDECHAIN_ATOM;
 			if (aa.equals(AminoAcid.ARG)) atom = ARG_SIDECHAIN_ATOM;

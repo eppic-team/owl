@@ -30,7 +30,8 @@ public class NaccessRunner {
 	/**
 	 * Constructs a NaccessRunner by passing the executable location and parameters
 	 * @param naccessExecutable
-	 * @param naccessParameters
+	 * @param naccessParameters command line parameters to be passed to NACCESS. Use -h for including HETATOMs 
+	 * in surface calculations, by default they aren't included
 	 * @throws IOException if naccessExecutable not readable
 	 */
 	public NaccessRunner(File naccessExecutable, String naccessParameters) throws IOException {
@@ -84,7 +85,7 @@ public class NaccessRunner {
 		if (rsa.exists()) {
 			BufferedReader rsaInput = new BufferedReader(new FileReader(rsa));
 			while ((line = rsaInput.readLine()) != null) {
-				if (line.startsWith("RES")) {
+				if (line.startsWith("RES") || line.startsWith("HEM")) { // we will only have HEM (HETATM lines) if we ran naccess with -h option 
 					int resser = Integer.valueOf(line.substring(9,13).trim());
 					double allasa = Double.valueOf(line.substring(15,22).trim());
 					double allrsa = Double.valueOf(line.substring(22,28).trim());
@@ -166,7 +167,7 @@ public class NaccessRunner {
 		if (rsa.exists()) {
 			BufferedReader rsaInput = new BufferedReader(new FileReader(rsa));
 			while ((line = rsaInput.readLine()) != null) {
-				if (line.startsWith("RES")) {
+				if (line.startsWith("RES") || line.startsWith("HEM")) { // we will only have HEM (HETATM lines) if we ran naccess with -h option
 					int resser = Integer.valueOf(line.substring(9,13).trim());
 					String chain = line.substring(8,9).trim();
 					double allasa = Double.valueOf(line.substring(15,22).trim());

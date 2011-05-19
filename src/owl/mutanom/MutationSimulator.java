@@ -91,7 +91,7 @@ public class MutationSimulator {
 		for (int i = 0; i < Math.min(nProt, pdbCodes.size()); i++) {
 			// load pdb
 			PdbChain pdb = PdbChain.readStructureOrExit(pdbCodes.get(i));
-			Vector<Integer> observedResidues = new Vector<Integer>(pdb.getAllSortedResSerials());
+			Vector<Integer> observedResidues = new Vector<Integer>(pdb.getAllStdAaResSerials());
 			// generate random subsets
 			for (int j = 0; j < nRandSets; j++) {
 				Set<Integer> randIndices = getRandomSubset(observedResidues.size(), nRes); // TODO: what about unobserved residues?

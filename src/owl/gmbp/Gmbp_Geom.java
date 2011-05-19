@@ -12,13 +12,13 @@ import owl.core.structure.Atom;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.util.FileFormatException;
 
 public class Gmbp_Geom {
 	
-//	private Residue iRes;
-//	private Residue jRes;
+//	private AaResidue iRes;
+//	private AaResidue jRes;
 	
 	private final static String centre="CA";
 	private final static String right="C";
@@ -41,10 +41,9 @@ public class Gmbp_Geom {
 //		PdbChain proteinToLoad=new PdbfilePdb ("/home/belsare/Desktop/1E0L.pdb");
 		PdbAsymUnit fullpdb = new PdbAsymUnit(new File("/Users/vehlow/Documents/workspace/7ODC.pdb"));
 		PdbChain proteinToLoad = fullpdb.getChain(str);
-		TreeMap<Integer, Residue> protein=new TreeMap<Integer, Residue>(proteinToLoad.getResidues());
 		
 		int resno=26;
-		Residue res=protein.get(resno);
+		AaResidue res= (AaResidue)proteinToLoad.getResidue(resno);
 		String resType = res.getAaType().getThreeLetterCode();
 		System.out.println("ResType"+resType);
 		Atom atom=res.getAtom("CA");
@@ -114,7 +113,7 @@ public class Gmbp_Geom {
 	 * @param residue 
 	 * @return coordinates all atoms of residue
 	 */
-	public static HashMap<String,Point3d> getRelativeCoord (Residue iRes) {
+	public static HashMap<String,Point3d> getRelativeCoord (AaResidue iRes) {
 		HashMap<String,Point3d> atom_coord = new HashMap<String, Point3d>();
 		//TODO: compute and return the relative coordinate of all available atoms of the residue
 		// coord of CAatom of iRes should be (0,0,0) ...
@@ -160,7 +159,7 @@ public class Gmbp_Geom {
 	 * @param atom type
 	 * @return coordinates certain atom
 	 */
-	public static Point3d getRelativeCoord (Residue iRes, String atomType){
+	public static Point3d getRelativeCoord (AaResidue iRes, String atomType){
 		Point3d relativeCoord = new Point3d(0,0,0);
 		//TODO: compute and return the relative coordinate of the atom of type atomType
 		// coord of CAatom of iRes should be (0,0,0) ...
@@ -179,7 +178,7 @@ public class Gmbp_Geom {
 	 * @param atom type
 	 * @return coordinates certain atom
 	 */
-	public static Point3d getRelativeCoord (Residue iRes, Residue jRes, String atomType){
+	public static Point3d getRelativeCoord (AaResidue iRes, AaResidue jRes, String atomType){
 		Point3d relativeCoord = new Point3d(0,0,0);
 		//TODO: compute and return the relative coordinate of the atom of type atomType
 		
@@ -196,7 +195,7 @@ public class Gmbp_Geom {
 	 * @param residue to rotate (with respect to iRes)
 	 * @return coordinates all atoms of residue
 	 */
-	public static HashMap<String,Point3d> getRelativeCoord (Residue iRes, Residue jRes) {
+	public static HashMap<String,Point3d> getRelativeCoord (AaResidue iRes, AaResidue jRes) {
 		HashMap<String,Point3d> atom_coord = new HashMap<String, Point3d>();
 		//TODO: compute and return the relative coordinate of all available atoms of the residue jRes
 
@@ -212,7 +211,7 @@ public class Gmbp_Geom {
 	 * @param coordinates to transform with respect to iRes
 	 * @return coordinates all atoms of residue
 	 */
-	public static HashMap<String,Point3d> getRelativeCoord (Residue iRes, Point3d coord) {
+	public static HashMap<String,Point3d> getRelativeCoord (AaResidue iRes, Point3d coord) {
 		HashMap<String,Point3d> atom_coord = new HashMap<String, Point3d>();
 		//TODO: compute and return the relative coordinate (based on coord) with respect to iRes
 
@@ -244,7 +243,7 @@ public class Gmbp_Geom {
 	/*
 	 *  This method gets the translated coordinates for a residue placing the selected center atom at the origin. 
 	 */	
-	private static HashMap<String, Point3d> getTranslatedCoordinates(Residue res, String centre){
+	private static HashMap<String, Point3d> getTranslatedCoordinates(AaResidue res, String centre){
 		HashMap<String, Point3d> translatedCoordinates=new HashMap<String, Point3d>();
 		for (String key: res.getAtomsMap().keySet())
 			{
@@ -262,7 +261,7 @@ public class Gmbp_Geom {
 	 *  This method gets the translated coordinates for a residue placing the selected center atom at the origin. 
 	 */	
 	@SuppressWarnings("unused")
-	private static HashMap<String, Point3d> getTranslatedCoordinates(TreeMap<Integer, Residue> protein, int resno, String centre){
+	private static HashMap<String, Point3d> getTranslatedCoordinates(TreeMap<Integer, AaResidue> protein, int resno, String centre){
 		HashMap<String, Point3d> translatedCoordinates=new HashMap<String, Point3d>();
 		for (String key: protein.get(resno).getAtomsMap().keySet())
 			{

@@ -23,7 +23,7 @@ import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
 import owl.core.util.IntPairSet;
@@ -83,15 +83,15 @@ public class TinkerRunnerTest {
 		assertEquals(pdb.getSequence().getSeq(),outpdb.getSequence().getSeq());
 		
 		// checking atoms and that chirality is fine
-		for (int resser:outpdb.getAllSortedResSerials()) {
-			Residue res = outpdb.getResidue(resser);
-			Residue refRes = pdb.getResidue(resser); 
+		for (int resser:outpdb.getAllStdAaResSerials()) {
+			AaResidue res = (AaResidue) outpdb.getResidue(resser);
+			AaResidue refRes = (AaResidue) pdb.getResidue(resser); 
 			assertEquals(refRes.getAaType(),res.getAaType());
 			for (Atom atom:refRes) {
 				assertTrue(res.containsAtom(atom.getCode()));
 			}
-			Residue.Chirality chir = res.getChirality();
-			assertTrue(chir!=Residue.Chirality.D);
+			AaResidue.Chirality chir = res.getChirality();
+			assertTrue(chir!=AaResidue.Chirality.D);
 		}
 		
 		// checking we really reconstructed input contact map
@@ -116,8 +116,12 @@ public class TinkerRunnerTest {
 	 * always killed because of memory  
 	 * @param args
 	 */
-	public static void main(String args[]) {
+	public static void main(String args[]) throws Exception {
 		JUnitCore.main("tests.tinker.TinkerRunnerTest");
+		// following code to run as java program to be able to debug 
+		//TinkerRunnerTest trt = new TinkerRunnerTest();
+		//setUpBeforeClass();
+		//trt.testReconstruct();
 	}
 
 }

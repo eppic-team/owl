@@ -11,6 +11,8 @@ import javax.vecmath.Vector3d;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
+import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.util.Goodies;
 import owl.core.util.MySQLConnection;
 
@@ -309,13 +311,14 @@ public class Embedder {
 		
 		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
-		int n = pdb.getObsLength();
+		int n = pdb.getStdAaObsLength();
 		int ind = 0;
 		TreeMap<Integer, Integer> resser2ind = new TreeMap<Integer,Integer>();
 		TreeMap<Integer, Integer> ind2resser = new TreeMap<Integer, Integer>();
-		for (int resser:pdb.getAllSortedResSerials()) {
-			resser2ind.put(resser, ind);
-			ind2resser.put(ind, resser);
+		for (Residue residue:pdb) {
+			if (!(residue instanceof AaResidue)) continue;
+			resser2ind.put(residue.getSerial(), ind);
+			ind2resser.put(ind, residue.getSerial());
 			ind++;
 		}
 		

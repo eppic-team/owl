@@ -159,7 +159,7 @@ public class FileRIGraph extends RIGraph {
 		this.fullLength = sequence.length();
 		for (int serial:allserials){
 			if (serial>sequence.length()) 
-				throw new FileFormatException("Residue serial "+serial+" found in edges list of contact map file "+contactsfile+" is bigger than length of sequence");
+				throw new FileFormatException("AaResidue serial "+serial+" found in edges list of contact map file "+contactsfile+" is bigger than length of sequence");
 			RIGNode node = new RIGNode(serial,AminoAcid.one2three(sequence.charAt(serial-1)));
 			this.addVertex(node);
 		}

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import owl.core.connections.CSAConnection;
-import owl.core.connections.ConsurfConnection;
 import owl.core.connections.ECConnection;
 import owl.core.connections.ScopConnection;
 import owl.core.runners.DsspRunner;
@@ -237,14 +236,6 @@ public class genDbGraph {
 							System.err.println(e.getMessage());
 						}
 						try {
-							ConsurfConnection consurfConn = new ConsurfConnection();
-							int mistakes = consurfConn.getConsurfDataLocal(pdb, null);
-							System.out.println("ConsurfHssp Mistakes:"+mistakes);
-							if (mistakes == 0) consurf = true;
-						} catch (Exception e) {
-							System.err.println(e.getMessage());
-						}	
-						try {
 							ECConnection.parseEC(pdb,false);
 							ec = true;
 						} catch (Exception e) {
@@ -342,14 +333,6 @@ public class genDbGraph {
 					try {
 						ScopConnection.parseScop(pdb,"1.73", false);
 						scop = true;
-					} catch (Exception e) {
-						System.err.println(e.getMessage());
-					}
-					try {
-						ConsurfConnection consurfConn = new ConsurfConnection();
-						int mistakes = consurfConn.getConsurfDataLocal(pdb, null);
-						System.out.println("ConsurfHssp Mistakes:"+mistakes);
-						if (mistakes == 0) consurf = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());
 					}

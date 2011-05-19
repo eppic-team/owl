@@ -59,6 +59,7 @@ public enum AtomType {
 	Ho(67,164.930, 2.00, "HO", "Holmium",   false),
 	W (74,183.841, 2.00,  "W", "Tungsten",  false),
 	Pt(78,195.085, 1.72, "PT", "Platinum",  false),
+	Au(79,196.967, 1.66, "AU", "Gold",      false),
 	Hg(80,200.592, 1.55, "HG", "Mercury",   false),
 	U (92,238.029, 1.86,  "U", "Uranium",   false),
 	// unknown atom (we treat it as a nitrogen in terms of mass and radius)
@@ -102,7 +103,7 @@ public enum AtomType {
 		return name;
 	}
 
-	public boolean iInStandardAA() {
+	public boolean isInStandardAA() {
 		return isInStandardAA;
 	}
 	

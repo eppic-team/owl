@@ -98,8 +98,8 @@ public class DsspRunner {
 			throw new IOException("No DSSP output found.");
 		}
 
-		if(ssTypes.size() != pdb.getObsLength()) {	// compare with number of observed residues
-			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + pdb.getObsLength() + ").");
+		if(ssTypes.size() != pdb.getObsLength()) {	// compare with number of observed residues 
+			System.err.println("Error: DSSP output size (" + ssTypes.size() + ") for "+pdbCode+"_"+chainCode+" does not match number of observed residues in structure (" + pdb.getStdAaObsLength() + ").");
 		}
 
 		// assign secondary structure

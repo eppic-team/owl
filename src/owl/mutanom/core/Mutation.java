@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import owl.core.structure.AminoAcid;
+import owl.core.structure.AaResidue;
 import owl.core.structure.PdbChain;
 import owl.mutanom.output.PyMolScriptMaker;
 import owl.mutanom.output.PyMolScriptMaker.Color;
@@ -286,7 +287,7 @@ public class Mutation {
 	 */
 	public static Mutation fromPos(int pos, PdbChain pdb) {
 		if(pos < 0 || pos > pdb.getFullLength()) return null;
-		return new Mutation(pdb.getResidue(pos).getAaType(),AminoAcid.XXX,pos);
+		return new Mutation(((AaResidue)pdb.getResidue(pos)).getAaType(),AminoAcid.XXX,pos);
 	}
 	
 	

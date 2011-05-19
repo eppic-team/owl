@@ -85,6 +85,20 @@ public class Sequence implements Serializable {
 			this.seqType = PROT_SEQUENCE;
 		}
 	}
+	
+	/**
+	 * Creates a new sequence object with the given name and the given sequence string.
+	 * The sequence type is passed as a boolean parameter, if true protein, false nucleotide.
+	 * @param name
+	 * @param seq
+	 * @param protein
+	 */
+	public Sequence(String name, String seq, boolean protein) {
+		this.name = name;
+		this.seq = seq;
+		this.seqType = protein;
+
+	}
 
 	/*-------------------------- getters and setters ------------------------*/
 	
@@ -157,13 +171,21 @@ public class Sequence implements Serializable {
 	}
 	
 	public boolean isProtein() {
-		if (seqType==PROT_SEQUENCE) return PROT_SEQUENCE;
-		else return NUC_SEQUENCE;
+		if (seqType==PROT_SEQUENCE) return true;
+		else return false;
 	}
 	
 	public boolean isNucleotide() {
-		if (seqType==NUC_SEQUENCE) return NUC_SEQUENCE;
-		else return PROT_SEQUENCE;
+		if (seqType==NUC_SEQUENCE) return true;
+		else return false;
+	}
+	
+	/**
+	 * Sets type of this sequence
+	 * @param protein true if type is protein, false if type is nucleotide
+	 */
+	public void setType(boolean protein) {
+		this.seqType = protein;
 	}
 	
 	/*---------------------------- public methods ---------------------------*/

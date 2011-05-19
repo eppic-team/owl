@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.Vector;
 
 import javax.vecmath.Vector3d;
@@ -19,7 +18,7 @@ import owl.core.structure.AminoAcid;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
-import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGGeometry;
 import owl.core.structure.graphs.RIGNbhood;
@@ -39,8 +38,8 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 	private Vector3d[] coordNBs;
 	
 	// --- contact defining parameters
-	private Residue iResidue;
-	private Residue jResidue;
+	private AaResidue iResidue;
+	private AaResidue jResidue;
 	
 	// --- position defining parameters
 	private Vector3d contactPos;
@@ -69,7 +68,7 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 		this.conn = new MySQLConnection(this.host,this.username,this.password,this.db);
 	}
 	
-	public CMPdb_sphoxel_greedy(Residue iResidue, Residue jResidue, RIGNbhood nbhood) throws SQLException {
+	public CMPdb_sphoxel_greedy(AaResidue iResidue, AaResidue jResidue, RIGNbhood nbhood) throws SQLException {
 		this.iResidue = iResidue;
 		this.jResidue = jResidue;
 		initContactType();
@@ -680,19 +679,19 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 		this.nbSerials = serials;
 	}
 	
-	public Residue getiResidue() {
+	public AaResidue getiResidue() {
 		return iResidue;
 	}
 
-	public void setiResidue(Residue iResidue) {
+	public void setiResidue(AaResidue iResidue) {
 		this.iResidue = iResidue;
 	}
 
-	public Residue getjResidue() {
+	public AaResidue getjResidue() {
 		return jResidue;
 	}
 
-	public void setjResidue(Residue jResidue) {
+	public void setjResidue(AaResidue jResidue) {
 		this.jResidue = jResidue;
 	}
 
@@ -743,7 +742,7 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 		}
 		if (pdb!=null && pdb.getRIGraph(contactType, cutOff)!=null) {
 			graph = pdb.getRIGraph(contactType, cutOff);
-			graphGeom = new RIGGeometry(graph, pdb.getResidues());
+			graphGeom = new RIGGeometry(graph, pdb);
 			
 			try {
 				greedy = new CMPdb_sphoxel_greedy();
@@ -757,7 +756,6 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 				e.printStackTrace();
 			}
 			
-			TreeMap<Integer,Residue> residues = pdb.getResidues();
 			
 			System.out.println(proteinName+" has "+graph.getEdgeCount()+" edges");
 			
@@ -777,8 +775,8 @@ public class CMPdb_sphoxel_greedy extends CMPdb_sphoxel{
 					issType = iNode.getSecStrucElement().getType();
 				}
 				
-				Residue iRes = residues.get(iNum);
-				Residue jRes = residues.get(jNum);
+				AaResidue iRes = (AaResidue)pdb.getResidue(iNum);
+				AaResidue jRes = (AaResidue)pdb.getResidue(jNum);
 				
 				System.out.println("E"+iNum+iResType+"-"+issType+"_"+jNum+jResType);
 				

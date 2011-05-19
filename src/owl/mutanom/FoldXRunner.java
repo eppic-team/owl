@@ -15,6 +15,7 @@ import java.util.LinkedList;
 
 import owl.core.structure.AminoAcid;
 import owl.core.structure.PdbChain;
+import owl.core.structure.AaResidue;
 import owl.mutanom.core.Gene;
 import owl.mutanom.core.Mutation;
 import owl.mutanom.core.Substructure;
@@ -222,7 +223,7 @@ public class FoldXRunner {
 				if(!ss.isPdbLoaded()) {
 					System.err.println("Skipping " + g.getGeneName() + " " + ss.getRange() + " " + ss.getPdbCode()+ss.getChainCode() + ": Structure not loaded.");
 				} else {
-					for(int p: ss.getPdb().getAllSortedResSerials()) {	// only observed residues
+					for(int p: ss.getPdb().getAllStdAaResSerials()) {	// only standard amino acid observed residues
 						// assuming cif residue numbers are fine
 						String pdbCode = ss.getPdbCode();
 						String chain = ss.getChainCode();
@@ -237,7 +238,7 @@ public class FoldXRunner {
 							continue;
 						}
 						String pdbFileName = pdbFile.getAbsolutePath();
-						String aaBefore = Character.toString(ss.getPdb().getResidue(p).getAaType().getOneLetterCode());
+						String aaBefore = Character.toString(((AaResidue)ss.getPdb().getResidue(p)).getAaType().getOneLetterCode());
 						String position = "?";
 						if(useSingleChainPdbFiles) {
 							position = Integer.toString(p);

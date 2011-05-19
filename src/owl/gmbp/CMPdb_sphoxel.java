@@ -6,7 +6,7 @@ import java.sql.Statement;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
-import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGGeometry;
 import owl.core.util.MySQLConnection;
 
@@ -83,7 +83,7 @@ public class CMPdb_sphoxel {
 //		return score;
 //	}
 	
-	public double getLogOddsScore(Residue iResidue, Residue jResidue , double resDist, RIGGeometry graphGeom, double dAngle, double dRad) throws SQLException{
+	public double getLogOddsScore(AaResidue iResidue, AaResidue jResidue , double resDist, RIGGeometry graphGeom, double dAngle, double dRad) throws SQLException{
 		String query;
 		Statement stmt;
 		ResultSet result_angle, result_type, result_angle_type, result_all;
@@ -169,7 +169,7 @@ public class CMPdb_sphoxel {
 		return lOS;
 	}
 	
-	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, RIGGeometry graphGeom) throws SQLException{
+	public double getLogOddsScore(AaResidue iRes, AaResidue jRes, double resDist, RIGGeometry graphGeom) throws SQLException{
 
 		double deltar = defaultDeltaR; //0.5;
 		double deltatheta = defaultDeltaTheta; //=Math.PI/72;	deltatheta /= 2;

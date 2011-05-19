@@ -183,9 +183,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * The total interface area is also calculated from the individual residue values (use {@link #getInterfaceArea()} 
 	 * to get it)
 	 * @param naccessExecutable
+	 * @param hetAtoms if true HET residues are considered, if false they aren't (NACCESS' -h option)
 	 * @throws IOException
 	 */
-	public void calcSurfAccessNaccess(File naccessExecutable) throws IOException {
+	public void calcSurfAccessNaccess(File naccessExecutable, boolean hetAtoms) throws IOException {
 
 		// NOTE in principle it is more efficient to run naccess only once per isolated chain
 		// BUT! surprisingly naccess gives slightly different values for same molecule in different 
@@ -193,12 +194,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		// That's why we run naccess always for 2 separate member of interface and the complex, otherwise 
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
 		
-		NaccessRunner nar = new NaccessRunner(naccessExecutable, "");
+		String naccessParams = "";
+		if (hetAtoms) naccessParams = "-h";
+		NaccessRunner nar = new NaccessRunner(naccessExecutable, naccessParams);
 		
 		PdbAsymUnit complex = new PdbAsymUnit();
 		complex.setPdbCode(firstMolecule.getPdbCode());
-		complex.setChain("A", firstMolecule);
-		complex.setChain("B", secondMolecule);
+		complex.setPolyChain("A", firstMolecule);
+		complex.setPolyChain("B", secondMolecule);
 		
 		nar.runNaccess(firstMolecule);
 		nar.runNaccess(secondMolecule);
@@ -206,10 +209,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		nar.runNaccess(complex); // this will set the bsa members of the Residues of firstMolecule and secondMolecule
 	
 		double totBuried = 0.0;
-		for (Residue residue:firstMolecule.getResidues().values()) {
+		for (Residue residue:firstMolecule) {
 			totBuried+=residue.getBsa();
 		}
-		for (Residue residue:secondMolecule.getResidues().values()) {
+		for (Residue residue:secondMolecule) {
 			totBuried+=residue.getBsa();
 		}
 
@@ -223,8 +226,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * to get it)
 	 * @param nSpherePoints
 	 * @param nThreads 
+	 * @param hetAtoms if true HET residues are considered, if false they aren't, equivalent to 
+	 * NACCESS' -h option
 	 */
-	public void calcSurfAccess(int nSpherePoints, int nThreads) {
+	public void calcSurfAccess(int nSpherePoints, int nThreads, boolean hetAtoms) {
 		// NOTE in principle it is more efficient to calculate the ASAs only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
 		// orientations! (can't really understand why!)
@@ -232,21 +237,21 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
 
 		
-		firstMolecule.calcASAs(nSpherePoints, nThreads);
-		secondMolecule.calcASAs(nSpherePoints, nThreads);
+		firstMolecule.calcASAs(nSpherePoints, nThreads, hetAtoms);
+		secondMolecule.calcASAs(nSpherePoints, nThreads, hetAtoms);
 		
 		PdbAsymUnit complex = new PdbAsymUnit();
 		complex.setPdbCode(firstMolecule.getPdbCode());
-		complex.setChain("A", firstMolecule);
-		complex.setChain("B", secondMolecule);
+		complex.setPolyChain("A", firstMolecule);
+		complex.setPolyChain("B", secondMolecule);
 
-		complex.calcBSAs(nSpherePoints, nThreads);
+		complex.calcBSAs(nSpherePoints, nThreads, hetAtoms);
 		double totBuried = 0.0;
 		
-		for (Residue residue:firstMolecule.getResidues().values()) {
+		for (Residue residue:firstMolecule) {
 			totBuried+=residue.getBsa();
 		}
-		for (Residue residue:secondMolecule.getResidues().values()) {
+		for (Residue residue:secondMolecule) {
 			totBuried+=residue.getBsa();
 		}
 
@@ -340,8 +345,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			}
 		}
 
-		for (Residue residue:firstMolecule.getResidues().values()) {
-			residue.printTabular(ps);
+		for (Residue residue:firstMolecule) {
+			if (residue instanceof AaResidue) { 
+				((AaResidue)residue).printTabular(ps);
+			}
 		}
 	}
 
@@ -357,8 +364,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			}
 		}
 
-		for (Residue residue:secondMolecule.getResidues().values()) {
-			residue.printTabular(ps);
+		for (Residue residue:secondMolecule) {
+			if (residue instanceof AaResidue) { 
+				((AaResidue)residue).printTabular(ps);
+			}
 		}
 	}
 

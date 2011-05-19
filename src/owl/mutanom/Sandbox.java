@@ -3,6 +3,7 @@ package owl.mutanom;
 import java.sql.SQLException;
 
 import owl.core.structure.PdbChain;
+import owl.core.structure.AaResidue;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
@@ -23,7 +24,7 @@ public class Sandbox {
 		String[] pdbResNums = {"3","208","209","321"};
 		for(String pdbResNum:pdbResNums) {
 			int cifResNum = chain.getResSerFromPdbResSer(pdbResNum);
-			String resType = chain.getResidue(cifResNum).getAaType().toString();
+			String resType = ((AaResidue)chain.getResidue(cifResNum)).getAaType().toString();
 			System.out.printf("pdb=%s cif=%d type=%s\n", pdbResNum, cifResNum, resType);			
 		}
 				

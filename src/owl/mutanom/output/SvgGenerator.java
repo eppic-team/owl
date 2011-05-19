@@ -329,7 +329,7 @@ public class SvgGenerator {
     		g2d.setPaint(mutColor);
 			for (Mutation m : g.getMutations()) {
 				Substructure ss = g.getSubstructure(m.getPos());
-				if(restrictToType==null || (ss != null && ss.getType() == restrictToType) && ss.getPdb().hasCoordinates(ss.mapUniprotResser2Cif(m.getPos()))) {
+				if(restrictToType==null || (ss != null && ss.getType() == restrictToType) && ss.getPdb().containsStdAaResidue(ss.mapUniprotResser2Cif(m.getPos()))) {
 					int mutPos = m.getPos();
 					//String mutLabel = m.getMutStr();
 	    			double x = baselineX + factor * mutPos;

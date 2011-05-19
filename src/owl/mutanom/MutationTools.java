@@ -100,7 +100,7 @@ public class MutationTools {
 			try {
 				NaccessRunner nar = new NaccessRunner(new File(NACCESS_EXECUTABLE), NACCESS_PARAMETERS);
 				nar.runNaccess(pdb);
-				for(int pos:pdb.getAllSortedResSerials()) {
+				for(int pos:pdb.getAllStdAaResSerials()) {
 					if(pdb.getAllRsaFromResSerial(pos) > EXPOSURE_CUTOFF) {
 						exposed++;
 					} else {
@@ -138,7 +138,7 @@ public class MutationTools {
 			NaccessRunner nar = new NaccessRunner(new File(NACCESS_EXECUTABLE), NACCESS_PARAMETERS);
 			nar.runNaccess(pdb);
 			//pdb.runNaccess(NACCESS_EXECUTABLE, NACCESS_PARAMETERS);
-			for(int pos:pdb.getAllSortedResSerials()) {
+			for(int pos:pdb.getAllStdAaResSerials()) {
 				if(pdb.getAllRsaFromResSerial(pos) > EXPOSURE_CUTOFF) {
 					exposed++;
 				} else {

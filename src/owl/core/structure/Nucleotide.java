@@ -104,6 +104,21 @@ public enum Nucleotide {
 	}
 	
 	/**
+	 * Get Nucleotide object by 1-letter or 2-letter code 
+	 * @param two Nucleotide 1-letter or 2-letter code (e.g. "C" or "DC" for Cytosine)
+	 * @return a Nucleotide object of the given type 
+	 * or null, if 1-letter or 2-letter code is invalid
+	 */	
+	public static Nucleotide getByCode(String code) {
+		if (code.length()==1) {
+			return one2aa.get(Character.toUpperCase(code.charAt(0)));
+		} else if (code.length()==2){
+			return two2aa.get(code.toUpperCase());
+		}
+		return null;
+	}
+	
+	/**
 	 * Get Nucleotide object by full nucleotide name
 	 * @param fullName the full name of a nucleotide with first letter capitalised (e.g. "Adenine") 
 	 * @return a Nucleotide object of the given type or null if full name is invalid

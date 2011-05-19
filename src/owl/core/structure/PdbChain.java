@@ -42,6 +42,7 @@ import owl.core.structure.graphs.AIGraph;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.BoundingBox;
+import owl.core.util.FileFormatException;
 import owl.core.util.Grid;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
@@ -87,12 +88,24 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	private Sequence sequence; 							// full sequence as it appears in SEQRES field
 
 	// identifiers 
-	private String pdbChainCode;		// Given "external" pdb chain code, i.e. the classic (author's) pdb code 
-										// If it is blank in original PDB file then it is: PdbChain.NULL_CHAIN_CODE
-	private String chainCode;			// Our internal chain identifier:
-										// - in reading from pdbase/cif file it will be set to the cif chain id (asym_id field)
-										// - in reading from PDB file it coincides with pdbChainCode except for 
-										//   PdbChain.NULL_CHAIN_CODE where we use "A"
+	/**
+	 * The author assigned chain code (PDB chain code). 
+	 * Called auth_asym_id in CIF files.
+	 * Not always consistently named, must be one character exactly. 
+	 */
+	private String pdbChainCode;	
+	
+	/**
+	 * The CIF chain code.
+	 * Called asym_id or label_asym_id in CIF files.
+	 * More consistently named than PDB chain codes (always consecutive 
+	 * A,B,C,...,Z,AA,BA,...), every distinct non-polymeric chain has a different 
+	 * one assigned and it can have more than one character.
+	 * When we read from PDB files we assign CIF chain codes trying to follow the
+	 * assignment criteria of the PDB but still in many cases, especially for 
+	 * non-polymer chains, they don't coincide.
+	 */
+	private String chainCode;			
 
 	private String sid;					// the scop id if PdbChain has been restricted (restrictToScopDomain)	
 	
@@ -115,6 +128,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 	
 	private boolean hasAltCodes;		// true if while parsing this chain we found alt codes (we don't store them)
+	
+	private boolean isNonPolyChain;		// true if chain is a non-polymer chain (purely a HET residues one, ligands and other hets), i.e. not polypeptide or nucleotide chain 
 
 	private BoundingBox bounds; 		// cached bounding box (calculated in getAllAtoms() from old atoms in chain) to speed up getAICGraph()
 	
@@ -135,45 +150,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Constructs a PdbChain for given sequence with empty residues (residues with no atoms)
-	 * @param sequence
-	 * @throws IllegalArgumentException if sequence contains invalid characters
-	 */
-	public PdbChain(Sequence sequence) {
-		this.chainCode = DEFAULT_CHAIN;
-		this.pdbChainCode = DEFAULT_CHAIN;
-		
-		this.hasASA = false;
-		this.hasBfactors = false;
-		this.hasAltCodes = false;
-
-		this.sequence = sequence;
-		this.initialiseResidues();
-		this.resser2pdbresser = new TreeMap<Integer, String>();
-		this.pdbresser2resser = new TreeMap<String, Integer>();
-
-		for (int i=0;i<sequence.getLength();i++) {
-			int resser = i+1;
-			char one = sequence.getSeq().charAt(i);
-			if (!AminoAcid.isStandardAA(one)) {
-				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
-			}
-			this.addResidue(new Residue(AminoAcid.getByOneLetterCode(one),resser,this));
-			resser2pdbresser.put(resser, String.valueOf(resser));
-			pdbresser2resser.put(String.valueOf(resser), resser);
-		}
-		
-		this.initialiseMaps();
-
-	}
-	
-	/**
-	 * Constructs a PdbChain for given sequence setting coordinates of the given atom type to 
+	 * Constructs a PdbChain for given protein sequence setting coordinates of the given atom type to 
 	 * the given coordinates coords
 	 * @param sequence
 	 * @param coords the array of all coordinates, must be ordered as the sequence and be
 	 * of the same size 
-	 * @param atom the atom code for which to set the coordinates
+	 * @param atom the atom code for which to set the coordinates, e.g. "CA"
 	 * @throws IllegalArgumentException if sequence contains invalid characters or if array
 	 * of coordinates is of different length as sequence
 	 */
@@ -200,7 +182,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			if (!AminoAcid.isStandardAA(one)) {
 				throw new IllegalArgumentException("Given input sequence to construct a pdb model contains an invalid aminoacid "+one);
 			}
-			this.addResidue(new Residue(AminoAcid.getByOneLetterCode(one),resser,this));
+			this.addResidue(new AaResidue(AminoAcid.getByOneLetterCode(one),resser,this));
 			resser2pdbresser.put(resser, String.valueOf(resser));
 			pdbresser2resser.put(String.valueOf(resser), resser);
 		}
@@ -233,7 +215,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @param residue
 	 */
 	public void addResidue(Residue residue) {
-		residues.put(residue.getSerial(), residue);
+		Residue returnRes = residues.put(residue.getSerial(), residue);
+		if (returnRes!=null) {
+			System.err.println("Warning: a residue with the same residue serial already exists in this chain. New residue: "+residue+", old residue: "+returnRes);
+		}
 	}
 	
 	/**
@@ -244,13 +229,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public Residue getResidue(int resSerial) {
 		
-		Residue res = residues.get(resSerial);
-		return res;
+		return residues.get(resSerial);
+
 	}
 	
 	/**
-	 * Tells whether residue of given residue number is a (observed) residue in this PdbChain
-	 * instance. See also {@link #hasCoordinates(int)}
+	 * Tells whether residue of given residue number is a (observed) residue (standard 
+	 * amino acid, nucleotide or het residue) in this PdbChain instance. 
+	 * See also {@link #hasCoordinates(int)}
 	 * @param resSerial
 	 * @return
 	 */
@@ -259,15 +245,34 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Gets all residues of specified type in a List
+	 * Tells whether residue of given residue number is a (observed) standard amino 
+	 * acid residue in this PdbChain instance. 
+	 * See also {@link #hasCoordinates(int)} 
+	 * @param resSerial
+	 * @return
+	 */
+	public boolean containsStdAaResidue(int resSerial) {
+		if (containsResidue(resSerial)) {
+			if (getResidue(resSerial) instanceof AaResidue) {
+				return true;
+			}
+		}
+		return false;
+	}	
+	
+	/**
+	 * Gets all residues of specified amino acid type in a List
 	 * @param aa the amino acid type (see AminoAcid class)
 	 * @return
 	 */
-	public ArrayList<Residue> getResiduesOfType(AminoAcid aa) {
-		ArrayList<Residue> list = new ArrayList<Residue>();
+	public ArrayList<AaResidue> getResiduesOfType(AminoAcid aa) {
+		ArrayList<AaResidue> list = new ArrayList<AaResidue>();
 		for (Residue residue:residues.values()) {
-			if (residue.getAaType().equals(aa)) {
-				list.add(residue);
+			if (residue instanceof AaResidue) {
+				AaResidue aares = (AaResidue) residue;
+				if (aares.getAaType().equals(aa)) {
+					list.add(aares);
+				}
 			}
 		}
 		return list;
@@ -275,15 +280,15 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Gets a new Map with residue serials to Residues that contain only the atoms for the 
-	 * given contact type and given interval set. The Residue objects are new, but the Atom 
-	 * objects to which they point to are the same old references.
+	 * given contact type and given interval set (standard aminoacids only). The Residue objects 
+	 * are new, but the Atom objects to which they point to are the same old references.
 	 * @param ct the contact type
 	 * @param intervSet only residues of this intervals will be considered, if null then
 	 * all residues taken
 	 * @return
 	 */
-	private TreeMap<Integer, Residue> getReducedResidues(String ct, IntervalSet intervSet) {
-		TreeMap<Integer,Residue> reducedResidues = new TreeMap<Integer, Residue>();
+	private TreeMap<Integer, AaResidue> getReducedResidues(String ct, IntervalSet intervSet) {
+		TreeMap<Integer,AaResidue> reducedResidues = new TreeMap<Integer, AaResidue>();
 		
 		if (intervSet!=null) {
 			for (Interval interv:intervSet) {
@@ -291,12 +296,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 					Residue residue = getResidue(resser);
 					if (residue==null) 
 						throw new IllegalArgumentException("Invalid interval specified, residue "+resser+" is not part of this PdbChain");
-					reducedResidues.put(resser,residue.getReducedResidue(ct));
+					if (!(residue instanceof AaResidue)) continue;
+					reducedResidues.put(resser,((AaResidue)residue).getReducedResidue(ct));
 				}
 			}
 		} else { // we take all observed residues
 			for (Residue residue:residues.values()) {
-				reducedResidues.put(residue.getSerial(),residue.getReducedResidue(ct));
+				if (!(residue instanceof AaResidue)) continue;
+				reducedResidues.put(residue.getSerial(),((AaResidue)residue).getReducedResidue(ct));
 			}
 		}
 		return reducedResidues;
@@ -304,22 +311,22 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Gets an array of Atoms that contain only the atoms for the given 
-	 * contact type and given interval set. 
+	 * contact type and given interval set for standard aminoacids only.
 	 *
 	 * @param ct the contact type
 	 * @param intervSet only residues of this intervals will be considered, if null then 
 	 * all residues taken
 	 * @return
 	 */
-	protected Atom[] getAtomsForCt(String ct, IntervalSet intervSet) {
-		TreeMap<Integer, Residue> reducedResidues = getReducedResidues(ct, intervSet);
+	private Atom[] getAtomsForCt(String ct, IntervalSet intervSet) {
+		TreeMap<Integer, AaResidue> reducedResidues = getReducedResidues(ct, intervSet);
 		int totalAtoms = 0;
-		for (Residue residue:reducedResidues.values()) {
+		for (AaResidue residue:reducedResidues.values()) {
 			totalAtoms+=residue.getNumAtoms(); 
 		}
 		Atom[] atoms = new Atom[totalAtoms];
 		int i = 0;
-		for (Residue residue:reducedResidues.values()) {
+		for (AaResidue residue:reducedResidues.values()) {
 			for (Atom atom:residue.getAtoms()) {
 				atoms[i]=atom;
 				i++;
@@ -329,15 +336,16 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Gets an array with all atoms present in this chain.
+	 * Gets an array with all atoms present in this chain. Atoms of standard aminoacids,
+	 * hetatoms and nucleotides will be taken.
 	 * Calculates also the bounds array so that it gets cached and can be used in {@link #getAICGraph(PdbChain, double)}
 	 * @return
 	 */
 	protected Atom[] getAllAtoms() {
  		Atom[] atoms = new Atom[this.getNumAtoms()];
 		int i = 0;
-		for (Residue residue:residues.values()) {
-			for (Atom atom:residue.getAtoms()) {
+		for (Residue residue:this) {
+			for (Atom atom:residue) {
 				atoms[i]=atom;
 				i++;
 			}
@@ -388,7 +396,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			SecStrucElement ssElem = it.next();
 			for (int resser=ssElem.getInterval().beg;resser<=ssElem.getInterval().end;resser++) {
 				if (this.containsResidue(resser)) {
-					this.getResidue(resser).setSsElem(ssElem);
+					Residue residue = this.getResidue(resser);
+					if (residue instanceof AaResidue) {
+						((AaResidue)residue).setSsElem(ssElem);
+					} else if (residue instanceof HetResidue) {
+						((HetResidue)residue).setSsElem(ssElem);
+					}
 				} else {
 					// we don't warn because this does happen really often!
 					//System.err.println("Warning: the residue serial "+resser+" can't be assigned with the secondary structure element "+
@@ -412,7 +425,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Returns the per-residue relative solvent accessible surface areas (SASA) as 
-	 * calculated by NACCESS.
+	 * calculated by NACCESS. Only considers standard amino acids.
 	 * Returns null if SASA has not previously been calculated with {@link runner.NaccessRunner}.
 	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
@@ -420,7 +433,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		if (hasASA()) {
 			HashMap<Integer, Double> resser2allrsa = new HashMap<Integer, Double>();
 			for (Residue residue:residues.values()) {
-				resser2allrsa.put(residue.getSerial(), residue.getRsa());
+				if (residue instanceof AaResidue) { 
+					resser2allrsa.put(residue.getSerial(), residue.getRsa());
+				}
 			}
 			return resser2allrsa;
 		} else {
@@ -430,7 +445,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 	/**
 	 * Returns the per-residue side-chain relative solvent accessible surface areas (SASA)
-	 * as calculated by NACCESS.
+	 * as calculated by NACCESS. Only considers standard amino acids.
 	 * Returns null if SASA has not previously been calculated with {@link runner.NaccessRunner}.
 	 * @return a map from residue serial to SASA value (null if not calculated yet)
 	 */
@@ -438,7 +453,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		if (hasASA()) {
 			HashMap<Integer, Double> resser2scrsa = new HashMap<Integer, Double>();
 			for (Residue residue:residues.values()) {
-				resser2scrsa.put(residue.getSerial(), residue.getScRsa());
+				if (residue instanceof AaResidue) {
+					resser2scrsa.put(residue.getSerial(), ((AaResidue)residue).getScRsa());
+				}
 			}
 			return resser2scrsa;
 		} else {
@@ -447,7 +464,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the per-residue all-atoms absolute solvent accessible areas as calculated by NACCESS
+	 * Returns the per-residue all-atoms absolute solvent accessible areas as calculated by NACCESS.
+	 * Only considers standard amino acids.
 	 * @return a map from residue serial to absolute ASA value or null if ASA has not previously been 
 	 * calculated with {@link runner.NaccessRunner}.
 	 */
@@ -455,24 +473,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		if (hasASA()) {
 			HashMap<Integer, Double> resser2allrsa = new HashMap<Integer, Double>();
 			for (Residue residue:residues.values()) {
-				resser2allrsa.put(residue.getSerial(), residue.getAsa());
+				if (residue instanceof AaResidue) {
+					resser2allrsa.put(residue.getSerial(), residue.getAsa());
+				}
 			}
 			return resser2allrsa;
 		} else {
 			return null;
 		}
-	}
-	
-	/**
-	 * Sets the absolute surface accessibility values of the Residue objects from the 
-	 * given map of residue serials to ASA values.
-	 * @param asas
-	 */
-	public void setAbsSurfaceAccessibilities(HashMap<Integer, Double> asas) {
-		for (Residue residue:residues.values()){
-			residue.setAsa(asas.get(residue.getSerial()));
-		}
-		hasASA = true;
 	}
 
 	/**
@@ -489,7 +497,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Sets the VdW radius values of all Atoms of this PdbChain. 
+	 * Sets the VdW radius values of all atoms of this PdbChain (from standard amino acids,
+	 * het residues and nucleotides) 
 	 * Use subsequently Atom.getRadius() to get the value.
 	 * This uses the AtomRadii parser of the vdw.radii resource file.
 	 */
@@ -507,14 +516,23 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @param nSpherePoints the number of points to be used in generating the spherical 
 	 * dot-density, the more points the more accurate (and slower) calculation
 	 * @param nThreads number of threads to be used for ASA calculation
+	 * @param hetAtoms if true HET residues are considered, if false they aren't, equivalent to 
+	 * NACCESS' -h option
 	 */
-	public void calcASAs(int nSpherePoints, int nThreads) {
+	public void calcASAs(int nSpherePoints, int nThreads, boolean hetAtoms) {
 		this.setAtomRadii();
-		Atom[] atoms = new Atom[this.getNumAtoms()];
+		int numAtoms = getNumNonHetAtoms();
+		if (hetAtoms) {
+			numAtoms = getNumAtoms();
+		}
+		Atom[] atoms = new Atom[numAtoms];
 		int i = 0;
-		for (int atomser: this.getAllAtomSerials()) {
-			atoms[i] = this.getAtom(atomser);
-			i++;
+		for (Residue residue: this) {
+			if (!hetAtoms && (residue instanceof HetResidue)) continue;
+			for (Atom atom: residue) {
+				atoms[i] = atom;
+				i++;
+			}
 		}
 		double[] asas = Asa.calculateAsa(atoms,Asa.DEFAULT_PROBE_SIZE,nSpherePoints,nThreads);
 		
@@ -523,7 +541,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		}
 
 		// and finally sums per residue
-		for (Residue residue: residues.values()) {
+		for (Residue residue: this) {
+			if (!hetAtoms && (residue instanceof HetResidue)) continue;
 			double tot = 0;
 			for (Atom atom:residue.getAtoms()) {
 				tot+=atom.getAsa();
@@ -533,7 +552,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Calculates for each atom in this structure the deviation to the corresponding atom
+	 * Calculates for each atom (of standard amino acids) in this structure the deviation to the corresponding atom
 	 * in the reference structure and returns a map from atom serials to differences in Angstrom.
 	 * The corresponding atom is the atom with the same residue serial and the same PDB residue code
 	 * (e.g. CA, CB, N), ignoring residues which are mutated between this and the reference structure.
@@ -550,16 +569,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		HashMap<Integer, Double> distances = new HashMap<Integer, Double>();
 		
 		// first set all distances to the default value, so that the map contains the full set of atoms
-		for(int atomSer: this.getAllAtomSerials()) {
-				distances.put(atomSer,Atom.DEFAULT_B_FACTOR);
+		for (Residue res:this) {
+			if (!(res instanceof AaResidue)) continue;
+			for (Atom atom:res) {
+				distances.put(atom.getSerial(),Atom.DEFAULT_B_FACTOR);
+			}
 		}
 		
 		// then set the real distance whereever possible
-		for(int resSer: this.getAllSortedResSerials()) {
+		for(int resSer: this.getAllResSerials()) {
 			Residue r = this.getResidue(resSer);
-			AminoAcid thisType = r.getAaType();
-			if(referencePdb.hasCoordinates(resSer)) {
-				AminoAcid refType = referencePdb.getResidue(resSer).getAaType();
+			if (!(r instanceof AaResidue)) continue;
+			AminoAcid thisType = ((AaResidue)r).getAaType();
+			if(referencePdb.hasCoordinates(resSer) && (referencePdb.getResidue(resSer) instanceof AaResidue)) {
+				AminoAcid refType = ((AaResidue)referencePdb.getResidue(resSer)).getAaType();
 				if(thisType == refType) {
 					for(Atom a1:r.getAtoms()) {
 						int atomSer = a1.getSerial();
@@ -591,7 +614,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			if (this.containsResidue(resser)) {
 				Residue residue = this.getResidue(resser);
 				double bfactor = bfactorsPerResidue.get(resser);
-				for(Atom atom:residue.getAtoms()) {
+				for(Atom atom:residue) {
 					atom.setBfactor(bfactor);
 				}
 			} else {
@@ -663,19 +686,24 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
 			chainCodeStr = chainCode.substring(0,1);
 		}
+		// we write atoms sorted by atom serial, 
+		// if we were iterating over residues and then atoms we'd get them in order of residue and atom code alphabetical order
 		for (int atomser:this.getAllAtomSerials()) {
 			Atom atom = getAtom(atomser);
 			int resser = atom.getParentResSerial();
 			String atomCode = atom.getCode();
 			String atomType = atom.getType().getSymbol();
-			String res = atom.getParentResidue().getAaType().getThreeLetterCode();
+			String res = atom.getParentResidue().getLongCode();
 			Point3d coords = atom.getCoords();
 			double occupancy = atom.getOccupancy();
 			double bFactor = atom.getBfactor();
-			
-			String printfStr = "ATOM  %5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+			String lineType = "ATOM  ";
+			if (atom.getParentResidue() instanceof HetResidue) {
+				lineType = "HETATM";
+			}
+			String printfStr = lineType+"%5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
 			if (atomCode.length()==4) { // some hydrogens have a 4 letter code and it is not aligned to column 14 but to 13 instead 
-				printfStr = "ATOM  %5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+				printfStr = lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
 			}
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
 			out.printf(Locale.US, printfStr,
@@ -736,11 +764,23 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 
 	/** 
-	 * Returns the number of observed standard residues.
-	 * @return number of observed standard residues
+	 * Returns the number of observed residues (standard amino acids, nucleotides and hets)
+	 * @return number of observed residues
 	 */
 	public int getObsLength(){
 		return residues.size();
+	}
+	
+	/**
+	 * Returns the number of observed standard amino acid residues.
+	 * @return
+	 */
+	public int getStdAaObsLength() {
+		int count=0;
+		for (Residue residue:this) {
+			if (residue instanceof AaResidue) count++;
+		}
+		return count;
 	}
 
 	/** 
@@ -753,24 +793,53 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 	/**
 	 * Returns number of atoms in the protein, including Hydrogens if they are present
+	 * Includes all residues: standard amino acids, peptide linked het residues and ligands 
 	 * @return number of atoms
 	 */
 	public int getNumAtoms() {
 		int numAtoms = 0;
-		for (Residue residue:this.getResidues().values()) {
+		for (Residue residue:this) {
 			numAtoms+=residue.getNumAtoms();
 		}
 		return numAtoms;
 	}
 	
 	/**
+	 * Returns number of atoms in the protein, including Hydrogens if they are present 
+	 * only considering standard amino acid residues or nucleotides if the chains is a nucleic acid.
+	 * @return number of atoms
+	 */	
+	public int getNumNonHetAtoms() {
+		int numAtoms = 0;
+		for (Residue res:this) {
+			if ((res instanceof HetResidue)) continue;
+			numAtoms+=res.getNumAtoms();
+		}
+		return numAtoms;
+	}
+	
+	/**
 	 * Returns number of heavy (non-Hydrogen) atoms in the protein
+	 * Includes all residues: standard amino acids, peptide linked het residues and ligands  
 	 * @return number of (non-Hydrogen) atoms
 	 */
 	public int getNumHeavyAtoms() {
 		int numAtoms = 0;
-		for (Residue residue: residues.values()) {
+		for (Residue residue: this) {
 			numAtoms+=residue.getNumHeavyAtoms();
+		}
+		return numAtoms;
+	}
+	
+	/**
+	 * Returs the number of heavy (non-Hydrogen) atoms of standard amino acids in this protein chain
+	 * @return
+	 */
+	public int getNumStdAaHeavyAtoms() {
+		int numAtoms = 0;
+		for (Residue res:this) {
+			if (!(res instanceof AaResidue)) continue;
+			numAtoms+=res.getNumHeavyAtoms();
 		}
 		return numAtoms;
 	}
@@ -783,7 +852,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	public int getNumChainBreaks() {
 		int numChainBreaks = 0;
 		int lastResser = 0;
-		for (int resser:getAllSortedResSerials()) {
+		for (int resser:getAllResSerials()) {
 			if (lastResser!=0 && resser-lastResser>1) 
 				numChainBreaks++;
 			lastResser = resser;
@@ -792,7 +861,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the distance matrix (one distance per pair of residues) as a Jama Matrix object. 
+	 * Returns the distance matrix of standard amino acid residues as a Jama Matrix object. 
 	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
 	 * residues. 
 	 * The indices of the matrix will be 0 to get_length()-1 and will be in the same order 
@@ -803,12 +872,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	public Matrix calcDistMatrixJamaFormat(String ct) {
 		HashMap<Integer,Integer> resser2ind = new HashMap<Integer, Integer>();
 		int i = 0;
-		for (int resser:this.getAllSortedResSerials()) {
-			resser2ind.put(resser,i);
-			i++;
+		for (Residue residue:this) {
+			if (residue instanceof AaResidue) {
+				resser2ind.put(residue.getSerial(),i);
+				i++;
+			}
 		}
-		HashMap<Pair<Integer>, Double> distHM = this.calcDistMatrix("Ca");
-		Matrix matrix = new Matrix(this.getObsLength(), this.getObsLength());
+		HashMap<Pair<Integer>, Double> distHM = this.calcDistMatrix(ct);
+		Matrix matrix = new Matrix(this.getStdAaObsLength(), this.getStdAaObsLength());
 		for (Pair<Integer> pair: distHM.keySet()) {
 			double currentElem = distHM.get(pair);
 			matrix.set(resser2ind.get(pair.getFirst()), resser2ind.get(pair.getSecond()), currentElem);
@@ -818,7 +889,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the distance matrix as a HashMap with residue serial pairs as keys
+	 * Returns the distance matrix of standard amino acid residues as a HashMap with residue serial pairs as keys
 	 * For multi atom contact types the distance matrix has the minimum distance for each pair of
 	 * residues 
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
@@ -829,7 +900,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		HashMap<Pair<Integer>,Double> distMatrixAtoms = calcAtomDistMatrix(ct);
 
 		 // mapping atom serials to residue serials
-		 // TODO: we could integrate this with the code in calculate_atom_dist_matrix to avoid storing two distance maps in memory
+		 // TODO: we could integrate this with the code in calcAtomDistMatrix to avoid storing two distance maps in memory
 		HashMap<Pair<Integer>,Double> distMatrixRes = new HashMap<Pair<Integer>, Double>();
 		for (Pair<Integer> cont: distMatrixAtoms.keySet()){
 			int i_resser = getResSerFromAtomSer(cont.getFirst());
@@ -847,6 +918,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Returns the distance matrix as a HashMap with atom serial pairs as keys
+	 * Only standard aminoacids are considered.
 	 * This method can be used for any contact type 
 	 * AAinfo.isValidSingleAtomCT(ct) can be used to check before calling.
 	 * @param ct contact type for which distances are being calculated
@@ -897,7 +969,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Get the graph for given contact type and cutoff for this PdbChain object.
+	 * Get the atom interaction graph for given contact type and cutoff for this PdbChain object.
+	 * Only standard aminoacids are considered.
 	 * Returns a Graph object with the contacts
 	 * A geometric hashing algorithm is used for fast contact computation (without needing 
 	 * to calculate full distance matrix)
@@ -949,7 +1022,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			SecStrucElement sselem = secondaryStructureCopy.getSecStrucElement(resser);
 			if (!rignodemap.containsKey(resser)) {
 				// NOTE!: we are passing references to the SecStrucElement objects! they point to the same objects as secondaryStructureCopy 
-				RIGNode resNode = new RIGNode(resser, getResidue(resser).getAaType().getThreeLetterCode(), sselem);
+				RIGNode resNode = new RIGNode(resser, ((AaResidue)getResidue(resser)).getAaType().getThreeLetterCode(), sselem);
 				rignodemap.put(resser,resNode);
 			}
 			AIGNode atomNode = new AIGNode(atomSer,getAtom(atomSer).getCode(),rignodemap.get(resser));
@@ -999,6 +1072,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 	/**
 	 * Returns a RIGraph for given contact type, cutoff and directionality
+	 * Only standard aminoacids are considered.
 	 * @param ct  the contact type
 	 * @param cutoff  the distance cutoff
 	 * @param directed  true if we want a directed graph, false for undirected
@@ -1048,6 +1122,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Returns an all atom graph in a AIGraph object
+	 * Only standard aminoacids are considered.
 	 * @param cutoff  the distance cutoff
 	 * @return
 	 */
@@ -1055,6 +1130,13 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		return this.getAIGraph("ALL", cutoff);
 	}
 	
+	/**
+	 * Calculates the grid density.
+	 * Only standard aminoacids are considered.
+	 * @param ct
+	 * @param cutoff
+	 * @param densityCount
+	 */
 	public void calcGridDensity(String ct, double cutoff, Map<Integer, Integer> densityCount) { 
 		Atom[] atoms = getAtomsForCt(ct, null);
 
@@ -1093,10 +1175,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		for(int i = 1; i <= ali.getAlignmentLength(); ++i) {
 			i1 = ali.al2seq(name1, i);
 			i2 = ali.al2seq(name2, i);
-			if( i1 != -1 && !hasCoordinates(i1) ) {
+			if( i1 != -1 && !containsStdAaResidue(i1) ) {
 				unobserved1.add(i1);
 			}
-			if( i2 != -1 && !pdb2.hasCoordinates(i2) ) {
+			if( i2 != -1 && !pdb2.containsStdAaResidue(i2) ) {
 				unobserved2.add(i2);
 			}
 		}
@@ -1142,7 +1224,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Computes the atom interaction graph between this and given protein chain for all
-	 * atoms and given cutoff. 
+	 * atoms (standard aminoacids, hetatoms and nucleotides) and given cutoff. 
 	 * A geometric hashing algorithm is used for fast contact computation (without needing 
 	 * to calculate full distance matrix) 
 	 * @param other
@@ -1173,35 +1255,15 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		}
 		return graph;
 	}
-	
-	/**
-	 * Gets the Consurf-HSSP score given an internal residue serial
-	 * @param resser
-	 * @return
-	 * @throws NullPointerException if residue serial not present in this PdbChain instance
-	 */
-	public Double getConsurfhsspScoreFromResSerial(int resser){
-		return getResidue(resser).getConsurfScore();
-	}
 
 	/**
-	 * Gets the Consurf-HSSP color rsa given an internal residue serial
-	 * @param resser
-	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
-	 * @return
-	 */
-	public Integer getConsurfhsspColorFromResSerial(int resser){
-		return getResidue(resser).getConsurfColor();
-	}
-
-	/**
-	 * Gets the all atoms rsa given an internal residue serial
+	 * Gets the all atoms rsa given an internal residue serial corresponding to a standard amino acid
 	 * @param resser
 	 * @return the rsa or null if rsa has not been calculated yet or the residue number cannot be found
 	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
 	 */
 	public Double getAllRsaFromResSerial(int resser){
-		if (hasASA()) {
+		if (hasASA() && containsResidue(resser)) {
 			return getResidue(resser).getRsa();
 		} else {
 			return null;
@@ -1209,13 +1271,13 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 
 	/**
-	 * Gets the sc rsa given an internal residue serial
+	 * Gets the sc rsa given an internal residue serial corresponding to a standard amino acid
 	 * @param resser
-	 * @return
+	 * @return the sc rsa or null if rsa has not been calculated yet or the residue number cannot be found
 	 * @throws NullPointerException if residue serial not present in this PdbChain instance 
 	 */
 	public Double getScRsaFromResSerial(int resser){
-		if (hasASA()) {
+		if (hasASA() && containsResidue(resser)) {
 			return getResidue(resser).getScRsa();
 		} else {
 			return null;
@@ -1288,17 +1350,17 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Checks whether this PdbChain is an all-atom one (disregarding Hydrogens), i.e. is not a 
-	 * CA only or BB only or has no other major group of atoms missing.
+	 * Checks whether this PdbChain is an all-atom one (disregarding Hydrogens), i.e. its standard amino acids
+	 * have coordinates for most atoms (thus excludes CA-only or BB only or any chain with major group of atoms missing).
 	 * Even PDB structures with all atoms can still have missing atoms for some residues, 
-	 * here what we check is that the average number of (non-Hydrogen) atoms per residue is above the 
+	 * here what we check is that the average number of (non-Hydrogen) atoms per standard amino acid is above the 
 	 * threshold {@value #MIN_AVRG_NUM_ATOMS_RES} . This threshold has been obtained from statistics of a set of non-redundant 
 	 * PDB structures.
 	 * 
 	 * @return true if above average atoms per residue threshold, false otherwise
 	 */
 	public boolean isAllAtom() {
-		if (((double)this.getNumHeavyAtoms()/(double)this.getObsLength())<MIN_AVRG_NUM_ATOMS_RES) {
+		if (((double)this.getNumStdAaHeavyAtoms()/(double)this.getStdAaObsLength())<MIN_AVRG_NUM_ATOMS_RES) {
 			return false;
 		} else {
 			return true;
@@ -1354,10 +1416,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Gets the atom coordinates (Point3d object) given the atom serial
 	 * @param atomser
-	 * @return
+	 * @return the atom coordinates or null if no atom exist for the atomser
 	 */
 	public Point3d getAtomCoord(int atomser) {
-		return getAtom(atomser).getCoords();
+		Atom atom = getAtom(atomser);
+		if (atom!=null){
+			return atom.getCoords();
+		}
+		return null;
 	}
 
 	/**
@@ -1365,26 +1431,24 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * (standard PDB atom name, e.g. CA, N, C, O, CB, ...) 
 	 * @param resser
 	 * @param atomCode
-	 * @return
+	 * @return the coordinates or null if no such atomCode and resser combination exist
 	 */
 	public Point3d getAtomCoord(int resser, String atomCode) {
-		return getResidue(resser).getAtom(atomCode).getCoords();
-	}
-	
-	/**
-	 * Gets the atom code (standard PDB atom name, e.g. CA, N, C, O, CB, ...) given the 
-	 * atom serial
-	 * @param atomser
-	 * @return
-	 */
-	public String getAtomNameFromAtomSer(int atomser) {
-		return this.getAtom(atomser).getCode();
+		if (containsResidue(resser)) {
+			Residue residue = getResidue(resser);
+			if (residue.containsAtom(atomCode)) {
+				return residue.getAtom(atomCode).getCoords();
+			}
+		}
+		return null;
 	}
 	
 	/**
 	 * Returns a Set of all ordered atom serials (only observed atoms)
 	 * The order is according to atom serials (not necessarily ordered by residue
 	 * although they almost always are)
+	 * Atoms of all residues are considered: standard amino acids, het residues or 
+	 * nucleotides (if chain is nucleic acid) 
 	 * @return
 	 */
 	public Set<Integer> getAllAtomSerials() {
@@ -1393,35 +1457,60 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 	/**
 	 * Returns a Set of all ordered residue serials (only observed residues)
+	 * All residues are considered: standard amino acids, het residues or nucleotides (if chain
+	 * is nucleic acid)
 	 * @return
 	 */
-	public Set<Integer> getAllSortedResSerials() {
+	public Set<Integer> getAllResSerials() {
 		return residues.keySet();
 	}
 	
 	/**
-	 * Returns the lowest observed residue serial 
+	 * Returns a Set of all ordered standard amino acid residue serials (only observed residues)
+	 * @return
+	 */
+	public Set<Integer> getAllStdAaResSerials() {
+		Set<Integer> set = new TreeSet<Integer>();
+		for (Residue residue:this) {
+			if (residue instanceof AaResidue) {
+				set.add(residue.getSerial());
+			}
+		}
+		return set;
+	}
+	
+	/**
+	 * Returns the lowest (standard amino acid) observed residue serial 
 	 * @return
 	 */
 	public int getMinObsResSerial() {
-		return residues.firstEntry().getKey();
+		return ((TreeSet<Integer>)getAllStdAaResSerials()).first();
 	}
 	
 	/**
-	 * Returns the highest observed residue serial 
+	 * Returns the highest (standard amino acid) observed residue serial 
 	 * @return
 	 */
 	public int getMaxObsResSerial() {
-		return residues.lastEntry().getKey();
+		return ((TreeSet<Integer>)getAllStdAaResSerials()).last();
+	}
+
+	/**
+	 * Returns the first observed residue in the chain (can be standard aminoacid, nucleotide or het)
+	 * @return
+	 */
+	public Residue getFirstResidue() {
+		return residues.firstEntry().getValue();
 	}
 	
 	/**
-	 * Returns all residue of pdb
+	 * Returns the last observed residue in the chain (can be standard aminoacid, nucleotide or het)
 	 * @return
 	 */
-	public TreeMap<Integer, Residue> getResidues() {
-		return this.residues;
+	public Residue getLastResidue() {
+		return residues.lastEntry().getValue();
 	}
+	
 	
 	/**
 	 * Returns the parent PdbAsymUnit to which this chain belongs
@@ -1581,9 +1670,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Sets the sequence for the first time in this PdbChain. To use only from parser classes when there's no sequence set yet.
 	 * @param sequence
+	 * @param protein true if sequence is a protein, false if it is a nucleotide
 	 */
-	protected void setSequence(String seq) {
-		this.sequence = new Sequence(getPdbCode()+this.pdbChainCode,seq);
+	protected void setSequence(String seq, boolean protein) {
+		this.sequence = new Sequence(getPdbCode()+this.pdbChainCode,seq,protein);
 	}
 	
 	/**
@@ -1601,9 +1691,16 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 					+(sequence.isProtein()?"protein":"nucleotide")+")");
 		}
 		// we check that the sequences from ATOM lines and the new sequence coincide (except for unobserved residues)
-		for (int resser:getAllSortedResSerials()) {
+		for (int resser:getAllResSerials()) {
 			Residue residue = this.getResidue(resser);
-			char seqLetter = residue.getAaType().getOneLetterCode();
+			char seqLetter = 0;
+			if (residue instanceof AaResidue) {
+				seqLetter = ((AaResidue)residue).getAaType().getOneLetterCode();
+			} else if (residue instanceof NucResidue) {
+				seqLetter = ((NucResidue)residue).getNucType().getOneLetterCode();
+			} else if (residue instanceof HetResidue) {
+				seqLetter = AminoAcid.XXX.getOneLetterCode();
+			}
 			if (seq.getSeq().charAt(resser-1)!=seqLetter) {
 				throw new PdbLoadException("Given sequence does not match observed sequence from ATOM lines for position "+resser+".");
 			}
@@ -1614,16 +1711,31 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Gets the observed sequence, i.e. the sequence as it appears in the ATOM 
-	 * lines of the PDB file (non-standard aas are not in this sequence even if 
-	 * they have coordinates)
+	 * lines of the PDB file (observed non-standard amino acids will be shown as 'X')
 	 * @return
 	 */
 	public String getObsSequence() {
 		String obsSequence = "";
-		for (Residue residue:residues.values()) {
-			obsSequence += residue.getAaType().getOneLetterCode();
+		for (Residue residue:this) {
+			obsSequence+=residue.getShortCode();
 		}
 		return obsSequence;
+	}
+	
+	/**
+	 * Returns true if this chain is a non-polymer chain (purely HET residues), i.e. not a peptide or nucleotide chain
+	 * @return
+	 */
+	public boolean isNonPolyChain() {
+		return isNonPolyChain;
+	}
+	
+	/**
+	 * Sets the isNonPolyChain flag, true for non-polymers (purely HET residues chain) false for polymer (peptide/nucleotide) chains
+	 * @param isNonPolyChain
+	 */
+	public void setIsNonPolyChain(boolean isNonPolyChain) {
+		this.isNonPolyChain = isNonPolyChain;
 	}
 	
 	/**
@@ -1785,8 +1897,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Calculates rmsd (on atoms given by ct) of this PdbChain object to otherPdb object
-	 * restricted only to the given set of intervals
+	 * Calculates rmsd (on atoms of given by contact type ct) of this PdbChain object to otherPdb object
+	 * restricted to the given set of intervals
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
 	 * 
 	 * @param otherPdb
@@ -1797,17 +1909,17 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @throws ConformationsNotSameSizeException
 	 */
 	public double rmsd(PdbChain otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeException {
-		TreeMap<Integer, Residue> thisResidues = this.getReducedResidues(ct,intervSet);
-		TreeMap<Integer, Residue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
+		TreeMap<Integer, AaResidue> thisResidues = this.getReducedResidues(ct,intervSet);
+		TreeMap<Integer, AaResidue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
 
 		ArrayList<Vector3d> conf1AL = new ArrayList<Vector3d>();
 		ArrayList<Vector3d> conf2AL = new ArrayList<Vector3d>();	
 		// there might be unobserved residues or some missing atoms for a residue
 		// here we get the ones that are in common
 		for (int resser:thisResidues.keySet()) {
-			Residue thisRes = thisResidues.get(resser);
+			AaResidue thisRes = thisResidues.get(resser);
 			if (otherResidues.containsKey(resser)) {
-				Residue otherRes = otherResidues.get(resser);
+				AaResidue otherRes = otherResidues.get(resser);
 				for (Atom atom:thisRes.getAtoms()) {
 					if (otherRes.containsAtom(atom.getCode())) {
 						conf1AL.add(new Vector3d(atom.getCoords()));
@@ -1949,6 +2061,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Write residue info to given db, using our db graph OWL format, 
 	 * i.e. tables: residue_info
+	 * Only considers standard amino acids
 	 * @param conn
 	 * @param db
 	 * @throws SQLException
@@ -1960,9 +2073,11 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 		conn.setSqlMode("NO_UNSIGNED_SUBTRACTION,TRADITIONAL");
 
-		for (int resser:getAllSortedResSerials()) {
-			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
-			String pdbresser = getPdbResSerFromResSer(resser);
+		for (Residue residue:this) {
+			if (!(residue instanceof AaResidue)) continue;
+			int resser = residue.getSerial();
+			String resType = String.valueOf(((AaResidue)residue).getAaType().getOneLetterCode());
+			String pdbresser = residue.getPdbSerial();
 
 			String secStructType = null;
 			String secStructId = null;
@@ -1994,8 +2109,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			Double allRsa = getAllRsaFromResSerial(resser);
 			Double scRsa = getScRsaFromResSerial(resser);
 
-			Double consurfhsspScore = getConsurfhsspScoreFromResSerial(resser);
-			Integer consurfhsspColor = getConsurfhsspColorFromResSerial(resser);
+			// support for consurf parsing now discontinued: web site changed format, need a local executable or similar
+			Double consurfhsspScore = null;//((AaResidue)residue).getConsurfScore();
+			Integer consurfhsspColor = null;//((AaResidue)residue).getConsurfColor();
 
 			String ecId = null;
 			if (ec != null) {
@@ -2027,6 +2143,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Write residue info to given db, using our db graph OWL format, 
 	 * i.e. tables: residue_info
+	 * Only considers standard amino acids 
 	 * @param conn
 	 * @param db
 	 * @throws SQLException
@@ -2040,9 +2157,11 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		
 		PrintStream resOut = new PrintStream(new FileOutputStream(getPdbCode()+chainCode+"_residues.txt"));
 		
-		for (int resser:getAllSortedResSerials()) {
-			String resType = String.valueOf(this.getResidue(resser).getAaType().getOneLetterCode());
-			String pdbresser = getPdbResSerFromResSer(resser);
+		for (Residue residue:this) {
+			if (!(residue instanceof AaResidue)) continue;
+			int resser = residue.getSerial();
+			String resType = String.valueOf(((AaResidue)residue).getAaType().getOneLetterCode());
+			String pdbresser = residue.getPdbSerial();
 			
 			String secStructType = "\\N";
 			String secStructId = "\\N";
@@ -2074,8 +2193,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			Double allRsa = getAllRsaFromResSerial(resser);
 			Double scRsa = getScRsaFromResSerial(resser);
 			
-			Double consurfhsspScore = getConsurfhsspScoreFromResSerial(resser);
-			Integer consurfhsspColor = getConsurfhsspColorFromResSerial(resser);
+			// support for consurf parsing now discontinued: web site changed format, need a local executable or similar
+			Double consurfhsspScore = null;//((AaResidue)residue).getConsurfScore();
+			Integer consurfhsspColor = null;//((AaResidue)residue).getConsurfColor();
 			
 			String ecId = "\\N";
 			if (ec != null) {
@@ -2269,7 +2389,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		TreeSet<Integer> resSersToKeep = intervSet.getIntegerSet();
 
 		// removing residues
-		Iterator<Residue> resIt = residues.values().iterator();
+		Iterator<Residue> resIt = iterator();
 		while (resIt.hasNext()) {
 			int resser = resIt.next().getSerial();
 			if (!resSersToKeep.contains(resser)) {
@@ -2300,14 +2420,16 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @return
 	 */
 	public InterfaceRimCore getRimAndCore(double bsaToAsaCutoff) {
-		List<Residue> core = new ArrayList<Residue>();
-		List<Residue> rim = new ArrayList<Residue>();
-		for (Residue residue:this.residues.values()) {
-			if (residue.getBsa()>0) {
-				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
-					rim.add(residue);
-				} else {
-					core.add(residue);
+		List<AaResidue> core = new ArrayList<AaResidue>();
+		List<AaResidue> rim = new ArrayList<AaResidue>();
+		for (Residue residue:this) {
+			if ((residue instanceof AaResidue)) {
+				if (residue.getBsa()>0) {
+					if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
+						rim.add((AaResidue)residue);
+					} else {
+						core.add((AaResidue)residue);
+					}
 				}
 			}
 		}
@@ -2343,11 +2465,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * Mirror this PdbChain structure by inverting through the origin.
 	 */
 	public void mirror() {
-		for (int atomserial:getAllAtomSerials()){
-			Point3d coords = getAtomCoord(atomserial);
-			coords.x *= -1;
-			coords.y *= -1;
-			coords.z *= -1;
+		this.bounds = null; // we must reset bounds whenever the coordinates are changed
+		for (Residue residue:this) {
+			for (Atom atom:residue) {
+				Point3d coords = atom.getCoords();
+				coords.x *= -1;
+				coords.y *= -1;
+				coords.z *= -1;				
+			}
 		}
 	}
 
@@ -2355,11 +2480,13 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * Transforms (rotation+translation) this structure in place as indicated by the given matrix. 
 	 * @param m the rotation/translation matrix
 	 */
-	public void transform(Matrix4d m) {
+	public void transform(Matrix4d m) {	
 		this.bounds = null; // we must reset bounds whenever the coordinates are changed
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			m.transform(coords);
+		for (Residue residue:this) {
+			for (Atom atom:residue) {
+				Point3d coords = atom.getCoords();
+				m.transform(coords);
+			}
 		}
 	}
 	
@@ -2436,12 +2563,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
 		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
 		rot.setRotation(axisAngle);
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			// translate to new origin
-			coords.sub(center);
-			// rotate so that z axis is the given axis
-			rot.transform(coords);
+		for (Residue residue: this) {
+			for (Atom atom:residue) {
+				Point3d coords = atom.getCoords();
+				// translate to new origin
+				coords.sub(center);
+				// rotate so that z axis is the given axis
+				rot.transform(coords);
+			}
 		}
 	}
 	
@@ -2456,11 +2585,11 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		// note that the matrix needs to be initialised to the unit matrix otherwise setRotation() doesn't work properly
 		Matrix4d rot = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1); 
 		rot.setRotation(axisAngle);
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			// rotate
-			rot.transform(coords);			
-		}			
+		for (Residue residue: this) {
+			for (Atom atom:residue) {
+				rot.transform(atom.getCoords());
+			}
+		}
 	}
 
 	
@@ -2469,20 +2598,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public void moveToOrigin() {
 		this.bounds = null; // we must reset bounds whenever the coordinates are changed
-		Vector3d sumVector = new Vector3d();
-		int numVectors = 0;
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			sumVector.add(coords);
-			numVectors++;
+		Point3d center = getCenterOfMass();
+		for (Residue residue: this) {
+			for (Atom atom:residue) {
+				atom.getCoords().sub(center);
+			}
 		}
-		sumVector.scale(1.0/numVectors);
-		//System.out.println(sumVector);
-		
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			coords.sub(sumVector);
-		}		
 	}
 	
 	/**
@@ -2501,19 +2622,27 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		sumVector.scale(1.0/numVectors);
 		//System.out.println(sumVector);
 		
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			coords.sub(sumVector);
-		}		
+		for (Residue residue: this) {
+			for (Atom atom:residue) {
+				atom.getCoords().sub(sumVector);
+			}
+		}
 	}
 	
+	/**
+	 * Returns the average coordinate of all atoms in this chain (disregarding atom masses)
+	 * Atoms of all kinds of residues are considered
+	 * @return
+	 */
 	public Point3d getCenterOfMass() {
 		Vector3d sumVector = new Vector3d();
 		int numAtoms = 0;
-		for(int atomserial:getAllAtomSerials()) {
-			Point3d coords = getAtomCoord(atomserial);
-			sumVector.add(coords);
-			numAtoms++;
+		for (Residue residue:this) {
+			for (Atom atom:residue) {
+				Point3d coords = atom.getCoords();
+				sumVector.add(coords);
+				numAtoms++;
+			}
 		}
 		sumVector.scale(1.0/numAtoms);
 		return new Point3d(sumVector);
@@ -2598,7 +2727,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public TreeMap<Integer, double[]> getAllPhiPsi() {
 		TreeMap<Integer, double[]> phipsi = new TreeMap<Integer, double[]>();
-		for (int resser: getAllSortedResSerials()) {
+		for (int resser: getAllResSerials()) {
 			double[] angles = {getPhiAngle(resser), getPsiAngle(resser)};
 			phipsi.put(resser, angles);
 		}
@@ -2617,20 +2746,18 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the number of unobserved residues
+	 * Returns a TreeMap of residue serials to standard amino acid unobserved residue's one letter codes 
 	 * @return
 	 */
-	public int countUnobserved() {
-		return getFullLength()-getObsLength();
-	}
-	
 	public TreeMap<Integer,Character> getUnobservedResidues() {
 		TreeMap<Integer,Character> unobserved = new TreeMap<Integer,Character>();
 
 		// detect all unobserved residues
 		for(int i = 1; i <= getFullLength(); ++i) {
 			if(!residues.containsKey(i)) {
-				unobserved.put(i,sequence.getSeq().charAt(i-1));
+				if (sequence.getSeq().charAt(i-1)!=AminoAcid.XXX.getOneLetterCode()) {
+					unobserved.put(i,sequence.getSeq().charAt(i-1));
+				}
 			}
 		}
 		return unobserved;
@@ -2662,7 +2789,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		newPdb.hasBfactors = this.hasBfactors;
 				
 		newPdb.sequence = this.sequence;
-		newPdb.secondaryStructure = this.secondaryStructure.copy();
+		if (secondaryStructure!=null) {
+			newPdb.secondaryStructure = this.secondaryStructure.copy();
+		}
 		if (this.scop!=null) newPdb.scop = this.scop.copy();
 		if (this.ec!=null) newPdb.ec = this.ec.copy();
 		if (this.catalSiteSet!=null) newPdb.catalSiteSet = this.catalSiteSet.copy();
@@ -2679,13 +2808,15 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			}
 		}
 		// resser2pdbresser and pdbresser2resser
-		newPdb.resser2pdbresser = new TreeMap<Integer, String>();
-		newPdb.pdbresser2resser = new TreeMap<String, Integer>();
-		for (int resser:this.resser2pdbresser.keySet()) {
-			newPdb.resser2pdbresser.put(resser, this.resser2pdbresser.get(resser));
-		}
-		for (String pdbresser:this.pdbresser2resser.keySet()) {
-			newPdb.pdbresser2resser.put(pdbresser, this.pdbresser2resser.get(pdbresser));
+		if (resser2pdbresser!=null) {
+			newPdb.resser2pdbresser = new TreeMap<Integer, String>();
+			newPdb.pdbresser2resser = new TreeMap<String, Integer>();
+			for (int resser:this.resser2pdbresser.keySet()) {
+				newPdb.resser2pdbresser.put(resser, this.resser2pdbresser.get(resser));
+			}
+			for (String pdbresser:this.pdbresser2resser.keySet()) {
+				newPdb.pdbresser2resser.put(pdbresser, this.pdbresser2resser.get(pdbresser));
+			}
 		}
 		return newPdb;
 	}
@@ -2744,17 +2875,21 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		File inFile = new File(arg);
 		if(inFile.canRead()) {
 			if(!silent) System.out.println("Reading file " + arg);
-			PdbfileParser parser = new PdbfileParser(arg);
 			try {
+				PdbAsymUnit fullpdb = new PdbAsymUnit(new File(arg));
 				if(chain == null) {
-					String[] chains = parser.getChains();
-					if(!silent) System.out.println("Loading chain " + chains[0]);
-					pdb = parser.readChain(chains[0], PdbAsymUnit.DEFAULT_MODEL);
+					//String[] chains = parser.getChains();
+					if(!silent) System.out.println("Loading chain " + fullpdb.getFirstChain().getPdbChainCode());
+					pdb = fullpdb.getFirstChain();
 				} else {
 					if(!silent) System.out.println("Loading chain " + chain);
-					pdb = parser.readChain(chain, PdbAsymUnit.DEFAULT_MODEL);
+					pdb = fullpdb.getChain(chain);
 				}
 			} catch (PdbLoadException e) {
+				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
+			} catch (FileFormatException e) {
+				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
+			} catch (IOException e) {
 				if(!silent) System.err.println("Error loading file " + arg + ":" + e.getMessage());
 			}
 		} else {
@@ -2767,25 +2902,22 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				String chainCode = arg.substring(4,5);
 				try {
 					if(!silent) System.out.println("Loading pdb code " + pdbCode);
-					PdbaseParser parser = new PdbaseParser(pdbCode,PdbaseParser.DEFAULT_PDBASE_DB,new MySQLConnection());
 					try {
+						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(), PdbaseParser.DEFAULT_PDBASE_DB);
 						
 						if(chainCode.length() == 0) {
 
-							chainCode = parser.getChains()[0];
+							chainCode = fullpdb.getFirstChain().getPdbChainCode();
 						}
+						
+						if(!silent) System.out.println("Loading chain " + chainCode);
+						pdb = fullpdb.getChain(chainCode);
+
 					} catch (PdbLoadException e) {
 						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
 						if(exit) System.exit(1);
 					}
 
-					try {
-						if(!silent) System.out.println("Loading chain " + chainCode);
-						pdb = parser.readChain(chainCode, PdbAsymUnit.DEFAULT_MODEL);
-					} catch (PdbLoadException e) {
-						if(!silent) System.err.println("Error loading pdb structure:" + e.getMessage());
-						if(exit) System.exit(1);
-					}
 				} catch (SQLException e) {
 					if(!silent) System.err.println("Database error: " + e.getMessage());
 					if(exit) System.exit(1);

@@ -4,7 +4,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -31,14 +30,8 @@ public class PdbaseParser {
 	
 	//public enum ChainCodeType {PDB_CHAIN_CODE, CIF_CHAIN_CODE};
 	
-	private int model;
-	private String pdbChainCode;
-	
 	private String pdbCode;
 	private int entrykey;
-	private String asymid;
-	private int entitykey;
-	private String alt_locs_sql_str;
 	
 	private String[] chainsArray;
 	private Integer[] modelsArray;
@@ -63,53 +56,30 @@ public class PdbaseParser {
 	}
 
 	/**
-	 * Reads PDB data from pdbase given a chain code of type ccType.
-	 * @param pdbChainCode
+	 * Reads PDB data from pdbase given a PDB chain code
+	 * @param pdbAsymUnit
 	 * @param modelSerial
 	 * @throws PdbLoadException
 	 */
-	public PdbChain readChain(String pdbChainCode, int modelSerial) throws PdbLoadException {
-		PdbChain pdb = new PdbChain();
-		try {
-			this.model = modelSerial;
-			this.pdbChainCode=pdbChainCode;	// NOTE! pdb chain code are case sensitive!
-			pdb.setPdbChainCode(pdbChainCode);
-			
-			this.asymid=getAsymId();		
-			pdb.setChainCode(asymid);
- 
-			this.entitykey=getEntityKey();
-			this.alt_locs_sql_str=getAtomAltLocs(pdb);
-			
-			pdb.setSequence(readSeq());
-			
-			TreeMap<String,Integer> pdbresser2resser = getRessersMapping(); 
-			pdb.setPdbresser2resserMap(pdbresser2resser);
-			// we initialise resser2pdbresser from the pdbresser2resser TreeMap
-			TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer, String>();
-			for (String pdbresser:pdbresser2resser.keySet()){
-				resser2pdbresser.put(pdbresser2resser.get(pdbresser), pdbresser);
-			}
-			pdb.setResser2pdbresserMap(resser2pdbresser);
+	public void readChains(PdbAsymUnit pdbAsymUnit, int modelSerial) throws PdbLoadException {
 
-			// this needs the info in the pdbress2resser maps
-			this.readAtomData(pdb);
+		try {
+ 			
+			readPdbxPolySeq(pdbAsymUnit);
 			
-			SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());	// create empty secondary structure first to make sure object is not null
-			readSecStructure(secondaryStructure);
-			pdb.setSecondaryStructure(secondaryStructure);
-			if(!secondaryStructure.isEmpty()) {
-				secondaryStructure.setComment("Pdbase");
-				pdb.initialiseResiduesSecStruct();
+			// this needs the info in the pdbress2resser maps
+			this.readAtomSite(pdbAsymUnit,modelSerial);
+			
+			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
+				pdb.initialiseMaps();
 			}
 			
-			pdb.initialiseMaps();
+			readSecStructure(pdbAsymUnit);
 			
 		} catch (SQLException e) {
 			throw new PdbLoadException(e);
 		} 
 
-		return pdb;
 	}
 	
 	/**
@@ -209,41 +179,6 @@ public class PdbaseParser {
 	}
 	
 	/**
-	 * Gets the asym_id given a pdb_strand_id (from field pdbChainCode) and entry_key (from field entrykey)
-	 * @return
-	 * @throws PdbLoadException
-	 * @throws SQLException
-	 */
-	private String getAsymId() throws PdbLoadException, SQLException {
-		String asymid = null;
-		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
-			pdbstrandid="A";
-		}
-		// NOTE: as pdbx_poly_seq_scheme contains a record per residue, this query returns many (identical) records
-		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
-		// NOTE2: pdb_strand_id case sensitive!
-		String sql="SELECT asym_id " +
-				" FROM "+db+".pdbx_poly_seq_scheme " +
-				" WHERE entry_key=" + entrykey +
-				" AND pdb_strand_id='"+pdbstrandid+"' " +
-				" LIMIT 1";
-
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
-		if (rsst.next()) {
-			asymid = rsst.getString(1);
-		} else {
-			//System.err.println("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-			throw new PdbLoadException("No asym_id match for entry_key="+entrykey+", pdb_strand_id="+pdbChainCode);
-		}
-		rsst.close();
-		stmt.close();
-
-		return asymid;	
-	}
-
-	/**
 	 * Gets the pdb_strand_id given an asym_id (from field asymid) and entry_key (from field entrykey)
 	 * This is useful to get the pdbChainCode given the cif chain code. We don't use it anymore, thus is now commented out.
 	 * @return
@@ -272,70 +207,7 @@ public class PdbaseParser {
 //
 //		return pdbstrandid;	
 //	}
-	
-	// NOTE: Entity key not really needed since there can be only one entity_key
-	// per entry_key,asym_id combination 
-	private int getEntityKey() throws PdbLoadException, SQLException {
-		String sql="SELECT entity_key " +
-				" FROM "+db+".struct_asym " +
-				" WHERE entry_key="+ entrykey +
-				" AND id='"+asymid+"'";
 
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
-		if (rsst.next()) {
-			entitykey = rsst.getInt(1);
-			if (! rsst.isLast()) {
-				throw new PdbLoadException("More than 1 entity_key match for entry_key="+entrykey+", asym_id="+asymid);					
-			}
-		} else {
-			throw new PdbLoadException("No entity_key match for entry_key="+entrykey+", asym_id="+asymid);
-		}
-		rsst.close();
-		stmt.close();
-		return entitykey;
-	}
-	
-	private String getAtomAltLocs(PdbChain pdb) throws PdbLoadException, SQLException{
-		ArrayList<String> alt_ids = new ArrayList<String>();
-		String alt_loc_field="label_alt_id";
-		String sql = "SELECT DISTINCT " + alt_loc_field + 
-					" FROM "+db+".atom_site " +
-					" WHERE entry_key="+entrykey +
-					" AND label_asym_id='"+asymid+"' " +
-					" AND label_entity_key="+ entitykey +
-					" AND model_num="+ model;
-		
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
-		int count=0;
-		while (rsst.next()) {
-			count++;
-			alt_ids.add(rsst.getString(1));
-		}
-		if (count>0){
-			if (! alt_ids.contains(".")){ 
-				throw new PdbLoadException("alt_codes exist for entry_key "+entrykey+" but there is no default value '.'. Something wrong with this entry_key or with "+DEFAULT_PDBASE_DB+" db!");
-			}
-			if (count==1) {
-				alt_locs_sql_str = alt_loc_field+"='.'";
-			} else {
-				pdb.setHasAltCodes(true);
-				alt_ids.remove(".");
-				Collections.sort(alt_ids);
-				String lowest_alt_id = alt_ids.get(0);
-				alt_locs_sql_str = "("+alt_loc_field+"='.' OR "+alt_loc_field+"='"+lowest_alt_id+"')";
-			}
-		} else {
-			throw new PdbLoadException("No records returned from atom_site table for entry_key="+entrykey+", entity_key="+entitykey+", asym_id="+asymid+", model_num="+model);
-		} 
-
-		rsst.close();
-		stmt.close();
-
-		return alt_locs_sql_str;
-	}
-	
 	protected SpaceGroup readSpaceGroup() throws SQLException, PdbLoadException {
 		String sql = "SELECT space_group_name_h_m " +
 				" FROM "+db+".symmetry " +
@@ -452,131 +324,217 @@ public class PdbaseParser {
 		return title;
 	}
 	
-	private void readAtomData(PdbChain pdb) throws PdbLoadException, SQLException{
-		// NOTE: label_entity_key not really needed since there can be only one entity_key
-		// per entry_key,asym_id combination
-		String sql = "SELECT id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv " +
-				" FROM "+db+".atom_site " +
-				" WHERE entry_key="+entrykey +
-				" AND label_asym_id='"+asymid+"' " +
-				" AND label_entity_key="+ entitykey +
-				" AND model_num="+ model +
-				" AND "+alt_locs_sql_str;
+	private void readAtomSite(PdbAsymUnit pdbAsymUnit, int model) throws PdbLoadException, SQLException{
+		
+		AtomLineList atomLines = new AtomLineList();
+		String sql = 
+			"SELECT label_asym_id, label_alt_id, id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, auth_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv, auth_asym_id " +
+			" FROM "+db+".atom_site " +
+			" WHERE entry_key="+entrykey +
+			" AND model_num="+ model+
+			" ORDER BY label_asym_id, id+0";
 
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
-		int count=0;
 		while (rsst.next()){
-			count++;
-
-			int atomserial = rsst.getInt(1); 			// atomserial
-			String atom = rsst.getString(2).trim();  	// atom
-			String element = rsst.getString(3).trim();  //element
-			String res_type = rsst.getString(4).trim();	// res_type
-			int res_serial = rsst.getInt(5);			// res_serial
-			double x = rsst.getDouble(6);				// x
-			double y = rsst.getDouble(7);				// y
-			double z = rsst.getDouble(8);				// z
-			Point3d coords = new Point3d(x, y, z);
-			double occupancy = rsst.getDouble(9);       // occupancy
-			double bfactor = rsst.getDouble(10);        // bfactor
-			if (AminoAcid.isStandardAA(res_type)) {
-				if (!pdb.containsResidue(res_serial)) { 
-					Residue residue = new Residue(AminoAcid.getByThreeLetterCode(res_type), res_serial, pdb);
-					residue.setPdbSerial(pdb.getPdbResSerFromResSer(res_serial));
-					pdb.addResidue(residue);
-				}
-				if (AminoAcid.isValidAtomWithOXT(res_type,atom)){
-					Residue residue = pdb.getResidue(res_serial);
-					residue.addAtom(new Atom(atomserial, atom, element, coords, residue, occupancy, bfactor));
-				}
+			String labelAsymId = rsst.getString(1).trim();	// asym_id
+			String labelAltId = rsst.getString(2).trim();	// altCode
+			int atomserial = rsst.getInt(3); 			// atomserial
+			String atom = rsst.getString(4).trim();  	// atom
+			String element = rsst.getString(5).trim();  //element
+			String res_type = rsst.getString(6).trim();	// res_type
+			String field7 = rsst.getString(7);			// res_serial
+			int resSerial = -1;
+			if (!field7.equals(".")) {
+				resSerial = Integer.parseInt(field7);
 			}
-
-		}
-		if (count==0){
-			throw new PdbLoadException("Atom data query returned no data at all for entry_key="+entrykey+", asym_id="+asymid+", entity_key="+entitykey+", model_num="+model+", alt_locs_sql_str='"+alt_locs_sql_str+"'");
+			int pdbResSerial = rsst.getInt(8);			// pdb res serial (needed for het chains where res_serial is not set)
+			double x = rsst.getDouble(9);				// x
+			double y = rsst.getDouble(10);				// y
+			double z = rsst.getDouble(11);				// z
+			double occupancy = rsst.getDouble(12);      // occupancy
+			double bfactor = rsst.getDouble(13);        // bfactor
+			String authAsymId = rsst.getString(14);		// auth_asym_id
+			
+			if (!res_type.equals("HOH")) {
+				// note we don't really use the insCode and nonPoly fields of AtomLine (we use them only in pdb file parser), we fill them with null and false
+				atomLines.addAtomLine(new AtomLine(labelAsymId,labelAltId,atomserial,atom,element,res_type,resSerial,pdbResSerial,null,new Point3d(x,y,z),occupancy,bfactor,authAsymId,false,false));
+			}
 		}
 		rsst.close();
 		stmt.close();
+		if (atomLines.isEmpty()){
+			throw new PdbLoadException("Atom data query returned no data at all for entry_key="+entrykey+", model_num="+model);
+		}
+		
+		String altLoc = atomLines.getAtomAltLoc();
+		String lastChainCode = null;
+		
+		for (AtomLine atomLine:atomLines) {
+			// we read only the alt locs we want
+			if (altLoc!=null && !atomLine.labelAltId.equals(altLoc) && !atomLine.labelAltId.equals(".")) continue;
+			
+			if (lastChainCode!=null && !lastChainCode.equals(atomLine.labelAsymId)) {
+				if (!pdbAsymUnit.containsChainCode(atomLine.labelAsymId)) {
+					// in readPdbxPolySeq we already added the polymer chains, now we only need to add the missing ones: non-polymer chains
+					PdbChain pdb = new PdbChain();
+					pdb.setChainCode(atomLine.labelAsymId);
+					pdb.setPdbChainCode(atomLine.authAsymId);
+					pdbAsymUnit.setNonPolyChain(atomLine.labelAsymId,pdb);
+					pdb.setIsNonPolyChain(true);
+				}
+			} 
+			PdbChain pdb = pdbAsymUnit.getChainForChainCode(atomLine.labelAsymId);
+			if ((atomLine.resSerial!=-1 && !pdb.containsResidue(atomLine.resSerial)) ||
+					(atomLine.resSerial==-1 && !pdb.containsResidue(atomLine.pdbResSerial))) {
+				Residue residue = null;
+				if (AminoAcid.isStandardAA(atomLine.res_type)) {
+					residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), atomLine.resSerial, pdb);
+				} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
+					Nucleotide nuc = Nucleotide.getByCode(atomLine.res_type);
+					residue = new NucResidue(nuc,atomLine.resSerial,pdb);
+				} else {
+					// this check is valid for both protein or nucleotide sequences
+					if (!pdb.isNonPolyChain() && pdb.getSequence().getSeq().charAt(atomLine.resSerial-1)!=AminoAcid.XXX.getOneLetterCode()) {
+						throw new PdbLoadException("HET residue with residue serial "+atomLine.resSerial+" and type "+atomLine.res_type+" does not match an X in the SEQRES sequence");
+					}
+					if (pdb.isNonPolyChain()) {
+						// in het chains the res serial is not set in cif, we've got to use the pdb res serial 
+						residue = new HetResidue(atomLine.res_type,atomLine.pdbResSerial,pdb);
+
+					} else {
+						residue = new HetResidue(atomLine.res_type,atomLine.resSerial,pdb);
+					}
+				}
+				if (pdb.isNonPolyChain()) {
+					residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial));
+					residue.setSerial(atomLine.pdbResSerial);
+				} else {
+					residue.setPdbSerial(pdb.getPdbResSerFromResSer(atomLine.resSerial));
+				}
+				pdb.addResidue(residue);
+			}
+
+			Residue residue = null;
+			if (pdb.isNonPolyChain()) {
+				residue = pdb.getResidue(atomLine.pdbResSerial);
+			} else {
+				residue = pdb.getResidue(atomLine.resSerial);
+			}
+
+			residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element, atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
+
+			lastChainCode = atomLine.labelAsymId;
+		}
+		
+		if (altLoc!=null) {
+			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
+				pdb.setHasAltCodes(true);
+			}
+		}
+
+		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+			if (pdb.getObsLength()>pdb.getFullLength()) {
+				throw new PdbLoadException("Length of observed (atom_site) sequence longer than pdbx_poly_seq_scheme sequence for CIF chain "+pdb.getChainCode()+". Inconsistent PDB entry. Report to the PDB.");
+			}
+			for (Residue residue:pdb) {
+				if (residue.getShortCode()!=pdb.getSequence().getSeq().charAt(residue.getSerial()-1)){
+					throw new PdbLoadException("atom_site sequence does not match sequence in pdbx_poly_seq_scheme for CIF chain "+pdb.getChainCode()+". Inconsistent PDB entry. Report to the PDB.");
+				}	
+			}
+		}
+
+		
 	}
 	
-	private String readSeq() throws PdbLoadException, SQLException{
-		String sequence="";
-
-        // we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
-        String sql="SELECT mon_id" +
+	private void readPdbxPolySeq(PdbAsymUnit pdbAsymUnit) throws PdbLoadException, SQLException{
+		
+		PdbxPolySeqLineList list  = new PdbxPolySeqLineList();
+        
+		// we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
+		// we order by asym_id, thus our list will have that order (we then read atoms in the same way)
+        String sql="SELECT asym_id, pdb_strand_id, mon_id, seq_id, pdb_seq_num, pdb_ins_code " +
         		" FROM "+db+".pdbx_poly_seq_scheme " +
         		" WHERE entry_key=" + entrykey +
-        		" AND asym_id='"+asymid+"' " +
-        		" ORDER BY seq_id+0";
-
+        		" ORDER BY asym_id, seq_id+0"; 
+		
         Statement stmt = conn.createStatement();
         ResultSet rsst = stmt.executeQuery(sql);
-        int count=0;
+
         while (rsst.next()) {
-        	count++;
-        	String res_type = rsst.getString(1);
-        	if (AminoAcid.isStandardAA(res_type)){
-        		sequence+=AminoAcid.three2one(res_type);
-        	} else {
-        		sequence+=AminoAcid.XXX.getOneLetterCode();
-        	}
-        } 
-        if (count==0) {
-        	throw new PdbLoadException("No sequence data match for entry_key="+entrykey+", asym_id="+asymid);
+        	String asymId = rsst.getString(1).trim();
+        	String pdbChainCode = rsst.getString(2).trim();
+        	String res_type = rsst.getString(3).trim();
+			int resser = Integer.parseInt(rsst.getString(4).trim());
+			int pdb_seq_num = Integer.parseInt(rsst.getString(5).trim());
+			String pdb_ins_code = rsst.getString(6).trim();
+			
+			list.add(new PdbxPolySeqLine(asymId, resser, res_type, pdb_seq_num, pdbChainCode, pdb_ins_code));
         }
         rsst.close();
         stmt.close();
+        if (list.isEmpty()) {
+        	throw new PdbLoadException("No sequence data match for entry_key="+entrykey);
+        }
+        
+        ArrayList<PdbxPolySeqGroup> groups = new ArrayList<PdbxPolySeqGroup>();
 
-		return sequence;
+        String lastAsymId = null;
+        for (PdbxPolySeqLine line:list) {
+        	if (lastAsymId==null || !lastAsymId.equals(line.asym_id)) {
+        		PdbxPolySeqGroup group = new PdbxPolySeqGroup();
+        		group.add(line);
+        		groups.add(group);
+        	} else {
+        		PdbxPolySeqGroup group = groups.get(groups.size()-1);
+        		group.add(line);
+        	}
+        	lastAsymId = line.asym_id;
+        } 
+        
+        TreeMap<String,String> pdbchaincode2chaincode = new TreeMap<String,String>();
+        pdbAsymUnit.setPdbchaincode2chaincode(pdbchaincode2chaincode);
+
+        for (PdbxPolySeqGroup group:groups) {
+
+        	pdbchaincode2chaincode.put(group.getPdbChainCode(),group.getChainCode());
+
+        	PdbChain pdb = new PdbChain();
+            pdb.setSequence(group.getSequence(), group.isProtein());
+ 
+            pdb.setPdbresser2resserMap(group.getPdbresser2resserMap());
+			pdb.setResser2pdbresserMap(group.getResser2pdbresserMap());
+
+			pdb.setPdbChainCode(group.getPdbChainCode());			
+			pdb.setChainCode(group.getChainCode());
+
+			pdb.setIsNonPolyChain(false);
+			
+			pdbAsymUnit.setPolyChain(group.getChainCode(),pdb);
+			
+        }
+
+
 	}
-	
-	private TreeMap<String,Integer> getRessersMapping() throws PdbLoadException, SQLException{
-		String pdbstrandid=pdbChainCode;
-		if (pdbChainCode.equals(PdbAsymUnit.NULL_CHAIN_CODE)){
-			pdbstrandid="A";
+
+	private void readSecStructure(PdbAsymUnit pdbAsymUnit) throws SQLException {
+		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+			SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());	// create empty secondary structure first to make sure object is not null
+			pdb.setSecondaryStructure(secondaryStructure);
 		}
-
-		TreeMap<String,Integer> map = new TreeMap<String, Integer>();
-		String sql="SELECT seq_id, concat(pdb_seq_num,IF(pdb_ins_code='.','',pdb_ins_code))" +
-					" FROM "+db+".pdbx_poly_seq_scheme " +
-					" WHERE entry_key=" + entrykey +
-					" AND asym_id='"+asymid+"' " +
-					" AND pdb_strand_id='"+pdbstrandid+"' " +
-					" ORDER BY seq_id+0";
-
-		Statement stmt = conn.createStatement();
-		ResultSet rsst = stmt.executeQuery(sql);
-		int count=0;
-		while (rsst.next()) {
-			count++;
-			int resser = Integer.parseInt(rsst.getString(1));
-			String pdbresser = rsst.getString(2);
-			map.put(pdbresser, resser);
-		} 
-		if (count==0) {
-			throw new PdbLoadException("No residue serials mapping data match for entry_key="+entrykey+", asym_id="+asymid+", pdb_strand_id="+pdbstrandid);
-		}
-		rsst.close();
-		stmt.close();
-
-		return map;
-	}
-
-	private void readSecStructure(SecondaryStructure secondaryStructure) throws SQLException {
-		
 		// HELIX AND TURN -- struct_conf table
-		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id " +
+		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id,beg_label_asym_id " +
 				" FROM "+db+".struct_conf " +
 				" WHERE entry_key="+entrykey+
-				" AND beg_label_asym_id='"+asymid+"'";
+				" ORDER BY beg_label_asym_id";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		int count=0;
 		while (rsst.next()) {
 			count++;
 			String id = rsst.getString(1).trim(); // id is either HELIX_Pnn or TURN_Pnn
-			Pattern p = Pattern.compile("^(\\w).+_P(\\d)+$");
+			if (id.startsWith("TURN")) continue; // we don't parse turns anymore as they were dropped from PDB files and anyway the annotation is VERY inconsistent
+			Pattern p = Pattern.compile("^(\\w).+_P(\\d+)$");
 			Matcher m = p.matcher(id);
 			String ssId="Unknown";
 			if (m.find()){
@@ -584,6 +542,7 @@ public class PdbaseParser {
 			}
 			int beg = rsst.getInt(2);
 			int end =rsst.getInt(3);
+			String asymId = rsst.getString(4);
 			char ssType = SecStrucElement.OTHER;
 			if(id.startsWith("H")) {
 				ssType = SecStrucElement.HELIX;
@@ -594,17 +553,17 @@ public class PdbaseParser {
 			}
 			if(ssType != SecStrucElement.OTHER) {
 				SecStrucElement ssElem = new SecStrucElement(ssType, beg, end, ssId);
-				secondaryStructure.add(ssElem);
+				pdbAsymUnit.getChainForChainCode(asymId).getSecondaryStructure().add(ssElem);
 			}
 		} 
 		rsst.close();
 		stmt.close();
 		
 		// SHEET -- struct_sheet_range table
-		sql = "SELECT sheet_id, id, beg_label_seq_id, end_label_seq_id " +
+		sql = "SELECT sheet_id, id, beg_label_seq_id, end_label_seq_id, beg_label_asym_id " +
 				" FROM "+db+".struct_sheet_range " +
 				" WHERE entry_key="+entrykey+
-				" AND beg_label_asym_id='"+asymid+"'";
+				" ORDER BY beg_label_asym_id";
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
 		count=0;
@@ -614,13 +573,20 @@ public class PdbaseParser {
 			int id = rsst.getInt(2);
 			int beg = rsst.getInt(3);
 			int end =rsst.getInt(4);
+			String asymId = rsst.getString(5);
 			String ssId=SecStrucElement.STRAND+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
 			SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND, beg, end, ssId);
-			secondaryStructure.add(ssElem);
+			pdbAsymUnit.getChainForChainCode(asymId).getSecondaryStructure().add(ssElem);
 		} 
 		rsst.close();
 		stmt.close();
 
+		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+			if(!pdb.getSecondaryStructure().isEmpty()) {
+				pdb.getSecondaryStructure().setComment("Pdbase");
+				pdb.initialiseResiduesSecStruct();
+			}
+		}
 	}
 	
 	/**
@@ -703,12 +669,4 @@ public class PdbaseParser {
 		return map;
 	}
 	
-	/**
-	 * Returns the database name from which the PDB data has
-	 * been read.
-	 * @return
-	 */
-	public String getDb() {
-		return this.db;
-	}
 }

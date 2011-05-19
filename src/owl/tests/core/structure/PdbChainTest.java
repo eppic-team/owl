@@ -23,7 +23,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import owl.core.connections.ConsurfConnection;
 import owl.core.runners.DsspRunner;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.runners.NaccessRunner;
@@ -36,6 +35,7 @@ import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.FileRIGraph;
@@ -53,7 +53,7 @@ import owl.tests.TestsSetup;
 import edu.uci.ics.jung.graph.util.Pair;
 
 
-public class PdbTest {
+public class PdbChainTest {
 
 	private static String MAX_CLUSTER_EXEC; 
 	private static String NACCESS_EXEC; 
@@ -65,7 +65,6 @@ public class PdbTest {
 	private static final String TEST_CHAIN_1 = "A";
 	private static final String TEST_CHAIN_2 = "B";
 	private static final String NACCESS_OUTPUT_REF = TESTDATADIR+"/1tdrA.rsa";
-	private static final String CONSURF_DIR = "src/owl/tests/core/structure/data";
 	private static final String TESTSET10_LIST = TESTDATADIR+"/testset10.list";
 	
 	private static final String TEST_PDB_3 = "12as";
@@ -121,7 +120,7 @@ public class PdbTest {
 			Assert.assertEquals(scAsa, pdb.getScRsaFromResSerial(resser), 0);
 		}
 		br.close();
-		Assert.assertEquals(resser,pdb.getObsLength());
+		Assert.assertEquals(resser,pdb.getStdAaObsLength());
 		
 		
 	}
@@ -143,13 +142,14 @@ public class PdbTest {
 			try {
 				PdbAsymUnit theirsFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
 				theirs = theirsFull.getChain(pdbChainCode);
-				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC), "");
+				// note we run nacccess with -h to also include the het residues
+				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC),"-h");
 				naccRunner.runNaccess(theirs);
 
 				PdbAsymUnit oursFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
 				ours = oursFull.getChain(pdbChainCode);
 				long start = System.currentTimeMillis();
-				ours.calcASAs(960, NTHREADS);
+				ours.calcASAs(960, NTHREADS, true);
 				long end = System.currentTimeMillis();
 				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 
@@ -158,7 +158,7 @@ public class PdbTest {
 				System.err.println("Could not find pdb code "+pdbCode);
 				continue;
 			}
-			checkASAsMatch(theirs, ours, 0.20, 0.10);
+			checkASAsMatch(theirs, ours, 0.20, 0.11);
 			
 		}
 
@@ -180,13 +180,13 @@ public class PdbTest {
 
 				rotated.rotate(new Vector3d(0,0,1), Math.PI/4.0);
 				System.out.println("960 sphere points");
-				ours.calcASAs(960,NTHREADS);
-				rotated.calcASAs(960,NTHREADS);
+				ours.calcASAs(960,NTHREADS,true);
+				rotated.calcASAs(960,NTHREADS,true);
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 				System.out.println("9600 sphere points");
 
-				ours.calcASAs(9600,NTHREADS);
-				rotated.calcASAs(9600,NTHREADS);
+				ours.calcASAs(9600,NTHREADS,true);
+				rotated.calcASAs(9600,NTHREADS,true);
 
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 
@@ -201,7 +201,7 @@ public class PdbTest {
 	
 	private void checkASAsMatch(PdbChain theirs, PdbChain ours, double toleranceSingleVal, double toleranceGlobal) {
 		int misMatches = 0;
-		for (int resser:ours.getAllSortedResSerials()) {
+		for (int resser:ours.getAllResSerials()) {
 			Residue tRes = theirs.getResidue(resser);
 			Residue oRes = ours.getResidue(resser);
 			//String notWithin = "";
@@ -213,32 +213,17 @@ public class PdbTest {
 			//System.out.printf("%6.2f\t%6.2f\t"+notWithin+"\n",tRes.getAsa(),oRes.getAsa());
 			
 		}
-		System.out.printf("%4.1f%% mismatches\n",100.0*(double)misMatches/(double)ours.getObsLength());
+		System.out.printf("%4.1f%% mismatches (%d)\n",100.0*(double)misMatches/(double)ours.getObsLength(),misMatches);
 		// we require that 90% of them must be within the 20% tolerance
 		Assert.assertTrue(misMatches<(double)ours.getObsLength()*toleranceGlobal);
 
 	}
 	
 	@Test
-	public void testConsurfConnection() throws IOException, PdbLoadException, FileFormatException {
-		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
-		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
-		ConsurfConnection consurfConn = new ConsurfConnection();
-		consurfConn.getConsurfDataLocal(pdb, CONSURF_DIR);
-
-		for (int resser:pdb.getAllSortedResSerials()){
-			// very basic test, not sure how to test this better 
-			Assert.assertNotNull(pdb.getConsurfhsspColorFromResSerial(resser));
-			Assert.assertNotNull(pdb.getConsurfhsspScoreFromResSerial(resser));
-		}
- 
-	}
-	
-	@Test
 	public void testRunDssp() throws PdbLoadException, IOException, FileFormatException {
 		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
 		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
-		
+
 		PdbAsymUnit dsspAssignedFullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
 		PdbChain pdbDsspAssigned = dsspAssignedFullpdb.getChain(TEST_CHAIN_1);
 
@@ -251,7 +236,7 @@ public class PdbTest {
 		//}
 		// all we can do right now is check for nulls
 		Assert.assertNotNull(pdbDsspAssigned.getSecondaryStructure());
-		for (int resser:pdb.getAllSortedResSerials()) {
+		for (int resser:pdb.getAllStdAaResSerials()) {
 			Assert.assertNotNull(pdbDsspAssigned.getResidue(resser).getSsElem());
 		}
 	}
@@ -394,7 +379,7 @@ public class PdbTest {
 		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
 		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
 		int i=0;
-		for (int resser:pdb.getAllSortedResSerials()) {
+		for (int resser:pdb.getAllResSerials()) {
 			Atom atom = pdb.getResidue(resser).getAtom("CA");
 			conformation[i]=new Vector3d(atom.getCoords());
 			i++;
@@ -407,10 +392,10 @@ public class PdbTest {
 		Assert.assertEquals(model.getObsLength(),model.getNumAtoms());
 		Assert.assertEquals(pdb.getFullLength(), model.getFullLength());
 		Assert.assertEquals(pdb.getSequence(), model.getSequence());
-		for (int resser:model.getAllSortedResSerials()) {
+		for (int resser:model.getAllResSerials()) {
 			Residue residue = model.getResidue(resser);
 			Residue refRes = pdb.getResidue(resser);
-			Assert.assertEquals(refRes.getAaType(),residue.getAaType());
+			Assert.assertEquals(((AaResidue)refRes).getAaType(),((AaResidue)residue).getAaType());
 			Assert.assertEquals(refRes.getAtom("CA").getCoords(),residue.getAtom("CA").getCoords());
 		}
 		
@@ -488,7 +473,7 @@ public class PdbTest {
 		System.out.println(mis);
 		
 		// assuming trivial alignment
-		int expMissing = pdb1.getFullLength()*(pdb1.getFullLength()-1)/2 - pdb1.getObsLength()*(pdb1.getObsLength()-1)/2;
+		int expMissing = pdb1.getFullLength()*(pdb1.getFullLength()-1)/2 - pdb1.getStdAaObsLength()*(pdb1.getStdAaObsLength()-1)/2;
 		Assert.assertEquals(expMissing, mis);
 		
 		double min = Collections.min(diffDistMap.values());
@@ -521,7 +506,11 @@ public class PdbTest {
 	
 	// to debug the testing code (run as java program so that we can use normal debugger)
 	public static void main(String[] args) throws Exception {
-		PdbTest pdbTest = new PdbTest();
-		pdbTest.testRmsd();
+		PdbChainTest pdbTest = new PdbChainTest();
+		setUpBeforeClass();
+		pdbTest.testRunDssp();
+		//pdbTest.testRmsd();
+		//pdbTest.testRunNaccess();
+		//pdbTest.testASAcalcVsNaccess();
 	}
 }

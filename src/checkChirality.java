@@ -3,6 +3,7 @@ import java.io.File;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
+import owl.core.structure.AaResidue;
 
 
 /**
@@ -21,20 +22,20 @@ public class checkChirality {
 		File file = new File(args[0]);
 		PdbAsymUnit pdb = new PdbAsymUnit(file);
 		
-		for (PdbChain chain:pdb.getAllChains()) {
+		for (PdbChain chain:pdb.getPolyChains()) {
 			System.out.println("Chain "+chain+". D-form residues:");
 			int dcount=0;
 			int lcount=0;
 			int ucount=0;
-			for (int resser:chain.getAllSortedResSerials()) {
-				Residue res = chain.getResidue(resser);
-				Residue.Chirality chir = res.getChirality();
-				if (chir == Residue.Chirality.D) {
+			for (Residue res : chain) {
+				if (!(res instanceof AaResidue)) continue;
+				AaResidue.Chirality chir = ((AaResidue)res).getChirality();
+				if (chir == AaResidue.Chirality.D) {
 					//System.out.println(res+" "+chir.getAbbrev());
 					dcount++;
-				} else if (chir == Residue.Chirality.L) {
+				} else if (chir == AaResidue.Chirality.L) {
 					lcount++;
-				} else if (chir == Residue.Chirality.U) {
+				} else if (chir == AaResidue.Chirality.U) {
 					ucount++;
 				}
 			}

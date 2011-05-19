@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -16,7 +15,8 @@ import javax.vecmath.Vector3d;
 import edu.uci.ics.jung.graph.util.Pair;
 
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Residue;
+import owl.core.structure.PdbChain;
+import owl.core.structure.AaResidue;
 import owl.core.structure.features.SecStrucElement;
 import owl.gmbp.CMPdb_sphoxel;
 import owl.gmbp.CSVhandler;
@@ -27,7 +27,7 @@ import owl.gmbp.GmbpGeometry;
 public class RIGGeometry {
 	
 	private RIGraph graph;
-	private TreeMap<Integer, Residue> residues;
+	private PdbChain chain;
 //	private HashMap<String,Vector3d> coord_sph_rotated;  // holds geometry (translated and rotated contact coordinates of CA-position
 //						//	of j-Residue with respect to central iResidue of each edge of the graph, defined by residue serials of edge)
 	private HashMap<Pair<Integer>, Vector3d> coord_sph_rotated; // holds geometry (translated and rotated contact coordinates of CA-position
@@ -40,9 +40,9 @@ public class RIGGeometry {
 	 * Constructs a RIGraph with a sequence but no edges
 	 * @param sequence
 	 */
-	public RIGGeometry(RIGraph graph, TreeMap<Integer, Residue> residues) {
+	public RIGGeometry(RIGraph graph, PdbChain chain) {
 		this.graph = graph;
-		this.residues = residues;
+		this.chain = chain;
 		this.atomType = "CA";
 		
 		initialiseGeometry();
@@ -52,9 +52,9 @@ public class RIGGeometry {
 	 * Constructs a RIGraph with a sequence but no edges
 	 * @param sequence
 	 */
-	public RIGGeometry(RIGraph graph, TreeMap<Integer, Residue> residues, String atomType) {
+	public RIGGeometry(RIGraph graph, PdbChain chain, String atomType) {
 		this.graph = graph;
-		this.residues = residues;
+		this.chain = chain;
 		this.atomType = atomType;
 		
 		initialiseGeometry();
@@ -90,8 +90,8 @@ public class RIGGeometry {
 			String jResType = jNode.getResidueType();
 			
 			
-			Residue iRes = this.residues.get(iNum);
-			Residue jRes = this.residues.get(jNum);
+			AaResidue iRes = (AaResidue)this.chain.getResidue(iNum);
+			AaResidue jRes = (AaResidue)this.chain.getResidue(jNum);
 				
 			
 			// translate coordinates with rotation and translation invariant framework
@@ -170,7 +170,7 @@ public class RIGGeometry {
 		}
 	}
 	
-	public boolean isContactOnNorthernHemisphere(Residue iRes, Residue jRes){
+	public boolean isContactOnNorthernHemisphere(AaResidue iRes, AaResidue jRes){
 		int iNum=iRes.getSerial();
         int jNum=jRes.getSerial();
         
@@ -183,7 +183,7 @@ public class RIGGeometry {
         	return false;
 	}
 	
-	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist, String archiveFN) throws NumberFormatException, IOException{
+	public double getLogOddsScore(AaResidue iRes, AaResidue jRes, double resDist, String archiveFN) throws NumberFormatException, IOException{
 		ZipFile zipfile = null;
         try {
             zipfile = new ZipFile(archiveFN);
@@ -261,7 +261,7 @@ public class RIGGeometry {
         return   score;  
 	}
 	
-	public double getLogOddsScore(Residue iRes, Residue jRes, double resDist) throws NumberFormatException, IOException, SQLException{
+	public double getLogOddsScore(AaResidue iRes, AaResidue jRes, double resDist) throws NumberFormatException, IOException, SQLException{
 		CMPdb_sphoxel sphoxel = new CMPdb_sphoxel();
 		
 		double score = sphoxel.getLogOddsScore(iRes, jRes, resDist, this);
@@ -276,7 +276,7 @@ public class RIGGeometry {
      * @returns: double score for each contact. 
      * @throws: NumberFormatException, IOException
      */
-	public double outputLogOddsScore(Residue iRes, Residue jRes, double resDist) throws NumberFormatException, IOException
+	public double outputLogOddsScore(AaResidue iRes, AaResidue jRes, double resDist) throws NumberFormatException, IOException
         {
         
         String radiusPrefix="";

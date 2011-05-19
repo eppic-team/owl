@@ -861,7 +861,7 @@ public class Gene implements HasFeatures {
 					if(this.getSubstructure(m.position) != null) {
 						Substructure ss = this.getSubstructure(m.position);
 						if(!experimentalOnly || ss.getType() == Substructure.SubstructureType.NMR || ss.getType() == Substructure.SubstructureType.XRAY) {
-							if(ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) strMut.add(m);							
+							if(ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) strMut.add(m);							
 						}
 					}
 				}
@@ -1159,7 +1159,7 @@ public class Gene implements HasFeatures {
 							System.out.printf("Warning: Mutation %s%d does not match %s%d in %s%s\n", mutAA.getOneLetterCode(), uniPos, pdbAA.getOneLetterCode(), pdbPos, ss.getPdbCode(), ss.getChainCode());
 							result = false;
 						}
-						if(!ss.pdb.hasCoordinates(pdbPos)) {
+						if(!ss.pdb.containsStdAaResidue(pdbPos)) {
 							System.out.println("Warning: Residue at mutated position " + pdbPos + " has no coordinates");
 						}
 					}
@@ -1556,7 +1556,7 @@ public class Gene implements HasFeatures {
 				
 				for (Mutation m : this.mutations) {
 					Substructure ss = this.getSubstructure(m.position);
-					if(restrictToType==null || (ss != null && ss.getType() == restrictToType) && ss.pdb.hasCoordinates(ss.mapUniprotResser2Cif(m.position))) {
+					if(restrictToType==null || (ss != null && ss.getType() == restrictToType) && ss.pdb.containsStdAaResidue(ss.mapUniprotResser2Cif(m.position))) {
 						String mutStr = m.getDnaMutStr() == null?m.toString():m.getDnaMutStr();
 						out.printf("%d\t%s\t%s\t%s\n", m.position, mutStr, m.getComment(), m.getCommentDetails());
 					}
