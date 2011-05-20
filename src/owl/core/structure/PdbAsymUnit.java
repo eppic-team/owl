@@ -883,7 +883,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		Set<ChainInterface> set = new HashSet<ChainInterface>();
 
 		// 0. generate complete unit cell
-		PdbUnitCell cell = this.getUnitCell();
+		PdbUnitCell cell = null;
+		if (this.crystalCell!=null) {
+			cell = this.getUnitCell();
+		}
 		
 		long start = -1; 
 		long end = -1;
@@ -927,101 +930,102 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			start= System.currentTimeMillis();
 			System.out.println("Interfaces within the rest of the unit cell");
 		}
-		// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
-		for (int j=0;j<cell.getNumAsymUnits();j++) {
-			PdbAsymUnit jAsym = cell.getAsymUnit(j);
-			if (jAsym==this) continue; // we want to compare this to all others but not to itself
-			for (PdbChain chaini:this.getPolyChains()) {
-				for (PdbChain chainj:jAsym.getPolyChains()) {
-					if (debug) {
-						System.out.print(".");
-						trialCount++;
-					}
-					AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-					if (graph.getEdgeCount()>0) {
-						if (debug) System.out.print("x");
-						// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-						PdbChain chainiCopy = chaini.copy(this);
-						PdbChain chainjCopy = chainj.copy(jAsym);
-						ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
-						if (!set.add(interf)) {
-							duplicatesCount2++;
+		if (cell!=null) { // for NMR structures or structures with no crystal data we can't do more than AU contacts
+			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
+			for (int j=0;j<cell.getNumAsymUnits();j++) {
+				PdbAsymUnit jAsym = cell.getAsymUnit(j);
+				if (jAsym==this) continue; // we want to compare this to all others but not to itself
+				for (PdbChain chaini:this.getPolyChains()) {
+					for (PdbChain chainj:jAsym.getPolyChains()) {
+						if (debug) {
+							System.out.print(".");
+							trialCount++;
 						}
-					}													
-				}
-			}
-			
-		}
-		if (debug) {
-			end = System.currentTimeMillis();
-			System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
-		}
-		
-		if (debug) {
-			trialCount = 0;
-			start= System.currentTimeMillis();
-			int trials = this.getNumChains()*cell.getNumAsymUnits()*this.getNumChains()*26;
-			System.out.println("Interfaces between the original asym unit and the 26 neighbouring whole unit cells ("+trials+")");
-		}
-		// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
-		for (int i=-1;i<=1;i++) {
-			for (int j=-1;j<=1;j++) {
-				for (int k=-1;k<=1;k++) {
-					if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
-					PdbUnitCell translated = cell.copy();
-					Vector3d trans = new Vector3d(i,j,k);
-					translated.doCrystalTranslation(trans);
-					
-					for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
-						Point3d sep = this.getCrystalSeparation(jAsym);
-						if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
-							if (debug) {
-								//System.out.println("\nskipping:");
-								//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
-								//		sep.x,sep.y,sep.z,
-								//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
-								countSkipped++;
+						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
+						if (graph.getEdgeCount()>0) {
+							if (debug) System.out.print("x");
+							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+							PdbChain chainiCopy = chaini.copy(this);
+							PdbChain chainjCopy = chainj.copy(jAsym);
+							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
+							if (!set.add(interf)) {
+								duplicatesCount2++;
 							}
-							continue;
-						}
-						for (PdbChain chainj:jAsym.getPolyChains()) {
-							//try {
-							//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
-							//} catch (FileNotFoundException e) {
-							//	e.printStackTrace();
-							//}
+						}													
+					}
+				}
 
-							for (PdbChain chaini:this.getPolyChains()) { // we only have to compare the original asymmetric unit to every full cell around
+			}
+			if (debug) {
+				end = System.currentTimeMillis();
+				System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
+			}
+
+			if (debug) {
+				trialCount = 0;
+				start= System.currentTimeMillis();
+				int trials = this.getNumChains()*cell.getNumAsymUnits()*this.getNumChains()*26;
+				System.out.println("Interfaces between the original asym unit and the 26 neighbouring whole unit cells ("+trials+")");
+			}
+			// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
+			for (int i=-1;i<=1;i++) {
+				for (int j=-1;j<=1;j++) {
+					for (int k=-1;k<=1;k++) {
+						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
+						PdbUnitCell translated = cell.copy();
+						Vector3d trans = new Vector3d(i,j,k);
+						translated.doCrystalTranslation(trans);
+
+						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
+							Point3d sep = this.getCrystalSeparation(jAsym);
+							if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
 								if (debug) {
-									System.out.print(".");
-									trialCount++;
+									//System.out.println("\nskipping:");
+									//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
+									//		sep.x,sep.y,sep.z,
+									//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
+									countSkipped++;
 								}
-								AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-								if (graph.getEdgeCount()>0) {
-									if (debug) System.out.print("x");
-									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-									PdbChain chainiCopy = chaini.copy(this);
-									PdbChain chainjCopy = chainj.copy(jAsym);
-									ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
-									if (!set.add(interf)){
-										duplicatesCount3++;
+								continue;
+							}
+							for (PdbChain chainj:jAsym.getPolyChains()) {
+								//try {
+								//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
+								//} catch (FileNotFoundException e) {
+								//	e.printStackTrace();
+								//}
+
+								for (PdbChain chaini:this.getPolyChains()) { // we only have to compare the original asymmetric unit to every full cell around
+									if (debug) {
+										System.out.print(".");
+										trialCount++;
 									}
-								}							
+									AICGraph graph = chaini.getAICGraph(chainj, cutoff);
+									if (graph.getEdgeCount()>0) {
+										if (debug) System.out.print("x");
+										// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+										PdbChain chainiCopy = chaini.copy(this);
+										PdbChain chainjCopy = chainj.copy(jAsym);
+										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
+										if (!set.add(interf)){
+											duplicatesCount3++;
+										}
+									}							
+								}
 							}
 						}
 					}
 				}
 			}
+			if (debug) {
+				end = System.currentTimeMillis();
+				System.out.println("\n"+trialCount+" trials done ("+
+						countSkipped+" branches skipped). Total "+(trialCount+countSkipped*this.getNumChains()*this.getNumChains())+
+						" trials. Time "+(end-start)/1000+"s");
+				System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
+				System.out.println("Found "+set.size()+" interfaces.");
+			}
 		}
-		if (debug) {
-			end = System.currentTimeMillis();
-			System.out.println("\n"+trialCount+" trials done ("+
-					countSkipped+" branches skipped). Total "+(trialCount+countSkipped*this.getNumChains()*this.getNumChains())+
-					" trials. Time "+(end-start)/1000+"s");
-			System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
-			System.out.println("Found "+set.size()+" interfaces.");
-		}
-		
 		// bsa calculation 
 		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
