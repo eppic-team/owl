@@ -58,7 +58,7 @@ public class PdbAsymUnitTest {
 	// at least so many residues have to be in agreement within TOLERANCE above
 	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.90;
 
-	private static final boolean CONSIDER_HETATOMS = false;
+	private static final boolean CONSIDER_HETATOMS = true;
 	private static final boolean PRINT_PER_RES = false; // whether to print areas agreement per residue or not
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
