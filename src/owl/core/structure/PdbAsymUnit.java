@@ -1336,6 +1336,33 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		return reps;
 	}
 	
+	/**
+	 * Returns a string containing the given representative PDB chain code and the
+	 * PDB chain codes of all sequence-identical chains that it represents. 
+	 * The string is formatted like: A (B,C,D,E)  
+	 * @param repPdbChainCode
+	 * @return
+	 */
+	public String getSeqIdenticalGroupString(String repPdbChainCode) {
+		if (repChain2members==null) {
+			initialiseRepChainsMaps();
+		}
+		
+		List<String> members =  repChain2members.get(repPdbChainCode);
+		String str = repPdbChainCode+" (";
+		
+		for (int i=0;i<members.size();i++) {
+			if (!members.get(i).equals(repPdbChainCode)) {
+				if (i==members.size()-1) {
+					str+= members.get(i)+")";
+				}else {
+					str+= members.get(i)+",";
+				}
+			}
+		}
+		return str;
+	}
+	
 	/*--------------------------------------- static methods -----------------------------------------*/
 	
 	/**
