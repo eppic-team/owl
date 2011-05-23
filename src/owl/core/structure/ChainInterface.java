@@ -345,9 +345,13 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			}
 		}
 
-		for (Residue residue:firstMolecule) {
-			if (residue instanceof AaResidue) { 
-				((AaResidue)residue).printTabular(ps);
+		for (Residue residue:firstMolecule) {			
+			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
+			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
+			if (percentBurial>0.1) {
+				ps.printf("\t%5.1f\n",percentBurial);
+			} else {
+				ps.println();
 			}
 		}
 	}
@@ -365,8 +369,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		}
 
 		for (Residue residue:secondMolecule) {
-			if (residue instanceof AaResidue) { 
-				((AaResidue)residue).printTabular(ps);
+			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
+			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
+			if (percentBurial>0.1) {
+				ps.printf("\t%5.1f\n",percentBurial);
+			} else {
+				ps.println();
 			}
 		}
 	}

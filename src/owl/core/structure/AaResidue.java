@@ -1,6 +1,5 @@
 package owl.core.structure;
 
-import java.io.PrintStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
@@ -370,16 +369,6 @@ public class AaResidue implements Residue {
 		}
  
 		return newResidue;
-	}
-	
-	public void printTabular(PrintStream ps) {
-		ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",serial,pdbSerial,aaType==null?"UNK":aaType.getThreeLetterCode(),asa,bsa);
-		double percentBurial = 100.0*bsa/asa;
-		if (percentBurial>0.1) {
-			ps.printf("\t%5.1f\n",percentBurial);
-		} else {
-			ps.println();
-		}
 	}
 
 	@Override
