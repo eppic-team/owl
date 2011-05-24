@@ -1355,7 +1355,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 		
 		List<String> members =  repChain2members.get(repPdbChainCode);
-		String str = repPdbChainCode+" (";
+		String str = repPdbChainCode;
+		
+		if (members.size()>1) str+=" (";
 		
 		for (int i=0;i<members.size();i++) {
 			if (!members.get(i).equals(repPdbChainCode)) {
