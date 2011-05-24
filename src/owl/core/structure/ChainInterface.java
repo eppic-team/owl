@@ -507,11 +507,13 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			}
 		}
 		
-		PrintStream ps = new PrintStream(file);		
+		PrintStream ps = new PrintStream(file);
+		ps.println("HEADER");
 		firstMolecule.writeSeqresRecord(ps, firstMolecule.getPdbChainCode());
 		secondMolecule.writeSeqresRecord(ps,chain2forOutput);
 		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
 		secondMolecule.writeAtomLines(ps,chain2forOutput);
+		ps.println("END");
 		ps.close();
 	}
 	
