@@ -59,6 +59,8 @@ public class PdbParsersTest {
 	
 	private static final String CASPTARBALL = DATADIR+"/T0515.tar.gz";
 	
+	private static final String TMPDIR = System.getProperty("java.io.tmpdir");
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 	}
@@ -90,7 +92,7 @@ public class PdbParsersTest {
 		Assert.assertNotNull(fullpdb.getPdbCode());
 		
 		// CASP TS server files (testing with server tar ball T0515 of CASP9)
-		File dir = new File(System.getProperty("java.io.tmpdir"),"T0515");
+		File dir = new File(TMPDIR,"T0515");
 		File[] files = dir.listFiles(new RegexFileFilter("T0515.*"));
 		
 		for (File caspFileName:files) {
@@ -656,6 +658,59 @@ public class PdbParsersTest {
 			for (String warning:warnings) {
 				System.err.println(warning);
 			}
+		}
+	}
+	
+	@Test
+	public void testPdbFileWriteRead() throws PdbLoadException, IOException, FileFormatException {
+		// testing a list of PDB files from PDB
+		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
+		String line;
+		int count = 0;
+		while ((line = flist.readLine() ) != null ) {
+			if (line.startsWith("#")) continue;
+			String pdbCode = line.split("\\s+")[0].toLowerCase();
+			
+			System.out.println(pdbCode);
+			try {
+				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
+				PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
+				Integer[] models = parser.getModels();
+
+				Assert.assertTrue(models.length>0);
+				
+				File writtenPdbFile = new File(TMPDIR,"tmp"+pdbCode+".pdb");
+				
+				PdbAsymUnit pdb = new PdbAsymUnit(pdbFile,1);
+				pdb.writeToPdbFile(writtenPdbFile);
+				
+				PdbAsymUnit readPdb = new PdbAsymUnit(pdbFile,1);
+				
+				Assert.assertEquals(pdb.getNumAtoms(),readPdb.getNumAtoms());
+				Assert.assertEquals(pdb.getNumChains(),readPdb.getNumChains());
+				Assert.assertEquals(pdb.getNumPolyChains(),readPdb.getNumPolyChains());
+				Assert.assertEquals(pdb.getNumNonHetAtoms(),readPdb.getNumNonHetAtoms());
+				
+				for (PdbChain chain:pdb.getAllChains()) {
+					PdbChain readChain = readPdb.getChainForChainCode(chain.getChainCode());
+					Assert.assertEquals(chain.getNumAtoms(),readChain.getNumAtoms());
+					Assert.assertEquals(chain.getNumHeavyAtoms(),readChain.getNumHeavyAtoms());
+					Assert.assertEquals(chain.getNumNonHetAtoms(),readChain.getNumNonHetAtoms());
+					Assert.assertEquals(chain.getNumStdAaHeavyAtoms(),readChain.getNumStdAaHeavyAtoms());
+					if (!chain.isNonPolyChain()) {
+						Assert.assertEquals(chain.getFullLength(),readChain.getFullLength());
+						Assert.assertEquals(chain.getObsLength(), readChain.getObsLength());
+						Assert.assertEquals(chain.getSequence().getSeq(),readChain.getSequence().getSeq());
+						Assert.assertEquals(chain.getObsSequence(), readChain.getObsSequence());
+						
+					}
+				}
+				
+			} catch (FileNotFoundException e){
+				System.err.println("File missing. "+e.getMessage());
+			}
+			if (count>100) break;
+			count++;
 		}
 	}
 	

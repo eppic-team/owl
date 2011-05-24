@@ -8,7 +8,8 @@ public enum Nucleotide {
 	C ( 2, "Cytosine", 'C', "DC"), 
 	G ( 3, "Guanine",  'G', "DG"), 
 	U ( 4, "Uracil",   'U', "DU"),
-	T ( 5, "Thymine",  'T', "DT");
+	T ( 5, "Thymine",  'T', "DT"),
+	X ( 0, "Unknown",  'X', "XXX");
 
 	private int number;
 	private String name;			

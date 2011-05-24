@@ -495,10 +495,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @throws FileNotFoundException 
 	 */
 	public void writeToPdbFile(File file) throws FileNotFoundException {
-		PrintStream ps = new PrintStream(file);
-
-		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
-
 		String chain2forOutput = secondMolecule.getPdbChainCode();
 		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
 			// if both chains are named equally we want to still named them differently in the output pdb file
@@ -510,6 +506,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 				chain2forOutput = Character.toString((char)(letter-25)); //i.e. 'A' or 'a'
 			}
 		}
+		
+		PrintStream ps = new PrintStream(file);		
+		firstMolecule.writeSeqresRecord(ps, firstMolecule.getPdbChainCode());
+		secondMolecule.writeSeqresRecord(ps,chain2forOutput);
+		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
 		secondMolecule.writeAtomLines(ps,chain2forOutput);
 		ps.close();
 	}
