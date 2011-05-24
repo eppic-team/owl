@@ -352,16 +352,15 @@ public class CMGrabber {
 	 * @throws IOException
 	 */
 	public void dumpToPDBFile () throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException{
-		String title = new String (pdb_dir + name + ".pdb");
-		File pdbfile = new File (title);
+		File pdbfile = new File (pdb_dir,name + ".pdb");
 		if(!pdbfile.exists()){
 			MySQLConnection conn = new MySQLConnection ();
 			PdbAsymUnit fullpdb = new PdbAsymUnit(name,conn,"pdbase_20090728");
 			PdbChain pdb = fullpdb.getChain("A");
-			pdb.writeToPDBFile(title);
+			pdb.writeToPDBFile(pdbfile);
 		}
 		else{
-			System.err.println(title + " file already exists...");
+			System.err.println(pdbfile + " file already exists...");
 		}
 	}
 	

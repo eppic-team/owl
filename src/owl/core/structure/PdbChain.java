@@ -667,7 +667,9 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/** 
-	 * Writes atom lines for this structure to the given output stream
+	 * Writes atom lines for this structure to the given output stream.
+	 * The chain code written is the CIF chain code. If the code is longer than 1 character 
+	 * only first character is used and a warning issued.
 	 * @param out
 	 */
 	public void writeAtomLines(PrintStream out) {
@@ -676,7 +678,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Writes atom lines for this structure to the given output stream using the given
-	 * chain code instead of the internal chain code.
+	 * chain code instead of the internal CIF chain code.
 	 * @param out
 	 * @param chainCode
 	 */
@@ -701,29 +703,74 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			if (atom.getParentResidue() instanceof HetResidue) {
 				lineType = "HETATM";
 			}
-			String printfStr = lineType+"%5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+			String printfStr = lineType+"%5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
 			if (atomCode.length()==4) { // some hydrogens have a 4 letter code and it is not aligned to column 14 but to 13 instead 
-				printfStr = lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f           %s\n";
+				printfStr =    lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
+			}
+			if (atomType.length()==2) { // for atoms with 2 letter codes (CL, NA, ....) the alignment is to the left again
+				printfStr =    lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
 			}
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
 			out.printf(Locale.US, printfStr,
 					atomser, atomCode, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
 		}
-		
+		if (!isNonPolyChain()) out.println("TER");
 	}
 
 	/**
-	 * Dumps coordinate data into a file in PDB format (ATOM lines only)
-	 * The residue serials written correspond to the SEQRES sequence (as cif does).
-	 * The chain dumped is the value of the cif chain code (chainCode variable)
-	 * @param outfile
+	 * Writes to given PrintStream the SEQRES record for this chain using the given 
+	 * chain code instead of the internal CIF chain code.
+	 * @param out
+	 * @param chainCode
+	 */
+	protected void writeSeqresRecord(PrintStream out, String chainCode) {
+		String chainCodeStr = chainCode;
+		if (chainCode.length()>1) {
+			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
+			chainCodeStr = chainCode.substring(0,1);
+		}
+		ArrayList<String> seqLines = new ArrayList<String>();
+		String seqLine = null;
+		for (int i=0;i<this.sequence.getSeq().length();i++){
+			String longCode = AminoAcid.XXX.getThreeLetterCode();
+			if (this.sequence.isProtein()) {
+				AminoAcid aa = AminoAcid.getByOneLetterCode(this.sequence.getSeq().charAt(i));
+				longCode = aa.getThreeLetterCode();
+			} else {
+				Nucleotide nuc = Nucleotide.getByOneLetterCode(this.sequence.getSeq().charAt(i));
+				longCode = nuc.getTwoLetterCode();				
+			}
+			if (longCode.equals(AminoAcid.XXX.getThreeLetterCode())) {
+				if (containsResidue(i+1)) {
+					longCode = getResidue(i+1).getLongCode();				
+				}
+			}
+			if (i%13==0) {
+				if (seqLine!=null) seqLines.add(seqLine);
+				seqLine = "";
+			}
+			seqLine += String.format("%3s ",longCode);
+		}
+		seqLines.add(seqLine); // the last line wasn't added by the loop
+		for (int i=0;i<seqLines.size();i++){
+			out.printf("SEQRES %3d %s %4d  %s\n",i+1,chainCodeStr,this.getFullLength(),seqLines.get(i));
+		}
+	}
+	
+	/**
+	 * Writes coordinate data into a file in PDB format (ATOM lines only)
+	 * The residue serials written correspond to the SEQRES sequence (as in CIF files).
+	 * The chain code written is the CIF chain code, if it is longer than one character
+	 * then only first character is written and a warning issued.
+	 * @param outFile
 	 * @throws FileNotFoundException
 	 */
-	public void writeToPDBFile(String outfile) throws FileNotFoundException {
-		PrintStream Out = new PrintStream(new FileOutputStream(outfile));
-		writeAtomLines(Out);
-		Out.println("END");
-		Out.close();
+	public void writeToPDBFile(File outFile) throws FileNotFoundException {
+		PrintStream out = new PrintStream(new FileOutputStream(outFile));
+		writeSeqresRecord(out, chainCode);
+		writeAtomLines(out);
+		out.println("END");
+		out.close();
 	}
 
 	/**
@@ -736,15 +783,11 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @throws FileNotFoundException
 	 */
 	public void writeToCaspTSFile(File outFile) throws FileNotFoundException {
-		PrintStream Out = new PrintStream(new FileOutputStream(outFile));
-		writeCaspTSHeader(Out, this.caspParents);
-		String oldChainCode = this.chainCode;
-		this.chainCode = DEFAULT_CASP_TS_CHAINCODE;
-		writeAtomLines(Out);
-		this.chainCode = oldChainCode;
-		Out.println("TER"); // note that CASP TS requires a TER field at the end of each model
-		Out.println("END");
-		Out.close();
+		PrintStream out = new PrintStream(new FileOutputStream(outFile));
+		writeCaspTSHeader(out, this.caspParents);
+		writeAtomLines(out,DEFAULT_CASP_TS_CHAINCODE);
+		out.println("END");
+		out.close();
 	}
 	
 	/**

@@ -54,7 +54,7 @@ public class NaccessRunner {
 		File pdbFile = File.createTempFile(prefix, ".pdb",tempDir);
 		String baseName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 
-		pdb.writeToPDBFile(pdbFile.getAbsolutePath());
+		pdb.writeToPDBFile(pdbFile);
 		String line;
 		int errorLineCount = 0;
 

@@ -462,7 +462,7 @@ public class RunAll {
 			File outpdbfile = new File(outDir,baseName+".reconstructed.pdb");
 			
 			try {
-				pdb.writeToPDBFile(outpdbfile.getAbsolutePath());
+				pdb.writeToPDBFile(outpdbfile);
 				System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
 			} catch (IOException e) {
 				System.err.println("Done reconstruction. Couldn't write final selected model to pdb file! "+outpdbfile);

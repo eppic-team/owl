@@ -272,7 +272,7 @@ public class Reconstructer {
 
 			
 			if (writeFiles)
-				model.writeToPDBFile(new File(outDir,"embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb").getAbsolutePath());
+				model.writeToPDBFile(new File(outDir,"embed_"+pdbCode+pdbChainCode+"_"+modelnum+".pdb"));
 			
 			modelnum++;
 		}

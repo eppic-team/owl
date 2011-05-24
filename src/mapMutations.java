@@ -224,7 +224,7 @@ public class mapMutations {
 			if(!keepPymolScript) scriptFile.deleteOnExit();
 			File pdbFile = File.createTempFile("temp", ".pdb");
 			pdbFile.deleteOnExit();
-			pdb.writeToPDBFile(pdbFile.toString());
+			pdb.writeToPDBFile(pdbFile);
 			PrintWriter out = new PrintWriter(scriptFile);
 			out.println("Pymol script:");
 			out.println("load " + pdbFile);

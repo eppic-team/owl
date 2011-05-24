@@ -350,7 +350,7 @@ public class Embedder {
 		}
 		
 		System.out.println("Writing out embedding as CA trace pdb file "+outPdbFile);
-		pdbEmbedded.writeToPDBFile(outPdbFile.getAbsolutePath());
+		pdbEmbedded.writeToPDBFile(outPdbFile);
 
 	}
 }

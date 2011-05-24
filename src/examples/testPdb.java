@@ -30,7 +30,7 @@ public class testPdb {
 		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
 		PdbChain pdbFromPdbase = fullpdb.getChain(pdbChainCode);
 		System.out.println("dumping structure to pdb file");
-		pdbFromPdbase.writeToPDBFile("test_dump_from_pdbase.pdb");
+		pdbFromPdbase.writeToPDBFile(new File("test_dump_from_pdbase.pdb"));
 		// note that the chainCode is not necessarily the same as the pdbChainCode
 		String chainCode = pdbFromPdbase.getChainCode();
 		System.out.println("getting graph");

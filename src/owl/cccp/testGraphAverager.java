@@ -327,7 +327,7 @@ public class testGraphAverager {
 			try {
 				PdbChain resultPdb = tr.reconstruct(sequence, graphs, null, false, numberOfTinkerModels, false);
 				if(outputPredictedStructure) {
-					resultPdb.writeToPDBFile(outStructFile);
+					resultPdb.writeToPDBFile(new File(outStructFile));
 					System.err.println("Output of reconstruction written to " + outStructFile);
 				}
 			} catch (IOException e) {

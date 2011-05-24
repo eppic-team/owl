@@ -138,7 +138,7 @@ public class BlastUtils {
 				
 				PdbChain pdb = template.getPdb();
 				// write to file
-				pdb.writeToPDBFile(pdbFile.getAbsolutePath());
+				pdb.writeToPDBFile(pdbFile);
 				
 				// add to listfile
 				out.println(pdbFile.getAbsolutePath());

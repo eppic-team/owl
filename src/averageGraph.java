@@ -508,7 +508,7 @@ public class averageGraph {
 			}
 			
 			File outpdbfile = new File(outDir,basename+".reconstructed.pdb");
-			pdb.writeToPDBFile(outpdbfile.getAbsolutePath());
+			pdb.writeToPDBFile(outpdbfile);
 			System.out.println("Done reconstruction. Final selected model written to " + outpdbfile);
 			if (casp) {
 				File outcasptsfile = new File(outDir,basename+".reconstructed.casp");

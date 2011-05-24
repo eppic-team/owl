@@ -62,7 +62,7 @@ public class CalcSurfVolRunner {
 		File pdbFile = new File(TMP_DIR,pdb.getPdbCode()+pdb.getChainCode()+"_"+System.currentTimeMillis()+".pdb");
 		pdbFile.deleteOnExit();
 		String pdbFileName = pdbFile.getAbsolutePath();
-		pdb.writeToPDBFile(pdbFileName);
+		pdb.writeToPDBFile(pdbFile);
 		
 		File test = new File(calcExecutable);
 		if(!test.canRead()) throw new IOException("calc-volume Executable is not readable");

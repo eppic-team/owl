@@ -382,7 +382,7 @@ public class reconstruct {
 					// we also write the file to the out dir so it can be used later for clustering rmsds etc.
 					origPdbFile = new File (outputDir,baseName+".native.pdb");
 					try {
-						pdb.writeToPDBFile(origPdbFile.getAbsolutePath());
+						pdb.writeToPDBFile(origPdbFile);
 					} catch (IOException e4) {
 						System.err.println("Couldn't write original pdb file "+origPdbFile.getAbsolutePath());
 						System.err.println("Continuing without it, this is not needed for the rest of the reconstruction process but only for post processing (e.g. comparing rmsds to original)");

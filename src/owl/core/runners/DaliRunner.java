@@ -46,8 +46,8 @@ public class DaliRunner {
 		first = query;
 		second = subj;
 		workdir = createTempDirectory(tempdir);
-		first.writeToPDBFile(workdir.getAbsolutePath()+"/mod1.pdb");
-		second.writeToPDBFile(workdir.getAbsolutePath()+"/mod2.pdb");
+		first.writeToPDBFile(new File(workdir,"mod1.pdb"));
+		second.writeToPDBFile(new File(workdir,"mod2.pdb"));
 		
 		String daliOutputFilename = workdir.getAbsolutePath()+"/"+first.getPdbCode()+first.getPdbChainCode()+
 									"-"+second.getPdbCode()+second.getPdbChainCode()+".html";

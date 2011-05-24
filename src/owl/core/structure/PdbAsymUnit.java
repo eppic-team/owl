@@ -762,15 +762,21 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/**
 	 * Writes PDB data out in PDB file format.
+	 * The chain codes written are the CIF chain codes. If they are longer than one character
+	 * then only the first one is used and a warning issued.
 	 * @param outFile
 	 * @throws FileNotFoundException
 	 */
 	public void writeToPdbFile(File outFile) throws FileNotFoundException {
 		PrintStream ps = new PrintStream(outFile);
 		writePDBFileHeader(ps);
+		for (PdbChain chain:getPolyChains()) {
+			chain.writeSeqresRecord(ps, chain.getChainCode());
+		}
 		for (PdbChain chain:getAllChains()) {
 			chain.writeAtomLines(ps);
 		}
+		ps.println("END");
 		ps.close();
 	}
 	
