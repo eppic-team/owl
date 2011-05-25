@@ -767,8 +767,13 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public void writeToPDBFile(File outFile) throws FileNotFoundException {
 		PrintStream out = new PrintStream(new FileOutputStream(outFile));
-		writeSeqresRecord(out, chainCode);
+		if (!isNonPolyChain()) {
+			writeSeqresRecord(out, chainCode);
+		}
 		writeAtomLines(out);
+		if (!isNonPolyChain()) {
+			out.println("TER");
+		}
 		out.println("END");
 		out.close();
 	}
@@ -2830,6 +2835,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		newPdb.groupNum = this.groupNum;
 		newPdb.hasASA = this.hasASA;
 		newPdb.hasBfactors = this.hasBfactors;
+		newPdb.isNonPolyChain = this.isNonPolyChain;
+		newPdb.hasAltCodes = this.hasAltCodes;
 				
 		newPdb.sequence = this.sequence;
 		if (secondaryStructure!=null) {

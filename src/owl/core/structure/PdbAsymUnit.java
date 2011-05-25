@@ -423,6 +423,14 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		return chains.size();
 	}
 	
+	/**
+	 * Returns the total number of non-polymer chains present in this asym unit.
+	 * @return
+	 */
+	public int getNumNonPolyChains() {
+		return nonPolyChains.size();
+	}
+	
 	public String getPdbCode() {
 		return pdbCode;
 	}
@@ -531,19 +539,16 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/**
 	 * Tells whether a polymer chain of this PdbAsymUnit contains a (observed) residue (standard amino acid,
-	 * het residue or nucleotide) with the given residue serial and given pdbChainCode
+	 * het residue or nucleotide) with the given residue serial and given CIF chain code
 	 * @param resSerial
-	 * @param pdbChainCode
+	 * @param chainCode
 	 * @return
 	 */
-	public boolean containsResidue(int resSerial, String pdbChainCode) {
-		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
-		if (chainCode==null) return false;
-		
-		if (!containsPdbChainCode(chainCode)) {
+	public boolean containsResidue(int resSerial, String chainCode) {
+		if (!containsChainCode(chainCode)) {
 			return false;
 		}
-		return this.getChain(chainCode).containsResidue(resSerial);
+		return this.getChainForChainCode(chainCode).containsResidue(resSerial);
 	}
 	
 	/**
@@ -585,7 +590,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/**
 	 * Gets the CIF chain code corresponding to the given PDB chain code of a polymer (protein/nucleotide) chain.
-	 * If given PDB chain code is of a non-polymer chain, null will be returned.
+	 * If given PDB chain code does not correspond to one of a polymer chain, null will be returned.
 	 * @param pdbChainCode the PDB chain code
 	 * @return
 	 */
@@ -594,19 +599,18 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
-	 * Returns the Residue for the given residue serial and pdbChainCode of a polymer chain
+	 * Returns the Residue for the given residue serial and CIF chain code
 	 * @param resSerial
-	 * @param pdbChainCode
+	 * @param chainCode
 	 * @return
-	 * @throws the Residue or null if the pdbChainCode/resSerial combination not contained in this PdbAsymUnit
+	 * @throws the Residue or null if the chainCode/resSerial combination not contained in this PdbAsymUnit
 	 */
-	public Residue getResidue(int resSerial, String pdbChainCode) {
-		String chainCode = getChainCodeForPdbChainCode(pdbChainCode);
+	public Residue getResidue(int resSerial, String chainCode) {
 		if (chainCode==null) return null;
-		if (!this.chains.containsKey(chainCode)) {
+		if (!containsChainCode(chainCode)) {
 			return null;
 		}
-		return this.getChain(chainCode).getResidue(resSerial);
+		return this.getChainForChainCode(chainCode).getResidue(resSerial);
 	}
 	
 	/**
@@ -904,15 +908,15 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 		// 1. interfaces within unit cell
 		// 1.1 within asymmetric unit
-		for (String iChainCode:this.getPolyChainCodes()) {
-			for (String jChainCode:this.getPolyChainCodes()) {
+		for (String iChainCode:this.getPolyChainCodes()) { //getChainCodes
+			for (String jChainCode:this.getPolyChainCodes()) { // getChainCodes
 				if (iChainCode.compareTo(jChainCode)<=0) continue;
 				if (debug) {
 					System.out.print(".");
 					trialCount++;
 				}
-				PdbChain chaini = this.getChain(iChainCode);
-				PdbChain chainj = this.getChain(jChainCode);
+				PdbChain chaini = this.getChainForChainCode(iChainCode);
+				PdbChain chainj = this.getChainForChainCode(jChainCode);
 				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 				if (graph.getEdgeCount()>0) {
 					if (debug) System.out.print("x");
@@ -941,8 +945,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
 				if (jAsym==this) continue; // we want to compare this to all others but not to itself
-				for (PdbChain chaini:this.getPolyChains()) {
-					for (PdbChain chainj:jAsym.getPolyChains()) {
+				for (PdbChain chaini:this.getPolyChains()) { // getAllChains
+					for (PdbChain chainj:jAsym.getPolyChains()) { // getAllChains
 						if (debug) {
 							System.out.print(".");
 							trialCount++;
