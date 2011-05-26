@@ -731,6 +731,7 @@ public class PdbfileParser {
 
 		if (!hasSeqRes){ // no SEQRES could be read
 			boolean canUseResidueNumberingAsIs = true;
+			int lastResSerial = 0;
 			for (Residue residue:tmpResiduesList) {
 				// negative or 0 residue numbers
 				if (residue.getSerial()<=0) {
@@ -742,6 +743,12 @@ public class PdbfileParser {
 					canUseResidueNumberingAsIs = false;
 					break;
 				}
+				// residue serials in ascending order
+				if (residue.getSerial()<lastResSerial) {
+					canUseResidueNumberingAsIs = false;
+					break;					
+				}
+				lastResSerial = residue.getSerial();
 			}
 			
 			if (canUseResidueNumberingAsIs) {

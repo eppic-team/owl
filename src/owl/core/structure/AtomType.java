@@ -24,10 +24,10 @@ public enum AtomType {
 	// in standard aas
 	H ( 1,  1.008, 1.20, "H", "Hydrogen",   true),
 	C ( 6, 12.011, 1.70, "C", "Carbon",     true),
-	O ( 8, 15.999, 1.52, "O", "Oxygen",     true),
 	N ( 7, 14.007, 1.55, "N", "Nitrogen",   true),
-	S (16, 32.065, 1.80, "S", "Sulfur",     true),
+	O ( 8, 15.999, 1.52, "O", "Oxygen",     true),
 	P (15, 30.974, 1.80, "P", "Phosphorus", true),
+	S (16, 32.065, 1.80, "S", "Sulfur",     true),
 	// in non-standard aas and hets
 	Li( 3,  6.941, 1.82, "LI", "Lithium",   false),
 	B ( 5, 10.811, 2.00,  "B", "Boron",     false),
@@ -57,7 +57,9 @@ public enum AtomType {
 	Cs(55,132.905, 2.00, "CS", "Caesium",   false),
 	Sm(62,150.362, 2.00, "SM", "Samarium",  false),
 	Ho(67,164.930, 2.00, "HO", "Holmium",   false),
+	Ta(73,180.948, 2.00, "TA", "Tantalum",  false),
 	W (74,183.841, 2.00,  "W", "Tungsten",  false),
+	Ir(77,192.217, 2.00, "IR", "Iridium",   false),
 	Pt(78,195.085, 1.72, "PT", "Platinum",  false),
 	Au(79,196.967, 1.66, "AU", "Gold",      false),
 	Hg(80,200.592, 1.55, "HG", "Mercury",   false),

@@ -745,8 +745,8 @@ public class PdbParsersTest {
 		PdbParsersTest pdbTest = new PdbParsersTest();
 		pdbTest.setUp();
 		//pdbTest.testSpecialPDBFiles();
-		pdbTest.testCIFagainstPDBASE();
-		//pdbTest.testPdbfileParser();
+		//pdbTest.testCIFagainstPDBASE();
+		pdbTest.testPdbfileParser();
 	}
 
 }

@@ -145,8 +145,11 @@ public class AtomLineList implements Iterable<AtomLine> {
 		for (ArrayList<AtomLine> group:atomLineGroups.values()) {
 			boolean hasOnePolyAtom = false;
 			for (AtomLine atomLine:group) {
-				//if (!atomLine.outOfPolyChain) hasOnePolyAtom = true;
-				if (!atomLine.lineIsHetAtm) hasOnePolyAtom = true;
+				if (!atomLine.lineIsHetAtm && 
+					// some bad PDB files (e.g. output of old phenix versions) don't use HETATM to tag a het atom but simply ATOM, 
+					// that's why we also check this (UNK we check for the rare cases when a deposited PDB file has a poly chain with only unknown residues):
+					(AminoAcid.isStandardAA(atomLine.res_type) || Nucleotide.isStandardNuc(atomLine.res_type) || atomLine.res_type.equals("UNK"))) 
+						hasOnePolyAtom = true;
 			}
 			// if one outOfPolyChain was true that means that the chain is poly, we assign isNonPoly accordingly:
 			if (hasOnePolyAtom) {
