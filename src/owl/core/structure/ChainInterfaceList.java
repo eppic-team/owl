@@ -46,6 +46,10 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		list.add(interf);
 	}
 	
+	public int getNumInterfaces() {
+		return list.size();
+	}
+	
 	public int getNumProtProtInterfaces() {
 		int count = 0;
 		for (ChainInterface interf:this) {

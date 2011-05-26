@@ -9,6 +9,7 @@ import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
+import owl.core.structure.PdbChain;
 import owl.core.structure.SpaceGroup;
 
 
@@ -117,13 +118,28 @@ public class enumerateInterfaces {
 			outBaseName = inputFile.getName().substring(0, inputFile.getName().lastIndexOf("."));
 		}
 
-		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumChains()+" chains ("+pdb.getAllRepChains().size()+" sequence unique)");
+		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumPolyChains()+" polymer chains ("+pdb.getAllRepChains().size()+" sequence unique), " +
+				pdb.getNumNonPolyChains()+" non-polymer chains.");
+
+		for (String repChain:pdb.getAllRepChains()) {
+			System.out.println(pdb.getSeqIdenticalGroupString(repChain));
+		}
+		System.out.println("Polymer chains: ");
+		for (PdbChain chain:pdb.getPolyChains()) {
+			System.out.println(chain.getChainCode()+"("+chain.getPdbChainCode()+")");
+		}
+		System.out.println("Non-polymer chains: ");
+		for (PdbChain chain:pdb.getNonPolyChains()) {
+			System.out.println(chain.getChainCode()+"("+chain.getPdbChainCode()+") "+" residues: "+chain.getObsLength()+
+					" ("+chain.getFirstResidue().getLongCode()+"-"+chain.getFirstResidue().getSerial()+")");
+		}
+		
 		System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 		if (debug) System.out.println("Symmetry operators: "+pdb.getSpaceGroup().getNumOperators());
 		
 		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, debug);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, debug);
 		long end = System.currentTimeMillis();
 		System.out.println("Total time for interface calculation: "+(end-start)/1000+"s");
 		
@@ -137,7 +153,7 @@ public class enumerateInterfaces {
 			if (interf.hasClashes(CLASH_DISTANCE)) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
-			System.out.println(interf.getFirstMolecule().getPdbChainCode()+" - "+interf.getSecondMolecule().getPdbChainCode());
+			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());

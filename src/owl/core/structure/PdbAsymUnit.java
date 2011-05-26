@@ -859,11 +859,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
+	 * @param nonPoly if true interfaces will be calculated for non-polymer chains as well as polymer, if false 
+	 * only interfaces between polymer chains calculated
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms) throws IOException {
-		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, false);
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {
+		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, nonPoly, false);
 	}
 	
 	/**
@@ -880,11 +882,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
+	 * @param nonPoly if true interfaces will be calculated for non-polymer chains as well as polymer, if false 
+	 * only interfaces between polymer chains calculated
 	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean debug) throws IOException {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, boolean debug) throws IOException {	
 		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
 		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
 		
@@ -908,8 +912,12 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 		// 1. interfaces within unit cell
 		// 1.1 within asymmetric unit
-		for (String iChainCode:this.getPolyChainCodes()) { //getChainCodes
-			for (String jChainCode:this.getPolyChainCodes()) { // getChainCodes
+		Set<String> chainCodes = null;
+		if (nonPoly) chainCodes = this.getChainCodes();
+		else chainCodes = this.getPolyChainCodes();
+		
+		for (String iChainCode:chainCodes) { 
+			for (String jChainCode:chainCodes) { // getPolyChainCodes
 				if (iChainCode.compareTo(jChainCode)<=0) continue;
 				if (debug) {
 					System.out.print(".");
@@ -945,8 +953,17 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
 				if (jAsym==this) continue; // we want to compare this to all others but not to itself
-				for (PdbChain chaini:this.getPolyChains()) { // getAllChains
-					for (PdbChain chainj:jAsym.getPolyChains()) { // getAllChains
+				Collection<PdbChain> ichains = null;
+				Collection<PdbChain> jchains = null;
+				if (nonPoly) {
+					ichains = this.getAllChains();
+					jchains = jAsym.getAllChains();
+				} else {
+					ichains = this.getPolyChains();
+					jchains = jAsym.getPolyChains();
+				}
+				for (PdbChain chaini:ichains) { 
+					for (PdbChain chainj:jchains) { 
 						if (debug) {
 							System.out.print(".");
 							trialCount++;
@@ -998,14 +1015,20 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 								}
 								continue;
 							}
-							for (PdbChain chainj:jAsym.getPolyChains()) {
+							Collection<PdbChain> jchains = null;
+							if (nonPoly) jchains = jAsym.getAllChains();
+							else jchains = jAsym.getPolyChains();
+							for (PdbChain chainj:jchains) {
 								//try {
 								//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
 								//} catch (FileNotFoundException e) {
 								//	e.printStackTrace();
 								//}
 
-								for (PdbChain chaini:this.getPolyChains()) { // we only have to compare the original asymmetric unit to every full cell around
+								Collection<PdbChain> ichains = null;
+								if (nonPoly) ichains = this.getAllChains();
+								else ichains = this.getPolyChains();
+								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
 									if (debug) {
 										System.out.print(".");
 										trialCount++;

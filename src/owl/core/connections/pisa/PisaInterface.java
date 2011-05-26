@@ -1,10 +1,13 @@
 package owl.core.connections.pisa;
 
 import java.io.PrintStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import owl.core.structure.ChainInterface;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
+import owl.core.structure.Residue;
 
 public class PisaInterface implements Comparable<PisaInterface> {
 
@@ -162,23 +165,56 @@ public class PisaInterface implements Comparable<PisaInterface> {
 		interf.setSecondMolType(secondMolecule.getMolClass());
 		interf.setName(firstMolecule.getChainId()+"+"+secondMolecule.getChainId());
 		
-		if (firstMolecule.isProtein()) {
-			PdbChain pdb1 = pdb.getChain(this.firstMolecule.getChainId()).copy(pdb);
-			pdb1.transform(firstMolecule.getTransfOrth());
-			// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
-			firstMolecule.setAsaAndBsas(pdb1);
-			interf.setFirstMolecule(pdb1);
-		}
-		if (secondMolecule.isProtein()) {
-			PdbChain pdb2 = pdb.getChain(secondMolecule.getChainId()).copy(pdb);
-			pdb2.transform(secondMolecule.getTransfOrth());
-			// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
-			secondMolecule.setAsaAndBsas(pdb2);
-			interf.setSecondMolecule(pdb2);
-		}
+		PdbChain pdb1 = findChainForPisaMolecule(this.firstMolecule, pdb).copy(pdb);
+		pdb1.transform(firstMolecule.getTransfOrth());
+		// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
+		firstMolecule.setAsaAndBsas(pdb1);
+		interf.setFirstMolecule(pdb1);
+		PdbChain pdb2 = findChainForPisaMolecule(this.secondMolecule, pdb).copy(pdb);
+		pdb2.transform(secondMolecule.getTransfOrth());
+		// this might be confusing: the setAsaAndBsas methods sets the asa/bsa values of the passed pdb object from the PisaMolecule
+		secondMolecule.setAsaAndBsas(pdb2);
+		interf.setSecondMolecule(pdb2);		
 		
 		return interf;
 	}
 	
-	
+	/**
+	 * For a given PisaMolecule and a corresponding PdbAsymUnit it finds what is the 
+	 * PdbChain corresponding to the PisaMolecule: if is a protein/nucleotide chain it is straight 
+	 * forward from the PDB chain code, but if it is a non-polymer chain then it has to find the corresponding
+	 * chain by matching the 3 parts of the PISA identifier (PDB chain code, residue type and PDB residue serial). 
+	 * @param molecule
+	 * @param pdb the chain or null if nothing found (a warning is printed as well)
+	 * @return
+	 */
+	private PdbChain findChainForPisaMolecule(PisaMolecule molecule, PdbAsymUnit pdb) {
+		if (molecule.isProtein()) {
+			return pdb.getChain(molecule.getChainId());
+		}
+		String pisaNonPolyChainId = molecule.getChainId();
+		Pattern p = Pattern.compile("^\\[(\\w+)\\](\\w):(\\d+)$");
+		Matcher m = p.matcher(pisaNonPolyChainId);
+		String resCode = null;
+		String chain = null;
+		String pdbResSerial = null;
+		if (m.matches()){
+			resCode = m.group(1).trim();
+			chain = m.group(2);
+			pdbResSerial = m.group(3);
+		}
+		PdbChain selectedChain = null; // here we put the chain that we think matches the pisa non-poly chain identifier 
+		for (PdbChain nonPolyChain: pdb.getNonPolyChains()){
+			if (nonPolyChain.getPdbChainCode().equals(chain)) {
+				for (Residue res:nonPolyChain) {
+					if (res.getLongCode().equals(resCode) && res.getPdbSerial().equals(pdbResSerial)) {
+						selectedChain = nonPolyChain;
+						break;
+					}
+				}
+			}
+		}
+		if (selectedChain==null) System.err.println("Warning! couldn't find a corresponding non-polymer chain for PISA identifier "+pisaNonPolyChainId);
+		return selectedChain;
+	}
 }

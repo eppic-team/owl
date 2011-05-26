@@ -146,7 +146,12 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 */
 	public void setAsaAndBsas(PdbChain pdb) {
 		for (PisaResidue pisaRes:this) {
-			int resSerial = pdb.getResSerFromPdbResSer(pisaRes.getPdbResSer());
+			int resSerial = 0;
+			if (pdb.isNonPolyChain()) {
+				resSerial = pdb.getResidue(Integer.parseInt(pisaRes.getPdbResSer())).getSerial();
+			} else {
+				resSerial = pdb.getResSerFromPdbResSer(pisaRes.getPdbResSer()); 
+			}
 			if (pdb.containsResidue(resSerial)) {
 				Residue res = pdb.getResidue(resSerial);
 				res.setAsa(pisaRes.getAsa());

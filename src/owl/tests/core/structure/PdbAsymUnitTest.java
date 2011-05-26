@@ -59,6 +59,7 @@ public class PdbAsymUnitTest {
 	private static final double TOLERANCE_RESIDUE_AGREEMENT = 0.90;
 
 	private static final boolean CONSIDER_HETATOMS = true;
+	private static final boolean CONSIDER_NONPOLY = false;
 	private static final boolean PRINT_PER_RES = false; // whether to print areas agreement per residue or not
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
@@ -154,7 +155,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
