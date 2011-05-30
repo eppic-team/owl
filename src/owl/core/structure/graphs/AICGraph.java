@@ -1,5 +1,8 @@
 package owl.core.structure.graphs;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import owl.core.structure.Atom;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
@@ -15,6 +18,9 @@ import edu.uci.ics.jung.graph.util.Pair;
 public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 
 	private static final long serialVersionUID = 1L;
+	
+	public static final double DISULFIDE_BRIDGE_DIST = 2.05;
+	public static final double DISULFIDE_BRIDGE_DIST_SIGMA = 0.1;
 	
 	private double distCutoff;
 	
@@ -39,6 +45,51 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 			}
 		}
 		return count;		
+	}
+	
+	/**
+	 * Returns true if at least one pair of atoms in this atom interchain graph forms 
+	 * disulfide bridge. Conditions for it are: they both belong to CYS residues, they are
+	 * both SG atoms and the distance between them is 2.05A+-0.1A
+	 * @return
+	 */
+	public boolean hasDisulfideBridges() {
+		for (AICGEdge edge:this.getEdges()) {
+			Pair<Atom> pair = this.getEndpoints(edge);
+			Atom atomi = pair.getFirst();
+			Atom atomj = pair.getSecond();
+			if (    atomi.getParentResidue().getShortCode()=='C' &&
+					atomj.getParentResidue().getShortCode()=='C' &&
+					atomi.getCode().equals("SG") &&
+					atomj.getCode().equals("SG") &&
+					edge.getDistance()<(DISULFIDE_BRIDGE_DIST+DISULFIDE_BRIDGE_DIST_SIGMA) && 
+					edge.getDistance()>(DISULFIDE_BRIDGE_DIST-DISULFIDE_BRIDGE_DIST_SIGMA)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Returns a list of all pairs of atoms that form a disulfide bond in this interface.
+	 * @return
+	 */
+	public List<Pair<Atom>> getDisulfidePairs() {
+		List<Pair<Atom>> disPairs = new ArrayList<Pair<Atom>>();
+		for (AICGEdge edge:this.getEdges()) {
+			Pair<Atom> pair = this.getEndpoints(edge);
+			Atom atomi = pair.getFirst();
+			Atom atomj = pair.getSecond();
+			if (    atomi.getParentResidue().getShortCode()=='C' &&
+					atomj.getParentResidue().getShortCode()=='C' &&
+					atomi.getCode().equals("SG") &&
+					atomj.getCode().equals("SG") &&
+					edge.getDistance()<(DISULFIDE_BRIDGE_DIST+DISULFIDE_BRIDGE_DIST_SIGMA) && 
+					edge.getDistance()>(DISULFIDE_BRIDGE_DIST-DISULFIDE_BRIDGE_DIST_SIGMA)) {
+				disPairs.add(pair);
+			}
+		}
+		return disPairs;
 	}
 	
 	/**

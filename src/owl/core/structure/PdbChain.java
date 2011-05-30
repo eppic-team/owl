@@ -497,6 +497,19 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Gets the total accessible surface area for this chain by summing up the individual
+	 * residue ASAs. Use {@link #calcASAs(int, int, boolean)} before.
+	 * @return
+	 */
+	public double getASA() {
+		double asa = 0;
+		for (Residue res:this) {
+			asa+=res.getAsa();
+		}
+		return asa;
+	}
+	
+	/**
 	 * Sets the VdW radius values of all atoms of this PdbChain (from standard amino acids,
 	 * het residues and nucleotides) 
 	 * Use subsequently Atom.getRadius() to get the value.
@@ -2458,6 +2471,24 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			newSequence += sequence.getSeq().substring((region.beg-1),region.end);
 		}
 		sequence = new Sequence(sequence.getName()+"_partial",newSequence);
+	}
+	
+	/**
+	 * Returns the number of residues with BSA (buried surface accessibility) above
+	 * given BSA value. 
+	 * @param value
+	 * @return
+	 */
+	public int getNumResiduesWithBsaAbove(double value) {
+		int count=0;
+		for (Residue residue:this) {
+			if ((residue instanceof AaResidue)) {
+				if (residue.getBsa()>value) {
+					count++;
+				}
+			}
+		}
+		return count;
 	}
 	
 	/**

@@ -833,20 +833,33 @@ public class MultipleSequenceAlignment implements Serializable {
 	 *  sequences 
 	 */
 	public void writeFasta(PrintStream out, Integer lineLength, boolean alignedSeqs) {
+		out.println(getFastaString(lineLength, alignedSeqs));
+	}
+	
+	/**
+	 * Returns a string with the alignment in FASTA format.
+	 * @param lineLength  the maximal line length, setting this to null 
+	 *  always results in 80 characters per line
+	 * @param alignedSeqs  toggles the output of the aligned or ungapped 
+	 *  sequences 
+	 * @return
+	 */
+	public String getFastaString(Integer lineLength, boolean alignedSeqs) {
 		int len = 80;
 		String seq = "";
 
 		if( lineLength != null ) {
 			len = lineLength;
 		}
-
+		String alnString = "";
 		for( String name : getTags() ) {
 			seq = alignedSeqs ? getAlignedSequence(name) : getSequenceNoGaps(name);
-			out.println(FASTAHEADER_CHAR + name);
+			alnString+=FASTAHEADER_CHAR + name +"\n";
 			for(int i=0; i<seq.length(); i+=len) {
-				out.println(seq.substring(i, Math.min(i+len,seq.length())));
+				alnString+=seq.substring(i, Math.min(i+len,seq.length()))+"\n";
 			}
 		}
+		return alnString;
 	}
 	
     /**
