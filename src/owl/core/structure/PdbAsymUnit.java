@@ -1398,6 +1398,19 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		return str;
 	}
 	
+	/**
+	 * Calculates molecular weight of this PDB asym unit for all chains (polymer or non-polymer)
+	 * and all atoms of all residues
+	 * @return
+	 */
+	public double getMass() {
+		double mass = 0;
+		for (PdbChain chain:getAllChains()) {
+			mass+=chain.getMass();
+		}
+		return mass;
+	}
+	
 	/*--------------------------------------- static methods -----------------------------------------*/
 	
 	/**

@@ -2728,6 +2728,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Calculates molecular weight of this PDB chain for all atoms of all residues
+	 * @return
+	 */
+	public double getMass() {
+		double mass = 0;
+		for (Residue res:this) {
+			for (Atom atom:res) {
+				mass+=atom.getType().getAtomicMass();	
+			}
+		}
+		return mass;
+	}
+	
+	/**
 	 * Gets the phi angle in degrees for given residue serial
 	 * @param i
 	 * @return the phi angle or NaN if there are no coordinates for given i or i-1
