@@ -424,9 +424,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			if (isFirstProtein()) totalCoreResidues+=rimCore1.getCoreSize();
 			if (isSecondProtein()) totalCoreResidues+=rimCore2.getCoreSize();
 			if (totalCoreResidues>=minNumResidues) {
+				bsaToAsaCutoffs[0] = cutoff;
 				break;
 			}
 		}
+		
 	}
 
 	/**
