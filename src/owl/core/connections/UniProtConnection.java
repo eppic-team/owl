@@ -143,7 +143,7 @@ public class UniProtConnection {
 			String pdbCode = ref.getPdbAccessionNumber().getValue();
 			String chainRecordsStr = ref.getPdbChains().getValue();	
 			String[] chainRecords = chainRecordsStr.split(",");	// in rare cases, there can be multiple of these
-			String chainRecord = chainRecords[0];				// take first, ignore others, TOOO: log WARNING
+			String chainRecord = chainRecords[0];				// take first, ignore others, TODO: log WARNING
 			String[] fields = chainRecord.trim().split("=");	// e.g. A/B/C/D=319-360
 			if(fields.length < 2) {
 				System.err.println("Error parsing xref from Uniprot for " + uniprotId + ". Sequence range not found.");

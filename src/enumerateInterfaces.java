@@ -11,6 +11,7 @@ import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbChain;
 import owl.core.structure.SpaceGroup;
+import owl.core.util.Goodies;
 
 
 public class enumerateInterfaces {
@@ -55,8 +56,9 @@ public class enumerateInterfaces {
 		int nThreads = NTHREADS;
 		boolean generatePngs = false;
 		boolean debug = false;
+		boolean serialize = false;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:ldh?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lsdh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -71,6 +73,9 @@ public class enumerateInterfaces {
 				break;
 			case 'l':
 				generatePngs = true;
+				break;
+			case 's':
+				serialize = true;
 				break;
 			case 'd':
 				debug = true;
@@ -169,6 +174,9 @@ public class enumerateInterfaces {
 				interf.writeToPdbFile(pdbFile);
 				if (generatePngs) {
 					pr.generatePng(pdbFile, outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
+				}
+				if (serialize) {
+					Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
 				}
 			}
 		}
