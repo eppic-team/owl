@@ -175,10 +175,11 @@ public class enumerateInterfaces {
 				if (generatePngs) {
 					pr.generatePng(pdbFile, outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
 				}
-				if (serialize) {
-					Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
-				}
 			}
+		}
+		
+		if (serialize && writeDir!=null) {
+			Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
 		}
 	}
 
