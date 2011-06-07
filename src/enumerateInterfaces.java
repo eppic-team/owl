@@ -22,6 +22,8 @@ public class enumerateInterfaces {
 	private static final int[] HEIGHTS = {300};
 	private static final int[] WIDTHS = {300};
 	
+	private static final double[] BSATOASA_CUTOFFS = {0.95};
+
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
 	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing
@@ -149,6 +151,7 @@ public class enumerateInterfaces {
 					
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
+			interf.calcRimAndCore(BSATOASA_CUTOFFS);
 			System.out.println("\n##Interface "+(i+1));
 			if (interf.hasClashes(CLASH_DISTANCE)) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
@@ -156,6 +159,8 @@ public class enumerateInterfaces {
 			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
+			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFFS[0])+
+					" bsa to asa cutoff: "+interf.getFirstRimCores()[0].getCoreSize()+" "+interf.getSecondRimCores()[0].getCoreSize());
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 		
 			if (writeDir!=null) {
