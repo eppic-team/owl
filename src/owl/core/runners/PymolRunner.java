@@ -47,7 +47,7 @@ public class PymolRunner {
 		String[] chains = parser.getChains();
 
 		List<String> command = new ArrayList<String>();
-		command.add(pymolExec.getName());
+		command.add(pymolExec.getAbsolutePath());
 		command.add("-q");
 		command.add("-c");
 		command.add("-p");
