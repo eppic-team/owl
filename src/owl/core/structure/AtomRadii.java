@@ -54,7 +54,8 @@ public class AtomRadii {
 	 */
 	public static double getRadius(String mol3lettercode, Atom atom) {
 		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
-		if (!radii.containsKey(mol3lettercode)) {
+		if (!radii.containsKey(mol3lettercode) || 
+			!radii.get(mol3lettercode).containsKey(atom.getCode())) { // this can happen if for a het aa there is an unknown atom (X atom)
 			return atom.getType().getRadius();
 		}
 		return radii.get(mol3lettercode).get(atom.getCode());
