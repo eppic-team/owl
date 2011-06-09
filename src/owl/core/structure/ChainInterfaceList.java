@@ -77,6 +77,14 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		return list.size();
 	}
 	
+	/**
+	 * Gets the interface corresponding to given index i.
+	 * Indices go from 0 to n-1.
+	 * If {@link #sort()} was called then the order is descendent by area.
+	 * Note that the interface id is actually i+1
+	 * @param i
+	 * @return
+	 */
 	public ChainInterface get(int i) {
 		return list.get(i);
 	}
