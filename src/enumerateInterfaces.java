@@ -45,11 +45,17 @@ public class enumerateInterfaces {
 
 		
 		String help = 
-			"Usage: enumerateInterfaces -i <pdb code> [-w <out dir for pdb files>] [-l] [-d] [-t num of threads]\n" +
-			"If -w specified PDB files for each interface will be written to given out dir\n" +
-			"If -l specified cartoon PNG images of each interface will be written to given \n" +
-			"out dir (must use -w also)\n" +
-			"Use -d for more verbose output for debugging\n\n";
+			"Usage: \n" +
+			"enumerateInterfaces \n" +
+			" -i <string> : input pdb code\n" +
+			" [-t <int>]  : number of threads for calculating ASAs. Default: "+NTHREADS + "\n"+
+			" [-w <dir>]  : output dir to write PDB files for each interface \n" +
+			" [-l]        : cartoon PNG images of each interface will be written to\n" +
+			"               output dir given in -w \n" +
+			" [-s]        : write a serialized interfaces.dat file to output dir given\n" +
+			"               in -w\n" +
+			" [-n]        : non-polymer chains will also be considered\n" +
+			" [-d]        : more verbose output for debugging\n\n";
 		
 		String pdbStr = null;
 		File writeDir = null;
@@ -57,8 +63,9 @@ public class enumerateInterfaces {
 		boolean generatePngs = false;
 		boolean debug = false;
 		boolean serialize = false;
+		boolean nonPoly = false;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lsdh?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lsndh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -76,6 +83,9 @@ public class enumerateInterfaces {
 				break;
 			case 's':
 				serialize = true;
+				break;
+			case 'n':
+				nonPoly = true;
 				break;
 			case 'd':
 				debug = true;
@@ -146,7 +156,7 @@ public class enumerateInterfaces {
 		
 		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, debug);
+		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly, debug);
 		long end = System.currentTimeMillis();
 		System.out.println("Total time for interface calculation: "+(end-start)/1000+"s");
 		

@@ -847,28 +847,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 
 	/**
-	 * Returns a sorted (decreasing area) list of all interfaces (any 2 atoms under cutoff) 
-	 * that this chain has upon generation of all crystal symmetry objects. 
-	 * The interface areas and BSAs are calculated with either our implementation of the rolling
-	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
-	 * be passed).
-	 * No debugging output is produced.
-	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
-	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
-	 * will be used
-	 * @param nSpherePoints
-	 * @param nThreads
-	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
-	 * @param nonPoly if true interfaces will be calculated for non-polymer chains as well as polymer, if false 
-	 * only interfaces between polymer chains calculated
-	 * @return
-	 * @throws IOException when problems when running NACCESS (if NACCESS used)
-	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {
-		return getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, nonPoly, false);
-	}
-	
-	/**
 	 * Returns a sorted (decreasing area) list of all interfaces that this PdbAsymUnit has upon 
 	 * generation of all crystal symmetry objects. An interface is defined as any pair of chains 
 	 * that contact, i.e. for which there is at least a pair of atoms (one from each chain) within 

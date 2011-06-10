@@ -155,7 +155,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, false);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
