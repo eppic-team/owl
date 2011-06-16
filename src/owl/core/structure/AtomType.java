@@ -22,50 +22,50 @@ import java.util.HashMap;
 public enum AtomType {
 
 	// in standard aas
-	H ( 1,  1.008, 1.20, "H", "Hydrogen",   true),
-	C ( 6, 12.011, 1.70, "C", "Carbon",     true),
-	N ( 7, 14.007, 1.55, "N", "Nitrogen",   true),
-	O ( 8, 15.999, 1.52, "O", "Oxygen",     true),
-	P (15, 30.974, 1.80, "P", "Phosphorus", true),
-	S (16, 32.065, 1.80, "S", "Sulfur",     true),
+	H ( 1,  1.008, 1.20, "H", "Hydrogen",   false, true),
+	C ( 6, 12.011, 1.70, "C", "Carbon",     false, true),
+	N ( 7, 14.007, 1.55, "N", "Nitrogen",   true,  true),
+	O ( 8, 15.999, 1.52, "O", "Oxygen",     true,  true),
+	P (15, 30.974, 1.80, "P", "Phosphorus", false, true),
+	S (16, 32.065, 1.80, "S", "Sulfur",     false, true),
 	// in non-standard aas and hets
-	Li( 3,  6.941, 1.82, "LI", "Lithium",   false),
-	B ( 5, 10.811, 2.00,  "B", "Boron",     false),
-	F ( 9, 18.998, 1.47,  "F", "Fluorine",  false),
-	Na(11, 22.990, 2.27, "NA", "Sodium",    false),
-	Mg(12, 24.305, 1.73, "MG", "Magnesium", false),
-	Cl(17, 35.453, 1.75, "CL", "Chlorine",  false),
-	K (19, 39.098, 2.75,  "K", "Potassium", false),
-	Ca(20, 40.078, 2.00, "CA", "Calcium",   false),
-	V (23, 50.942, 2.00,  "V", "Vanadium",  false),
-	Mn(25, 54.938, 2.00, "MN", "Manganese", false),
-	Fe(26, 55.845, 2.00, "FE", "Iron",      false),
-	Co(27, 58.933, 2.00, "CO", "Cobalt",    false),
-	Ni(28, 58.693, 1.63, "NI", "Nickel",    false),
-	Cu(29, 63.546, 1.40, "CU", "Copper",    false),
-	Zn(30, 65.382, 1.39, "ZN", "Zinc",      false),
-	As(33, 74.922, 1.85, "AS", "Arsenic",   false),
-	Se(34, 78.963, 1.90, "SE", "Selenium",  false),
-	Br(35, 79.904, 1.85, "BR", "Bromine",   false),
-	Sr(38, 87.621, 2.00, "SR", "Strontium", false),
-	Y (39, 88.906, 2.00,  "Y", "Yttrium",   false),
-	Mo(42, 95.962, 2.00, "MO", "Molybdenum",false),
-	Ru(44,101.072, 2.00, "RU", "Ruthenium", false),
-	Cd(48,112.412, 1.58, "CD", "Cadmium",   false),
-	I (53,126.904, 1.98,  "I", "Iodine",    false),
-	Xe(54,131.294, 2.16, "XE", "Xenon",     false),
-	Cs(55,132.905, 2.00, "CS", "Caesium",   false),
-	Sm(62,150.362, 2.00, "SM", "Samarium",  false),
-	Ho(67,164.930, 2.00, "HO", "Holmium",   false),
-	Ta(73,180.948, 2.00, "TA", "Tantalum",  false),
-	W (74,183.841, 2.00,  "W", "Tungsten",  false),
-	Ir(77,192.217, 2.00, "IR", "Iridium",   false),
-	Pt(78,195.085, 1.72, "PT", "Platinum",  false),
-	Au(79,196.967, 1.66, "AU", "Gold",      false),
-	Hg(80,200.592, 1.55, "HG", "Mercury",   false),
-	U (92,238.029, 1.86,  "U", "Uranium",   false),
+	Li( 3,  6.941, 1.82, "LI", "Lithium",   false, false),
+	B ( 5, 10.811, 2.00,  "B", "Boron",     false, false),
+	F ( 9, 18.998, 1.47,  "F", "Fluorine",  true,  false),
+	Na(11, 22.990, 2.27, "NA", "Sodium",    false, false),
+	Mg(12, 24.305, 1.73, "MG", "Magnesium", false, false),
+	Cl(17, 35.453, 1.75, "CL", "Chlorine",  false, false),
+	K (19, 39.098, 2.75,  "K", "Potassium", false, false),
+	Ca(20, 40.078, 2.00, "CA", "Calcium",   false, false),
+	V (23, 50.942, 2.00,  "V", "Vanadium",  false, false),
+	Mn(25, 54.938, 2.00, "MN", "Manganese", false, false),
+	Fe(26, 55.845, 2.00, "FE", "Iron",      false, false),
+	Co(27, 58.933, 2.00, "CO", "Cobalt",    false, false),
+	Ni(28, 58.693, 1.63, "NI", "Nickel",    false, false),
+	Cu(29, 63.546, 1.40, "CU", "Copper",    false, false),
+	Zn(30, 65.382, 1.39, "ZN", "Zinc",      false, false),
+	As(33, 74.922, 1.85, "AS", "Arsenic",   false, false),
+	Se(34, 78.963, 1.90, "SE", "Selenium",  false, false),
+	Br(35, 79.904, 1.85, "BR", "Bromine",   false, false),
+	Sr(38, 87.621, 2.00, "SR", "Strontium", false, false),
+	Y (39, 88.906, 2.00,  "Y", "Yttrium",   false, false),
+	Mo(42, 95.962, 2.00, "MO", "Molybdenum",false, false),
+	Ru(44,101.072, 2.00, "RU", "Ruthenium", false, false),
+	Cd(48,112.412, 1.58, "CD", "Cadmium",   false, false),
+	I (53,126.904, 1.98,  "I", "Iodine",    false, false),
+	Xe(54,131.294, 2.16, "XE", "Xenon",     false, false),
+	Cs(55,132.905, 2.00, "CS", "Caesium",   false, false),
+	Sm(62,150.362, 2.00, "SM", "Samarium",  false, false),
+	Ho(67,164.930, 2.00, "HO", "Holmium",   false, false),
+	Ta(73,180.948, 2.00, "TA", "Tantalum",  false, false),
+	W (74,183.841, 2.00,  "W", "Tungsten",  false, false),
+	Ir(77,192.217, 2.00, "IR", "Iridium",   false, false),
+	Pt(78,195.085, 1.72, "PT", "Platinum",  false, false),
+	Au(79,196.967, 1.66, "AU", "Gold",      false, false),
+	Hg(80,200.592, 1.55, "HG", "Mercury",   false, false),
+	U (92,238.029, 1.86,  "U", "Uranium",   false, false),
 	// unknown atom (we treat it as a nitrogen in terms of mass and radius)
-	X ( 0, 14.007, 1.55,  "X", "Unknown",   false);
+	X ( 0, 14.007, 1.55,  "X", "Unknown",   false, false);
 	
 	private int atomicNumber;
 	private double atomicMass;
@@ -73,15 +73,17 @@ public enum AtomType {
 	private String symbol;
 	private String name;
 	private boolean isInStandardAA;
+	private boolean isHbondAcceptor;
 	
 	private static final HashMap<String,AtomType> symbol2AtomType = initSymbol2AtomType();
 
-	private AtomType(int atomicNumber, double atomicMass, double radius, String symbol, String name, boolean isInStandardAA) {
+	private AtomType(int atomicNumber, double atomicMass, double radius, String symbol, String name, boolean isHbondAcceptor, boolean isInStandardAA) {
 		this.atomicMass = atomicMass;
 		this.atomicNumber = atomicNumber;
 		this.radius = radius;
 		this.name = name;
 		this.symbol = symbol;
+		this.isHbondAcceptor = isHbondAcceptor;
 		this.isInStandardAA = isInStandardAA;
 	}
 
@@ -105,6 +107,10 @@ public enum AtomType {
 		return name;
 	}
 
+	public boolean isHbondAcceptor() {
+		return isHbondAcceptor;
+	}
+	
 	public boolean isInStandardAA() {
 		return isInStandardAA;
 	}

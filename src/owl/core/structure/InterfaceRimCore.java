@@ -7,11 +7,11 @@ public class InterfaceRimCore implements Serializable {
 
 	private static final long serialVersionUID = -1931015962640626829L;
 
-	private List<AaResidue> rimResidues;
-	private List<AaResidue> coreResidues;
+	private List<Residue> rimResidues;
+	private List<Residue> coreResidues;
 	private double bsaToAsaCutoff;
 	
-	public InterfaceRimCore(List<AaResidue> rimResidues, List<AaResidue> coreResidues, double bsaToAsaCutoff) {
+	public InterfaceRimCore(List<Residue> rimResidues, List<Residue> coreResidues, double bsaToAsaCutoff) {
 		this.rimResidues = rimResidues;
 		this.coreResidues = coreResidues;
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
@@ -20,28 +20,28 @@ public class InterfaceRimCore implements Serializable {
 	/**
 	 * @return the rimResidues
 	 */
-	public List<AaResidue> getRimResidues() {
+	public List<Residue> getRimResidues() {
 		return rimResidues;
 	}
 
 	/**
 	 * @param rimResidues the rimResidues to set
 	 */
-	public void setRimResidues(List<AaResidue> rimResidues) {
+	public void setRimResidues(List<Residue> rimResidues) {
 		this.rimResidues = rimResidues;
 	}
 
 	/**
 	 * @return the coreResidues
 	 */
-	public List<AaResidue> getCoreResidues() {
+	public List<Residue> getCoreResidues() {
 		return coreResidues;
 	}
 
 	/**
 	 * @param coreResidues the coreResidues to set
 	 */
-	public void setCoreResidues(List<AaResidue> coreResidues) {
+	public void setCoreResidues(List<Residue> coreResidues) {
 		this.coreResidues = coreResidues;
 	}
 	
@@ -75,7 +75,7 @@ public class InterfaceRimCore implements Serializable {
 		return getResString(coreResidues);
 	}
 	
-	private static String getResString(List<AaResidue> residues) {
+	private static String getResString(List<Residue> residues) {
 		String str = "";
 		for (int i=0;i<residues.size();i++) {
 			if (i!=residues.size()-1)

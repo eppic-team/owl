@@ -112,13 +112,13 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 	
 	/**
-	 * Calculates the rims and cores of all member interfaces for each of the
-	 * bsaToAsa cutoffs given.
-	 * @param bsaToAsaCutoffs
+	 * Calculates the rims and cores of all interfaces in list for the
+	 * bsaToAsaCutoff given.
+	 * @param bsaToAsaCutoff
 	 */
-	public void calcRimAndCores(double[] bsaToAsaCutoffs) {
+	public void calcRimAndCores(double bsaToAsaCutoff) {
 		for (ChainInterface interf:list){
-			interf.calcRimAndCore(bsaToAsaCutoffs);
+			interf.calcRimAndCore(bsaToAsaCutoff);
 		}
 	}
 	
@@ -135,17 +135,17 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		}		
 	}
 	
-	public boolean hasInterfacesWithClashes(double clashDistance) {
+	public boolean hasInterfacesWithClashes() {
 		for (ChainInterface interf:list){
-			if (interf.hasClashes(clashDistance)) return true;
+			if (interf.hasClashes()) return true;
 		}
 		return false;
 	}
 	
-	public List<ChainInterface> getInterfacesWithClashes(double clashDistance) {
+	public List<ChainInterface> getInterfacesWithClashes() {
 		List<ChainInterface> clashyInterfs = new ArrayList<ChainInterface>();
 		for (ChainInterface interf:list){
-			if (interf.hasClashes(clashDistance)) {
+			if (interf.hasClashes()) {
 				clashyInterfs.add(interf);
 			}
 		}

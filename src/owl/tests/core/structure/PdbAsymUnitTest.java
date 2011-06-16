@@ -50,8 +50,6 @@ public class PdbAsymUnitTest {
 	
 	private static final double CUTOFF = 5.9;
 	
-	private static final double CLASH_DISTANCE = 1.5;
-
 	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS/our own implementation and results will disagree always)
 	private static final double TOLERANCE_ASA = 0.30;
 	private static final double TOLERANCE_BSA = 0.20;
@@ -177,7 +175,7 @@ public class PdbAsymUnitTest {
 				Assert.assertEquals(pisaInterf.getInterfaceArea(), myInterf.getInterfaceArea(), pisaInterf.getInterfaceArea()*0.10);
 				
 				// make sure there are no clashes
-				Assert.assertFalse(myInterf.hasClashes(CLASH_DISTANCE));
+				Assert.assertFalse(myInterf.hasClashes());
 				
 				// asa/bsas of individual residues, we allow for some discrepancy from PISA
 				

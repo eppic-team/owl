@@ -1301,6 +1301,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		grid.addAtoms(thisAtoms,bounds,otherAtoms,other.bounds);
 		
 		AICGraph graph = new AICGraph();
+		graph.setDistCutoff(cutoff);
 
 		float[][] distMatrix = grid.getDistMatrix(true);
 		
@@ -2499,16 +2500,14 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @return
 	 */
 	public InterfaceRimCore getRimAndCore(double bsaToAsaCutoff) {
-		List<AaResidue> core = new ArrayList<AaResidue>();
-		List<AaResidue> rim = new ArrayList<AaResidue>();
+		List<Residue> core = new ArrayList<Residue>();
+		List<Residue> rim = new ArrayList<Residue>();
 		for (Residue residue:this) {
-			if ((residue instanceof AaResidue)) {
-				if (residue.getBsa()>0) {
-					if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
-						rim.add((AaResidue)residue);
-					} else {
-						core.add((AaResidue)residue);
-					}
+			if (residue.getBsa()>0) {
+				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
+					rim.add(residue);
+				} else {
+					core.add(residue);
 				}
 			}
 		}

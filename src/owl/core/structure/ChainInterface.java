@@ -9,6 +9,7 @@ import java.io.Serializable;
 import javax.vecmath.Matrix4d;
 
 import owl.core.runners.NaccessRunner;
+import owl.core.runners.PymolRunner;
 import owl.core.structure.graphs.AICGraph;
 
 public class ChainInterface implements Comparable<ChainInterface>, Serializable {
@@ -16,6 +17,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private static final long serialVersionUID = 1L;
 
 	public static final String TYPE_PROTEIN = "Protein";
+	
+	private static final String TN_STYLE = "cartoon";
+	private static final String TN_BG_COLOR = "white";
+	private static final int[] TN_HEIGHTS = {75};
+	private static final int[] TN_WIDTHS = {75};
+	
 
 	private int id;
 	private String name;
@@ -25,12 +32,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private PdbChain firstMolecule;
 	private PdbChain secondMolecule;
 	
-	private InterfaceRimCore[] firstRimCores;  // cached first molecule's rim and cores (indices as bsaToAsaCutoffs)
-	private InterfaceRimCore[] secondRimCores; // cached second molecule's rim and cores (indices as bsaToAsaCutoffs)
+	private InterfaceRimCore firstRimCore;  // cached first molecule's rim and core
+	private InterfaceRimCore secondRimCore; // cached second molecule's rim and core
 	
-	private double[] bsaToAsaCutoffs;
+	private double bsaToAsaCutoff;
 	private boolean zoomingUsed;
-	private double bsaToAsaSoftCutoff; // the hard cutoff is stored in the bsaToAsaCutoffs array (must be then an array with only the one member)
+	private double bsaToAsaSoftCutoff; // the hard cutoff is stored in the bsaToAsaCutoffs var
 	private double bsaToAsaRelaxStep;
 	
 	private Matrix4d firstTransf; 		// the transformation applied to first molecule expressed in crystal axes coordinates
@@ -279,12 +286,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return this.secondMolType.equals(TYPE_PROTEIN);
 	}
 	
-	public boolean hasClashes(double clashDistance) {
-		return this.graph.hasClashes(clashDistance);
+	public boolean hasClashes() {
+		return this.graph.hasClashes();
 	}
 	
-	public int getNumClashes(double clashDistance) {
-		return this.graph.getNumClashes(clashDistance);
+	public int getNumClashes() {
+		return this.graph.getNumClashes();
 	}
 	
 	public int compareTo(ChainInterface o) {
@@ -336,13 +343,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private void printFirstMolInfoTabular(PrintStream ps) {
 		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+this.getFirstMolType());
 
-		InterfaceRimCore[] rimCores = getFirstRimCores();
-		for (int i=0;i<bsaToAsaCutoffs.length;i++) {
-			ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
-			ps.println("## rim : "+rimCores[i].getRimResString());
-			if (rimCores[i].getCoreResidues().size()>0) {
-				ps.println("## core: "+rimCores[i].getCoreResString());
-			}
+		InterfaceRimCore rimCore = getFirstRimCore();
+		ps.printf("## %4.2f\n",bsaToAsaCutoff);
+		ps.println("## rim : "+rimCore.getRimResString());
+		if (rimCore.getCoreResidues().size()>0) {
+			ps.println("## core: "+rimCore.getCoreResString());
 		}
 
 		for (Residue residue:firstMolecule) {			
@@ -359,13 +364,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private void printSecondMolInfoTabular(PrintStream ps) {
 		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+this.getSecondMolType());
 
-		InterfaceRimCore[] rimCores = getSecondRimCores();
-		for (int i=0;i<bsaToAsaCutoffs.length;i++) {
-			ps.printf("## %4.2f\n",bsaToAsaCutoffs[i]);
-			ps.println("## rim : "+rimCores[i].getRimResString());
-			if (rimCores[i].getCoreResidues().size()>0) {
-				ps.println("## core: "+rimCores[i].getCoreResString());
-			}
+		InterfaceRimCore rimCore = getSecondRimCore();
+		ps.printf("## %4.2f\n",bsaToAsaCutoff);
+		ps.println("## rim : "+rimCore.getRimResString());
+		if (rimCore.getCoreResidues().size()>0) {
+			ps.println("## core: "+rimCore.getCoreResString());
 		}
 
 		for (Residue residue:secondMolecule) {
@@ -377,6 +380,21 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 				ps.println();
 			}
 		}
+	}
+	
+	public void printRimCoreInfo(PrintStream ps) {
+		
+
+		ps.printf("%15s\t%6.1f",
+				getId()+"("+getFirstMolecule().getPdbChainCode()+"+"+getSecondMolecule().getPdbChainCode()+")",
+				getInterfaceArea());
+		boolean isProt1 = isFirstProtein();
+		boolean isProt2 = isSecondProtein();
+		ps.printf("%5d\t%5d\t%5.2f", (!isProt1)?0:getFirstRimCore().getCoreSize(),
+									 (!isProt2)?0:getSecondRimCore().getCoreSize(),
+									 getBsaToAsaCutoff());
+		ps.print("\t");
+
 	}
 
 	/**
@@ -397,17 +415,13 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	public void calcRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
 		zoomingUsed = true;
 		
-		bsaToAsaCutoffs = new double[1];
-		bsaToAsaCutoffs[0] = bsaToAsaHardCutoff;
+		bsaToAsaCutoff = bsaToAsaHardCutoff;
 		this.bsaToAsaSoftCutoff = bsaToAsaSoftCutoff;
 		this.bsaToAsaRelaxStep = relaxationStep;
-		
-		firstRimCores = new InterfaceRimCore[1];
-		secondRimCores = new InterfaceRimCore[1];
-		
+				
 		if (!isFirstProtein() && !isSecondProtein()) {
-			firstRimCores[0] = null;
-			secondRimCores[0] = null;
+			firstRimCore = null;
+			secondRimCore = null;
 			return;
 		}
 		
@@ -417,14 +431,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 			InterfaceRimCore rimCore2 = null;
 			if (isFirstProtein()) rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
 			if (isSecondProtein()) rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
-			firstRimCores[0] = rimCore1;
-			secondRimCores[0] = rimCore2;
+			firstRimCore = rimCore1;
+			secondRimCore = rimCore2;
 			
 			int totalCoreResidues = 0;
 			if (isFirstProtein()) totalCoreResidues+=rimCore1.getCoreSize();
 			if (isSecondProtein()) totalCoreResidues+=rimCore2.getCoreSize();
 			if (totalCoreResidues>=minNumResidues) {
-				bsaToAsaCutoffs[0] = cutoff;
+				bsaToAsaCutoff = cutoff;
 				break;
 			}
 		}
@@ -432,45 +446,34 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 
 	/**
-	 * Calculates residues in rim and core for all given bsaToAsaCutoffs, storing the 
-	 * lists in a cached array.
-	 * Use {@link #getFirstRimCores()} and {@link #getSecondRimCores()} to retrieve them.
+	 * Calculates residues in rim and core for given bsaToAsaCutoff, storing the 
+	 * lists in a cached variable
+	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve them.
 	 * (see getRimAndCore in {@link PdbChain})
 	 * If either of the 2 molecules of this interface is not a protein, the map will be empty for it. 
-	 * @param bsaToAsaCutoffs
+	 * @param bsaToAsaCutoff
 	 * @return
 	 */
-	public void calcRimAndCore(double[] bsaToAsaCutoffs) {
+	public void calcRimAndCore(double bsaToAsaCutoff) {
 		zoomingUsed = false;
 		
-		this.bsaToAsaCutoffs = bsaToAsaCutoffs;
-		
-		firstRimCores = new InterfaceRimCore[bsaToAsaCutoffs.length];
-		secondRimCores = new InterfaceRimCore[bsaToAsaCutoffs.length];
+		this.bsaToAsaCutoff = bsaToAsaCutoff;
 		
 		InterfaceRimCore rimCore1 = null;
 		InterfaceRimCore rimCore2 = null;
 		if (isFirstProtein()) { 
-			for (int i=0;i<bsaToAsaCutoffs.length;i++) {
-				rimCore1 = this.firstMolecule.getRimAndCore(bsaToAsaCutoffs[i]);
-				firstRimCores[i] = rimCore1;
-			}
+			rimCore1 = this.firstMolecule.getRimAndCore(bsaToAsaCutoff);
+			firstRimCore = rimCore1;
 		}
 		
-		if (isSecondProtein()) {
-			for (int i=0;i<bsaToAsaCutoffs.length;i++) {		
-				rimCore2 = this.secondMolecule.getRimAndCore(bsaToAsaCutoffs[i]);
-				secondRimCores[i] = rimCore2;
-			}
+		if (isSecondProtein()) {		
+			rimCore2 = this.secondMolecule.getRimAndCore(bsaToAsaCutoff);
+			secondRimCore = rimCore2;
 		}
 	}
 	
-	public double[] getBsaToAsaCutoffs() {
-		return bsaToAsaCutoffs;
-	}
-	
-	public int getNumBsaToAsaCutoffs() {
-		return bsaToAsaCutoffs.length;
+	public double getBsaToAsaCutoff() {
+		return bsaToAsaCutoff;
 	}
 	
 	public double getBsaToAsaSoftCutoff() {
@@ -481,16 +484,16 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return bsaToAsaRelaxStep;
 	}
 	
-	public InterfaceRimCore[] getFirstRimCores() {
-		return firstRimCores;
+	public InterfaceRimCore getFirstRimCore() {
+		return firstRimCore;
 	}
 	
-	public InterfaceRimCore[] getSecondRimCores() {
-		return secondRimCores;
+	public InterfaceRimCore getSecondRimCore() {
+		return secondRimCore;
 	}
 	
 	/**
-	 * Writes this interface to given PDB file with original chain names (pdb chain codes),
+	 * Writes this interface to given PDB file with original chain names (PDB chain codes),
 	 * unless the 2 chains are the same where the second one is renamed to next letter in 
 	 * alphabet.
 	 * @param file
@@ -517,6 +520,25 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		secondMolecule.writeAtomLines(ps,chain2forOutput);
 		ps.println("END");
 		ps.close();
+	}
+	
+	/**
+	 * Generate thumbnail files for this interface with PyMol for given pdbFile. 
+	 * Output files will be written to same dir as pdbFile using given base name.
+	 * @param pymolExe
+	 * @param pdbFile
+	 * @param base
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws PdbLoadException
+	 */
+	public void generateThumbnails(File pymolExe, File pdbFile, String base) throws IOException, InterruptedException, PdbLoadException {
+		PymolRunner pr = new PymolRunner(pymolExe);
+		File[] pngFiles = new File[TN_HEIGHTS.length];
+		for (int i=0;i<TN_HEIGHTS.length;i++) {
+			pngFiles[i] = new File(pdbFile.getParent(),base+"."+TN_WIDTHS[i]+"x"+TN_HEIGHTS[i]+".png");
+		}
+		pr.generatePng(pdbFile, pngFiles, TN_STYLE, TN_BG_COLOR, TN_HEIGHTS, TN_WIDTHS);
 	}
 	
 	/**

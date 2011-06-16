@@ -23,7 +23,7 @@ public class enumerateInterfaces {
 	private static final int[] HEIGHTS = {300};
 	private static final int[] WIDTHS = {300};
 	
-	private static final double[] BSATOASA_CUTOFFS = {0.95};
+	private static final double BSATOASA_CUTOFF = 0.95;
 
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
@@ -33,8 +33,6 @@ public class enumerateInterfaces {
 	// 5.75 gives 25 for 1pmo (right) but 26 for 1pmm (instead of 27)
 	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)  
 	private static final double CUTOFF = 5.9; 
-	
-	private static final double CLASH_DISTANCE = 1.5;
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
 	
@@ -166,16 +164,16 @@ public class enumerateInterfaces {
 					
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i);
-			interf.calcRimAndCore(BSATOASA_CUTOFFS);
+			interf.calcRimAndCore(BSATOASA_CUTOFF);
 			System.out.println("\n##Interface "+(i+1));
-			if (interf.hasClashes(CLASH_DISTANCE)) System.out.println("CLASHES!!!");
+			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
-			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFFS[0])+
-					" bsa to asa cutoff: "+interf.getFirstRimCores()[0].getCoreSize()+" "+interf.getSecondRimCores()[0].getCoreSize());
+			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+
+					" bsa to asa cutoff: "+interf.getFirstRimCore().getCoreSize()+" "+interf.getSecondRimCore().getCoreSize());
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 		
 			if (writeDir!=null) {
