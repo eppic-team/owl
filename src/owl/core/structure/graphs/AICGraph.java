@@ -183,7 +183,8 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	private boolean isHbondInteraction(Pair<Atom> pair, double distance) {
 		Atom atomi = pair.getFirst();
 		Atom atomj = pair.getSecond();
-		if (((atomi.getType().isHbondAcceptor() && atomj.getType()==AtomType.H) ||
+		if ( (atomi.getType()!=null && atomj.getType()!=null) && // this can happen if the atom type is unknonw (not in our AtomType enum)
+			 ((atomi.getType().isHbondAcceptor() && atomj.getType()==AtomType.H) ||
 			 (atomj.getType().isHbondAcceptor() && atomi.getType()==AtomType.H)) &&
 			 distance<HBOND_UPPER && 
 			 distance>HBOND_LOWER) {
