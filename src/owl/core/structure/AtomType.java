@@ -34,6 +34,7 @@ public enum AtomType {
 	F ( 9, 18.998, 1.47,  "F", "Fluorine",  true,  false),
 	Na(11, 22.990, 2.27, "NA", "Sodium",    false, false),
 	Mg(12, 24.305, 1.73, "MG", "Magnesium", false, false),
+	Al(13, 26.982, 2.00, "AL", "Aluminium", false, false),
 	Cl(17, 35.453, 1.75, "CL", "Chlorine",  false, false),
 	K (19, 39.098, 2.75,  "K", "Potassium", false, false),
 	Ca(20, 40.078, 2.00, "CA", "Calcium",   false, false),
