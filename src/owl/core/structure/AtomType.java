@@ -64,6 +64,7 @@ public enum AtomType {
 	Pt(78,195.085, 1.72, "PT", "Platinum",  false, false),
 	Au(79,196.967, 1.66, "AU", "Gold",      false, false),
 	Hg(80,200.592, 1.55, "HG", "Mercury",   false, false),
+	Pb(82,207.200, 2.02, "PB", "Lead",      false, false),
 	U (92,238.029, 1.86,  "U", "Uranium",   false, false),
 	// unknown atom (we treat it as a nitrogen in terms of mass and radius)
 	X ( 0, 14.007, 1.55,  "X", "Unknown",   false, false);
