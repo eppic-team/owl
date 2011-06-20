@@ -30,6 +30,7 @@ public enum AtomType {
 	S (16, 32.065, 1.80, "S", "Sulfur",     false, true),
 	// in non-standard aas and hets
 	Li( 3,  6.941, 1.82, "LI", "Lithium",   false, false),
+	Be( 4,  9.012, 2.00, "BE", "Beryllium", false, false),
 	B ( 5, 10.811, 2.00,  "B", "Boron",     false, false),
 	F ( 9, 18.998, 1.47,  "F", "Fluorine",  true,  false),
 	Na(11, 22.990, 2.27, "NA", "Sodium",    false, false),
