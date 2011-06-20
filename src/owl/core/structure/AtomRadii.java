@@ -53,6 +53,11 @@ public class AtomRadii {
 	 * @return
 	 */
 	public static double getRadius(String mol3lettercode, Atom atom) {
+		if (atom.getType()==null) {
+			System.err.println("Unrecognised atom "+atom.getCode()+" in residue "+atom.getParentResSerial()+"-"+mol3lettercode+
+					", setting its radius to radius of default unknown atom (Nitrogen).");
+			return AtomType.X.getRadius();
+		}
 		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
 		if (!radii.containsKey(mol3lettercode) || 
 			!radii.get(mol3lettercode).containsKey(atom.getCode())) { // this can happen if for a het aa there is an unknown atom (X atom)
