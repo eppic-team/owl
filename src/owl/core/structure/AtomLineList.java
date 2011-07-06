@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import owl.core.util.FileFormatException;
+
 
 public class AtomLineList implements Iterable<AtomLine> {
 	
@@ -110,8 +112,9 @@ public class AtomLineList implements Iterable<AtomLine> {
 	 * Also assigns the isNonPoly field of all AtomLines in this list and finds out the pdbchaincode2chaincode mapping.
 	 * Retrieve the data subsequently with {@link #getAtomLineGroups()} and {@link #getPdbChainCode2chainCode()}
 	 * To be used in PDB file parsing only. 
+	 * @throws FileFormatException 
 	 */
-	public void sortIntoChains() {
+	public void sortIntoChains() throws FileFormatException {
 		atomLineGroups = new TreeMap<String, ArrayList<AtomLine>>();
 		
 		String lastPdbChainCode = null;
@@ -139,10 +142,22 @@ public class AtomLineList implements Iterable<AtomLine> {
 		
 		pdbchaincode2chaincode = new TreeMap<String, String>();
 		
+		// we now check for consistency in atom numbering
+		for (ArrayList<AtomLine> group:atomLineGroups.values()) {
+			int lastAtomSerial = -1;	
+			for (AtomLine line:group) {
+				if(line.atomserial <= lastAtomSerial) {
+					throw new FileFormatException("Atom serials do not occur in ascending order in PDB file for atom " + line.atomserial + ")");
+				}
+				lastAtomSerial = line.atomserial;
+			}
+		}
+		
 		// now chains are all assigned to chainCodes
 		// we can now fill the isNonPoly field indicating whether a chain is non-polymer or polymer (it's polymer when it has at least one ATOM line)
 		// we have to do this for the cases when a polymer chain starts with a HETATM, otherwise we could rely directly on the outOfPolyChain field
 		for (ArrayList<AtomLine> group:atomLineGroups.values()) {
+			
 			boolean hasOnePolyAtom = false;
 			for (AtomLine atomLine:group) {
 				if (!atomLine.lineIsHetAtm && 
@@ -161,8 +176,8 @@ public class AtomLineList implements Iterable<AtomLine> {
 				for (AtomLine atomLine:group) {
 					atomLine.isNonPoly = true;
 				}
-			}
-			
+			}			
+
 		}
 		
 	}

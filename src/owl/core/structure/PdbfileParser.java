@@ -245,7 +245,6 @@ public class PdbfileParser {
 		Matcher m;
 		this.title = "";
 		boolean outOfPolyChain = false; // true when out of poly chain (after TER record seen), false again when an ATOM record found
-		int lastAtomSerial = -1;
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		int thismodel=PdbAsymUnit.DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
@@ -474,11 +473,7 @@ public class PdbfileParser {
 							pdbResSerial = Integer.parseInt(pdbResSerialField.substring(0,pdbResSerialField.length()-1));
 							insCode = pdbResSerialField.substring(pdbResSerialField.length()-1);
 						}
-						if(atomserial <= lastAtomSerial) {
-							fpdb.close();
-							throw new FileFormatException("Atom serials do not occur in ascending order in PDB file " + pdbfile + "(atom=" + atomserial + ")");
-						}
-						lastAtomSerial = atomserial;
+						
 						String altCode = line.substring(16, 17);
 						if (altCode.equals(" ")) altCode=".";
 						double x = Double.parseDouble(line.substring(30,38).trim());
