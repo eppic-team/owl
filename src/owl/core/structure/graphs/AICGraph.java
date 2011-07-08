@@ -1,10 +1,14 @@
 package owl.core.structure.graphs;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import owl.core.structure.Atom;
 import owl.core.structure.AtomType;
+import owl.core.structure.Residue;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -126,6 +130,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	
 	/**
 	 * Returns a list of all pair os atoms in this interchain graph that form a Hydrogen bond.
+	 * TODO this can find Hbonds only if H atoms are present, should write a more general algorithm for cases when no H atoms are present 
 	 * @return
 	 */
 	public List<Pair<Atom>> getHbondPairs() {
@@ -176,6 +181,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	
 	/**
 	 * Tells whether given atom pair and distance fullfils the conditions for a Hydrogen bond
+	 * TODO this can find Hbonds only if H atoms are present, should write a more general algorithm for cases when no H atoms are present
 	 * @param pair
 	 * @param distance
 	 * @return
@@ -209,6 +215,63 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 			distance<(DISULFIDE_BRIDGE_DIST+DISULFIDE_BRIDGE_DIST_SIGMA) && 
 			distance>(DISULFIDE_BRIDGE_DIST-DISULFIDE_BRIDGE_DIST_SIGMA)) {
 				return true;
+		}
+		return false;
+	}
+	
+	public double getAvrgNumNeighbors() {
+		int total = 0;
+		int count = 0;
+		for (Atom atom:this.getVertices()) {
+			total+=this.getNeighborCount(atom);
+			count++;
+		}
+		return (double)total/(double)count;
+	}
+	
+	public double getAvrgNumNeighbors(Collection<Residue> iresidues, Collection<Residue> jresidues) {
+		int total = 0;
+		int count = 0;
+		for (Atom atom:this.getFirstVertices()) {
+			if (isAtomInResidues(atom, iresidues)) {
+				total+=this.getNeighborCount(atom);
+				count++;
+			}
+		}		
+		for (Atom atom:this.getSecondVertices()) {
+			if (isAtomInResidues(atom, jresidues)) {
+				total+=this.getNeighborCount(atom);
+				count++;
+			}			
+		}
+		return (double)total/(double)count;
+	}
+
+	private Set<Atom> getFirstVertices() {
+		Set<Atom> atoms = new HashSet<Atom>();
+		for (AICGEdge edge:this.getEdges()) {
+			Pair<Atom> pair = this.getEndpoints(edge);
+			atoms.add(pair.getFirst());
+		}
+		return atoms;
+	}
+
+	private Set<Atom> getSecondVertices() {
+		Set<Atom> atoms = new HashSet<Atom>();
+		for (AICGEdge edge:this.getEdges()) {
+			Pair<Atom> pair = this.getEndpoints(edge);
+			atoms.add(pair.getSecond());
+		}
+		return atoms;
+	}
+	
+	private static boolean isAtomInResidues(Atom atom, Collection<Residue> residues) {
+		for (Residue residue:residues) {
+			Residue parent = atom.getParentResidue();
+			if (parent.getSerial()==residue.getSerial() && 
+				parent.getLongCode().equals(residue.getLongCode())) {
+				return true;
+			}
 		}
 		return false;
 	}

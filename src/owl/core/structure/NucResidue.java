@@ -1,7 +1,9 @@
 package owl.core.structure;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeMap;
 
 import owl.core.structure.features.SecStrucElement;
@@ -212,6 +214,19 @@ public class NucResidue implements Residue {
 	
 	public String toString() {
 		return this.parent.getChainCode()+serial+nucType.getOneLetterCode();
+	}
+
+	@Override
+	public void removeHatoms() {
+		List<String> toRemove = new ArrayList<String>();
+		for (Atom atom:this.atoms.values()) {
+			if (atom.getType()==AtomType.H) {
+				toRemove.add(atom.getCode());
+			}
+		}
+		for (String atomCode:toRemove) {
+			atoms.remove(atomCode);
+		}
 	}
 
 }

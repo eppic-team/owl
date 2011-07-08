@@ -133,6 +133,9 @@ public class enumerateInterfaces {
 			outBaseName = inputFile.getName().substring(0, inputFile.getName().lastIndexOf("."));
 		}
 
+		// we remove H atoms
+		pdb.removeHatoms();
+		
 		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumPolyChains()+" polymer chains ("+pdb.getAllRepChains().size()+" sequence unique), " +
 				pdb.getNumNonPolyChains()+" non-polymer chains.");
 

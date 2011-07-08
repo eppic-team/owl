@@ -906,6 +906,16 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 
 	/**
+	 * Removes all Hydrogen atoms from this chain
+	 */
+	public void removeHatoms() {
+		for (Residue residue:this) {
+			residue.removeHatoms();
+		}
+		initialiseMaps();
+	}
+	
+	/**
 	 * Returns the number of chain breaks in this structure, i.e. how many unobserved 
 	 * gaps are there in the chain (excluding unobserved regions in the terminals)
 	 * @return

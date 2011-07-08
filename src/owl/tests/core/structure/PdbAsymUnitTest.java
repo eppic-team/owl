@@ -101,6 +101,9 @@ public class PdbAsymUnitTest {
 				System.err.println("PDB load error, cause: "+e.getMessage());
 				continue;
 			}
+			
+			pdb.removeHatoms();
+			
 			List<String> repChains = pdb.getAllRepChains();
 			Assert.assertTrue(repChains.size()<=pdb.getNumPolyChains() && repChains.size()>0);
 			List<String> allchains = new ArrayList<String>();

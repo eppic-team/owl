@@ -1389,6 +1389,15 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		return mass;
 	}
 	
+	/**
+	 * Removes all Hydrogen atoms from this structure
+	 */
+	public void removeHatoms() {
+		for (PdbChain chain:this.getAllChains()) {
+			chain.removeHatoms();
+		}
+	}
+	
 	/*--------------------------------------- static methods -----------------------------------------*/
 	
 	/**
@@ -1435,11 +1444,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		os.close();
 	}
 
-//	@Override
-//	public Iterator<PdbChain> iterator() {
-//		return chains.values().iterator();
-//	}
-	
+
 
 
 }

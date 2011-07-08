@@ -195,4 +195,9 @@ public interface Residue extends Iterable<Atom>, Serializable {
 	 * @return
 	 */
 	public SecStrucElement getSsElem();
+	
+	/**
+	 * Removes all Hydrogen atoms from this Residue
+	 */
+	public void removeHatoms();
 }
