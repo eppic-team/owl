@@ -29,41 +29,43 @@ import java.util.Set;
  * 2009/01/05 moved to package owl.core.structure
  * 2009/03/18 adding stop codon
  * 2010/05/02 adding reduced alphabets (JD)
+ * 2011/07/12 adding ASAs of extended tri-peptides GLY-X-GLY (for calculation of rASA)
  */
 public enum AminoAcid {
 		
 	/*---------------------- member variables --------------------------*/
 	
     //                                                                                                                  reduced alphabets
-	//                                         hydro  hydro  arom   aliph  polar  charg  pos    neg    small  tiny   15  10   8   6   4   2  
-	 ALA ( 1, "Alanine",       'A', "ALA",  1, -0.20, true,  false, false, false, false, false, false, true,  true ,  3,  3,  2,  1,  2,  1), 
-	 ARG ( 2, "Arginine",      'R', "ARG",  7,  1.43, false, false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2), 
-	 ASN ( 3, "Asparagine",    'N', "ASN",  4,  0.69, false, false, false, true,  false, false, false, true,  false, 12,  8,  6,  4,  4,  2),
-	 ASP ( 4, "Aspartic Acid", 'D', "ASP",  4,  0.72, false, false, false, true,  true,  false, true,  true,  false, 11,  8,  6,  5,  4,  2),
-	 CYS ( 5, "Cysteine",      'C', "CYS",  2, -0.67, true,  false, false, true,  false, false, false, true,  false,  2,  2,  1,  1,  1,  1),
-	 GLN ( 6, "Glutamine",     'Q', "GLN",  5,  0.74, false, false, false, true,  false, false, false, false, false, 13,  8,  6,  4,  4,  2),
-	 GLU ( 7, "Glutamic Acid", 'E', "GLU",  5,  1.09, false, false, false, true,  true,  false, true,  false, false, 10,  8,  6,  5,  4,  2),
-	 GLY ( 8, "Glycine",       'G', "GLY",  0, -0.06, true,  false, false, false, false, false, false, true,  true ,  4,  4,  2,  2,  2,  1),
-	 HIS ( 9, "Histidine",     'H', "HIS",  6, -0.04, true,  true,  false, true,  true,  true,  false, false, false, 15, 10,  8,  3,  4,  2),
-	 ILE (10, "Isoleucine",    'I', "ILE",  4, -0.74, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
-	 LEU (11, "Leucine",       'L', "LEU",  4, -0.65, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
-	 LYS (12, "Lysine",        'K', "LYS",  5,  2.00, true,  false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2),
-	 MET (13, "Methionine",    'M', "MET",  4, -0.71, true,  false, false, false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
-	 PHE (14, "Phenylalanine", 'F', "PHE",  7, -0.67, true,  true,  false, false, false, false, false, false, false,  8,  7,  5,  3,  3,  1),
-	 PRO (15, "Proline",       'P', "PRO",  3, -0.44, false, false, false, false, false, false, false, true , false,  7,  6,  4,  2,  2,  1),
-	 SER (16, "Serine",        'S', "SER",  2,  0.34, false, false, false, true,  false, false, false, true,  true ,  5,  5,  3,  4,  2,  1),
-	 THR (17, "Threonine",     'T', "THR",  3,  0.26, false, false, false, true,  false, false, false, true,  false,  6,  5,  3,  4,  2,  1),
-	 TRP (18, "Tryptophan",    'W', "TRP", 10, -0.45, true,  true,  false, true,  false, false, false, false, false,  9,  7,  5,  3,  3,  1),
-	 TYR (19, "Tyrosine",      'Y', "TYR",  8,  0.22, true,  true,  false, true,  false, false, false, false, false,  8,  7,  5,  3,  3,  1),
-	 VAL (20, "Valine",        'V', "VAL",  3, -0.61, true,  false, true,  false, false, false, false, true , false,  1,  1,  1,  1,  1,  1),
-	 XXX ( 0, "Unknown",       'X', "XXX", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1),
-	 STP (-1, "Stop codon",    '*', "STP", -1,  Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1);	 
+	//                                              hydro  hydro  arom   aliph  polar  charg  pos    neg    small  tiny   15  10   8   6   4   2  
+	 ALA ( 1, "Alanine",       'A', "ALA",  1, 113, -0.20, true,  false, false, false, false, false, false, true,  true ,  3,  3,  2,  1,  2,  1), 
+	 ARG ( 2, "Arginine",      'R', "ARG",  7, 241,  1.43, false, false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2), 
+	 ASN ( 3, "Asparagine",    'N', "ASN",  4, 158,  0.69, false, false, false, true,  false, false, false, true,  false, 12,  8,  6,  4,  4,  2),
+	 ASP ( 4, "Aspartic Acid", 'D', "ASP",  4, 151,  0.72, false, false, false, true,  true,  false, true,  true,  false, 11,  8,  6,  5,  4,  2),
+	 CYS ( 5, "Cysteine",      'C', "CYS",  2, 140, -0.67, true,  false, false, true,  false, false, false, true,  false,  2,  2,  1,  1,  1,  1),
+	 GLN ( 6, "Glutamine",     'Q', "GLN",  5, 189,  0.74, false, false, false, true,  false, false, false, false, false, 13,  8,  6,  4,  4,  2),
+	 GLU ( 7, "Glutamic Acid", 'E', "GLU",  5, 183,  1.09, false, false, false, true,  true,  false, true,  false, false, 10,  8,  6,  5,  4,  2),
+	 GLY ( 8, "Glycine",       'G', "GLY",  0,  85, -0.06, true,  false, false, false, false, false, false, true,  true ,  4,  4,  2,  2,  2,  1),
+	 HIS ( 9, "Histidine",     'H', "HIS",  6, 194, -0.04, true,  true,  false, true,  true,  true,  false, false, false, 15, 10,  8,  3,  4,  2),
+	 ILE (10, "Isoleucine",    'I', "ILE",  4, 182, -0.74, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 LEU (11, "Leucine",       'L', "LEU",  4, 180, -0.65, true,  false, true,  false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 LYS (12, "Lysine",        'K', "LYS",  5, 211,  2.00, true,  false, false, true,  true,  true,  false, false, false, 14,  9,  7,  6,  4,  2),
+	 MET (13, "Methionine",    'M', "MET",  4, 204, -0.71, true,  false, false, false, false, false, false, false, false,  1,  1,  1,  1,  1,  1),
+	 PHE (14, "Phenylalanine", 'F', "PHE",  7, 218, -0.67, true,  true,  false, false, false, false, false, false, false,  8,  7,  5,  3,  3,  1),
+	 PRO (15, "Proline",       'P', "PRO",  3, 143, -0.44, false, false, false, false, false, false, false, true , false,  7,  6,  4,  2,  2,  1),
+	 SER (16, "Serine",        'S', "SER",  2, 122,  0.34, false, false, false, true,  false, false, false, true,  true ,  5,  5,  3,  4,  2,  1),
+	 THR (17, "Threonine",     'T', "THR",  3, 146,  0.26, false, false, false, true,  false, false, false, true,  false,  6,  5,  3,  4,  2,  1),
+	 TRP (18, "Tryptophan",    'W', "TRP", 10, 259, -0.45, true,  true,  false, true,  false, false, false, false, false,  9,  7,  5,  3,  3,  1),
+	 TYR (19, "Tyrosine",      'Y', "TYR",  8, 229,  0.22, true,  true,  false, true,  false, false, false, false, false,  8,  7,  5,  3,  3,  1),
+	 VAL (20, "Valine",        'V', "VAL",  3, 160, -0.61, true,  false, true,  false, false, false, false, true , false,  1,  1,  1,  1,  1,  1),
+	 XXX ( 0, "Unknown",       'X', "XXX", -1, Double.NaN, Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1),
+	 STP (-1, "Stop codon",    '*', "STP", -1, Double.NaN, Double.NaN, false, false, false, false, false, false, false, false, false, -1, -1, -1, -1, -1, -1);	 
 		
 	private int number;				// we use this instead of ordinal() to define our own values, e.g. for STP
 	private String name;			
 	private char oneLetterCode;
 	private String threeLetterCode; 
 	private int numberOfAtoms;		// number of heavy (non-Hydrogen) side chain atoms
+	private double asaInExtTripept; // ASA in extended tripeptide conformation (GLY-X-GLY) from Miller et al JMB 1987 (for calculation of relative ASAs)
 	private double hydrophobicity;	// empirical hydrophibicity scale by Miller in kcal/mol
 	private boolean hydrophobic;
 	private boolean aromatic;	
@@ -112,6 +114,7 @@ public enum AminoAcid {
 	 * Main constructor. Only used internally to create enumeration instances.
 	 */
 	private AminoAcid(int number, String name, char one, String three, int atoms,
+			  double asaInExtTripept,
 			  double hydrophobicity,
 			  boolean hydrophobic, boolean aromatic, boolean aliphatic,
 			  boolean polar,       boolean charged,  boolean positive,
@@ -123,6 +126,7 @@ public enum AminoAcid {
 		this.oneLetterCode = one;
 		this.threeLetterCode = three;
 		this.numberOfAtoms = atoms;
+		this.asaInExtTripept = asaInExtTripept;
 		this.hydrophobicity = hydrophobicity;
 		this.aromatic = aromatic;
 		this.hydrophobic = hydrophobic;
@@ -180,6 +184,16 @@ public enum AminoAcid {
 	 * @return number of side chain heavy atoms
 	 */
 	public int getNumberOfAtoms() {return this.numberOfAtoms; }
+	
+	/**
+	 * Returns the ASA of the aminoacid in an ideal extended tri-peptide conformation 
+	 * (GLY-X-GLY, X being this aminoacid) as calculated in Miller et al. 1987 JMB (Table 2)
+	 * For calculations of relative ASAs  
+	 * @return
+	 */
+	public double getAsaInExtTripept() {
+		return asaInExtTripept;
+	}
 	
 	/**
 	 * Returns the empirical hydrophibicity by Miller in kcal/mol

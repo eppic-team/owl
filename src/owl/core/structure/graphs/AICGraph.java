@@ -226,25 +226,33 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 			total+=this.getNeighborCount(atom);
 			count++;
 		}
-		return (double)total/(double)count;
+		if (total==0) return 0;
+		else return (double)total/(double)count;
 	}
 	
 	public double getAvrgNumNeighbors(Collection<Residue> iresidues, Collection<Residue> jresidues) {
 		int total = 0;
 		int count = 0;
+		//System.out.println("FIRST");
 		for (Atom atom:this.getFirstVertices()) {
 			if (isAtomInResidues(atom, iresidues)) {
 				total+=this.getNeighborCount(atom);
 				count++;
+				//System.out.print(atom.getCode()+atom.getSerial()+": "+getNeighborCount(atom)+" ");
 			}
-		}		
+		}
+		//System.out.println();
+		//System.out.println("SECOND");
 		for (Atom atom:this.getSecondVertices()) {
 			if (isAtomInResidues(atom, jresidues)) {
 				total+=this.getNeighborCount(atom);
 				count++;
+				//System.out.print(atom.getCode()+atom.getSerial()+": "+getNeighborCount(atom)+" ");
 			}			
 		}
-		return (double)total/(double)count;
+		//System.out.println();
+		if (total==0) return 0;
+		else return (double)total/(double)count;
 	}
 
 	private Set<Atom> getFirstVertices() {

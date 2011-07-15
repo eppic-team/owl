@@ -1119,6 +1119,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 					tot+=atom.getAsa();
 				}
 				residue.setAsa(tot);
+				if (residue instanceof AaResidue) {
+					AaResidue aares = (AaResidue) residue;
+					residue.setRsa(tot/aares.getAaType().getAsaInExtTripept());
+				}
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package owl.core.structure;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class InterfaceRimCore implements Serializable {
@@ -11,10 +12,23 @@ public class InterfaceRimCore implements Serializable {
 	private List<Residue> coreResidues;
 	private double bsaToAsaCutoff;
 	
+	public InterfaceRimCore() {
+		this.coreResidues = new ArrayList<Residue>();
+		this.rimResidues = new ArrayList<Residue>();
+	}
+	
 	public InterfaceRimCore(List<Residue> rimResidues, List<Residue> coreResidues, double bsaToAsaCutoff) {
 		this.rimResidues = rimResidues;
 		this.coreResidues = coreResidues;
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
+	}
+	
+	public void addCoreResidue(Residue residue) {
+		coreResidues.add(residue);
+	}
+	
+	public void addRimResidue(Residue residue) {
+		rimResidues.add(residue);
 	}
 
 	/**
@@ -23,7 +37,7 @@ public class InterfaceRimCore implements Serializable {
 	public List<Residue> getRimResidues() {
 		return rimResidues;
 	}
-
+	
 	/**
 	 * @param rimResidues the rimResidues to set
 	 */

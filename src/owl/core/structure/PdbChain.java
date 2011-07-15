@@ -561,6 +561,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				tot+=atom.getAsa();
 			}
 			residue.setAsa(tot);
+			if (residue instanceof AaResidue) {
+				AaResidue aares = (AaResidue) residue;
+				residue.setRsa(tot/aares.getAaType().getAsaInExtTripept());
+			}
 		}
 	}
 	
@@ -2525,6 +2529,33 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object: core residues are those for 
+	 * which the bsa/asa ratio is above the given cut-off, rim those with bsa>0 and with 
+	 * bsa/asa below the cut-off.
+	 * Support residues are excluded as per Levy definition (rASA of residue in uncomplexed 
+	 * subunit<given rASA cutoff) are excluded. 
+	 * @param bsaToAsaCutoff
+	 * @param rASAcutoff
+	 * @return
+	 */
+	public InterfaceRimCore getRimAndCoreExcludeSupport(double bsaToAsaCutoff,double rASAcutoff) {
+		List<Residue> core = new ArrayList<Residue>();
+		List<Residue> rim = new ArrayList<Residue>();
+		for (Residue residue:this) {
+			if (residue.getBsa()>0) {
+				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
+					rim.add(residue);
+				} else {
+					if (residue.getRsa()>rASAcutoff) {
+						core.add(residue);
+					}
+				}
+			}
+		}
+		return new InterfaceRimCore(rim,core,bsaToAsaCutoff);
+	}
+	
+	/**
 	 * Returns 2 list of residues as a {@link InterfaceRimCore} object (see {@link #getRimAndCore(double)})
 	 * The core is required to have a minimum of minNumResidues. If the minimum is not 
 	 * reached with the bsaToAsaSoftCutoff, then the cutoff is relaxed in relaxationStep steps 
@@ -2548,6 +2579,59 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		return rimCore;
 	}
 	
+	/**
+	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object.
+	 * Following the Chakrabarti definition (see Chakrabarti, Janin Proteins 2002):
+	 * core residues have at least one atom fully buried (bsa/asa=1) and rim residues are all the
+	 * rest still with bsa>0 but bsa/asa<1 (all atoms partially accessible)
+	 * @return
+	 */
+	public InterfaceRimCore getRimAndCoreChakrabarti() {
+		InterfaceRimCore rimcore = new InterfaceRimCore();
+		for (Residue residue:this) {
+			if (residue.getBsa()>0) {
+				boolean iscore = false;
+				for (Atom atom:residue) {
+					if (atom.getBsa()/atom.getAsa()>0.999) {
+						iscore = true;
+						break;
+					}
+				}
+				if (iscore) rimcore.addCoreResidue(residue);
+				else rimcore.addRimResidue(residue);
+			}
+		}
+		return rimcore;
+	}
+	
+	/**
+	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object. 
+	 * Following the Levy definition (see Levy JMB 2010):
+	 * core residues have relative ASA (complex) below 25% while ASA (uncomplexed) was above 25%, 
+	 * rim residues have relative ASA (complex) above 25%
+	 * @param rASAcutoff
+	 * @return
+	 */
+	public InterfaceRimCore getRimAndCoreLevy(double rASAcutoff) {
+		InterfaceRimCore rimcore = new InterfaceRimCore();
+		for (Residue residue:this) {
+			if (residue.getBsa()>0) {
+				if (residue instanceof AaResidue) {
+					AaResidue aares = (AaResidue) residue;
+					// rBSA = rASA(u)-rASA(c) --> rASA(c) = rASA(u) - rBSA
+					double rbsa = aares.getBsa()/aares.getAaType().getAsaInExtTripept();
+					double rasau = aares.getAsa()/aares.getAaType().getAsaInExtTripept();
+					double rasac = rasau -rbsa;
+					if ( rasac<rASAcutoff && rasau>rASAcutoff) {  
+						rimcore.addCoreResidue(residue);
+					} else {
+						rimcore.addRimResidue(residue);
+					}
+				}
+			}
+		}
+		return rimcore;
+	}
 	
 	/**
 	 * Mirror this PdbChain structure by inverting through the origin.
