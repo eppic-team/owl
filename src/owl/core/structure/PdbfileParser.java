@@ -298,7 +298,7 @@ public class PdbfileParser {
 						this.title += " ";
 					}
 				}
-				this.title += line.substring(10,80).trim();
+				this.title += line.substring(10,line.length()).trim();
 			}
 			// EXPDTA
 			if (line.startsWith("EXPDTA")) {
