@@ -167,10 +167,10 @@ public class PdbAsymUnitTest {
 
 			int i = 0;
 			for (int p=0;p<pisaInterfaces.size();p++) {
-				ChainInterface pisaInterf = pisaInterfaces.get(p);
+				ChainInterface pisaInterf = pisaInterfaces.get(p+1);
 				if (!pisaInterf.isProtein()) continue;
 				System.out.println("\nInterface "+(i+1));
-				ChainInterface myInterf = interfaces.get(i);
+				ChainInterface myInterf = interfaces.get(i+1);
 				
 				
 				System.out.printf("Areas, pisa: %8.2f\tmy: %8.2f\tdiff: %4.1f%%\n",pisaInterf.getInterfaceArea(),myInterf.getInterfaceArea(),

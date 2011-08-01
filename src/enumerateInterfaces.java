@@ -166,9 +166,15 @@ public class enumerateInterfaces {
 		PymolRunner pr = new PymolRunner(PYMOL_EXE);
 					
 		for (int i=0;i<interfaces.size();i++) {
-			ChainInterface interf = interfaces.get(i);
+			ChainInterface interf = interfaces.get(i+1);
 			interf.calcRimAndCore(BSATOASA_CUTOFF);
-			System.out.println("\n##Interface "+(i+1));
+			String parallel = "";
+			String notInUnitCell = "";
+			if (interf.isParallel()) parallel = " -- PARALLEL interface";
+			if (!interf.isWithinUnitCell()) notInUnitCell = " -- not in unit cell";
+			System.out.println("\n##Interface "+(i+1)+" "+
+					interf.getFirstSubunitId()+"-"+
+					interf.getSecondSubunitId()+parallel+notInUnitCell);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
@@ -192,6 +198,7 @@ public class enumerateInterfaces {
 		if (serialize && writeDir!=null) {
 			Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
 		}
+		
 	}
 
 }

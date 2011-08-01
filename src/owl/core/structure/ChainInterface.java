@@ -25,6 +25,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 
 	private int id;
+	private boolean withinUnitCell; 
 	private String name;
 	private double interfaceArea;
 	private AICGraph graph;
@@ -75,6 +76,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setId(int id) {
 		this.id = id;
+	}
+	
+	public boolean isWithinUnitCell() {
+		return withinUnitCell;
+	}
+	
+	public void setWithinUnitcell(boolean withinUnitCell) {
+		this.withinUnitCell = withinUnitCell;
 	}
 	
 	public String getName() {
@@ -632,4 +641,15 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return zoomingUsed;
 	}
 	
+	public SubunitId getFirstSubunitId() {
+		return new SubunitId(firstMolecule.getPdbChainCode().charAt(0),firstMolecule.getParent().getTransformId());
+	}
+
+	public SubunitId getSecondSubunitId() {
+		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondMolecule.getParent().getTransformId());
+	}
+
+	public boolean isParallel() {
+		return this.getFirstSubunitId().equals(this.getSecondSubunitId());
+	}
 }

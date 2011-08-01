@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+//import owl.core.util.CombinationsGenerator;
+
 
 /**
  * A list of all the interfaces of a crystal structure (a PdbAsymUnit)
@@ -33,6 +35,8 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 
 	private List<ChainInterface> list;
+	
+	private InterfaceGraph graph; 
 	
 	private AsaCalcMethod asaCalcMethod;
 	private int asaCalcAccuracyParam;
@@ -78,15 +82,14 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 	
 	/**
-	 * Gets the interface corresponding to given index i.
-	 * Indices go from 0 to n-1.
+	 * Gets the interface corresponding to given id.
+	 * The ids go from 1 to n
 	 * If {@link #sort()} was called then the order is descendent by area.
-	 * Note that the interface id is actually i+1
-	 * @param i
+	 * @param id
 	 * @return
 	 */
-	public ChainInterface get(int i) {
-		return list.get(i);
+	public ChainInterface get(int id) {
+		return list.get(id-1);
 	}
 	
 	public AsaCalcMethod getAsaCalcType() {
@@ -168,4 +171,92 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 			interf.printTabular(ps);
 		}
 	}
+	
+	/**
+	 * Returns true if this interface list contains parallel interfaces
+	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
+	 * related by a translation. Creating an assembly with it would result in an infinite assembly. 
+	 * @return
+	 */
+	public boolean hasParallelInterfaces() {
+		for (ChainInterface interf:this) {
+			if (interf.isParallel()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+     * Get a list of ids of all interfaces that are parallel.
+	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
+	 * related by a translation. Creating an assembly with it would result in an infinite assembly.
+	 * @return
+	 */
+	public ArrayList<Integer> getParallelInterfacesIds() {
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		for (ChainInterface interf:this) {
+			if (interf.isParallel()) {
+				list.add(interf.getId());
+			}
+		}		
+		return list;
+	}
+	
+	/**
+	 * Get a list of ids of all interfaces that are not parallel.
+	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
+	 * related by a translation. Creating an assembly with it would result in an infinite assembly.
+	 * @return
+	 */
+	public ArrayList<Integer> getNonParallelInterfacesIds() {
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		for (ChainInterface interf:this) {
+			if (!interf.isParallel()) {
+				list.add(interf.getId());
+			}
+		}		
+		return list;
+	}
+	
+	public InterfaceGraph getInterfacesGraph() {
+		if (graph==null) {
+			graph = new InterfaceGraph(this);
+		}
+		return graph;
+	}
+	
+//	public List<Assembly> getAllAssemblies() {
+//		List<Assembly> assemblies = new ArrayList<Assembly>();
+//		
+//		getInterfacesGraph();
+//		
+//		ArrayList<Integer> candidates = getNonParallelInterfacesIds();
+//		System.out.println("Total "+candidates.size()+" interfaces to use ("+(size()-candidates.size())+" parallel interfaces discarded)");
+//		
+//		// we then enumerate all assemblies with 1 interface, 2 interfaces, 3 interfaces .... up to n
+//		System.out.println("Theoretical total assemblies: "+(((int)Math.pow(2, candidates.size()))-1));
+//		for (int n=1;n<=candidates.size();n++) {
+//			List<Assembly> sizenassemblies = enumerateAssembliesSizeN(n,candidates);
+//			
+//			assemblies.addAll(sizenassemblies);
+//		}
+//		
+//		return assemblies;
+//	}
+//	
+//	private List<Assembly> enumerateAssembliesSizeN(int n, ArrayList<Integer> candidates) {
+//		List<Assembly> assemblies = new ArrayList<Assembly>();
+//		CombinationsGenerator x = new CombinationsGenerator (candidates.size(), n);
+//		while (x.hasMore()) {
+//			Assembly ass = new Assembly(this);
+//			int[] indices = x.getNext();
+//			for (int i = 0; i < indices.length; i++) {
+//				ass.add(candidates.get(indices[i]));
+//			}
+//			assemblies.add(ass);
+//		}
+//		System.out.println("size "+n+": "+assemblies.size());
+//		return assemblies;
+//	}
 }
