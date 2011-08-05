@@ -62,6 +62,7 @@ public enum AtomType {
 	Cs(55,132.905, 2.00, "CS", "Caesium",   false, false),
 	Pr(59,140.908, 2.00, "PR", "Praseodymium",false,false),
 	Sm(62,150.362, 2.00, "SM", "Samarium",  false, false),
+	Eu(63,151.964, 2.00, "EU", "Europium",  false, false),
 	Ho(67,164.930, 2.00, "HO", "Holmium",   false, false),
 	Yb(70,173.054, 2.00, "YB", "Ytterbium", false, false),
 	Ta(73,180.948, 2.00, "TA", "Tantalum",  false, false),
