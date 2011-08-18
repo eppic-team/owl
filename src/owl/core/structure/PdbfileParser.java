@@ -246,6 +246,7 @@ public class PdbfileParser {
 		this.title = "";
 		boolean outOfPolyChain = false; // true when out of poly chain (after TER record seen), false again when an ATOM record found
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
+		boolean terRecordSeen = false;
 		int thismodel=PdbAsymUnit.DEFAULT_MODEL; // we initialise to DEFAULT_MODEL, in case file doesn't have MODEL lines 
 		BufferedReader fpdb = new BufferedReader(new FileReader(new File(pdbfile)));
 		int linecount=0;
@@ -447,6 +448,7 @@ public class PdbfileParser {
 			}
 			if (line.startsWith("TER ")) {
 				outOfPolyChain = true;
+				terRecordSeen = true;
 			}
 			// ATOM
 			p = Pattern.compile("^(ATOM|HETATM)");
@@ -510,6 +512,7 @@ public class PdbfileParser {
 								continue;
 							}
 						} 
+						
 						atomLines.addAtomLine(
 							new AtomLine(null, altCode, atomserial, atom, element, res_type, 0, pdbResSerial, insCode, coords, occupancy, bfactor, 
 									pdbChainCode, outOfPolyChain, m.group(1).equals("HETATM")));
@@ -527,7 +530,9 @@ public class PdbfileParser {
 			throw new PdbLoadException("Couldn't find any ATOM/HETATM line for model: "+model);
 		}
 		
-		atomLines.sortIntoChains(); // this assigns the labelAsymIds (chainCodes) and the isNonPoly fields and finds out the pdbchaincode2chaincode mapping
+		//if (!terRecordSeen) System.err.println("Warning: TER records are missing in PDB file, chain assignments can be unreliable");
+		
+		atomLines.sortIntoChains(terRecordSeen); // this assigns the labelAsymIds (chainCodes) and the isNonPoly fields and finds out the pdbchaincode2chaincode mapping
 		pdbAsymUnit.setPdbchaincode2chaincode(atomLines.getPdbChainCode2chainCode());
 		String altLoc = atomLines.getAtomAltLoc();
 

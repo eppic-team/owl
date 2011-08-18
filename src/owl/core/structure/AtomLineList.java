@@ -112,32 +112,69 @@ public class AtomLineList implements Iterable<AtomLine> {
 	 * Also assigns the isNonPoly field of all AtomLines in this list and finds out the pdbchaincode2chaincode mapping.
 	 * Retrieve the data subsequently with {@link #getAtomLineGroups()} and {@link #getPdbChainCode2chainCode()}
 	 * To be used in PDB file parsing only. 
+	 * @param terRecordSeen whether at least one TER record is present in PDB file or not
 	 * @throws FileFormatException 
 	 */
-	public void sortIntoChains() throws FileFormatException {
+	public void sortIntoChains(boolean terRecordSeen) throws FileFormatException {
 		atomLineGroups = new TreeMap<String, ArrayList<AtomLine>>();
 		
 		String lastPdbChainCode = null;
 		boolean lastOutOfPolyChain = false;
+		boolean lastIsHetAtom = false;
+		 
 		String chainCode = "A";
 		String currentChainCode = chainCode;
+		
+		// two strategies to follow here: 
+		//  1) when at least a TER record is present we can rely on chain codes and outOfPolyChain fields exclusively
+		if (terRecordSeen) {
+			for (AtomLine atomLine:this) {
+				if (	lastPdbChainCode==null || 
+						!lastPdbChainCode.equals(atomLine.authAsymId) || 
+						(lastOutOfPolyChain==false && atomLine.outOfPolyChain==true)) {
 
-		for (AtomLine atomLine:this) {
-			if (lastPdbChainCode==null || !lastPdbChainCode.equals(atomLine.authAsymId) || (lastOutOfPolyChain==false && atomLine.outOfPolyChain==true)) {
-				ArrayList<AtomLine> list = new ArrayList<AtomLine>();
-				list.add(atomLine);
-				atomLineGroups.put(chainCode,list);
-				currentChainCode = chainCode;
-				chainCode = getNextChainCode(chainCode);
-			} else {
-				atomLineGroups.get(currentChainCode).add(atomLine);
+					ArrayList<AtomLine> list = new ArrayList<AtomLine>();
+					list.add(atomLine);
+					atomLineGroups.put(chainCode,list);
+					currentChainCode = chainCode;
+					chainCode = getNextChainCode(chainCode);
+				} else {
+					atomLineGroups.get(currentChainCode).add(atomLine);
+				}
+
+				atomLine.labelAsymId = currentChainCode;
+
+				lastPdbChainCode = atomLine.authAsymId;
+				lastOutOfPolyChain = atomLine.outOfPolyChain;
 			}
-			
-			atomLine.labelAsymId = currentChainCode;
+		// 2) no TER records at all: we must also try to guess if a HETATOM is not peptide-linked 
+		//    (otherwise lacking the TER records, we would extend the poly chains into non-poly parts, e.g. 1c52.pdb without TER records)
+		//    This strategy is dangerous because our knowledge of HETATOMs that are peptide-linked is not 
+		//    very comprehensive (see HetAtom.isPeptideLinked()). We will sometimes think wrongly that a certain hetatom line
+		//    belongs to a not-peptide-linked residue and then cut wrongly the chain into a poly and a non-poly part
+		} else {
+			for (AtomLine atomLine:this) {
+				if (	lastPdbChainCode==null || 
+						!lastPdbChainCode.equals(atomLine.authAsymId) || 
+						(lastOutOfPolyChain==false && atomLine.outOfPolyChain==true) ||
+						// this is the new condition is strategy 2 vs 1)
+						(lastIsHetAtom==false && atomLine.lineIsHetAtm==true && !atomLine.isPeptideLinked()) ) {
 
-			lastPdbChainCode = atomLine.authAsymId;
-			lastOutOfPolyChain = atomLine.outOfPolyChain;
-			
+					ArrayList<AtomLine> list = new ArrayList<AtomLine>();
+					list.add(atomLine);
+					atomLineGroups.put(chainCode,list);
+					currentChainCode = chainCode;
+					chainCode = getNextChainCode(chainCode);
+				} else {
+					atomLineGroups.get(currentChainCode).add(atomLine);
+				}
+
+				atomLine.labelAsymId = currentChainCode;
+
+				lastPdbChainCode = atomLine.authAsymId;
+				lastOutOfPolyChain = atomLine.outOfPolyChain;
+				lastIsHetAtom = atomLine.lineIsHetAtm;
+			}
 		}
 		
 		pdbchaincode2chaincode = new TreeMap<String, String>();
@@ -181,7 +218,7 @@ public class AtomLineList implements Iterable<AtomLine> {
 		}
 		
 	}
-
+	
 	/**
 	 * Gets the next CIF chain code given a CIF chain code according to the convention followed by the PDB
 	 * i.e.: A,B,...,Z,AA,BA,CA,...,ZA,AB,BB,CB,...,ZB,.......,ZZ,AAA,BAA,CAA,...

@@ -57,6 +57,8 @@ public class PdbParsersTest {
 	
 	private static final String TINKERPDBFILE = DATADIR+"/1bxyA_tinker.pdb";
 	
+	private static final String PDBFILE_NO_TER = DATADIR+"/1c52A.pdb";
+	
 	private static final String CASPTARBALL = DATADIR+"/T0515.tar.gz";
 	
 	private static final String TMPDIR = System.getProperty("java.io.tmpdir");
@@ -90,6 +92,16 @@ public class PdbParsersTest {
 		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TINKERPDBFILE));
 		Assert.assertNotNull(fullpdb);
 		Assert.assertNotNull(fullpdb.getPdbCode());
+		
+		// file with no TER records and no SEQRES
+		System.out.println(PDBFILE_NO_TER);
+		fullpdb = new PdbAsymUnit(new File(PDBFILE_NO_TER));
+		Assert.assertEquals(2,fullpdb.getNumChains());
+		Assert.assertEquals(1,fullpdb.getNumPolyChains());
+		Assert.assertEquals(1,fullpdb.getNumNonPolyChains());
+		Assert.assertEquals(131, fullpdb.getChain("A").getFullLength());
+		Assert.assertEquals(fullpdb.getChain("A").getFullLength(), fullpdb.getChain("A").getSequence().getLength());
+				
 		
 		// CASP TS server files (testing with server tar ball T0515 of CASP9)
 		File dir = new File(TMPDIR,"T0515");

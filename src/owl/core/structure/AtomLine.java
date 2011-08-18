@@ -51,6 +51,22 @@ public class AtomLine {
 		return pdbResSerial+(insCode.equals(".")?"":insCode);
 	}
 	
+	/**
+	 * Tells whether this AtomLine corresponds to a peptide linked residue
+	 * i.e. either a standard aa or a HetResidue that is peptide linked.
+	 * @return
+	 */
+	public boolean isPeptideLinked() {
+		if (AminoAcid.isStandardAA(res_type)) {
+			return true;
+		}
+		if (Nucleotide.isStandardNuc(res_type)) {
+			return false;
+		}
+		HetResidue res = new HetResidue(res_type, resSerial, null);
+		return res.isPeptideLinked(); 
+	}
+	
 	public String toString() {
 		return (lineIsHetAtm?"HETATM ":"ATOM ")+labelAsymId+" "+labelAltId+" "+atomserial+" "+atom+" "+element+" "+res_type+" "+
 		resSerial+" "+pdbResSerial+" "+(insCode==null?".":insCode)+" "+
