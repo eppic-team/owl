@@ -24,6 +24,18 @@ import owl.core.util.MySQLConnection;
 public class PdbaseParser {
 
 	public final static String DEFAULT_PDBASE_DB="pdbase";
+	
+	// table names
+	public static final String PDBX_POLY_SEQ_SCHEME_TABLE = "PDBX_POLY_SEQ_SCHEME";
+	public static final String ATOM_SITE_TABLE = "ATOM_SITE";
+	public static final String STRUCT_TABLE = "STRUCT";
+	public static final String SYMMETRY_TABLE = "SYMMETRY";
+	public static final String CELL_TABLE = "CELL";
+	public static final String EXPTL_TABLE = "EXPTL";
+	public static final String REFINE_TABLE = "REFINE";
+	public static final String REFLNS_TABLE = "REFLNS";
+	public static final String STRUCT_CONF_TABLE = "STRUCT_CONF";
+	public static final String STRUCT_SHEET_RANGE_TABLE = "STRUCT_SHEET_RANGE";
 
 	private String db;				// the pdbase db from which we have taken the data
 	private MySQLConnection conn;
@@ -97,7 +109,7 @@ public class PdbaseParser {
 		}
 		TreeSet<String> chains = new TreeSet<String>();
 		try {
-			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+".pdbx_poly_seq_scheme WHERE entry_key="+entrykey;
+			String sql = "SELECT DISTINCT pdb_strand_id FROM "+db+"."+PDBX_POLY_SEQ_SCHEME_TABLE+" WHERE entry_key="+entrykey;
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			while (rsst.next()) {
@@ -131,7 +143,7 @@ public class PdbaseParser {
 		}
 		TreeSet<Integer> models = new TreeSet<Integer>();
 		try {
-			String sql = "SELECT DISTINCT model_num FROM "+db+".atom_site WHERE entry_key="+entrykey;
+			String sql = "SELECT DISTINCT model_num FROM "+db+"."+ATOM_SITE_TABLE+" WHERE entry_key="+entrykey;
 			Statement stmt = conn.createStatement();
 			ResultSet rsst = stmt.executeQuery(sql);
 			while (rsst.next()) {
@@ -162,7 +174,7 @@ public class PdbaseParser {
 	 */
 	private int getEntryKey() throws PdbCodeNotFoundException, SQLException {
 		int entrykey = -1;
-		String sql="SELECT entry_key FROM "+db+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		String sql="SELECT entry_key FROM "+db+"."+STRUCT_TABLE+" WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
@@ -210,7 +222,7 @@ public class PdbaseParser {
 
 	protected SpaceGroup readSpaceGroup() throws SQLException, PdbLoadException {
 		String sql = "SELECT space_group_name_h_m " +
-				" FROM "+db+".symmetry " +
+				" FROM "+db+"."+SYMMETRY_TABLE+" " +
 				" WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -236,7 +248,7 @@ public class PdbaseParser {
 	protected CrystalCell readCrystalCell () throws SQLException {
 		
 		String sql = "SELECT cell_length_a, cell_length_b, cell_length_c, cell_angle_alpha, cell_angle_beta, cell_angle_gamma " +
-			  " FROM "+db+".cell " +
+			  " FROM "+db+"."+CELL_TABLE+" " +
 			  " WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
@@ -258,7 +270,7 @@ public class PdbaseParser {
 	
 	protected String readExpMethod() throws SQLException {
 		String expMethod = null;
-		String sql = "SELECT method FROM "+db+".exptl WHERE entry_key="+entrykey;
+		String sql = "SELECT method FROM "+db+"."+EXPTL_TABLE+" WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
@@ -278,7 +290,7 @@ public class PdbaseParser {
 		double[] qParams = {-1,-1,-1};
 		// NOTE that in case of non-xray structures no records will be present in refine or reflns and nothing will be set
 		
-		String sql = "SELECT ls_d_res_high, ls_r_factor_r_free FROM "+db+".refine WHERE entry_key="+entrykey;
+		String sql = "SELECT ls_d_res_high, ls_r_factor_r_free FROM "+db+"."+REFINE_TABLE+" WHERE entry_key="+entrykey;
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
@@ -295,7 +307,7 @@ public class PdbaseParser {
 		// if both Rsym/Rmerge are present, we don't compare them but take the Rsym value to be 
 		// the right one (there's not much consensus in the field as to what's the 
 		// right thing to do anyway!)
-		sql = "SELECT pdbx_Rsym_value, pdbx_Rmerge_I_obs FROM "+db+".reflns WHERE entry_key="+entrykey;
+		sql = "SELECT pdbx_Rsym_value, pdbx_Rmerge_I_obs FROM "+db+"."+REFLNS_TABLE+" WHERE entry_key="+entrykey;
 		rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
 			double rsymval = rsst.getFloat(1);
@@ -312,7 +324,7 @@ public class PdbaseParser {
 	}
 	
 	protected String readTitle() throws SQLException {
-		String sql="SELECT title FROM "+db+".struct WHERE entry_key="+entrykey+"";
+		String sql="SELECT title FROM "+db+"."+STRUCT_TABLE+" WHERE entry_key="+entrykey+"";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		String title = "";
@@ -329,7 +341,7 @@ public class PdbaseParser {
 		AtomLineList atomLines = new AtomLineList();
 		String sql = 
 			"SELECT label_asym_id, label_alt_id, id, label_atom_id, type_symbol_id, label_comp_id, label_seq_id, auth_seq_id, Cartn_x, Cartn_y, Cartn_z, occupancy, b_iso_or_equiv, auth_asym_id " +
-			" FROM "+db+".atom_site " +
+			" FROM "+db+"."+ATOM_SITE_TABLE+" " +
 			" WHERE entry_key="+entrykey +
 			" AND model_num="+ model+
 			" ORDER BY label_asym_id, id+0";
@@ -454,7 +466,7 @@ public class PdbaseParser {
 		// we use seq_id+0 (implicitly converts to int) in ORDER BY because seq_id is varchar!!
 		// we order by asym_id, thus our list will have that order (we then read atoms in the same way)
         String sql="SELECT asym_id, pdb_strand_id, mon_id, seq_id, pdb_seq_num, pdb_ins_code " +
-        		" FROM "+db+".pdbx_poly_seq_scheme " +
+        		" FROM "+db+"."+PDBX_POLY_SEQ_SCHEME_TABLE+" " +
         		" WHERE entry_key=" + entrykey +
         		" ORDER BY asym_id, seq_id+0"; 
 		
@@ -524,14 +536,12 @@ public class PdbaseParser {
 		}
 		// HELIX AND TURN -- struct_conf table
 		String sql = "SELECT id,beg_label_seq_id,end_label_seq_id,beg_label_asym_id " +
-				" FROM "+db+".struct_conf " +
+				" FROM "+db+"."+STRUCT_CONF_TABLE+" " +
 				" WHERE entry_key="+entrykey+
 				" ORDER BY beg_label_asym_id";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
-		int count=0;
 		while (rsst.next()) {
-			count++;
 			String id = rsst.getString(1).trim(); // id is either HELIX_Pnn or TURN_Pnn
 			if (id.startsWith("TURN")) continue; // we don't parse turns anymore as they were dropped from PDB files and anyway the annotation is VERY inconsistent
 			Pattern p = Pattern.compile("^(\\w).+_P(\\d+)$");
@@ -561,14 +571,12 @@ public class PdbaseParser {
 		
 		// SHEET -- struct_sheet_range table
 		sql = "SELECT sheet_id, id, beg_label_seq_id, end_label_seq_id, beg_label_asym_id " +
-				" FROM "+db+".struct_sheet_range " +
+				" FROM "+db+"."+STRUCT_SHEET_RANGE_TABLE+" " +
 				" WHERE entry_key="+entrykey+
 				" ORDER BY beg_label_asym_id";
 		stmt = conn.createStatement();
 		rsst = stmt.executeQuery(sql);
-		count=0;
 		while (rsst.next()) {
-			count++;
 			String sheetid = rsst.getString(1).trim();
 			int id = rsst.getInt(2);
 			int beg = rsst.getInt(3);
@@ -609,7 +617,7 @@ public class PdbaseParser {
 		
 		// finding entry key
 		int entrykey = -1;
-		String sql="SELECT entry_key FROM "+pdbaseDb+".struct WHERE entry_id='"+pdbCode.toUpperCase()+"'";
+		String sql="SELECT entry_key FROM "+pdbaseDb+"."+STRUCT_TABLE+" WHERE entry_id='"+pdbCode.toUpperCase()+"'";
 		Statement stmt = conn.createStatement();
 		ResultSet rsst = stmt.executeQuery(sql);
 		if (rsst.next()) {
@@ -633,7 +641,7 @@ public class PdbaseParser {
 		// We use the 'LIMIT 1' simply to be able to easily catch the error of no matches with an if (rsst.next()), see below
 		// NOTE2: pdb_strand_id case sensitive!
 		sql="SELECT asym_id " +
-				" FROM "+pdbaseDb+".pdbx_poly_seq_scheme " +
+				" FROM "+pdbaseDb+"."+PDBX_POLY_SEQ_SCHEME_TABLE+" " +
 				" WHERE entry_key=" + entrykey +
 				" AND pdb_strand_id='"+pdbstrandid+"' " +
 				" LIMIT 1";
@@ -652,7 +660,7 @@ public class PdbaseParser {
 		// and finally getting mapping
 		TreeMap<Integer,Integer> map = new TreeMap<Integer, Integer>();
 		sql = "SELECT seq_id " +
-					" FROM "+pdbaseDb+".pdbx_poly_seq_scheme"+
+					" FROM "+pdbaseDb+"."+PDBX_POLY_SEQ_SCHEME_TABLE+
 					" WHERE entry_key=" + entrykey +
 					" AND asym_id='"+asymid+"' " +
 					" AND auth_seq_num!='?' " + // this gives only observed residues
