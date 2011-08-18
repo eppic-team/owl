@@ -287,7 +287,7 @@
 2DT8	A
 1JFB	A
 2DG5	B
-2HAL	A
+#2HAL	A # removed from test set because it has an unusual non-peptide linked compound in a peptide (introduced in remediation of July 2011)
 2OFC	A
 2FCJ	A
 1IE9	A
