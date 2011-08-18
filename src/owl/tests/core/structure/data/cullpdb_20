@@ -69,7 +69,7 @@
 1FO8	A
 2BVR	L
 1MJ4	A
-2DKO	B
+#2DKO	B # removed from test set because it has an unusual non-peptide linked compound in a peptide (introduced in remediation of July 2011)
 2EB4	A
 1GK9	B
 2DE3	A
