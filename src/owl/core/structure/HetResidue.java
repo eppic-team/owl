@@ -20,7 +20,7 @@ public class HetResidue implements Residue {
 	private static final long serialVersionUID = 1L;
 	
 	// a (non-comprehensive) list of het residues that are within protein chains (peptide-linked)
-	private static final String[] BACKBONE_HET_RESIDUES = {"ACE", "NH2", "SUI", "PYR", "GL3", "MSE", "SNN", "CRO", "AKZ", "GLK"};
+	private static final String[] BACKBONE_HET_RESIDUES = {"ACE", "NH2", "SUI", "PYR", "GL3", "MSE", "SNN", "CRO", "AKZ", "GLK", "LLP"};
 	
 	private String mol3letterCode;
 	
