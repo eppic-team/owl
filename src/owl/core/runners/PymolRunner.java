@@ -53,7 +53,6 @@ public class PymolRunner {
 		command.add(pymolExec.getAbsolutePath());
 		command.add("-q");
 		command.add("-c");
-		command.add("-p");
 
 		StringBuffer pymolScriptBuilder = new StringBuffer();
 		
