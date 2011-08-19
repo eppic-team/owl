@@ -100,4 +100,36 @@ public class InterfaceRimCore implements Serializable {
 		return str;
 	}
 	
+	public double getAsaRim() {
+		double asa = 0;
+		for (Residue res:rimResidues) {
+			asa+=res.getAsa();
+		}
+		return asa;
+	}
+	
+	public double getAsaCore() {
+		double asa = 0;
+		for (Residue res:coreResidues) {
+			asa+=res.getAsa();
+		}
+		return asa;		
+	}
+
+	public double getBsaRim() {
+		double asa = 0;
+		for (Residue res:rimResidues) {
+			asa+=res.getBsa();
+		}
+		return asa;
+	}
+	
+	public double getBsaCore() {
+		double asa = 0;
+		for (Residue res:coreResidues) {
+			asa+=res.getBsa();
+		}
+		return asa;		
+	}
+
 }
