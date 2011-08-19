@@ -510,6 +510,21 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Gets the total buried surface area for this chain by summing up the individual
+	 * residue BSAs. 
+	 * The values are filled when ASAs are calculated for this chain and this chain in 
+	 * a complex with another one. See PdbAsymUnit.calcBSAs()
+	 * @return
+	 */
+	public double getBSA() {
+		double bsa = 0;
+		for (Residue res:this) {
+			bsa+=res.getBsa();
+		}
+		return bsa;
+	}
+	
+	/**
 	 * Sets the VdW radius values of all atoms of this PdbChain (from standard amino acids,
 	 * het residues and nucleotides) 
 	 * Use subsequently Atom.getRadius() to get the value.
