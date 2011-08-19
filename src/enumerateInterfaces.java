@@ -190,7 +190,10 @@ public class enumerateInterfaces {
 				File[] outPngFiles = {new File(writeDir,outBaseName+"."+(i+1)+".interface.png")};
 				interf.writeToPdbFile(pdbFile);
 				if (generatePngs) {
-					pr.generatePng(pdbFile, outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
+					boolean isSameChain = false;
+					if (interf.getFirstMolecule().getPdbChainCode().equals(interf.getSecondMolecule().getPdbChainCode()))
+						isSameChain = true;
+					pr.generatePng(pdbFile, isSameChain, outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
 				}
 			}
 		}

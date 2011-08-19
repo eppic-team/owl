@@ -624,12 +624,15 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @throws PdbLoadException
 	 */
 	public void generateThumbnails(File pymolExe, File pdbFile, String base) throws IOException, InterruptedException, PdbLoadException {
+		boolean isSameChain = false;
+		if (firstMolecule.getPdbChainCode().equals(secondMolecule.getPdbChainCode())) isSameChain = true;
+		
 		PymolRunner pr = new PymolRunner(pymolExe);
 		File[] pngFiles = new File[TN_HEIGHTS.length];
 		for (int i=0;i<TN_HEIGHTS.length;i++) {
 			pngFiles[i] = new File(pdbFile.getParent(),base+"."+TN_WIDTHS[i]+"x"+TN_HEIGHTS[i]+".png");
 		}
-		pr.generatePng(pdbFile, pngFiles, TN_STYLE, TN_BG_COLOR, TN_HEIGHTS, TN_WIDTHS);
+		pr.generatePng(pdbFile, isSameChain, pngFiles, TN_STYLE, TN_BG_COLOR, TN_HEIGHTS, TN_WIDTHS);
 	}
 	
 	/**

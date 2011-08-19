@@ -17,6 +17,8 @@ public class PymolRunner {
 	{"green","cyan","yellow","white","lightblue","magenta","red","orange","wheat","limon","salmon","palegreen","lightorange",
 	 "green","cyan","yellow","white","lightblue","magenta","red","orange","wheat","limon","salmon","palegreen","lightorange",};
 	
+	private static final String SYM_RELATED_CHAIN_COLOR = "grey";
+	
 	private File pymolExec;
 	
 	public PymolRunner(File pymolExec) {
@@ -27,6 +29,7 @@ public class PymolRunner {
 	 * Generates png images of the desired heights and widths with the specified style and 
 	 * coloring each chain with a color of {@link #CHAIN_COLORS}
 	 * @param pdbFile
+	 * @param isSameChain whether the PDB file contains crystal-symmetry-related chains (originally they had the same chain code) 
 	 * @param outPngFiles output png file names
 	 * @param style can be cartoon, surface, spheres
 	 * @param bgColor the background color for the image: black, white, gray
@@ -37,7 +40,7 @@ public class PymolRunner {
 	 * @throws PdbLoadException 
 	 * @throws IllegalArgumentException if heights length differs from widhts length
 	 */
-	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
+	public void generatePng(File pdbFile, boolean isSameChain, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
 	throws PdbLoadException, IOException, InterruptedException {
 		
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
@@ -71,6 +74,9 @@ public class PymolRunner {
 				// A-Z correspond to ASCII codes 65 to 90. The letter ascii code modulo 65 gives an indexing of 0 (A) to 25 (Z)
 				// a given letter will always get the same color assigned
 				color = CHAIN_COLORS[letter%65];	
+			}
+			if (isSameChain && c!=0) {
+				color = SYM_RELATED_CHAIN_COLOR; 
 			}
 			pymolScriptBuilder.append("color "+color+", "+molecName+" and chain "+letter + ";");
 		}
