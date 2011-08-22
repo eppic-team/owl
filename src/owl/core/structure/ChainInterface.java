@@ -9,20 +9,13 @@ import java.io.Serializable;
 import javax.vecmath.Matrix4d;
 
 import owl.core.runners.NaccessRunner;
-import owl.core.runners.PymolRunner;
 import owl.core.structure.graphs.AICGraph;
 
 public class ChainInterface implements Comparable<ChainInterface>, Serializable {
 	
 	private static final long serialVersionUID = 1L;
 
-	public static final String TYPE_PROTEIN = "Protein";
-	
-	private static final String TN_STYLE = "cartoon";
-	private static final String TN_BG_COLOR = "white";
-	private static final int[] TN_HEIGHTS = {75};
-	private static final int[] TN_WIDTHS = {75};
-	
+	public static final String TYPE_PROTEIN = "Protein";	
 
 	private int id;
 	private boolean withinUnitCell; 
@@ -51,6 +44,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private String secondMolType;
 	
 	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
+	
+	private String chain2forOutput;
 	
 	/**
 	 * Constructs an empty ChainInterface. Use the setters to set the values.
@@ -587,11 +582,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * Writes this interface to given PDB file with original chain names (PDB chain codes),
 	 * unless the 2 chains are the same where the second one is renamed to next letter in 
 	 * alphabet.
+	 * Subsequently the chain code for the renamed chain can be retrieved with {@link #getSecondPdbChainCodeForOutput()}
 	 * @param file
 	 * @throws FileNotFoundException 
 	 */
 	public void writeToPdbFile(File file) throws FileNotFoundException {
-		String chain2forOutput = secondMolecule.getPdbChainCode();
+		chain2forOutput = secondMolecule.getPdbChainCode();
 		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
 			// if both chains are named equally we want to still named them differently in the output pdb file
 			// so that molecular viewers can handle properly the 2 chains as separate entities 
@@ -613,26 +609,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		ps.close();
 	}
 	
-	/**
-	 * Generate thumbnail files for this interface with PyMol for given pdbFile. 
-	 * Output files will be written to same dir as pdbFile using given base name.
-	 * @param pymolExe
-	 * @param pdbFile
-	 * @param base
-	 * @throws IOException
-	 * @throws InterruptedException
-	 * @throws PdbLoadException
-	 */
-	public void generateThumbnails(File pymolExe, File pdbFile, String base) throws IOException, InterruptedException, PdbLoadException {
-		boolean isSameChain = false;
-		if (firstMolecule.getPdbChainCode().equals(secondMolecule.getPdbChainCode())) isSameChain = true;
-		
-		PymolRunner pr = new PymolRunner(pymolExe);
-		File[] pngFiles = new File[TN_HEIGHTS.length];
-		for (int i=0;i<TN_HEIGHTS.length;i++) {
-			pngFiles[i] = new File(pdbFile.getParent(),base+"."+TN_WIDTHS[i]+"x"+TN_HEIGHTS[i]+".png");
-		}
-		pr.generatePng(pdbFile, isSameChain, pngFiles, TN_STYLE, TN_BG_COLOR, TN_HEIGHTS, TN_WIDTHS);
+	public String getSecondPdbChainCodeForOutput() {
+		return chain2forOutput;
 	}
 	
 	/**
@@ -654,5 +632,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 
 	public boolean isParallel() {
 		return this.getFirstSubunitId().equals(this.getSecondSubunitId());
+	}
+	
+	/**
+	 * Returns true if both chains in this interface have same PDB chain code 
+	 * and thus it's an interface of symmetry-related chains. Returns false otherwise.
+	 * @return
+	 */
+	public boolean isSymRelated() {
+		return (getFirstMolecule().getPdbChainCode().equals(getSecondMolecule().getPdbChainCode()));
 	}
 }
