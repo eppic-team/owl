@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Properties;
 
 import owl.core.structure.ChainInterface;
+import owl.core.structure.PdbLoadException;
+import owl.core.structure.PdbfileParser;
 import owl.core.structure.Residue;
 
 public class PymolRunner {
@@ -42,34 +44,10 @@ public class PymolRunner {
 		this.symRelatedColor = symRelatedColor;
 	}
 	
-	
-	/**
-	 * Generate thumbnail files for this interface with PyMol for given pdbFile. 
-	 * Output files will be written to same dir as pdbFile using given base name.
-	 * @param pymolExe
-	 * @param pdbFile
-	 * @param base
-	 * @throws IOException
-	 * @throws InterruptedException
-	 */
-	public void generateThumbnails(ChainInterface interf, File pdbFile, String base) throws IOException, InterruptedException {
-		
-		File[] pngFiles = new File[DEF_TN_HEIGHTS.length];
-		for (int i=0;i<DEF_TN_HEIGHTS.length;i++) {
-			pngFiles[i] = new File(pdbFile.getParent(),base+"."+DEF_TN_WIDTHS[i]+"x"+DEF_TN_HEIGHTS[i]+".png");
-		}
-		String[] chains = new String[2];
-		chains[0] = interf.getFirstMolecule().getPdbChainCode();
-		chains[1] = interf.getSecondPdbChainCodeForOutput();
-		generatePng(pdbFile, chains, interf.isSymRelated(), pngFiles, DEF_TN_STYLE, DEF_TN_BG_COLOR, DEF_TN_HEIGHTS, DEF_TN_WIDTHS);
-	}
-	
 	/**
 	 * Generates png images of the desired heights and widths with the specified style and 
-	 * coloring each chain with a color of {@link #CHAIN_COLORS}
+	 * coloring each chain with a color as set in {@link #setColors(String[], String)}
 	 * @param pdbFile
-	 * @param chains the chains present in the file
-	 * @param isSymRelated whether the PDB file contains crystal-symmetry-related chains (originally they had the same chain code) 
 	 * @param outPngFiles output png file names
 	 * @param style can be cartoon, surface, spheres
 	 * @param bgColor the background color for the image: black, white, gray
@@ -77,15 +55,18 @@ public class PymolRunner {
 	 * @param widths 
 	 * @throws IOException 
 	 * @throws InterruptedException 
+	 * @throws PdbLoadException 
 	 * @throws IllegalArgumentException if heights length differs from widhts length
 	 */
-	public void generatePng(File pdbFile, String[] chains, boolean isSymRelated, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
-	throws IOException, InterruptedException {
+	public void generatePng(File pdbFile, File[] outPngFiles, String style, String bgColor, int[] heights, int[] widths) 
+	throws PdbLoadException, IOException, InterruptedException {
 		
 		if (heights.length!=widths.length || heights.length!=outPngFiles.length) 
 			throw new IllegalArgumentException("The number of heights is different from the number of widths or the number of output png files");
 		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
-		
+		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
+		String[] chains = parser.getChains();
+
 		List<String> command = new ArrayList<String>();
 		command.add(pymolExec.getAbsolutePath());
 		command.add("-q");
@@ -96,17 +77,23 @@ public class PymolRunner {
 		pymolScriptBuilder.append("load "+pdbFile.getAbsolutePath() + ";");
 		
 		pymolScriptBuilder.append("bg "+bgColor + ";");
-		
+	
 		pymolScriptBuilder.append("orient;");
-		
+
 		pymolScriptBuilder.append("remove solvent;");
 		
 		pymolScriptBuilder.append("as "+style + ";");
-		
-		
 		for (int c=0;c<chains.length;c++) {
 			char letter = chains[c].charAt(0);
-			String color = getChainColor(letter, c, isSymRelated);
+			String color = null;
+			if (letter<'A' || letter>'Z') {
+				// if out of the range A-Z then we assign simply a color based on the chain index
+				color = chainColors[c%chainColors.length];
+			} else {
+				// A-Z correspond to ASCII codes 65 to 90. The letter ascii code modulo 65 gives an indexing of 0 (A) to 25 (Z)
+				// a given letter will always get the same color assigned
+				color = chainColors[letter%65];	
+			}
 			pymolScriptBuilder.append("color "+color+", "+molecName+" and chain "+letter + ";");
 		}
 
@@ -131,20 +118,32 @@ public class PymolRunner {
 	}
 	
 	/**
-	 * Generates pymol pse file and pml script for given interface producing a 
+	 * Generates png file, pymol pse file and pml script for given interface producing a 
 	 * mixed cartoon/surface representation of interface with selections 
-	 * coloring each chain with a color of {@link #CHAIN_COLORS}
+	 * coloring each chain with a color as set in {@link #setColors(String[], String)} and 
+	 * through {@link #readColorsFromPropertiesFile(InputStream)}
 	 * @param pymolExec
 	 * @param interf
 	 * @param pdbFile
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateInterfPse(ChainInterface interf, File pdbFile, File pseFile, File pmlFile) 
+	public void generateInterfPngPsePml(ChainInterface interf, File pdbFile, File pseFile, File pmlFile, String base) 
 	throws IOException, InterruptedException {
 		
 		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 
+		File[] pngFiles = new File[DEF_TN_HEIGHTS.length];
+		for (int i=0;i<DEF_TN_HEIGHTS.length;i++) {
+			pngFiles[i] = new File(pdbFile.getParent(),base+"."+DEF_TN_WIDTHS[i]+"x"+DEF_TN_HEIGHTS[i]+".png");
+		}
+		
+		char chain1 = interf.getFirstMolecule().getPdbChainCode().charAt(0);
+		char chain2 = interf.getSecondPdbChainCodeForOutput().charAt(0);
+		
+		String color1 = getChainColor(chain1, 0, interf.isSymRelated());
+		String color2 = getChainColor(chain2, 1, interf.isSymRelated());
+		
 		List<String> command = new ArrayList<String>();
 		command.add(pymolExec.getAbsolutePath());
 		command.add("-q");
@@ -152,7 +151,7 @@ public class PymolRunner {
 
 
 		// NOTE we used to pass all commands in one string after -d (with the pymolScriptBuilder StringBuffer.
-		//      But pymol 1.3 and 1.4 seem to have problem with very long strings (causing segfaults)
+		//      But pymol 1.3 and 1.4 seem to have problems with very long strings (causing segfaults)
 		//      Because of that now we write most commands to pml file (which we were doing anyway so that users can 
 		//      use the pml scripts if they want) and then load the pmls with pymol "@" command
 		
@@ -161,7 +160,7 @@ public class PymolRunner {
 		PrintStream pml = new PrintStream(pmlFile);
 		
 		pymolScriptBuilder.append("load "+pdbFile.getAbsolutePath()+";");
-
+				
 		String cmd;
 
 		cmd = "orient";
@@ -172,12 +171,6 @@ public class PymolRunner {
 		
 		cmd = "as cartoon";
 		writeCommand(cmd, pml);
-		
-		char chain1 = interf.getFirstMolecule().getPdbChainCode().charAt(0);
-		char chain2 = interf.getSecondPdbChainCodeForOutput().charAt(0);
-		
-		String color1 = getChainColor(chain1, 0, interf.isSymRelated());
-		String color2 = getChainColor(chain2, 1, interf.isSymRelated());
 		
 		cmd = "color "+color1+", "+molecName+" and chain "+chain1;
 		writeCommand(cmd, pml);
@@ -224,6 +217,22 @@ public class PymolRunner {
 		pymolScriptBuilder.append("@ "+pmlFile+";");
 		
 		pymolScriptBuilder.append("save "+pseFile+";");
+
+		// and now creating the png thumbnail
+		pymolScriptBuilder.append("bg "+DEF_TN_BG_COLOR+";");
+		
+		pymolScriptBuilder.append("as "+DEF_TN_STYLE+";");
+		
+		pymolScriptBuilder.append("color "+color1+", "+molecName+" and chain "+chain1+";");
+		pymolScriptBuilder.append("color "+color2+", "+molecName+" and chain "+chain2+";");
+		
+		for (int i=0;i<DEF_TN_HEIGHTS.length;i++) {
+			pymolScriptBuilder.append("viewport "+DEF_TN_HEIGHTS[i]+","+DEF_TN_WIDTHS[i] + ";");
+			
+			pymolScriptBuilder.append("ray;");
+			
+			pymolScriptBuilder.append("png "+pngFiles[i].getAbsolutePath() + ";");
+		}
 		
 		pymolScriptBuilder.append("quit;");
 		
