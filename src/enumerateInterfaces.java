@@ -20,8 +20,6 @@ public class enumerateInterfaces {
 	private static final String BASENAME = "interf_enum";
 	private static final String TMPDIR = System.getProperty("java.io.tmpdir");
 	private static final File   PYMOL_EXE = new File("/usr/bin/pymol");
-	private static final int[] HEIGHTS = {300};
-	private static final int[] WIDTHS = {300};
 	
 	private static final double BSATOASA_CUTOFF = 0.95;
 
@@ -187,13 +185,11 @@ public class enumerateInterfaces {
 		
 			if (writeDir!=null) {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
-				File[] outPngFiles = {new File(writeDir,outBaseName+"."+(i+1)+".interface.png")};
 				interf.writeToPdbFile(pdbFile);
 				if (generatePngs) {
-					String[] chains = new String[2];
-					chains[0] = interf.getFirstMolecule().getPdbChainCode();
-					chains[1] = interf.getSecondPdbChainCodeForOutput();
-					pr.generatePng(pdbFile, chains, interf.isSymRelated(), outPngFiles, "cartoon", "white", HEIGHTS, WIDTHS);
+					pr.generateInterfPngPsePml(interf, pdbFile, 
+							new File(writeDir,outBaseName+"."+(i+1)+".pse"), 
+							new File(writeDir,outBaseName+"."+(i+1)+".pml"), outBaseName);
 				}
 			}
 		}
