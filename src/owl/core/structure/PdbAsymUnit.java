@@ -1325,6 +1325,19 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
+	 * Returns the map containing as keys all PDB chain codes and values their corresponding 
+	 * representative chains (the first chain alphabetically from the group of identical chains)
+	 * @return
+	 * @see #getRepChain(String)
+	 */
+	public HashMap<String,String> getChain2repChainMap() {
+		if (chain2repChain==null) {
+			initialiseRepChainsMaps();
+		}
+		return chain2repChain;
+	}
+	
+	/**
 	 * For a given PDB chain code of a representative chain returns all the PDB chain codes
 	 * of the sequence-identical chains that it represents.
 	 * @param repPdbChainCode
