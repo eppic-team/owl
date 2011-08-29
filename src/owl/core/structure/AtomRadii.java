@@ -41,7 +41,10 @@ public class AtomRadii {
 	 */
 	public static double getRadius(Nucleotide nuc, Atom atom) {
 		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
-		return radii.get(nuc.getTwoLetterCode()).get(atom.getCode());
+		String atomCode = atom.getCode();
+		// in RNA there's an additional O2' that is not in DNA (which is what vdw.radii has)
+		if (atomCode.equals("O2'")) return AtomType.O.getRadius();
+		return radii.get(nuc.getTwoLetterCode()).get(atomCode);
 	}
 	
 	/**
@@ -72,14 +75,17 @@ public class AtomRadii {
 			BufferedReader br = new BufferedReader(new InputStreamReader(vdwradIS));
 			String line;
 			HashMap<String,Double> perResRad = null;
+			boolean isNucleotide = false;
 			while ((line=br.readLine())!=null) {
 				if (line.startsWith("#")) continue;
 				
 				if (line.startsWith("RESIDUE ")) {
+					isNucleotide = false;
 					String res = line.substring(13,16);
 					if (res.startsWith("__")) {
 						// the nucleotides start with a __ that we strip here and convert to 2-letter code
 						res = Nucleotide.getByOneLetterCode(res.charAt(2)).getTwoLetterCode();
+						isNucleotide = true;
 					}
 					
 					perResRad = new HashMap<String, Double>();
@@ -89,8 +95,13 @@ public class AtomRadii {
 					String atomCode = line.substring(5,9).trim();
 					// in HET residue HEM the NA, NB, NC, ND have a space in between (no idea why). This is to fix that
 					if (atomCode.contains(" ")) atomCode = atomCode.replaceAll(" ", "");
-					// in nucleotide atoms * are used instead of ', this is to fix that:
-					if (atomCode.contains("*")) atomCode = atomCode.replaceAll("*","'");
+					if (isNucleotide) {
+						// in nucleotide atoms * are used instead of ', this is to fix that:
+						if (atomCode.contains("*")) atomCode = atomCode.replaceAll("\\*","'");
+						// and the oxigens of the P are not in standard PDB nomenclature either
+						if (atomCode.equals("O1P")) atomCode = "OP1";
+						if (atomCode.equals("O2P")) atomCode = "OP2";
+					}
 					double radius = Double.parseDouble(line.substring(10,14));
 					perResRad.put(atomCode,radius);
 				}
