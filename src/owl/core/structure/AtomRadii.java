@@ -89,6 +89,8 @@ public class AtomRadii {
 					String atomCode = line.substring(5,9).trim();
 					// in HET residue HEM the NA, NB, NC, ND have a space in between (no idea why). This is to fix that
 					if (atomCode.contains(" ")) atomCode = atomCode.replaceAll(" ", "");
+					// in nucleotide atoms * are used instead of ', this is to fix that:
+					if (atomCode.contains("*")) atomCode = atomCode.replaceAll("*","'");
 					double radius = Double.parseDouble(line.substring(10,14));
 					perResRad.put(atomCode,radius);
 				}
