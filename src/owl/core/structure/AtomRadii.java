@@ -44,6 +44,8 @@ public class AtomRadii {
 		String atomCode = atom.getCode();
 		// in RNA there's an additional O2' that is not in DNA (which is what vdw.radii has)
 		if (atomCode.equals("O2'")) return AtomType.O.getRadius();
+		// in T of DNA there's C7, for some reason not present in vdw.radii
+		if (atomCode.equals("C7")) atomCode = "C6";
 		return radii.get(nuc.getTwoLetterCode()).get(atomCode);
 	}
 	

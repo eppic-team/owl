@@ -15,8 +15,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	private static final long serialVersionUID = 1L;
 
-	public static final String TYPE_PROTEIN = "Protein";	
-
 	private int id;
 	private boolean withinUnitCell; 
 	private String name;
@@ -39,10 +37,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private Matrix4d secondTransf; 		// the transformation applied to second molecule expressed in crystal axes coordinates
 	private Matrix4d secondTransfOrth;	// the transformation applied to second molecule expressed in orthonormal axes coordinates
 	
-	private String firstMolType;	// interface descriptions taken from PISA can have ligands as members, 
-									// our own interfaces can only be protein (TYPE_PROTEIN constant)
-	private String secondMolType;
-	
 	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
 	
 	private String chain2forOutput;
@@ -60,8 +54,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		this.graph = graph;
 		this.firstTransf = firstTransf;
 		this.secondTransf = secondTransf;
-		this.firstMolType = TYPE_PROTEIN;
-		this.secondMolType = TYPE_PROTEIN;
 		this.name = this.firstMolecule.getPdbChainCode()+"+"+this.secondMolecule.getPdbChainCode();
 	}
 	
@@ -180,22 +172,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		this.score = score;
 	}
 	
-	public String getFirstMolType() {
-		return firstMolType;
-	}
-	
-	public void setFirstMolType(String firstMolType) {
-		this.firstMolType = firstMolType;
-	}
-	
-	public String getSecondMolType() {
-		return secondMolType;
-	}
-	
-	public void setSecondMolType(String secondMolType) {
-		this.secondMolType = secondMolType;
-	}
-	
 	/**
 	 * Runs the NACCESS program to calculate accessible surface areas of separate molecules
 	 * and 2 molecules-complex setting both ASAs and BSAs of the residues of the two molecules making 
@@ -292,11 +268,13 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	public boolean isFirstProtein() {
-		return this.firstMolType.equals(TYPE_PROTEIN);
+		if (this.firstMolecule.isNonPolyChain()) return false;
+		return this.firstMolecule.getSequence().isProtein();
 	}
 	
 	public boolean isSecondProtein() {
-		return this.secondMolType.equals(TYPE_PROTEIN);
+		if (this.firstMolecule.isNonPolyChain()) return false;
+		return this.secondMolecule.getSequence().isProtein();
 	}
 	
 	public boolean hasClashes() {
@@ -354,7 +332,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	private void printFirstMolInfoTabular(PrintStream ps) {
-		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+this.getFirstMolType());
+		String molType = null;
+		if (this.getFirstMolecule().isNonPolyChain()) molType = "non-polymer";
+		else if (this.getFirstMolecule().getSequence().isProtein()) molType = "protein";
+		else molType = "nucleic acid";
+		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+molType);
 
 		InterfaceRimCore rimCore = getFirstRimCore();
 		ps.printf("## %4.2f\n",bsaToAsaCutoff);
@@ -375,7 +357,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 
 	private void printSecondMolInfoTabular(PrintStream ps) {
-		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+this.getSecondMolType());
+		String molType = null;
+		if (this.getSecondMolecule().isNonPolyChain()) molType = "non-polymer";
+		else if (this.getSecondMolecule().getSequence().isProtein()) molType = "protein";
+		else molType = "nucleic acid";
+
+		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+molType);
 
 		InterfaceRimCore rimCore = getSecondRimCore();
 		ps.printf("## %4.2f\n",bsaToAsaCutoff);

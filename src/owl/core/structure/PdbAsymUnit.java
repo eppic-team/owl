@@ -355,6 +355,18 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
+	 * Returns a Collection of all protein chains (no nucleotide chains)
+	 * @return
+	 */
+	private Collection<PdbChain> getProtChains() {
+		Collection<PdbChain> protChains = new ArrayList<PdbChain>();
+		for (PdbChain chain:chains.values()){
+			if (chain.getSequence().isProtein()) protChains.add(chain);
+		}
+		return protChains;
+	}
+	
+	/**
 	 * Returns a Collection of all non-polymer (ligands and het residues) chains
 	 * @return
 	 */
@@ -385,13 +397,26 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
-	 * Returs a sorted set of all CIF chain codes of polymer chains in this entry
+	 * Returns a sorted set of all CIF chain codes of polymer chains (protein/nucleic acid) in this entry
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private Set<String> getPolyChainCodes() {
 		Set<String> all = new TreeSet<String>();
 		all.addAll(chains.keySet());
 		return all;		
+	}
+	
+	/**
+	 * Returns a sorted set of all CIF chain codes of protein chains in this entry (no nucleic acid chains)
+	 * @return
+	 */
+	private Set<String> getProtChainCodes() {
+		Set<String> all = new TreeSet<String>();
+		for (PdbChain polyChain:chains.values()) {
+			if (polyChain.getSequence().isProtein()) all.add(polyChain.getChainCode());
+		}
+		return all;				
 	}
 	
 	/**
@@ -860,8 +885,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
-	 * @param nonPoly if true interfaces will be calculated for non-polymer chains as well as polymer, if false 
-	 * only interfaces between polymer chains calculated
+	 * @param nonPoly if true interfaces will be calculated for non-polymer chains and 
+	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
 	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
@@ -892,7 +917,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		// 1.1 within asymmetric unit
 		Set<String> chainCodes = null;
 		if (nonPoly) chainCodes = this.getChainCodes();
-		else chainCodes = this.getPolyChainCodes();
+		else chainCodes = this.getProtChainCodes();
 		
 		for (String iChainCode:chainCodes) { 
 			for (String jChainCode:chainCodes) { // getPolyChainCodes
@@ -939,8 +964,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 					ichains = this.getAllChains();
 					jchains = jAsym.getAllChains();
 				} else {
-					ichains = this.getPolyChains();
-					jchains = jAsym.getPolyChains();
+					ichains = this.getProtChains();
+					jchains = jAsym.getProtChains();
 				}
 				for (PdbChain chaini:ichains) { 
 					for (PdbChain chainj:jchains) { 
@@ -998,7 +1023,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 							}
 							Collection<PdbChain> jchains = null;
 							if (nonPoly) jchains = jAsym.getAllChains();
-							else jchains = jAsym.getPolyChains();
+							else jchains = jAsym.getProtChains();
 							for (PdbChain chainj:jchains) {
 								//try {
 								//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
@@ -1008,7 +1033,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 
 								Collection<PdbChain> ichains = null;
 								if (nonPoly) ichains = this.getAllChains();
-								else ichains = this.getPolyChains();
+								else ichains = this.getProtChains();
 								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
 									if (debug) {
 										System.out.print(".");

@@ -161,8 +161,6 @@ public class PisaInterface implements Comparable<PisaInterface> {
 		interf.setFirstTransfOrth(firstMolecule.getTransfOrth());
 		interf.setSecondTransf(secondMolecule.getTransf());
 		interf.setSecondTransfOrth(secondMolecule.getTransfOrth());
-		interf.setFirstMolType(firstMolecule.getMolClass());
-		interf.setSecondMolType(secondMolecule.getMolClass());
 		interf.setName(firstMolecule.getChainId()+"+"+secondMolecule.getChainId());
 		
 		PdbChain pdb1 = findChainForPisaMolecule(this.firstMolecule, pdb).copy(pdb);
