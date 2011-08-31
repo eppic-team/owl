@@ -9,15 +9,14 @@
 	<classpathentry exported="true" kind="lib" path="jars/jaligner.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/Jama-1.0.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/java-getopt-1.0.13.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/JRclient-RE817.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/mysql-connector-java-5.0.5-bin.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/vecmath.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/ws-commons-util-1.0.2.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/xmlrpc-client-3.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/xmlrpc-common-3.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-api-2.0-beta1-sources.jar"/>
+	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-graph-impl-2.0-beta1-sources.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring-core.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/uniprotjapi.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring-aop.jar"/>
@@ -28,7 +27,6 @@
 	<classpathentry kind="lib" path="jars/uniprot/commons-httpclient.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/log4j.jar"/>
 	<classpathentry kind="lib" path="jars/commons-lang-2.5.jar"/>
-	<classpathentry kind="lib" path="jars/commons-math-1.2.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-awt-util.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-dom.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-ext.jar"/>
@@ -36,5 +34,7 @@
 	<classpathentry kind="lib" path="jars/batik/batik-svggen.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-util.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-xml.jar"/>
+	<classpathentry kind="lib" path="jars/JRclient-RE817.jar"/>
+	<classpathentry kind="lib" path="jars/commons-math-2.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
