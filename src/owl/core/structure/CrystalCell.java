@@ -160,6 +160,14 @@ public class CrystalCell implements Serializable {
 	}
 
 	/**
+	 * Transforms the given vector expressed in crystal basis to orthonormal basis
+	 * @param v
+	 */
+	public void transfToOrthonormal(Vector3d v) {
+		getMInv().transform(v);
+	}
+	
+	/**
 	 * Transform given Matrix4d in orthonormal basis to the crystal basis using
 	 * the PDB axes convention (NCODE=1)
 	 * @param m
@@ -176,6 +184,14 @@ public class CrystalCell implements Serializable {
 		rot.mul(this.getMTranspose(),rot);
 
 		return new Matrix4d(rot,trans,1.0);		
+	}
+	
+	/**
+	 * Transforms the given vector expressed in orthonormal basis to crystal basis
+	 * @param v
+	 */
+	public void transfToCrystal(Vector3d v) {
+		getM().transform(v);
 	}
 	
 	/**
