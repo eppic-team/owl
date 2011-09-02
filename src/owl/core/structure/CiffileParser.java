@@ -292,12 +292,12 @@ public class CiffileParser {
 		if (!p.matcher(line).find()){
 			throw new FileFormatException("The file "+cifFile+" doesn't seem to be a cif file");
 		}
-		int linecount = 1; // we have read one line already, we initialise count to 1
+		//int linecount = 1; // we have read one line already, we initialise count to 1
 		// we need to store the last line's byte offset (which indicates the beginning of this line) 
 		long lastLineOffset=fcif.getFilePointer();
 		while((line = fcif.readLine()) != null ) {
 			long currentOffset = fcif.getFilePointer(); //this gets byte offset at end of line
-			linecount++;
+			//linecount++;
 			if (line.startsWith("#")) {
 				element++;
 				continue;

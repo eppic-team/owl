@@ -4,8 +4,10 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 //import owl.core.util.CombinationsGenerator;
 
@@ -170,6 +172,65 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		for (ChainInterface interf:this) {
 			interf.printTabular(ps);
 		}
+	}
+	
+	/**
+	 * Given a PDB chain code returns the List of residues that are in the surface but belong to NO
+	 * interface (above given minInterfArea) 
+	 * @param pdbChainCode
+	 * @param minInterfArea
+	 * @return
+	 */
+	public List<Residue> getResiduesNotInInterfaces(String pdbChainCode, double minInterfArea) {
+
+		List<Residue> surfResidues = new ArrayList<Residue>();
+		PdbChain chain = null;
+		for (ChainInterface interf:this) {
+			if (interf.getFirstMolecule().getPdbChainCode().equals(pdbChainCode)) {
+				chain = interf.getFirstMolecule();
+				break;
+			}
+		}
+		
+		for (Residue res:chain) {
+			if (res.getAsa()>0) surfResidues.add(res);
+		}
+		//System.out.println(" in surface: "+surfResidues.size());
+		
+		Set<Integer> interfResSerials = new HashSet<Integer>();
+		
+		for (ChainInterface interf:this) {
+			if (interf.getInterfaceArea()>minInterfArea) {
+				if (interf.getFirstMolecule().getPdbChainCode().equals(pdbChainCode)) {
+					for (Residue res:interf.getFirstRimCore().getCoreResidues()) {
+						interfResSerials.add(res.getSerial());
+					}
+					for (Residue res:interf.getFirstRimCore().getRimResidues()) {
+						interfResSerials.add(res.getSerial());
+					}
+				}
+				if (interf.getSecondMolecule().getPdbChainCode().equals(pdbChainCode)) {
+					for (Residue res:interf.getSecondRimCore().getCoreResidues()) {
+						interfResSerials.add(res.getSerial());
+					}
+					for (Residue res:interf.getSecondRimCore().getRimResidues()) {
+						interfResSerials.add(res.getSerial());
+					}
+				}
+				
+			}
+		}
+
+		Iterator<Residue> it = surfResidues.iterator();
+		while (it.hasNext()) {
+			Residue res = it.next();
+			if (interfResSerials.contains(res.getSerial())) {
+				it.remove();
+			}
+		}
+		//System.out.println(" in no interface: "+surfResidues.size());
+		
+		return surfResidues;
 	}
 	
 	/**
