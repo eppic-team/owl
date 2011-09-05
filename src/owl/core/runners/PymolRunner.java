@@ -1,10 +1,13 @@
 package owl.core.runners;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -32,6 +35,10 @@ public class PymolRunner {
 	private File pymolExec;
 	private String[] chainColors;
 	private String symRelatedColor;
+	private String interf1color;
+	private String interf2color;
+	
+	private HashMap<String, String> colorMappings;
 	
 	public PymolRunner(File pymolExec) {
 		this.pymolExec = pymolExec;
@@ -198,11 +205,11 @@ public class PymolRunner {
 		writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("color blue, core"+chains[0]+";");
 		//pymolScriptBuilder.append("color red, rim"+chains[0]+";");
-		cmd = "color red, interface"+chain1;
+		cmd = "color "+interf1color+", interface"+chain1;
 		writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("color slate, core"+chains[1]+";");
 		//pymolScriptBuilder.append("color raspberry, rim"+chains[1]+";");
-		cmd = "color raspberry, interface"+chain2;
+		cmd = "color "+interf2color+", interface"+chain2;
 		writeCommand(cmd, pml);
 		cmd = "show sticks, bothinterf";
 		writeCommand(cmd, pml);
@@ -250,7 +257,7 @@ public class PymolRunner {
 		}
 	}
 	
-	private String getChainColor(char letter, int index, boolean isSymRelated) {
+	public String getChainColor(char letter, int index, boolean isSymRelated) {
 		String color = null;
 		if (isSymRelated && index!=0) {
 			color = symRelatedColor;
@@ -309,6 +316,43 @@ public class PymolRunner {
 			letter++;
 		}
 		symRelatedColor = p.getProperty("SYMCHAIN");
+		interf1color = p.getProperty("INTERF1");
+		interf2color = p.getProperty("INTERF2");
 	}	
+	
+	/**
+	 * Reads from resource file the color mappings of pymol color names to hex RGB color codes
+	 * @param is
+	 * @throws IOException
+	 */
+	public void readColorMappingsFromResourceFile(InputStream is) throws IOException {
+		colorMappings = new HashMap<String, String>();
+		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		String line;
+		while ((line=br.readLine())!=null) {
+			if (line.isEmpty()) continue;
+			if (line.startsWith("#")) continue;
+			String[] tokens = line.split(" ");
+			colorMappings.put(tokens[0], tokens[1]);
+		}
+		br.close();
+	}
+	
+	/**
+	 * Given a pymol color name (e.g. "raspberry") returns the hex RGB color code, e.g. #b24c66
+	 * or null if no such color name exists.
+	 * @param pymolColor
+	 * @return
+	 */
+	public String getHexColorCode(String pymolColor) {
+		return colorMappings.get(pymolColor);
+	}
 
+	public String getInterf1Color() {
+		return interf1color;
+	}
+	
+	public String getInterf2Color() {
+		return interf2color;
+	}
 }
