@@ -45,6 +45,8 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	
 	private static final long serialVersionUID = 1L;
 
+	private static final String UNIPROT_URL_PREFIX = "http://www.uniprot.org/uniprot/";
+	
 	private static final Log LOGGER = LogFactory.getLog(UniprotEntry.class);
 	
 	private static final float MIN_TOLERATED_ID = 0.95f; // the minimum sequence identity for the CDS sequence to be considered as a representative CDS of the uniprot entry
@@ -73,6 +75,14 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	 */
 	public String getUniId() {
 		return uniId;
+	}
+	
+	/**
+	 * Returns the URL of the uniprot entry in the www.uniprot.org web site
+	 * @return
+	 */
+	public String getUniprotUrl() {
+		return UNIPROT_URL_PREFIX+uniId;
 	}
 
 	/**
