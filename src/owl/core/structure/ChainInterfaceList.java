@@ -127,19 +127,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		}
 	}
 	
-	/**
-	 * Calculates the rims and cores of all member interfaces with a zooming approach.
-	 * @param bsaToAsaSoftCutoff
-	 * @param bsaToAsaHardCutoff
-	 * @param relaxationStep
-	 * @param minNumResidues
-	 */
-	public void calcRimAndCores(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
-		for (ChainInterface interf:list){
-			interf.calcRimAndCore(bsaToAsaSoftCutoff, bsaToAsaHardCutoff, relaxationStep, minNumResidues);
-		}		
-	}
-	
 	public boolean hasInterfacesWithClashes() {
 		for (ChainInterface interf:list){
 			if (interf.hasClashes()) return true;
@@ -188,6 +175,10 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		for (ChainInterface interf:this) {
 			if (interf.getFirstMolecule().getPdbChainCode().equals(pdbChainCode)) {
 				chain = interf.getFirstMolecule();
+				break;
+			}
+			if (interf.getSecondMolecule().getPdbChainCode().equals(pdbChainCode)) {
+				chain = interf.getSecondMolecule();
 				break;
 			}
 		}
