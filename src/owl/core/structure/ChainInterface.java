@@ -28,9 +28,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private InterfaceRimCore secondRimCore; // cached second molecule's rim and core
 	
 	private double bsaToAsaCutoff;
-	private boolean zoomingUsed;
-	private double bsaToAsaSoftCutoff; // the hard cutoff is stored in the bsaToAsaCutoffs var
-	private double bsaToAsaRelaxStep;
 	
 	private Matrix4d firstTransf; 		// the transformation applied to first molecule expressed in crystal axes coordinates
 	private Matrix4d firstTransfOrth;	// the transformation applied to first molecule expressed in orthonormal axes coordinates
@@ -412,12 +409,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @param minNumResidues
 	 * @return
 	 */
-	public void calcRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
-		zoomingUsed = true;
+	public void calcRimAndCoreZooming(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+		//zoomingUsed = true;
 		
 		bsaToAsaCutoff = bsaToAsaHardCutoff;
-		this.bsaToAsaSoftCutoff = bsaToAsaSoftCutoff;
-		this.bsaToAsaRelaxStep = relaxationStep;
+		//this.bsaToAsaSoftCutoff = bsaToAsaSoftCutoff;
+		//this.bsaToAsaRelaxStep = relaxationStep;
 				
 		if (!isFirstProtein() && !isSecondProtein()) {
 			firstRimCore = null;
@@ -455,7 +452,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @return
 	 */
 	public void calcRimAndCore(double bsaToAsaCutoff) {
-		zoomingUsed = false;
+		//zoomingUsed = false;
 		
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
 		
@@ -487,7 +484,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @return
 	 */
 	public void calcRimAndCoreExcludeSupport(double bsaToAsaCutoff, double rASAcutoff) {
-		zoomingUsed = false;
+		//zoomingUsed = false;
 		
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
 		
@@ -549,14 +546,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return bsaToAsaCutoff;
 	}
 	
-	public double getBsaToAsaSoftCutoff() {
-		return bsaToAsaSoftCutoff;
-	}
-	
-	public double getBsaToAsaRelaxStep() {
-		return bsaToAsaRelaxStep;
-	}
-	
 	public InterfaceRimCore getFirstRimCore() {
 		return firstRimCore;
 	}
@@ -598,15 +587,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public String getSecondPdbChainCodeForOutput() {
 		return chain2forOutput;
-	}
-	
-	/**
-	 * Tells whether rim/core residues were calculated with zooming (true)
-	 * or with fixed cutoff (false).
-	 * @return
-	 */
-	public boolean isRimAndCoreZoomed() {
-		return zoomingUsed;
 	}
 	
 	public SubunitId getFirstSubunitId() {
