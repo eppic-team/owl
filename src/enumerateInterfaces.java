@@ -167,16 +167,15 @@ public class enumerateInterfaces {
 			ChainInterface interf = interfaces.get(i+1);
 			interf.calcRimAndCore(BSATOASA_CUTOFF);
 			String parallel = "";
-			String notInUnitCell = "";
 			if (interf.isParallel()) parallel = " -- PARALLEL interface";
-			if (!interf.isWithinUnitCell()) notInUnitCell = " -- not in unit cell";
 			System.out.println("\n##Interface "+(i+1)+" "+
 					interf.getFirstSubunitId()+"-"+
-					interf.getSecondSubunitId()+parallel+notInUnitCell);
+					interf.getSecondSubunitId()+parallel);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
 			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
+			System.out.printf("Connection vector: (%5.2f %5.2f %5.2f)\n",interf.getConnectionVector().x,interf.getConnectionVector().y,interf.getConnectionVector().z);
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+

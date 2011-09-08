@@ -935,7 +935,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 					PdbChain chainiCopy = chaini.copy(this);
 					PdbChain chainjCopy = chainj.copy(this);
 					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM);
-					interf.setWithinUnitcell(true);
 					if (!set.add(interf)) {
 						duplicatesCount1++;
 					}
@@ -980,7 +979,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 							PdbChain chainiCopy = chaini.copy(this);
 							PdbChain chainjCopy = chainj.copy(jAsym);
 							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
-							interf.setWithinUnitcell(true);
 							if (!set.add(interf)) {
 								duplicatesCount2++;
 							}
@@ -1046,7 +1044,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 										PdbChain chainiCopy = chaini.copy(this);
 										PdbChain chainjCopy = chainj.copy(jAsym);
 										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
-										interf.setWithinUnitcell(false);
 										if (!set.add(interf)){
 											duplicatesCount3++;
 										}

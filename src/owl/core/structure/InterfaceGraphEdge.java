@@ -1,13 +1,15 @@
 package owl.core.structure;
 
+//import javax.vecmath.Vector3d;
+
 public class InterfaceGraphEdge implements Comparable<InterfaceGraphEdge> {
 
+	private ChainInterface interf;
 	private int id;
-	private boolean withinUnitCell;
 	
-	public InterfaceGraphEdge(int id, boolean withinUnitCell) {
-		this.id = id;
-		this.withinUnitCell = withinUnitCell;
+	public InterfaceGraphEdge(ChainInterface interf) {
+		this.interf = interf;
+		this.id = interf.getId();
 	}
 	
 	@Override
@@ -15,6 +17,10 @@ public class InterfaceGraphEdge implements Comparable<InterfaceGraphEdge> {
 		return new Integer(id).compareTo(arg0.id);
 	}
 	
+	/**
+	 * Compares the two InterfaceGraphEdge based in their ids only.
+	 * @param o
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if (!(o instanceof InterfaceGraphEdge)) return false;
@@ -30,7 +36,6 @@ public class InterfaceGraphEdge implements Comparable<InterfaceGraphEdge> {
 	@Override
 	public String toString() {
 		String str = id+"";
-		if (!withinUnitCell) str+="'";
 		return str;
 	}
 	
@@ -38,7 +43,12 @@ public class InterfaceGraphEdge implements Comparable<InterfaceGraphEdge> {
 		return id;
 	}
 	
-	public boolean isWithinUnitCell() {
-		return withinUnitCell;
+	public ChainInterface getInterface() {
+		return interf;
 	}
+	
+//	public Vector3d getConnectionVector() {
+//		return interf.getConnectionVector();
+//	}
+	
 }

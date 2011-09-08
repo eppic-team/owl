@@ -7,6 +7,8 @@ import java.io.PrintStream;
 import java.io.Serializable;
 
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3i;
+import javax.vecmath.Vector3d;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
@@ -16,7 +18,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private static final long serialVersionUID = 1L;
 
 	private int id;
-	private boolean withinUnitCell; 
 	private String name;
 	private double interfaceArea;
 	private AICGraph graph;
@@ -34,7 +35,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private Matrix4d secondTransf; 		// the transformation applied to second molecule expressed in crystal axes coordinates
 	private Matrix4d secondTransfOrth;	// the transformation applied to second molecule expressed in orthonormal axes coordinates
 	
+	private Point3i transl;		// the crystal translation (excluding unit cell symmetry translations) applied to second molecule expressed in crystal axes coordinates
+								// note that the translation component of secondTransf above contains this + any possible unit cell symmetry translations
+	
 	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
+	
+	private Vector3d connection; 	// the vector that connects the center of mass of first to center of mass of second
 	
 	private String chain2forOutput;
 	
@@ -60,14 +66,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setId(int id) {
 		this.id = id;
-	}
-	
-	public boolean isWithinUnitCell() {
-		return withinUnitCell;
-	}
-	
-	public void setWithinUnitcell(boolean withinUnitCell) {
-		this.withinUnitCell = withinUnitCell;
 	}
 	
 	public String getName() {
@@ -159,6 +157,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setSecondTransfOrth(Matrix4d secondTransfOrth) {
 		this.secondTransfOrth = secondTransfOrth;
+	}
+	
+	public Point3i getSecondTranslation() {
+		return transl;
+	}
+	
+	public void setSecondTranslation(Point3i transl) {
+		this.transl = transl;
 	}
 	
 	public double getScore() {
@@ -590,15 +596,30 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	public SubunitId getFirstSubunitId() {
-		return new SubunitId(firstMolecule.getPdbChainCode().charAt(0),firstMolecule.getParent().getTransformId());
+		return new SubunitId(firstMolecule.getPdbChainCode().charAt(0),firstMolecule.getParent().getTransformId(),new Point3i(0,0,0));
 	}
 
 	public SubunitId getSecondSubunitId() {
-		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondMolecule.getParent().getTransformId());
+		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondMolecule.getParent().getTransformId(),transl);
 	}
 
 	public boolean isParallel() {
-		return this.getFirstSubunitId().equals(this.getSecondSubunitId());
+		return this.getFirstSubunitId().isSymRelatedEquivalent(this.getSecondSubunitId());
+	}
+	
+	/**
+	 * Returns the vector that connects the center of mass of first 
+	 * molecule to the center of mass of second molecule expressed in crystal coordinates
+	 * @return
+	 */
+	public Vector3d getConnectionVector() {
+		if (connection==null) {
+			CrystalCell cell = firstMolecule.getParent().getCrystalCell();
+			connection = new Vector3d(secondMolecule.getCenterOfMass());
+			connection.sub(firstMolecule.getCenterOfMass());
+			cell.transfToCrystal(connection);
+		}
+		return connection;
 	}
 	
 	/**
