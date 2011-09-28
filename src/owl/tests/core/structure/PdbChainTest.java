@@ -260,7 +260,7 @@ public class PdbChainTest {
 		}
 		// rmsd on intervals check
 		IntervalSet intervSet = new IntervalSet();
-		intervSet.add(new Interval(pdb1.getMinObsResSerial()+10,pdb1.getMaxObsResSerial()-10));
+		intervSet.add(new Interval(pdb1.getFirstResidue().getSerial()+10,pdb1.getLastResidue().getSerial()-10));
 		// check that rmsd is 0 on an interval
 		for (String ct:cts) {
 			Assert.assertEquals(0.0,pdb1.rmsd(pdb1p, ct, intervSet),0.0001);

@@ -1571,22 +1571,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the lowest (standard amino acid) observed residue serial 
-	 * @return
-	 */
-	public int getMinObsResSerial() {
-		return ((TreeSet<Integer>)getAllStdAaResSerials()).first();
-	}
-	
-	/**
-	 * Returns the highest (standard amino acid) observed residue serial 
-	 * @return
-	 */
-	public int getMaxObsResSerial() {
-		return ((TreeSet<Integer>)getAllStdAaResSerials()).last();
-	}
-
-	/**
 	 * Returns the first observed residue in the chain (can be standard aminoacid, nucleotide or het)
 	 * @return
 	 */

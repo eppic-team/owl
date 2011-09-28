@@ -29,6 +29,7 @@ public enum AtomType {
 	P (15, 30.974, 1.80, "P", "Phosphorus", false, true),
 	S (16, 32.065, 1.80, "S", "Sulfur",     false, true),
 	// in non-standard aas and hets
+	D ( 1,  2.014, 1.20,  "D", "Deuterium", false, false), // couldn't find a value for vdw radius, using Hydrogen's
 	Li( 3,  6.941, 1.82, "LI", "Lithium",   false, false),
 	Be( 4,  9.012, 2.00, "BE", "Beryllium", false, false),
 	B ( 5, 10.811, 2.00,  "B", "Boron",     false, false),

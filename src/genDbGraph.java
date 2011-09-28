@@ -34,6 +34,9 @@ public class genDbGraph {
 	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
 	public static final String			NACCESS_PARAMS = "";
 
+	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
+
+	
 	//public static double			cutoff = 4.2;
 	//public static String			edgeType = "ALL";
 	
@@ -230,7 +233,7 @@ public class genDbGraph {
 					}
 					if (!mode.equals("GRAPH")) {
 						try {
-							ScopConnection.parseScop(pdb,"1.73", false);
+							ScopConnection.parseScop(pdb,"1.73", SCOP_DIR);
 							scop = true;
 						} catch (Exception e) {
 							System.err.println(e.getMessage());
@@ -331,7 +334,7 @@ public class genDbGraph {
 						System.err.println(e.getMessage());
 					}
 					try {
-						ScopConnection.parseScop(pdb,"1.73", false);
+						ScopConnection.parseScop(pdb,"1.73", SCOP_DIR);
 						scop = true;
 					} catch (Exception e) {
 						System.err.println(e.getMessage());

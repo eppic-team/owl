@@ -24,7 +24,6 @@ import owl.core.structure.features.ScopRegion;
 public class ScopConnection {
 	
 	private static final String SCOP_URL_PREFIX = "http://scop.mrc-lmb.cam.ac.uk/scop/parse/";
-	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
 
 
 	/**
@@ -32,11 +31,11 @@ public class ScopConnection {
 	 * Scop member with SCOP annotation.
 	 * @param pdb the PdbChain object for which we want Scop annotation
 	 * @param version the SCOP version that we want to parse
-	 * @param online if true SCOP annotation will be taken from web, if false 
-	 * from local file
+	 * @param scopDir the dir where the SCOP annotation cla file is stored, if null it will 
+	 * be taken from SCOP web 
 	 * @throws IOException 
 	 */
-	public static void parseScop(PdbChain pdb, String version, boolean online) throws IOException {
+	public static void parseScop(PdbChain pdb, String version, String scopDir) throws IOException {
 		String pdbCode = pdb.getPdbCode();
 		// if this is not a pdb entry with a pdb code there's no SCOP id to get
 		if (pdbCode==null || pdbCode.equals(PdbAsymUnit.NO_PDB_CODE)) return; 
@@ -49,12 +48,12 @@ public class ScopConnection {
 		BufferedReader in;
 		String inputLine;
 	
-		if (online) {
+		if (scopDir==null) {
 			URL scop_cla = new URL(SCOP_URL_PREFIX+"dir.cla.scop.txt_"+version);
 			URLConnection sc = scop_cla.openConnection();
 			in = new BufferedReader(new InputStreamReader(sc.getInputStream()));
 		} else {
-			File scop_cla = new File(SCOP_DIR,"dir.cla.scop.txt_"+version);
+			File scop_cla = new File(scopDir,"dir.cla.scop.txt_"+version);
 			in = new BufferedReader(new FileReader(scop_cla));
 		}
 
@@ -78,8 +77,8 @@ public class ScopConnection {
 								startPdbResSer = m.group(5);
 								endPdbResSer = m.group(6);								
 							} else {
-								startPdbResSer = pdb.getPdbResSerFromResSer(pdb.getMinObsResSerial());
-								endPdbResSer = pdb.getPdbResSerFromResSer(pdb.getMaxObsResSerial());
+								startPdbResSer = pdb.getPdbResSerFromResSer(pdb.getFirstResidue().getSerial());
+								endPdbResSer = pdb.getPdbResSerFromResSer(pdb.getLastResidue().getSerial());
 							}
 							sr = new ScopRegion(fields[0], fields[3], Integer.parseInt(fields[4]), j, regions.length, startPdbResSer, endPdbResSer, pdb.getResSerFromPdbResSer(startPdbResSer), pdb.getResSerFromPdbResSer(endPdbResSer));
 							scop.add(sr);

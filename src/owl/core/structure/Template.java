@@ -20,6 +20,7 @@ import owl.core.util.MySQLConnection;
  */
 public class Template {
 
+	private static final String SCOP_DIR = "/project/StruPPi/Databases/SCOP";
 	private static final String SCOP_VERSION = "1.73";
 	
 	// 2 types of Template: 
@@ -135,7 +136,7 @@ public class Template {
 	 */
 	private void getScopInfo() {
 		try {
-			ScopConnection.parseScop(pdb,SCOP_VERSION, false);
+			ScopConnection.parseScop(pdb,SCOP_VERSION, SCOP_DIR);
 			Iterator<ScopRegion> it = pdb.getScop().getIterator();
 			scopSccsString = "";
 			while (it.hasNext()) {
