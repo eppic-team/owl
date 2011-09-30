@@ -952,7 +952,12 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			start= System.currentTimeMillis();
 			System.out.println("Interfaces within the rest of the unit cell");
 		}
-		if (cell!=null) { // for NMR structures or structures with no crystal data we can't do more than AU contacts
+		
+		// this condition covers 3 cases:
+		// a) entries with expMethod X-RAY and defined crystalCell (most usual case)
+		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
+		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
+		if (cell!=null && (this.expMethod==null || this.expMethod.equals("X-RAY DIFFRACTION"))) { 
 			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
