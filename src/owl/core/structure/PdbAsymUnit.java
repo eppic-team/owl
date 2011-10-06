@@ -193,7 +193,43 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
-			loadFromPdbFile(pdbSourceFile);
+			loadFromPdbFile(pdbSourceFile, true);
+		} else if (type==FileTypeGuesser.CIF_FILE) {
+			loadFromCifFile(pdbSourceFile);
+		} else {
+			throw new FileFormatException("The given file does not seem to be neither a PDB file nor a mmCIF file");
+		}
+		
+	}
+	
+	/**
+	 * Constructs a PdbAsymUnit by reading given model for all chains 
+	 * from given pdbSourceFile. 
+	 * The pdbSourceFile can be in PDB or mmCIF format. 
+	 * @param pdbSourceFile
+	 * @param model
+	 * @param missingSeqResPadding if true in a PDB file without SEQRES, the sequence will be padded with X 
+	 * for any missing residue (deduced from residue numbering) in ATOM line. If false no padding will be
+	 * done if no SEQRES found 
+	 * @throws IOException if IO problems while reading PDB data from file
+	 * @throws FileFormatException if given file is not in PDB or mmCIF format
+	 * @throws PdbLoadException if problems while loading the PDB data from file
+	 */
+	public PdbAsymUnit(File pdbSourceFile, int model, boolean missingSeqResPadding) throws IOException, FileFormatException, PdbLoadException {
+		this.expMethod = null;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		this.pdbCode = NO_PDB_CODE;
+		this.model = model;
+		this.title = null;
+		this.transform = IDENTITY_TRANSFORM;
+		this.transformId = 0;
+		this.chains = new TreeMap<String, PdbChain>();
+		this.nonPolyChains = new TreeMap<String,PdbChain>();
+		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
+		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
+			loadFromPdbFile(pdbSourceFile, missingSeqResPadding);
 		} else if (type==FileTypeGuesser.CIF_FILE) {
 			loadFromCifFile(pdbSourceFile);
 		} else {
@@ -245,15 +281,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/*----------------------------------  loader methods ----------------------------------------*/
 	
-	private void loadFromPdbFile(File pdbFile) throws PdbLoadException {
-		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
-		
-//		String[] chainCodes = parser.getChains();
-//		for (int i=0;i<chainCodes.length;i++) {
-//			PdbChain chain = parser.readChain(chainCodes[i],model);
-//			chain.setParent(this);
-//			chains.put(chainCodes[i],chain);
-//		}
+	private void loadFromPdbFile(File pdbFile, boolean missingSeqResPadding) throws PdbLoadException {
+		PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath(),missingSeqResPadding);
 		
 		parser.readChains(this,model);
 		

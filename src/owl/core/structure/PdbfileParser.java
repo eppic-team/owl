@@ -67,6 +67,8 @@ public class PdbfileParser {
 	private String[] chainsArray;
 	private Integer[] modelsArray;
 	
+	private boolean missingSeqResPadding;
+	
 	/**
 	 * Constructs a pdb file parser object given a pdbfile name
 	 * Use readChain(pdbChainCode, modelSerial) to generate PdbChain objects. 
@@ -80,9 +82,28 @@ public class PdbfileParser {
 		this.resolution = -1;
 		this.rFree = -1;
 		this.rSym = -1;
-
+		this.missingSeqResPadding = true;
 	}
 
+	/**
+	 * Constructs a pdb file parser object given a pdbfile name
+	 * Use readChain(pdbChainCode, modelSerial) to generate PdbChain objects. 
+	 * @param pdbfile
+	 * @param missingSeqResPadding if true in a PDB file without SEQRES, the sequence will be padded with X 
+	 * for any missing residue (deduced from residue numbering) in ATOM line. If false no padding will be
+	 */
+	public PdbfileParser (String pdbfile, boolean missingSeqResPadding) {
+		this.pdbfile = pdbfile;
+		this.isCaspTS = false; //we assume by default this is not a CASP TS file, when reading we set it to true if we detect CASP TS headers
+		
+		this.pdbCode = PdbAsymUnit.NO_PDB_CODE;
+		this.resolution = -1;
+		this.rFree = -1;
+		this.rSym = -1;
+		this.missingSeqResPadding = missingSeqResPadding;
+
+	}
+	
 	/**
 	 * Reads PDB data (coordinates, sequence, etc.) from the PDB file
 	 * for given pdbChainCode and modelSerial
@@ -751,7 +772,7 @@ public class PdbfileParser {
 				lastResSerial = residue.getSerial();
 			}
 			
-			if (canUseResidueNumberingAsIs) {
+			if (canUseResidueNumberingAsIs && missingSeqResPadding) { // we only do padding if padding mode was specified
 				// we take the residue serials to be a valid numbering and fill the unknown gaps with Xs
 				String sequence = "";
 				for (int resser=1;resser<=tmpResiduesList.get(tmpResiduesList.size()-1).getSerial();resser++) {
