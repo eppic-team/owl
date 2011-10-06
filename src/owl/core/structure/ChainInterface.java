@@ -276,7 +276,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	public boolean isSecondProtein() {
-		if (this.firstMolecule.isNonPolyChain()) return false;
+		if (this.secondMolecule.isNonPolyChain()) return false;
 		return this.secondMolecule.getSequence().isProtein();
 	}
 	
