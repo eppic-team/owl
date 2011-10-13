@@ -34,12 +34,12 @@ public class PisaConnection {
 	private static final int MAX_ENTRIES_PER_REQUEST = 50; // pisa doesn't specify a limit but recommends 20-50 per request
 	
 	private String interfacesUrl;
-	//private String assembliesUrl;
+	private String assembliesUrl;
 	//private String pdbAssembliesUrl;
 	
 	public PisaConnection(String interfacesUrl, String assembliesUrl, String pdbAssembliesUrl)	{
 		this.interfacesUrl = interfacesUrl;
-		//this.assembliesUrl = assembliesUrl;
+		this.assembliesUrl = assembliesUrl;
 		//this.pdbAssembliesUrl = pdbAssembliesUrl;
 	}
 	
@@ -61,7 +61,6 @@ public class PisaConnection {
 				if (c!=i) commaSepList+=",";
 				commaSepList+=pdbCodesList.get(c);
 			}
-			//TODO use pdbs to convert the pisa parser output into our own kind of interfaces
 			allPisaInterfaces.putAll(getInterfacesDescription(commaSepList));
 		}
 		return allPisaInterfaces;
@@ -83,14 +82,54 @@ public class PisaConnection {
 		return pxmlParser.getAllInterfaces();
 	}
 	
+	/**
+	 * Retrieves the XML PISA assembly description from the PISA web server dividing the 
+	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST}, parses it and 
+	 * returns the result as a map of pdb codes to lists of PISA assemblies 
+	 * @param pdbCodesList pdb codes list for which we want to retrieve pisa assemblies
+	 * @return
+	 * @throws IOException
+	 * @throws SAXException
+	 */
+	public Map<String,PisaAsmSetList> getAssembliesDescription(List<String> pdbCodesList) throws IOException, SAXException {
+		Map<String,PisaAsmSetList> allPisaAsmSets = new HashMap<String,PisaAsmSetList>();
+		// we do batches of MAX_ENTRIES_PER_REQUEST
+		for (int i=0;i<pdbCodesList.size();i+=MAX_ENTRIES_PER_REQUEST) {
+			String commaSepList = "";
+			for (int c=i;c<i+MAX_ENTRIES_PER_REQUEST && c<pdbCodesList.size();c++) {
+				if (c!=i) commaSepList+=",";
+				commaSepList+=pdbCodesList.get(c);
+			}
+			allPisaAsmSets.putAll(getAssembliesDescription(commaSepList));
+		}
+		return allPisaAsmSets;
+	}
+	
+	/**
+	 * Retrieves the XML PISA assembly description from the PISA web server, parses it and 
+	 * returns the result as a map of pdb codes to lists of PISA assemblies 
+	 * @param commaSepList
+	 * @return
+	 * @throws IOException
+	 * @throws SAXException
+	 */
+	private Map<String,PisaAsmSetList> getAssembliesDescription(String commaSepList) throws IOException, SAXException {
+		URL interfacesURL = new URL(assembliesUrl+commaSepList);
+		URLConnection conn = interfacesURL.openConnection();
+		
+		PisaAssembliesXMLParser pxmlParser = new PisaAssembliesXMLParser(conn.getInputStream());
+		return pxmlParser.getAllAssemblies();
+	}
+	
 	public static void main(String[] args) throws Exception {
-		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, null, null);
+		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, PISA_ASSEMBLIES_URL, null);
 		String pdbCode1 = "1aor";
 		String pdbCode2 = "1bxy";
 		
 		File cifFile1 = new File(System.getProperty("java.io.tmpdir"),"pisa_conn"+"_"+pdbCode1+".cif");
 		File cifFile2 = new File(System.getProperty("java.io.tmpdir"),"pisa_conn"+"_"+pdbCode2+".cif");
 		PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode1, cifFile1, false);
+		PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode2, cifFile2, false);
 		PdbAsymUnit pdb1 = new PdbAsymUnit(cifFile1);
 		PdbAsymUnit pdb2 = new PdbAsymUnit(cifFile2);
 
@@ -114,5 +153,21 @@ public class PisaConnection {
 				interf.printTabular(System.out);
 			}
 		}
+		
+		Map<String,PisaAsmSetList> allPisaAsmSets = pc.getAssembliesDescription(pdbCodesList);
+		for (String pdbCode:allPisaAsmSets.keySet()) {
+			System.out.println(pdbCode);
+			for (PisaAsmSet asmSet:allPisaAsmSets.get(pdbCode)) {
+				for (PisaAssembly ass:asmSet) {
+					System.out.print(pdbCode+"\t"+ass.getId()+"\t"+ass.getMmsize()+"\t"+ass.getFormula()+"\t"+String.format("%6.2f",ass.getDissEnergy())+"\t[");
+					for (int interfId:ass.getInterfaceIds()) {
+						System.out.print(interfId+" ");
+					}
+					System.out.println("]");
+				}
+			}
+		}
+		
+
 	}
 }
