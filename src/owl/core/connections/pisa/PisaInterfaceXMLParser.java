@@ -102,6 +102,12 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	 * @return a map of pdb codes to lists of interfaces
 	 */
 	public Map<String,PisaInterfaceList> getAllInterfaces() {
+		
+		// first we fill the protprotId members
+		for (PisaInterfaceList pil:allInterfaces.values()) {
+			pil.setProtProtIds();
+		}
+		
 		return allInterfaces;
 	}
 	

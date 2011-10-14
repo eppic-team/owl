@@ -46,8 +46,6 @@ public class PdbAsymUnitTest {
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String LISTFILE = TESTDATADIR+"/testset_interfaces.txt";
 	
-	private static final String PISA_INTERFACES_URL = "http://www.ebi.ac.uk/msd-srv/pisa/cgi-bin/interfaces.pisa?";
-	
 	private static final double CUTOFF = 5.9;
 	
 	// we allow for a 20% discrepancy from PISA in area values (we calculate with NACCESS/our own implementation and results will disagree always)
@@ -127,7 +125,7 @@ public class PdbAsymUnitTest {
 		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
 		
 		// getting PISA interfaces
-		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, null, null);
+		PisaConnection pc = new PisaConnection();
 		System.out.println("Downloading PISA interfaces");
 		Map<String, PisaInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
 

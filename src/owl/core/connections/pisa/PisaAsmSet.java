@@ -16,6 +16,10 @@ public class PisaAsmSet implements Iterable<PisaAssembly> {
 		return list.get(i);
 	}
 	
+	public int size() {
+		return list.size();
+	}
+	
 	public boolean add(PisaAssembly pisaAssembly) {
 		return list.add(pisaAssembly);
 	}

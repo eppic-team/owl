@@ -31,16 +31,18 @@ public class PisaConnection {
 	
 	private static final String LOCAL_CIF_DIR = "/nfs/data/dbs/pdb/data/structures/all/mmCIF";
 	
-	private static final int MAX_ENTRIES_PER_REQUEST = 50; // pisa doesn't specify a limit but recommends 20-50 per request
+	private static final int MAX_ENTRIES_PER_REQUEST = 10; // pisa doesn't specify a limit but recommends 20-50 per request
+														   // first we used 50 and seemed to work, lately (14Oct 2011) we had to change to 10 
+														   // because the server would stall at downloading
 	
 	private String interfacesUrl;
 	private String assembliesUrl;
 	//private String pdbAssembliesUrl;
 	
-	public PisaConnection(String interfacesUrl, String assembliesUrl, String pdbAssembliesUrl)	{
-		this.interfacesUrl = interfacesUrl;
-		this.assembliesUrl = assembliesUrl;
-		//this.pdbAssembliesUrl = pdbAssembliesUrl;
+	public PisaConnection()	{
+		this.interfacesUrl = PISA_INTERFACES_URL;
+		this.assembliesUrl = PISA_ASSEMBLIES_URL;
+		//this.pdbAssembliesUrl = PISA_PDB_ASSEMBLIES_URL;
 	}
 	
 	/**
@@ -122,7 +124,7 @@ public class PisaConnection {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		PisaConnection pc = new PisaConnection(PISA_INTERFACES_URL, PISA_ASSEMBLIES_URL, null);
+		PisaConnection pc = new PisaConnection();
 		String pdbCode1 = "1aor";
 		String pdbCode2 = "1bxy";
 		
@@ -159,11 +161,7 @@ public class PisaConnection {
 			System.out.println(pdbCode);
 			for (PisaAsmSet asmSet:allPisaAsmSets.get(pdbCode)) {
 				for (PisaAssembly ass:asmSet) {
-					System.out.print(pdbCode+"\t"+ass.getId()+"\t"+ass.getMmsize()+"\t"+ass.getFormula()+"\t"+String.format("%6.2f",ass.getDissEnergy())+"\t[");
-					for (int interfId:ass.getInterfaceIds()) {
-						System.out.print(interfId+" ");
-					}
-					System.out.println("]");
+					System.out.println(pdbCode+"\t"+ass.getId()+"\t"+ass.getMmsize()+"\t"+ass.getFormula()+"\t"+String.format("%6.2f",ass.getDissEnergy())+"\t"+ass.getInterfaceIdsString());
 				}
 			}
 		}

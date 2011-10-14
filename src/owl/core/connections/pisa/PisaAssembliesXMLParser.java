@@ -36,6 +36,7 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 	private static final String SCORE_TAG = "score";
 	private static final String	DISS_ENERGY_TAG = "diss_energy";
 	private static final String	FORMULA_TAG = "formula";
+	private static final String	COMPOSITION_TAG = "composition";
 
 	private static final String NOCC_TAG = "nocc";
 		
@@ -147,6 +148,8 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 					initValueReading();
 				} else if (name.equals(FORMULA_TAG)) {
 					initValueReading();
+				} else if (name.equals(COMPOSITION_TAG)) {
+					initValueReading();
 				} else if (name.equals(INTERFACES_TAG)) {
 					inInterfaces = true;
 				}
@@ -191,6 +194,8 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 					currentPisaAssembly.setDissEnergy(Double.parseDouble(flushValue()));
 				} else if (name.equals(FORMULA_TAG)) {
 					currentPisaAssembly.setFormula(flushValue());
+				} else if (name.equals(COMPOSITION_TAG)) {
+					currentPisaAssembly.setComposition(flushValue());
 				} else if (name.equals(ASSEMBLY_TAG)) {
 					inAssembly = false;
 					currentAsmSet.add(currentPisaAssembly);

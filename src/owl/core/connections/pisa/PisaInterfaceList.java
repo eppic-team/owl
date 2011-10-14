@@ -35,6 +35,48 @@ public class PisaInterfaceList implements Iterable<PisaInterface> {
 	}
 	
 	/**
+	 * Gets the PISA interface identified by the given PISA interface id
+	 * If no such id exists returns null.
+	 * @param id
+	 * @return
+	 */
+	public PisaInterface getById(int id) {
+		for (PisaInterface pi:list) {
+			if (pi.getId()==id) return pi;
+		}
+		return null;
+	}
+	
+	/**
+	 * Gets the PISA interface identified by the given prot-prot interface id, 
+	 * that is the interface serial if only protein-protein interfaces are considered.
+	 * @param protprotId
+	 * @return
+	 */
+	public PisaInterface getByProtProtId(int protprotId) {
+		for (PisaInterface pi:list) {
+			if (pi.getProtProtId()==protprotId) return pi;
+		}
+		return null;		
+	}
+	
+	/**
+	 * Sets the protprotId members of the PisaInterfaces in this list
+	 * @return
+	 */
+	protected void setProtProtIds() {
+		int i = 1;
+		for (PisaInterface pi:list) {
+			if (pi.isProtein()) {
+				pi.setProtProtId(i);
+				i++;
+			} else {
+				pi.setProtProtId(-1);
+			}
+		}
+	}
+	
+	/**
 	 * Converts this list of Pisa interfaces to one of our ChainInterfaceList containing interfaces
 	 * including coordinates appropriately transformed as indicated by transformations read from Pisa.
 	 * @param pdb the PDB entry data corresponding to this PisaInterfaceList

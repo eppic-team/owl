@@ -20,6 +20,9 @@ public class PisaInterface implements Comparable<PisaInterface> {
 	private PisaMolecule firstMolecule;
 	private PisaMolecule secondMolecule;
 	
+	// our own fields
+	private int protprotId; 		// the serial number of this interface if only protein-protein interfaces are counted
+	
 	public PisaInterface() {
 		
 	}
@@ -139,6 +142,23 @@ public class PisaInterface implements Comparable<PisaInterface> {
 		return (firstMolecule.isProtein() && secondMolecule.isProtein());
 	}
 
+	/**
+	 * Return the serial number of this interface if only protein-protein interfaces are
+	 * counted. 1 would be the top prot-prot interface in the PISA list (usually biggest prot-prot interface) 
+	 * @return
+	 */
+	public int getProtProtId() {
+		return protprotId;
+	}
+	
+	/**
+	 * Sets the protprotId
+	 * @param protprotId
+	 */
+	public void setProtProtId(int protprotId) {
+		this.protprotId = protprotId;
+	}
+	
 	@Override
 	public int compareTo(PisaInterface o) {
 		return new Double(this.getInterfaceArea()).compareTo(o.getInterfaceArea());
