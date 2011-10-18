@@ -49,6 +49,7 @@ public class getPisaAssemblyPreds {
 		
 		for (String pdbCode:pdbCodes) {
 			PisaAsmSetList pal = asms.get(pdbCode);
+			if (pal==null) continue; // pisa didn't return the pdb code, probably obsoleted
 			if (pal.size()==0) {
 				System.out.printf("%4s\t%2d\n",pdbCode,1);
 			} else {
@@ -62,11 +63,12 @@ public class getPisaAssemblyPreds {
 					int mmsizePred = 1;
 					if (pa.getDissEnergy()>0) mmsizePred = pa.getMmsize();
 
-					System.out.printf("\t%2d\t%2d\t%5.1f\t%20s\t%s\n",
+					System.out.printf("\t%2d\t%2d\t%5.1f\t%20s\t%s\t%s\n",
 							mmsizePred,pa.getMmsize(),
 							pa.getDissEnergy(),
 							pa.getFormula(),
-							pa.getInterfaceIdsString());
+							pa.getInterfaceIdsString(),
+							pa.getScore());
 					i++;
 				}
 			}
