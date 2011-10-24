@@ -17,11 +17,7 @@
 	<classpathentry exported="true" kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-api-2.0-beta1-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-graph-impl-2.0-beta1-sources.jar"/>
-	<classpathentry kind="lib" path="jars/uniprot/spring-core.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/uniprotjapi.jar"/>
-	<classpathentry kind="lib" path="jars/uniprot/spring-aop.jar"/>
-	<classpathentry kind="lib" path="jars/uniprot/spring-beans.jar"/>
-	<classpathentry kind="lib" path="jars/uniprot/spring-remoting.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/commons-logging.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/aopalliance.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/commons-httpclient.jar"/>
@@ -36,5 +32,10 @@
 	<classpathentry kind="lib" path="jars/batik/batik-xml.jar"/>
 	<classpathentry kind="lib" path="jars/JRclient-RE817.jar"/>
 	<classpathentry kind="lib" path="jars/commons-math-2.2.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring.aop.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring.beans.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring.context.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring.core.jar"/>
+	<classpathentry kind="lib" path="jars/uniprot/spring.web.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
