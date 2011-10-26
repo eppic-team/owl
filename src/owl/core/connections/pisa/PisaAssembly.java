@@ -7,6 +7,23 @@ import java.util.regex.Pattern;
 
 public class PisaAssembly implements Comparable<PisaAssembly> {
 
+	// the fantastically diplomatic PISA score strings ;)
+	private static final String SCORE_STABLE = 
+			"This assembly appears to be stable in solution.";
+	private static final String SCORE_UNSTABLE = 
+			"This assembly may be formed from crystallographic considerations, however it does not appear to be stable in solution.";
+	// this message seems to be the one appearing on top of the list when there are no stable assemblies, however in some cases it appears
+	// as the score of a specific assembly, e.g. 1eer (set 1, assembly 2)
+	// we'll considered that it means simply unstable 
+	private static final String SCORE_UNSTABLE2 =   
+			"Analysis of crystal interfaces has not revealed any strong indications that this assembly may form stable complexes in solution.";
+	private static final String SCORE_GRAY = 
+			"This assembly falls into a grey region of complex formation criteria. It may or may not be stable in solution.";
+	
+	public enum PredictionType {
+		STABLE, UNSTABLE, GRAY;
+	}
+	
 	private int id;
 	private int mmsize;
 	private String score;
@@ -105,6 +122,17 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 		} else {
 			return false;
 		}
+	}
+	
+	/**
+	 * Returns the prediction type (STABLE, UNSTABLE, GRAY) from the score string.
+	 * @return
+	 */
+	public PredictionType getPredictionType() {
+		if (score.equals(SCORE_STABLE)) return PredictionType.STABLE;
+		if (score.equals(SCORE_UNSTABLE) || score.equals(SCORE_UNSTABLE2)) return PredictionType.UNSTABLE;
+		if (score.equals(SCORE_GRAY)) return PredictionType.GRAY;
+		return null;
 	}
 	
 	@Override

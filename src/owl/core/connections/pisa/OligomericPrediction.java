@@ -18,11 +18,23 @@ public class OligomericPrediction {
 	private int mmSize;
 	private List<PisaAssembly> assemblies;
 	
+	/**
+	 * Creates a new OligomericPrediction object passing the macromolecular size:
+	 * 1 for monomer, 2 for dimer, etc
+	 * If PISA prediction is gray then we use mmSize -1
+	 * @param mmSize
+	 */
 	public OligomericPrediction(int mmSize) {
 		this.mmSize = mmSize;
 		assemblies = new ArrayList<PisaAssembly>();
 	}
 	
+	/**
+	 * Returns the macromolecular size of this OligomericPrediction:
+	 * 1 for monomer, 2 for dimer etc.
+	 * If value returned is -1, it means that PISA prediction was in the GRAY area.
+	 * @return
+	 */
 	public int getMmSize() {
 		return mmSize;
 	}

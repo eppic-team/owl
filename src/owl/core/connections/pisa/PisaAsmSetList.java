@@ -55,17 +55,33 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 		} 
 		PisaAsmSet pas = get(0);
 		
-		// NOTE pisa has a grey zone (anything with deltaGdiss between -2 and 2 I believe) that we don't use here.
-		// we simply call either a valid assembly when deltaGdiss>0, not valid deltaGdiss<0
+		// NOTE that in principle PISA uses deltaGdiss to classify between stable, unstable and gray:
+		//  stable >0
+		//  unstable ~<-2
+		//  gray ~>-2 && <0
+		// But the rule is not always so clear, see for instance 1ibr where first assembly is deltaGdiss>0 but gray
+		// or 1eer where deltaGdiss=-0.9 and it's considered stable, while for 1bam deltaGdiss=-1.6 is gray
 		
-		// we check now for cases when the AsmSet is composed entirely of assemblies with deltaGdiss<0, e.g. 3hzl
-		// those will be called monomers directly
-		boolean validAsmExist = false;
+		// check whether all assemblies of the set are unstable or all gray
+		boolean allGray = true;
+		boolean allUnstable = true;
+		
 		for (PisaAssembly pa:pas) {
-			if (pa.getDissEnergy()>0 && pa.isMacromolecular()) validAsmExist = true;
+			if (pa.isMacromolecular()) {
+				if (pa.getPredictionType()!=PisaAssembly.PredictionType.GRAY) allGray = false;
+				if (pa.getPredictionType()!=PisaAssembly.PredictionType.UNSTABLE) allUnstable = false;
+			}
 		}
-		if (!validAsmExist) 
-			return new OligomericPrediction(1);
+
+		if (allGray) {
+			return new OligomericPrediction(-1);
+		}
+		if (allUnstable) {
+			// then it's a monomer
+			return new OligomericPrediction(1);				
+		}
+
+			
 
 		// all other cases: one or more stable assemblies in the AsmSet
 		OligomericPrediction op = new OligomericPrediction(1);
