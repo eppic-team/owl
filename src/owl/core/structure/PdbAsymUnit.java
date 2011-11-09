@@ -983,10 +983,14 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 		
 		// this condition covers 3 cases:
-		// a) entries with expMethod X-RAY and defined crystalCell (most usual case)
+		// a) entries with expMethod X-RAY/other diffraction and defined crystalCell (most usual case)
 		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
 		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
-		if (cell!=null && (this.expMethod==null || this.expMethod.equals("X-RAY DIFFRACTION"))) { 
+		if (cell!=null && 
+				(this.expMethod==null || 
+				this.expMethod.equals("X-RAY DIFFRACTION") || 
+				this.expMethod.equals("NEUTRON DIFFRACTION") || 
+				this.expMethod.equals("ELECTRON CRYSTALLOGRAPHY"))) { 
 			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
