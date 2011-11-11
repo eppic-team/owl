@@ -406,10 +406,11 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * returning a MultipleSequenceAlignment object
 	 * @param tcoffeeBin
 	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
+	 * @params nThreads number of CPU cores t_coffee should use
 	 * @throws IOException
 	 * @throws TcoffeeException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast) throws IOException, TcoffeeException, InterruptedException {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads) throws IOException, TcoffeeException, InterruptedException {
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");
@@ -422,7 +423,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		}
 		this.writeToFasta(homologSeqsFile, true);
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast);
+		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
 		
 		try {
 			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);

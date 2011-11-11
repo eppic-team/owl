@@ -52,7 +52,7 @@ public class TcoffeeRunner {
 		PrintStream out = new PrintStream(profileFile);
 		profile.writeFasta(out, 80, true);
 		out.close();
-		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, outTreeFile, profileFile, logFile, false);
+		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, outTreeFile, profileFile, logFile, false, 1);
 		
 		MultipleSequenceAlignment al =  null;
 		try {
@@ -75,10 +75,11 @@ public class TcoffeeRunner {
 	 * @param profileFile the fasta file with a multiple sequence alignment representing 
 	 * the profile to align to, if null no profile will be used
 	 * @param logFile all stdout/stderr of t_coffee will be logged, if null no logging at all (quiet mode)
-	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate) 
+	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate)
+	 * @param nThreads how many CPU cores should t_coffee (-n_core option of t_coffee) 
 	 * @throws TcoffeeException if t_coffee exits with non 0 status or an IOException occurs
 	 */
-	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast) throws TcoffeeException, InterruptedException {
+	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast, int nThreads) throws TcoffeeException, InterruptedException {
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
@@ -91,7 +92,7 @@ public class TcoffeeRunner {
 		if (veryFast) {
 			veryFastStr = "-mode quickaln";
 		}
-		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+" -newtree="+outTreeFile+" "+quietStr+" "+veryFastStr;
+		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+" -newtree="+outTreeFile+" "+quietStr+" "+veryFastStr+" -n_core="+nThreads;
 		
 		try {
 			PrintWriter tcofLog = new PrintWriter(logFile);
