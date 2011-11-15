@@ -21,6 +21,7 @@ SITE="ftp://ftp.ebi.ac.uk/pub" # UK mirror
  
 
 COMPLETEKBDIR="databases/uniprot/current_release/knowledgebase/complete"
+UNIREFDIR="databases/uniprot/uniref/uniref100"
 
 SIFTSPDB2UNIPROTFTP="ftp://ftp.ebi.ac.uk/pub/databases/msd/sifts/text/pdb_chain_uniprot.lst"
 
@@ -29,12 +30,15 @@ SPROT="uniprot_sprot.fasta"
 SPROTGZ="${SPROT}.gz"
 TREMBL="uniprot_trembl.fasta"
 TREMBLGZ="${TREMBL}.gz"
+UNIREF100="uniref100.fasta"
+UNIREF100GZ="uniref100.fasta.gz"
 ALL="uniprot_all.fasta"
 RELDATEFILE="reldate.txt"
 SIFTSPDB2UNIPROT="pdb_chain_uniprot.lst"
 
 sproturl="$SITE/$COMPLETEKBDIR/$SPROTGZ"
 tremblurl="$SITE/$COMPLETEKBDIR/$TREMBLGZ"
+uref100url="$SITE/$UNIREFDIR/$UNIREF100GZ"
 reldateurl="$SITE/$COMPLETEKBDIR/$RELDATEFILE"
 
 # remove existing download directory if there was one
@@ -75,6 +79,14 @@ else
 	exit 1	
 fi
 
+curl -z $CURRENT/$UNIREF100 $uref100url > $DOWNLOAD/${UNIREF100}.gz
+if [ -s "$DOWNLOAD/${UNIREF100}.gz" ]
+then
+    echo "New Uniref100 version downloaded"
+else
+    echo "Remote Uniref100 file not newer than local one. Something wrong. Exiting"
+    exit 1
+fi
 
 # getting the SIFTS PDB to UNIPROT mapping file
 curl $SIFTSPDB2UNIPROTFTP > $DOWNLOAD/$SIFTSPDB2UNIPROT
@@ -83,6 +95,7 @@ curl $SIFTSPDB2UNIPROTFTP > $DOWNLOAD/$SIFTSPDB2UNIPROT
 # uncompressing
 gzip -df $DOWNLOAD/${SPROT}.gz
 gzip -df $DOWNLOAD/${TREMBL}.gz
+gzip -df $DOWNLOAD/${UNIREF100}.gz
 # creating the "all" file
 cat $DOWNLOAD/$TREMBL $DOWNLOAD/$SPROT > $DOWNLOAD/$ALL
 	
@@ -99,9 +112,10 @@ echo "Running formatdb..."
 logfile="$DOWNLOAD/formatdb.log"
 
 cd $DOWNLOAD
-$FORMATDB -p T -o T -l $logfile -i $SPROT
-$FORMATDB -p T -o T -l $logfile -i $TREMBL
+#$FORMATDB -p T -o T -l $logfile -i $SPROT
+#$FORMATDB -p T -o T -l $logfile -i $TREMBL
 $FORMATDB -p T -o T -l $logfile -i $ALL
+$FORMATDB -p T -o T -l $logfile -i $UNIREF100
 
 #renaming DOWNLOAD dir to uniprot version and updating current symlink
 echo "Creating new symlink..."
