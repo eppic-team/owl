@@ -1,7 +1,9 @@
 package owl.core.runners;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
@@ -25,6 +27,8 @@ public class TcoffeeRunner {
 	private static final boolean DEBUG = false;
 	private File tcofProg;
 
+	private String cmdLine;
+	private File logFile;
 	
 	public TcoffeeRunner(File tcofProg) {
 		this.tcofProg = tcofProg;
@@ -52,7 +56,8 @@ public class TcoffeeRunner {
 		PrintStream out = new PrintStream(profileFile);
 		profile.writeFasta(out, 80, true);
 		out.close();
-		runTcoffee(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, outTreeFile, profileFile, logFile, false, 1);
+		buildCmdLine(inFile, outFile, DEFAULT_SEQ2PROF_OUTFORMAT, outTreeFile, profileFile, logFile, false, 1);
+		runTcoffee();
 		
 		MultipleSequenceAlignment al =  null;
 		try {
@@ -67,7 +72,8 @@ public class TcoffeeRunner {
 	}
 	
 	/**
-	 * Runs t_coffee with default parameters (and optionally a profile)
+	 * Builds the t_coffee command line returning it.
+	 * The command line will then be executed upon call of {@link #runTcoffee(File, File, String, File, File, File, boolean, int)}
 	 * @param inFile the file with the sequences to be aligned
 	 * @param outFile the output file that will contain the aligned sequences
 	 * @param outFormat the output format, valid values are: fasta, clustalw
@@ -77,31 +83,47 @@ public class TcoffeeRunner {
 	 * @param logFile all stdout/stderr of t_coffee will be logged, if null no logging at all (quiet mode)
 	 * @param veryFast if true will use t_coffee quickaln mode (faster but less accurate)
 	 * @param nThreads how many CPU cores should t_coffee (-n_core option of t_coffee) 
-	 * @throws TcoffeeException if t_coffee exits with non 0 status or an IOException occurs
+	 * @return
 	 */
-	public void runTcoffee(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast, int nThreads) throws TcoffeeException, InterruptedException {
+	public String buildCmdLine(File inFile, File outFile, String outFormat, File outTreeFile, File profileFile, File logFile, boolean veryFast, int nThreads) {
+		this.logFile = logFile;
 		String profStr = "";
 		if (profileFile!=null) {
 			profStr = "-profile "+profileFile+" -profile_comparison=full50";
 		}
 		String quietStr = "-quiet";
-		if (logFile!=null) {
-			quietStr = "-quiet="+logFile;
-		}
 		String veryFastStr = "";
 		if (veryFast) {
 			veryFastStr = "-mode quickaln";
 		}
-		String cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "+" -newtree="+outTreeFile+" "+quietStr+" "+veryFastStr+" -n_core="+nThreads;
+		cmdLine = tcofProg + " "+ inFile + " "+ profStr + " -output=" +outFormat+" -outfile="+outFile+" "
+				+" -newtree="+outTreeFile+" "
+				+quietStr+" "+veryFastStr+" -n_core="+nThreads;
+		return cmdLine;
+	}
+	
+	/**
+	 * Runs t_coffee with command line built trough {@link #buildCmdLine(File, File, String, File, File, File, boolean, int)}
+	 * @throws TcoffeeException if t_coffee exits with non 0 status or an IOException occurs
+	 */
+	public void runTcoffee() throws TcoffeeException, InterruptedException {
 		
 		try {
+			
 			PrintWriter tcofLog = new PrintWriter(logFile);
 			
 			Process proc = Runtime.getRuntime().exec(cmdLine);
+
+			BufferedReader errorBR = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+			String line;
+			while((line = errorBR.readLine()) != null) {
+				tcofLog.println(line);
+			}
+
 			int exitValue = proc.waitFor();
 			// throwing exception if exit state is not 0 
 			if (exitValue!=0) {
-				tcofLog.flush();
+				tcofLog.close();
 				throw new TcoffeeException(tcofProg + " exited with value "+exitValue+". Revise log file "+logFile);
 			}
 
@@ -112,6 +134,14 @@ public class TcoffeeRunner {
 		}
 		
 		
+	}
+	
+	/**
+	 * Returns the last run t_coffee cached command line
+	 * @return
+	 */
+	public String getCmdLine() {
+		return cmdLine;
 	}
 	
 	public static void main(String[] args) throws Exception {

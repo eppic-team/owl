@@ -422,15 +422,21 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File alnFile = File.createTempFile("homologs.",".aln");
 		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
-		if (!DEBUG) {
+
+		this.writeToFasta(homologSeqsFile, true);
+		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
+		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
+		LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
+		tcr.runTcoffee();
+		if (!DEBUG) { 
+			// note that if the run of tcoffee throws an exception, files are not marked for deletion
 			homologSeqsFile.deleteOnExit();
 			alnFile.deleteOnExit();
 			tcoffeeLogFile.deleteOnExit();
 			outTreeFile.deleteOnExit(); 
 		}
-		this.writeToFasta(homologSeqsFile, true);
-		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.runTcoffee(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
+
+
 		
 		try {
 			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
