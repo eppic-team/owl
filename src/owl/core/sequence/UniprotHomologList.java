@@ -142,6 +142,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			if (cacheFile!=null) {
 				try {
 					Goodies.copyFile(outBlast, cacheFile);
+					LOGGER.info("Writing blast cache file "+cacheFile);
 				} catch (IOException e) {
 					System.err.println("Couldn't write the blast cache file "+cacheFile);
 					System.err.println(e.getMessage());
