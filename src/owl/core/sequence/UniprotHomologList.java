@@ -184,7 +184,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 				String uniId = m.group(1);
 				list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
 			} else {
-				System.err.println("Could not find uniprot id in subject id "+sid);
+				Matcher m2 = Sequence.DEFLINE_PRIM_ACCESSION_UNIREF_REGEX.matcher(sid);
+				if (m2.matches()) {
+					String uniId = m2.group(1);
+					list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
+				} else {
+					System.err.println("Could not find uniprot id in subject id "+sid);
+				}
 			}
 		}
 		initialiseMap();

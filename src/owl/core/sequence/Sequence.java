@@ -35,6 +35,7 @@ public class Sequence implements Serializable {
 	// in principle this works for emblcds and uniprot fasta headers (not tested anywhere else!) 
 	// it also removes the version (the .1 suffix at the end of the identifier that sometimes is used for instance in emblcds)
 	public static final Pattern DEFLINE_PRIM_ACCESSION_REGEX = Pattern.compile("^.*\\|([^.]+)(?:\\.\\d+)?\\|.*$");
+	public static final Pattern DEFLINE_PRIM_ACCESSION_UNIREF_REGEX = Pattern.compile("^.*\\|UniRef\\d+_(\\w+)$");
 	public static final Pattern DEFLINE_SEC_ACCESSION_REGEX = Pattern.compile("^.*\\|.*\\|([^. ]+)(?:\\.\\d+)?.*$");
 	
 	public static final boolean PROT_SEQUENCE = true;
