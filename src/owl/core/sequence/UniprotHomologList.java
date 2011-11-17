@@ -120,7 +120,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @throws UniprotVerMisMatchException if uniprot versions of cacheFile given and blastDbDir do not coincide
 	 * @throws InterruptedException
 	 */
-	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, File cacheFile) throws IOException, BlastException, UniprotVerMisMatchException, InterruptedException {
+	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, int maxNumSeqs, File cacheFile) throws IOException, BlastException, UniprotVerMisMatchException, InterruptedException {
 		File outBlast = null;
 		boolean fromCache = false;
 		if (cacheFile!=null && cacheFile.exists()) {
@@ -137,7 +137,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			// NOTE: we blast the reference uniprot sequence
 			this.ref.getUniprotSeq().writeToFastaFile(inputSeqFile);
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
-			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
+			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
 			this.uniprotVer = readUniprotVer(blastDbDir);
 			if (cacheFile!=null) {
 				try {

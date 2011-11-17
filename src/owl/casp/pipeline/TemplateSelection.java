@@ -227,8 +227,8 @@ public class TemplateSelection {
 		outPdbBlast = new File(outDir,baseName+BLASTOUT_PDB_SUFFIX);
 		File classicOutFile = new File(outDir,baseName+BLASTOUT_CLASSIC_PDB_SUFFIX);
 		BlastRunner blastRunner = new BlastRunner(BLASTBIN_DIR, BLASTDB_PDB_DIR);
-		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, outPdbBlast, BLAST_DEFAULT_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
-		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, classicOutFile, BLAST_CLASSIC_OUTPUT, BLAST_NO_FILTERING, blastNumThreads);
+		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, outPdbBlast, BLAST_DEFAULT_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, 500);
+		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, classicOutFile, BLAST_CLASSIC_OUTPUT, BLAST_NO_FILTERING, blastNumThreads, 500);
 		
 		try {
 			BlastXMLParser blastParser = new BlastXMLParser(outPdbBlast);

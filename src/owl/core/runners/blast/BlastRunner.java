@@ -38,11 +38,15 @@ public class BlastRunner {
 		this.makematProg = new File(blastBinDir,MAKEMAT_PROG).getAbsolutePath();
 	}
 	
-	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) { 
+	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) { 
 		String dbFullPath = new File(blastDbDir,db).getAbsolutePath();
 		String filter = "";
 		if (noFiltering) filter = " -F F ";
+		String maxHits = "";
+		// default blast max num hits is 500, only if we require more, we pass the -v option
+		if (maxNumHits>500) maxHits = " -v "+maxNumHits+" ";
 		String options = filter +
+						 maxHits +
 						 " -a "+numThreads+
 						 " -m "+outputType+
 						 " -i "+queryFile.getAbsolutePath()+
@@ -86,7 +90,7 @@ public class BlastRunner {
 		String inProfileOpt = "";
 		if (outProfileFile!=null) outProfileOpt = " -C "+outProfileFile.getAbsolutePath();
 		if (inProfileFile!=null) inProfileOpt = " -R "+inProfileFile.getAbsolutePath();
-		String cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads) +
+		String cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, 500) +
 						" -j " + maxIter+
 						outProfileOpt + inProfileOpt;
 		Process blastpgpProc = Runtime.getRuntime().exec(cmdLine);
@@ -109,16 +113,19 @@ public class BlastRunner {
 	 * that the default for this parameter varies from blastall to blastpgp and also from one 
 	 * output type to another. So it is recommended to use it to get consistent results if one
 	 * wants no filtering.
+	 * @param numThreads
+	 * @param maxNumHits the maximum number of hits to report, only used when >500, then passed 
+	 * to blast with option -v 
 	 * @throws IOException
 	 * @throws BlastException if exit statis of the program is not 0
 	 * @throws InterruptedException
 	 */
-	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads) 
+	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
 	throws IOException, BlastException, InterruptedException {
 		
 		checkIO(queryFile, db);
 		
-		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads);
+		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, maxNumHits);
 		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
 		
 
@@ -137,13 +144,16 @@ public class BlastRunner {
 	 * @param noFiltering if true no filtering of query sequence will be done (-F F). Note 
 	 * that the default for this parameter varies from blastall to blastpgp and also from one 
 	 * output type to another. So it is recommended to use it to get consistent results if one
-	 * wants no filtering. 
+	 * wants no filtering.
+	 * @param numThreads
+	 * @param maxNumHits the maximum number of hits to report, only used when >500, then passed 
+	 * to blast with option -v 
 	 * @throws IOException
 	 * @throws BlastException
 	 */
-	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads) 
+	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
 	throws IOException, BlastException, InterruptedException {
-		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads);
+		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads, maxNumHits);
 	}
 	
 	/**
@@ -198,7 +208,7 @@ public class BlastRunner {
 		
 		// BlastP
 		System.out.println("Running blast against PDB...");
-		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering, numThreads);
+		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering, numThreads, 500);
 		BlastTabularParser blastParser1 = new BlastTabularParser(outFile);
 		BlastHitList hits1 = blastParser1.getHits();
 		hits1.setQueryLength(queryLength);

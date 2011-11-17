@@ -70,8 +70,8 @@ public class BlastParsersTest {
 			tabFiles[i] = outFileTAB;
 			xmlFiles[i] = outFileXML;
 			BlastRunner br = new BlastRunner(BLAST_BIN_DIR,BLAST_DB_DIR);
-			br.runBlastp(queryFile, BLAST_DB, outFileXML, 7, true, numThreads);
-			br.runBlastp(queryFile, BLAST_DB, outFileTAB, 8, true, numThreads);
+			br.runBlastp(queryFile, BLAST_DB, outFileXML, 7, true, numThreads, 500);
+			br.runBlastp(queryFile, BLAST_DB, outFileTAB, 8, true, numThreads, 500);
 			i++;
 		}
 	}
