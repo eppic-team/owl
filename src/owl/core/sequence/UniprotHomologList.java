@@ -123,11 +123,45 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, int maxNumSeqs, File cacheFile) throws IOException, BlastException, UniprotVerMisMatchException, InterruptedException {
 		File outBlast = null;
 		boolean fromCache = false;
+		BlastHitList blastList = null;
+		
 		if (cacheFile!=null && cacheFile.exists()) {
 			outBlast = cacheFile;
 			fromCache = true;
 			LOGGER.warn("Reading blast results from cache file "+cacheFile);
-		} else {
+
+			try {
+				BlastXMLParser blastParser = new BlastXMLParser(outBlast);
+				blastList = blastParser.getHits();
+				
+				if (blastList.size()<maxNumSeqs) {
+					// we are asking for more max hits than present in the file, we have to blast again
+					LOGGER.info("Blast cache file exits ("+cacheFile+") but it contains only "+blastList.size()+" hits. Need to re-blast as a max of "+maxNumSeqs+" hits have been requested");
+					fromCache = false;
+					blastList = null;
+				} else {
+					// if we do take the cache file we have to do some sanity checks
+					if (!blastList.getQueryId().equals(this.ref.getUniprotSeq().getName())) {
+						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotSeq().getName());
+					}
+					this.uniprotVer = readUniprotVer(cacheFile.getParent());
+					String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
+					if (!uniprotVerFromBlastDbDir.equals(uniprotVer)) {
+						throw new UniprotVerMisMatchException("Uniprot version from blast db dir "+blastDbDir+
+								" ("+uniprotVerFromBlastDbDir+") does not match version in cache dir "+cacheFile.getParent()+" ("+uniprotVer+")");
+					}
+					if (!blastList.getDb().substring(blastList.getDb().lastIndexOf("/")+1).equals(blastDb)) {
+						LOGGER.error("Blast db used in cache file ("+cacheFile+") different from one requested "+blastDb);
+						LOGGER.error("Please check the blast cache directory.");
+						System.exit(1);
+					}
+				}
+			} catch (SAXException e) {
+				throw new IOException("Cache file "+cacheFile+" does not comply with blast XML format. "+e.getMessage());
+			}
+		} 
+		
+		if (!fromCache) {
 			outBlast = File.createTempFile(BLAST_BASENAME,BLASTOUT_SUFFIX);
 			File inputSeqFile = File.createTempFile(BLAST_BASENAME,FASTA_SUFFIX);
 			if (!DEBUG) {
@@ -139,43 +173,26 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
 			this.uniprotVer = readUniprotVer(blastDbDir);
+			LOGGER.info("Blasted against "+blastDbDir+"/"+blastDb);
 			if (cacheFile!=null) {
 				try {
-					Goodies.copyFile(outBlast, cacheFile);
 					LOGGER.info("Writing blast cache file "+cacheFile);
+					Goodies.copyFile(outBlast, cacheFile);
+					cacheFile.setWritable(true, false);
 				} catch (IOException e) {
 					LOGGER.error("Couldn't write the blast cache file "+cacheFile);
 					LOGGER.error(e.getMessage());
 				}
 			} 
-		}
-		
-		BlastHitList blastList = null;
-		try {
-			BlastXMLParser blastParser = new BlastXMLParser(outBlast);
-			blastList = blastParser.getHits();
-		} catch (SAXException e) {
-			if (fromCache) {
-				throw new IOException("Cache file "+cacheFile+" does not comply with blast XML format.");
-			} else {
+			try {
+				BlastXMLParser blastParser = new BlastXMLParser(outBlast);
+				blastList = blastParser.getHits();
+			} catch (SAXException e) {
 				// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug
-				System.err.println("Unexpected error: "+e.getMessage());
+				LOGGER.fatal("Unexpected error: "+e.getMessage());
 				System.exit(1);
 			}
 		}
-
-		if (fromCache) {
-			if (!blastList.getQueryId().equals(this.ref.getUniprotSeq().getName())) {
-				throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotSeq().getName());
-			}
-			this.uniprotVer = readUniprotVer(cacheFile.getParent());
-			String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
-			if (!uniprotVerFromBlastDbDir.equals(uniprotVer)) {
-				throw new UniprotVerMisMatchException("Uniprot version from blast db dir "+blastDbDir+
-						" ("+uniprotVerFromBlastDbDir+") does not match version in cache dir "+cacheFile.getParent()+" ("+uniprotVer+")");
-			}
-		}
-
 		
 		this.list = new ArrayList<UniprotHomolog>();
 		for (BlastHit hit:blastList) {
