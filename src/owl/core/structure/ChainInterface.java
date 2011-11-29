@@ -17,6 +17,9 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	private static final long serialVersionUID = 1L;
 
+	private static final int FIRST = 0;
+	private static final int SECOND = 1;
+	
 	private int id;
 	private String name;
 	private double interfaceArea;
@@ -558,6 +561,15 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public InterfaceRimCore getSecondRimCore() {
 		return secondRimCore;
+	}
+	
+	public InterfaceRimCore getRimCore(int molecId) {
+		if (molecId==FIRST) {
+			return firstRimCore;
+		} else if (molecId==SECOND) {
+			return secondRimCore;
+		}
+		return null;
 	}
 	
 	/**
