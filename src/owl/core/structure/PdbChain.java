@@ -1743,6 +1743,25 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Gets the sequence as a String using Ms instead of Xs for MSEs (seleno-methionines)
+	 * @return
+	 */
+	public String getSequenceMSEtoMET() {
+		StringBuffer sb = new StringBuffer();
+		for (int i=0;i<sequence.getLength();i++) {
+			char letter = sequence.getSeq().charAt(i);
+			Residue res = getResidue(i+1);
+			if (letter=='X' && res!=null && res.getLongCode().equals("MSE")) {
+				sb.append('M');
+				continue; // we don't want to add the X in this case
+			} 
+			sb.append(letter);
+		}
+		
+		return sb.toString();
+	}
+	
+	/**
 	 * Sets the sequence for the first time in this PdbChain. To use only from parser classes when there's no sequence set yet.
 	 * @param sequence
 	 * @param protein true if sequence is a protein, false if it is a nucleotide
