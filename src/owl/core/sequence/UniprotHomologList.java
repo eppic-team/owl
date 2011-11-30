@@ -203,11 +203,19 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 				list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
 			} else {
 				Matcher m2 = Sequence.DEFLINE_PRIM_ACCESSION_UNIREF_REGEX.matcher(sid);
-				if (m2.matches()) {
+				if (m2.matches()) {					
 					String uniId = m2.group(1);
-					list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
+					if (uniId.startsWith("UPI")){
+						LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniparc id.");
+					}
+					else if (uniId.contains("-")) {
+						LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniprot isoform id.");
+					}
+					else {						
+						list.add(new UniprotHomolog(hit,new UniprotEntry(uniId)));
+					}
 				} else {
-					System.err.println("Could not find uniprot id in subject id "+sid);
+					LOGGER.error("Could not find uniprot id in subject id "+sid);
 				}
 			}
 		}
@@ -271,7 +279,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			returnedUniIds.add(uniId);
 			if (!this.lookup.containsKey(uniId)) {
 				// this happens if the JAPI/server are really broken and return records that we didn't ask for (actually happened on the 09.02.2011!!!)
-				throw new IOException("Uniprot JAPI server returned unexpected records.");
+				throw new IOException("Uniprot JAPI server returned an unexpected record: "+uniId);
 			}
 			UniprotHomolog hom = this.getHomolog(uniId);
 
