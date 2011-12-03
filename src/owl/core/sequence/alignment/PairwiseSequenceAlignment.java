@@ -343,9 +343,51 @@ public class PairwiseSequenceAlignment implements Serializable {
 	public int getMapping2To1(int i) {
 		return getMapping2To1()[i];
 	}
-
+	
+	/**
+	 * Return the position (in sequence 1 or 2 depending of parameter) of the first occurrence of a match (identity)
+	 * @param first true if we want the position in sequence 1, false if we want the position in sequence 2  
+	 * @return the position or -1 if there are no matches
+	 */
+	public int getFirstMatchingPos(boolean first) {
+		int pos1 = 0;
+		int pos2 = 0;
+		for (int i=0;i<alignedSeq1.length();i++) {
+			char current1 = alignedSeq1.charAt(i);
+			char current2 = alignedSeq2.charAt(i);
+			if (current1==current2) {
+				if (first) return pos1;
+				else return pos2;
+			}
+			if (current1!=Alignment.GAP) pos1++;
+			if (current2!=Alignment.GAP) pos2++;
+		}
+		return -1;
+	}
+	
+	/**
+	 * Return the position (in sequence 1 or 2 depending of parameter) of the last occurrence of a match (identity)
+	 * @param first true if we want the position in sequence 1, false if we want the position in sequence 2  
+	 * @return the position or -1 if there are no matches
+	 */
+	public int getLastMatchingPos(boolean first) {
+		int pos1 = origSeq1.length()-1;
+		int pos2 = origSeq2.length()-1;
+		for (int i=alignedSeq1.length()-1;i>=0;i--) {
+			char current1 = alignedSeq1.charAt(i);
+			char current2 = alignedSeq2.charAt(i);
+			if (current1==current2) {
+				if (first) return pos1;
+				else return pos2;
+			}
+			if (current1!=Alignment.GAP) pos1--;
+			if (current2!=Alignment.GAP) pos2--;
+		}
+		return -1;		
+	}
+	
 	/*---------------------------- private methods --------------------------*/
-
+	
 	/**
 	 * Returns a string where all gap characters are removed.
 	 * @param str The input sequence

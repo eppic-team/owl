@@ -47,6 +47,10 @@ public class BlastHit implements Iterable<BlastHsp>, Serializable {
 	public void setQueryId(String queryId) {
 		this.queryId = queryId;
 	}
+	
+	public int getNumHsps() {
+		return hsps.size();
+	}
 
 	public int getQueryLength() {
 		return this.queryLength;

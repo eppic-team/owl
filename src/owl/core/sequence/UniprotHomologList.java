@@ -41,6 +41,7 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
+import owl.core.util.Interval;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
@@ -83,6 +84,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	/*-------------------------- members --------------------------*/
 	
 	private UniprotEntry ref;						 // the uniprot entry to which the homologs refer
+	private Interval refInterval;
+	private boolean isSubInterval;
 	private List<UniprotHomolog> list; 				 // the list of homologs
 	private Map<String,UniprotHomolog> lookup; // to speed up searches (uniprot ids to Homologs)
 													 // (used to be lists of homologs as we considered multi-matches of the 
@@ -101,8 +104,30 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 
 	private boolean haveCDSData;
 	
+	
 	public UniprotHomologList(UniprotEntry ref) {
+		this(ref,null);
+	}
+	
+	/**
+	 * Create a new UniprotHomologList
+	 * @param ref the uniprot entry whose sequence is the reference for this homolog list
+	 * @param interv the interval in the uniprot sequence that we actually use (with 
+	 * numbering of uniprot seq from 1 to length-1), if null the whole sequence is use 
+	 */
+	public UniprotHomologList(UniprotEntry ref, Interval interv) {
 		this.ref = ref;
+		if (interv!=null) {
+			this.refInterval = interv;
+		} else {
+			this.refInterval = new Interval(1,ref.getLength());
+		}
+		if (refInterval.beg==1 && refInterval.end==ref.getLength()) {
+			isSubInterval = false;
+		} else {
+			isSubInterval = true;
+		}
+		
 		this.idCutoff = 0.0; // i.e. no filter
 		haveCDSData = false;
 	}
@@ -125,7 +150,15 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		boolean fromCache = false;
 		BlastHitList blastList = null;
 		
+		// if a sub-interval is used, we need to alter the cache file name to contain the subinterval string
+		if (cacheFile!=null && isSubInterval) {
+			String prefix = cacheFile.getName();
+			prefix = prefix.substring(0, prefix.lastIndexOf(".blast.xml"));
+			cacheFile = new File(cacheFile.getParent(),prefix+"."+refInterval.beg+"-"+refInterval.end+".blast.xml");
+		}
+		
 		if (cacheFile!=null && cacheFile.exists()) {
+
 			outBlast = cacheFile;
 			fromCache = true;
 			LOGGER.warn("Reading blast results from cache file "+cacheFile);
@@ -168,8 +201,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 				outBlast.deleteOnExit();
 				inputSeqFile.deleteOnExit();
 			}
-			// NOTE: we blast the reference uniprot sequence
-			this.ref.getUniprotSeq().writeToFastaFile(inputSeqFile);
+			// NOTE: we blast the reference uniprot sequence using only the interval specified
+			this.ref.getUniprotSeq().getInterval(this.refInterval).writeToFastaFile(inputSeqFile);
+			
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
 			this.uniprotVer = readUniprotVer(blastDbDir);
@@ -416,8 +450,9 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 
 		if (writeQuery) {
 			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotSeq().getName());
-			for(int i=0; i<this.ref.getLength(); i+=len) {
-				pw.println(ref.getUniprotSeq().getSeq().substring(i, Math.min(i+len,ref.getLength())));
+			Sequence refSequence = ref.getUniprotSeq().getInterval(refInterval);
+			for(int i=0; i<refSequence.getLength(); i+=len) {
+				pw.println(refSequence.getSeq().substring(i, Math.min(i+len,refSequence.getLength())));
 			}
 		}
 		
@@ -867,7 +902,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	public void computeEntropies(int reducedAlphabet) {
 		this.reducedAlphabet = reducedAlphabet;
 		this.entropies = new ArrayList<Double>(); 
-		for (int i=0;i<ref.getUniprotSeq().getLength();i++){
+		for (int i=0;i<refInterval.getLength();i++){
 			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniprotSeq().getName(),i+1), reducedAlphabet));
 		}
 	}

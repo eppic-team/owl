@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.AminoAcid;
 import owl.core.util.FileFormatException;
+import owl.core.util.Interval;
 
 
 /**
@@ -148,6 +149,16 @@ public class Sequence implements Serializable {
 	 */
 	public String getSeq() {
 		return seq;
+	}
+	
+	/**
+	 * Returns a new Sequence object that is a copy of this one but with only with the
+	 * subsequence given in interval. The sequence numbering used is from 1 to length-1
+	 * @param interv
+	 * @return
+	 */
+	public Sequence getInterval(Interval interval) {
+		return new Sequence(this.name,this.seq.substring(interval.beg-1,interval.end),this.isProtein());
 	}
 
 	/**

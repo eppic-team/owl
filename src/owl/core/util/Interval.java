@@ -40,7 +40,7 @@ public class Interval implements Comparable<Interval>, Serializable {
 	}
 	
 	public int getLength(){
-		return (end - beg);
+		return (end - beg + 1);
 	}
 	
 	/**
