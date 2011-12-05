@@ -19,6 +19,8 @@ public class BlastRunner {
 	
 	private static final String BLASTP_PROGRAM_NAME = "blastp";
 	
+	public static final int		BLAST_DEFAULT_MAX_HITS = 500;
+	
 	// members
 	private String blastDbDir;
 	private String blastallProg;
@@ -44,7 +46,7 @@ public class BlastRunner {
 		if (noFiltering) filter = " -F F ";
 		String maxHits = "";
 		// default blast max num hits is 500, only if we require more, we pass the -v option
-		if (maxNumHits>500) maxHits = " -v "+maxNumHits+" ";
+		if (maxNumHits>BLAST_DEFAULT_MAX_HITS) maxHits = " -v "+maxNumHits+" ";
 		String options = filter +
 						 maxHits +
 						 " -a "+numThreads+

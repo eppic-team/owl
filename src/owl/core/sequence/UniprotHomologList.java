@@ -167,7 +167,8 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 				BlastXMLParser blastParser = new BlastXMLParser(outBlast);
 				blastList = blastParser.getHits();
 				
-				if (blastList.size()<maxNumSeqs) {
+				// 500 is blast's default, we don't want to check this if we are under default
+				if (maxNumSeqs>BlastRunner.BLAST_DEFAULT_MAX_HITS && blastList.size()<maxNumSeqs) { 
 					// we are asking for more max hits than present in the file, we have to blast again
 					LOGGER.info("Blast cache file exits ("+cacheFile+") but it contains only "+blastList.size()+" hits. Need to re-blast as a max of "+maxNumSeqs+" hits have been requested");
 					fromCache = false;
