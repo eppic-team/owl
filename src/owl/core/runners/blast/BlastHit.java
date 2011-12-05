@@ -92,7 +92,7 @@ public class BlastHit implements Iterable<BlastHsp>, Serializable {
 	public double getQueryCoverage() {
 		int countAlignedResidues = 0;
 		for (BlastHsp hsp:this) {
-			countAlignedResidues+=(hsp.getQueryEnd()-hsp.getQueryStart());
+			countAlignedResidues+=(hsp.getQueryEnd()-hsp.getQueryStart()+1);
 		}
 		return  ((double)countAlignedResidues/this.getQueryLength());
 	}
