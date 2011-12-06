@@ -350,6 +350,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		if (rimCore.getCoreResidues().size()>0) {
 			ps.println("## core: "+rimCore.getCoreResString());
 		}
+		ps.println("## seqres pdb res asa bsa burial(percent)");
 
 		for (Residue residue:firstMolecule) {			
 			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
@@ -376,7 +377,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		if (rimCore.getCoreResidues().size()>0) {
 			ps.println("## core: "+rimCore.getCoreResString());
 		}
-
+		ps.println("## seqres pdb res asa bsa burial(percent)");
+		
 		for (Residue residue:secondMolecule) {
 			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
 			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
