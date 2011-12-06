@@ -199,10 +199,11 @@ public class PymolRunner {
 		writeCommand(cmd, pml);
 		cmd = "select bothinterf , interface"+chain1+" or interface"+chain2;
 		writeCommand(cmd, pml);
-		cmd = "show surface, chain "+chain1;
-		writeCommand(cmd, pml);
-		cmd = "show surface, chain "+chain2;
-		writeCommand(cmd, pml);
+		// not showing surface anymore, was not so useful 
+		//cmd = "show surface, chain "+chain1;
+		//writeCommand(cmd, pml);
+		//cmd = "show surface, chain "+chain2;
+		//writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("color blue, core"+chains[0]+";");
 		//pymolScriptBuilder.append("color red, rim"+chains[0]+";");
 		cmd = "color "+interf1color+", interface"+chain1;
@@ -213,8 +214,8 @@ public class PymolRunner {
 		writeCommand(cmd, pml);
 		cmd = "show sticks, bothinterf";
 		writeCommand(cmd, pml);
-		cmd = "set transparency, 0.35";
-		writeCommand(cmd, pml);
+		//cmd = "set transparency, 0.35";
+		//writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("zoom bothinterf"+";");
 		cmd = "select resi 0";// so that the last selection is deactivated
 		writeCommand(cmd, pml);
