@@ -621,7 +621,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	}
 	
 	/**
-	 * Removes the redundant sequences in this list of Homologs. The redundancy reduction procedes as follows:
+	 * Removes the redundant sequences in this list of Homologs. The redundancy reduction proceeds as follows:
 	 * 1) It groups the sequences by taxonomy id and sequence identity
 	 * 2) If any of the groups have more than one member then the pairwise identities within the group are calculated 
 	 *    (all vs all Needleman-Wunsch). From the pairwise identity matrix sequences that are not 100% identity to all the others
@@ -636,7 +636,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		for (UniprotHomolog hom:this){
 			double percentId = hom.getPercentIdentity();
 			String taxId = hom.getUniprotEntry().getTaxId();
-			String key = taxId+"_"+String.format("%5.1f",percentId);
+			String key = taxId+"_"+String.format("%6.3f",percentId);
 			if (groups.containsKey(key)) {
 				groups.get(key).add(hom);
 			} else {
@@ -659,9 +659,11 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUniprotSeq(), list.get(j).getUniprotSeq());
 							pairwiseIdMatrix[i][j]=aln.getPercentIdentity();
 						} catch (PairwiseSequenceAlignmentException e) {
-							LOGGER.fatal("Unexpected error. Couldn't align sequences for redundancy removal procedure");
-							LOGGER.fatal(e.getMessage());
-							System.exit(1);
+							LOGGER.error("Unexpected error. Couldn't align sequences for redundancy removal procedure");
+							LOGGER.error(e.getMessage());
+						} catch (OutOfMemoryError e) {
+							// we can continue here, the only effect is that the entries won't be removed
+							LOGGER.error("Out of memory while trying to align sequences "+list.get(i).getUniId()+" and "+list.get(j).getUniId()+" for redundancy removal procedure. Sequences probably too long");
 						}
 					}
 				}
