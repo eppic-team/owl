@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -988,5 +989,52 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			}
 		}
 		return true;
+	}
+	
+	/**
+	 * Returns a string containing information about the distribution of the sequence entropies for
+	 * the alignment of this homolog list, including an entropy value for the distribution.
+	 * It divides the sequence entropy values into 6 bins from 0 to max(s), using that distribution 
+	 * to calculate an entropy value of it. 
+	 * @return
+	 */
+	public String getAlnVariability() {
+		int numBins = 6;
+		// the max value for entropy given a reducedAlphabet
+		double maxs = Math.log(reducedAlphabet)/Math.log(2);
+		double max = Math.max(1,Collections.max(entropies));
+		// the bin step given the max and numBins
+		double binStep = max/(double)numBins;
+		int[] binCounts = new int[numBins];
+		int totalLength = entropies.size();
+		for (double s:entropies) {
+			int i=0;
+			for (double binBoundary=binStep;binBoundary<=max;binBoundary+=binStep) {
+				if (s>=binBoundary-binStep && s<binBoundary) binCounts[i]++;
+				i++;
+			}
+		}
+		
+		StringBuffer bf = new StringBuffer();
+		
+		bf.append("Distribution of entropies: \n");
+		for (double binBoundary=binStep;binBoundary<=max;binBoundary+=binStep) {
+			bf.append(String.format("%4.2f ", binBoundary));
+		}
+		bf.append("\n");
+		double sumplogp=0.0;
+		for (int i=0;i<numBins;i++){
+			bf.append(String.format("%4s ",binCounts[i]));
+			double prob = (double)binCounts[i]/(double)totalLength; 
+			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
+				sumplogp += prob*(Math.log(prob)/Math.log(2));
+			}
+		}
+		double alnVariability = (-1.0)*sumplogp;
+		
+		bf.append("\n");
+		bf.append(String.format("min: %4.2f max: %4.2f max s possible: %4.2f\n",Collections.min(entropies),Collections.max(entropies),maxs));
+		bf.append(String.format("Alignment information content: %4.2f\n",alnVariability));
+		return bf.toString();
 	}
 }
