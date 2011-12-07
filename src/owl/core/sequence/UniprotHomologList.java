@@ -61,7 +61,7 @@ import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
  * @author duarte_j
  *
  */
-public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializable {
+public class UniprotHomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 	private static final long serialVersionUID = 1L;
 
@@ -88,12 +88,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	private Interval refInterval;
 	private boolean isSubInterval;
 	private List<UniprotHomolog> list; 				 // the list of homologs
-	private Map<String,UniprotHomolog> lookup; // to speed up searches (uniprot ids to Homologs)
+	private List<UniprotHomolog> subList;			 // the filtered list of homologs after calling filterToMinIdAndCoverage
+	private Map<String,UniprotHomolog> lookup;		 // to speed up searches (uniprot ids to Homologs)
 													 // (used to be lists of homologs as we considered multi-matches of the 
 													 // same uniprot as different BlastHits, but not anymore since we introduced 
 													 // BlastHsps)
-	private double idCutoff; 						 // the identity cutoff (see restrictToMinIdAndCoverage() )
-	private double qCoverageCutoff;					 // the query coverage cutoff (see restrictToMinIdAndCoverage() )
+	private double idCutoff; 						 // the identity cutoff (see filterToMinIdAndCoverage() )
+	private double qCoverageCutoff;					 // the query coverage cutoff (see filterToMinIdAndCoverage() )
 	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
 	
 	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
@@ -131,6 +132,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		
 		this.idCutoff = 0.0; // i.e. no filter
 		haveCDSData = false;
+	}
+	
+	public List<UniprotHomolog> getFilteredSubset() {
+		return subList;
 	}
 	
 	/**
@@ -255,6 +260,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 				}
 			}
 		}
+		this.subList = list; // initially the subList is the same as the list until filterToMinIdAndCoverage is called
 		initialiseMap();
 	}
 	
@@ -262,10 +268,11 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 
 	/**
 	 * Initialises the lookup map (for speeding up lookups of homologs by uniprot ids)
+	 * Applies only to filtered subset of homologs
 	 */
 	private void initialiseMap() {
 		this.lookup = new HashMap<String, UniprotHomolog>();
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			lookup.put(hom.getUniId(), hom);
 		}
 	}
@@ -303,7 +310,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			uniprotIds.add(hom.getUniId());
 		}
 		EntryIterator<UniProtEntry> entries = uniprotConn.getMultipleEntries(uniprotIds);
@@ -360,7 +367,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		}
 		// now we check if the query to uniprot JAPI did really return all requested uniprot ids
 		boolean allIdsReturned = true;
-		Iterator<UniprotHomolog> it = this.iterator(); 
+		Iterator<UniprotHomolog> it = subList.iterator(); 
 		while (it.hasNext()) {
 			UniprotHomolog hom = it.next();
 			if (!returnedUniIds.contains(hom.getUniId())) {
@@ -387,7 +394,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	public void retrieveEmblCdsSeqs(File cacheFile) throws IOException {
 		List<String> allIds = new ArrayList<String>();
 		
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			allIds.addAll(hom.getUniprotEntry().getEmblCdsIds());
 		}
 		List<Sequence> allSeqs = null;
@@ -406,7 +413,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			lookup.put(seq.getSecondaryAccession(), seq);
 		}
 		 
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			List<Sequence> seqs = new ArrayList<Sequence>();
 			for (String emblCdsId:hom.getUniprotEntry().getEmblCdsIds()) {
 				if (lookup.containsKey(emblCdsId)) {
@@ -434,13 +441,14 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		return this.lookup.get(uniprotId);
 	}
 	
-	public Iterator<UniprotHomolog> iterator() {
-		return this.list.iterator();
-	}
+//	public Iterator<UniprotHomolog> iterator() {
+//		return this.list.iterator();
+//	}
 
 	/**
 	 * Write to the given file the query protein sequence and all the homolog protein 
-	 * sequences (full uniprot sequences) in fasta format.
+	 * sequences in FASTA format. Only the subset of entries result of filtering with {@link #filterToMinIdAndCoverage(double, double)}
+	 * will be used. If no filtered applied yet then all entries are used.
 	 * @param outFile
 	 * @param writeQuery if true the query sequence is written as well, if false only homologs 
 	 * @throws FileNotFoundException
@@ -458,7 +466,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			}
 		}
 		
-		for(UniprotHomolog hom:this) {
+		for(UniprotHomolog hom:subList) {
 			
 			String sequence = hom.getUniprotSeq().getSeq();
 			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getLongSequenceTag());
@@ -543,7 +551,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			protToCDSMatches.add(queryMatching);
 		}
 		// homologs
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
 			if (matching!=null){
 				alignedProtSeqs.add(aln.getAlignedSequence(hom.getBlastHit().getSubjectId()));
@@ -601,27 +609,33 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	}
 	
 	/**
-	 * Removes homologs below the given sequence identity and query coverage values.
+	 * Creates a subset list of Homologs that have at least the required identities
+	 * and query coverage.
+	 * Subsequently all methods in this class will refer to the sublist rather than to original unfiltered list.
+	 * Upon a subsequent call to this method the a different id/coverage can be chosen and other methods used with those.
 	 * @param idCutoff
+	 * @param queryCovCutoff
 	 */
-	public void restrictToMinIdAndCoverage(double idCutoff, double queryCovCutoff) {
+	public void filterToMinIdAndCoverage(double idCutoff, double queryCovCutoff) {
 		this.idCutoff = idCutoff;
 		this.qCoverageCutoff = queryCovCutoff;
 
-		Iterator<UniprotHomolog> it = list.iterator();
-		while (it.hasNext()) {
-			UniprotHomolog hom = it.next();
-			if ((hom.getBlastHit().getTotalPercentIdentity()/100.0)<=idCutoff || hom.getBlastHit().getQueryCoverage()<=queryCovCutoff) {
-				it.remove();
+		this.subList = new ArrayList<UniprotHomolog>();
 
+		for (UniprotHomolog hom:list) {
+			if ((hom.getBlastHit().getTotalPercentIdentity()/100.0)>idCutoff && hom.getBlastHit().getQueryCoverage()>queryCovCutoff) {
+				subList.add(hom);
 			}
 		}
+		
 		// finally we update the lookup table
 		initialiseMap();
 	}
 	
 	/**
-	 * Removes the redundant sequences in this list of Homologs. The redundancy reduction proceeds as follows:
+	 * Removes the redundant sequences in the filtered subset list of Homologs (those remaining after 
+	 * calling {@link #filterToMinIdAndCoverage(double, double)}. 
+	 * The redundancy reduction proceeds as follows:
 	 * 1) It groups the sequences by taxonomy id and sequence identity
 	 * 2) If any of the groups have more than one member then the pairwise identities within the group are calculated 
 	 *    (all vs all Needleman-Wunsch). From the pairwise identity matrix sequences that are not 100% identity to all the others
@@ -633,7 +647,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 		
 		// 1) grouping by tax id and sequence identity
 		Map<String,List<UniprotHomolog>> groups = new HashMap<String,List<UniprotHomolog>>();
-		for (UniprotHomolog hom:this){
+		for (UniprotHomolog hom:subList){
 			double percentId = hom.getPercentIdentity();
 			String taxId = hom.getUniprotEntry().getTaxId();
 			String key = taxId+"_"+String.format("%6.3f",percentId);
@@ -659,9 +673,10 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUniprotSeq(), list.get(j).getUniprotSeq());
 							pairwiseIdMatrix[i][j]=aln.getPercentIdentity();
 						} catch (PairwiseSequenceAlignmentException e) {
-							LOGGER.error("Unexpected error. Couldn't align sequences for redundancy removal procedure");
+							LOGGER.error("Unexpected error. Couldn't align sequences "+list.get(i).getUniId()+" and "+list.get(j).getUniId()+" for redundancy removal procedure");
 							LOGGER.error(e.getMessage());
 						} catch (OutOfMemoryError e) {
+							// this happens when very long sequences are used (e.g. 1tki which is a subdomain of the muscular titin protein ~30000 res!)
 							// we can continue here, the only effect is that the entries won't be removed
 							LOGGER.error("Out of memory while trying to align sequences "+list.get(i).getUniId()+" and "+list.get(j).getUniId()+" for redundancy removal procedure. Sequences probably too long");
 						}
@@ -729,17 +744,17 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			}
 		}
 		for (UniprotHomolog hom:toRemove){
-			this.list.remove(hom);
+			this.subList.remove(hom);
 			LOGGER.info("Homolog "+hom.getUniId()+" removed because it is redundant.");
 		}
-		LOGGER.info("Number of homologs after redundancy elimination: "+this.size());
+		LOGGER.info("Number of homologs after redundancy elimination: "+this.getSizeFilteredSubset());
 		
 		// finally we update the lookup table
 		initialiseMap();
 	}
 	
 	/**
-	 * Reduces the number of homologs by skimming the list for homologs with same identities 
+	 * Reduces the size of the subset of homologs by skimming it for homologs with same identities 
 	 * until maxDesiredHomologs is reached.
 	 * The procedure is as follows: sequences are grouped by identity to query and one of each group 
 	 * eliminated (if possible the one without valid CDS matching) at each iteration until the 
@@ -749,13 +764,13 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @param maxDesiredHomologs
 	 */
 	public void skimList(int maxDesiredHomologs) {
-		if (list.size()<=maxDesiredHomologs) {
+		if (subList.size()<=maxDesiredHomologs) {
 			return;
 		}
-		LOGGER.info("List of homologs too long: "+list.size()+", skimming it.");
+		LOGGER.info("List of homologs too long: "+subList.size()+", skimming it.");
 		// 1) grouping by sequence identity
 		Map<Integer,List<UniprotHomolog>> groups = new HashMap<Integer,List<UniprotHomolog>>();
-		for (UniprotHomolog hom:this){
+		for (UniprotHomolog hom:subList){
 			double percentId = hom.getPercentIdentity();
 			int key =(int) Math.round(percentId);
 			if (groups.containsKey(key)) {
@@ -782,15 +797,15 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 					if (toRemove==null) {
 						toRemove = group.get(group.size()-1);
 					} 
-					list.remove(toRemove);					
+					subList.remove(toRemove);					
 					group.remove(toRemove);
 					
 					LOGGER.info("Removed "+toRemove.getUniId());
-					if (list.size()<=maxDesiredHomologs) break outer;
+					if (subList.size()<=maxDesiredHomologs) break outer;
 				}
 			}
 		}
-		LOGGER.info("Size of homolog list after skimming: "+list.size()+" ("+countIterations+" iterations)");
+		LOGGER.info("Size of homolog list after skimming: "+subList.size()+" ("+countIterations+" iterations)");
 
 		// and we reinitialise the lookup maps
 		initialiseMap();
@@ -812,15 +827,24 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	}
 	
 	/**
-	 * Returns the number of homologs in this list
+	 * Returns the number of homologs in the unfiltered list (not filtered)
 	 * @return
 	 */
-	public int size() {
+	public int getSizeFullList() {
 		return list.size();
 	}
 	
 	/**
-	 * Returns the sequence identity cutoff, see {@link #restrictToMinIdAndCoverage(double, double)}
+	 * Returns the number of homologs in the filtered subset i.e. the one 
+	 * after calling {@link #filterToMinIdAndCoverage(double, double)}
+	 * @return
+	 */
+	public int getSizeFilteredSubset() {
+		return subList.size();
+	}
+	
+	/**
+	 * Returns the sequence identity cutoff, see {@link #filterToMinIdAndCoverage(double, double)}
 	 * @return
 	 */
 	public double getIdCutoff() {
@@ -828,7 +852,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	}
 	
 	/**
-	 * Returns the query coverage cutoff, see {@link #restrictToMinIdAndCoverage(double, double)}
+	 * Returns the query coverage cutoff, see {@link #filterToMinIdAndCoverage(double, double)}
 	 * @return
 	 */
 	public double getQCovCutoff() {
@@ -845,7 +869,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	
 	public int getNumHomologsWithCDS() {
 		int count = 0;
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			if (hom.getUniprotEntry().hasCDS()) {
 				count++;
 			}
@@ -855,7 +879,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	
 	public int getNumHomologsWithValidCDS() {
 		int count = 0;
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
 				count++;
 			}
@@ -879,7 +903,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 */
 	public boolean isConsistentGeneticCodeType() {
 		GeneticCodeType lastGct = null;
-		for (UniprotHomolog hom:this) {
+		for (UniprotHomolog hom:subList) {
 			GeneticCodeType gct = hom.getUniprotEntry().getGeneticCodeType();
 			if (lastGct!=null && !lastGct.equals(gct)) {
 				return false;
@@ -896,7 +920,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 	 * @return
 	 */
 	public GeneticCodeType getGeneticCodeType() {
-		return this.list.get(0).getUniprotEntry().getGeneticCodeType();
+		return this.subList.get(0).getUniprotEntry().getGeneticCodeType();
 	}
 	
 	/**
@@ -977,7 +1001,7 @@ public class UniprotHomologList implements Iterable<UniprotHomolog>, Serializabl
 			return false;
 		}
 		// check if each of the matching CDS of the homologs is reliable at position i of the ref sequence
-		for (UniprotHomolog hom:this){
+		for (UniprotHomolog hom:subList){
 			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
 				continue; // the homolog may have no representative CDS, in that case we don't want to check the CDS alignment as it doesn't exist
 			}
