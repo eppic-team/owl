@@ -362,6 +362,16 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	public GeneticCodeType getGeneticCodeType() {
 		return GeneticCodeType.getByOrganelleAndOrganism(this.geneEncodingOrganelle,this.getLastTaxon());
 	}
+	
+	/**
+	 * Returns true if this UniprotEntry belongs to same domain of life (Bacteria, Archaea, Eukaryota) 
+	 * as the one given
+	 * @param other
+	 * @return
+	 */
+	public boolean isInSameDomainOfLife(UniprotEntry other) {
+		return this.getFirstTaxon().equals(other.getFirstTaxon());
+	}
 
 	/*------------------------ HasFeature interface implementation -----------------------*/
 	

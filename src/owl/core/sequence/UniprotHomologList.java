@@ -633,6 +633,19 @@ public class UniprotHomologList implements  Serializable {//Iterable<UniprotHomo
 	}
 	
 	/**
+	 * Filters the existing subset to the same domain of life (Bacteria, Archaea, Eukaryota) as the reference sequence
+	 */
+	public void filterToSameDomainOfLife() {
+		Iterator<UniprotHomolog> it = subList.iterator();
+		while (it.hasNext()) {
+			UniprotHomolog hom = it.next();
+			if (!hom.getUniprotEntry().isInSameDomainOfLife(this.ref)) {
+				it.remove();
+			}
+		}
+	}
+	
+	/**
 	 * Removes the redundant sequences in the filtered subset list of Homologs (those remaining after 
 	 * calling {@link #filterToMinIdAndCoverage(double, double)}. 
 	 * The redundancy reduction proceeds as follows:
