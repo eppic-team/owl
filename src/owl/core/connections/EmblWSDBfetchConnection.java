@@ -49,7 +49,8 @@ public class EmblWSDBfetchConnection {
 	
 	public enum Db {
 		EMBLCDS("emblcds"),
-		UNIPROTKB("uniprotkb");
+		UNIPROTKB("uniprotkb"),
+		UNIPARC("uniparc");
 		
 		private String dbfetchStr;
 		private Db(String dbfetchStr) {
@@ -149,6 +150,8 @@ public class EmblWSDBfetchConnection {
 				idsLookup.add(sequence.getSecondaryAccession());
 			} else if (db.equals(Db.UNIPROTKB)) {
 				idsLookup.add(sequence.getPrimaryAccession());
+			} else if (db.equals(Db.UNIPARC)) {
+				idsLookup.add(sequence.getName().substring(0,sequence.getName().lastIndexOf(" ")));
 			} else {
 				System.err.println("Error! "+db+" is not a supported format for lookups! Please report the bug.");
 				System.exit(1);
@@ -248,6 +251,23 @@ public class EmblWSDBfetchConnection {
 	 */
 	public static List<Sequence> fetchUniprot(List<String> uniprotIds, File cacheFile) throws IOException, NoMatchFoundException {
 		return fetch(Db.UNIPROTKB, uniprotIds, cacheFile);
+	}
+	
+	/**
+	 * Fetches UNIPARC entries from EMBL DB fetch web service in FASTA format
+	 * If sequences are retrieved online (not read from cacheFile) and cacheFile is not null
+	 * then the sequences are written to the cache file.  
+	 * @param uniparcIds
+	 * @param cacheFile a FASTA file containing the sequences to retrieve. If present and if
+	 * it contains ALL required sequences then they are read from cacheFile. If null or file
+	 * does not exist or file older than {@value #MAX_CACHE_AGE} then the sequences are 
+	 * retrieved from EMBL DB fetch
+	 * @return
+	 * @throws IOException
+	 * @throws NoMatchFoundException
+	 */
+	public static List<Sequence> fetchUniparc(List<String> uniparcIds, File cacheFile) throws IOException, NoMatchFoundException {
+		return fetch(Db.UNIPARC, uniparcIds, cacheFile);
 	}
 	
 	/**
