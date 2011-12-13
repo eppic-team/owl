@@ -107,6 +107,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 	private boolean haveCDSData;
 	
+	private boolean useUniparc;
+	
 	
 	public HomologList(UniprotEntry ref) {
 		this(ref,null);
@@ -248,8 +250,11 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				if (m2.matches()) {					
 					String uniId = m2.group(1);
 					if (uniId.startsWith("UPI")){
-						list.add(new Homolog(hit,uniId));
-						//LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniparc id.");
+						if (useUniparc) {
+							list.add(new Homolog(hit,uniId));
+						} else {
+							LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniparc id.");
+						}
 					}
 					else if (uniId.contains("-")) {
 						LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniprot isoform id.");
@@ -1030,6 +1035,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	public int getReducedAlphabet() {
 		return reducedAlphabet;
+	}
+	
+	public void setUseUniparc(boolean useUniparc) {
+		this.useUniparc = useUniparc;
 	}
 	
 	/**
