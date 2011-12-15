@@ -258,7 +258,29 @@ public final class SpaceGroup implements Serializable {
 		if (Math.abs((Math.rint(c)-c))<delta) { // this is an integer
 			return String.format("%+d",(int)Math.rint(c));
 		} else { // it is a fraction
-			return String.format("%+4.2f",c);
+			int num,den;
+			int floor = (int)Math.floor(c);
+			double decPart = c - floor;
+			if (deltaComp(decPart,0.3333333,delta)) {
+				num=1;den=3;
+			} else if (deltaComp(decPart,0.6666667,delta)) {
+				num=2;den=3;
+			} else if (deltaComp(decPart,0.2500000,delta)) {
+				num=1;den=4;
+			} else if (deltaComp(decPart,0.5000000,delta)) {
+				num=1;den=2;
+			} else if (deltaComp(decPart,0.7500000,delta)) {
+				num=3;den=4;
+			} else if (deltaComp(decPart,0.1666667,delta)) {
+				num=1;den=6;
+			} else if (deltaComp(decPart,0.8333333,delta)) {
+				num=5;den=6;
+			} else {
+				num=0;den=0; // this in an error
+			}
+			num = floor*den+num;
+			return String.format("%+d/%d", num,den);
+			//return String.format("%+4.2f",c);
 		}
 	}
 	
