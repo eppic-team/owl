@@ -376,6 +376,10 @@ public class CiffileParser {
 		if (!fields2values.containsKey(cell+".length_a")) {
 			return null;
 		}
+		if (fields2values.get(cell+".length_a").trim().equals("?")) {
+			// some NMR entries (e.g. 1fmm) do have cell params with a question mark value! we love the PDB!!
+			return null;
+		}
 		CrystalCell crystalCell = null;
 		double a = Double.parseDouble(fields2values.get(cell+".length_a").trim());
 		double b = Double.parseDouble(fields2values.get(cell+".length_b").trim());
