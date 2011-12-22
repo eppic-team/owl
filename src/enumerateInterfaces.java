@@ -186,7 +186,7 @@ public class enumerateInterfaces {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
 				interf.writeToPdbFile(pdbFile);
 				if (generatePngs) {
-					pr.generateInterfPngPsePml(interf, pdbFile, 
+					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, pdbFile, 
 							new File(writeDir,outBaseName+"."+(i+1)+".pse"), 
 							new File(writeDir,outBaseName+"."+(i+1)+".pml"), outBaseName);
 				}

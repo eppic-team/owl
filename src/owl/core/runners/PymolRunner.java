@@ -135,7 +135,7 @@ public class PymolRunner {
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateInterfPngPsePml(ChainInterface interf, File pdbFile, File pseFile, File pmlFile, String base) 
+	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, File pdbFile, File pseFile, File pmlFile, String base) 
 	throws IOException, InterruptedException {
 		
 		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
@@ -183,6 +183,8 @@ public class PymolRunner {
 		writeCommand(cmd, pml);
 		cmd = "color "+color2+", "+molecName+" and chain "+chain2;
 		writeCommand(cmd, pml);
+		
+		interf.calcRimAndCore(caCutoff);
 
 		cmd = getSelString("core", chain1, interf.getFirstRimCore().getCoreResidues());
 		writeCommand(cmd, pml);
@@ -206,11 +208,11 @@ public class PymolRunner {
 		//writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("color blue, core"+chains[0]+";");
 		//pymolScriptBuilder.append("color red, rim"+chains[0]+";");
-		cmd = "color "+interf1color+", interface"+chain1;
+		cmd = "color "+interf1color+", core"+chain1;
 		writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("color slate, core"+chains[1]+";");
 		//pymolScriptBuilder.append("color raspberry, rim"+chains[1]+";");
-		cmd = "color "+interf2color+", interface"+chain2;
+		cmd = "color "+interf2color+", core"+chain2;
 		writeCommand(cmd, pml);
 		cmd = "show sticks, bothinterf";
 		writeCommand(cmd, pml);
