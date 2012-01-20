@@ -964,6 +964,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 					PdbChain chainiCopy = chaini.copy(this);
 					PdbChain chainjCopy = chainj.copy(this);
 					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM);
+					interf.setSecondTranslation(new Point3i(0,0,0));
 					if (!set.add(interf)) {
 						duplicatesCount1++;
 					}
@@ -1016,7 +1017,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 							PdbChain chainiCopy = chaini.copy(this);
 							PdbChain chainjCopy = chainj.copy(jAsym);
-							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform()); 
+							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
+							interf.setSecondTranslation(new Point3i(0,0,0));
 							if (!set.add(interf)) {
 								duplicatesCount2++;
 							}
@@ -1082,6 +1084,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 										PdbChain chainiCopy = chaini.copy(this);
 										PdbChain chainjCopy = chainj.copy(jAsym);
 										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
+										interf.setSecondTranslation(new Point3i((int)trans.x,(int)trans.y,(int)trans.z));
 										if (!set.add(interf)){
 											duplicatesCount3++;
 										}
