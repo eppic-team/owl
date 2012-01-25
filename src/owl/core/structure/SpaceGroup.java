@@ -88,6 +88,8 @@ public final class SpaceGroup implements Serializable {
 	private ArrayList<Integer> bAxisRotations;
 	private ArrayList<Integer> cAxisRotations;
 	
+	private HashMap<Integer,Integer> transformId2AxisType;
+	
 	private BravaisLattice bravLattice;
 	
 	public SpaceGroup(int id, String shortSymbol, BravaisLattice bravLattice) {
@@ -198,6 +200,8 @@ public final class SpaceGroup implements Serializable {
 		aAxisRotations = new ArrayList<Integer>();
 		bAxisRotations = new ArrayList<Integer>();
 		cAxisRotations = new ArrayList<Integer>();
+		transformId2AxisType = new HashMap<Integer, Integer>();
+		transformId2AxisType.put(0, 1); // for operator transformId=0, axis type is "1-fold"
 		
 		for (int i=1;i<this.transformations.size();i++){
 			double[] d = {transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
@@ -211,6 +215,7 @@ public final class SpaceGroup implements Serializable {
 				// the rotation is an identity: no axis, we add a (0,0,0)
 				axes.add(new Vector3d(0,0,0)); 
 				angles.add(0.0);
+				transformId2AxisType.put(i, 1);
 				continue;
 			}
 			int indexOfEv1;
@@ -218,12 +223,22 @@ public final class SpaceGroup implements Serializable {
 				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,0.00001)) break;
 			}
 			Matrix evec = evd.getV();
-			angles.add(Math.acos((eval.trace()-1)/2));
+			double angle = Math.acos((eval.trace()-1)/2);
+			angles.add(angle);
 			Vector3d axis = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
 			axes.add(axis);
-			if (deltaComp(axis.x, 1, 0.00001)) aAxisRotations.add(i);
-			if (deltaComp(axis.y, 1, 0.00001)) bAxisRotations.add(i);
-			if (deltaComp(axis.z, 1, 0.00001)) cAxisRotations.add(i);
+			if (deltaComp(axis.x, 1, delta)) aAxisRotations.add(i);
+			if (deltaComp(axis.y, 1, delta)) bAxisRotations.add(i);
+			if (deltaComp(axis.z, 1, delta)) cAxisRotations.add(i);
+			if (deltaComp(angle, Math.PI, delta)) { 
+				transformId2AxisType.put(i, 2);
+			} else if (deltaComp(angle, 2.0*Math.PI/3.0, delta)) {
+				transformId2AxisType.put(i, 3);
+			} else if (deltaComp(angle, Math.PI/2.0, delta)) {
+				transformId2AxisType.put(i, 4);
+			} else if (deltaComp(angle, Math.PI/3.0, delta)) {
+				transformId2AxisType.put(i, 6);
+			}
 		}	
 	}
 	
@@ -251,23 +266,34 @@ public final class SpaceGroup implements Serializable {
 	
 	/**
 	 * Returns true if both given transform ids belong to the same crystallographic axis (a, b or c)
-	 * For non-rotation transformations (i.e. identity operators) it returns true
-	 * @param transformId1
-	 * @param transformId2
+	 * For two non-rotation transformations (i.e. identity operators) it returns true
+	 * @param tId1
+	 * @param tId2
 	 * @return
 	 */
-	public boolean areInSameAxis(int transformId1, int transformId2) {
-		if (transformId1==transformId2) return true;
+	public boolean areInSameAxis(int tId1, int tId2) {
+		if (tId1==tId2) return true;
 		
 		if (aAxisRotations== null) calcRotAxesAndAngles();
 		
-		if (isRotationIdentity(transformId1) && isRotationIdentity(transformId2)) return true;
+		if (isRotationIdentity(tId1) && isRotationIdentity(tId2)) return true;
 		
-		if (aAxisRotations.contains(transformId1) && aAxisRotations.contains(transformId2)) return true;
-		if (bAxisRotations.contains(transformId1) && bAxisRotations.contains(transformId2)) return true;
-		if (cAxisRotations.contains(transformId1) && cAxisRotations.contains(transformId2)) return true;
+		if (aAxisRotations.contains(tId1) && aAxisRotations.contains(tId2)) return true;
+		if (bAxisRotations.contains(tId1) && bAxisRotations.contains(tId2)) return true;
+		if (cAxisRotations.contains(tId1) && cAxisRotations.contains(tId2)) return true;
 		
 		return false;
+	}
+	
+	/**
+	 * Given a transformId returns the type of axis of rotation: 2, 3, 4 or 6 -fold
+	 * (or 1-fold for identity transformations)
+	 * @param transformId
+	 * @return
+	 */
+	public int getAxisFoldType(int transformId) {
+		if (transformId2AxisType== null) calcRotAxesAndAngles();
+		return transformId2AxisType.get(transformId);
 	}
 	
 	/**
@@ -408,6 +434,36 @@ public final class SpaceGroup implements Serializable {
 	}
 	
 	/**
+	 * Returns true if two given transformIds are rotation-related, defined as:
+	 * they are rotations in same axis and are symmetry related (ad-hoc rule for interface calculation)
+	 * @param tId1
+	 * @param tId2
+	 * @return
+	 */
+	public boolean areRotRelated(int tId1, int tId2) {
+		
+		if (!areInSameAxis(tId1, tId2)) return false;
+		
+		int ft1 = getAxisFoldType(tId1);
+		int ft2 = getAxisFoldType(tId2);
+		if (ft1!=ft2) return false;
+		// so ft1==ft2
+		// case 2
+		if (ft1==2) {
+			// all 2-fold rotations in same axis are related
+			return true;
+		}
+		if (ft1==3 || ft1==4 || ft1==6) {
+			// in 3-fold 4-fold and 6-fold axes the related ones are the 2 "opposite" transformations
+			return (tId1!=tId2);
+		}
+		
+		// we shouldn't reach this point
+		System.err.println("Error! two given transformIds ("+tId1+","+tId2+") didn't fall in any rotation-related case");
+		return false;
+	}
+	
+	/**
 	 * Returns true if the transform identified by given id is an identity rotation
 	 * It happens always for transformId==0 or for face centered space groups (e.g. C 1 2 1)
 	 * that have operators that are simply translations in cell unit without rotation 
@@ -417,7 +473,7 @@ public final class SpaceGroup implements Serializable {
 	public boolean isRotationIdentity(int transformId) {
 		if (transformId==0) return true;
 		Vector3d axis = getRotAxes().get(transformId-1);
-		if (axis.epsilonEquals(new Vector3d(0,0,0), 0.00001)) {
+		if (axis.epsilonEquals(new Vector3d(0,0,0), delta)) {
 			return true;
 		}
 		return false;

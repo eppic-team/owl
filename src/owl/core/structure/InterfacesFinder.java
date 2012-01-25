@@ -156,7 +156,7 @@ public class InterfacesFinder {
 				if (jAsym==pdb) continue; // we want to compare this to all others but not to itself
 
 				if (withRedundancyElimination) {
-					if (!addVisitedVector(jAsym.getTransformId(), jAsym.getTranslation())) {
+					if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
 						if (debug) countSkipped1++;
 						continue;
 					}
@@ -216,7 +216,7 @@ public class InterfacesFinder {
 						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
 							// short-cut 1: checking for redundancy in symmetry, will skip if redundant
 							if (withRedundancyElimination) {
-								if (!addVisitedVector(jAsym.getTransformId(), jAsym.getTranslation())) {
+								if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
 									if (debug) countSkipped1++;								
 									continue;
 								}
@@ -322,13 +322,13 @@ public class InterfacesFinder {
 	
 	
 	/**
-	 * Checks whether given vector is symmetry redundant, if not it is added to the list 
-	 * of seen vectors and true returned. If it is redundant nothing is added and false is returned 
+	 * Checks whether given transformId/translation is symmetry redundant, if not it is added to the list 
+	 * of seen transformIds/translations and true returned. If it is redundant nothing is added and false is returned 
 	 * @param transformId
 	 * @param newDirection
 	 * @return
 	 */
-	private boolean addVisitedVector(int transformId, Vector3d newDirection) {
+	private boolean addVisited(int transformId, Vector3d newDirection) {
 		TransformIdTranslation dt = new TransformIdTranslation(transformId, newDirection);
 		// for a not rotational transformation (transformId==0 or identity rotations)
 		if (sg.isRotationIdentity(transformId)) {
@@ -346,45 +346,50 @@ public class InterfacesFinder {
 				}
 			}
 		} 
-//		else {
-//			// for a rotational transformation, it is a bit more complicated
-//			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
-//			//double angle = sg.getRotAngles().get(dt.transformId-1);
-//			for (TransformIdTranslation v:visited) {
-//				if (sg.isRotationIdentity(v.transformId)) continue;
-//				if (!sg.areInSameAxis(v.transformId, dt.transformId)) continue;
-//				//Vector3d sub = new Vector3d();
-//				//Vector3d cross = new Vector3d();
-//				if (sg.areInvertRotations(v.transformId,dt.transformId) &&           // rotations are invert of each other 
-//					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  // translations are opposite with respect to the axis of rotation
-//					deltaComp(dt.translation.length(),v.translation.length())) {
-//
-//					//if (deltaComp(angle, Math.PI)) { // ad-hoc rule to fix the case of 2-fold axes: subtraction of 2 translations lie on the axis
-//					//	sub.sub(dt.translation,v.translation);
-//					//	cross.cross(sub, axis);
-//					//	if (cross.epsilonEquals(new Vector3d(0,0,0),0.0001)) {
-//					//		if (debug) {
-//					//			System.out.println("Skipping redundant transformation (rotational): "+dt+", equivalent to "+v);
-//					//		}
-//					//		return false;
-//					//	}
-//					//} else {
-//						if (debug) {
-//							System.out.println("Skipping redundant transformation (rotational): "+dt+", equivalent to "+v);
-//						}
-//						return false;
-//					//}
-//				}
-//			}
-//		}
+		// for a rotational transformation, it is a bit more complicated
+		else if (sg.getAxisFoldType(transformId)==2)  { // at the moment we have only a rule for 2-fold axes
+			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
+			//double angle = sg.getRotAngles().get(dt.transformId-1);
+			Vector3d tNormalProj = getNormalToAxisProjection(axis, dt.translation);
+			
+			for (TransformIdTranslation v:visited) {
+				if (sg.isRotationIdentity(v.transformId)) continue;
+				if (!sg.areRotRelated(v.transformId,dt.transformId)) continue; // rotations are related (so they must also be in same axis)
+				
+								
+				if (
+					// rule 1) translations are opposite with respect to the axis of rotation --> HOLDS FOR SURE FOR ALL TYPES OF AXES
+					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  
+					// rule 2) projections on plane normal to axis form an angle equals to rotation angle --> WORKS FOR 2-FOLDS
+					deltaComp(getNormalToAxisProjection(axis,v.translation).angle(tNormalProj),0) &&   
+					// rule 3) projections on plane normal to axis are same length, holds if simply vectors same length (because of rule 1) --> WORKS FOR 2-FOLDS
+					deltaComp(v.translation.length(),dt.translation.length())) { 
+					if (debug) {
+						System.out.println("Skipping redundant transformation (rotational): "+dt+", equivalent to "+v);
+					}
+					return false;
+				}
+			}
+		}
 		visited.add(dt);
 		return true;
 	}
 	
-//	private boolean deltaComp(double d1, double d2) {
-//		if (Math.abs(d1-d2)<0.000001) return true;
-//		return false;
-//	}
+	private Vector3d getNormalToAxisProjection(Vector3d a, Vector3d t) {
+		// see http://en.wikipedia.org/wiki/Vector_projection
+		Vector3d axisUnit = new Vector3d(a);
+		axisUnit.normalize();
+		Vector3d tAxisProjection = new Vector3d(axisUnit);
+		tAxisProjection.scale(axisUnit.dot(t));
+		Vector3d tNormalProjection = new Vector3d(t);
+		tNormalProjection.sub(tAxisProjection);
+		return tNormalProjection;
+	}
+	
+	private boolean deltaComp(double d1, double d2) {
+		if (Math.abs(d1-d2)<0.000001) return true;
+		return false;
+	}
 
 
 }
