@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,7 +59,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 
 
 	
-	private static final Matrix4d IDENTITY_TRANSFORM = new Matrix4d(1,0,0,0,
+	protected static final Matrix4d IDENTITY_TRANSFORM = new Matrix4d(1,0,0,0,
 																	0,1,0,0,
 																	0,0,1,0,
 																	0,0,0,1);
@@ -387,7 +386,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * Returns a Collection of all protein chains (no nucleotide chains)
 	 * @return
 	 */
-	private Collection<PdbChain> getProtChains() {
+	protected Collection<PdbChain> getProtChains() {
 		Collection<PdbChain> protChains = new ArrayList<PdbChain>();
 		for (PdbChain chain:chains.values()){
 			if (chain.getSequence().isProtein()) protChains.add(chain);
@@ -440,7 +439,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * Returns a sorted set of all CIF chain codes of protein chains in this entry (no nucleic acid chains)
 	 * @return
 	 */
-	private Set<String> getProtChainCodes() {
+	protected Set<String> getProtChainCodes() {
 		Set<String> all = new TreeSet<String>();
 		for (PdbChain polyChain:chains.values()) {
 			if (polyChain.getSequence().isProtein()) all.add(polyChain.getChainCode());
@@ -873,6 +872,14 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
+	 * Gets the translation component of the transformation used to generate the asymmetric unit
+	 * @return
+	 */
+	protected Vector3d getTranslation() {
+		return new Vector3d(transform.m03,transform.m13,transform.m23);
+	}
+	
+	/**
 	 * Sets the transformation used to generate the asymmetric unit.
 	 * @param transform
 	 */
@@ -916,232 +923,12 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
 	 * @param nonPoly if true interfaces will be calculated for non-polymer chains and 
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
-	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, boolean debug) throws IOException {	
-		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
-		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
-		
-		// the set takes care of eliminating duplicates, comparison is based on the equals() 
-		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
-		Set<ChainInterface> set = new HashSet<ChainInterface>();
-
-		// 0. generate complete unit cell
-		PdbUnitCell cell = null;
-		if (this.crystalCell!=null) {
-			cell = this.getUnitCell();
-		}
-		
-		long start = -1; 
-		long end = -1;
-		int trialCount = 0, countSkipped = 0, duplicatesCount1=0, duplicatesCount2=0, duplicatesCount3=0;
-		if (debug) {
-			trialCount = 0;
-			start= System.currentTimeMillis();
-			System.out.println("Interfaces within asymmetric unit");
-		}
-		// 1. interfaces within unit cell
-		// 1.1 within asymmetric unit
-		Set<String> chainCodes = null;
-		if (nonPoly) chainCodes = this.getChainCodes();
-		else chainCodes = this.getProtChainCodes();
-		
-		for (String iChainCode:chainCodes) { 
-			for (String jChainCode:chainCodes) { // getPolyChainCodes
-				if (iChainCode.compareTo(jChainCode)<=0) continue;
-				if (debug) {
-					System.out.print(".");
-					trialCount++;
-				}
-				PdbChain chaini = this.getChainForChainCode(iChainCode);
-				PdbChain chainj = this.getChainForChainCode(jChainCode);
-				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-				if (graph.getEdgeCount()>0) {
-					if (debug) System.out.print("x");
-					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-					PdbChain chainiCopy = chaini.copy(this);
-					PdbChain chainjCopy = chainj.copy(this);
-					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,IDENTITY_TRANSFORM,IDENTITY_TRANSFORM);
-					interf.setSecondTranslation(new Point3i(0,0,0));
-					if (!set.add(interf)) {
-						duplicatesCount1++;
-					}
-				}											
-			}
-		}
-		if (debug) {
-			end = System.currentTimeMillis();
-			System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
-		}
-
-		
-		if (debug) {
-			trialCount = 0;
-			start= System.currentTimeMillis();
-			System.out.println("Interfaces within the rest of the unit cell");
-		}
-		
-		// this condition covers 3 cases:
-		// a) entries with expMethod X-RAY/other diffraction and defined crystalCell (most usual case)
-		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
-		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
-		if (cell!=null && 
-				(this.expMethod==null || 
-				this.expMethod.equals("X-RAY DIFFRACTION") || 
-				this.expMethod.equals("NEUTRON DIFFRACTION") || 
-				this.expMethod.equals("ELECTRON CRYSTALLOGRAPHY"))) { 
-			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
-			for (int j=0;j<cell.getNumAsymUnits();j++) {
-				PdbAsymUnit jAsym = cell.getAsymUnit(j);
-				if (jAsym==this) continue; // we want to compare this to all others but not to itself
-				Collection<PdbChain> ichains = null;
-				Collection<PdbChain> jchains = null;
-				if (nonPoly) {
-					ichains = this.getAllChains();
-					jchains = jAsym.getAllChains();
-				} else {
-					ichains = this.getProtChains();
-					jchains = jAsym.getProtChains();
-				}
-				for (PdbChain chaini:ichains) { 
-					for (PdbChain chainj:jchains) { 
-						if (debug) {
-							System.out.print(".");
-							trialCount++;
-						}
-						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-						if (graph.getEdgeCount()>0) {
-							if (debug) System.out.print("x");
-							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-							PdbChain chainiCopy = chaini.copy(this);
-							PdbChain chainjCopy = chainj.copy(jAsym);
-							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
-							interf.setSecondTranslation(new Point3i(0,0,0));
-							if (!set.add(interf)) {
-								duplicatesCount2++;
-							}
-						}													
-					}
-				}
-
-			}
-			if (debug) {
-				end = System.currentTimeMillis();
-				System.out.println("\n"+trialCount+" trials done. Time "+(end-start)/1000+"s");
-			}
-
-			if (debug) {
-				trialCount = 0;
-				start= System.currentTimeMillis();
-				int trials = this.getNumChains()*cell.getNumAsymUnits()*this.getNumChains()*26;
-				System.out.println("Interfaces between the original asym unit and the 26 neighbouring whole unit cells ("+trials+")");
-			}
-			// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
-			for (int i=-1;i<=1;i++) {
-				for (int j=-1;j<=1;j++) {
-					for (int k=-1;k<=1;k++) {
-						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
-						PdbUnitCell translated = cell.copy();
-						Vector3d trans = new Vector3d(i,j,k);
-						translated.doCrystalTranslation(trans);
-
-						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
-							Point3d sep = this.getCrystalSeparation(jAsym);
-							if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
-								if (debug) {
-									//System.out.println("\nskipping:");
-									//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
-									//		sep.x,sep.y,sep.z,
-									//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
-									countSkipped++;
-								}
-								continue;
-							}
-							Collection<PdbChain> jchains = null;
-							if (nonPoly) jchains = jAsym.getAllChains();
-							else jchains = jAsym.getProtChains();
-							for (PdbChain chainj:jchains) {
-								//try {
-								//	chainj.writeToPDBFile("/home/duarte_j/"+pdbCode+"."+i+"."+j+"."+k+"."+jAsym.getTransformId()+".pdb");
-								//} catch (FileNotFoundException e) {
-								//	e.printStackTrace();
-								//}
-
-								Collection<PdbChain> ichains = null;
-								if (nonPoly) ichains = this.getAllChains();
-								else ichains = this.getProtChains();
-								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
-									if (debug) {
-										System.out.print(".");
-										trialCount++;
-									}
-									AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-									if (graph.getEdgeCount()>0) {
-										if (debug) System.out.print("x");
-										// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-										PdbChain chainiCopy = chaini.copy(this);
-										PdbChain chainjCopy = chainj.copy(jAsym);
-										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,this.getTransform(),jAsym.getTransform());
-										interf.setSecondTranslation(new Point3i((int)trans.x,(int)trans.y,(int)trans.z));
-										if (!set.add(interf)){
-											duplicatesCount3++;
-										}
-									}							
-								}
-							}
-						}
-					}
-				}
-			}
-			if (debug) {
-				end = System.currentTimeMillis();
-				System.out.println("\n"+trialCount+" trials done ("+
-						countSkipped+" branches skipped). Total "+(trialCount+countSkipped*this.getNumChains()*this.getNumChains())+
-						" trials. Time "+(end-start)/1000+"s");
-				System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
-				System.out.println("Found "+set.size()+" interfaces.");
-			}
-		}
-		// bsa calculation 
-		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
-		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
-		// orientations! (can't really understand why!). Both NACCESS and our own implementation behave like that.
-		// That's why we calculate always for the 2 separate members of interface and the complex, otherwise 
-		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
-		if (debug) {
-			start= System.currentTimeMillis();
-			System.out.println("Calculating ASAs with "+nThreads+" threads and "+nSpherePoints+" sphere points");
-		}
-		for (ChainInterface interf:set) {
-			//System.out.print(".");
-			if (naccessExe!=null) {
-				interf.calcSurfAccessNaccess(naccessExe,hetAtoms);
-			} else {
-				interf.calcSurfAccess(nSpherePoints, nThreads,hetAtoms);
-			}
-		}
-		if (debug) {
-			end = System.currentTimeMillis();
-			System.out.println("\nDone. Time "+(end-start)/1000+"s");
-		}
-		
-		// now that we have the areas we can put them into a list and sort them
-		ChainInterfaceList.AsaCalcMethod asaCalcMethod = ChainInterfaceList.AsaCalcMethod.INTERNAL;
-		if (naccessExe!=null) {
-			asaCalcMethod = ChainInterfaceList.AsaCalcMethod.NACCESS;
-		}
-		ChainInterfaceList list = new ChainInterfaceList(asaCalcMethod);
-		if (asaCalcMethod == ChainInterfaceList.AsaCalcMethod.INTERNAL) {
-			list.setAsaCalcAccuracyParam(nSpherePoints);
-		}
-		for (ChainInterface interf:set) {
-			list.addInterface(interf);
-		}
-		list.sort(); // this sorts the returned list and assigns ids to the ChainInterface members
-		
-		return list;
+	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {
+		InterfacesFinder interfFinder = new InterfacesFinder(this);
+		return interfFinder.getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, nonPoly);
 	}
 
 	/**

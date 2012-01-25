@@ -11,6 +11,9 @@ import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
+import Jama.EigenvalueDecomposition;
+import Jama.Matrix;
+
 
 /**
  * A crystallographic space group. We store the standard numeric identifier,
@@ -76,6 +79,14 @@ public final class SpaceGroup implements Serializable {
 	private String shortSymbol;
 	private List<Matrix4d> transformations;
 	private List<String> transfAlgebraic;
+	
+	private List<Double> angles; // all rotation angles except for the identity transformation (thus one element fewer than transformations)
+	private List<Vector3d> axes; // all rotation axes except for the identity transformation (thus one element fewer than transformations)
+	
+	// we store here the transformIds (the rotational ones) belonging to a, b or c axes 
+	private ArrayList<Integer> aAxisRotations;
+	private ArrayList<Integer> bAxisRotations;
+	private ArrayList<Integer> cAxisRotations;
 	
 	private BravaisLattice bravLattice;
 	
@@ -179,6 +190,84 @@ public final class SpaceGroup implements Serializable {
 			transfs.add(transformations.get(i));
 		}
 		return transfs;
+	}
+	
+	private void calcRotAxesAndAngles() {
+		angles = new ArrayList<Double>();
+		axes = new ArrayList<Vector3d>();
+		aAxisRotations = new ArrayList<Integer>();
+		bAxisRotations = new ArrayList<Integer>();
+		cAxisRotations = new ArrayList<Integer>();
+		
+		for (int i=1;i<this.transformations.size();i++){
+			double[] d = {transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
+					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
+					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22};
+			Matrix r = new Matrix(d,3);
+			EigenvalueDecomposition evd = new EigenvalueDecomposition(r);
+			
+			Matrix eval = evd.getD();
+			if (eval.get(0, 0)==1 && eval.get(1, 1)==1 && eval.get(2, 2)==1) {
+				// the rotation is an identity: no axis, we add a (0,0,0)
+				axes.add(new Vector3d(0,0,0)); 
+				angles.add(0.0);
+				continue;
+			}
+			int indexOfEv1;
+			for (indexOfEv1=0;indexOfEv1<3;indexOfEv1++) {
+				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,0.00001)) break;
+			}
+			Matrix evec = evd.getV();
+			angles.add(Math.acos((eval.trace()-1)/2));
+			Vector3d axis = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
+			axes.add(axis);
+			if (deltaComp(axis.x, 1, 0.00001)) aAxisRotations.add(i);
+			if (deltaComp(axis.y, 1, 0.00001)) bAxisRotations.add(i);
+			if (deltaComp(axis.z, 1, 0.00001)) cAxisRotations.add(i);
+		}	
+	}
+	
+	/**
+	 * Gets all axes (crystal basis) corresponding to the rotations of each of the transformations of 
+	 * this space group except for identity.
+	 * @return
+	 */
+	public List<Vector3d> getRotAxes() {
+		if (axes!=null) return axes;
+		calcRotAxesAndAngles();
+		return axes;
+	}
+	
+	/**
+	 * Gets all angles of rotation corresponding to each of the transformations of this space group
+	 * except for identity.
+	 * @return
+	 */
+	public List<Double> getRotAngles() {
+		if (angles!=null) return angles;
+		calcRotAxesAndAngles();
+		return angles;
+	}
+	
+	/**
+	 * Returns true if both given transform ids belong to the same crystallographic axis (a, b or c)
+	 * For non-rotation transformations (i.e. identity operators) it returns true
+	 * @param transformId1
+	 * @param transformId2
+	 * @return
+	 */
+	public boolean areInSameAxis(int transformId1, int transformId2) {
+		if (transformId1==transformId2) return true;
+		
+		if (aAxisRotations== null) calcRotAxesAndAngles();
+		
+		if (isRotationIdentity(transformId1) && isRotationIdentity(transformId2)) return true;
+		
+		if (aAxisRotations.contains(transformId1) && aAxisRotations.contains(transformId2)) return true;
+		if (bAxisRotations.contains(transformId1) && bAxisRotations.contains(transformId2)) return true;
+		if (cAxisRotations.contains(transformId1) && cAxisRotations.contains(transformId2)) return true;
+		
+		return false;
 	}
 	
 	/**
@@ -298,5 +387,39 @@ public final class SpaceGroup implements Serializable {
 			return false;
 		}
 		return true;
+	}
+	
+	/**
+	 * Given the transform ids of two operators of this space group tells
+	 * whether they are invert (their rotation matrices are invert of each other
+	 * i.e. transpose, as for rotation matrices Rt=R-1) 
+	 * @param tId1
+	 * @param tId2
+	 * @return
+	 */
+	public boolean areInvertRotations(int tId1, int tId2) {
+		Matrix4d t1 = getTransformation(tId1);
+		Matrix4d t2 = getTransformation(tId2);
+		if (deltaComp(t1.m00,t2.m00,0.0001) && deltaComp(t1.m11,t2.m11,0.0001) && deltaComp(t1.m22,t2.m22,0.0001) &&  // same diagonal 
+			deltaComp(t1.m01,t2.m10,0.0001) && deltaComp(t1.m02,t2.m20,0.0001) && deltaComp(t1.m12,t2.m21,0.0001)) {  // transposed coincide
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Returns true if the transform identified by given id is an identity rotation
+	 * It happens always for transformId==0 or for face centered space groups (e.g. C 1 2 1)
+	 * that have operators that are simply translations in cell unit without rotation 
+	 * @param transformId
+	 * @return
+	 */
+	public boolean isRotationIdentity(int transformId) {
+		if (transformId==0) return true;
+		Vector3d axis = getRotAxes().get(transformId-1);
+		if (axis.epsilonEquals(new Vector3d(0,0,0), 0.00001)) {
+			return true;
+		}
+		return false;
 	}
 }

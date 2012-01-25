@@ -8,6 +8,7 @@ import owl.core.runners.PymolRunner;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.InterfacesFinder;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbChain;
 import owl.core.structure.SpaceGroup;
@@ -123,9 +124,9 @@ public class enumerateInterfaces {
 		
 		PdbAsymUnit pdb = null;
 		if (inputFile==null) {
-			File cifFile = new File(TMPDIR,BASENAME+"_"+pdbStr+".cif");
-			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbStr, cifFile, false);
-			pdb = new PdbAsymUnit(cifFile);
+			inputFile = new File(TMPDIR,BASENAME+"_"+pdbStr+".cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbStr, inputFile, false);
+			pdb = new PdbAsymUnit(inputFile);
 		} else {
 			pdb = new PdbAsymUnit(inputFile);
 			outBaseName = inputFile.getName().substring(0, inputFile.getName().lastIndexOf("."));
@@ -155,13 +156,19 @@ public class enumerateInterfaces {
 		
 		System.out.println("Calculating possible interfaces... (using "+nThreads+" CPUs for ASA calculation)");
 		long start = System.currentTimeMillis();
-		ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly, debug);
+		InterfacesFinder interfFinder = new InterfacesFinder(pdb);
+		interfFinder.setDebug(debug);
+		interfFinder.setWithRedundancyElimination(true);
+
+		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
 		long end = System.currentTimeMillis();
-		System.out.println("Total time for interface calculation: "+(end-start)/1000+"s");
+		long total = (end-start)/1000;
+		System.out.println("Total time for interface calculation: "+total+"s");
 		
 		System.out.println("Total number of interfaces found: "+interfaces.size());
 
 		PymolRunner pr = new PymolRunner(PYMOL_EXE);
+		File[] interfPdbFiles = new File[interfaces.size()];
 					
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i+1);
@@ -174,8 +181,6 @@ public class enumerateInterfaces {
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
-			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
-			System.out.printf("Connection vector: (%5.2f %5.2f %5.2f)\n",interf.getConnectionVector().x,interf.getConnectionVector().y,interf.getConnectionVector().z);
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+
@@ -185,6 +190,7 @@ public class enumerateInterfaces {
 			if (writeDir!=null) {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
 				interf.writeToPdbFile(pdbFile);
+				interfPdbFiles[i] = pdbFile; 
 				if (generatePngs) {
 					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, pdbFile, 
 							new File(writeDir,outBaseName+"."+(i+1)+".pse"), 
@@ -192,11 +198,42 @@ public class enumerateInterfaces {
 				}
 			}
 		}
+		if (writeDir!=null) {
+			pr.generateInterfacesPse(inputFile, pdb.getPdbChainCodes(),
+					new File(writeDir,outBaseName+".allinterfaces.pml"), 
+					new File(writeDir,outBaseName+".allinterfaces.pse"), 
+					interfPdbFiles,interfaces);
+		}
 		
 		if (serialize && writeDir!=null) {
 			Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
 		}
 		
+		
+//		System.out.println();
+//		System.out.println("#### RECALCULATING with redundancy elimination");
+//		System.out.println();
+//		
+//		start = System.currentTimeMillis();
+//		interfFinder.setDebug(debug);
+//		interfFinder.setWithRedundancyElimination(true);
+//		ChainInterfaceList interfacesWithRE = interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
+//		end = System.currentTimeMillis();
+//		long totalWithRE = (end-start)/1000;
+//		
+//		System.out.println();
+//		System.out.println();
+//		System.out.println("Total time for interface calculation ");
+//		System.out.println(" with redundancy: "+total+"s");
+//		System.out.println(" no redundancy  : "+totalWithRE+"s");
+//		System.out.println("Total number of interfaces found: ");
+//		System.out.println(" with redundancy: "+interfaces.size());
+//		System.out.println(" no redundancy  : "+interfacesWithRE.size());
+//		if (interfaces.size()!=interfacesWithRE.size()) {
+//			System.out.println("#### FAILURE!");
+//		}
+
+
 	}
 
 }

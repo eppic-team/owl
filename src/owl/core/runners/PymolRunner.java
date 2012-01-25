@@ -10,8 +10,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import owl.core.structure.ChainInterface;
+import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfileParser;
 import owl.core.structure.Residue;
@@ -26,6 +28,9 @@ public class PymolRunner {
 	 "green","cyan","yellow","white","lightblue","magenta","red","orange","wheat","limon","salmon","palegreen","lightorange",};
 	
 	private static final String DEF_SYM_RELATED_CHAIN_COLOR = "grey";
+	
+	private static final String[] DEF_CHAIN_COLORS_ASU_ALLINTERFACES = 
+		{"green", "tv_green", "chartreuse", "splitpea", "smudge", "palegreen", "limegreen", "lime", "limon", "forest"};
 	
 	private static final String DEF_TN_STYLE = "cartoon";
 	private static final String DEF_TN_BG_COLOR = "white";
@@ -138,7 +143,7 @@ public class PymolRunner {
 	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, File pdbFile, File pseFile, File pmlFile, String base) 
 	throws IOException, InterruptedException {
 		
-		String molecName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
+		String molecName = getPymolMolecName(pdbFile);
 
 		File[] pngFiles = new File[DEF_TN_HEIGHTS.length];
 		for (int i=0;i<DEF_TN_HEIGHTS.length;i++) {
@@ -260,6 +265,109 @@ public class PymolRunner {
 		}
 	}
 	
+	public void generateInterfacesPse(File asuPdbFile, Set<String> chains, File pmlFile, File pseFile, File[] interfacePdbFiles, ChainInterfaceList interfaces) 
+			throws IOException, InterruptedException {
+		
+		String molecName = getPymolMolecName(asuPdbFile);
+		
+		List<String> command = new ArrayList<String>();
+		command.add(pymolExec.getAbsolutePath());
+		command.add("-q");
+		command.add("-c");
+
+		StringBuffer pymolScriptBuilder = new StringBuffer();
+		PrintStream pml = new PrintStream(pmlFile);
+		
+		String cmd;
+
+		
+		// loading and coloring
+		cmd = "load "+asuPdbFile.getAbsolutePath();
+		writeCommand(cmd,pml);
+		
+		cmd = "show cell";
+		writeCommand(cmd,pml);
+		
+		int i = 0;
+		for (String chain:chains) {
+			cmd = "color "+DEF_CHAIN_COLORS_ASU_ALLINTERFACES[i%DEF_CHAIN_COLORS_ASU_ALLINTERFACES.length]+
+					", "+molecName+" and chain "+chain;
+			writeCommand(cmd, pml);
+			
+			i++;			
+		}
+				
+		i = 1;
+		for (File interfPdbFile:interfacePdbFiles) {
+			cmd = "load "+interfPdbFile.getAbsolutePath();
+			writeCommand(cmd,pml);
+			
+			String symMolecName = getPymolMolecName(interfPdbFile);
+			String color = chainColors[i%chainColors.length];
+			cmd = "color "+color+", "+symMolecName;
+			writeCommand(cmd, pml);
+			i++;
+		}
+		
+		// selections 
+		
+		i = 0;
+		for (String chain:chains) {
+			
+			cmd = "select "+molecName+"."+chain+", "+molecName+" and chain " + chain;
+			writeCommand(cmd,pml);
+
+			i++;			
+		}
+		
+		i = 1;
+		for (File interfPdbFile:interfacePdbFiles) {
+			ChainInterface interf = interfaces.get(i);
+			char chain1 = interf.getFirstMolecule().getPdbChainCode().charAt(0);
+			char chain2 = interf.getSecondPdbChainCodeForOutput().charAt(0);
+			
+			String symMolecName = getPymolMolecName(interfPdbFile);
+			
+			cmd = "select "+symMolecName+"."+chain1+", "+symMolecName+" and chain " + chain1;
+			writeCommand(cmd,pml);
+			
+			cmd = "select "+symMolecName+"."+chain2+", "+symMolecName+" and chain " + chain2;
+			writeCommand(cmd,pml);
+			
+			i++;
+		}
+		
+		cmd = "remove solvent";
+		writeCommand(cmd, pml);
+		
+		cmd = "as cartoon";
+		writeCommand(cmd, pml);
+
+		
+		pml.close();
+		
+		pymolScriptBuilder.append("@ "+pmlFile+";");
+		
+		pymolScriptBuilder.append("save "+pseFile+";");
+
+		
+		
+		
+		pymolScriptBuilder.append("quit;");
+		
+		command.add("-d");
+
+		command.add(pymolScriptBuilder.toString());
+
+		
+		Process pymolProcess = new ProcessBuilder(command).start();
+		int exit = pymolProcess.waitFor();
+		if (exit!=0) {
+			throw new IOException("Pymol exited with error status "+exit);
+		}
+
+	}
+	
 	public String getChainColor(char letter, int index, boolean isSymRelated) {
 		String color = null;
 		if (isSymRelated && index!=0) {
@@ -275,6 +383,10 @@ public class PymolRunner {
 			}
 		}
 		return color;
+	}
+	
+	private String getPymolMolecName(File pdbFile) {
+		 return pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 	}
 	
 	private String getResiSelString(List<Residue> list) {
