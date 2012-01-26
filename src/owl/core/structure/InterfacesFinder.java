@@ -340,14 +340,14 @@ public class InterfacesFinder {
 				if (sum.epsilonEquals(new Vector3d(0,0,0), 0.001)) {
 					// they are symmetry redundant, return false and don't add
 					if (debug) {
-						System.out.println("Skipping redundant transformation (non-rotational): "+dt+", equivalent to "+v);
+						System.out.println("Skipping redundant translational transformation: "+dt+", equivalent to "+v);
 					}
 					return false;
 				}
 			}
 		} 
 		// for a rotational transformation, it is a bit more complicated
-		else if (sg.getAxisFoldType(transformId)==2)  { // at the moment we have only a rule for 2-fold axes
+		else if (sg.getAxisFoldType(transformId)==2)  { // 2-FOLD AXIS
 			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
 			//double angle = sg.getRotAngles().get(dt.transformId-1);
 			Vector3d tNormalProj = getNormalToAxisProjection(axis, dt.translation);
@@ -360,16 +360,41 @@ public class InterfacesFinder {
 				if (
 					// rule 1) translations are opposite with respect to the axis of rotation --> HOLDS FOR SURE FOR ALL TYPES OF AXES
 					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  
-					// rule 2) projections on plane normal to axis form an angle equals to rotation angle --> WORKS FOR 2-FOLDS
+					// rule 2) projections on plane normal to axis form an angle == 0 --> WORKS FOR 2-FOLDS
 					deltaComp(getNormalToAxisProjection(axis,v.translation).angle(tNormalProj),0) &&   
 					// rule 3) projections on plane normal to axis are same length, holds if simply vectors same length (because of rule 1) --> WORKS FOR 2-FOLDS
 					deltaComp(v.translation.length(),dt.translation.length())) { 
 					if (debug) {
-						System.out.println("Skipping redundant transformation (rotational): "+dt+", equivalent to "+v);
+						System.out.println("Skipping redundant "+sg.getAxisFoldType(transformId)+"-fold transformation: "+dt+", equivalent to "+v);
 					}
 					return false;
 				}
 			}
+		}
+		else if (sg.getAxisFoldType(transformId)==3 ||
+				 sg.getAxisFoldType(transformId)==4 ||
+				 sg.getAxisFoldType(transformId)==6)  { // 3-FOLD,4-FOLD, 6-FOLD AXIS
+			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
+			//double angle = sg.getRotAngles().get(dt.transformId-1);
+			Vector3d tNormalProj = getNormalToAxisProjection(axis, dt.translation);
+			
+			for (TransformIdTranslation v:visited) {
+				if (sg.isRotationIdentity(v.transformId)) continue;
+				if (!sg.areRotRelated(v.transformId,dt.transformId)) continue; // rotations are related (so they must also be in same axis)
+				
+								
+				if (
+					// rule 1) translations are opposite with respect to the axis of rotation --> HOLDS FOR SURE FOR ALL TYPES OF AXES
+					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  
+					// rule 2) projections on plane normal to axis are 0 length (we only consider the vertical within the axis) 
+					// TODO    we need a more general rule! for other cells in other verticals
+					deltaComp(tNormalProj.length(),0) && deltaComp(getNormalToAxisProjection(axis,v.translation).length(),0)) { 
+					if (debug) {
+						System.out.println("Skipping redundant "+sg.getAxisFoldType(transformId)+"-fold transformation: "+dt+", equivalent to "+v);
+					}
+					return false;
+				}
+			}		
 		}
 		visited.add(dt);
 		return true;

@@ -416,24 +416,6 @@ public final class SpaceGroup implements Serializable {
 	}
 	
 	/**
-	 * Given the transform ids of two operators of this space group tells
-	 * whether they are invert (their rotation matrices are invert of each other
-	 * i.e. transpose, as for rotation matrices Rt=R-1) 
-	 * @param tId1
-	 * @param tId2
-	 * @return
-	 */
-	public boolean areInvertRotations(int tId1, int tId2) {
-		Matrix4d t1 = getTransformation(tId1);
-		Matrix4d t2 = getTransformation(tId2);
-		if (deltaComp(t1.m00,t2.m00,0.0001) && deltaComp(t1.m11,t2.m11,0.0001) && deltaComp(t1.m22,t2.m22,0.0001) &&  // same diagonal 
-			deltaComp(t1.m01,t2.m10,0.0001) && deltaComp(t1.m02,t2.m20,0.0001) && deltaComp(t1.m12,t2.m21,0.0001)) {  // transposed coincide
-			return true;
-		}
-		return false;
-	}
-	
-	/**
 	 * Returns true if two given transformIds are rotation-related, defined as:
 	 * they are rotations in same axis and are symmetry related (ad-hoc rule for interface calculation)
 	 * @param tId1
