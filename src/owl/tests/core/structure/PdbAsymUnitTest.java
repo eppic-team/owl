@@ -28,10 +28,12 @@ import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.HetResidue;
+import owl.core.structure.InterfacesFinder;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.Residue;
+import owl.core.structure.SpaceGroup;
 import owl.core.util.FileFormatException;
 import owl.tests.TestsSetup;
 
@@ -45,6 +47,7 @@ public class PdbAsymUnitTest {
 	
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String LISTFILE = TESTDATADIR+"/testset_interfaces.txt";
+	private static final String CULLPDB20FILE = TESTDATADIR+"/cullpdb_20";
 	
 	private static final double CUTOFF = 5.9;
 	
@@ -81,7 +84,7 @@ public class PdbAsymUnitTest {
 
 	@Test
 	public void testGetAllRepChains() throws IOException {
-		List<String> pdbCodes = readListFile();
+		List<String> pdbCodes = readListFile(new File(LISTFILE));
 		System.out.println("Checking unique and representative chains");
 		for (String pdbCode: pdbCodes) {
 			
@@ -120,8 +123,9 @@ public class PdbAsymUnitTest {
 	@Test
 	public void testGetAllInterfaces() throws IOException, SQLException, SAXException {
 
-		List<String> pdbCodes = readListFile();
+		List<String> pdbCodes = readListFile(new File(LISTFILE));
 
+		System.out.println("Interface calculation vs PISA test ("+pdbCodes.size()+" structures to test)");
 		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
 		
 		// getting PISA interfaces
@@ -218,6 +222,73 @@ public class PdbAsymUnitTest {
 		}
 	}
 	
+	@Test
+	public void testInterfacesFinderRedundancyElimination() throws IOException, SQLException, SAXException {
+		
+		
+		
+		List<String> pdbCodes = readListFile(new File(CULLPDB20FILE));
+		
+		System.out.println("Interface calculation - redundancy elimination test ("+pdbCodes.size()+" structures to test)");
+		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+		
+		for (String pdbCode: pdbCodes) {
+					
+			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+
+			SpaceGroup sg = pdb.getSpaceGroup();
+			if (sg==null) System.out.println("No space group");
+			else System.out.println(sg.getShortSymbol()+" ("+sg.getId()+")");
+			System.out.println(pdb.getNumPolyChains()+" polymer chains in AU");
+			
+			long start = 0, end =0;
+			
+			start = System.currentTimeMillis();
+			
+			InterfacesFinder interfFinder = new InterfacesFinder(pdb);
+			interfFinder.setWithRedundancyElimination(false);
+			ChainInterfaceList interfacesWithRedundancy = 
+					interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			end = System.currentTimeMillis();
+			long totalWithRedundancy = (end-start)/1000;
+			
+			start = System.currentTimeMillis();
+			interfFinder.setWithRedundancyElimination(true);
+			ChainInterfaceList interfacesRedundancyElim = 
+					interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			end = System.currentTimeMillis();
+			long totalRedundancyElim = (end-start)/1000;
+
+			
+			
+			System.out.println("Time: ");
+			System.out.println(" with redundancy: "+totalWithRedundancy+"s");
+			System.out.println(" redundancy elimination: "+totalRedundancyElim+"s");
+			
+			System.out.println("Total number of interfaces found: "+interfacesWithRedundancy.size()+" "+interfacesRedundancyElim.size());
+			
+			Assert.assertEquals(interfacesWithRedundancy.size(), interfacesRedundancyElim.size());
+
+			for (int i=0;i<interfacesRedundancyElim.size();i++) {
+				Assert.assertEquals(interfacesWithRedundancy.get(i+1).getNumContacts(),interfacesRedundancyElim.get(i+1).getNumContacts());
+			}
+		}
+
+	}
+	
 	private static boolean deltaComp(double a, double b, double delta) {
 		boolean within = false;
 		if (delta<0.2) { // for small values we have to have a bigger margin, chose 0.50 more or less arbitrarily
@@ -284,9 +355,9 @@ public class PdbAsymUnitTest {
 		return (counts[0]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]) && counts[1]>(TOLERANCE_RESIDUE_AGREEMENT*(double)counts[2]));
 	}
 	
-	private static List<String> readListFile() throws IOException {
+	private static List<String> readListFile(File file) throws IOException {
 		List<String> pdbCodes = new ArrayList<String>();
-		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
+		BufferedReader flist = new BufferedReader(new FileReader(file));
 		String line;
 		while ((line = flist.readLine() ) != null ) {
 			if (line.startsWith("#")) continue;
