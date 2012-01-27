@@ -236,7 +236,12 @@ public class PdbAsymUnitTest {
 					
 			System.out.println("\n##"+pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
-			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+			try {
+				PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+			} catch (IOException e) {
+				System.err.println("Something went wrong while grabbing cif file: "+e.getMessage());
+				continue;
+			}
 
 			PdbAsymUnit pdb = null;
 			try {
@@ -282,9 +287,39 @@ public class PdbAsymUnitTest {
 			
 			Assert.assertEquals(interfacesWithRedundancy.size(), interfacesRedundancyElim.size());
 
+			boolean match = true;
 			for (int i=0;i<interfacesRedundancyElim.size();i++) {
-				Assert.assertEquals(interfacesWithRedundancy.get(i+1).getNumContacts(),interfacesRedundancyElim.get(i+1).getNumContacts());
+				ChainInterface wr = interfacesWithRedundancy.get(i+1);
+				ChainInterface re = interfacesRedundancyElim.get(i+1);
+				
+				ChainInterface wrbefore = null;
+				if (i!=0) wrbefore = interfacesWithRedundancy.get(i);
+				//ChainInterface rebefore = interfacesRedundancyElim.get(i);
+				
+				ChainInterface wrafter = null;
+				if (i!=interfacesRedundancyElim.size()-1) wrafter = interfacesWithRedundancy.get(i+2);
+				//ChainInterface reafter = interfacesRedundancyElim.get(i+2);
+
+				
+				//System.out.printf("%7.2f %7.2f - %5d %5d\n",wr.getInterfaceArea(),re.getInterfaceArea(),wr.getNumContacts(),re.getNumContacts());
+				
+				// because same interfaces can be found in different places in redundancy/non-redundancy
+				// it can happen that the values are slightly different (due to asa calc algorithm giving different results for same molec in different orientations)
+				// then the sorting based on areas can be different... but at most there would be a different in 1 position, 
+				// that's why we simply check the position after and the one before
+				// e.g. 1hbn
+				if (wr.getNumContacts() == re.getNumContacts() ||
+					((wrbefore!=null) && wrbefore.getNumContacts()==re.getNumContacts()) ||
+					((wrafter!=null) && wrafter.getNumContacts()==re.getNumContacts())) {
+					
+				} else {
+					System.out.printf("%7.2f %7.2f - %5d %5d\n",wr.getInterfaceArea(),re.getInterfaceArea(),wr.getNumContacts(),re.getNumContacts());
+					match = false;
+				}
+				//Assert.assertEquals(wr.getNumContacts(),re.getNumContacts());
 			}
+			
+			Assert.assertTrue(match);
 		}
 
 	}
