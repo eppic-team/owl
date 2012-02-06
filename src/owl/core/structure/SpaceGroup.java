@@ -83,10 +83,8 @@ public final class SpaceGroup implements Serializable {
 	private List<Double> angles; // all rotation angles except for the identity transformation (thus one element fewer than transformations)
 	private List<Vector3d> axes; // all rotation axes except for the identity transformation (thus one element fewer than transformations)
 	
-	// we store here the transformIds (the rotational ones) belonging to a, b or c axes 
-	private ArrayList<Integer> aAxisRotations;
-	private ArrayList<Integer> bAxisRotations;
-	private ArrayList<Integer> cAxisRotations;
+	// we store here the transformIds (the rotational ones) for each of the possible rotation axes (the key of the map)
+	private HashMap<Vector3d,ArrayList<Integer>> operatorsPerAxis; // axes of rotation to lists of operator ids
 	
 	private HashMap<Integer,Integer> transformId2AxisType;
 	
@@ -197,9 +195,7 @@ public final class SpaceGroup implements Serializable {
 	private void calcRotAxesAndAngles() {
 		angles = new ArrayList<Double>();
 		axes = new ArrayList<Vector3d>();
-		aAxisRotations = new ArrayList<Integer>();
-		bAxisRotations = new ArrayList<Integer>();
-		cAxisRotations = new ArrayList<Integer>();
+		operatorsPerAxis = new HashMap<Vector3d, ArrayList<Integer>>();
 		transformId2AxisType = new HashMap<Integer, Integer>();
 		transformId2AxisType.put(0, 1); // for operator transformId=0, axis type is "1-fold"
 		
@@ -227,9 +223,13 @@ public final class SpaceGroup implements Serializable {
 			angles.add(angle);
 			Vector3d axis = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
 			axes.add(axis);
-			if (deltaComp(axis.x, 1, delta)) aAxisRotations.add(i);
-			if (deltaComp(axis.y, 1, delta)) bAxisRotations.add(i);
-			if (deltaComp(axis.z, 1, delta)) cAxisRotations.add(i);
+			if (operatorsPerAxis.containsKey(axis)) {
+				operatorsPerAxis.get(axis).add(i);
+			} else {
+				ArrayList<Integer> ops = new ArrayList<Integer>();
+				ops.add(i);
+				operatorsPerAxis.put(axis, ops);
+			}
 			if (deltaComp(angle, Math.PI, delta)) { 
 				transformId2AxisType.put(i, 2);
 			} else if (deltaComp(angle, 2.0*Math.PI/3.0, delta)) {
@@ -274,13 +274,16 @@ public final class SpaceGroup implements Serializable {
 	public boolean areInSameAxis(int tId1, int tId2) {
 		if (tId1==tId2) return true;
 		
-		if (aAxisRotations== null) calcRotAxesAndAngles();
+		if (operatorsPerAxis== null) calcRotAxesAndAngles();
 		
 		if (isRotationIdentity(tId1) && isRotationIdentity(tId2)) return true;
 		
-		if (aAxisRotations.contains(tId1) && aAxisRotations.contains(tId2)) return true;
-		if (bAxisRotations.contains(tId1) && bAxisRotations.contains(tId2)) return true;
-		if (cAxisRotations.contains(tId1) && cAxisRotations.contains(tId2)) return true;
+		for (Vector3d axis:operatorsPerAxis.keySet()) {
+			ArrayList<Integer> ops = operatorsPerAxis.get(axis);
+			if (ops.contains(tId1) && ops.contains(tId2)) {
+				return true;
+			}
+		}
 		
 		return false;
 	}
