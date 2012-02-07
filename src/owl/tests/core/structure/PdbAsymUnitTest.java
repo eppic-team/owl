@@ -339,8 +339,8 @@ public class PdbAsymUnitTest {
 				// we don't check the too small ones because they are problematic (and anyway not interesting)
 				if (wr.getInterfaceArea()>10) {
 					Assert.assertEquals(wr.getInterfaceArea(), re.getInterfaceArea(), wr.getInterfaceArea()*0.10); // 10% discrepancy permitted
-					// additionally we count the ones with discrepancies above 2%, we won't allow more than 2
-					if (Math.abs(wr.getInterfaceArea() - re.getInterfaceArea())>0.02*wr.getInterfaceArea()) {
+					// additionally we count the ones with discrepancies above 3%, we won't allow more than 2
+					if (Math.abs(wr.getInterfaceArea() - re.getInterfaceArea())>0.03*wr.getInterfaceArea()) {
 						countDiscAbove2pc++;
 					}
 				}
