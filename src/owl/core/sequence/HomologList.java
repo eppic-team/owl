@@ -516,42 +516,67 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @param tcoffeeBin
 	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
 	 * @params nThreads number of CPU cores t_coffee should use
+	 * @params alnCacheFile
 	 * @throws IOException
 	 * @throws TcoffeeException 
+	 * @throws UniprotVerMisMatchException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads) throws IOException, TcoffeeException, InterruptedException {
-		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
-		File outTreeFile = File.createTempFile("homologs.", ".dnd");
-		File alnFile = File.createTempFile("homologs.",".aln");
-		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, File alnCacheFile) throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
+		File alnFile = null;
+		
+		if (alnCacheFile!=null && alnCacheFile.exists()) {
+			String uniprotVerFromCacheDir = readUniprotVer(alnCacheFile.getParent());
+			String uniprotVerFromBlast = this.uniprotVer; // this can be either actually from blast db dir (if blast was run) or read from blast cache dir
+			if (!uniprotVerFromBlast.equals(uniprotVerFromCacheDir)) {
+				throw new UniprotVerMisMatchException("Uniprot version used for blast "+
+						" ("+uniprotVerFromBlast+") does not match version in alignment cache dir "+
+						alnCacheFile.getParent()+" ("+uniprotVerFromCacheDir+")");
+			}
+			
+			alnFile = alnCacheFile;
+			LOGGER.warn("Reading alignment from cache file " + alnCacheFile+". Won't recompute with t_coffee");
+			
+		} else {
+			// no cache: we compute with t-coffee
 
-		this.writeToFasta(homologSeqsFile, true);
-		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
-		LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
-		tcr.runTcoffee();
-		if (!DEBUG) { 
-			// note that if the run of tcoffee throws an exception, files are not marked for deletion
-			homologSeqsFile.deleteOnExit();
-			alnFile.deleteOnExit();
-			tcoffeeLogFile.deleteOnExit();
-			outTreeFile.deleteOnExit(); 
+			alnFile = File.createTempFile("homologs.",".aln");
+			File homologSeqsFile = File.createTempFile("homologs.", ".fa");
+			File outTreeFile = File.createTempFile("homologs.", ".dnd");
+			File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
+
+			this.writeToFasta(homologSeqsFile, true);
+			TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
+			tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
+			LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
+			tcr.runTcoffee();
+			if (!DEBUG) { 
+				// note that if the run of tcoffee throws an exception, files are not marked for deletion
+				homologSeqsFile.deleteOnExit();
+				alnFile.deleteOnExit();
+				tcoffeeLogFile.deleteOnExit();
+				outTreeFile.deleteOnExit(); 
+			}
+
 		}
-
-
 		
 		try {
 			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
 		} catch (FileFormatException e) {
-			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" does not seem to be in the right format.");
-			System.err.println("Error: "+e.getMessage());
-			System.exit(1);
+			throw new IOException(e);
 		} catch (AlignmentConstructionException e) {
-			System.err.println("Unexpected error, output file of tcoffee "+alnFile+" seems to contain .");
-			System.err.println("Error: "+e.getMessage());
-			System.exit(1);
+			throw new IOException(e);
 		}
-		
+
+		// if we did pass a cache file but it doesn't exist yet, we have computed the alignment. Now we need to write it to the given cache file
+		if (alnCacheFile!=null && !alnCacheFile.exists()) { 
+			try {
+				writeAlignmentToFile(alnCacheFile);
+				LOGGER.info("Writing alignment cache file "+alnCacheFile);
+			} catch(FileNotFoundException e) {
+				LOGGER.error("Couldn't write alignment cache file "+alnCacheFile);
+			}
+		}
+
 	}
 	
 	/**
