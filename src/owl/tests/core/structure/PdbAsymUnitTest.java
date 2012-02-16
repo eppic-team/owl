@@ -104,8 +104,6 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 			
-			pdb.removeHatoms();
-			
 			List<String> repChains = pdb.getAllRepChains();
 			Assert.assertTrue(repChains.size()<=pdb.getNumPolyChains() && repChains.size()>0);
 			List<String> allchains = new ArrayList<String>();
@@ -150,6 +148,8 @@ public class PdbAsymUnitTest {
 				System.err.println("PDB load error, cause: "+e.getMessage());
 				continue;
 			}
+			
+			pdb.removeHatoms();
 
 			ChainInterfaceList pisaInterfaces = all.get(pdbCode).convertToChainInterfaceList(pdb);
 			// we sort them on interface area because pisa doesn't always sort them like that (it does some kind of grouping)
@@ -283,6 +283,8 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 
+			pdb.removeHatoms();
+			
 			SpaceGroup sg = pdb.getSpaceGroup();
 			if (sg==null) System.out.println("No space group");
 			else System.out.println(sg.getShortSymbol()+" ("+sg.getId()+")");
