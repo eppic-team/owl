@@ -68,6 +68,7 @@ public enum AtomType {
 	Pr(59,140.908, 2.00, "PR", "Praseodymium",false,false),
 	Sm(62,150.362, 2.00, "SM", "Samarium",  false, false),
 	Eu(63,151.964, 2.00, "EU", "Europium",  false, false),
+	Gd(64,157.253, 2.00, "GD", "Gadolinium",false, false),
 	Tb(65,158.925, 2.00, "TB", "Terbium",   false, false),
 	Ho(67,164.930, 2.00, "HO", "Holmium",   false, false),
 	Yb(70,173.054, 2.00, "YB", "Ytterbium", false, false),
