@@ -1269,6 +1269,19 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 	}
 	
+	/**
+	 * Returns true if at least one Hydrogen atom is present in a standard amino-acid 
+	 * of at least one protein chain of this PDB structure
+	 * @see #removeHatoms()
+	 * @return
+	 */
+	public boolean hasHydrogens() {
+		for (PdbChain chain:this.getPolyChains()) {
+			if (chain.hasHydrogens()) return true;
+		}
+		return false;
+	}
+	
 	/*--------------------------------------- static methods -----------------------------------------*/
 	
 	/**

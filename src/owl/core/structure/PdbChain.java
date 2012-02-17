@@ -1489,6 +1489,24 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
+	 * Returns true if at least one Hydrogen atom is present in a standard amino-acid of this chain
+	 * @see #removeHatoms()
+	 * @return
+	 */
+	public boolean hasHydrogens() {
+		for (Residue res:this) {
+			if (res instanceof AaResidue) {
+				for (Atom atom:res) {
+					if (atom.getType()==AtomType.H) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+	
+	/**
 	 * Returns true if this PdbChain has been restricted to a specific SCOP domain 
 	 * @return
 	 */

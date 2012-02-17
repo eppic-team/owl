@@ -41,6 +41,12 @@ public class InterfacesFinder {
 		this.sg = pdb.getSpaceGroup();
 		this.debug = false;
 		this.withRedundancyElimination = true;
+		if (this.pdb.hasHydrogens()) {
+			// We have to warn because at the moment we implemented things so that we have to call removeHatoms() before calling getAllInterfaces()
+			// We need to fix that so that we simply can calculate interfaces by ignoring Hydrogens without having to remove them
+			// While we don't fix that, we need to warn because it's really dangerous to calculate interfaces (and thus core/rim residues) with Hydrogens 
+			System.err.println("Warning! Hydrogen atoms present in the structure, the interface calculation (ASAs) won't be reliable!");
+		}
 	}
 	
 	public void setDebug(boolean debug) {
