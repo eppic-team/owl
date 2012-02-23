@@ -6,8 +6,8 @@ import owl.core.runners.blast.BlastHit;
 
 /**
  * Class to encapsulate a blast hit representing a homolog to a certain
- * sequence. It stores data from the blast hit and the Uniprot entry or other 
- * data if not a Uniprot 
+ * sequence. 
+ * It stores data from the blast hit and the UniRef entry (can be UniProt or UniParc)
  *  
  * @see HomologList
  * 
@@ -20,28 +20,16 @@ public class Homolog implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	private BlastHit blastHit;
-	private UniprotEntry uniprotEntry;
-	private String id;
-	private String sequence;
+	private UnirefEntry unirefEntry;
 	
 	/**
-	 * Constructs a new Uniprot Homolog
+	 * Constructs a new UniRef Homolog
 	 * @param blastHit
 	 * @param uniprotEntry
 	 */
-	public Homolog(BlastHit blastHit, UniprotEntry uniprotEntry) {
+	public Homolog(BlastHit blastHit, UnirefEntry unirefEntry) {
 		this.blastHit = blastHit;
-		this.uniprotEntry = uniprotEntry;
-	}
-	
-	/**
-	 * Constructs a new non-uniprot Homolog
-	 * @param blastHit
-	 * @param id
-	 */
-	public Homolog(BlastHit blastHit, String id) {
-		this.blastHit = blastHit;
-		this.id = id;
+		this.unirefEntry = unirefEntry;
 	}
 	
 	public BlastHit getBlastHit() {
@@ -52,23 +40,23 @@ public class Homolog implements Serializable {
 		this.blastHit = blastHit;
 	}
 
-	public UniprotEntry getUniprotEntry() {
-		return this.uniprotEntry;
+	public UnirefEntry getUnirefEntry() {
+		return this.unirefEntry;
 	}
 	
-	public void setUniprotEntry(UniprotEntry uniprotEntry) {
-		this.uniprotEntry = uniprotEntry;
-	}
-	
-	public String getIdentifier() {
-		if (uniprotEntry==null) return id;
-		else return this.uniprotEntry.getUniId();
-	}
+//	public UniprotEntry getUniprotEntry() {
+//		return this.unirefEntry.getUniprotEntry();
+//	}
 
-	public Sequence getUniprotSeq() {
-		return this.uniprotEntry.getUniprotSeq();
+	/**
+	 * Returns the UniProt identifier if the UniRef entry corresponds to a UniProt or
+	 * else it returns the UniParc identifier 
+	 * @return
+	 */
+	public String getIdentifier() {
+		if (unirefEntry.isUniprot()) return unirefEntry.getUniprotId();
+		else return unirefEntry.getUniparcId();
 	}
-	
 
 	public double getPercentIdentity() {
 		return this.blastHit.getTotalPercentIdentity();
@@ -84,12 +72,7 @@ public class Homolog implements Serializable {
 	}
 	
 	public String getSequence() {
-		if (uniprotEntry==null) return sequence;
-		else return uniprotEntry.getUniprotSeq().getSeq();
-	}
-	
-	public void setSequence(String sequence) {
-		this.sequence = sequence;
+		return unirefEntry.getSequence();
 	}
 	
 	/**
@@ -97,6 +80,6 @@ public class Homolog implements Serializable {
 	 * @return
 	 */
 	public boolean isUniprot() {
-		return uniprotEntry!=null;
+		return unirefEntry.isUniprot();
 	}
 }

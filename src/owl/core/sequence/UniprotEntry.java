@@ -55,7 +55,7 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	
 	private String uniId;
 	private Sequence uniprotSeq;
-	private String taxId;
+	private int taxId;
 	private List<String> taxons; // the taxonomy as returned by UniprotEntry.getTaxonomy(). First value is the most general (kingdom), last is the most specific (species).
 	private List<String> emblCdsIds;
 	private List<Sequence> emblCdsSeqs; 
@@ -109,25 +109,38 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	/**
 	 * @return the taxId
 	 */
-	public String getTaxId() {
+	public int getTaxId() {
 		return taxId;
 	}
 
 	/**
 	 * @param taxId the taxId to set
 	 */
-	public void setTaxId(String taxId) {
+	public void setTaxId(int taxId) {
 		this.taxId = taxId;
 	}
 	
+	/**
+	 * The taxonomy as returned by UniprotEntry.getTaxonomy(). 
+	 * First value is the most general (domain of life), last is the most specific (species).
+	 * @return
+	 */
 	public List<String> getTaxons() {
 		return taxons;
 	}
 	
+	/**
+	 * Returns the domain of life (what used to be kingdom) for this entry 
+	 * @return
+	 */
 	public String getFirstTaxon() {
 		return this.taxons.get(0);
 	}
 	
+	/**
+	 * Returns the most specific taxonomy annotation (species) for this entry
+	 * @return
+	 */
 	public String getLastTaxon() {
 		return this.taxons.get(this.taxons.size()-1);
 	}
@@ -204,7 +217,7 @@ public class UniprotEntry implements HasFeatures, Serializable {
 		if (ncbiTaxIds.size()>1) {
 			LOGGER.warn("More than one taxonomy id for uniprot entry "+this.uniId);
 		}
-		this.taxId = ncbiTaxIds.get(0).getValue();
+		this.taxId = Integer.parseInt(ncbiTaxIds.get(0).getValue());
 		for (NcbiTaxon ncbiTax:entry.getTaxonomy()) {
 			taxons.add(ncbiTax.getValue());
 		}
@@ -280,7 +293,7 @@ public class UniprotEntry implements HasFeatures, Serializable {
 			LOGGER.info("Non-empty uniprot gene encoding organelle field: entry "+this.getUniId()+" encoded in: "+this.geneEncodingOrganelle);
 			if (!this.geneEncodingOrganelle.equals(GENE_ENC_ORG_PLASMID)) { 
 				LOGGER.warn("The entry "+this.getUniId()+" is not encoded in nucleus or plasmid! Not using its CDS.");
-				//TODO this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
+				// this is a temporary solution, eventually we should let it in and use the appropriate genetic code if needed
 				representativeCDS = null;
 				repCDScached = true;
 				return representativeCDS;

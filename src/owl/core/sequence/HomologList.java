@@ -9,15 +9,12 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,7 +25,6 @@ import org.xml.sax.SAXException;
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
-import owl.core.runners.SelectonRunner;
 import owl.core.runners.TcoffeeException;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastException;
@@ -43,12 +39,9 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAli
 import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
-import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
-import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
-import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
 
 /**
@@ -85,27 +78,23 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	/*-------------------------- members --------------------------*/
 	
-	private UniprotEntry ref;						 // the uniprot entry to which the homologs refer
+	private UniprotEntry ref;						// the uniprot entry to which the homologs refer
 	private Interval refInterval;
 	private boolean isSubInterval;
-	private List<Homolog> list; 				 // the list of homologs
-	private List<Homolog> subList;			 // the filtered list of homologs after calling filterToMinIdAndCoverage
-	private Map<String,Homolog> lookup;		 // to speed up searches (uniprot ids to Homologs)
-													 // (used to be lists of homologs as we considered multi-matches of the 
-													 // same uniprot as different BlastHits, but not anymore since we introduced 
-													 // BlastHsps)
-	private double idCutoff; 						 // the identity cutoff (see filterToMinIdAndCoverage() )
-	private double qCoverageCutoff;					 // the query coverage cutoff (see filterToMinIdAndCoverage() )
-	private String uniprotVer;						 // the version of uniprot used in blasting, read from the reldate.txt uniprot file
+	private List<Homolog> list; 					// the list of homologs
+	private List<Homolog> subList;			 		// the filtered list of homologs after calling filterToMinIdAndCoverage
+	private Map<String,Homolog> lookup;		 		// to speed up searches (uniprot ids to Homologs)
+													// (used to be lists of homologs as we considered multi-matches of the 
+													// same uniprot as different BlastHits, but not anymore since we introduced 
+													// BlastHsps)
+	private double idCutoff; 						// the identity cutoff (see filterToMinIdAndCoverage() )
+	private double qCoverageCutoff;					// the query coverage cutoff (see filterToMinIdAndCoverage() )
+	private String uniprotVer;						// the version of uniprot used in blasting, read from the reldate.txt uniprot file
 	
 	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
-	private MultipleSequenceAlignment nucAln; 		// the nucleotides alignment
 
 	private int reducedAlphabet;					// the reduced alphabet used to calculate entropies
 	private List<Double> entropies;					// entropies for each uniprot reference sequence position
-	private List<Double> kaksRatios;				// ka/ks for each uniprot reference sequence position
-
-	private boolean haveCDSData;
 	
 	private boolean useUniparc;
 	
@@ -134,7 +123,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		
 		this.idCutoff = 0.0; // i.e. no filter
-		haveCDSData = false;
+
 	}
 	
 	public List<Homolog> getFilteredSubset() {
@@ -244,14 +233,18 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			Matcher m = Sequence.DEFLINE_PRIM_ACCESSION_REGEX.matcher(sid);
 			if (m.matches()) {
 				String uniId = m.group(1);
-				list.add(new Homolog(hit,new UniprotEntry(uniId)));
+				UnirefEntry uniref = new UnirefEntry();
+				uniref.setUniprotId(uniId);
+				list.add(new Homolog(hit,uniref));
 			} else {
 				Matcher m2 = Sequence.DEFLINE_PRIM_ACCESSION_UNIREF_REGEX.matcher(sid);
 				if (m2.matches()) {					
 					String uniId = m2.group(1);
 					if (uniId.startsWith("UPI")){
 						if (useUniparc) {
-							list.add(new Homolog(hit,uniId));
+							UnirefEntry uniref = new UnirefEntry();
+							uniref.setUniparcId(uniId);
+							list.add(new Homolog(hit,uniref));
 						} else {
 							LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniparc id.");
 						}
@@ -259,8 +252,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					else if (uniId.contains("-")) {
 						LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniprot isoform id.");
 					}
-					else {						
-						list.add(new Homolog(hit,new UniprotEntry(uniId)));
+					else {	
+						UnirefEntry uniref = new UnirefEntry();
+						uniref.setUniprotId(uniId);
+						list.add(new Homolog(hit,uniref));
 					}
 				} else {
 					LOGGER.error("Could not find uniprot id in subject id "+sid);
@@ -333,44 +328,20 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 			Homolog hom = this.getHomolog(uniId);
 
-			hom.getUniprotEntry().setUniprotSeq(new Sequence(hom.getIdentifier(),entry.getSequence().getValue()));
+			hom.getUnirefEntry().setSequence(entry.getSequence().getValue());
 
 			List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
 			if (ncbiTaxIds.size()>1) {
 				LOGGER.warn("More than one taxonomy id for uniprot entry "+hom.getIdentifier());
 			}
-			hom.getUniprotEntry().setTaxId(ncbiTaxIds.get(0).getValue());
+			hom.getUnirefEntry().setNcbiTaxId(Integer.parseInt(ncbiTaxIds.get(0).getValue()));
 			List<String> taxons = new ArrayList<String>();
 			for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
 				taxons.add(ncbiTaxon.getValue());
 			}
-			hom.getUniprotEntry().setTaxons(taxons);
+			hom.getUnirefEntry().setTaxons(taxons);
 
-			Collection<Embl> emblrefs = entry.getDatabaseCrossReferences(DatabaseType.EMBL);
-			List<String> emblCdsIds = new ArrayList<String>();
-			Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
-			for(Embl ref:emblrefs) {
-				String emblCdsIdWithVer = ref.getEmblProteinId().getValue();
-				if (!emblCdsIdWithVer.equals("-")) { // for non annotated genomic dna cds sequences the identifier is '-', we ignore them
-					String emblCdsId = emblCdsIdWithVer.substring(0, emblCdsIdWithVer.lastIndexOf("."));
-					//emblCdsIds.add(emblCdsId);
-					tmpEmblCdsIdsSet.add(emblCdsId);
-				}
-			}
-			emblCdsIds.addAll(tmpEmblCdsIdsSet); // we use the set to be sure there are no duplicates (it does happen sometimes)
-			hom.getUniprotEntry().setEmblCdsIds(emblCdsIds);
-
-			List<Organelle> orglls = entry.getOrganelles();
-			if (orglls.size()>0) {
-				hom.getUniprotEntry().setGeneEncodingOrganelle(orglls.get(0).getType().getValue());
-				if (orglls.size()>1) {
-					for (Organelle orgll:orglls){ 
-						if (!orgll.getType().equals(hom.getUniprotEntry().getGeneEncodingOrganelle())) {
-							LOGGER.warn("Different gene encoding organelles for Uniprot "+hom.getIdentifier());
-						}
-					}
-				}
-			}
+			
 		}
 		// now we check if the query to uniprot JAPI did really return all requested uniprot ids
 		boolean allIdsReturned = true;
@@ -389,55 +360,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		if (!allIdsReturned) {
 			initialiseMap();
 		}
-	}
-	
-	/**
-	 * Retrieves from EMBL DB fetch web service the EMBL CDS sequences
-	 * @param cacheFile a FASTA file containing the sequences to retrieve. If present and if
-	 * it contains ALL required sequences then they are read from cacheFile. If null or file
-	 * does not exist or file older than {@value #EmblWSDBfetchConnect.MAX_CACHE_AGE} then the sequences are 
-	 * retrieved from EMBL DB fetch
-	 * @throws IOException
-	 */
-	public void retrieveEmblCdsSeqs(File cacheFile) throws IOException {
-		List<String> allIds = new ArrayList<String>();
-		
-		for (Homolog hom:subList) {
-			allIds.addAll(hom.getUniprotEntry().getEmblCdsIds());
-		}
-		List<Sequence> allSeqs = null;
-		try {
-			allSeqs = EmblWSDBfetchConnection.fetchEMBLCDS(allIds, cacheFile);
-		} catch (NoMatchFoundException e) {
-			// this is unlikely to happen here, that's why we don't write a better error message
-			LOGGER.warn("Couldn't retrieve EMBL CDS sequences for some EMBL cds ids");
-			LOGGER.warn(e.getMessage());
-		}
-		
-		// we put the list (containing all the sequences from all the homologs) in a lookup table
-		// so that we can then retrieve the ones corresponding to each homolog below
-		Map<String,Sequence> lookup = new HashMap<String,Sequence>();
-		for (Sequence seq:allSeqs) {
-			lookup.put(seq.getSecondaryAccession(), seq);
-		}
-		 
-		for (Homolog hom:subList) {
-			List<Sequence> seqs = new ArrayList<Sequence>();
-			for (String emblCdsId:hom.getUniprotEntry().getEmblCdsIds()) {
-				if (lookup.containsKey(emblCdsId)) {
-					seqs.add(lookup.get(emblCdsId));
-				} else { 
-					// this will happen when the CDS sequence was not returned by embl dbfetch or the cache file does not have it (it's in the list of missing entries)
-					// in either case we don't want the list of emblcs sequences to contain a null
-					LOGGER.warn("Sequence for EMBL CDS "+emblCdsId+" of uniprot entry "+hom.getIdentifier()+" could not be found. Not using it.");
-					//TODO should we also remove from the list of embl cds ids this emblCdsId? Not sure if it can cause problems
-					// to have an embl cds id without its corresponding sequence
-				}
-			}
-			
-			hom.getUniprotEntry().setEmblCdsSeqs(seqs);
-		}		
-		haveCDSData = true;
 	}
 	
 	public void retrieveUniparcData(File cacheFile) throws IOException {
@@ -459,7 +381,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			for (Homolog hom:subList) {
 				if (hom.isUniprot()) continue;
 				if (lookup.containsKey(hom.getIdentifier())) {
-					hom.setSequence(lookup.get(hom.getIdentifier()).getSeq());
+					hom.getUnirefEntry().setSequence(lookup.get(hom.getIdentifier()).getSeq());
 				}
 			}		
 		} catch (NoMatchFoundException e) {
@@ -587,84 +509,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		return aln;
 	}
 	
-	/**
-	 * Returns a multiple sequence alignment of all valid nucleotide CDS sequences from the 
-	 * UniprotHomologList plus the query's CDS by mapping the nucleotide sequences to the protein 
-	 * sequences alignment. 
-	 * @return
-	 */
-	public MultipleSequenceAlignment getNucleotideAlignment() {
-		if (nucAln!=null) {
-			return nucAln;
-		}
-		
-		// first we gather all the aligned protein sequences and the unaligned nucleotide sequences
-		List<String> alignedProtSeqs = new ArrayList<String>();
-		List<ProteinToCDSMatch> protToCDSMatches = new ArrayList<ProteinToCDSMatch>();
-		// query
-		ProteinToCDSMatch queryMatching = ref.getRepresentativeCDS();
-		if (queryMatching!=null) {
-			alignedProtSeqs.add(aln.getAlignedSequence(ref.getUniprotSeq().getName()));
-			protToCDSMatches.add(queryMatching);
-		}
-		// homologs
-		for (Homolog hom:subList) {
-			ProteinToCDSMatch matching = hom.getUniprotEntry().getRepresentativeCDS();
-			if (matching!=null){
-				alignedProtSeqs.add(aln.getAlignedSequence(hom.getBlastHit().getSubjectId()));
-				protToCDSMatches.add(matching);
-			}
-		}
-		
-		// put the gaps in and produce the final nucleotide alignment
-		List<Sequence> allSeqs = new ArrayList<Sequence>();
-
-		for (int seqIdx=0;seqIdx<alignedProtSeqs.size();seqIdx++) {
-			String alignedProtSeq = alignedProtSeqs.get(seqIdx);
-			ProteinToCDSMatch protToCDSMatch = protToCDSMatches.get(seqIdx);
-			String unalignedNucSeq = protToCDSMatch.getNucleotideSeqForBestTranslation();
-			
-			StringBuffer nucSeqSB = new StringBuffer();
-			int j = 0;
-			for (int i=0;i<alignedProtSeq.length();i++) {
-				char aa = alignedProtSeq.charAt(i);
-				if (aa==MultipleSequenceAlignment.GAPCHARACTER) {
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-				} else {
-					if (j+3<=unalignedNucSeq.length()) {
-						nucSeqSB.append(unalignedNucSeq.substring(j, j+3));
-					} else {
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-						nucSeqSB.append(MultipleSequenceAlignment.GAPCHARACTER);
-					}
-					j+=3;
-				}				
-			}
-			allSeqs.add(new Sequence(protToCDSMatch.getCDSName(),nucSeqSB.toString()));
-		}
-		
-		try {
-			nucAln = new MultipleSequenceAlignment(allSeqs);
-		} catch(AlignmentConstructionException e) {
-			LOGGER.fatal("Unexpected error while creating the nucleotides alignment");
-			LOGGER.fatal(e.getMessage());
-			System.exit(1);
-		}
-		
-		return nucAln;
-	}
-	
 	public void writeAlignmentToFile(File alnFile) throws FileNotFoundException {
 		aln.writeFasta(new PrintStream(alnFile), 80, true);
 	}
  
-	public void writeNucleotideAlignmentToFile(File alnFile) throws FileNotFoundException {
-		this.getNucleotideAlignment().writeFasta(new PrintStream(alnFile), 80, true);
-	}
-	
 	/**
 	 * Creates a subset list of Homologs that have at least the required identities
 	 * and query coverage.
@@ -701,7 +549,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				it.remove();
 				continue;
 			}
-			if (!hom.getUniprotEntry().isInSameDomainOfLife(this.ref)) {
+			if (!hom.getUnirefEntry().isInSameDomainOfLife(this.ref)) {
 				it.remove();
 			}
 		}
@@ -725,7 +573,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		for (Homolog hom:subList){
 			if (!hom.isUniprot()) continue; //we don't know the tax id for Uniparcs, we simply ignore them in this redundancy elimination procedure
 			double percentId = hom.getPercentIdentity();
-			String taxId = hom.getUniprotEntry().getTaxId();
+			int taxId = hom.getUnirefEntry().getNcbiTaxId();
 			String key = taxId+"_"+String.format("%6.3f",percentId);
 			if (groups.containsKey(key)) {
 				groups.get(key).add(hom);
@@ -746,7 +594,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				for (int i=0;i<list.size();i++){
 					for (int j=i+1;j<list.size();j++){
 						try {
-							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUniprotSeq(), list.get(j).getUniprotSeq());
+							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUnirefEntry().getSeq(), list.get(j).getUnirefEntry().getSeq());
 							pairwiseIdMatrix[i][j]=aln.getPercentIdentity();
 						} catch (PairwiseSequenceAlignmentException e) {
 							LOGGER.error("Unexpected error. Couldn't align sequences "+list.get(i).getIdentifier()+" and "+list.get(j).getIdentifier()+" for redundancy removal procedure");
@@ -794,28 +642,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 		}
 		// 3) if there are still groups with size>1 then they are really redundant, all sequences except one have to be eliminated
-		//    in any case we first check that the one we want to eliminate doesn't have a better CDS representative
 		List<Homolog> toRemove = new ArrayList<Homolog>();
 		for (String key:groups.keySet()) {
 			List<Homolog> list = groups.get(key);
-			if (list.size()>1) {
-				Homolog homToKeep = null;
-				if (hasCDSData()) {
-					for (Homolog hom:list){
-						if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
-							homToKeep = hom;
-							break;
-						}
-					}
-				}
-				if (homToKeep==null) { // if there wasn't any good CDS homolog we remove all but first
-					for (int i=1;i<list.size();i++) {
-						toRemove.add(list.get(i));
-					}
-				} else { // if we found one good CDS homolog we remove all the others
-					for (Homolog hom:list) {
-						if (hom!=homToKeep) toRemove.add(hom);
-					}
+			if (list.size()>1) {				
+				// we remove all but first
+				for (int i=1;i<list.size();i++) {
+					toRemove.add(list.get(i));
 				}
 			}
 		}
@@ -866,13 +699,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				List<Homolog> group = groups.get(key);
 				if (group.size()>1) {
 					// remove the last element of the group
-					Homolog toRemove = null;
-					if (hasCDSData()) {
-						toRemove = getHomologNonValidCDS(group);
-					}
-					if (toRemove==null) {
-						toRemove = group.get(group.size()-1);
-					} 
+					Homolog toRemove = group.get(group.size()-1);
+					
 					subList.remove(toRemove);					
 					group.remove(toRemove);
 					
@@ -885,21 +713,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 		// and we reinitialise the lookup maps
 		initialiseMap();
-	}
-	
-	/**
-	 * Given a list of homologs returns the first one that does not have a valid CDS match 
-	 * or null if all homologs have valid matches. 
-	 * @param list
-	 * @return
-	 */
-	private static Homolog getHomologNonValidCDS(List<Homolog> list) {
-		for (Homolog hom:list) {
-			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
-				return hom;
-			}
-		}
-		return null;
 	}
 	
 	/**
@@ -943,62 +756,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		return uniprotVer;
 	}
 	
-	public int getNumHomologsWithCDS() {
-		int count = 0;
-		for (Homolog hom:subList) {
-			if (hom.getUniprotEntry().hasCDS()) {
-				count++;
-			}
-		}				
-		return count;
-	}
-	
-	public int getNumHomologsWithValidCDS() {
-		int count = 0;
-		for (Homolog hom:subList) {
-			if (hom.getUniprotEntry().getRepresentativeCDS()!=null) {
-				count++;
-			}
-		}
-		return count;
-	}
-
-	/**
-	 * Tells whether CDS data was retrieved from this list by calling {@link #retrieveEmblCdsSeqs(File)}
-	 * @return
-	 */
-	public boolean hasCDSData() {
-		return haveCDSData;
-	}
-	
-	/**
-	 * Checks whether this UniprotHomologList contains genes encoded with strictly 
-	 * one genetic code type.
-	 * @see GeneticCodeType
-	 * @return
-	 */
-	public boolean isConsistentGeneticCodeType() {
-		GeneticCodeType lastGct = null;
-		for (Homolog hom:subList) {
-			GeneticCodeType gct = hom.getUniprotEntry().getGeneticCodeType();
-			if (lastGct!=null && !lastGct.equals(gct)) {
-				return false;
-			}
-			lastGct = gct;
-		}
-		return true;
-	}
-	
-	/**
-	 * Gets the genetic code type of this UniprotHomologList. It does it by simply returning
-	 * the genetic code type of the first homolog in the list. It does NOT check for consistency
-	 * within the list. For that use {@link #isConsistentGeneticCodeType()}
-	 * @return
-	 */
-	public GeneticCodeType getGeneticCodeType() {
-		return this.subList.get(0).getUniprotEntry().getGeneticCodeType();
-	}
-	
 	/**
 	 * Compute the sequence entropies for all reference sequence (uniprot) positions
 	 * @param reducedAlphabet
@@ -1011,51 +768,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 	}
 	
-	/**
-	 * Compute the sequence ka/ks ratios with selecton for all reference CDS sequence positions
-	 * @param selectonBin
-	 * @param resultsFile
-	 * @param logFile
-	 * @param treeFile
-	 * @param globalResultsFile
-	 * @param epsilon
-	 * @throws IOException
-	 */
-	public void computeKaKsRatiosSelecton(File selectonBin, File resultsFile, File logFile, File treeFile, File globalResultsFile, double epsilon) 
-	throws IOException, InterruptedException {
-		kaksRatios = new ArrayList<Double>();
-		SelectonRunner sr = new SelectonRunner(selectonBin);
-		if(!resultsFile.exists()) {
-			File alnFile = File.createTempFile("selecton.", ".cds.aln");
-			alnFile.deleteOnExit();
-			this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
-			sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);
-		} else {
-			LOGGER.warn("Selecton output file "+resultsFile+" already exists. Using the file instead of running selecton.");
-			try {
-				sr.parseResultsFile(resultsFile, this.ref.getRepresentativeCDS().getCDSName());
-			} catch (FileFormatException e) {
-				LOGGER.warn("Cached output selecton file "+resultsFile+" does not seem to be in the righ format");
-				LOGGER.warn(e.getMessage());
-				LOGGER.warn("Running selecton and overwritting the file.");
-				File alnFile = File.createTempFile("selecton.", ".cds.aln");
-				alnFile.deleteOnExit();
-				this.nucAln.writeFasta(new PrintStream(alnFile), 80, true);
-				sr.run(alnFile, resultsFile, logFile, treeFile, null, globalResultsFile, this.ref.getRepresentativeCDS().getCDSName(), this.getGeneticCodeType(),epsilon);				
-			}
-		}
-		kaksRatios = sr.getKaKsRatios();
-		if (kaksRatios.size()!=this.ref.getUniprotSeq().getLength()) {
-			LOGGER.info("Size of ka/ks ratio list ("+kaksRatios.size()+") is not the same as length of reference sequence ("+this.ref.getUniprotSeq().getLength()+")");
-		}
-	}
-
 	public List<Double> getEntropies() {
 		return entropies;
-	}
-	
-	public List<Double> getKaksRatios() {
-		return kaksRatios;
 	}
 	
 	public int getReducedAlphabet() {
@@ -1064,37 +778,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	public void setUseUniparc(boolean useUniparc) {
 		this.useUniparc = useUniparc;
-	}
-	
-	/**
-	 * Tells whether a given position of the reference sequence (starting at 0)
-	 * is reliable with respect to the CDS matching of the reference sequence and the CDS
-	 * matchings of the homologs 
-	 * (not reliable is considered any position where the CDS translation does not match exactly the 
-	 * protein residue) 
-	 * @param i
-	 * @return
-	 */
-	public boolean isReferenceSeqPositionReliable(int i) {
-		// check if matching CDS of ref sequence is reliable at position i
-		if (!this.ref.isReliablePosition(i)) {
-			return false;
-		}
-		// check if each of the matching CDS of the homologs is reliable at position i of the ref sequence
-		for (Homolog hom:subList){
-			if (hom.getUniprotEntry().getRepresentativeCDS()==null) {
-				continue; // the homolog may have no representative CDS, in that case we don't want to check the CDS alignment as it doesn't exist
-			}
-			int alnPos = aln.seq2al(this.ref.getUniprotSeq().getName(), i+1);
-			int seqPos = aln.al2seq(hom.getLongSequenceTag(), alnPos);
-			if (seqPos==-1) { // the position maps to a gap in the homolog sequence, there's no CDS alignment to check, we can continue to next homolog directly
-				continue;
-			}
-			if (!hom.getUniprotEntry().isReliablePosition(seqPos-1)) {
-				return false;
-			}
-		}
-		return true;
 	}
 	
 	/**
