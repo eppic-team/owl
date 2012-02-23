@@ -78,7 +78,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	/*-------------------------- members --------------------------*/
 	
-	private UniprotEntry ref;						// the uniprot entry to which the homologs refer
+	private UnirefEntry ref;						// the uniprot entry to which the homologs refer
 	private Interval refInterval;
 	private boolean isSubInterval;
 	private List<Homolog> list; 					// the list of homologs
@@ -99,7 +99,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	private boolean useUniparc;
 	
 	
-	public HomologList(UniprotEntry ref) {
+	public HomologList(UnirefEntry ref) {
 		this(ref,null);
 	}
 	
@@ -109,7 +109,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @param interv the interval in the uniprot sequence that we actually use (with 
 	 * numbering of uniprot seq from 1 to length-1), if null the whole sequence is use 
 	 */
-	public HomologList(UniprotEntry ref, Interval interv) {
+	public HomologList(UnirefEntry ref, Interval interv) {
 		this.ref = ref;
 		if (interv!=null) {
 			this.refInterval = interv;
@@ -173,8 +173,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					blastList = null;
 				} else {
 					// if we do take the cache file we have to do some sanity checks
-					if (!blastList.getQueryId().equals(this.ref.getUniprotSeq().getName())) {
-						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotSeq().getName());
+					if (!blastList.getQueryId().equals(this.ref.getUniprotId())) {
+						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotId());
 					}
 					this.uniprotVer = readUniprotVer(cacheFile.getParent());
 					String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
@@ -201,7 +201,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				inputSeqFile.deleteOnExit();
 			}
 			// NOTE: we blast the reference uniprot sequence using only the interval specified
-			this.ref.getUniprotSeq().getInterval(this.refInterval).writeToFastaFile(inputSeqFile);
+			this.ref.getSeq().getInterval(this.refInterval).writeToFastaFile(inputSeqFile);
 			
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
@@ -413,8 +413,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		int len = 80;
 
 		if (writeQuery) {
-			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotSeq().getName());
-			Sequence refSequence = ref.getUniprotSeq().getInterval(refInterval);
+			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotId());
+			Sequence refSequence = ref.getSeq().getInterval(refInterval);
 			for(int i=0; i<refSequence.getLength(); i+=len) {
 				pw.println(refSequence.getSeq().substring(i, Math.min(i+len,refSequence.getLength())));
 			}
@@ -764,7 +764,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		this.reducedAlphabet = reducedAlphabet;
 		this.entropies = new ArrayList<Double>(); 
 		for (int i=0;i<refInterval.getLength();i++){
-			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniprotSeq().getName(),i+1), reducedAlphabet));
+			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniprotId(),i+1), reducedAlphabet));
 		}
 	}
 	
