@@ -28,7 +28,7 @@ import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastInput;
 
 /**
  * Our interface to the Uniprot Java API.
- * TODO: Merge with owl.core.connections.UniprotConnection
+ * 
  * @author stehr
  */
 public class UniProtConnection {

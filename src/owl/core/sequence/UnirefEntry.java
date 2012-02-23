@@ -1,9 +1,12 @@
-package owl.core.connections;
+package owl.core.sequence;
+
+import owl.core.connections.UnirefXMLParser;
 
 /**
  * A minimal Uniref entry representation as parsed from a uniref xml file 
  * See uniprot archives at ftp://ftp.uniprot.org/pub/databases/uniprot/previous_releases/
  * 
+ * @see UnirefXMLParser
  * @author duarte_j
  *
  */

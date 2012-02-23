@@ -196,9 +196,7 @@ public class UniprotEntry implements HasFeatures, Serializable {
 		Set<String> tmpEmblCdsIdsSet = new TreeSet<String>();
 		
 		UniProtConnection uniprotConn = new UniProtConnection();
-		UniProtEntry entry = null;
-		
-		entry = uniprotConn.getEntry(uniId);
+		UniProtEntry entry = uniprotConn.getEntry(uniId);
 		
 		this.setUniprotSeq(new Sequence(this.getUniId(),entry.getSequence().getValue()));
 		

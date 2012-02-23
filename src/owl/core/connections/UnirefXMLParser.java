@@ -15,6 +15,8 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import owl.core.sequence.UnirefEntry;
+
 
 public class UnirefXMLParser implements ContentHandler {
 
