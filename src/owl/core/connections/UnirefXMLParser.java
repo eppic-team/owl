@@ -223,13 +223,17 @@ public class UnirefXMLParser implements ContentHandler {
 			if (name.equals(DB_REFERENCE_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" ID")) {
 					inDbReferenceUniProt = true;
+					uniprotAccessionCounter = 0;
 				}
 			}
 		}
 		if (inMember && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" accession")) {
-					currentEntry.addClusterMember(atts.getValue("value"));
+					if (uniprotAccessionCounter==0) {
+						currentEntry.addClusterMember(atts.getValue("value"));
+					}
+					uniprotAccessionCounter++;
 				}
 			}
 		}
