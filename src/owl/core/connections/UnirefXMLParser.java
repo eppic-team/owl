@@ -28,6 +28,7 @@ public class UnirefXMLParser implements ContentHandler {
 	private static final String ORGANISM_TAG = "organism";
 	private static final String SEQUENCE_TAG = "sequence";
 	private static final String REPRESENTATIVE_MEMBER_TAG = "representativeMember";
+	private static final String MEMBER_TAG = "member";
 	
 	private File unirefXMLFile;
 	private InputSource input;
@@ -43,8 +44,12 @@ public class UnirefXMLParser implements ContentHandler {
 	private boolean inDbReferenceUniParc;
 	private boolean inOrganism;
 	private boolean inRepresentativeMember;
+	private boolean inMember;
+	
+	private int uniprotAccessionCounter;
 	
 	private PrintWriter out;
+	private PrintWriter clustersOut;
 	
 	private boolean isGzipped;
 	
@@ -65,11 +70,13 @@ public class UnirefXMLParser implements ContentHandler {
 	 * Parses the UniRef XML file outputting to outFile tab delimited
 	 * with columns: uniref_id, uniprot_id, uniparc_id, tax_id, sequence    
 	 * @param outFile
+	 * @param clustersFile
 	 * @throws SAXException
 	 * @throws IOException
 	 */
-	public void parseIntoTabDelimited(File outFile) throws SAXException, IOException {
+	public void parseIntoTabDelimitedFiles(File outFile, File clustersFile) throws SAXException, IOException {
 		out = new PrintWriter(outFile);
+		clustersOut = new PrintWriter(clustersFile);
 
 		InputStream is = null;
 		if (isGzipped) {
@@ -87,6 +94,7 @@ public class UnirefXMLParser implements ContentHandler {
 		parser.parse(input);
 		
 		out.close();
+		clustersOut.close();
 	}
 	
 	/**
@@ -116,7 +124,8 @@ public class UnirefXMLParser implements ContentHandler {
 		inDbReferenceUniProt = false;
 		inDbReferenceUniParc = false;
 		inRepresentativeMember = false;
-		
+		inMember = false;
+		uniprotAccessionCounter = 0;
 		buffer = null;
 	}
 
@@ -142,6 +151,9 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		else if (name.equals(REFERENCE_SEQUENCE_TAG)) {
 			inReferenceSequence = true;
+		}
+		else if (name.equals(MEMBER_TAG)) {
+			inMember = true;
 		}
 		else if (name.equals(SEQUENCE_TAG)) {
 			initValueReading();
@@ -176,6 +188,7 @@ public class UnirefXMLParser implements ContentHandler {
 			if (name.equals(DB_REFERENCE_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" ID")) {
 					inDbReferenceUniProt = true;	
+					uniprotAccessionCounter = 0;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
 					currentEntry.setUniparcId(atts.getValue("id"));
 					inDbReferenceUniParc = true;
@@ -185,7 +198,12 @@ public class UnirefXMLParser implements ContentHandler {
 		if (inRepresentativeMember && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" accession")) {
-					currentEntry.setUniprotId(atts.getValue("value")); 
+					if (uniprotAccessionCounter==0) {
+						currentEntry.setUniprotId(atts.getValue("value"));
+					} else {
+						currentEntry.addInactiveUniprotId(atts.getValue("value"));
+					}
+					uniprotAccessionCounter++;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
 					currentEntry.setUniparcId(atts.getValue("value"));
 				} else if (atts.getValue("type").equals("NCBI taxonomy")) {
@@ -200,6 +218,34 @@ public class UnirefXMLParser implements ContentHandler {
 				}
 			}
 		}
+		
+		if (inMember) {
+			if (name.equals(DB_REFERENCE_TAG)) {
+				if (atts.getValue("type").equals(uniprotName+" ID")) {
+					inDbReferenceUniProt = true;
+				}
+			}
+		}
+		if (inMember && inDbReferenceUniProt) {
+			if (name.equals(PROPERTY_TAG)) {
+				if (atts.getValue("type").equals(uniprotName+" accession")) {
+					currentEntry.addClusterMember(atts.getValue("value"));
+				}
+			}
+		}
+		
+	}
+	
+	private void writeTabDelimited() {
+		out.println(currentEntry.getTabDelimitedMySQLString()); 
+		if (currentEntry.isUniprot()) {
+			clustersOut.println(currentEntry.getUniprotId()+"\t"+currentEntry.getUniprotId());
+			if (currentEntry.hasClusterMembers()) {
+				 for (String memberuniprotid:currentEntry.getClusterMembers()){
+					 clustersOut.println(currentEntry.getUniprotId()+"\t"+memberuniprotid);
+				 }
+			}
+		}
 	}
 
 	public void endElement(String uri, String localName, String name)
@@ -209,7 +255,7 @@ public class UnirefXMLParser implements ContentHandler {
 			if (currentEntry.hasNulls()) {
 				System.err.println("Warning! nulls in Uniref entry "+currentEntry.getId());
 			}
-			out.println(currentEntry.getTabDelimitedMySQLString()); 
+			writeTabDelimited();			
 		}
 		else if (name.equals(REPRESENTATIVE_MEMBER_TAG)) {
 			inRepresentativeMember = false;
@@ -219,6 +265,9 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		else if (name.equals(REFERENCE_SEQUENCE_TAG)) {
 			inReferenceSequence = false;
+		}
+		else if (name.equals(MEMBER_TAG)) {
+			inMember = false;
 		}
 		else if (name.equals(SEQUENCE_TAG)) {
 			String sequence = flushValue().replaceAll("\n", "");
@@ -236,7 +285,11 @@ public class UnirefXMLParser implements ContentHandler {
 				inDbReferenceUniParc = false;
 			}
 		}
-		
+		if (inMember) {
+			if (name.equals(DB_REFERENCE_TAG)) {
+				inDbReferenceUniProt = false;
+			}
+		}
 		
 	}
 
@@ -280,12 +333,12 @@ public class UnirefXMLParser implements ContentHandler {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		if (args.length<2) {
-			System.err.println("Usage: UnirefXMLParser <input xml or xml.gz file> <out file>");
+		if (args.length<3) {
+			System.err.println("Usage: UnirefXMLParser <input xml or xml.gz file> <out data file> <out cluster members file>");
 			System.exit(1);
 		}
 		UnirefXMLParser urxp = new UnirefXMLParser(new File(args[0]));
-		urxp.parseIntoTabDelimited(new File(args[1]));
+		urxp.parseIntoTabDelimitedFiles(new File(args[1]), new File(args[2]));
 		
 	}
 
