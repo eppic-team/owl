@@ -4,15 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import owl.core.connections.NoMatchFoundException;
-import owl.core.connections.UniProtConnection;
 import owl.core.connections.UnirefXMLParser;
-import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
-import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
-import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 
 /**
  * A minimal Uniref entry representation as parsed from a UniRef xml file 
@@ -25,8 +17,6 @@ import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 public class UnirefEntry implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-	
-	private static final Log LOGGER = LogFactory.getLog(UnirefEntry.class);
 	
 	private String id;
 	private String uniprotId;
@@ -233,27 +223,5 @@ public class UnirefEntry implements Serializable {
 	public String getTabDelimitedMySQLString() {
 		return id+"\t"+(uniprotId==null?"\\N":uniprotId)+"\t"+uniparcId+"\t"+ncbiTaxId+"\t"+sequence;
 	}
-	
-	/**
-	 * Retrieves from UniprotKB the sequence and taxonomy 
-	 * by using the remote Uniprot API
-	 */
-	public void retrieveUniprotKBData() throws NoMatchFoundException {
-		this.taxons = new ArrayList<String>();
-		
-		UniProtConnection uniprotConn = new UniProtConnection();
-		UniProtEntry entry = uniprotConn.getEntry(uniprotId);
-		
-		this.sequence = entry.getSequence().getValue();
-		
-		List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
-		if (ncbiTaxIds.size()>1) {
-			LOGGER.warn("More than one taxonomy id for uniprot entry "+this.uniprotId);
-		}
-		this.ncbiTaxId = Integer.parseInt(ncbiTaxIds.get(0).getValue());
-		for (NcbiTaxon ncbiTax:entry.getTaxonomy()) {
-			taxons.add(ncbiTax.getValue());
-		}
 
-	}
 }

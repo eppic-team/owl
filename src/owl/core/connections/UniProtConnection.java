@@ -1,13 +1,21 @@
 package owl.core.connections;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import owl.core.connections.NoMatchFoundException;
+import owl.core.sequence.UnirefEntry;
 
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseCrossReference;
 import uk.ac.ebi.kraken.interfaces.uniprot.DatabaseType;
+import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
+import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.embl.Embl;
 import uk.ac.ebi.kraken.interfaces.uniprot.dbx.pdb.Pdb;
@@ -33,15 +41,18 @@ import uk.ac.ebi.kraken.uuw.services.remoting.blast.BlastInput;
  */
 public class UniProtConnection {
 	
+	private static final Log LOGGER = LogFactory.getLog(UniProtConnection.class);
+	
 	/*--------------------------- member variables --------------------------*/
-	EntryRetrievalService entryRetrievalService;
-	UniProtQueryService uniProtQueryService;
+	private EntryRetrievalService entryRetrievalService;
+	private UniProtQueryService uniProtQueryService;
+	
+	private HashSet<String> nonReturnedIdsLastMultipleRequest;
 	
 	/*----------------------------- constructors ----------------------------*/
 	
 	public UniProtConnection() {
-		// TODO: Create logger
-		//Create entry retrieval service
+		// Create entry retrieval service
 		entryRetrievalService = UniProtJAPI.factory.getEntryRetrievalService();
 	    // Create UniProt query service
 	    uniProtQueryService = UniProtJAPI.factory.getUniProtQueryService();
@@ -53,6 +64,9 @@ public class UniProtConnection {
 	 * Primary method to retrieve a Uniprot entry by its ID. The entry object
 	 * can be used for subsequent method calls or for functions provided by the
 	 * Uniprot API for which we do not have our own implementation.
+	 * @param uniProtId
+	 * @return 
+	 * @throws NoMatchFoundException if no match returned by UniProt JAPI
 	 */
 	public UniProtEntry getEntry(String uniProtId) throws NoMatchFoundException {
 		UniProtEntry entry = (UniProtEntry) entryRetrievalService.getUniProtEntry(uniProtId);
@@ -61,15 +75,108 @@ public class UniProtConnection {
 	}
 
 	/**
+	 * Convenience method to get a owl.core.sequence.UnirefEntry object from UniProt JAPI 
+	 * given a uniprot id.
+	 * The UnirefEntry object returned contains the uniprot id, tax id, taxons and sequence.
+	 * The information returned with this object can be obtained by calling {@link #getEntry(String)} and
+	 * then extracting the different parts of the info from the returned JAPI's UniProtEntry
+	 * @param uniProtId
+	 * @return
+	 * @throws NoMatchFoundException if no match returned by UniProt JAPI
+	 */
+	public UnirefEntry getUnirefEntry(String uniProtId) throws NoMatchFoundException {
+		List<String> taxons = new ArrayList<String>();
+		
+		UniProtEntry entry = getEntry(uniProtId);
+		String sequence = entry.getSequence().getValue();
+		
+		List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
+		if (ncbiTaxIds.size()>1) {
+			LOGGER.warn("More than one taxonomy id for uniprot entry "+uniProtId);
+		}
+		int ncbiTaxId = Integer.parseInt(ncbiTaxIds.get(0).getValue());
+		for (NcbiTaxon ncbiTax:entry.getTaxonomy()) {
+			taxons.add(ncbiTax.getValue());
+		}
+		UnirefEntry uniref = new UnirefEntry();
+		uniref.setUniprotId(uniProtId);
+		uniref.setNcbiTaxId(ncbiTaxId);
+		uniref.setTaxons(taxons);
+		uniref.setSequence(sequence);
+		return uniref;
+	}
+	
+	/**
 	 * Gets a list of Uniprot entries as an Iterator given a list of Uniprot identifiers.
 	 * If any of the input entries can not be retrieved through JAPI then they will be
-	 * missing in the returned iterator. The user must check for those. 
+	 * missing in the returned iterator. The user must check for those.  
 	 * @param idsList a list of uniprot ids
 	 * @return
 	 */
 	public EntryIterator<UniProtEntry> getMultipleEntries(List<String> idsList) {
 	    Query query = UniProtQueryBuilder.buildIDListQuery(idsList);
 	    return uniProtQueryService.getEntryIterator(query);
+	}
+	
+	/**
+	 * Convenience method to get a List of owl.core.sequence.UnirefEntry given a List of uniprot ids.
+	 * Analogous to {@link #getUnirefEntry(String)} but for multiple entries.
+	 * If the JAPI does not return all requested ids a warning is logged and the list of non-returned 
+	 * ids can be retrieved through {@link #getNonReturnedIdsLastMultipleRequest()}
+	 * @param uniprotIds
+	 * @return
+	 * @throws IOException
+	 */
+	public List<UnirefEntry> getMultipleUnirefEntries(List<String> uniprotIds) throws IOException {
+		
+		List<UnirefEntry> unirefEntries = new ArrayList<UnirefEntry>();
+		
+		EntryIterator<UniProtEntry> entries = getMultipleEntries(uniprotIds);
+
+		for (UniProtEntry entry:entries) {
+			String uniId = entry.getPrimaryUniProtAccession().getValue();
+			if (!uniprotIds.contains(uniId)) { // TODO this could be more efficient by using a Map, is it necessary?
+				// this happens if the JAPI/server are really broken and return records that we didn't ask for (actually happened on the 09.02.2011!!!)
+				throw new IOException("Uniprot JAPI server returned an unexpected record: "+uniId);
+			}
+			String sequence = entry.getSequence().getValue();
+
+			List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
+			if (ncbiTaxIds.size()>1) {
+				LOGGER.warn("More than one taxonomy id for uniprot entry "+uniId);
+			}
+			int ncbiTaxId = Integer.parseInt(ncbiTaxIds.get(0).getValue());
+			
+			List<String> taxons = new ArrayList<String>();
+			for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
+				taxons.add(ncbiTaxon.getValue());
+			}
+			UnirefEntry uniref = new UnirefEntry();
+			uniref.setUniprotId(uniId);
+			uniref.setNcbiTaxId(ncbiTaxId);
+			uniref.setTaxons(taxons);
+			uniref.setSequence(sequence);
+			unirefEntries.add(uniref);
+		}
+		
+		// now we check if the query to uniprot JAPI did really return all requested uniprot ids
+	    HashSet<String> returnedUniIds = new HashSet<String>();
+	    for (UnirefEntry uniref:unirefEntries) {
+			returnedUniIds.add(uniref.getUniprotId());
+	    }
+	    nonReturnedIdsLastMultipleRequest = new HashSet<String>();
+	    for (String uniprotId:uniprotIds){
+	    	if (!returnedUniIds.contains(uniprotId)) {
+	    		nonReturnedIdsLastMultipleRequest.add(uniprotId);
+	    		LOGGER.warn("Information for uniprot ID "+uniprotId+" could not be retrieved with the Uniprot JAPI.");
+	    	}
+	    }
+		
+		return unirefEntries;
+	}
+	
+	public HashSet<String> getNonReturnedIdsLastMultipleRequest() {
+		return nonReturnedIdsLastMultipleRequest;
 	}
 	
 	/**

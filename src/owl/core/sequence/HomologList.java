@@ -39,10 +39,6 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAli
 import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
-import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
-import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
-import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
-import uk.ac.ebi.kraken.uuw.services.remoting.EntryIterator;
 
 /**
  * Class to store a set of homologs of a given sequence.
@@ -304,10 +300,12 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and EMBL CDS ids data,
 	 * by using the remote Uniprot API
+	 * @param uniprotConn
 	 * @throws UniprotVerMisMatchException 
+	 * @throws IOException
 	 */
-	public void retrieveUniprotKBData() throws UniprotVerMisMatchException, IOException {
-		UniProtConnection uniprotConn = new UniProtConnection();
+	public void retrieveUniprotKBData(UniProtConnection uniprotConn) throws UniprotVerMisMatchException, IOException {
+		
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
 			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
 		}
@@ -315,49 +313,31 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		for (Homolog hom:subList) {
 			if (hom.isUniprot()) uniprotIds.add(hom.getIdentifier());
 		}
-		EntryIterator<UniProtEntry> entries = uniprotConn.getMultipleEntries(uniprotIds);
-
-		HashSet<String> returnedUniIds = new HashSet<String>();
 		
-		for (UniProtEntry entry:entries) {
-			String uniId = entry.getPrimaryUniProtAccession().getValue();
-			returnedUniIds.add(uniId);
-			if (!this.lookup.containsKey(uniId)) {
-				// this happens if the JAPI/server are really broken and return records that we didn't ask for (actually happened on the 09.02.2011!!!)
-				throw new IOException("Uniprot JAPI server returned an unexpected record: "+uniId);
-			}
-			Homolog hom = this.getHomolog(uniId);
+		List<UnirefEntry> unirefs = uniprotConn.getMultipleUnirefEntries(uniprotIds);
 
-			hom.getUnirefEntry().setSequence(entry.getSequence().getValue());
-
-			List<NcbiTaxonomyId> ncbiTaxIds = entry.getNcbiTaxonomyIds();
-			if (ncbiTaxIds.size()>1) {
-				LOGGER.warn("More than one taxonomy id for uniprot entry "+hom.getIdentifier());
-			}
-			hom.getUnirefEntry().setNcbiTaxId(Integer.parseInt(ncbiTaxIds.get(0).getValue()));
-			List<String> taxons = new ArrayList<String>();
-			for(NcbiTaxon ncbiTaxon:entry.getTaxonomy()) {
-				taxons.add(ncbiTaxon.getValue());
-			}
-			hom.getUnirefEntry().setTaxons(taxons);
-
-			
-		}
-		// now we check if the query to uniprot JAPI did really return all requested uniprot ids
-		boolean allIdsReturned = true;
-		Iterator<Homolog> it = subList.iterator(); 
-		while (it.hasNext()) {
-			Homolog hom = it.next();
-			if (!hom.isUniprot()) continue;
-			if (!returnedUniIds.contains(hom.getIdentifier())) {
-				allIdsReturned = false;
-				LOGGER.warn("Information for uniprot ID "+hom.getIdentifier()+" could not be retrieved with the Uniprot JAPI. Will remove this id from the homologs list.");
-				it.remove();
-			}
+		for (UnirefEntry uniref:unirefs) {
+			Homolog hom = this.getHomolog(uniref.getUniprotId());
+			hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
+			hom.getUnirefEntry().setSequence(uniref.getSequence());
+			hom.getUnirefEntry().setTaxons(uniref.getTaxons());
+			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
 		}
 		
-		// and update the lookup table if necessary
-		if (!allIdsReturned) {
+		// now we check if the query did really return all requested uniprot ids 
+		HashSet<String> nonreturned = uniprotConn.getNonReturnedIdsLastMultipleRequest();
+		
+		if (!nonreturned.isEmpty()) {
+			Iterator<Homolog> it = subList.iterator(); 
+			while (it.hasNext()) {
+				Homolog hom = it.next();
+				if (!hom.isUniprot()) continue;
+				if (nonreturned.contains(hom.getIdentifier())) {
+					LOGGER.info("Removing uniprot id "+hom.getIdentifier()+" from homologs because it wasn't returned by the Uniprot connection.");
+					it.remove();
+				}
+			}
+			// and update the lookup table 
 			initialiseMap();
 		}
 	}
