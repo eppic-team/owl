@@ -24,27 +24,29 @@ import owl.core.util.MySQLConnection;
  */
 public class UniprotLocalConnection {
 
-	private static final String TABLES_PREFIX = "uniprot_"; 
+	private static final String DATA_TABLE = "uniprot"; 
+	private static final String CLUSTERS_TABLE = "uniprot_clusters";
 	private static final Log LOGGER = LogFactory.getLog(UniprotLocalConnection.class);
 	
 	private MySQLConnection conn;
 	private String dbName;
-	private String uniprotTable;
-	private String clustersTable;
+	private String uniprotVer;
 	
 	private HashSet<String> nonReturnedIdsLastMultipleRequest;
 	
-	public UniprotLocalConnection(String dbName, String uniprotVersion) throws SQLException {
+	public UniprotLocalConnection(String dbName) throws SQLException {
 		
 		conn = new MySQLConnection();
 		
 		this.dbName = dbName;
-		if (uniprotVersion.contains(".")) {
-			// for older style uniprot version numbers
-			uniprotVersion = uniprotVersion.replace(".", "_");
-		}
-		uniprotTable = TABLES_PREFIX+uniprotVersion;
-		clustersTable = TABLES_PREFIX+uniprotVersion+"_clusters";
+		
+		this.uniprotVer = dbName.substring(dbName.indexOf('_'), dbName.length());
+		this.uniprotVer = uniprotVer.replace("-", "."); // for older style uniprot version numbers
+		
+	}
+	
+	public String getVersion() {
+		return uniprotVer;
 	}
 	
 	/**
@@ -67,7 +69,7 @@ public class UniprotLocalConnection {
 		}
 		
 		Statement st = conn.createStatement();
-		String sql = "SELECT id, uniprot_id, uniparc_id, tax_id, sequence FROM "+dbName+"."+uniprotTable+" WHERE "+idColumn+"='"+repId+"'";
+		String sql = "SELECT id, uniprot_id, uniparc_id, tax_id, sequence FROM "+dbName+"."+DATA_TABLE+" WHERE "+idColumn+"='"+repId+"'";
 		ResultSet rs = st.executeQuery(sql);
 		UnirefEntry uniref = null;
 		int count = 0;
@@ -83,16 +85,16 @@ public class UniprotLocalConnection {
 		rs.close();
 		st.close();
 		if (uniref==null) 
-			throw new NoMatchFoundException("No match in table "+dbName+"."+uniprotTable+" for id "+uniId);
+			throw new NoMatchFoundException("No match in table "+dbName+"."+DATA_TABLE+" for id "+uniId);
 		if (count>1) 
-			throw new SQLException("Multiple matches in table "+dbName+"."+uniprotTable+" for id "+repId);
+			throw new SQLException("Multiple matches in table "+dbName+"."+DATA_TABLE+" for id "+repId);
 		
 		return uniref;
 	}
 	
 	private String getRepresentative(String uniId) throws SQLException, NoMatchFoundException {
 		Statement st = conn.createStatement();
-		String sql = "SELECT representative FROM "+dbName+"."+clustersTable+" WHERE member='"+uniId+"'";
+		String sql = "SELECT representative FROM "+dbName+"."+CLUSTERS_TABLE+" WHERE member='"+uniId+"'";
 		ResultSet rs = st.executeQuery(sql);
 		String repUniId = null;
 		int count = 0;
@@ -103,9 +105,9 @@ public class UniprotLocalConnection {
 		rs.close();
 		st.close();
 		if (repUniId==null) 
-			throw new NoMatchFoundException("No match in clusters table "+dbName+"."+clustersTable+" for uniprot id "+uniId);
+			throw new NoMatchFoundException("No match in clusters table "+dbName+"."+CLUSTERS_TABLE+" for uniprot id "+uniId);
 		if (count>1) 
-			throw new SQLException("Multiple matches in clusters table "+dbName+"."+clustersTable+" for uniprot id "+uniId);
+			throw new SQLException("Multiple matches in clusters table "+dbName+"."+CLUSTERS_TABLE+" for uniprot id "+uniId);
 			
 		return repUniId;
 	}
