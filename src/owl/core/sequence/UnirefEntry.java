@@ -4,13 +4,17 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import owl.core.connections.UniProtConnection;
+import owl.core.connections.UniprotLocalConnection;
 import owl.core.connections.UnirefXMLParser;
 
 /**
- * A minimal Uniref entry representation as parsed from a UniRef xml file 
- * See uniprot archives at ftp://ftp.uniprot.org/pub/databases/uniprot/previous_releases/
+ * A minimal Uniref entry representation  
  * 
+ * @see UniProtConnection
+ * @see UniprotLocalConnection
  * @see UnirefXMLParser
+ * 
  * @author duarte_j
  *
  */
@@ -96,6 +100,14 @@ public class UnirefEntry implements Serializable {
 	
 	public void setTaxons(List<String> taxons) {
 		this.taxons = taxons;
+	}
+	
+	/**
+	 * Returns either the uniprot or the uniparc id depending of the kind of this uniref entry
+	 * @return
+	 */
+	public String getUniId() {
+		return isUniprot()?uniprotId:uniparcId;
 	}
 	
 	/**

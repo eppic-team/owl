@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.xml.sax.SAXException;
 import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
+import owl.core.connections.UniprotLocalConnection;
 import owl.core.runners.TcoffeeException;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastException;
@@ -79,7 +81,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	private boolean isSubInterval;
 	private List<Homolog> list; 					// the list of homologs
 	private List<Homolog> subList;			 		// the filtered list of homologs after calling filterToMinIdAndCoverage
-	private Map<String,Homolog> lookup;		 		// to speed up searches (uniprot ids to Homologs)
+	private Map<String,Homolog> lookup;		 		// to speed up searches (uniprot/uniparc ids to Homologs)
 													// (used to be lists of homologs as we considered multi-matches of the 
 													// same uniprot as different BlastHits, but not anymore since we introduced 
 													// BlastHsps)
@@ -318,10 +320,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 		for (UnirefEntry uniref:unirefs) {
 			Homolog hom = this.getHomolog(uniref.getUniprotId());
+			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
 			hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
 			hom.getUnirefEntry().setSequence(uniref.getSequence());
-			hom.getUnirefEntry().setTaxons(uniref.getTaxons());
-			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
+			hom.getUnirefEntry().setTaxons(uniref.getTaxons());			
 		}
 		
 		// now we check if the query did really return all requested uniprot ids 
@@ -368,6 +370,50 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			LOGGER.warn("Couldn't retrieve Uniparc sequences");
 		}
 
+	}
+	
+	/**
+	 * Retrieves both uniprot and uniparc data from local db
+	 * @param uniprotConn
+	 * @throws UniprotVerMisMatchException
+	 * @throws SQLException
+	 */
+	public void retrieveUniprotKBData(UniprotLocalConnection uniprotConn) throws UniprotVerMisMatchException, SQLException {
+		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
+			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
+		}
+		List<String> uniIds = new ArrayList<String>();
+		for (Homolog hom:subList) {
+			uniIds.add(hom.getIdentifier());
+		}
+		
+		List<UnirefEntry> unirefs = uniprotConn.getMultipleUnirefEntries(uniIds);
+
+		for (UnirefEntry uniref:unirefs) {
+			Homolog hom = this.getHomolog(uniref.getUniId());
+			hom.getUnirefEntry().setId(uniref.getId());
+			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
+			hom.getUnirefEntry().setUniparcId(uniref.getUniparcId());
+			hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
+			hom.getUnirefEntry().setSequence(uniref.getSequence());
+			hom.getUnirefEntry().setTaxons(uniref.getTaxons());
+		}
+		
+		// now we check if the query did really return all requested uniprot ids 
+		HashSet<String> nonreturned = uniprotConn.getNonReturnedIdsLastMultipleRequest();
+		
+		if (!nonreturned.isEmpty()) {
+			Iterator<Homolog> it = subList.iterator(); 
+			while (it.hasNext()) {
+				Homolog hom = it.next();
+				if (nonreturned.contains(hom.getIdentifier())) {
+					LOGGER.info("Removing uniprot/uniparc id "+hom.getIdentifier()+" from homologs because it wasn't returned by the Uniprot connection.");
+					it.remove();
+				}
+			}
+			// and update the lookup table 
+			initialiseMap();
+		}
 	}
 	
 	/**
