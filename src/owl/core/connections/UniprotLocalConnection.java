@@ -1,5 +1,8 @@
 package owl.core.connections;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -207,5 +210,80 @@ public class UniprotLocalConnection {
 		List<String> taxonsAL = Arrays.asList(taxons);
 		
 		return new TaxonomyRecord(scientific, taxonsAL);
+	}
+	
+	/**
+	 * Dumps all sequences of the local uniprot database to a FASTA file with headers as the uniprot
+	 * UniRef provided files, i.e. >UniRef100_UPI123456789
+	 * @param file
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public void dumpToFasta(File file) throws SQLException, IOException {
+		
+		PrintStream out = new PrintStream(file);		
+		
+		Statement st = conn.createStatement();
+		// this is important: by default query results are stored completely in memory, but with this amount of data we can't do that
+		// with this we read row by row instead of storing in memory first
+		// see http://benjchristensen.com/2008/05/27/mysql-jdbc-memory-usage-on-large-resultset/
+		st.setFetchSize(Integer.MIN_VALUE);  
+		String sql = "SELECT id,uniprot_id,uniparc_id,sequence FROM "+dbName+"."+DATA_TABLE; 
+		ResultSet rs = st.executeQuery(sql);
+		String id = null;
+		String uniprotId = null;
+		String uniparcId = null;
+		String sequence = null;
+
+		while (rs.next()) {
+			 id = rs.getString(1);
+			 uniprotId = rs.getString(2);
+			 uniparcId = rs.getString(3);
+			 sequence = rs.getString(4);
+			 printFastaEntry(out, id, uniprotId, uniparcId, sequence);
+		}
+		rs.close();
+		st.close();
+		
+		out.close();
+		
+	}
+	
+	private void printFastaEntry(PrintStream out, String id, String uniprotId, String uniparcId, String sequence) {
+		//>UniRef100_UPI00024B9D0B
+		
+		String header = null;
+		if (id.startsWith("UniRef100_")) {
+			header = ">"+id;	
+		} else {
+			String uniId = null;
+			if (uniprotId==null) uniId = uniparcId;
+			else uniId = uniprotId;
+				
+			header = ">UniRef100_"+uniId;
+		}
+		out.println(header);
+		
+		int len = 60; 
+		for(int i=0; i<sequence.length(); i+=len) {
+			out.println(sequence.substring(i, Math.min(i+len,sequence.length())));
+		}		
+		
+	}
+	
+	/**
+	 * Given a local uniprot database name and an output fasta file dumps all sequences 
+	 * in fasta format with headers as the ones used by UniProt for its UniRef files 
+	 * @param args
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public static void main(String[] args) throws SQLException, IOException {
+		if (args.length<2) {
+			System.err.println("Usage: UniprotLocalConnection <database name> <file to dump fasta sequences>");
+			System.exit(1);
+		}
+		UniprotLocalConnection upl = new UniprotLocalConnection(args[0], null);
+		upl.dumpToFasta(new File(args[1]));
 	}
 }
