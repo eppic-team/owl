@@ -169,6 +169,7 @@ public class UnirefXMLParser implements ContentHandler {
 			if (name.equals(DB_REFERENCE_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" ID")) {
 					inDbReferenceUniProt = true;	
+					uniprotAccessionCounter = 0;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
 					inDbReferenceUniParc = true;
 				}
@@ -177,7 +178,12 @@ public class UnirefXMLParser implements ContentHandler {
 		if (inReferenceSequence && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
 				if (atts.getValue("type").equals(uniprotName+" accession")) {
-					currentEntry.setUniprotId(atts.getValue("value")); 
+					if (uniprotAccessionCounter==0) {
+						currentEntry.setUniprotId(atts.getValue("value"));
+					} else {
+						currentEntry.addInactiveUniprotId(atts.getValue("value"));
+					}
+					uniprotAccessionCounter++;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
 					currentEntry.setUniparcId(atts.getValue("value"));
 				}

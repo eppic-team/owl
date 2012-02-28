@@ -380,7 +380,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 */
 	public void retrieveUniprotKBData(UniprotLocalConnection uniprotConn) throws UniprotVerMisMatchException, SQLException {
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
+			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried from local database ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniIds = new ArrayList<String>();
 		for (Homolog hom:subList) {
