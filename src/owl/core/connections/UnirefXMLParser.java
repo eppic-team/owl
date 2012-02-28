@@ -53,8 +53,6 @@ public class UnirefXMLParser implements ContentHandler {
 	
 	private boolean isGzipped;
 	
-	private String uniprotName; // in earlier versions it is "UniProt", later on it became "UniProtKB"
-	
 	/**
 	 * Constructs new UnirefXMLParser, use subsequently {@link #parseIntoTabDelimited(File)}
 	 * @param unirefXMLFile either an xml file or a gzipped xml file (with extension gz)
@@ -63,7 +61,6 @@ public class UnirefXMLParser implements ContentHandler {
 		this.isGzipped = false;
 		this.unirefXMLFile = unirefXMLFile;
 		if (this.unirefXMLFile.getName().endsWith(".gz")) isGzipped = true;
-		this.uniprotName = "UniProt";
 	}
 
 	/**
@@ -116,6 +113,18 @@ public class UnirefXMLParser implements ContentHandler {
 		return readValue;
 	}
 	
+	private boolean isUniprotIdAttribute(String value) {
+		// in early versions of the uniref xml format strings "UniProt ID" and "UniProt accession" were used (seen in 1.0 and 4.0)
+		// later on "UniProtKB ID" and "UniProtKB accession" were used (at least from 7.0 on)
+		return (value.equals("UniProtKB ID") || value.equals("UniProt ID"));
+	}
+	
+	private boolean isUniprotAccessionAttribute(String value) {
+		// in early versions of the uniref xml format strings "UniProt ID" and "UniProt accession" were used (seen in 1.0 and 4.0)
+		// later on "UniProtKB ID" and "UniProtKB accession" were used (at least from 7.0 on)		
+		return (value.equals("UniProtKB accession") || value.equals("UniProt accession"));
+	}
+	
 	public void startDocument() throws SAXException {
 		
 		inValue = false;
@@ -141,15 +150,14 @@ public class UnirefXMLParser implements ContentHandler {
 			currentEntry.setId(atts.getValue("id")); 
 		}
 		else if (name.equals(REPRESENTATIVE_MEMBER_TAG)) {
-			inRepresentativeMember = true;
-			// representativeMember tag is used in newer versions of the XML format (at least since 2010_01)
-			// where uniprot is called UniProtKB
-			uniprotName = "UniProtKB";
+			// representativeMember tag is used ever since at least version 4.0 of uniprot, in earlier versions it was referenceSequence
+			inRepresentativeMember = true;			
 		}
 		else if (name.equals(ORGANISM_TAG)) {
 			inOrganism = true;
 		}
 		else if (name.equals(REFERENCE_SEQUENCE_TAG)) {
+			// referenceSequence tag is used in early versions of the uniref XML format (seen only in 1.0, already 4.0 contains only the new representativeMember tag)
 			inReferenceSequence = true;
 		}
 		else if (name.equals(MEMBER_TAG)) {
@@ -167,7 +175,7 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		if (inReferenceSequence) {
 			if (name.equals(DB_REFERENCE_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" ID")) {
+				if (isUniprotIdAttribute(atts.getValue("type"))) {
 					inDbReferenceUniProt = true;	
 					uniprotAccessionCounter = 0;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
@@ -177,7 +185,7 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		if (inReferenceSequence && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" accession")) {
+				if (isUniprotAccessionAttribute(atts.getValue("type"))) {
 					if (uniprotAccessionCounter==0) {
 						currentEntry.setUniprotId(atts.getValue("value"));
 					} else {
@@ -192,7 +200,7 @@ public class UnirefXMLParser implements ContentHandler {
 
 		if (inRepresentativeMember) {
 			if (name.equals(DB_REFERENCE_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" ID")) {
+				if (isUniprotIdAttribute(atts.getValue("type"))) {
 					inDbReferenceUniProt = true;	
 					uniprotAccessionCounter = 0;
 				} else if (atts.getValue("type").equals("UniParc ID")) {
@@ -203,7 +211,7 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		if (inRepresentativeMember && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" accession")) {
+				if (isUniprotAccessionAttribute(atts.getValue("type"))) {
 					if (uniprotAccessionCounter==0) {
 						currentEntry.setUniprotId(atts.getValue("value"));
 					} else {
@@ -227,7 +235,7 @@ public class UnirefXMLParser implements ContentHandler {
 		
 		if (inMember) {
 			if (name.equals(DB_REFERENCE_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" ID")) {
+				if (isUniprotIdAttribute(atts.getValue("type"))) {
 					inDbReferenceUniProt = true;
 					uniprotAccessionCounter = 0;
 				}
@@ -235,7 +243,7 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		if (inMember && inDbReferenceUniProt) {
 			if (name.equals(PROPERTY_TAG)) {
-				if (atts.getValue("type").equals(uniprotName+" accession")) {
+				if (isUniprotAccessionAttribute(atts.getValue("type"))) {
 					if (uniprotAccessionCounter==0) {
 						currentEntry.addClusterMember(atts.getValue("value"));
 					}
