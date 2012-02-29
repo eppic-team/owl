@@ -76,7 +76,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	/*-------------------------- members --------------------------*/
 	
-	private UnirefEntry ref;						// the uniprot entry to which the homologs refer
+	private UnirefEntry ref;						// the uniref entry (uniprot/uniparc) to which the homologs refer
 	private Interval refInterval;
 	private boolean isSubInterval;
 	private List<Homolog> list; 					// the list of homologs
@@ -171,8 +171,9 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					blastList = null;
 				} else {
 					// if we do take the cache file we have to do some sanity checks
-					if (!blastList.getQueryId().equals(this.ref.getUniprotId())) {
-						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+" does not match the id from the sequence: "+this.ref.getUniprotId());
+					if (!blastList.getQueryId().equals(this.ref.getUniId())) {
+						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+
+								" does not match the id from the sequence: "+this.ref.getUniId());
 					}
 					this.uniprotVer = readUniprotVer(cacheFile.getParent());
 					String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
@@ -439,7 +440,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		int len = 80;
 
 		if (writeQuery) {
-			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniprotId());
+			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniId());
 			Sequence refSequence = ref.getSeq().getInterval(refInterval);
 			for(int i=0; i<refSequence.getLength(); i+=len) {
 				pw.println(refSequence.getSeq().substring(i, Math.min(i+len,refSequence.getLength())));
@@ -790,7 +791,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		this.reducedAlphabet = reducedAlphabet;
 		this.entropies = new ArrayList<Double>(); 
 		for (int i=0;i<refInterval.getLength();i++){
-			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniprotId(),i+1), reducedAlphabet));
+			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniId(),i+1), reducedAlphabet));
 		}
 	}
 	

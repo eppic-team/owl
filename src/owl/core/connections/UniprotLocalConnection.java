@@ -130,7 +130,7 @@ public class UniprotLocalConnection {
 			if (tax!=null) {
 				uniref.setTaxons(tax.taxons);
 			} else {
-				LOGGER.warn("No taxonomy information could be found for uniprot/uniparc id "+uniref.getUniId()+"(tax_id="+uniref.getNcbiTaxId()+")");
+				LOGGER.warn("No taxonomy information could be found for uniprot/uniparc id "+uniref.getUniId()+" (tax_id="+uniref.getNcbiTaxId()+")");
 			}
 		} else {
 			LOGGER.warn("No taxonomy database specified, no taxonomy information will be available");

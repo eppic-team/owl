@@ -54,8 +54,7 @@ public class Homolog implements Serializable {
 	 * @return
 	 */
 	public String getIdentifier() {
-		if (unirefEntry.isUniprot()) return unirefEntry.getUniprotId();
-		else return unirefEntry.getUniparcId();
+		return unirefEntry.getUniId();
 	}
 
 	public double getPercentIdentity() {
