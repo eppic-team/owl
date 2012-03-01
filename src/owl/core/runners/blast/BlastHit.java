@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * alignments of the subject to the query.
  * 
  */
-public class BlastHit implements Iterable<BlastHsp>, Serializable {
+public class BlastHit implements Iterable<BlastHsp>, Serializable, Comparable<BlastHit> {
 	
 	private static final long serialVersionUID = 1L;
 
@@ -270,6 +270,11 @@ public class BlastHit implements Iterable<BlastHsp>, Serializable {
 			System.out.print("-");
 		}
 		System.out.println();
+	}
+
+	@Override
+	public int compareTo(BlastHit o) {
+		return Double.compare(this.getEvalueMaxScoringHsp(), o.getEvalueMaxScoringHsp());
 	}
 
 }

@@ -2,6 +2,7 @@ package owl.core.runners.blast;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -194,6 +195,21 @@ public class BlastHitList implements Iterable<BlastHit> {
 			}
 		}
 		return bestHit;
+	}
+	
+	/**
+	 * Sorts the BlastHitList by e-values of max scoring hsps
+	 */
+	public void sort() {
+		Collections.sort(hits);
+	}
+	
+	public boolean isEmpty() {
+		return hits.isEmpty();
+	}
+	
+	public BlastHit get(int i) {
+		return hits.get(i);
 	}
 	
 	/**
