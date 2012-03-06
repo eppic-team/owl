@@ -152,6 +152,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			prefix = prefix.substring(0, prefix.lastIndexOf(".blast.xml"));
 			cacheFile = new File(cacheFile.getParent(),prefix+"."+refInterval.beg+"-"+refInterval.end+".blast.xml");
 		}
+		this.uniprotVer = readUniprotVer(blastDbDir);
 		
 		if (cacheFile!=null && cacheFile.exists()) {
 
@@ -175,11 +176,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+
 								" does not match the id from the sequence: "+this.ref.getUniId());
 					}
-					this.uniprotVer = readUniprotVer(cacheFile.getParent());
-					String uniprotVerFromBlastDbDir = readUniprotVer(blastDbDir);
-					if (!uniprotVerFromBlastDbDir.equals(uniprotVer)) {
+					String uniprotVerFromCache = readUniprotVer(cacheFile.getParent());
+					if (!uniprotVerFromCache.equals(uniprotVer)) {
 						throw new UniprotVerMisMatchException("Uniprot version from blast db dir "+blastDbDir+
-								" ("+uniprotVerFromBlastDbDir+") does not match version in cache dir "+cacheFile.getParent()+" ("+uniprotVer+")");
+								" ("+uniprotVer+") does not match version in cache dir "+cacheFile.getParent()+" ("+uniprotVerFromCache+")");
 					}
 					if (!blastList.getDb().substring(blastList.getDb().lastIndexOf("/")+1).equals(blastDb)) {
 						LOGGER.error("Blast db used in cache file ("+cacheFile+") different from one requested "+blastDb);
@@ -204,7 +204,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			
 			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
 			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
-			this.uniprotVer = readUniprotVer(blastDbDir);
+
 			LOGGER.info("Blasted against "+blastDbDir+"/"+blastDb);
 			if (cacheFile!=null) {
 				try {
