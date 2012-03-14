@@ -481,38 +481,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	/**
-	 * Calculates residues in rim and core for given bsaToAsaCutoff, storing the 
-	 * lists in cached variables.
-	 * Support residues are excluded as per Levy definition (rASA of residue in uncomplexed 
-	 * subunit<given rASA cutoff) are excluded. 
-	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve them.
-	 * (see getRimAndCore in {@link PdbChain})
-	 * If either of the 2 molecules of this interface is not a protein, the InterfaceRimCore 
-	 * object will be null for it  
-	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve the core/rim lists. 
-	 * @param bsaToAsaCutoff
-	 * @param rASAcutoff
-	 * @return
-	 */
-	public void calcRimAndCoreExcludeSupport(double bsaToAsaCutoff, double rASAcutoff) {
-		//zoomingUsed = false;
-		
-		this.bsaToAsaCutoff = bsaToAsaCutoff;
-		
-		InterfaceRimCore rimCore1 = null;
-		InterfaceRimCore rimCore2 = null;
-		if (isFirstProtein()) { 
-			rimCore1 = this.firstMolecule.getRimAndCoreExcludeSupport(bsaToAsaCutoff,rASAcutoff);
-			firstRimCore = rimCore1;
-		}
-		
-		if (isSecondProtein()) {		
-			rimCore2 = this.secondMolecule.getRimAndCoreExcludeSupport(bsaToAsaCutoff,rASAcutoff);
-			secondRimCore = rimCore2;
-		}
-	}
-	
-	/**
 	 * Calculates core/rim lists of residues and caches them locally in {@link InterfaceRimCore} objects.
 	 * Following the Chakrabarti definition (see Chakrabarti, Janin Proteins 2002)
 	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve the core/rim lists. 

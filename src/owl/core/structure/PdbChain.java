@@ -2565,33 +2565,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object: core residues are those for 
-	 * which the bsa/asa ratio is above the given cut-off, rim those with bsa>0 and with 
-	 * bsa/asa below the cut-off.
-	 * Support residues are excluded as per Levy definition (rASA of residue in uncomplexed 
-	 * subunit<given rASA cutoff) are excluded. 
-	 * @param bsaToAsaCutoff
-	 * @param rASAcutoff
-	 * @return
-	 */
-	public InterfaceRimCore getRimAndCoreExcludeSupport(double bsaToAsaCutoff,double rASAcutoff) {
-		List<Residue> core = new ArrayList<Residue>();
-		List<Residue> rim = new ArrayList<Residue>();
-		for (Residue residue:this) {
-			if (residue.getBsa()>0) {
-				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
-					rim.add(residue);
-				} else {
-					if (residue.getRsa()>rASAcutoff) {
-						core.add(residue);
-					}
-				}
-			}
-		}
-		return new InterfaceRimCore(rim,core,bsaToAsaCutoff);
-	}
-	
-	/**
 	 * Returns 2 list of residues as a {@link InterfaceRimCore} object (see {@link #getRimAndCore(double)})
 	 * The core is required to have a minimum of minNumResidues. If the minimum is not 
 	 * reached with the bsaToAsaSoftCutoff, then the cutoff is relaxed in relaxationStep steps 
@@ -2643,8 +2616,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object. 
 	 * Following the Levy definition (see Levy JMB 2010):
-	 * core residues have relative ASA (complex) below 25% while ASA (uncomplexed) was above 25%, 
-	 * rim residues have relative ASA (complex) above 25%
+	 * core residues have rASA(c) below 25% while rASA(u) was above 25%, 
+	 * rim residues have rASA(c) above 25%
+	 * The support residues, a third class of residues introduced in Levy JMB 2010, are not included
+	 * in either the core or the rim sets here. Support residues are those with rASA(u)<25%  
 	 * @param rASAcutoff
 	 * @return
 	 */
