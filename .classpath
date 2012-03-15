@@ -11,9 +11,6 @@
 	<classpathentry exported="true" kind="lib" path="jars/java-getopt-1.0.13.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/mysql-connector-java-5.0.5-bin.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/vecmath.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/ws-commons-util-1.0.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/xmlrpc-client-3.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/xmlrpc-common-3.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-api-2.0-beta1-sources.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-graph-impl-2.0-beta1-sources.jar"/>
@@ -30,12 +27,14 @@
 	<classpathentry kind="lib" path="jars/batik/batik-svggen.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-util.jar"/>
 	<classpathentry kind="lib" path="jars/batik/batik-xml.jar"/>
-	<classpathentry kind="lib" path="jars/JRclient-RE817.jar"/>
 	<classpathentry kind="lib" path="jars/commons-math-2.2.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring.aop.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring.beans.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring.context.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring.core.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/spring.web.jar"/>
+	<classpathentry kind="lib" path="jars/ws-commons-util-1.0.2.jar"/>
+	<classpathentry kind="lib" path="jars/xmlrpc-client-3.1.jar"/>
+	<classpathentry kind="lib" path="jars/xmlrpc-common-3.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
