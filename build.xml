@@ -2,10 +2,18 @@
 <!-- ====================================================================== 
      owl    
                    
-     	An ant script to build the owl package. The default target will clean and
-     	create a build dir with a jar subdir containing a owl.jar file (with all
-     	dependent jars packed in it). 
-     	The owl.tests packages are excluded
+     	An ant script to build the owl package.
+     	Targets:
+     	
+     	- default -> core-only
+     	
+     	- core-only: builds only owl.core and packs necessary jars only. 
+     				 The uniprot.jar is not included as it changes often with UniProt version
+     				 
+     	- all: builds everything except for owl.tests and packs all jars
+     	      	
+     	The build is output to a build/jar
+     	Final owl.jar contains owl code with all dependent jars packed in it 
      	
      duarte_j                                                                
      ====================================================================== -->
@@ -25,35 +33,68 @@
 	<property name="vendor" value="Otto Warburg Laboratory, MPI for Molecular Genetics, Berlin"/>
 	
 	<path id="classpath">
-		<fileset dir="${lib.dir}" includes="**/*.jar">
+		<fileset dir="${lib.dir}" 
+			includes="**/*.jar"
+			excludes="ws-commons-util-1.0.2.jar,xmlrpc-client-3.1.jar,xmlrpc-common-3.1.jar">
 		</fileset>
 	</path>
 
-    <target name="default" depends="clean,jar">
-        
-    </target>
+	<path id="classpath-core-only">
+		<fileset dir="${lib.dir}" 
+			includes="**/*.jar"
+			excludes="ws-commons-util-1.0.2.jar,xmlrpc-client-3.1.jar,xmlrpc-common-3.1.jar,batik/**">
+		</fileset>
+	</path>
 
+	<!--Target all, to compile everything and include all jars
+		owl.tests not included-->
+	<target name="all" depends="clean,jar"/>
+	
+	<!--Target core-only, for core packages only-->
+    <target name="core-only" depends="clean,jar-core-only"/>
+	
+	<!--Target default goes to core-only -->
+    <target name="default" depends="core-only"/>
+
+	
 	<target name="clean">
 		<delete dir="${build.dir}"></delete>
 	</target>
-	
+
 	<target name="compile">
 		<mkdir dir="${bin.dir}"/>
 		<javac srcdir="${src.dir}"
          destdir="${bin.dir}"
          classpathref="classpath"
-		 excludes="**/owl/tests/**"
-		/>
+		 excludes="**/owl/tests/**,testPyMol.java,**/owl/core/util/PymolServerOutputStream.java"/>
+		
 		<!-- resources -->
 		<copy todir="${bin.dir}">
 			<fileset dir="${src.dir}" excludes="**/*.java,**/owl/tests/**"></fileset>
 		</copy>
 	</target>
 	
+	<target name="compile-core-only">
+		<mkdir dir="${bin.dir}"/>
+		<javac srcdir="${src.dir}"
+         destdir="${bin.dir}"
+         classpathref="classpath"
+		 includes="**/owl/core/**/*.java"
+		 excludes="testPyMol.java,**/owl/core/util/PymolServerOutputStream.java"
+		/>
+		
+		<!-- resources -->
+		<copy todir="${bin.dir}">
+			<fileset dir="${src.dir}" includes="**/owl/core/**" excludes="**/*.java"></fileset>
+		</copy>
+	</target>
+	
 	<target name="jar" depends="compile">
 		<mkdir dir="${jar.dir}"/>
 		<jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${bin.dir}">
-			<zipgroupfileset dir="${lib.dir}" includes="**/*.jar">
+			<zipgroupfileset dir="${lib.dir}" 
+				includes="**/*.jar" 
+				excludes="ws-commons-util-1.0.2.jar,xmlrpc-client-3.1.jar,xmlrpc-common-3.1.jar">
 			</zipgroupfileset>
 			
 			<manifest>
@@ -65,5 +106,21 @@
 		</jar>
 	</target>
 	
-
+	<target name="jar-core-only" depends="compile-core-only"> 
+			<mkdir dir="${jar.dir}"/>
+			<jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${bin.dir}">
+				<zipgroupfileset dir="${lib.dir}" 
+					includes="**/*.jar" 
+					excludes="ws-commons-util-1.0.2.jar,xmlrpc-client-3.1.jar,xmlrpc-common-3.1.jar,batik/**,uniprot/uniprotjapi.jar">
+				</zipgroupfileset>
+				
+				<manifest>
+					<section name="${ant.project.name}"></section>
+					<attribute name="Specification-Title" value="${title}"/>
+					<attribute name="Specification-Vendor" value="${vendor}"/>
+					<attribute name="Specification-Version" value="${version}"/>
+				</manifest>
+			</jar>
+		</target>
+	
 </project>
