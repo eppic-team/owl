@@ -161,7 +161,8 @@ public class InterfacesFinder {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
 				if (jAsym==pdb) continue; // we want to compare this to all others but not to itself
 
-				if (withRedundancyElimination) {
+				// we also have to check whether space group is enantiomorphic, otherwise it would have issues with axes and angles in rare case P-1
+				if (withRedundancyElimination && pdb.getSpaceGroup().isEnantiomorphic()) { 
 					if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
 						if (debug) countSkipped1++;
 						continue;
@@ -221,7 +222,7 @@ public class InterfacesFinder {
 						
 						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
 							// short-cut 1: checking for redundancy in symmetry, will skip if redundant
-							if (withRedundancyElimination) {
+							if (withRedundancyElimination && pdb.getSpaceGroup().isEnantiomorphic()) {
 								if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
 									if (debug) countSkipped1++;								
 									continue;
