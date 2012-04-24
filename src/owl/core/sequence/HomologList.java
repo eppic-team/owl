@@ -433,9 +433,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * will be used. If no filtered applied yet then all entries are used.
 	 * @param outFile
 	 * @param writeQuery if true the query sequence is written as well, if false only homologs 
+	 * @param useHspsOnly if true only the matching HSPs region of homologs will be written out, otherwise full uniprot sequences are written
 	 * @throws FileNotFoundException
 	 */
-	public void writeToFasta(File outFile, boolean writeQuery) throws FileNotFoundException {
+	public void writeToFasta(File outFile, boolean writeQuery, boolean useHspsOnly) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(outFile);
 		
 		int len = 80;
@@ -450,8 +451,21 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		
 		for(Homolog hom:subList) {
 			
-			String sequence = hom.getSequence();
-			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getLongSequenceTag());
+			String sequence = null;
+			if (useHspsOnly) {
+				sequence = hom.getUnirefEntry().getSeq().
+						getInterval(new Interval(hom.getBlastHit().getMaxScoringHsp().getSubjectStart(),
+												 hom.getBlastHit().getMaxScoringHsp().getSubjectEnd())).getSeq();
+			} else {
+				sequence = hom.getSequence();
+			}
+			
+			pw.print(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getLongSequenceTag());
+			if (useHspsOnly) {
+				// we print out to the fasta tags also the subsequence in case we are using hsps only
+				pw.print(" "+hom.getBlastHit().getMaxScoringHsp().getSubjectStart()+"-"+hom.getBlastHit().getMaxScoringHsp().getSubjectEnd());
+			}
+			pw.println();
 			for(int i=0; i<sequence.length(); i+=len) {
 				pw.println(sequence.substring(i, Math.min(i+len,sequence.length())));
 			}
@@ -471,7 +485,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @throws TcoffeeException 
 	 * @throws UniprotVerMisMatchException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, File alnCacheFile) throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly, File alnCacheFile) throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
 		File alnFile = null;
 		
 		if (alnCacheFile!=null && alnCacheFile.exists()) {
@@ -494,7 +508,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			File outTreeFile = File.createTempFile("homologs.", ".dnd");
 			File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
 
-			this.writeToFasta(homologSeqsFile, true);
+			this.writeToFasta(homologSeqsFile, true, useHspsOnly);
 			TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
 			tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
 			LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
