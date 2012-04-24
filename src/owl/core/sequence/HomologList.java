@@ -742,6 +742,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * to query until maxDesiredHomologs is reached.
 	 * The procedure is as follows: sequences are grouped by identity to query (rounded to integer percent values) 
 	 * and one of each group eliminated at each iteration until the desired number of homologs is reached.
+	 * The grouping by identities is not equally distributed. We make more groups in >90% and >95% regions 
+	 * so that we eliminate many more from the very high identities that are not very informative. 
 	 * @param maxDesiredHomologs
 	 */
 	public void skimList(int maxDesiredHomologs) {
@@ -753,9 +755,21 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		// we make it a treemap simply to have them ordered by ids in the log output
 		Map<Integer,List<Homolog>> groups = new TreeMap<Integer,List<Homolog>>(); 
 		for (Homolog hom:subList){
+			// Strategy is to make bin groups of different sizes at different cut-offs:
+			//   1% bin groups in >95% (i.e. 95, 96, 97, 98, 99, 100)
+			//   90-95 one group
+			//   90 and below: groups every 10%
+			// By this procedure we eliminate a lot more from the top identities (not so informative) and equally from the middle ones
 			double percentId = hom.getPercentIdentity();
-			int key = (int)Math.round(percentId);
-			
+			int intPercentId = (int)Math.round(percentId);
+			int key = -1;
+			if (intPercentId>=95) {
+				key = intPercentId;
+			} else if (intPercentId>=90) {
+				key = 90;
+			} else {
+				key = (intPercentId/10)*10; 
+			}
 			if (groups.containsKey(key)) {
 				groups.get(key).add(hom);
 			} else {
@@ -779,7 +793,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					subList.remove(toRemove);					
 					group.remove(toRemove);
 					
-					LOGGER.info("Removed "+toRemove.getIdentifier()+" ("+String.format("%4.1f",toRemove.getPercentIdentity())+"% id to query)");
+					LOGGER.info("Removed "+toRemove.getIdentifier()+" (group "+key+", "+String.format("%4.1f",toRemove.getPercentIdentity())+"% id to query)");
 					if (subList.size()<=maxDesiredHomologs) break outer;
 				}
 			}
