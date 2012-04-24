@@ -622,7 +622,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				for (int i=0;i<list.size();i++){
 					for (int j=i+1;j<list.size();j++){
 						try {
-							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(list.get(i).getUnirefEntry().getSeq(), list.get(j).getUnirefEntry().getSeq());
+							// we have to make sure we use only the hsps subsequences
+							Sequence iseq = list.get(i).getUnirefEntry().getSeq().getInterval(
+									new Interval(list.get(i).getBlastHit().getMaxScoringHsp().getSubjectStart(),list.get(i).getBlastHit().getMaxScoringHsp().getSubjectEnd()));
+							Sequence jseq = list.get(j).getUnirefEntry().getSeq().getInterval(
+									new Interval(list.get(j).getBlastHit().getMaxScoringHsp().getSubjectStart(),list.get(j).getBlastHit().getMaxScoringHsp().getSubjectEnd()));
+
+							PairwiseSequenceAlignment aln = new PairwiseSequenceAlignment(iseq, jseq);
 							pairwiseIdMatrix[i][j]=aln.getPercentIdentity();
 						} catch (PairwiseSequenceAlignmentException e) {
 							LOGGER.error("Unexpected error. Couldn't align sequences "+list.get(i).getIdentifier()+" and "+list.get(j).getIdentifier()+" for redundancy removal procedure");
@@ -677,12 +683,12 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				// we remove all but first
 				for (int i=1;i<list.size();i++) {
 					toRemove.add(list.get(i));
+					LOGGER.info("Homolog "+list.get(i).getIdentifier()+" removed because it is redundant (query matching region is 100% identical to "+list.get(0).getIdentifier()+").");
 				}
 			}
 		}
 		for (Homolog hom:toRemove){
 			this.subList.remove(hom);
-			LOGGER.info("Homolog "+hom.getIdentifier()+" removed because it is redundant (another 100% identical sequence exists in the homologs list).");
 		}
 		if (!toRemove.isEmpty()) {
 			LOGGER.info("Number of homologs after redundancy (duplicates) elimination: "+this.getSizeFilteredSubset());
