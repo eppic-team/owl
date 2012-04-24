@@ -442,7 +442,11 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		int len = 80;
 
 		if (writeQuery) {
-			pw.println(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniId());
+			pw.print(MultipleSequenceAlignment.FASTAHEADER_CHAR + this.ref.getUniId());
+			if (isSubInterval) {
+				pw.print(" "+refInterval.beg+"-"+refInterval.end);
+			}
+			pw.println();
 			Sequence refSequence = ref.getSeq().getInterval(refInterval);
 			for(int i=0; i<refSequence.getLength(); i+=len) {
 				pw.println(refSequence.getSeq().substring(i, Math.min(i+len,refSequence.getLength())));
