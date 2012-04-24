@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -583,25 +584,25 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	}
 	
 	/**
-	 * Removes the redundant sequences in the filtered subset list of Homologs (those remaining after 
+	 * Removes the redundant (duplicate) sequences in the filtered subset list of Homologs (those remaining after 
 	 * calling {@link #filterToMinIdAndCoverage(double, double)}. 
-	 * The redundancy reduction proceeds as follows:
-	 * 1) It groups the sequences by taxonomy id and sequence identity
+	 * Redundant sequences are any 2 sequences in the homologs list that are 100% identical.
+	 * The algorithm for duplicates elimination is based in the fact that any 2 identical sequences 
+	 * in the list must have the same id to the query. Thus we can first group them by id to query 
+	 * and then calculate a pairwise id matrix within the groups.
+	 * It proceeds as follows:
+	 * 1) It groups the sequences by sequence id (in percents with 3 decimal figures) to query
 	 * 2) If any of the groups have more than one member then the pairwise identities within the group are calculated 
 	 *    (all vs all Needleman-Wunsch). From the pairwise identity matrix sequences that are not 100% identity to all the others
 	 *    are removed from the group, leaving groups that contain only identical sequences from same species. 
-	 * 3) If after this second pruning any group has more than 1 member then a single member is chosen (first one with a
-	 *    good matching corresponding CDS sequence or simply first one if no good CDS matchings exist) 
+	 * 3) If after this second pruning any group has more than 1 member then a single member is chosen (first one) 
 	 */
 	public void removeRedundancy() {
 		
-		// 1) grouping by tax id and sequence identity
+		// 1) grouping by sequence identity
 		Map<String,List<Homolog>> groups = new HashMap<String,List<Homolog>>();
 		for (Homolog hom:subList){
-			if (!hom.isUniprot()) continue; //we don't know the tax id for Uniparcs, we simply ignore them in this redundancy elimination procedure
-			double percentId = hom.getPercentIdentity();
-			int taxId = hom.getUnirefEntry().getNcbiTaxId();
-			String key = taxId+"_"+String.format("%6.3f",percentId);
+			String key = String.format("%6.3f",hom.getPercentIdentity());
 			if (groups.containsKey(key)) {
 				groups.get(key).add(hom);
 			} else {
@@ -610,7 +611,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				groups.put(key, list);
 			}
 		}
-		LOGGER.debug("Number of protein sequence groups for redundancy elimination (based on same identity value and same tax id): "+groups.size());
+		LOGGER.debug("Number of protein sequence groups for redundancy elimination (based on same identity value): "+groups.size());
 		// 2) finding if group members are really identical (all vs all pairwise alignments)
 		for (String key:groups.keySet()) {
 			// all vs all pairwise alignments
@@ -681,22 +682,42 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		for (Homolog hom:toRemove){
 			this.subList.remove(hom);
-			LOGGER.info("Homolog "+hom.getIdentifier()+" removed because it is redundant.");
+			LOGGER.info("Homolog "+hom.getIdentifier()+" removed because it is redundant (another 100% identical sequence exists in the homologs list).");
 		}
-		LOGGER.info("Number of homologs after redundancy elimination: "+this.getSizeFilteredSubset());
+		if (!toRemove.isEmpty()) {
+			LOGGER.info("Number of homologs after redundancy (duplicates) elimination: "+this.getSizeFilteredSubset());
+			// finally we update the lookup table
+			initialiseMap();
+		}
 		
-		// finally we update the lookup table
-		initialiseMap();
+	}
+	
+	/**
+	 * Removes from the filtered subset homologs list (those remaining after calling {@link #filterToMinIdAndCoverage(double, double)})
+	 * those homologs that are 100% identical to query while covering at least the given minQueryCov. 
+	 * The query itself will usually be in this group and removed with this procedure.
+	 */
+	public void removeIdenticalToQuery(double minQueryCov) {
+		boolean identicalsFound = false;
+		Iterator<Homolog> it = subList.iterator();
+		while (it.hasNext()) {
+			Homolog hom = it.next();
+			if (hom.getPercentIdentity()>99.99999 && hom.getBlastHit().getQueryCoverage()>minQueryCov) {
+				it.remove();
+				identicalsFound = true;
+				LOGGER.info("Removing "+hom.getIdentifier()+" because it is 100% identical and covers "+
+						String.format("%5.1f%%",hom.getBlastHit().getQueryCoverage()*100.0)+" of the query.");				
+			}
+		}
+		// finally we update the lookup table if something changed
+		if (identicalsFound) initialiseMap();
 	}
 	
 	/**
 	 * Reduces the size of the subset of homologs by skimming it for homologs with same identities 
-	 * until maxDesiredHomologs is reached.
-	 * The procedure is as follows: sequences are grouped by identity to query and one of each group 
-	 * eliminated (if possible the one without valid CDS matching) at each iteration until the 
-	 * desired number of homologs is reached.
-	 * This is needed for example to perform ka/ks calculations with selecton (too many sequences 
-	 * are far too slow and a risk of ks saturation).
+	 * to query until maxDesiredHomologs is reached.
+	 * The procedure is as follows: sequences are grouped by identity to query (rounded to integer percent values) 
+	 * and one of each group eliminated at each iteration until the desired number of homologs is reached.
 	 * @param maxDesiredHomologs
 	 */
 	public void skimList(int maxDesiredHomologs) {
@@ -705,10 +726,12 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		LOGGER.info("List of homologs too long: "+subList.size()+", skimming it.");
 		// 1) grouping by sequence identity
-		Map<Integer,List<Homolog>> groups = new HashMap<Integer,List<Homolog>>();
+		// we make it a treemap simply to have them ordered by ids in the log output
+		Map<Integer,List<Homolog>> groups = new TreeMap<Integer,List<Homolog>>(); 
 		for (Homolog hom:subList){
 			double percentId = hom.getPercentIdentity();
-			int key =(int) Math.round(percentId);
+			int key = (int)Math.round(percentId);
+			
 			if (groups.containsKey(key)) {
 				groups.get(key).add(hom);
 			} else {
@@ -722,6 +745,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		outer:
 		while (true) {
 			countIterations++;
+			LOGGER.info("Skimming round "+countIterations);
 			for (int key:groups.keySet()) {
 				List<Homolog> group = groups.get(key);
 				if (group.size()>1) {
@@ -731,7 +755,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					subList.remove(toRemove);					
 					group.remove(toRemove);
 					
-					LOGGER.info("Removed "+toRemove.getIdentifier());
+					LOGGER.info("Removed "+toRemove.getIdentifier()+" ("+String.format("%4.1f",toRemove.getPercentIdentity())+"% id to query)");
 					if (subList.size()<=maxDesiredHomologs) break outer;
 				}
 			}
