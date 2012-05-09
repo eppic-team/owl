@@ -1,7 +1,12 @@
 package owl.core.runners.blast;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import owl.core.sequence.Sequence;
 
@@ -13,9 +18,10 @@ import owl.core.sequence.Sequence;
 public class BlastRunner {
 
 	// constants
-	private static final String BLASTALL_PROG = "blastall";
-	private static final String BLASTPGP_PROG = "blastpgp";
-	private static final String MAKEMAT_PROG  = "makemat_withcd"; // customised makemat script that cds to working dir before running makemat
+	public static final String BLASTALL_PROG = "blastall";
+	public static final String BLASTPGP_PROG = "blastpgp";
+	public static final String MAKEMAT_PROG  = "makemat_withcd"; // customised makemat script that cds to working dir before running makemat
+	public static final String BLASTCLUST_PROG = "blastclust";
 	
 	private static final String BLASTP_PROGRAM_NAME = "blastp";
 	
@@ -26,18 +32,22 @@ public class BlastRunner {
 	private String blastallProg;
 	private String blastpgpProg;
 	private String makematProg;
+	private String blastclustProg;
+	
+	private String cmdLine;
 	
 	/**
 	 * Constructs a BlastRunner object given a blast bin directory and a blast 
 	 * db directory
 	 * @param blastBinDir
-	 * @param blastDbDir
+	 * @param blastDbDir the blast databases dir (formatdb formatted dbs), use null if only blastclust needed
 	 */
 	public BlastRunner(String blastBinDir, String blastDbDir) {
 		this.blastDbDir = blastDbDir;
 		this.blastallProg = new File(blastBinDir,BLASTALL_PROG).getAbsolutePath();
 		this.blastpgpProg = new File(blastBinDir,BLASTPGP_PROG).getAbsolutePath();
 		this.makematProg = new File(blastBinDir,MAKEMAT_PROG).getAbsolutePath();
+		this.blastclustProg = new File(blastBinDir,BLASTCLUST_PROG).getAbsolutePath();
 	}
 	
 	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) { 
@@ -92,7 +102,7 @@ public class BlastRunner {
 		String inProfileOpt = "";
 		if (outProfileFile!=null) outProfileOpt = " -C "+outProfileFile.getAbsolutePath();
 		if (inProfileFile!=null) inProfileOpt = " -R "+inProfileFile.getAbsolutePath();
-		String cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, 500) +
+		cmdLine = blastpgpProg + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, 500) +
 						" -j " + maxIter+
 						outProfileOpt + inProfileOpt;
 		Process blastpgpProc = Runtime.getRuntime().exec(cmdLine);
@@ -127,7 +137,7 @@ public class BlastRunner {
 		
 		checkIO(queryFile, db);
 		
-		String cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, maxNumHits);
+		cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, maxNumHits);
 		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
 		
 
@@ -164,13 +174,156 @@ public class BlastRunner {
 	 * @param basename
 	 */
 	public void runMakemat(String workDir, String basename) throws IOException, BlastException, InterruptedException {
-		String cmdLine = makematProg + " "+workDir+" -P " + basename;
+		cmdLine = makematProg + " "+workDir+" -P " + basename;
 		Process makematProc = Runtime.getRuntime().exec(cmdLine);
 		
 		int exitValue = makematProc.waitFor();
 		if (exitValue>0) {
 			throw new BlastException(MAKEMAT_PROG + " exited with error value " + exitValue);
 		}
+	}
+		
+	/**
+	 * Runs blastclust, parsing the output file and returning it as a list of clusters. 
+	 * If a saveFile is passed, the neighbors are saved for later reuse (options -s/-r)
+	 * (see {@link #runBlastclust(File, boolean, int, double, File, int)}
+	 * @param inFile the input FASTA file with all sequences to be clustered
+	 * @param outFile the output file where clusters will be written
+	 * @param protein if true sequences are protein, false sequences are nucleotide
+	 * @param clusteringPercentId the percentage identity threshold for clustering: the 
+	 * cluster members will be all within this id (blastclust option -S)
+	 * @param clusteringCoverage the ratio coverage threshold (blastclust option -L) 
+	 * We use by default -b T, i.e. the coverage threshold is applied to both members of 
+	 * the sequence pairs
+	 * @param blastDataDir the path to the blast distribution data files with blosum matrices
+	 * @param saveFile a file to save the neighbors (option -s) in order to reuse them with -r, 
+	 * if null the neighbors won't be saved
+	 * @param numThreads the number of CPUs to be used
+	 * @return a list of clusters
+	 * @throws IOException 
+	 * @throws InterruptedException 
+	 * @throws BlastException 
+	 */
+	public List<List<String>> runBlastclust(File inFile, File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, String blastDataDir, File saveFile, int numThreads) 
+			throws IOException, InterruptedException, BlastException {
+		
+		// command to run blastclust for 95% clustering over full lengths 
+		// (see http://www.ncbi.nlm.nih.gov/Web/Newsltr/Spring04/blastlab.html) 
+		// blastclust -i infile -o outfile -p T -L 1 -b T -S 95 -a 1  		
+		
+		List<String> cmd = new ArrayList<String>();
+		
+		cmd.add(blastclustProg);
+		cmd.add("-i"); cmd.add(inFile.getAbsolutePath());
+		cmd.add("-o"); cmd.add(outFile.getAbsolutePath());
+		cmd.add("-p"); cmd.add((protein?"T":"F"));
+		cmd.add("-S"); cmd.add(Integer.toString(clusteringPercentId));
+		cmd.add("-L"); cmd.add(String.format("%4.2f",clusteringCoverage));
+		cmd.add("-a"); cmd.add(Integer.toString(numThreads));
+		cmd.add("-b"); cmd.add("T");
+		if (saveFile!=null) {
+			cmd.add("-s");cmd.add(saveFile.getAbsolutePath());
+		}		
+		
+		cmdLine = "";
+		for (String token:cmd) {
+			cmdLine+=token+" ";
+		}
+		
+		ProcessBuilder pb = new ProcessBuilder(cmd);
+		// beware blastclust needs either a BLASTMAT env variable defining the 
+		// path to the dir with blosum matrices or a ~/.ncbirc file with:
+		// [NCBI]
+		// data=/path/to/blast/data/dir
+		Map<String,String> envVars = pb.environment();
+		envVars.put("BLASTMAT",blastDataDir);
+		Process blastclustProc = pb.start();		
+		
+		int exitValue = blastclustProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(BLASTCLUST_PROG + " exited with error value " + exitValue);
+		}
+		
+		// and we parse the output file		
+		
+		return parseBlastClustOut(outFile); 
+	}
+	
+	/**
+	 * Runs blastclust from a previously saved neighbors file (option -s) in order to save
+	 * computation time. The output file is parsed and output returned as a list of clusters
+	 * @param outFile the output file where clusters will be written
+	 * @param protein if true sequences are protein, false sequences are nucleotide
+	 * @param clusteringPercentId the percentage identity threshold for clustering: the 
+	 * cluster members will be all within this id (blastclust option -S)
+	 * @param clusteringCoverage the ratio coverage threshold (blastclust option -L) 
+	 * We use by default -b T, i.e. the coverage threshold is applied to both members of 
+	 * the sequence pairs
+	 * @param savedFile a saved file from running blastclust with -s option 
+	 * @param numThreads the number of CPUs to be used
+	 * @return a list of clusters
+	 * @throws IOException 
+	 * @throws InterruptedException 
+	 * @throws BlastException 
+	 */
+	public List<List<String>> runBlastclust(File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, File savedFile, int numThreads) 
+			throws IOException, InterruptedException, BlastException {
+		
+		List<String> cmd = new ArrayList<String>();
+		
+		cmd.add(blastclustProg);
+		cmd.add("-o"); cmd.add(outFile.getAbsolutePath());
+		cmd.add("-p"); cmd.add((protein?"T":"F"));
+		cmd.add("-S"); cmd.add(Integer.toString(clusteringPercentId));
+		// beware that probably the coverage parameter is already in the neighbors file, so here it might be redundant and probably misleading!
+		cmd.add("-L"); cmd.add(String.format("%4.2f",clusteringCoverage));
+		cmd.add("-a"); cmd.add(Integer.toString(numThreads));
+		cmd.add("-b"); cmd.add("T");		
+		cmd.add("-r"); cmd.add(savedFile.getAbsolutePath());				
+		
+		cmdLine = "";
+		for (String token:cmd) {
+			cmdLine+=token+" ";
+		}
+		
+		ProcessBuilder pb = new ProcessBuilder(cmd);
+		Process blastclustProc = pb.start();		
+		
+		int exitValue = blastclustProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(BLASTCLUST_PROG + " exited with error value " + exitValue);
+		}
+		
+		// and we parse the output file		
+		
+		return parseBlastClustOut(outFile); 
+	}	
+	
+	private List<List<String>> parseBlastClustOut(File blastclustOutFile) throws IOException {
+		List<List<String>> clusters = new ArrayList<List<String>>();
+		
+		BufferedReader br = new BufferedReader(new FileReader(blastclustOutFile));
+		String line;
+		while ((line = br.readLine())!=null) {
+			if (line.trim().isEmpty()) continue;
+			List<String> cluster = new ArrayList<String>();
+			clusters.add(cluster);
+			String[] tokens = line.split(" ");
+			for (String token:tokens) {
+				cluster.add(token);
+			}
+		}
+		br.close();
+		
+		return clusters;
+	}
+	
+	/**
+	 * Gets the last run blast command. Useful for logging.
+	 * @return
+	 */
+	public String getLastBlastCommand() {
+		return cmdLine;
 	}
 	
 	/**
