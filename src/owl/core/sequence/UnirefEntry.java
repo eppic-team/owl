@@ -29,7 +29,7 @@ public class UnirefEntry implements Serializable {
 	private String sequence;
 	
 	private List<String> inactiveUniprotIds;
-	private List<String> clusterMembers;
+	private List<UnirefEntryClusterMember> clusterMembers;
 	
 	private List<String> taxons;
 	
@@ -127,21 +127,21 @@ public class UnirefEntry implements Serializable {
 	}
 	
 	/**
-	 * Adds a cluster member UniProt id to this UniRef entry
+	 * Adds a cluster member to this UniRef entry.
 	 * Uniref entries are clustering several sequences that share 100%, 90% or 50% identity,
 	 * thus they are actually clusters for which a representative has been chosen.
 	 * e.g. UniRef100_P30340 contains 4 members, the representative P30340 plus Q2EFX9, Q5N5G6, Q6PQB8
 	 * We only keep UniProt cluster members and not UniParc cluster members
-	 * @param uniprotId
+	 * @param member
 	 */
-	public void addClusterMember(String uniprotId) {
+	public void addClusterMember(UnirefEntryClusterMember member) {
 		if (clusterMembers==null) {
-			clusterMembers = new ArrayList<String>();
+			clusterMembers = new ArrayList<UnirefEntryClusterMember>();
 		}
-		this.clusterMembers.add(uniprotId);
+		this.clusterMembers.add(member);
 	}
 	
-	public List<String> getClusterMembers() {
+	public List<UnirefEntryClusterMember> getClusterMembers() {
 		return this.clusterMembers;
 	}
 	

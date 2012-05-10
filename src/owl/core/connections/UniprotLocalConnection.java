@@ -15,6 +15,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import owl.core.sequence.UnirefEntry;
+import owl.core.sequence.UnirefEntryClusterMember;
 import owl.core.util.MySQLConnection;
 
 /**
@@ -94,35 +95,50 @@ public class UniprotLocalConnection {
 	public UnirefEntry getUnirefEntry(String uniId) throws SQLException, NoMatchFoundException {
 		String repId = null;
 		String idColumn = null;
+		int taxId = -1;
+		String sequence = null;
+		String uniprotId = null;
+		String uniparcId = null;
+		
 		if (uniId.startsWith("UPI")) {
 			// uniparc id
 			repId = uniId;
 			idColumn = "uniparc_id";
+			uniparcId = uniId; 
 		} else {
-			repId = getRepresentative(uniId);
+			// uniprot id
+			UnirefEntryClusterMember repId_taxId = getRepresentative(uniId);
+			repId = repId_taxId.getUniprotId();
+			taxId = repId_taxId.getNcbiTaxId();
 			idColumn = "uniprot_id";
+			uniprotId = uniId;
 		}
 		
 		Statement st = conn.createStatement();
-		String sql = "SELECT id, uniprot_id, uniparc_id, tax_id, sequence FROM "+dbName+"."+DATA_TABLE+" WHERE "+idColumn+"='"+repId+"'";
+		String sql = "SELECT tax_id, sequence FROM "+dbName+"."+DATA_TABLE+" WHERE "+idColumn+"='"+repId+"'";
 		ResultSet rs = st.executeQuery(sql);
-		UnirefEntry uniref = null;
+		
 		int count = 0;
 		while (rs.next()) {
-			uniref = new UnirefEntry();
-			uniref.setId(rs.getString(1));
-			uniref.setUniprotId(rs.getString(2));
-			uniref.setUniparcId(rs.getString(3));
-			uniref.setNcbiTaxId(rs.getInt(4));
-			uniref.setSequence(rs.getString(5));
+			if (uniprotId==null) {
+				// we take the tax_id from this table only when input was a uniparc
+				taxId = rs.getInt(1);
+			}
+			sequence = rs.getString(2);
 			count++;
 		}
 		rs.close();
 		st.close();
-		if (uniref==null) 
-			throw new NoMatchFoundException("No match in table "+dbName+"."+DATA_TABLE+" for id "+uniId);
+		if (sequence==null) 
+			throw new NoMatchFoundException("No match in table "+dbName+"."+DATA_TABLE+" for id "+repId);
 		if (count>1) 
 			throw new SQLException("Multiple matches in table "+dbName+"."+DATA_TABLE+" for id "+repId);
+		
+		UnirefEntry uniref = new UnirefEntry();
+		uniref.setUniprotId(uniprotId);
+		uniref.setUniparcId(uniparcId);
+		uniref.setNcbiTaxId(taxId);
+		uniref.setSequence(sequence);
 		
 		
 		if (taxonomyDbName!=null) {
@@ -139,14 +155,16 @@ public class UniprotLocalConnection {
 		return uniref;
 	}
 	
-	private String getRepresentative(String uniId) throws SQLException, NoMatchFoundException {
+	private UnirefEntryClusterMember getRepresentative(String uniId) throws SQLException, NoMatchFoundException {
 		Statement st = conn.createStatement();
-		String sql = "SELECT representative FROM "+dbName+"."+CLUSTERS_TABLE+" WHERE member='"+uniId+"'";
+		String sql = "SELECT representative, tax_id FROM "+dbName+"."+CLUSTERS_TABLE+" WHERE member='"+uniId+"'";
 		ResultSet rs = st.executeQuery(sql);
 		String repUniId = null;
+		int memberTaxId = -1;
 		int count = 0;
 		while (rs.next()) {
 			repUniId = rs.getString(1);
+			memberTaxId = rs.getInt(2);
 			count++;
 		}
 		rs.close();
@@ -156,7 +174,10 @@ public class UniprotLocalConnection {
 		if (count>1) 
 			throw new SQLException("Multiple matches in clusters table "+dbName+"."+CLUSTERS_TABLE+" for uniprot id "+uniId);
 			
-		return repUniId;
+		// we abuse here the UnirefEntryClusterMember class to return the result in one object,
+		// but it is not a correctly constructed object! because the uniprot id is the one of 
+		// the representative and the tax id the one of the member!
+		return new UnirefEntryClusterMember(repUniId, memberTaxId);
 	}
 	
 	/**

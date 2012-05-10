@@ -16,6 +16,7 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
 import owl.core.sequence.UnirefEntry;
+import owl.core.sequence.UnirefEntryClusterMember;
 
 
 public class UnirefXMLParser implements ContentHandler {
@@ -38,6 +39,7 @@ public class UnirefXMLParser implements ContentHandler {
 	private boolean inValue;
 	
 	private UnirefEntry currentEntry;
+	private UnirefEntryClusterMember currentClusterMember;
 	
 	private boolean inReferenceSequence;
 	private boolean inDbReferenceUniProt;
@@ -162,6 +164,7 @@ public class UnirefXMLParser implements ContentHandler {
 		}
 		else if (name.equals(MEMBER_TAG)) {
 			inMember = true;
+			currentClusterMember = new UnirefEntryClusterMember();
 		}
 		else if (name.equals(SEQUENCE_TAG)) {
 			initValueReading();
@@ -245,9 +248,12 @@ public class UnirefXMLParser implements ContentHandler {
 			if (name.equals(PROPERTY_TAG)) {
 				if (isUniprotAccessionAttribute(atts.getValue("type"))) {
 					if (uniprotAccessionCounter==0) {
-						currentEntry.addClusterMember(atts.getValue("value"));
+						currentClusterMember.setUniprotId(atts.getValue("value"));
+						currentEntry.addClusterMember(currentClusterMember);
 					}
 					uniprotAccessionCounter++;
+				} else if (atts.getValue("type").equals("NCBI taxonomy")) {
+					currentClusterMember.setNcbiTaxId(Integer.parseInt(atts.getValue("value")));
 				}
 			}
 		}
@@ -257,10 +263,10 @@ public class UnirefXMLParser implements ContentHandler {
 	private void writeTabDelimited() {
 		out.println(currentEntry.getTabDelimitedMySQLString()); 
 		if (currentEntry.isUniprot()) {
-			clustersOut.println(currentEntry.getUniprotId()+"\t"+currentEntry.getUniprotId());
+			clustersOut.println(currentEntry.getUniprotId()+"\t"+currentEntry.getUniprotId()+"\t"+currentEntry.getNcbiTaxId());
 			if (currentEntry.hasClusterMembers()) {
-				 for (String memberuniprotid:currentEntry.getClusterMembers()){
-					 clustersOut.println(currentEntry.getUniprotId()+"\t"+memberuniprotid);
+				 for (UnirefEntryClusterMember member:currentEntry.getClusterMembers()){
+					 clustersOut.println(currentEntry.getUniprotId()+"\t"+member.getUniprotId()+"\t"+member.getNcbiTaxId());
 				 }
 			}
 		}
