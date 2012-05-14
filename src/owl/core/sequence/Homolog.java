@@ -81,4 +81,8 @@ public class Homolog implements Serializable {
 	public boolean isUniprot() {
 		return unirefEntry.isUniprot();
 	}
+	
+	public String toString() {
+		return getIdentifier();
+	}
 }

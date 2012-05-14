@@ -71,7 +71,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	private static final String  	TCOFFEE_ALN_OUTFORMAT = "fasta";
 	
 	private static final int        BLASTCLUST_STARTING_CLUSTERING_ID = 98;
-	private static final int		CLUSTERING_ID_STEP = 2;
+	private static final int		CLUSTERING_ID_STEP = 1;
 	private static final double 	BLASTCLUST_CLUSTERING_COVERAGE = 0.99;
 	
 	
@@ -582,7 +582,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * Creates a subset list of Homologs that have at least the required identities
 	 * and query coverage.
 	 * Subsequently all methods in this class will refer to the sublist rather than to original unfiltered list.
-	 * Upon a subsequent call to this method the a different id/coverage can be chosen and other methods used with those.
+	 * Upon a subsequent call to this method a different id/coverage can be chosen and other methods used with those.
 	 * @param idCutoff
 	 * @param queryCovCutoff
 	 */
@@ -609,8 +609,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		Iterator<Homolog> it = subList.iterator();
 		while (it.hasNext()) {
 			Homolog hom = it.next();
-			if (!hom.isUniprot()) {
-				LOGGER.info("Removing Uniparc homolog "+hom.getIdentifier()+" as no taxonomy info available for Uniparc");
+			if (!hom.getUnirefEntry().hasTaxons()) {
+				LOGGER.info("Removing homolog "+hom.getIdentifier()+" as no taxonomy info available for it");
 				it.remove();
 				continue;
 			}
@@ -618,16 +618,19 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				it.remove();
 			}
 		}
+		
+		// finally we update the lookup table
+		initialiseMap();
 	}
 	
 	/**
-	 * Removes from the filtered subset homologs list (those remaining after calling {@link #filterToMinIdAndCoverage(double, double)})
-	 * those homologs that are 100% identical to query while covering at least the given minQueryCov. 
+	 * Removes from the original set of homologs returned by blast  
+	 * those ones that are 100% identical to query while covering at least the given minQueryCov. 
 	 * The query itself will usually be in this group and removed with this procedure.
 	 */
 	public void removeIdenticalToQuery(double minQueryCov) {
 		boolean identicalsFound = false;
-		Iterator<Homolog> it = subList.iterator();
+		Iterator<Homolog> it = list.iterator();
 		while (it.hasNext()) {
 			Homolog hom = it.next();
 			if (hom.getPercentIdentity()>99.99999 && hom.getBlastHit().getQueryCoverage()>minQueryCov) {
@@ -639,6 +642,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		// finally we update the lookup table if something changed
 		if (identicalsFound) initialiseMap();
+		
+		LOGGER.info(getSizeFullList()+" homologs after removing identicals to query");
 	}
 	
 	/**
@@ -674,7 +679,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		long start = System.currentTimeMillis();
 		blastRunner.runBlastclust(inputSeqFile, outblastclustFile, true, BLASTCLUST_STARTING_CLUSTERING_ID, BLASTCLUST_CLUSTERING_COVERAGE, blastDataDir, saveFile, blastNumThreads);
 		long end = System.currentTimeMillis();
-		LOGGER.info("Run blastclust ("+((end-start)/1000)+"s): "+blastRunner.getLastBlastCommand());
+		LOGGER.info("Run initial blastclust ("+((end-start)/1000)+"s): "+blastRunner.getLastBlastCommand());
 		
 		int clusteringId = BLASTCLUST_STARTING_CLUSTERING_ID;
 		int countIterations = 0;
