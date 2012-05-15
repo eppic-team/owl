@@ -85,6 +85,10 @@ public class UniprotLocalConnection {
 		return uniprotVer;
 	}
 	
+	public void close() {
+		this.conn.close();
+	}
+	
 	/**
 	 * Given a uniprot or uniparc id returns the corresponding UnirefEntry record
 	 * @param uniId
