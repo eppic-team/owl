@@ -508,8 +508,11 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @throws TcoffeeException 
 	 * @throws UniprotVerMisMatchException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly, File alnCacheFile) throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
+	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly, File alnCacheFile) 
+			throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
+		
 		File alnFile = null;
+		boolean alnFromCache = false;
 		
 		if (alnCacheFile!=null && alnCacheFile.exists()) {
 			String uniprotVerFromCacheDir = readUniprotVer(alnCacheFile.getParent());
@@ -521,38 +524,50 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 			
 			alnFile = alnCacheFile;
-			LOGGER.warn("Reading alignment from cache file " + alnCacheFile+". Won't recompute with t_coffee");
+			
+			
+			LOGGER.warn("Reading alignment from cache file " + alnCacheFile);
+			try {
+				this.aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
+				
+				if (!checkAlnFromCache(true, false)) { // the 2 parameters have to match the ones passed to writeToFasta in runTcoffee
+					LOGGER.warn("Alignment from cache file does not coindice with computed filtered list of homologs");
+					LOGGER.info("Will compute t_coffee alignment");
+					alnFile = runTcoffee(tcoffeeBin, veryFast, nThreads,useHspsOnly);
+
+				} else {
+					alnFromCache = true;
+					LOGGER.info("Alignment from cache file coincides with computed filtered list of homologs. Won't recompute with t_coffee");
+				}
+				
+				
+			} catch (FileFormatException e) {
+				throw new IOException(e);
+			} catch (AlignmentConstructionException e) {
+				throw new IOException(e);
+			}
+			
 			
 		} else {
 			// no cache: we compute with t-coffee
-
-			alnFile = File.createTempFile("homologs.",".aln");
-			File homologSeqsFile = File.createTempFile("homologs.", ".fa");
-			File outTreeFile = File.createTempFile("homologs.", ".dnd");
-			File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
-
-			this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
-			TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-			tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
-			LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
-			tcr.runTcoffee();
-			if (!DEBUG) { 
-				// note that if the run of tcoffee throws an exception, files are not marked for deletion
-				homologSeqsFile.deleteOnExit();
-				alnFile.deleteOnExit();
-				tcoffeeLogFile.deleteOnExit();
-				outTreeFile.deleteOnExit(); 
-			}
-
+			alnFile = runTcoffee(tcoffeeBin, veryFast, nThreads,useHspsOnly); 			
+			
 		}
 		
-		try {
-			aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
-		} catch (FileFormatException e) {
-			throw new IOException(e);
-		} catch (AlignmentConstructionException e) {
-			throw new IOException(e);
+		if (!alnFromCache) { 
+			// this can happen if 
+			// a) no cache file given, 
+			// b) cache file given but doesn't exist, 
+			// c) existing cache file given but with wrong content 
+			try {
+				this.aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
+			} catch (FileFormatException e) {
+				throw new IOException(e);
+			} catch (AlignmentConstructionException e) {
+				throw new IOException(e);
+			}		
 		}
+		
 
 		// if we did pass a cache file but it doesn't exist yet, we have computed the alignment. Now we need to write it to the given cache file
 		if (alnCacheFile!=null && !alnCacheFile.exists()) { 
@@ -564,6 +579,66 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 		}
 
+	}
+	
+	private File runTcoffee(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly) 
+			throws TcoffeeException, InterruptedException, IOException {
+		
+		File alnFile = File.createTempFile("homologs.",".aln");
+		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
+		File outTreeFile = File.createTempFile("homologs.", ".dnd");
+		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
+
+		this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
+		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
+		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
+		LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
+		tcr.runTcoffee();
+		if (!DEBUG) { 
+			// note that if the run of tcoffee throws an exception, files are not marked for deletion
+			homologSeqsFile.deleteOnExit();
+			alnFile.deleteOnExit();
+			tcoffeeLogFile.deleteOnExit();
+			outTreeFile.deleteOnExit(); 
+		}
+		return alnFile;
+	}
+	
+	private boolean checkAlnFromCache(boolean checkQuery, boolean simpleIds) {
+		
+		int size = this.subList.size();
+		if (checkQuery) size+=1;
+		
+		// first we check the size
+		if (this.aln.getNumberOfSequences()!=size) {
+			LOGGER.info("Number of sequences in alignment from cache file is "+this.aln.getNumberOfSequences()+" but the size of the computed filtered list of homologs is "+size);
+			return false;
+		}
+		
+		// then the query tag is present
+		if (checkQuery) {
+			if (!this.aln.hasTag(this.ref.getUniId())) {
+				LOGGER.info("Query tag "+this.ref.getUniId()+" not present in alignment cache file");
+				return false;
+			}
+		}		
+		
+		// and finally that all other tags are present
+		for (Homolog hom:subList){
+			String tag = null;
+			if (simpleIds) {
+				tag = hom.getUnirefEntry().getUniId();
+			} else {
+				tag = hom.getLongSequenceTag();
+			}
+			if (!this.aln.hasTag(tag)) {
+				LOGGER.info("Tag "+tag+" not present in alignment cached file");
+				return false;
+			}
+
+		}
+		
+		return true;
 	}
 	
 	/**
