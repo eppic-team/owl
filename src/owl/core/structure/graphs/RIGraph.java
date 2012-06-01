@@ -235,6 +235,27 @@ public class RIGraph extends ProtStructGraph<RIGNode,RIGEdge> {
 		return comNbhSizes;
 	}
 
+	/**
+	 * Calculates the contact order of this RIGraph
+	 * i.e. average contact range divided by number of observed residues
+	 * See wikipedia http://en.wikipedia.org/wiki/Contact_order
+	 * 
+	 * NOTE: not clear whether this is a standard calculation of contact order,
+	 * for instance it doesn't filter the contiguous residues 
+	 * @return
+	 */
+	public double getContactOrder() {
+		
+		int contRangeSum = 0;
+		
+		for (RIGEdge edge:this.getEdges()) {			
+			int contactRange = getContactRange(edge);
+			contRangeSum+=contactRange;
+		}
+		
+		return (double)contRangeSum/(double)(getObsLength()*getEdgeCount());
+	}
+	
 	public int getContactRange(RIGEdge edge) {
 		Pair<RIGNode> pair = this.getEndpoints(edge);
 		return Math.abs(pair.getFirst().getResidueSerial()-pair.getSecond().getResidueSerial());
