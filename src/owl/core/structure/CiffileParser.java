@@ -674,6 +674,7 @@ public class CiffileParser {
         	pdbchaincode2chaincode.put(group.getPdbChainCode(),group.getChainCode());
         	
         	PdbChain pdb = new PdbChain();
+        	pdb.setParent(pdbAsymUnit);
             pdb.setSequence(group.getSequence(), group.isProtein());
  
             pdb.setPdbresser2resserMap(group.getPdbresser2resserMap());
