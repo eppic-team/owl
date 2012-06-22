@@ -675,13 +675,13 @@ public class CiffileParser {
         	
         	PdbChain pdb = new PdbChain();
         	pdb.setParent(pdbAsymUnit);
+			pdb.setPdbChainCode(group.getPdbChainCode());			
+			pdb.setChainCode(group.getChainCode());
+
             pdb.setSequence(group.getSequence(), group.isProtein());
  
             pdb.setPdbresser2resserMap(group.getPdbresser2resserMap());
 			pdb.setResser2pdbresserMap(group.getResser2pdbresserMap());
-
-			pdb.setPdbChainCode(group.getPdbChainCode());			
-			pdb.setChainCode(group.getChainCode());
 
 			pdb.setIsNonPolyChain(false);
 			
