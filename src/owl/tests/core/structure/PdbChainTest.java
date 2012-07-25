@@ -59,6 +59,8 @@ public class PdbChainTest {
 	private static String NACCESS_EXEC; 
 	private static String DSSP_EXEC;
 	
+	private static final String CIFDIR="/nfs/data/dbs/pdb/data/structures/all/mmCIF/";
+	
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String TEST_PDB_FILE_1 = TESTDATADIR+"/1tdrA.pdb";
 	private static final String TEST_PDB_FILE_2 = TESTDATADIR+"/1tdrB.pdb";
@@ -131,7 +133,7 @@ public class PdbChainTest {
 		System.out.println("Using "+NTHREADS+" CPUs for ASA calculations");
 		System.out.println("Matching of our ASA values against NACCESS's. Areas with disagreement >20% reported");
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
-		MySQLConnection conn = new MySQLConnection();
+		
 		for (String pdbId:pdbIds) {
 			System.out.println(pdbId);
 			String pdbCode = pdbId.substring(0,4);
@@ -139,14 +141,14 @@ public class PdbChainTest {
 
 			PdbChain theirs = null;
 			PdbChain ours = null;
-			try {
-				PdbAsymUnit theirsFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+			try {				
+				PdbAsymUnit theirsFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
 				theirs = theirsFull.getChain(pdbChainCode);
 				// note we run nacccess with -h to also include the het residues
 				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC),"-h");
 				naccRunner.runNaccess(theirs);
 
-				PdbAsymUnit oursFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+				PdbAsymUnit oursFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
 				ours = oursFull.getChain(pdbChainCode);
 				long start = System.currentTimeMillis();
 				ours.calcASAs(960, NTHREADS, true);
@@ -154,9 +156,12 @@ public class PdbChainTest {
 				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 
 
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Could not find pdb code "+pdbCode);
+			} catch (IOException e) {
+				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
 				continue;
+			} catch (FileFormatException e) {
+				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
+				continue;				
 			}
 			checkASAsMatch(theirs, ours, 0.20, 0.11);
 			
@@ -172,7 +177,7 @@ public class PdbChainTest {
 			String pdbChainCode = pdbId.substring(4,5);
 			PdbChain ours = null;
 			try {
-				PdbAsymUnit oursFull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+				PdbAsymUnit oursFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
 				ours = oursFull.getChain(pdbChainCode);
 
 				
@@ -183,15 +188,22 @@ public class PdbChainTest {
 				ours.calcASAs(960,NTHREADS,true);
 				rotated.calcASAs(960,NTHREADS,true);
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
-				System.out.println("9600 sphere points");
 
+				System.out.println("3000 sphere points");
+				ours.calcASAs(3000,NTHREADS,true);
+				rotated.calcASAs(3000,NTHREADS,true);
+				checkASAsMatch(ours,rotated, 0.15, 0.10);				
+				
+				System.out.println("9600 sphere points");
 				ours.calcASAs(9600,NTHREADS,true);
 				rotated.calcASAs(9600,NTHREADS,true);
-
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
 
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Could not find pdb code "+pdbCode);
+			} catch (IOException e) {
+				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
 				continue;				
 			}
 		}

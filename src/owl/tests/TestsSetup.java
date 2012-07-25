@@ -3,9 +3,11 @@ package owl.tests;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Class containing static methods necessary for tests setup.
@@ -36,5 +38,31 @@ public class TestsSetup {
 		}
 		
 		return p;
+	}
+	
+	public static File unzipFile(File repoGzFile) throws FileNotFoundException {
+		if (!repoGzFile.exists()) {
+			throw new FileNotFoundException("PDB repository file "+repoGzFile+" could not be found.");
+		}
+		File unzippedFile = null;
+		try {
+			String prefix = repoGzFile.getName().substring(0,repoGzFile.getName().lastIndexOf(".gz"));
+			unzippedFile = File.createTempFile(prefix,"");
+			unzippedFile.deleteOnExit();
+
+			GZIPInputStream zis = new GZIPInputStream(new FileInputStream(repoGzFile));
+			FileOutputStream os = new FileOutputStream(unzippedFile);
+			int b;
+			while ( (b=zis.read())!=-1) {
+				os.write(b);
+			}
+			zis.close();
+			os.close();
+		} catch (IOException e) {
+			System.err.println("Couldn't uncompress "+repoGzFile+" file into "+unzippedFile);
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return unzippedFile;
 	}
 }

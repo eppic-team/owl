@@ -3,9 +3,7 @@ package owl.tests.core.structure;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -15,7 +13,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
 import junit.framework.Assert;
 
@@ -42,6 +39,7 @@ import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
+import owl.tests.TestsSetup;
 
 
 public class PdbParsersTest {
@@ -149,7 +147,7 @@ public class PdbParsersTest {
 			PdbChain pdbasePdb = null;
 
 			try {
-				File cifFile = unzipFile(new File(CIFDIR,pdbCode+".cif.gz"));
+				File cifFile = TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz"));
 
 				// getChains/getModels
 				PdbaseParser pdbaseParser = new PdbaseParser(pdbCode,PDBASE_DB,conn);
@@ -434,7 +432,7 @@ public class PdbParsersTest {
 			
 			
 			try {
-				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
+				File pdbFile = TestsSetup.unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
 				PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
 				Integer[] models = parser.getModels();
 
@@ -685,7 +683,7 @@ public class PdbParsersTest {
 			
 			System.out.println(pdbCode);
 			try {
-				File pdbFile = unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
+				File pdbFile = TestsSetup.unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
 				PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
 				Integer[] models = parser.getModels();
 
@@ -724,32 +722,6 @@ public class PdbParsersTest {
 			if (count>100) break;
 			count++;
 		}
-	}
-	
-	private static File unzipFile(File repoGzFile) throws FileNotFoundException {
-		if (!repoGzFile.exists()) {
-			throw new FileNotFoundException("PDB repository file "+repoGzFile+" could not be found.");
-		}
-		File unzippedFile = null;
-		try {
-			String prefix = repoGzFile.getName().substring(0,repoGzFile.getName().lastIndexOf(".gz"));
-			unzippedFile = File.createTempFile(prefix,"");
-			unzippedFile.deleteOnExit();
-
-			GZIPInputStream zis = new GZIPInputStream(new FileInputStream(repoGzFile));
-			FileOutputStream os = new FileOutputStream(unzippedFile);
-			int b;
-			while ( (b=zis.read())!=-1) {
-				os.write(b);
-			}
-			zis.close();
-			os.close();
-		} catch (IOException e) {
-			System.err.println("Couldn't uncompress "+repoGzFile+" file into "+unzippedFile);
-			System.err.println(e.getMessage());
-			System.exit(1);
-		}
-		return unzippedFile;
 	}
 
 	// to debug the testing code (run as java program so that we can use normal debugger)
