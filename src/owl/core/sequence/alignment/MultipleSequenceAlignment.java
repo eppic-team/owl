@@ -692,11 +692,14 @@ public class MultipleSequenceAlignment implements Serializable {
     	int[] counts = getColumnCounts(alignIndex, numGroupsAlphabet);
     	
     	// important: we are considering also gaps when calculating probabilities
-    	double sumplogp=0.0;
+    	
+    	double sumplogp = 0.0;
+    	double log2 = Math.log(2);
+    	
 		for (int i=1;i<=numGroupsAlphabet;i++){
 			double prob = (double)counts[i]/(double)this.getNumberOfSequences(); // i.e. we consider gaps!
 			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
-				sumplogp += prob*(Math.log(prob)/Math.log(2));
+				sumplogp += prob*(Math.log(prob)/log2);
 			}
 		}
 		return (-1.0)*sumplogp;
@@ -708,49 +711,54 @@ public class MultipleSequenceAlignment implements Serializable {
      * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
      * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum 
      * @return an array of size numGroupsAlphabet+1 with indices containing the 
-     * counts of groups, the indices correspond to those of the {@link AminoAcid} enum
+     * counts of groups, the indices correspond to those of the {@link AminoAcid} enum, 
+     * the 0 index contains the count of gaps in the column
      * @throws IllegalArgumentException if the numGroupsAlphabet given is not one of the
      * valid ones
      */
     public int[] getColumnCounts(int alignIndex, int numGroupsAlphabet) {
     	String column = getColumn(alignIndex);
-    	int[] counts = new int[numGroupsAlphabet+1]; // we don't use 0 (see AminoAcid enum) 
+    	
+    	// we use 0 for the gap counts, the rest for the AminoAcid classes counts (see AminoAcid enum)
+    	int[] counts = new int[numGroupsAlphabet+1];  
     	 
     	for (int i=0;i<column.length();i++) {
     		char letter = column.charAt(i);
-    		if (letter!=GAPCHARACTER) {
-    			
-    			if (AminoAcid.isStandardAA(letter)) {
-    				AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
-    				int index;
-    				switch(numGroupsAlphabet) {
-    				case 20:
-    					index = aa.getNumber();
-    					break;
-    				case 15:
-    					index = aa.getReduced15();
-    					break;
-    				case 10:
-    					index = aa.getReduced10();
-    					break;
-    				case 8:
-    					index = aa.getReduced8();
-    					break;
-    				case 6:
-    					index = aa.getReduced6();
-    					break;
-    				case 4:
-    					index = aa.getReduced4();
-    					break;
-    				case 2:
-    					index = aa.getReduced2();
-    					break;
-    				default:
-    					throw new IllegalArgumentException("A "+numGroupsAlphabet+ " groups alphabet is an invalid alphabet");	
-    				}
-    				counts[index]++;
+    		
+    		if (letter==GAPCHARACTER) {
+    			counts[0]++;
+    		}     			
+    		else if (AminoAcid.isStandardAA(letter)) {
+    			AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
+    			int index;
+    			switch(numGroupsAlphabet) {
+    			case 20:
+    				index = aa.getNumber();
+    				break;
+    			case 15:
+    				index = aa.getReduced15();
+    				break;
+    			case 10:
+    				index = aa.getReduced10();
+    				break;
+    			case 8:
+    				index = aa.getReduced8();
+    				break;
+    			case 6:
+    				index = aa.getReduced6();
+    				break;
+    			case 4:
+    				index = aa.getReduced4();
+    				break;
+    			case 2:
+    				index = aa.getReduced2();
+    				break;
+    			default:
+    				throw new IllegalArgumentException("A "+numGroupsAlphabet+ " groups alphabet is an invalid alphabet");	
     			}
+    			counts[index]++;    		
     		}
+    		// notice that non-standard aas are not counted neither as gap or as class, that should not be a big problem in most cases
     	}
     	return counts;
     }
@@ -777,7 +785,7 @@ public class MultipleSequenceAlignment implements Serializable {
 			int[] counts = this.getColumnCounts(this.seq2al(tag, i), numGroupsAlphabet);
 			ps.print(i+"\t"+sequence.charAt(i-1));
 			int sum = 0;
-			for (int j=1;j<=20;j++) {
+			for (int j=1;j<=numGroupsAlphabet;j++) {
 				ps.printf("\t%d",counts[j]);
 				sum+=counts[j];
 			}
