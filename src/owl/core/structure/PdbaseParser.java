@@ -9,6 +9,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
@@ -31,6 +32,7 @@ public class PdbaseParser {
 	public static final String STRUCT_TABLE = "STRUCT";
 	public static final String SYMMETRY_TABLE = "SYMMETRY";
 	public static final String CELL_TABLE = "CELL";
+	public static final String ATOM_SITES_TABLE = "ATOM_SITES";
 	public static final String EXPTL_TABLE = "EXPTL";
 	public static final String REFINE_TABLE = "REFINE";
 	public static final String REFLNS_TABLE = "REFLNS";
@@ -267,6 +269,45 @@ public class PdbaseParser {
 		stmt.close();
 		return crystalCell;
 	}
+	
+	protected Matrix4d readScaleMatrix () throws SQLException {
+		
+		Matrix4d scaleMatrix = null;
+		String sql = "SELECT " +
+				" fract_transf_matrix_0_0, fract_transf_matrix_0_1, fract_transf_matrix_0_2," +
+				" fract_transf_matrix_1_0, fract_transf_matrix_1_1, fract_transf_matrix_1_2," +
+				" fract_transf_matrix_2_0, fract_transf_matrix_2_1, fract_transf_matrix_2_2," +
+				" fract_transf_vector_0, fract_transf_vector_1, fract_transf_vector_2 " +
+			  " FROM "+db+"."+ATOM_SITES_TABLE+" " +
+			  " WHERE entry_key="+entrykey;
+		Statement stmt = conn.createStatement();
+		ResultSet rsst = stmt.executeQuery(sql);
+
+		if (rsst.next()) {
+			
+			double m00 = rsst.getFloat(1);
+			double m01 = rsst.getFloat(2);
+			double m02 = rsst.getFloat(3);
+			double m10 = rsst.getFloat(4);
+			double m11 = rsst.getFloat(5);
+			double m12 = rsst.getFloat(6);
+			double m20 = rsst.getFloat(7);
+			double m21 = rsst.getFloat(8);
+			double m22 = rsst.getFloat(9);
+			double t1 = rsst.getFloat(10);
+			double t2 = rsst.getFloat(11);
+			double t3 = rsst.getFloat(12);
+
+			scaleMatrix = new Matrix4d( m00,m01,m02,t1,
+										m10,m11,m12,t2,
+										m20,m21,m22,t3,
+										0,0,0,0);
+			
+		}
+		rsst.close();
+		stmt.close();
+		return scaleMatrix;
+	}	
 	
 	protected String readExpMethod() throws SQLException {
 		String expMethod = null;

@@ -1,4 +1,5 @@
 #3NQJ # interface count disagrees
+1BBB # a PDB entry in a non-standard crystal frame (very rare!), we simply throw PdbLoadException when reading it
 3KA0
 3MYI
 3MQL

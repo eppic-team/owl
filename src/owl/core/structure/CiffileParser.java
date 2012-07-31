@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
@@ -53,7 +54,9 @@ public class CiffileParser {
 	private static final String exptl = "_exptl";
 	private static final String reflns = "_reflns";
 	private static final String refine = "_refine";
-	private static final String[] ids = {entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine};
+	private static final String atomSitesId = "_atom_sites";
+	private static final String[] ids = 
+		{entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine,atomSitesId};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -309,7 +312,7 @@ public class CiffileParser {
 			
 			for (String id:ids){
 				if (!ids2fieldsIdx.containsKey(id)) ids2fieldsIdx.put(id,0);
-				p = Pattern.compile("^"+id+"\\.([\\w\\-]+)(?:\\s+(.*))?$");
+				p = Pattern.compile("^"+id+"\\.([\\w\\-\\[\\]]+)(?:\\s+(.*))?$");
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					ids2elements.put(id,element);
@@ -404,6 +407,29 @@ public class CiffileParser {
 			throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 		}
 		return spaceGroup;
+	}
+	
+	protected Matrix4d readScaleMatrix() throws PdbLoadException {
+
+		if (!fields2values.containsKey(atomSitesId+".fract_transf_matrix[1][1]")) {
+			return null;
+		}
+		
+		Matrix4d scaleMatrix = new Matrix4d();
+		scaleMatrix.m00 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[1][1]").trim());
+		scaleMatrix.m01 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[1][2]").trim());
+		scaleMatrix.m02 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[1][3]").trim());
+		scaleMatrix.m10 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[2][1]").trim());
+		scaleMatrix.m11 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[2][2]").trim());
+		scaleMatrix.m12 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[2][3]").trim());
+		scaleMatrix.m20 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[3][1]").trim());
+		scaleMatrix.m21 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[3][2]").trim());
+		scaleMatrix.m22 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_matrix[3][3]").trim());
+		scaleMatrix.m03 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_vector[1]").trim());
+		scaleMatrix.m13 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_vector[2]").trim());
+		scaleMatrix.m23 = Double.parseDouble(fields2values.get(atomSitesId+".fract_transf_vector[3]").trim());
+
+		return scaleMatrix;
 	}
 	
 	protected String readExpMethod() throws IOException, PdbLoadException {

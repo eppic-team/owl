@@ -418,7 +418,7 @@ public class PdbParsersTest {
 	
 	@Test
 	public void testPdbfileParser() throws IOException, SQLException, FileFormatException, PdbLoadException {
-		MySQLConnection conn = new MySQLConnection();
+		
 		ArrayList<String> warnings = new ArrayList<String>();
 		// testing a list of PDB files from PDB
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
@@ -433,6 +433,7 @@ public class PdbParsersTest {
 			
 			try {
 				File pdbFile = TestsSetup.unzipFile(new File(PDBDIR,"pdb"+pdbCode+".ent.gz"));
+				File cifFile = TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz"));
 				PdbfileParser parser = new PdbfileParser(pdbFile.getAbsolutePath());
 				Integer[] models = parser.getModels();
 
@@ -442,56 +443,60 @@ public class PdbParsersTest {
 				for (int model:models) {
 					System.out.println(model);
 					PdbAsymUnit pdbfileFullpdb = new PdbAsymUnit(pdbFile,model);
-					PdbAsymUnit pdbaseFullpdb = new PdbAsymUnit(pdbCode,model,conn,"pdbase");
+					PdbAsymUnit ciffileFullpdb = new PdbAsymUnit(cifFile,model);
 					
-					Assert.assertEquals(pdbaseFullpdb.getNumPolyChains(),pdbfileFullpdb.getNumPolyChains());
+					Assert.assertEquals(ciffileFullpdb.getNumPolyChains(),pdbfileFullpdb.getNumPolyChains());
 					// we can't assert that number of non-poly chains are the same as the assignment in CIF differs from mine in many cases
 					// the only thing we can say for sure is that CIF always assigns more non-poly chains than we do (because they split the non-polys into more groups)
-					Assert.assertTrue(pdbaseFullpdb.getNumChains()>=pdbfileFullpdb.getNumChains());
+					Assert.assertTrue(ciffileFullpdb.getNumChains()>=pdbfileFullpdb.getNumChains());
 				 
 					// pdbCode properly read
 					Pattern p = Pattern.compile("^\\d\\w\\w\\w$");
 					Matcher m = p.matcher(pdbfileFullpdb.getPdbCode());
 					Assert.assertTrue(m.matches());
-					Assert.assertEquals(pdbaseFullpdb.getPdbCode(), pdbfileFullpdb.getPdbCode());
+					Assert.assertEquals(ciffileFullpdb.getPdbCode(), pdbfileFullpdb.getPdbCode());
 
 					// title 
 					// the capitalization is not consistent between pdb file and cif, 
 					// the spaces introduced between different lines are lost in pdb and thus also 
 					// not consistent with cif
 					// that's why we compare in lower case and stripping spaces
-					Assert.assertEquals(pdbaseFullpdb.getTitle().toLowerCase().replaceAll(" ", ""), 
+					Assert.assertEquals(ciffileFullpdb.getTitle().toLowerCase().replaceAll(" ", ""), 
 							pdbfileFullpdb.getTitle().toLowerCase().replaceAll(" ",""));
 
 					// model as input
 					Assert.assertEquals(model,pdbfileFullpdb.getModel());
 					
 					// crystal data
-					if (pdbaseFullpdb.getSpaceGroup()!=null) {
-						Assert.assertEquals(pdbaseFullpdb.getSpaceGroup().getId(),pdbfileFullpdb.getSpaceGroup().getId());
+					if (ciffileFullpdb.getSpaceGroup()!=null) {
+						Assert.assertEquals(ciffileFullpdb.getSpaceGroup().getId(),pdbfileFullpdb.getSpaceGroup().getId());
 					}
 					Assert.assertNotNull(pdbfileFullpdb.getCrystalCell());
 					
 					// exp data and quality parameters
-					Assert.assertEquals(pdbaseFullpdb.getExpMethod(),pdbfileFullpdb.getExpMethod());
-					Assert.assertEquals(pdbaseFullpdb.getResolution(),pdbfileFullpdb.getResolution(),0.01);
-					if (Math.abs(pdbaseFullpdb.getRfree()-pdbfileFullpdb.getRfree())>0.01) {
-						// we can't assert because there's no consistency between pdbase and pdbfile, e.g. 1p1x
-						System.err.println(pdbCode+": rfrees don't agree, pdbase "+
-								String.format("%4.2f", pdbaseFullpdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfileFullpdb.getRfree()));
-						warnings.add(pdbCode+": rfrees don't agree, pdbase "+
-								String.format("%4.2f", pdbaseFullpdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfileFullpdb.getRfree()));
+					Assert.assertEquals(ciffileFullpdb.getExpMethod(),pdbfileFullpdb.getExpMethod());
+					if (ciffileFullpdb.isXrayDiffraction()) {
+						Assert.assertEquals(ciffileFullpdb.getResolution(),pdbfileFullpdb.getResolution(),0.01);
 					}
-					Assert.assertEquals(pdbaseFullpdb.getRsym(),pdbfileFullpdb.getRsym(),0.001);
+					if (Math.abs(ciffileFullpdb.getRfree()-pdbfileFullpdb.getRfree())>0.01) {
+						// we can't assert because there's no consistency between pdbase and pdbfile, e.g. 1p1x
+						System.err.println(pdbCode+": rfrees don't agree, cif "+
+								String.format("%4.2f", ciffileFullpdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfileFullpdb.getRfree()));
+						warnings.add(pdbCode+": rfrees don't agree, cif "+
+								String.format("%4.2f", ciffileFullpdb.getRfree())+", pdbfile "+String.format("%4.2f",pdbfileFullpdb.getRfree()));
+					}
+					if (ciffileFullpdb.isXrayDiffraction()) {
+						Assert.assertEquals(ciffileFullpdb.getRsym(),pdbfileFullpdb.getRsym(),0.001);
+					}
 
-					Assert.assertEquals(pdbaseFullpdb.getNumAtoms(),pdbfileFullpdb.getNumAtoms());
+					Assert.assertEquals(ciffileFullpdb.getNumAtoms(),pdbfileFullpdb.getNumAtoms());
 					
 					for (PdbChain pdbfilePdb:pdbfileFullpdb.getAllChains()) {
 						String chainCode = pdbfilePdb.getChainCode();
 						String pdbChainCode = pdbfilePdb.getPdbChainCode();
 						System.out.print(chainCode+" "+pdbChainCode+" ");
-						PdbChain pdbasePdb = pdbaseFullpdb.getChainForChainCode(chainCode);
-						if (!pdbaseFullpdb.containsChainCode(chainCode)) {
+						PdbChain pdbasePdb = ciffileFullpdb.getChainForChainCode(chainCode);
+						if (!ciffileFullpdb.containsChainCode(chainCode)) {
 							System.err.println("No pdbase chain for "+chainCode);
 							continue;
 						}
@@ -548,10 +553,10 @@ public class PdbParsersTest {
 									// wrong the last HISs (or maybe not, didn't look at 3D) but pdbfile says the one with coords is 183, where pdbase says it's 182  
 									// That's why here we only print a warning (anyway it is only in rare cases that it happen)
 									System.err.println(pdbCode+pdbChainCode+": resser " +resser+" maps to pdbresser "
-											+pdbasePdb.getPdbResSerFromResSer(resser)+" in pdbase and to pdbresser "
+											+pdbasePdb.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
 											+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
 									warnings.add(pdbCode+pdbChainCode+": resser " +resser+" maps to pdbresser "
-											+pdbasePdb.getPdbResSerFromResSer(resser)+" in pdbase and to pdbresser "
+											+pdbasePdb.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
 											+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
 								}
 							}
@@ -658,9 +663,7 @@ public class PdbParsersTest {
 				System.err.println("File missing. "+e.getMessage());
 			//}catch (PdbLoadException e) {
 			//	System.err.println("pdb load error, cause: "+e.getMessage());
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("pdb code not found in pdbase");			
-			}
+			} 
 		}
 		flist.close();
 		if (!warnings.isEmpty()) {

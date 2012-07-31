@@ -201,6 +201,14 @@ public class CrystalCell implements Serializable {
 	 * (CCP4 uses NCODE identifiers to distinguish the different conventions, the PDB one is called NCODE=1) 
 	 * The matrix is only calculated upon first call of this method, thereafter it is cached.
 	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5 (eq 2.30)
+	 * 
+	 * The non-standard orthogonalisation codes (NCODE for ccp4) are flagged in REMARK 285 after 2011's remediation
+	 * with text: "THE ENTRY COORDINATES ARE NOT PRESENTED IN THE STANDARD CRYSTAL FRAME". There were only 148 PDB
+	 * entries with non-standard code in 2011. See:
+	 * http://www.wwpdb.org/documentation/2011remediation_overview-061711.pdf 
+     * The SCALE1,2,3 records contain the correct transformation matrix (what Giacovazzo calls M matrix). 
+     * In those cases if we calculate the M matrix following Giacovazzo's equations here, we get an entirely wrong one.  
+     * Examples of PDB with non-standard orthogonalisation are 1bab and 1bbb.
 	 * @return
 	 */
 	private Matrix3d getMInv() {
@@ -373,5 +381,34 @@ public class CrystalCell implements Serializable {
 		return maxDimension;
 	}
 	
+	/**
+	 * Given a scale matrix parsed from a PDB entry (SCALE1,2,3 records), 
+	 * compares it to our calculated Mtranspose matrix to see if they coincide and 
+	 * returns true if they do.
+	 * If they don't that means that the PDB entry is not in the standard
+	 * orthogonalisation (NCODE=1 in ccp4).
+	 * In 2011's remediation only 148 PDB entries were found not to be in
+	 * a non-standard orthogonalisation. See:
+	 * http://www.wwpdb.org/documentation/2011remediation_overview-061711.pdf
+	 * For normal cases the scale matrix is diagonal without a translation component.
+	 * @param scaleMatrix
+	 * @return
+	 */
+	public boolean checkScaleMatrix(Matrix4d scaleMatrix) {
+		for (int i=0;i<3;i++) {
+			for (int j=0;j<3;j++) {
+				if (!deltaComp(getMTranspose().getElement(i, j),scaleMatrix.getElement(i, j))) {
+					//System.out.println("Our value   ("+i+","+j+"): "+getM().getElement(i,j));
+					//System.out.println("Their value ("+i+","+j+"): "+scaleMatrix.getElement(i,j));
+					return false;	
+				}
+			}
+		}
+		return true;
+	}
 	
+	private boolean deltaComp(double d1, double d2) {
+		if (Math.abs(d1-d2)<0.0001) return true;
+		return false;
+	}
 }

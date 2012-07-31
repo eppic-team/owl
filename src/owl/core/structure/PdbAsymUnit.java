@@ -294,6 +294,11 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.rFree = parser.getRfree();
 		this.rSym = parser.getRsym();
 		
+		// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb, 1bab)
+		Matrix4d scaleMatrix = parser.getScaleMatrix();
+		if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
+			throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
+		}
 
 	}
 	
@@ -314,6 +319,12 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			chain.setParent(this);
 		}
 
+		// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb, 1bab)
+		Matrix4d scaleMatrix = parser.readScaleMatrix();
+		if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
+			throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
+		}
+		
 		parser.closeFile();		
 	}
 	
@@ -333,7 +344,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			for (PdbChain chain:getAllChains()) {
 				chain.setParent(this);
 			}
-						
+				
+			// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb,1bab)
+			Matrix4d scaleMatrix = parser.readScaleMatrix();
+			if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
+				throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
+			}
+			
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
 		}
@@ -570,6 +587,16 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	public void setRsym(double rSym) {
 		this.rSym = rSym;
+	}
+	
+	/**
+	 * Returns true if the experimental method for this entry is X-RAY DIFFRACTION
+	 * False if experimental method not set or different from x-ray diffraction
+	 * @return
+	 */
+	public boolean isXrayDiffraction() {
+		if (getExpMethod()==null) return false;
+		return getExpMethod().equals("X-RAY DIFFRACTION");
 	}
 	
 	/**

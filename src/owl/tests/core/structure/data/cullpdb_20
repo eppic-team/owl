@@ -1,5 +1,27 @@
-# an NMR entry
-1NMR 
+# solution NMR entries
+1nmr
+7hsc
+8drh
+7gat
+4tgf
+4hir
+# solid state NMR entries
+2lgi
+2lbu
+2kb7
+# electron crystallography
+3b5u
+2h8a
+1i84
+# electron microscopy
+3j0e
+2xql
+3iz0 
+# neutron diffraction
+3otj
+3l45
+1wq2
+1cq2
 # dna only
 1zf5
 # dna with a ligand
@@ -12,6 +34,8 @@
 2xfm
 # rna with ligand
 3mei
+# an entry in a non-standard crystal frame (very rare!). We throw PdbLoadException when reading it, that's why it's commented out
+#1bab 
 # from here cullpdb20
 7ODC	A
 1WB4	A

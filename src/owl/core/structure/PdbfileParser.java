@@ -12,6 +12,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
@@ -53,6 +54,7 @@ public class PdbfileParser {
 	private String expMethod;
 	private CrystalCell crystalCell;
 	private SpaceGroup spaceGroup;
+	private Matrix4d scaleMatrix; // we parse it only in order to detect non-standard orthogonalisations
 	private double resolution;
 	private double rFree;
 	private double rSym; 
@@ -227,6 +229,10 @@ public class PdbfileParser {
 		return spaceGroup;
 	}
 	
+	protected Matrix4d getScaleMatrix() {
+		return scaleMatrix;
+	}
+	
 	protected double getResolution() {
 		return resolution;
 	}
@@ -383,6 +389,27 @@ public class PdbfileParser {
 					throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 				}
 			}
+			// SCALE1,2,3: parsed in order to detect non-standard orthogonalisations (also flagged in REMARK 285)
+			if (line.startsWith("SCALE1")) {
+				scaleMatrix = new Matrix4d();
+				scaleMatrix.m00 = Double.parseDouble(line.substring(10,20));
+				scaleMatrix.m01 = Double.parseDouble(line.substring(20,30));
+				scaleMatrix.m02 = Double.parseDouble(line.substring(30,40));
+				scaleMatrix.m03 = Double.parseDouble(line.substring(45,55));
+			}
+			if (line.startsWith("SCALE2")) {
+				scaleMatrix.m10 = Double.parseDouble(line.substring(10,20));
+				scaleMatrix.m11 = Double.parseDouble(line.substring(20,30));
+				scaleMatrix.m12 = Double.parseDouble(line.substring(30,40));
+				scaleMatrix.m13 = Double.parseDouble(line.substring(45,55));
+			}
+			if (line.startsWith("SCALE3")) {
+				scaleMatrix.m20 = Double.parseDouble(line.substring(10,20));
+				scaleMatrix.m21 = Double.parseDouble(line.substring(20,30));
+				scaleMatrix.m22 = Double.parseDouble(line.substring(30,40));
+				scaleMatrix.m23 = Double.parseDouble(line.substring(45,55));
+			}
+
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
 			if (line.startsWith("SEQRES")){
