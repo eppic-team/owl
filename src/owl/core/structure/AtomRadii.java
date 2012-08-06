@@ -28,8 +28,14 @@ public class AtomRadii {
 	 */
 	public static double getRadius(AminoAcid aa, Atom atom) {
 		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
+		// some unusual entries (e.g. 1tes) contain Deuterium atoms in standard aminoacids
+		if (atom.getType().equals(AtomType.D)) return AtomType.D.getRadius();
 		String atomCode = atom.getCode();
 		if (atomCode.equals("OXT")) atomCode="O";
+		if (!radii.get(aa.getThreeLetterCode()).containsKey(atomCode)) {
+			System.err.println("Unexpected atom "+atomCode+" in a "+aa.getThreeLetterCode()+" standard residue. Will use its generic vdw radius.");
+			return atom.getType().getRadius();
+		}
 		return radii.get(aa.getThreeLetterCode()).get(atomCode);
 	}
 	
@@ -41,6 +47,7 @@ public class AtomRadii {
 	 */
 	public static double getRadius(Nucleotide nuc, Atom atom) {
 		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
+		if (atom.getType().equals(AtomType.D)) return AtomType.D.getRadius();
 		String atomCode = atom.getCode();
 		// in RNA there's an additional O2' that is not in DNA (which is what vdw.radii has)
 		if (atomCode.equals("O2'")) return AtomType.O.getRadius();
