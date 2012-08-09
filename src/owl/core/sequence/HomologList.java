@@ -593,7 +593,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
 		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
 		LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
+		long start = System.nanoTime();
 		tcr.runTcoffee();
+		long end = System.nanoTime();
+		LOGGER.info("t_coffee ran in "+((end-start)/1000000000L)+"s ("+nThreads+" threads)");
 		if (!DEBUG) { 
 			// note that if the run of tcoffee throws an exception, files are not marked for deletion
 			homologSeqsFile.deleteOnExit();
