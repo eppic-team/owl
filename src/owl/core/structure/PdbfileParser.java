@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -546,7 +547,8 @@ public class PdbfileParser {
 						}
 						String element = null;
 						if (line.length()>=78) {
-							element = line.substring(76,78).trim();
+							// some programs like phenix use lower case for double-letter atom symbols like "Cl", we force the upper case
+							element = line.substring(76,78).trim().toUpperCase(Locale.ENGLISH);
 							if (element.equals("") || Character.isDigit(element.charAt(0)) || (element.length()==2 && Character.isDigit(element.charAt(1)))) 
 								element = null;
 						}
