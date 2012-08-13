@@ -495,7 +495,7 @@ public class PdbfileParser {
 				caspParents = new String[0];
 				caspParents = parentList.toArray(caspParents);
 			}
-			if (line.startsWith("TER ")) {
+			if (line.startsWith("TER")) {
 				outOfPolyChain = true;
 				terRecordSeen = true;
 			}
