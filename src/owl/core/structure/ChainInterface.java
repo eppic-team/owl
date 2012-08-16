@@ -597,8 +597,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	public Vector3d getConnectionVector() {
 		if (connection==null) {
 			CrystalCell cell = firstMolecule.getParent().getCrystalCell();
-			connection = new Vector3d(secondMolecule.getCenterOfMass());
-			connection.sub(firstMolecule.getCenterOfMass());
+			connection = new Vector3d(secondMolecule.getCentroid());
+			connection.sub(firstMolecule.getCentroid());
 			cell.transfToCrystal(connection);
 		}
 		return connection;

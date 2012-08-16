@@ -538,6 +538,22 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.expMethod = expMethod;
 	}
 	
+	/**
+	 * Returns true if the experimental method of this PdbAsymUnit
+	 * is a crystallographic one, i.e. one of :
+	 * X-RAY DIFFRACTION, NEUTRON DIFFRACTION or ELECTRON CRYSTALLOGRAPHY
+	 * If the experimental method is not set (null) then also true 
+	 * is returned, i.e. we consider the default PDB to be crystallographic
+	 * @return
+	 */
+	public boolean isCrystallographicExpMethod() {
+
+		return (getExpMethod()==null ||
+				getExpMethod().equals("X-RAY DIFFRACTION") || 
+				getExpMethod().equals("NEUTRON DIFFRACTION") || 
+				getExpMethod().equals("ELECTRON CRYSTALLOGRAPHY"));
+	}
+	
 	public int getModel() {
 		return model;
 	}
@@ -772,7 +788,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		int i = 1; // we start at 1 because we want to skip the identity
 		for (Matrix4d m:this.getTransformations()) {
 			PdbAsymUnit sym = this.copy();
+			sym.bounds = null;
+			sym.centroid = null;
 			for (PdbChain chain:sym.getAllChains()) {
+				// note that the call to transform in PdbChain also resets the cached bounds in the chain
 				chain.transform(m);
 			}
 			// the transformed object might end up in another cell but we want it in the original cell
@@ -855,8 +874,12 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		newAsym.pdbchaincode2chaincode.putAll(this.pdbchaincode2chaincode);
 		newAsym.chain2repChain = null;
 		newAsym.repChain2members = null;
-		newAsym.bounds = null;
-		newAsym.centroid = null;
+		if (this.bounds!=null) {
+			newAsym.bounds = new BoundingBox(bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax);
+		}
+		if (this.centroid!=null) {
+			newAsym.centroid = new Point3d(this.centroid);
+		}
 		
 		newAsym.setTransform(new Matrix4d(this.transform));
 		newAsym.setTransformId(this.getTransformId());

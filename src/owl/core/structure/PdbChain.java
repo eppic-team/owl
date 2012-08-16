@@ -2685,6 +2685,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public void transform(Matrix4d m, PdbChain pdb) {
 		pdb = this.copy(this.parent);
+		pdb.bounds = null;
 		pdb.transform(m);
 	}
 	
@@ -2705,8 +2706,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @return
 	 */
 	public boolean isCrystalNeighbor(PdbChain pdb) {
-		Point3d thisCoM  = this.getCenterOfMass();
-		Point3d otherCoM = pdb.getCenterOfMass();
+		Point3d thisCoM  = this.getCentroid();
+		Point3d otherCoM = pdb.getCentroid();
 		if (thisCoM.distance(otherCoM)<2.0*parent.getCrystalCell().getMaxDimension()) {
 			return true;
 		}
@@ -2720,8 +2721,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @return
 	 */
 	public Point3i getCrystalSeparation(PdbChain pdb) {
-		Point3d thisCoM  = this.getCenterOfMass();
-		Point3d otherCoM = pdb.getCenterOfMass();
+		Point3d thisCoM  = this.getCentroid();
+		Point3d otherCoM = pdb.getCentroid();
 		parent.getCrystalCell().getCrystalFromOrthCoords(thisCoM);
 		parent.getCrystalCell().getCrystalFromOrthCoords(otherCoM);
 		double asep = otherCoM.x-thisCoM.x;
@@ -2785,7 +2786,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 */
 	public void moveToOrigin() {
 		this.bounds = null; // we must reset bounds whenever the coordinates are changed
-		Point3d center = getCenterOfMass();
+		Point3d center = getCentroid();
 		for (Residue residue: this) {
 			for (Atom atom:residue) {
 				atom.getCoords().sub(center);
@@ -2817,11 +2818,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns the average coordinate of all atoms in this chain (disregarding atom masses)
+	 * Returns the centroid (average coordinate of all atoms) of this chain 
+	 * (i.e. center of mass, but disregarding atom masses)
 	 * Atoms of all kinds of residues are considered
 	 * @return
 	 */
-	public Point3d getCenterOfMass() {
+	public Point3d getCentroid() {
 		Vector3d sumVector = new Vector3d();
 		int numAtoms = 0;
 		for (Residue residue:this) {
@@ -3021,6 +3023,11 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				newPdb.pdbresser2resser.put(pdbresser, this.pdbresser2resser.get(pdbresser));
 			}
 		}
+		
+		if (this.bounds!=null) {
+			newPdb.bounds = new BoundingBox(bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax);
+		}
+		
 		return newPdb;
 	}
 	

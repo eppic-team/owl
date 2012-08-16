@@ -17,12 +17,12 @@ public class BoundingBox implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
-	double xmin;
-	double xmax;
-	double ymin;
-	double ymax;
-	double zmin;
-	double zmax;
+	public double xmin;
+	public double xmax;
+	public double ymin;
+	public double ymax;
+	public double zmin;
+	public double zmax;
 	
 	public BoundingBox(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax) {
 		this.xmin = xmin;

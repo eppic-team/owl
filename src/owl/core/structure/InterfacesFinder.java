@@ -166,11 +166,8 @@ public class InterfacesFinder {
 		// a) entries with expMethod X-RAY/other diffraction and defined crystalCell (most usual case)
 		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
 		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
-		if (cell!=null && 
-				(pdb.getExpMethod()==null || 
-				pdb.getExpMethod().equals("X-RAY DIFFRACTION") || 
-				pdb.getExpMethod().equals("NEUTRON DIFFRACTION") || 
-				pdb.getExpMethod().equals("ELECTRON CRYSTALLOGRAPHY"))) { 
+		if (cell!=null && pdb.isCrystallographicExpMethod()) {
+			
 			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
@@ -239,6 +236,7 @@ public class InterfacesFinder {
 				int trials = pdb.getNumChains()*cell.getNumAsymUnits()*pdb.getNumChains()*26;
 				System.out.println("Interfaces between the original asym unit and the 26 neighbouring whole unit cells ("+trials+")");
 			}
+			
 			// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
 			for (int i=-1;i<=1;i++) {
 				for (int j=-1;j<=1;j++) {
@@ -259,7 +257,7 @@ public class InterfacesFinder {
 								}
 							}
 							
-//							if (jAsym.getTransformId()==4 && i==0 && j==1 && k==1) {
+//							if (jAsym.getTransformId()==2 && i==1 && j==0 && k==0) {
 //								System.err.println("Writing debug file");
 //								jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_"+i+""+j+""+k+".pdb"));
 //							}
