@@ -1,0 +1,70 @@
+3NQJ # exact interface count disagrees because of cutoff issue (last interface very small)
+1FB6 
+3HBX
+#2CIO this one is a "bug" in pisa, they don't count chain B, because it's too incomplete in density. We do and get one more interface
+2PYX	A
+2BZ1	A
+2Q4N	A
+1P0H	A
+#1KMV	A  # problem with PISA to our ChainInterface conversion (we can't recognise one of their non-poly chains)
+1MJ5	A
+1O97	D
+2BZV	A
+2PR7	A
+2JE6	I
+1P9H	A
+2PYQ	A
+1MLA	A
+2B3F	A
+1MG4	A
+2O0M	A
+1JB3	A
+1JY2	N
+2ERB	A
+1HBN	C
+#1WQJ	B # contacts with 2nd neighbour cell that we miss
+2HEU	A
+2I53	A
+1J3A	A
+1VZI	A
+2GB4	A
+1ZHV	A
+1QFT	A
+1EAQ	A
+2O1Q	A
+1OZ2	A
+1FO8	A
+2BVR	L
+1MJ4	A
+2EB4	A
+1GK9	B
+#2DE3	A # contacts with 2nd neighbour cell that we miss
+3CHB	D
+2OPC	A
+2GZQ	A
+#1JCD	A # contacts with 2nd neighbour cell that we miss
+2O3S	A
+1IXH	A
+1XOD	A
+2GVK	A
+#2DRT	A # area of an interface around the 30A2 disagreeing makes count disagree 
+2P17	A
+1OBO	A
+1CCW	B
+1WHZ	A
+1U84	A
+1WHI	A
+2C60	A
+1K0M	A
+#2NRL	A # problem with PISA to our ChainInterface conversion (we can't recognise one of their non-poly chains)
+2HAI	A
+1JNI	A
+1Z2N	X
+1WT6	A
+1M15	A
+1GSO	A
+2DQ6	A
+2EUT	A
+2HHC	A
+2O6S	A
+1RJU	V

@@ -66,6 +66,16 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		return count;
 	}
 	
+	public int getNumProtProtInterfacesAboveArea(double area) {
+		int count = 0;
+		for (ChainInterface interf:this) {
+			if (interf.isProtein() && interf.getInterfaceArea()>area) {			
+				count++;
+			}
+		}
+		return count;
+	}
+	
 	/**
 	 * Sorts the interface list descending on total interface areas assigning identifiers 
 	 * from 1 to n in that order.

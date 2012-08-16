@@ -1332,6 +1332,10 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		AICGraph graph = new AICGraph();
 		graph.setDistCutoff(cutoff);
 
+		if (grid.isNoOverlap()) {
+			return graph;
+		}
+		
 		float[][] distMatrix = grid.getDistMatrix(true);
 		
 		for (int i=0;i<distMatrix.length;i++){ 

@@ -193,6 +193,7 @@ public final class SpaceGroup implements Serializable {
 	}
 	
 	private void calcRotAxesAndAngles() {
+		// beware this works only for non enantiomorphic groups (those without inversion points/mirror planes)
 		angles = new ArrayList<Double>();
 		axes = new ArrayList<Vector3d>();
 		operatorsPerAxis = new HashMap<Vector3d, ArrayList<Integer>>();
@@ -416,36 +417,6 @@ public final class SpaceGroup implements Serializable {
 			return false;
 		}
 		return true;
-	}
-	
-	/**
-	 * Returns true if two given transformIds are rotation-related, defined as:
-	 * they are rotations in same axis and are symmetry related (ad-hoc rule for interface calculation)
-	 * @param tId1
-	 * @param tId2
-	 * @return
-	 */
-	public boolean areRotRelated(int tId1, int tId2) {
-		
-		if (!areInSameAxis(tId1, tId2)) return false;
-		
-		int ft1 = getAxisFoldType(tId1);
-		int ft2 = getAxisFoldType(tId2);
-		if (ft1!=ft2) return false;
-		// so ft1==ft2
-		// case 2
-		if (ft1==2) {
-			// all 2-fold rotations in same axis are related
-			return true;
-		}
-		if (ft1==3 || ft1==4 || ft1==6) {
-			// in 3-fold 4-fold and 6-fold axes the related ones are the 2 "opposite" transformations
-			return (tId1!=tId2);
-		}
-		
-		// we shouldn't reach this point
-		System.err.println("Error! two given transformIds ("+tId1+","+tId2+") didn't fall in any rotation-related case");
-		return false;
 	}
 	
 	/**

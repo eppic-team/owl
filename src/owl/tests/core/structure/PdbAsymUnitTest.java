@@ -48,6 +48,7 @@ public class PdbAsymUnitTest {
 	
 	private static final String TESTDATADIR = "src/owl/tests/core/structure/data";
 	private static final String LISTFILE = TESTDATADIR+"/testset_interfaces.txt";
+	private static final String LISTFILE2 = TESTDATADIR+"/testset_interfaces2.txt";
 	private static final String CULLPDB20FILE = TESTDATADIR+"/cullpdb_20";
 	
 	private static final double CUTOFF = 5.9;
@@ -120,7 +121,7 @@ public class PdbAsymUnitTest {
 	}
 	
 	@Test
-	public void testGetAllInterfaces() throws IOException, SQLException, SAXException {
+	public void testInterfacesVsPisa() throws IOException, SQLException, SAXException {
 
 		List<String> pdbCodes = readListFile(new File(LISTFILE));
 
@@ -224,6 +225,60 @@ public class PdbAsymUnitTest {
 	}
 	
 	@Test
+	public void testInterfacesVsPisaCountsOnly() throws IOException, SQLException, SAXException {
+
+		List<String> pdbCodes = readListFile(new File(LISTFILE2));
+
+		System.out.println("Interface calculation vs PISA test ("+pdbCodes.size()+" structures to test). Only checking total interface counts");
+		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+		
+		// getting PISA interfaces
+		PisaConnection pc = new PisaConnection();
+		System.out.println("Downloading PISA interfaces");
+		Map<String, PisaInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
+
+		for (String pdbCode: pdbCodes) {
+					
+			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+			
+			pdb.removeHatoms();
+
+			ChainInterfaceList pisaInterfaces = all.get(pdbCode).convertToChainInterfaceList(pdb);
+			// we sort them on interface area because pisa doesn't always sort them like that (it does some kind of grouping)
+			pisaInterfaces.sort();
+			
+			System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
+			
+			long start = System.currentTimeMillis();
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			long end = System.currentTimeMillis();
+			System.out.println("Time: "+((end-start)/1000)+"s");
+			System.out.println("Total number of interfaces found above 30A2 area: "+interfaces.getNumInterfacesAboveArea(30));
+			
+			// TODO get only above 20 interfaces
+			int pisaCount = pisaInterfaces.getNumProtProtInterfacesAboveArea(30);
+			System.out.println("PISA interface count above 30A2 area: "+pisaCount);
+			Assert.assertEquals(pisaCount, interfaces.getNumInterfacesAboveArea(30));
+
+			
+			
+		}
+	}
+	
+	@Test
 	public void testInterfacesFinderRedundancyElimination() throws IOException, SQLException, SAXException {
 		
 		// A exclude list for entries we don't want to test here
@@ -241,7 +296,7 @@ public class PdbAsymUnitTest {
 		// just the one in our cullpdb20 list: 1vzi (we miss the 13th interface out of 14)
 		// This is happening because there are issues with how the transformations are moved around to be placed in the right cells 
 		// (see the trick we have to do in PdbAsymUnit.getSymRelatedObjects() )
-		String[] excludeCodesMismatch = {"1vzi"}; 
+		String[] excludeCodesMismatch = {}; //{"1vzi"}; 
 		
 		
 		List<String> pdbCodes = readListFile(new File(CULLPDB20FILE));
@@ -272,9 +327,15 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 
+			
+			// in some cases like 2pyq if one reuses the pdb for calculating with/without redund elim, the result is different (in 2pyq 21 vs 22 interfaces)
+			// I guess there is some issue with the caching of bounding boxes
+			// anyway to solve this we can simply clone the pdb
+
 			PdbAsymUnit pdb = null;
+			PdbAsymUnit pdb2 = null;
 			try {
-				pdb = new PdbAsymUnit(cifFile);
+				pdb = new PdbAsymUnit(cifFile);				
 			} catch (PdbLoadException e) {
 				System.err.println("PDB load error, cause: "+e.getMessage());
 				continue;
@@ -284,6 +345,7 @@ public class PdbAsymUnitTest {
 			}
 
 			pdb.removeHatoms();
+			pdb2 = pdb.copy();
 			
 			SpaceGroup sg = pdb.getSpaceGroup();
 			if (sg==null) System.out.println("No space group");
@@ -301,6 +363,7 @@ public class PdbAsymUnitTest {
 			end = System.currentTimeMillis();
 			long totalWithRedundancy = (end-start)/1000;
 			
+			interfFinder = new InterfacesFinder(pdb2);
 			start = System.currentTimeMillis();
 			interfFinder.setWithRedundancyElimination(true);
 			ChainInterfaceList interfacesRedundancyElim = 
@@ -453,7 +516,7 @@ public class PdbAsymUnitTest {
 	public static void main(String[] args) throws Exception {
 		PdbAsymUnitTest pdbAUTest = new PdbAsymUnitTest();
 		setUpBeforeClass();
-		pdbAUTest.testGetAllInterfaces();
+		pdbAUTest.testInterfacesVsPisa();
 	}
 
 }

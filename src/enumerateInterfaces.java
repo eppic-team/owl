@@ -26,6 +26,8 @@ public class enumerateInterfaces {
 
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
+	
+	
 	// 6.0 seems to be PISA's cutoff, found for structure 1pmm where with 5.5 there is one interface (tiny, 1 atom contacting) missing
 	// 5.0  gives 25 for 1pmo (right number) but 6.0 gives one more (26) for which NACCESS measures a negative area...
 	// what's the cutoff then? I'm trying a value in between but it seems strange to choose such fractional values
@@ -52,6 +54,7 @@ public class enumerateInterfaces {
 			" [-s]        : write a serialized interfaces.dat file to output dir given\n" +
 			"               in -w\n" +
 			" [-n]        : non-polymer chains will also be considered\n" +
+			" [-r]        : don't use redundancy elimination\n" +
 			" [-d]        : more verbose output for debugging\n\n";
 		
 		String pdbStr = null;
@@ -61,8 +64,9 @@ public class enumerateInterfaces {
 		boolean debug = false;
 		boolean serialize = false;
 		boolean nonPoly = false;
+		boolean withRedundancyElimination = true;
 
-		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lsndh?");
+		Getopt g = new Getopt("enumerateInterfaces", args, "i:w:t:lsnrdh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -83,6 +87,9 @@ public class enumerateInterfaces {
 				break;
 			case 'n':
 				nonPoly = true;
+				break;
+			case 'r':
+				withRedundancyElimination = false;
 				break;
 			case 'd':
 				debug = true;
@@ -158,7 +165,7 @@ public class enumerateInterfaces {
 		long start = System.currentTimeMillis();
 		InterfacesFinder interfFinder = new InterfacesFinder(pdb);
 		interfFinder.setDebug(debug);
-		interfFinder.setWithRedundancyElimination(true);
+		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
 		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
 		long end = System.currentTimeMillis();

@@ -282,4 +282,13 @@ public class Grid {
 		return cutoff;
 	}
 	
+	/**
+	 * Tells whether (after having added atoms to grid) the i and j grids are not overlapping. 
+	 * Overlap is defined as enclosing bounds of the 2 grids being no more than one cell size apart.
+	 * @return true if the 2 grids don't overlap, false if they do
+	 */
+	public boolean isNoOverlap() {
+		return noOverlap;
+	}
+	
 }

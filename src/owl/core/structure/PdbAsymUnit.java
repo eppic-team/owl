@@ -27,14 +27,9 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-import edu.uci.ics.jung.graph.util.EdgeType;
-
-import owl.core.structure.graphs.AICGEdge;
-import owl.core.structure.graphs.AICGraph;
 import owl.core.util.BoundingBox;
 import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
-import owl.core.util.Grid;
 import owl.core.util.MySQLConnection;
 
 /**
@@ -117,6 +112,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private double rFree;
 	private double rSym;
 	private BoundingBox bounds; // cached bounds for speed up of interface calculations, filled in getAllAtoms()
+	private boolean boundsProtOnly; // to track whether the cached bounds are for protein chains only (true) or for any chain poly/non-poly
+	private Point3d centroid;  // cached centroid
 	
 	/**
 	 * Transformation matrix used to generate this asym unit (includes 
@@ -494,6 +491,18 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
+	 * Returns the total number of protein polymer chains present in this asym unit.
+	 * @return
+	 */
+	public int getNumProtChains() {
+		int count = 0;
+		for (PdbChain chain:chains.values()) {
+			if (chain.getSequence().isProtein()) count++;
+		}
+		return count;
+	}
+	
+	/**
 	 * Returns the total number of non-polymer chains present in this asym unit.
 	 * @return
 	 */
@@ -694,12 +703,15 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
-	 * Returns the average coordinate of all atoms in this structure (disregarding atom masses)
+	 * Returns the centroid (average coordinate) of all atoms in this structure 
+	 * (i.e. center of mass disregarding atom masses)
 	 * Atoms of all chains (polymer/non-polymer) and of all kinds of residues (standard aminoacids, 
 	 * nucleotides, hets) are considered
+	 * The centroid valued is cached and reused upon subsequent calls
 	 * @return
 	 */
-	public Point3d getCenterOfMass() {
+	public Point3d getCentroid() {
+		if (centroid!=null) return centroid;
 		Vector3d sumVector = new Vector3d();
 		int numAtoms = 0;
 		for (PdbChain chain:getAllChains()) {
@@ -711,18 +723,19 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			}
 		}
 		sumVector.scale(1.0/numAtoms);
-		return new Point3d(sumVector);
+		centroid = new Point3d(sumVector);
+		return centroid;
 	}
 	
 	/**
 	 * Returns the separation in the three crystal axes (unit cell units) of this PdbAsymUnit's 
-	 * centre of mass with respect to the given one's centre of mass.
+	 * centroid with respect to the given one's centroid
 	 * @param pdb
 	 * @return
 	 */
 	public Point3d getCrystalSeparation(PdbAsymUnit pdb) {
-		Point3d thisCoM  = this.getCenterOfMass();
-		Point3d otherCoM = pdb.getCenterOfMass();
+		Point3d thisCoM  = this.getCentroid();
+		Point3d otherCoM = pdb.getCentroid();
 		crystalCell.getCrystalFromOrthCoords(thisCoM);
 		crystalCell.getCrystalFromOrthCoords(otherCoM);
 		double asep = otherCoM.x-thisCoM.x;
@@ -737,6 +750,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 */
 	public void transform(Matrix4d m) {
 		this.bounds = null; // cached bounds must be reset whenever we transform the coordinates
+		this.centroid = null;
 		for (PdbChain pdb:getAllChains()) {
 			pdb.transform(m);
 		}
@@ -746,6 +760,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * Mirror this structure by inverting through the origin.
 	 */
 	public void mirror() {
+		this.bounds = null; // cached bounds must be reset whenever we transform the coordinates
+		this.centroid = null;
 		for (PdbChain chain:getAllChains()){
 			chain.mirror();
 		}
@@ -800,6 +816,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
 		this.bounds = null; //bounds must be reset whenever the coordinates are transformed
+		this.centroid = null;
 		for (PdbChain pdb:getAllChains()) {
 			pdb.doCrystalTranslation(direction);
 		}		
@@ -807,7 +824,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		transform.m03 = transform.m03+direction.x;
 		transform.m13 = transform.m13+direction.y;
 		transform.m23 = transform.m23+direction.z;
-		// note that transformId doesn't change here. That's the whole point of having such an id: to identify equivalent crystal symmtry units  
+		// note that transformId doesn't change here: 
+		// that's the whole point of having such an id: to identify equivalent crystal symmetry units  
 	}
 	
 	/**
@@ -838,6 +856,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		newAsym.chain2repChain = null;
 		newAsym.repChain2members = null;
 		newAsym.bounds = null;
+		newAsym.centroid = null;
 		
 		newAsym.setTransform(new Matrix4d(this.transform));
 		newAsym.setTransformId(this.getTransformId());
@@ -1050,70 +1069,42 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 				residue.setBsa(tot);
 			}
 		}		
-	}
-	
-	private Atom[] getAllAtoms() {
- 
-		Atom[][] allAtoms = new Atom[this.getNumChains()][];
-		BoundingBox[] boxes = new BoundingBox[getNumChains()];
-		int numThisAtoms = 0;
-		int i = 0;
-		for (PdbChain chain:getAllChains()) {
-			allAtoms[i] = chain.getAllAtoms();
-			numThisAtoms += allAtoms[i].length;
-			boxes[i] = chain.getBoundingBox();
-			i++;
-		}
-		Atom[] thisAtoms = new Atom[numThisAtoms];
-		int k = 0;
-		for (i =0;i<this.getNumChains();i++) {
-			for (int j=0;j<allAtoms[i].length;j++) {
-				thisAtoms[k] = allAtoms[i][j];
-				k++;
-			}
-		}
-		if (bounds==null) {
-			bounds = new BoundingBox(boxes); 
-		}
-		return thisAtoms;		
-	}
-	
-	protected BoundingBox getBoundingBox() {
-		if (bounds!=null) {
+	}	
+
+	protected BoundingBox getBoundingBox(boolean protOnly) {
+		if (bounds!=null && boundsProtOnly==protOnly) {
 			return bounds;
 		}
-		BoundingBox[] boxes = new BoundingBox[getNumChains()];
+		int numChains = getNumChains();
+		if (protOnly) numChains = getNumProtChains();
+		
+		BoundingBox[] boxes = new BoundingBox[numChains];
+		Collection<PdbChain> cs = null;
+		if (!protOnly) cs = getAllChains();
+		else cs = getProtChains();
+		
 		int i = 0;
-		for (PdbChain chain:getAllChains()) {
+		for (PdbChain chain:cs) {
 			boxes[i] = chain.getBoundingBox();
 			i++;
 		}
 		bounds = new BoundingBox(boxes);
+		boundsProtOnly = protOnly;
 		return bounds;
 	}
 	
-	public AICGraph getAIAUGraph(PdbAsymUnit other, double cutoff) {
-		Atom[] thisAtoms = this.getAllAtoms();
-		Atom[] otherAtoms = other.getAllAtoms();
-		
-		Grid grid = new Grid(cutoff);
-		grid.addAtoms(thisAtoms,this.bounds,otherAtoms,other.bounds);
-		
-		AICGraph graph = new AICGraph();
-
-		float[][] distMatrix = grid.getDistMatrix(true);
-		
-		for (int i=0;i<distMatrix.length;i++){ 
-			for (int j=0;j<distMatrix[i].length;j++){
-				// the condition distMatrix[i][j]!=0.0 takes care of skipping cells for which we 
-				// didn't calculate a distance because the 2 points were not in same or neighbouring boxes (i.e. too far apart)
-				if (distMatrix[i][j]!=0.0f && distMatrix[i][j]<=cutoff){
-					graph.addEdge(new AICGEdge(distMatrix[i][j]), thisAtoms[i], otherAtoms[j], EdgeType.UNDIRECTED);
-				}
-
-			}
-		}
-		return graph;
+	/**
+	 * Returns true if the two bounding boxes of this AsymUnit and other AsymUnit
+	 * are not within the given cutoff, false if they are within the given cutoff
+	 * @param other
+	 * @param cutoff
+	 * @param protOnly whether to consider protein chains only or all (poly and non-poly)
+	 * @return
+	 */
+	public boolean areNotOverlapping(PdbAsymUnit other, double cutoff, boolean protOnly) {
+		BoundingBox thisbb = this.getBoundingBox(protOnly);
+		BoundingBox otherbb = other.getBoundingBox(protOnly);
+		return !thisbb.overlaps(otherbb, cutoff);
 	}
 	
 	/**

@@ -7,20 +7,29 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.vecmath.Point3d;
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.structure.graphs.AICGraph;
 
 public class InterfacesFinder {
+	
+	private static final Matrix4d IDENTITY = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
 
 	private class TransformIdTranslation {
 		public int transformId;
 		public Vector3d translation;
+		public boolean partnerSeen;
+		public boolean checkPartner; // whether to check the partner or not (default is of course not to check)
+		public Matrix4d matTransform;
 		public TransformIdTranslation(int transformId, Vector3d translation) {
 			this.transformId = transformId;
 			this.translation = translation;
+			this.partnerSeen = false;
+			this.checkPartner = false;
+			this.matTransform = (Matrix4d)sg.getTransformation(transformId).clone();
+			this.matTransform.setTranslation(translation);
 		}
 		public String toString() {
 			return String.format("[%d-(%5.2f,%5.2f,%5.2f)]",transformId,translation.x,translation.y,translation.z);
@@ -82,12 +91,18 @@ public class InterfacesFinder {
 	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
 	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {	
-		// TODO also take care that for longer cutoffs or for very small angles and small molecules one might need to go to the 2nd neighbour
-		// TODO pathological cases, 3hz3: one needs to go to the 2nd neighbour
+		// TODO take care of cases where interfaces are found to a 2nd neighbour cell
+		// e.g. 3hz3, 1wqj, 2de3, 1jcd: one needs to go to the 2nd neighbour
+		// This probably happens more for longer cutoffs or for very small angles and small molecules
 		
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
 		Set<ChainInterface> set = new HashSet<ChainInterface>();
+		
+		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
+		if (pdb.getProtChains().size()==0) {
+			return calcAsas(set, naccessExe, nSpherePoints, nThreads, hetAtoms);
+		}		
 
 		// initialising the visited ArrayList for keeping track of symmetry redundancy
 		initialiseVisited();
@@ -160,15 +175,21 @@ public class InterfacesFinder {
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
 				if (jAsym==pdb) continue; // we want to compare this to all others but not to itself
-
-				// we also have to check whether space group is enantiomorphic, otherwise it would have issues with axes and angles in rare case P-1
-				if (withRedundancyElimination && pdb.getSpaceGroup().isEnantiomorphic()) { 
-					if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
+				TransformIdTranslation tt = null;
+				if (withRedundancyElimination) { 
+					tt = new TransformIdTranslation(jAsym.getTransformId(), jAsym.getTranslation());
+					if (!addVisited(tt)) {
 						if (debug) countSkipped1++;
 						continue;
 					}
 				}
 				
+//				if (jAsym.getTransformId()==3) {
+//					System.err.println("Writing debug file");
+//					jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_000.pdb"));
+//				}
+				
+				int contactsFound = 0;
 				Collection<PdbChain> ichains = null;
 				Collection<PdbChain> jchains = null;
 				if (nonPoly) {
@@ -186,6 +207,7 @@ public class InterfacesFinder {
 						}
 						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 						if (graph.getEdgeCount()>0) {
+							contactsFound++;
 							if (debug) System.out.print("x");
 							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 							PdbChain chainiCopy = chaini.copy(pdb);
@@ -197,6 +219,12 @@ public class InterfacesFinder {
 							}
 						}													
 					}
+				}
+				// no contacts for all j chains were found for this operator => 
+				// we mark the tt as unchecked so that we make sure we do try the partner equivalent transformation
+				// no-contacts condition 2
+				if (withRedundancyElimination && contactsFound<(ichains.size()*jchains.size())) {
+					tt.checkPartner = true;
 				}
 
 			}
@@ -220,32 +248,42 @@ public class InterfacesFinder {
 						Vector3d trans = new Vector3d(i,j,k);
 						translated.doCrystalTranslation(trans);
 						
-						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {
+						for (PdbAsymUnit jAsym:translated.getAllAsymUnits()) {						
 							// short-cut 1: checking for redundancy in symmetry, will skip if redundant
-							if (withRedundancyElimination && pdb.getSpaceGroup().isEnantiomorphic()) {
-								if (!addVisited(jAsym.getTransformId(), jAsym.getTranslation())) {
+							TransformIdTranslation tt = null;
+							if (withRedundancyElimination) {
+								tt = new TransformIdTranslation(jAsym.getTransformId(), jAsym.getTranslation());
+								if (!addVisited(tt)) { 								
 									if (debug) countSkipped1++;								
 									continue;
 								}
 							}
-							// short-cut 2: checking for too far away asu cell, will skip if too far away
-							Point3d sep = pdb.getCrystalSeparation(jAsym);
-							if (Math.abs(sep.x)>1.1 || Math.abs(sep.y)>1.1 || Math.abs(sep.z)>1.1) {
+							
+//							if (jAsym.getTransformId()==4 && i==0 && j==1 && k==1) {
+//								System.err.println("Writing debug file");
+//								jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_"+i+""+j+""+k+".pdb"));
+//							}
+							
+							// short-cut 2: checking for too far away for a contact with bounding boxes
+							if (pdb.areNotOverlapping(jAsym,cutoff,!nonPoly)) {
 								if (debug) {
-									//System.out.println("\nskipping:");
-									//System.out.printf("(%2d,%2d,%2d) - %2d : %5.2f,%5.2f,%5.2f (%2d,%2d,%2d)\n",i,j,k,jAsym.getTransformId(),
-									//		sep.x,sep.y,sep.z,
-									//		(int)Math.round(sep.x),(int)Math.round(sep.y),(int)Math.round(sep.z));
 									countSkipped2++;
 								}
+
+								// no contacts for this transformation =>
+								// we mark the tt as unchecked so that we make sure we do try the partner equivalent transformation
+								// no-contacts condition 1
+								if (withRedundancyElimination) tt.checkPartner = true;
 								continue;
 							}
+							
+							int contactsFound = 0;
+							Collection<PdbChain> ichains = null;
 							Collection<PdbChain> jchains = null;
 							if (nonPoly) jchains = jAsym.getAllChains();
 							else jchains = jAsym.getProtChains();
 							for (PdbChain chainj:jchains) {
-
-								Collection<PdbChain> ichains = null;
+								
 								if (nonPoly) ichains = pdb.getAllChains();
 								else ichains = pdb.getProtChains();
 								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
@@ -255,6 +293,7 @@ public class InterfacesFinder {
 									}
 									AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 									if (graph.getEdgeCount()>0) {
+										contactsFound++;										
 										if (debug) System.out.print("x");
 										// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 										PdbChain chainiCopy = chaini.copy(pdb);
@@ -264,8 +303,14 @@ public class InterfacesFinder {
 										if (!set.add(interf)){
 											duplicatesCount3++;
 										}
-									}							
+									} 					
 								}
+							}
+							// no contacts for all j chains were found for this operator => 
+							// we mark the tt as unchecked so that we make sure we do try the partner equivalent transformation
+							// no-contacts condition 2
+							if (withRedundancyElimination && contactsFound<(ichains.size()*jchains.size())) {
+								tt.checkPartner = true;
 							}
 						}
 					}
@@ -279,6 +324,12 @@ public class InterfacesFinder {
 						" trials. Time "+(end-start)/1000+"s");
 				System.out.println("Duplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
 				System.out.println("Found "+set.size()+" interfaces.");
+				System.out.println("Transformations used: "+visited.size());
+				int countWithPartner = 0;
+				for (TransformIdTranslation v:visited) {
+					if (v.partnerSeen) countWithPartner++;
+				}
+				System.out.println("From them, transformations with equivalent partner: "+countWithPartner);
 			}
 		}
 		
@@ -330,98 +381,51 @@ public class InterfacesFinder {
 	
 	/**
 	 * Checks whether given transformId/translation is symmetry redundant, if not it is added to the list 
-	 * of seen transformIds/translations and true returned. If it is redundant nothing is added and false is returned 
-	 * @param transformId
-	 * @param newDirection
+	 * of seen transformIds/translations and true returned. If it is redundant nothing is added and false is returned. 
+	 * Two transformations are symmetry redundant if their matrices (4d) multiplication gives the identity, i.e.
+	 * if one is the inverse of the other.
+	 * @param tt
 	 * @return
 	 */
-	private boolean addVisited(int transformId, Vector3d newDirection) {
-		TransformIdTranslation dt = new TransformIdTranslation(transformId, newDirection);
-		// for a not rotational transformation (transformId==0 or identity rotations)
-		if (sg.isRotationIdentity(transformId)) {
-			// if a seen vector and new vector are same but opposite in sign then the transformation is redundant
-			for (TransformIdTranslation v:visited) {
-				if (!sg.isRotationIdentity(v.transformId)) continue;
-				Vector3d sum = new Vector3d();
-				sum.add(v.translation,dt.translation);
-				if (sum.epsilonEquals(new Vector3d(0,0,0), 0.001)) {
-					// they are symmetry redundant, return false and don't add
-					if (debug) {
-						System.out.println("Skipping redundant translational transformation: "+dt+", equivalent to "+v);
-					}
-					return false;
-				}
-			}
-		} 
-		// for a rotational transformation, it is a bit more complicated
-		else if (sg.getAxisFoldType(transformId)==2)  { // 2-FOLD AXIS
-			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
-			//double angle = sg.getRotAngles().get(dt.transformId-1);
-			Vector3d tNormalProj = getNormalToAxisProjection(axis, dt.translation);
+	private boolean addVisited(TransformIdTranslation tt) {
+		
+		
+		for (TransformIdTranslation v:visited) {
 			
-			for (TransformIdTranslation v:visited) {
-				if (sg.isRotationIdentity(v.transformId)) continue;
-				if (!sg.areRotRelated(v.transformId,dt.transformId)) continue; // rotations are related (so they must also be in same axis)
-				
-								
-				if (
-					// rule 1) translations are opposite with respect to the axis of rotation --> HOLDS FOR SURE FOR ALL TYPES OF AXES
-					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  
-					// rule 2) projections on plane normal to axis form an angle == 0 --> WORKS FOR 2-FOLDS
-					deltaComp(getNormalToAxisProjection(axis,v.translation).angle(tNormalProj),0) &&   
-					// rule 3) projections on plane normal to axis are same length, holds if simply vectors same length (because of rule 1) --> WORKS FOR 2-FOLDS
-					deltaComp(v.translation.length(),dt.translation.length())) { 
-					if (debug) {
-						System.out.println("Skipping redundant "+sg.getAxisFoldType(transformId)+"-fold transformation: "+dt+", equivalent to "+v);
-					}
-					return false;
-				}
-			}
-		}
-		else if (sg.getAxisFoldType(transformId)==3 ||
-				 sg.getAxisFoldType(transformId)==4 ||
-				 sg.getAxisFoldType(transformId)==6)  { // 3-FOLD,4-FOLD, 6-FOLD AXIS
-			Vector3d axis = sg.getRotAxes().get(dt.transformId-1);
-			//double angle = sg.getRotAngles().get(dt.transformId-1);
-			Vector3d tNormalProj = getNormalToAxisProjection(axis, dt.translation);
+			// there's only 1 possible equivalent partner for each visited matrix 
+			// (since the equivalent is its inverse matrix and the inverse matrix is unique)
+			// thus once the partner has been seen, we don't need to check it ever again
+			if (v.partnerSeen) continue;	
 			
-			for (TransformIdTranslation v:visited) {
-				if (sg.isRotationIdentity(v.transformId)) continue;
-				if (!sg.areRotRelated(v.transformId,dt.transformId)) continue; // rotations are related (so they must also be in same axis)
+			Matrix4d mul = new Matrix4d();
+			mul.mul(tt.matTransform,v.matTransform);
+			
+			if (mul.epsilonEquals(IDENTITY, 0.0001)) {
 				
-								
-				if (
-					// rule 1) translations are opposite with respect to the axis of rotation --> HOLDS FOR SURE FOR ALL TYPES OF AXES
-					deltaComp(axis.dot(dt.translation),-axis.dot(v.translation)) &&  
-					// rule 2) projections on plane normal to axis are 0 length (we only consider the vertical within the axis) 
-					// TODO    we need a more general rule! for other cells in other verticals
-					deltaComp(tNormalProj.length(),0) && deltaComp(getNormalToAxisProjection(axis,v.translation).length(),0)) { 
-					if (debug) {
-						System.out.println("Skipping redundant "+sg.getAxisFoldType(transformId)+"-fold transformation: "+dt+", equivalent to "+v);
-					}
-					return false;
+				v.partnerSeen = true;
+				
+				// in some cases the first of the 2 checked equivalent partners
+				// can happen to fall in a non-contacting position
+				// Thus above in getAllInterfaces we mark the transformation as unchecked (with checkPartner=true) so that now here
+				// we force to check also the equivalent partner
+				// We do it in with 2 different conditions above: no-contacts condition 1 and no-contacts condition 2
+				// Examples that need only condition 1: 2gdg 3ka0 1vzi
+				// Examples that need additionally condition 2: 1g3p 1eaq
+				if (v.checkPartner) {
+					if (debug) System.out.println("Will check "+tt+" because partner "+v+" was not contacting");
+					break;
+				} else {
+					if (debug) System.out.println("Skipping redundant transformation: "+tt+", equivalent to "+v);
 				}
-			}		
+				
+				return false;
+			}
+
 		}
-		visited.add(dt);
+		
+		visited.add(tt);
 		return true;
 	}
 	
-	private Vector3d getNormalToAxisProjection(Vector3d a, Vector3d t) {
-		// see http://en.wikipedia.org/wiki/Vector_projection
-		Vector3d axisUnit = new Vector3d(a);
-		axisUnit.normalize();
-		Vector3d tAxisProjection = new Vector3d(axisUnit);
-		tAxisProjection.scale(axisUnit.dot(t));
-		Vector3d tNormalProjection = new Vector3d(t);
-		tNormalProjection.sub(tAxisProjection);
-		return tNormalProjection;
-	}
-	
-	private boolean deltaComp(double d1, double d2) {
-		if (Math.abs(d1-d2)<0.000001) return true;
-		return false;
-	}
-
 
 }
