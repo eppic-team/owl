@@ -804,7 +804,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 					pdb.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
 				}	
 			}
-			sym.setTransform(this.spaceGroup.getTransformation(i));
+			sym.setTransform((Matrix4d)this.spaceGroup.getTransformation(i).clone());
 			sym.setTransformId(i);
 			syms.add(sym);
 			i++;

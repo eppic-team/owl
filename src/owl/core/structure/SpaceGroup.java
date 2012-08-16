@@ -75,10 +75,10 @@ public final class SpaceGroup implements Serializable {
 	
 	private static final double delta=0.0000001;
 	
-	private int id;
-	private String shortSymbol;
-	private List<Matrix4d> transformations;
-	private List<String> transfAlgebraic;
+	private final int id;
+	private final String shortSymbol;
+	private final List<Matrix4d> transformations;
+	private final List<String> transfAlgebraic;
 	
 	private List<Double> angles; // all rotation angles except for the identity transformation (thus one element fewer than transformations)
 	private List<Vector3d> axes; // all rotation axes except for the identity transformation (thus one element fewer than transformations)
@@ -303,6 +303,8 @@ public final class SpaceGroup implements Serializable {
 	/**
 	 * Gets a transformation by index expressed in crystal axes basis.
 	 * Index 0 corresponds always to the identity transformation.
+	 * Beware the returned Matrix4d is not a copy but it stays linked 
+	 * to the one stored in this SpaceGroup object
 	 * @param i
 	 * @return
 	 */
