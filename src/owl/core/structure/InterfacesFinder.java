@@ -111,6 +111,8 @@ public class InterfacesFinder {
 		PdbUnitCell cell = null;
 		if (pdb.getCrystalCell()!=null) {
 			cell = pdb.getUnitCell();
+			// we calculate all the bounds of each of the asym units, those will then be reused and translated
+			cell.calcBounds(!nonPoly);
 		}
 		
 		long start = -1; 
@@ -238,9 +240,10 @@ public class InterfacesFinder {
 			}
 			
 			// 2. interfaces between original asymmetric unit and 26 neighbouring whole unit cells
-			for (int i=-1;i<=1;i++) {
-				for (int j=-1;j<=1;j++) {
-					for (int k=-1;k<=1;k++) {
+			int numCells = 1;
+			for (int i=-numCells;i<=numCells;i++) {
+				for (int j=-numCells;j<=numCells;j++) {
+					for (int k=-numCells;k<=numCells;k++) {
 						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
 						PdbUnitCell translated = cell.copy();
 						Vector3d trans = new Vector3d(i,j,k);

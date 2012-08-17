@@ -834,9 +834,16 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param direction
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
-		this.bounds = null; //bounds must be reset whenever the coordinates are transformed
-		this.centroid = null;
+		// in order to speed up things we translate bounds instead of resetting them
+		// so no need for recalculating them will exist after
+		if (bounds!=null || centroid!=null) {
+			Matrix4d m = getCrystalCell().getTransform(direction);
+			if (bounds!=null) this.bounds.translate(new Vector3d(m.m03,m.m13,m.m23)); 
+			if (centroid!=null) this.centroid.add(new Vector3d(m.m03,m.m13,m.m23));
+		}
+		
 		for (PdbChain pdb:getAllChains()) {
+			// note that the bounds in the chain are also translated by this call
 			pdb.doCrystalTranslation(direction);
 		}		
 
@@ -877,6 +884,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		if (this.bounds!=null) {
 			newAsym.bounds = new BoundingBox(bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax);
 		}
+		newAsym.boundsProtOnly = this.boundsProtOnly;
+		
 		if (this.centroid!=null) {
 			newAsym.centroid = new Point3d(this.centroid);
 		}

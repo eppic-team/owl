@@ -2693,10 +2693,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * Translates this PdbChain to the given unit cell (direction).
 	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this PdbChain to 
 	 * crystal cell (1,1,1), considering always this PdbChain's cell to be (0,0,0)
+	 * The bounds are translated too so there is no need to recalculate them later
 	 * @param direction
 	 */
 	public void doCrystalTranslation(Vector3d direction) {
-		this.transform(parent.getCrystalCell().getTransform(direction));
+		Matrix4d m = parent.getCrystalCell().getTransform(direction);
+		if (bounds!=null) {
+			bounds.translate(new Vector3d(m.m03,m.m13,m.m23));
+		}
+		for (Residue residue:this) {
+			for (Atom atom:residue) {
+				Point3d coords = atom.getCoords();
+				m.transform(coords);
+			}
+		}
 	}
 	
 	/**

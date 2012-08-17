@@ -48,6 +48,12 @@ public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 		
 	}
 	
+	public void calcBounds(boolean protOnly) {
+		for (PdbAsymUnit pdb:units) {
+			pdb.getBoundingBox(protOnly);
+		}				
+	}
+	
 	public Iterator<PdbAsymUnit> iterator() {
 		return units.iterator();
 	}

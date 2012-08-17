@@ -3,6 +3,8 @@ package owl.core.util;
 import java.io.Serializable;
 import java.util.Arrays;
 
+import javax.vecmath.Vector3d;
+
 import owl.core.structure.Atom;
 
 /**
@@ -143,6 +145,15 @@ public class BoundingBox implements Serializable {
 		
 		return true;
 			
+	}
+	
+	public void translate(Vector3d translation) {
+		xmin+=translation.x;
+		xmax+=translation.x;
+		ymin+=translation.y;
+		ymax+=translation.y;
+		zmin+=translation.z;
+		zmax+=translation.z;		
 	}
 	
 	/**
