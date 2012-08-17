@@ -35,6 +35,15 @@ public class BoundingBox implements Serializable {
 		this.zmax = zmax;
 	}
 
+	public BoundingBox(BoundingBox bb) {
+		this.xmin = bb.xmin;
+		this.xmax = bb.xmax;
+		this.ymin = bb.ymin;
+		this.ymax = bb.ymax;
+		this.zmin = bb.zmin;
+		this.zmax = bb.zmax;		
+	}
+	
 	/**
 	 * Constructs a BoundingBox by calculating maxs and mins of given array of atoms.
 	 * @param atoms 

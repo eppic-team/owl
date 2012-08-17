@@ -6,6 +6,8 @@ import java.util.List;
 
 import javax.vecmath.Vector3d;
 
+import owl.core.util.BoundingBox;
+
 public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 
 	private List<PdbAsymUnit> units;
@@ -48,10 +50,18 @@ public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 		
 	}
 	
-	public void calcBounds(boolean protOnly) {
-		for (PdbAsymUnit pdb:units) {
-			pdb.getBoundingBox(protOnly);
+	/**
+	 * Calculates all bounding boxes of member PdbAsymUnits 
+	 * and returns a list of references to them 
+	 * @param protOnly whether to consider only protein chains or all poly/non-poly chains
+	 * @return
+	 */
+	public List<BoundingBox> getBoundingBoxes(boolean protOnly) {
+		List<BoundingBox> bbs = new ArrayList<BoundingBox>();
+		for (PdbAsymUnit pdb:units) {			
+			bbs.add(pdb.getBoundingBox(protOnly));
 		}				
+		return bbs;
 	}
 	
 	public Iterator<PdbAsymUnit> iterator() {

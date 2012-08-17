@@ -182,22 +182,32 @@ public class PdbChainTest {
 
 				
 				PdbChain rotated = ours.copy(oursFull);
+				PdbChain translated = ours.copy(oursFull);
 
 				rotated.rotate(new Vector3d(0,0,1), Math.PI/4.0);
+				translated.doCrystalTranslation(new Vector3d(1,1,1));
+				
 				System.out.println("960 sphere points");
 				ours.calcASAs(960,NTHREADS,true);
 				rotated.calcASAs(960,NTHREADS,true);
+				translated.calcASAs(960,NTHREADS,true);
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
+				checkASAsMatch(ours,translated, 0.01, 0.01);
 
 				System.out.println("3000 sphere points");
 				ours.calcASAs(3000,NTHREADS,true);
 				rotated.calcASAs(3000,NTHREADS,true);
-				checkASAsMatch(ours,rotated, 0.15, 0.10);				
+				translated.calcASAs(3000,NTHREADS,true);
+				checkASAsMatch(ours,rotated, 0.15, 0.10);
+				checkASAsMatch(ours,translated, 0.01, 0.01);
 				
 				System.out.println("9600 sphere points");
 				ours.calcASAs(9600,NTHREADS,true);
 				rotated.calcASAs(9600,NTHREADS,true);
+				translated.calcASAs(9600,NTHREADS,true);
 				checkASAsMatch(ours,rotated, 0.15, 0.10);
+				checkASAsMatch(ours,translated, 0.01, 0.01);
+				
 
 			} catch (IOException e) {
 				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());

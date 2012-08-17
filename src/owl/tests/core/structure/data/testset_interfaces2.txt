@@ -1,6 +1,12 @@
+3hz3 # interfaces with 2nd neighbors
 3NQJ # exact interface count disagrees because of cutoff issue (last interface very small)
 1FB6 
 3HBX
+2gdg # these 5 examples had some issues with redundancy elimination
+3ka0 
+1vzi
+1g3p 
+1eaq
 #2CIO this one is a "bug" in pisa, they don't count chain B, because it's too incomplete in density. We do and get one more interface
 2PYX	A
 2BZ1	A
@@ -22,7 +28,7 @@
 1JY2	N
 2ERB	A
 1HBN	C
-#1WQJ	B # contacts with 2nd neighbour cell that we miss
+1WQJ	B # interfaces with 2nd neighbors
 2HEU	A
 2I53	A
 1J3A	A
@@ -38,11 +44,11 @@
 1MJ4	A
 2EB4	A
 1GK9	B
-#2DE3	A # contacts with 2nd neighbour cell that we miss
+2DE3	A # interfaces with 2nd neighbors
 3CHB	D
 2OPC	A
 2GZQ	A
-#1JCD	A # contacts with 2nd neighbour cell that we miss
+1JCD	A # interfaces with 2nd neighbors
 2O3S	A
 1IXH	A
 1XOD	A
