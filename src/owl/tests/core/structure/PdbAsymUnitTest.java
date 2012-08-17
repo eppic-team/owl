@@ -160,7 +160,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			//ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, new File(NACCESS_EXEC));
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
@@ -263,7 +263,7 @@ public class PdbAsymUnitTest {
 			System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
 			
 			long start = System.currentTimeMillis();
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found above 30A2 area: "+interfaces.getNumInterfacesAboveArea(30));
@@ -348,7 +348,7 @@ public class PdbAsymUnitTest {
 			InterfacesFinder interfFinder = new InterfacesFinder(pdb);
 			interfFinder.setWithRedundancyElimination(false);
 			ChainInterfaceList interfacesWithRedundancy = 
-					interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+					interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			end = System.currentTimeMillis();
 			long totalWithRedundancy = (end-start)/1000;
 			
@@ -356,7 +356,7 @@ public class PdbAsymUnitTest {
 			start = System.currentTimeMillis();
 			interfFinder.setWithRedundancyElimination(true);
 			ChainInterfaceList interfacesRedundancyElim = 
-					interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+					interfFinder.getAllInterfaces(CUTOFF,Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			end = System.currentTimeMillis();
 			long totalRedundancyElim = (end-start)/1000;
 

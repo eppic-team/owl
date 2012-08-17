@@ -222,8 +222,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	/**
-	 * Calculates the accessible surface area for separate molecules and 2 molecules-complex setting
-	 * both ASAs and BSAs of the residues of the two molecules making up this interface.
+	 * Calculates the buried surface area for the interface. 
+	 * The two molecules must have already uncomplexed ASAs calculated, here we then
+	 * calculate the ASAs for the complex and make the subtraction. Then we set the 
+	 * BSAs of the residues of the two molecules making up this interface.
 	 * The total interface area is also calculated from the individual residue values (use {@link #getInterfaceArea()} 
 	 * to get it)
 	 * @param nSpherePoints
@@ -231,16 +233,9 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @param hetAtoms if true HET residues are considered, if false they aren't, equivalent to 
 	 * NACCESS' -h option
 	 */
-	public void calcSurfAccess(int nSpherePoints, int nThreads, boolean hetAtoms) {
-		// NOTE in principle it is more efficient to calculate the ASAs only once per isolated chain
-		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
-		// orientations! (can't really understand why!)
-		// That's why we calculate ASAs always for 2 separate member of interface and the complex, otherwise 
-		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
+	protected void calcSurfAccess(int nSpherePoints, int nThreads, boolean hetAtoms) {
 
-		
-		firstMolecule.calcASAs(nSpherePoints, nThreads, hetAtoms);
-		secondMolecule.calcASAs(nSpherePoints, nThreads, hetAtoms);
+		// the ASAs of the uncomplexed chains must be already calculated by the caller
 		
 		PdbAsymUnit complex = new PdbAsymUnit();
 		complex.setPdbCode(firstMolecule.getPdbCode());

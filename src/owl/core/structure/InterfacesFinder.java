@@ -1,12 +1,11 @@
 package owl.core.structure;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3i;
@@ -79,8 +78,6 @@ public class InterfacesFinder {
 	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
 	 * be passed)
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
-	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
-	 * will be used
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
@@ -88,9 +85,8 @@ public class InterfacesFinder {
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
 	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
 	 * @return
-	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) {	
 
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
@@ -98,7 +94,7 @@ public class InterfacesFinder {
 		
 		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
 		if (pdb.getProtChains().size()==0) {
-			return calcAsas(set, naccessExe, nSpherePoints, nThreads, hetAtoms);
+			return calcAsas(set, nSpherePoints, nThreads, hetAtoms);
 		}		
 
 		// initialising the visited ArrayList for keeping track of symmetry redundancy
@@ -354,30 +350,66 @@ public class InterfacesFinder {
 			}
 		}
 		
-		return calcAsas(set, naccessExe, nSpherePoints, nThreads, hetAtoms);
+		return calcAsas(set, nSpherePoints, nThreads, hetAtoms);
 	}
 	
-	private ChainInterfaceList calcAsas(Set<ChainInterface> set, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms) throws IOException {
+	private ChainInterfaceList calcAsas(Set<ChainInterface> set, int nSpherePoints, int nThreads, boolean hetAtoms) {
 		// bsa calculation 
 		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
 		// orientations! (due to sampling depending on orientation of axes grid). Both NACCESS and our own implementation behave like that.
 		// That's why we calculate always for the 2 separate members of interface and the complex, otherwise 
 		// we get (not very big but annoying) discrepancies and also things like negative (small) bsa values
+		// We do take a shortcut: instead of calculating asas for all monomers, 
+		// we only do it once per monomer type (chain code) per translation (transformId), since it's only
+		// rotations that give different area values
+		
 		long start =0 ,end =0;
 		
 		if (debug) {
 			start= System.currentTimeMillis();
 			System.out.println("Calculating ASAs with "+nThreads+" threads and "+nSpherePoints+" sphere points");
 		}
+
+		// first we put one chain of each transform id in the map
+		TreeMap<String, PdbChain> transformId2chain = new TreeMap<String, PdbChain>();
 		for (ChainInterface interf:set) {
-			//System.out.print(".");
-			if (naccessExe!=null) {
-				interf.calcSurfAccessNaccess(naccessExe,hetAtoms);
-			} else {
-				interf.calcSurfAccess(nSpherePoints, nThreads,hetAtoms);
+			PdbChain first = interf.getFirstMolecule();
+			PdbChain second = interf.getSecondMolecule();
+			if (!transformId2chain.containsKey(first.getPdbChainCode()+first.getParent().getTransformId())) {
+				transformId2chain.put(first.getPdbChainCode()+first.getParent().getTransformId(),first);
+			}
+			if (!transformId2chain.containsKey(second.getPdbChainCode()+second.getParent().getTransformId())) {
+				transformId2chain.put(second.getPdbChainCode()+second.getParent().getTransformId(),second);
 			}
 		}
+		
+		// now we calculate ASAs only for those chains in the map
+		for (PdbChain chain:transformId2chain.values()) {
+			if (debug) System.out.print(".");
+			chain.calcASAs(nSpherePoints, nThreads, hetAtoms);
+		}
+		if (debug) System.out.println();
+		
+		// for all others we copy the values from their corresponding transformids partners
+		for (ChainInterface interf:set) {
+			
+			PdbChain first = interf.getFirstMolecule();
+			PdbChain second = interf.getSecondMolecule();
+			if (!first.hasASA()) {
+				first.setASAs(transformId2chain.get(first.getPdbChainCode()+first.getParent().getTransformId()));
+			}
+			if (!second.hasASA()) {
+				second.setASAs(transformId2chain.get(second.getPdbChainCode()+second.getParent().getTransformId()));
+			}
+
+			// finally we need to calculate bsas
+			if (debug) System.out.print(".");
+			interf.calcSurfAccess(nSpherePoints, nThreads,hetAtoms);
+
+		}
+		
+		
 		if (debug) {
 			end = System.currentTimeMillis();
 			System.out.println("\nDone. Time "+(end-start)/1000+"s");
@@ -385,9 +417,6 @@ public class InterfacesFinder {
 
 		// now that we have the areas we can put them into a list and sort them
 		ChainInterfaceList.AsaCalcMethod asaCalcMethod = ChainInterfaceList.AsaCalcMethod.INTERNAL;
-		if (naccessExe!=null) {
-			asaCalcMethod = ChainInterfaceList.AsaCalcMethod.NACCESS;
-		}
 		ChainInterfaceList list = new ChainInterfaceList(asaCalcMethod);
 		if (asaCalcMethod == ChainInterfaceList.AsaCalcMethod.INTERNAL) {
 			list.setAsaCalcAccuracyParam(nSpherePoints);

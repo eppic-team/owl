@@ -581,6 +581,38 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				residue.setRsa(tot/aares.getAaType().getAsaInExtTripept());
 			}
 		}
+		this.hasASA = true;
+	}
+	
+	protected void setASAs(PdbChain other) {
+		if (!other.hasASA()) {
+			System.err.println("Error! given chain has no ASAs from which to set the ASAs of this chain");
+			return;
+		}
+		
+		for (Residue residue: this) {
+			
+			for (Atom atom: residue) {
+				if (other.getAtom(atom.getSerial())==null) {
+					System.err.println("Error! atom serial "+atom.getSerial()+" does not exist in given chain. Won't set ASAs of this chain");
+					return;
+				}
+				atom.setAsa(other.getAtom(atom.getSerial()).getAsa()); 
+			}
+		}
+		// and finally sums per residue
+		for (Residue residue: this) {
+			double tot = 0;
+			for (Atom atom:residue.getAtoms()) {
+				tot+=atom.getAsa();
+			}
+			residue.setAsa(tot);
+			if (residue instanceof AaResidue) {
+				AaResidue aares = (AaResidue) residue;
+				residue.setRsa(tot/aares.getAaType().getAsaInExtTripept());
+			}
+		}
+		this.hasASA = true;
 	}
 	
 	/**

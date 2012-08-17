@@ -983,19 +983,16 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
 	 * be passed)
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
-	 * @param naccessExe the NACCESS executable if null our rolling ball algorithm implementation
-	 * will be used
 	 * @param nSpherePoints
 	 * @param nThreads
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
 	 * @param nonPoly if true interfaces will be calculated for non-polymer chains and 
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
 	 * @return
-	 * @throws IOException when problems when running NACCESS (if NACCESS used)
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, File naccessExe, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) throws IOException {
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly)  {
 		InterfacesFinder interfFinder = new InterfacesFinder(this);
-		return interfFinder.getAllInterfaces(cutoff, naccessExe, nSpherePoints, nThreads, hetAtoms, nonPoly);
+		return interfFinder.getAllInterfaces(cutoff, nSpherePoints, nThreads, hetAtoms, nonPoly);
 	}
 
 	/**

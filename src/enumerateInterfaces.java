@@ -167,7 +167,7 @@ public class enumerateInterfaces {
 		interfFinder.setDebug(debug);
 		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
-		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, null, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
+		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
 		long end = System.currentTimeMillis();
 		long total = (end-start)/1000;
 		System.out.println("Total time for interface calculation: "+total+"s");
