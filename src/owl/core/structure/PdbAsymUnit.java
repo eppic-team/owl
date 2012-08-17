@@ -24,7 +24,6 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.util.BoundingBox;
@@ -793,16 +792,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			for (PdbChain chain:sym.getAllChains()) {
 				// note that the call to transform in PdbChain also resets the cached bounds in the chain
 				chain.transform(m);
-			}
-			// the transformed object might end up in another cell but we want it in the original cell
-			// that's why we check it now and translate if it wasn't
-			Point3d sep3d = this.getCrystalSeparation(sym);
-			Point3i sep = new Point3i((int)Math.round(sep3d.x),(int)Math.round(sep3d.y),(int)Math.round(sep3d.z));
-			if (!sep.equals(new Point3i(0,0,0))) {
-				// we don't use here doCrystalTranslation method because we don't want sym's transf member to be reset
-				for (PdbChain pdb:sym.getAllChains()) {
-					pdb.doCrystalTranslation(new Vector3d(-sep.x,-sep.y,-sep.z));
-				}	
 			}
 			sym.setTransform((Matrix4d)this.spaceGroup.getTransformation(i).clone());
 			sym.setTransformId(i);

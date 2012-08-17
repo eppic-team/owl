@@ -292,21 +292,10 @@ public class PdbAsymUnitTest {
 		// The solution we want eventually is that there's no symmetry redundancy at all in the search and thus there's no need to eliminate duplicates 
 		String[] excludeCodesCutoffIssues = {"1vyi"};
 		
-		// Second exclude list: for the rare entries in which the symmetry-redundancy elimination fails,
-		// just the one in our cullpdb20 list: 1vzi (we miss the 13th interface out of 14)
-		// This is happening because there are issues with how the transformations are moved around to be placed in the right cells 
-		// (see the trick we have to do in PdbAsymUnit.getSymRelatedObjects() )
-		String[] excludeCodesMismatch = {}; //{"1vzi"}; 
-		
 		
 		List<String> pdbCodes = readListFile(new File(CULLPDB20FILE));
 		
 		for (String excludeCode:excludeCodesCutoffIssues) {
-			if (pdbCodes.remove(excludeCode)) {
-				System.out.println("Removing code "+excludeCode+" because it is in the exclude list");
-			}
-		}
-		for (String excludeCode:excludeCodesMismatch) {
 			if (pdbCodes.remove(excludeCode)) {
 				System.out.println("Removing code "+excludeCode+" because it is in the exclude list");
 			}
