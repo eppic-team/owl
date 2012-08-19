@@ -345,15 +345,19 @@ public class InterfacesFinder {
 									}
 								}
 							}
+							if (debug) System.out.println(" "+contactsFound+"("+ichains.size()*jchains.size()+")");
 							// if all possible contacts (at max num i chains*num j chains) were found for this operator we mark it as visited
 							// in order to later avoiding visiting its equivalent partner
 							// [ in some cases after applying a transform, the molec can happen to fall in a non-contacting position,
 							//   examples where this happens are: 2gdg 3ka0 1vzi 1g3p 1eaq 
 							//   That's why we can't just add every single transform as visited ]
-							if (debug) System.out.println(" "+contactsFound+"("+ichains.size()*jchains.size()+")");
-							if (withRedundancyElimination && contactsFound==(ichains.size()*jchains.size())) {
-								addVisited(tt);
-							}
+							// Actually there are some very unusual cases when even checking for this is not enough and
+							// an operator and its equivalent will find more than the total i x j chains, e.g. 2gqv
+							// that's why we've commented out this here, although it is very rare and interfaces missed
+							// are unlikely to be important. Anyway I'd rather keep things as correct as possible.
+							//if (withRedundancyElimination && contactsFound==(ichains.size()*jchains.size())) {
+							//	addVisited(tt);
+							//}
 						}
 					}
 				}
