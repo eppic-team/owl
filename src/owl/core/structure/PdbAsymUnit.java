@@ -537,22 +537,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.expMethod = expMethod;
 	}
 	
-	/**
-	 * Returns true if the experimental method of this PdbAsymUnit
-	 * is a crystallographic one, i.e. one of :
-	 * X-RAY DIFFRACTION, NEUTRON DIFFRACTION or ELECTRON CRYSTALLOGRAPHY
-	 * If the experimental method is not set (null) then also true 
-	 * is returned, i.e. we consider the default PDB to be crystallographic
-	 * @return
-	 */
-	public boolean isCrystallographicExpMethod() {
-
-		return (getExpMethod()==null ||
-				getExpMethod().equals("X-RAY DIFFRACTION") || 
-				getExpMethod().equals("NEUTRON DIFFRACTION") || 
-				getExpMethod().equals("ELECTRON CRYSTALLOGRAPHY"));
-	}
-	
 	public int getModel() {
 		return model;
 	}
@@ -621,6 +605,24 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	public boolean isXrayDiffraction() {
 		if (getExpMethod()==null) return false;
 		return getExpMethod().equals("X-RAY DIFFRACTION");
+	}
+	
+	/**
+	 * Returns true if the experimental method of this PdbAsymUnit
+	 * is a crystallographic one, i.e. one of :
+	 * X-RAY DIFFRACTION, NEUTRON DIFFRACTION or ELECTRON CRYSTALLOGRAPHY
+	 * If the experimental method is not set (null) then also true 
+	 * is returned, i.e. we consider the default PDB to be crystallographic,
+	 * we do that because many non-deposited PDB files (e.g. from phenix) don't 
+	 * annotate an experimental method at all but are from x-ray
+	 * @return
+	 */
+	public boolean isCrystallographicExpMethod() {
+
+		return (getExpMethod()==null ||
+				getExpMethod().equals("X-RAY DIFFRACTION") || 
+				getExpMethod().equals("NEUTRON DIFFRACTION") || 
+				getExpMethod().equals("ELECTRON CRYSTALLOGRAPHY"));
 	}
 	
 	/**
@@ -1119,10 +1121,20 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param protOnly whether to consider protein chains only or all (poly and non-poly)
 	 * @return
 	 */
-	public boolean areNotOverlapping(PdbAsymUnit other, double cutoff, boolean protOnly) {
+	protected boolean isNotOverlapping(PdbAsymUnit other, double cutoff, boolean protOnly) {
 		BoundingBox thisbb = this.getBoundingBox(protOnly);
 		BoundingBox otherbb = other.getBoundingBox(protOnly);
 		return !thisbb.overlaps(otherbb, cutoff);
+	}
+	
+	protected List<BoundingBox> getChainsBoundingBoxes(boolean protOnly) {
+		List<BoundingBox> bbs = new ArrayList<BoundingBox>();
+		Collection<PdbChain> chains = getAllChains();
+		if (protOnly) chains = getProtChains();
+		for (PdbChain chain:chains) {			
+			bbs.add(chain.getBoundingBox());
+		}				
+		return bbs;
 	}
 	
 	/**

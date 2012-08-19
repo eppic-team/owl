@@ -365,6 +365,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		}
 	}
 	
+	protected boolean isNotOverlapping(PdbChain other, double cutoff) {
+		BoundingBox thisbb = this.getBoundingBox();
+		BoundingBox otherbb = other.getBoundingBox();
+		return !thisbb.overlaps(otherbb, cutoff);
+	}
+	
 	/**
 	 * Gets an Atom given its serial
 	 * @param atomSerial

@@ -93,7 +93,7 @@ public class InterfacesFinder {
 		Set<ChainInterface> set = new HashSet<ChainInterface>();
 		
 		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
-		if (pdb.getProtChains().size()==0) {
+		if (!nonPoly && pdb.getProtChains().size()==0) {
 			return calcAsas(set, nSpherePoints, nThreads, hetAtoms);
 		}		
 
@@ -111,7 +111,7 @@ public class InterfacesFinder {
 		
 		long start = -1; 
 		long end = -1;
-		int trialCount = 0, skippedRedundantOrigCell =0, skippedRedundant = 0, skippedAUsNoOverlap =0, skippedCellsNoOverlap = 0;
+		int trialCount = 0, skippedRedundantOrigCell =0, skippedRedundant = 0, skippedAUsNoOverlap = 0, skippedChainsNoOverlap = 0;
 		int duplicatesCount1=0, duplicatesCount2=0, duplicatesCount3=0;
 		if (debug) {
 			trialCount = 0;
@@ -125,13 +125,23 @@ public class InterfacesFinder {
 		else chainCodes = pdb.getProtChainCodes();
 		
 		for (String iChainCode:chainCodes) { 
-			for (String jChainCode:chainCodes) { // getPolyChainCodes
+			for (String jChainCode:chainCodes) { 
 				if (iChainCode.compareTo(jChainCode)<=0) continue;
-				if (debug) {					
-					trialCount++;
-				}
+				
 				PdbChain chaini = pdb.getChainForChainCode(iChainCode);
 				PdbChain chainj = pdb.getChainForChainCode(jChainCode);
+				
+				// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
+				if (chaini.isNotOverlapping(chainj, cutoff)) {
+					if (debug) {
+						skippedChainsNoOverlap++;
+						System.out.print(".");
+					}
+					continue;
+				}
+				
+				if (debug) trialCount++;
+				
 				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 				if (graph.getEdgeCount()>0) {
 					if (debug) System.out.print("x");
@@ -144,7 +154,7 @@ public class InterfacesFinder {
 						duplicatesCount1++;
 					}
 				} else {
-					if (debug) System.out.print(".");
+					if (debug) System.out.print("o");
 				}
 			}
 		}
@@ -196,9 +206,18 @@ public class InterfacesFinder {
 				}
 				for (PdbChain chaini:ichains) { 
 					for (PdbChain chainj:jchains) { 
-						if (debug) {							
-							trialCount++;
+						
+						// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
+						if (chaini.isNotOverlapping(chainj, cutoff)) {
+							if (debug) {
+								skippedChainsNoOverlap++;
+								System.out.print(".");
+							}
+							continue;
 						}
+						
+						if (debug) trialCount++;
+						
 						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 						if (graph.getEdgeCount()>0) {
 							contactsFound++;
@@ -212,7 +231,7 @@ public class InterfacesFinder {
 								duplicatesCount2++;
 							}
 						} else {
-							if (debug) System.out.print(".");
+							if (debug) System.out.print("o");
 						}
 					}
 				}
@@ -257,10 +276,10 @@ public class InterfacesFinder {
 							BoundingBox bbTrans = new BoundingBox(cellBBs.get(au));							
 							bbTrans.translate(new Vector3d(m.m03,m.m13,m.m23));
 						
-							// We have 3 short-cut strategies
-							// 1) we skip first of all if the bounding boxes of the unit cells don't overlap
+							// short-cut strategies
+							// 1) we skip first of all if the bounding boxes of the AUs don't overlap
 							if (!pdb.getBoundingBox(!nonPoly).overlaps(bbTrans, cutoff)) {
-								if (debug) skippedCellsNoOverlap++;
+								if (debug) skippedAUsNoOverlap++;
 								continue;
 							}
 													
@@ -287,12 +306,6 @@ public class InterfacesFinder {
 //								jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_"+i+""+j+""+k+".pdb"));
 //							}
 							
-							// 3) now we check whether the AUs don't overlap
-							if (pdb.areNotOverlapping(jAsym,cutoff,!nonPoly)) {
-								if (debug) skippedAUsNoOverlap++;								
-								continue;
-							}
-							
 							// Now that we know that boxes overlap and operator is not redundant, we have to go to the details 
 							int contactsFound = 0;
 							Collection<PdbChain> ichains = null;
@@ -304,9 +317,17 @@ public class InterfacesFinder {
 								if (nonPoly) ichains = pdb.getAllChains();
 								else ichains = pdb.getProtChains();
 								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
-									if (debug) {										
-										trialCount++;
+									
+									// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
+									if (chaini.isNotOverlapping(chainj, cutoff)) {
+										if (debug) {
+											skippedChainsNoOverlap++;
+											System.out.print(".");
+										}
+										continue;
 									}
+									if (debug) trialCount++;
+									
 									AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 									if (graph.getEdgeCount()>0) {
 										contactsFound++;										
@@ -320,7 +341,7 @@ public class InterfacesFinder {
 											duplicatesCount3++;
 										}
 									} else {
-										if (debug) System.out.print(".");
+										if (debug) System.out.print("o");
 									}
 								}
 							}
@@ -340,8 +361,8 @@ public class InterfacesFinder {
 			if (debug) {
 				end = System.currentTimeMillis();
 				System.out.println("\n"+trialCount+" chain-chain clash trials done. Time "+(end-start)/1000+"s");
-				System.out.println("  skipped (not overlapping full cells): "+skippedCellsNoOverlap);
 				System.out.println("  skipped (not overlapping AUs)       : "+skippedAUsNoOverlap);
+				System.out.println("  skipped (not overlapping chains)    : "+skippedChainsNoOverlap);
 				System.out.println("  skipped (sym redundant within cell) : "+skippedRedundantOrigCell);
 				System.out.println("  skipped (sym redundant other cells) : "+skippedRedundant);
 
