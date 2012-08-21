@@ -1,5 +1,7 @@
 package owl.core.structure;
 
+import java.io.Serializable;
+
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3i;
 
@@ -15,7 +17,10 @@ import javax.vecmath.Point3i;
  * @author duarte_j
  *
  */
-public class CrystalTransform {
+public class CrystalTransform implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
 
 	public static final Matrix4d IDENTITY = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
 
