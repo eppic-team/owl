@@ -195,6 +195,8 @@ public class PdbAsymUnitTest {
 					mySecondMol = myInterf.getFirstMolecule();
 				}
 
+				//Assert.assertEquals(pisaInterf.getSecondTransf().getTransformId(),myInterf.getSecondTransf().getTransformId());
+				//Assert.assertEquals(pisaInterf.getSecondTransf().getCrystalTranslation(),myInterf.getSecondTransf().getCrystalTranslation());
 				
 				System.out.println("Chain 1");
 				int[] counts1 = checkResidues(pisaInterf.getFirstMolecule(), myFirstMol, PRINT_PER_RES, CONSIDER_HETATOMS);
@@ -268,7 +270,6 @@ public class PdbAsymUnitTest {
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found above 30A2 area: "+interfaces.getNumInterfacesAboveArea(30));
 			
-			// TODO get only above 20 interfaces
 			int pisaCount = pisaInterfaces.getNumProtProtInterfacesAboveArea(30);
 			System.out.println("PISA interface count above 30A2 area: "+pisaCount);
 			Assert.assertEquals(pisaCount, interfaces.getNumInterfacesAboveArea(30));
@@ -288,8 +289,6 @@ public class PdbAsymUnitTest {
 		// e.g. in 1vyi there are 9 interfaces found if no symmetry redundancy elimination is used (they are actually only 6 unique ones following pisa)
 		// The repeated ones are the pairs 1-2, 3-4 and 6-7. For instance in 6-7 atoms CD (residue 7) and O (residue 43) are at cutoff limit 5.9
 		// This depends of course on cut-off values used. 
-		// Anyway we'll have to keep this here as long as we still have a less than perfect symmetry-redundancy elimination
-		// The solution we want eventually is that there's no symmetry redundancy at all in the search and thus there's no need to eliminate duplicates 
 		String[] excludeCodesCutoffIssues = {"1vyi"};
 		
 		
@@ -304,6 +303,8 @@ public class PdbAsymUnitTest {
 		
 		System.out.println("Interface calculation - redundancy elimination test ("+pdbCodes.size()+" structures to test)");
 		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+		
+		ArrayList<String> withDuplicatesInRedundElim = new ArrayList<String>();
 		
 		for (String pdbCode: pdbCodes) {
 					
@@ -352,21 +353,29 @@ public class PdbAsymUnitTest {
 			end = System.currentTimeMillis();
 			long totalWithRedundancy = (end-start)/1000;
 			
-			interfFinder = new InterfacesFinder(pdb2);
+			InterfacesFinder interfFinder2 = new InterfacesFinder(pdb2);
 			start = System.currentTimeMillis();
-			interfFinder.setWithRedundancyElimination(true);
+			interfFinder2.setWithRedundancyElimination(true);
 			ChainInterfaceList interfacesRedundancyElim = 
-					interfFinder.getAllInterfaces(CUTOFF,Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
+					interfFinder2.getAllInterfaces(CUTOFF,Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY);
 			end = System.currentTimeMillis();
-			long totalRedundancyElim = (end-start)/1000;
-
-			
+			long totalRedundancyElim = (end-start)/1000;			
 			
 			System.out.println("Time: ");
 			System.out.println(" with redundancy: "+totalWithRedundancy+"s");
 			System.out.println(" redundancy elimination: "+totalRedundancyElim+"s");
 			
 			System.out.println("Total number of interfaces found: "+interfacesWithRedundancy.size()+" "+interfacesRedundancyElim.size());
+						
+			System.out.println("Duplicates: "+
+			 interfFinder.getDuplicatesCount1()+","+interfFinder.getDuplicatesCount2()+","+interfFinder.getDuplicatesCount3()+
+			 "  -  "+
+			 interfFinder2.getDuplicatesCount1()+","+interfFinder2.getDuplicatesCount2()+","+interfFinder2.getDuplicatesCount3());
+			if (interfFinder2.getDuplicatesCount1()+interfFinder2.getDuplicatesCount2()+interfFinder2.getDuplicatesCount3()>0) {
+				System.out.println(" warning! duplicates in redundancy elimination");
+				withDuplicatesInRedundElim.add(pdbCode);
+			}
+
 			
 			Assert.assertEquals(interfacesWithRedundancy.size(), interfacesRedundancyElim.size());
 
@@ -417,6 +426,13 @@ public class PdbAsymUnitTest {
 				Assert.assertEquals(contactsWR.get(i),contactsRE.get(i));
 			}
 			
+		}
+		if (!withDuplicatesInRedundElim.isEmpty()) {
+			System.out.println("Warning! "+withDuplicatesInRedundElim.size()+" structures had duplicate interfaces in redundancy elimination calculation: ");
+			for (String pdbCode:withDuplicatesInRedundElim) {
+				System.out.println(pdbCode);
+			}
+			System.out.println("\nDuplicates in redundancy elimination procedure are unusual but they can still occur (due mainly to NCS). ");			
 		}
 
 	}

@@ -7,6 +7,7 @@ import java.util.Collections;
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
+import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 
@@ -126,10 +127,10 @@ public class CrystalCell implements Serializable {
 	 * @param direction
 	 * @return
 	 */
-	public Matrix4d getTransform(Vector3d direction) {
+	public Matrix4d getTransform(Point3i direction) {
 		Matrix4d mat = new Matrix4d();
 		mat.setIdentity();
-		mat.setTranslation(getTranslationVector(direction));
+		mat.setTranslation(getTranslationVector(new Vector3d(direction.x,direction.y,direction.z)));
 		return mat;
 	}
 	

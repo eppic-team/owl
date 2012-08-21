@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.vecmath.Matrix4d;
 
+import owl.core.structure.CrystalTransform;
 import owl.core.structure.PdbChain;
 import owl.core.structure.Residue;
 
@@ -18,7 +19,7 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	private String chainId;
 	private String molClass;
 	
-	private Matrix4d transf;
+	private CrystalTransform transf;
 	private Matrix4d transfOrth;
 		
 	private List<PisaResidue> residues;
@@ -92,7 +93,7 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 * Gets the symmetry operator used to generate this molecule (in crystal coordinates).
 	 * @return
 	 */
-	public Matrix4d getTransf() {
+	public CrystalTransform getTransf() {
 		return transf;
 	}
 	
@@ -100,7 +101,7 @@ public class PisaMolecule implements Iterable<PisaResidue> {
 	 * Sets the symmetry operator used to generate this molecule (in crystal coordinates).
 	 * @param transf
 	 */
-	public void setTransf(Matrix4d transf) {
+	public void setTransf(CrystalTransform transf) {
 		this.transf = transf;
 	}
 

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.vecmath.Vector3d;
+import javax.vecmath.Point3i;
 
 import owl.core.util.BoundingBox;
 
@@ -39,11 +39,11 @@ public class PdbUnitCell implements Iterable<PdbAsymUnit>{
 	
 	/**
 	 * Translates this PdbUnitCell to the given unit cell (direction).
-	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this PdbUnitCell to 
+	 * e.g. doCrystalTranslation(new Point3i(1,1,1)) will translate this PdbUnitCell to 
 	 * crystal cell (1,1,1), considering always this PdbUnitCell's cell to be (0,0,0)
 	 * @param direction
 	 */
-	public void doCrystalTranslation(Vector3d direction) {
+	public void doCrystalTranslation(Point3i direction) {
 		for (PdbAsymUnit pdb:units) {
 			pdb.doCrystalTranslation(direction);
 		}		

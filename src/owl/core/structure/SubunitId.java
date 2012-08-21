@@ -5,13 +5,11 @@ import javax.vecmath.Point3i;
 public class SubunitId implements Comparable<SubunitId>{
 
 	private char pdbChainCode;
-	private int transformId;
-	private Point3i transl;
+	private CrystalTransform transform;
 	
-	public SubunitId(char pdbChainCode, int transformId, Point3i transl) {
+	public SubunitId(char pdbChainCode, CrystalTransform transform) {
 		this.pdbChainCode = pdbChainCode;
-		this.transformId = transformId;
-		this.transl = transl;
+		this.transform = transform;
 	}
 	
 	public char getPdbChainCode() {
@@ -19,15 +17,15 @@ public class SubunitId implements Comparable<SubunitId>{
 	}
 	
 	public int getTransformId() {
-		return transformId;
+		return transform.getTransformId();
 	}
 	
 	public Point3i getTransl() {
-		return transl;
+		return transform.getCrystalTranslation();
 	}
 	
 	public boolean isSymRelatedEquivalent(SubunitId o) {
-		if (this.pdbChainCode==o.pdbChainCode && this.transformId==o.transformId) return true;
+		if (this.pdbChainCode==o.pdbChainCode && this.transform.getTransformId()==o.transform.getTransformId()) return true;
 		return false;
 	}
 	
@@ -35,29 +33,33 @@ public class SubunitId implements Comparable<SubunitId>{
 	public boolean equals(Object o) {
 		if (!(o instanceof SubunitId)) return false;
 		SubunitId other = (SubunitId) o;
-		if (this.pdbChainCode==other.pdbChainCode && this.transformId==other.transformId && this.transl.equals(other.transl)) return true;
+		if (this.pdbChainCode==other.pdbChainCode && 
+				this.transform.getTransformId()==other.transform.getTransformId() && 
+				this.transform.getCrystalTranslation().equals(other.transform.getCrystalTranslation()))
+			return true;
+		
 		return false;
 	}
 	
 	@Override
 	public int hashCode() {
 		int hash = pdbChainCode;
-		hash = hash * 31 + transformId;
-		hash = hash * 31 + transl.hashCode();
+		hash = hash * 31 + transform.getTransformId();
+		hash = hash * 31 + transform.getCrystalTranslation().hashCode();
 	    return hash;
 	}
 	
 	@Override
 	public String toString() {
-		return this.pdbChainCode+""+transformId+transl.toString();
+		return this.pdbChainCode+""+getTransformId()+getTransl().toString();
 	}
 
 	@Override
 	public int compareTo(SubunitId o) {
-		if (this.transformId<o.transformId) {
+		if (this.getTransformId()<o.getTransformId()) {
 			return -1;
 		} 
-		if (this.transformId>o.transformId) {
+		if (this.getTransformId()>o.getTransformId()) {
 			return 1;
 		}
 		
@@ -67,22 +69,22 @@ public class SubunitId implements Comparable<SubunitId>{
 		if (this.pdbChainCode>o.pdbChainCode) {
 			return 1;
 		}
-		if (this.transl.x<o.transl.x) {
+		if (this.getTransl().x<o.getTransl().x) {
 			return -1;
 		}
-		if (this.transl.x>o.transl.x) {
+		if (this.getTransl().x>o.getTransl().x) {
 			return 1;
 		}
-		if (this.transl.y<o.transl.y) {
+		if (this.getTransl().y<o.getTransl().y) {
 			return -1;
 		}
-		if (this.transl.y>o.transl.y) {
+		if (this.getTransl().y>o.getTransl().y) {
 			return 1;
 		}
-		if (this.transl.z<o.transl.z) {
+		if (this.getTransl().z<o.getTransl().z) {
 			return -1;
 		}
-		if (this.transl.z>o.transl.z) {
+		if (this.getTransl().z>o.getTransl().z) {
 			return 1;
 		}
 		

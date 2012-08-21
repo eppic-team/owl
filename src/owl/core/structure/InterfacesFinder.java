@@ -3,6 +3,7 @@ package owl.core.structure;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
@@ -16,37 +17,21 @@ import owl.core.util.BoundingBox;
 
 public class InterfacesFinder {
 	
-	private static final Matrix4d IDENTITY = new Matrix4d(1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1);
 
-	private class TransformIdTranslation {
-		public int transformId;
-		public Vector3d translation;
-		public boolean partnerSeen;
-		public Matrix4d matTransform;
-		public TransformIdTranslation(int transformId, Vector3d translation) {
-			this.transformId = transformId;
-			this.translation = translation;
-			this.partnerSeen = false;
-			this.matTransform = (Matrix4d)sg.getTransformation(transformId).clone();
-			this.matTransform.setTranslation(translation);
-		}
-		public String toString() {
-			return String.format("[%d-(%5.2f,%5.2f,%5.2f)]",transformId,translation.x,translation.y,translation.z);
-		}
-	}
 	
 	private PdbAsymUnit pdb;
 	private boolean debug;
 	
 	private boolean withRedundancyElimination;
 	
-	private SpaceGroup sg;
+	private ArrayList<CrystalTransform> visited;
 	
-	private ArrayList<TransformIdTranslation> visited;
+	private int duplicatesCount1=0;
+	private int duplicatesCount2=0; 
+	private int duplicatesCount3=0;
 	
 	public InterfacesFinder(PdbAsymUnit pdb) {
 		this.pdb = pdb;
-		this.sg = pdb.getSpaceGroup();
 		this.debug = false;
 		this.withRedundancyElimination = true;
 		if (this.pdb.hasHydrogens()) {
@@ -66,7 +51,7 @@ public class InterfacesFinder {
 	}
 	
 	private void initialiseVisited() {
-		visited = new ArrayList<TransformIdTranslation>();
+		visited = new ArrayList<CrystalTransform>();
 	}
 	
 	/**
@@ -112,7 +97,10 @@ public class InterfacesFinder {
 		long start = -1; 
 		long end = -1;
 		int trialCount = 0, skippedRedundantOrigCell =0, skippedRedundant = 0, skippedAUsNoOverlap = 0, skippedChainsNoOverlap = 0;
-		int duplicatesCount1=0, duplicatesCount2=0, duplicatesCount3=0;
+		duplicatesCount1 = 0;
+		duplicatesCount2 = 0;
+		duplicatesCount3 = 0;
+		
 		if (debug) {
 			trialCount = 0;
 			start= System.currentTimeMillis();
@@ -148,8 +136,7 @@ public class InterfacesFinder {
 					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 					PdbChain chainiCopy = chaini.copy(pdb);
 					PdbChain chainjCopy = chainj.copy(pdb);
-					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,PdbAsymUnit.IDENTITY_TRANSFORM,PdbAsymUnit.IDENTITY_TRANSFORM);
-					interf.setSecondTranslation(new Point3i(0,0,0));
+					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),pdb.getTransform());
 					if (!set.add(interf)) {
 						duplicatesCount1++;
 					}
@@ -180,13 +167,12 @@ public class InterfacesFinder {
 			for (int j=0;j<cell.getNumAsymUnits();j++) {
 				PdbAsymUnit jAsym = cell.getAsymUnit(j);
 				if (jAsym==pdb) continue; // we want to compare this to all others but not to itself
-				TransformIdTranslation tt = null;
 				if (withRedundancyElimination) { 
-					tt = new TransformIdTranslation(jAsym.getTransformId(), jAsym.getTranslation());
-					if (isRedundant(tt)) {
+					if (isRedundant(jAsym.getTransform())) {
 						if (debug) skippedRedundantOrigCell++;
 						continue;
 					}
+					addVisited(jAsym.getTransform());
 				}
 				
 //				if (jAsym.getTransformId()==3) {
@@ -194,7 +180,6 @@ public class InterfacesFinder {
 //					jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_000.pdb"));
 //				}
 				
-				int contactsFound = 0;
 				Collection<PdbChain> ichains = null;
 				Collection<PdbChain> jchains = null;
 				if (nonPoly) {
@@ -220,15 +205,26 @@ public class InterfacesFinder {
 						
 						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 						if (graph.getEdgeCount()>0) {
-							contactsFound++;
 							if (debug) System.out.print("x");
 							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 							PdbChain chainiCopy = chaini.copy(pdb);
 							PdbChain chainjCopy = chainj.copy(jAsym);
 							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
-							interf.setSecondTranslation(new Point3i(0,0,0));
 							if (!set.add(interf)) {
 								duplicatesCount2++;
+								if (debug) {
+									ChainInterface duplicate = null;
+									for (ChainInterface ci:set) {
+										if (ci.equals(interf)) duplicate = ci;
+									}
+									String equivalent = "";
+									if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
+										equivalent = " (transforms equivalent)";
+									System.out.println("\nDuplicate interface found for "+
+											chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
+											" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
+											" - "+duplicate.getSecondTransf()+equivalent);									
+								}
 							}
 						} else {
 							if (debug) System.out.print("o");
@@ -236,11 +232,6 @@ public class InterfacesFinder {
 					}
 				}
 				
-				// if all possible contacts (at max num i chains*num j chains) were found for this operator we mark it as visited
-				// in order to later avoiding visiting its equivalent partner
-				if (withRedundancyElimination && contactsFound==(ichains.size()*jchains.size())) {
-					addVisited(tt);
-				}
 
 			}
 			if (debug) {
@@ -269,7 +260,7 @@ public class InterfacesFinder {
 					for (int k=-numCells;k<=numCells;k++) {
 						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
 
-						Vector3d trans = new Vector3d(i,j,k);
+						Point3i trans = new Point3i(i,j,k);
 						Matrix4d m = pdb.getCrystalCell().getTransform(trans);
 						
 						for (int au=0;au<cell.getNumAsymUnits();au++) { 
@@ -283,23 +274,21 @@ public class InterfacesFinder {
 								continue;
 							}
 													
-							// 2) we check if we didn't already see its equivalent symmetry operator partner
-							//    in reality this doesn't happen so often as we only count it as seen when contacts are seen for all chain interactions 
-							TransformIdTranslation tt = null;
+							// 2) we check if we didn't already see its equivalent symmetry operator partner 							
 							if (withRedundancyElimination) {
-								tt = new TransformIdTranslation(cell.getAsymUnit(au).getTransformId(), trans);
-								// pure cell-translations we can always add as visited 
-								if (tt.transformId==0) addVisited(tt);
+								CrystalTransform tt = new CrystalTransform(cell.getAsymUnit(au).getTransform());
+								tt.translate(trans);
 								if (isRedundant(tt)) { 								
 									if (debug) skippedRedundant++;								
 									continue;
 								}
+								addVisited(tt);
 							}
 							
 							// now we copy and actually translate the AU if we saw it does overlap and the sym op was not redundant
 							PdbAsymUnit jAsym = cell.getAsymUnit(au).copy();
 							jAsym.doCrystalTranslation(trans);
-
+							if (debug) System.out.print(jAsym.getTransform()+" ");
 							
 //							if (jAsym.getTransformId()==2 && i==1 && j==0 && k==0) {
 //								System.err.println("Writing debug file");
@@ -336,9 +325,21 @@ public class InterfacesFinder {
 										PdbChain chainiCopy = chaini.copy(pdb);
 										PdbChain chainjCopy = chainj.copy(jAsym);
 										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
-										interf.setSecondTranslation(new Point3i(i,j,k));
 										if (!set.add(interf)){
 											duplicatesCount3++;
+											if (debug) {
+												ChainInterface duplicate = null;
+												for (ChainInterface ci:set) {
+													if (ci.equals(interf)) duplicate = ci;
+												}
+												String equivalent = "";
+												if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
+													equivalent = " (transforms equivalent)";
+												System.out.println("\nDuplicate interface found for "+
+														chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
+														" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
+														" - "+duplicate.getSecondTransf()+equivalent);
+											}
 										}
 									} else {
 										if (debug) System.out.print("o");
@@ -346,18 +347,6 @@ public class InterfacesFinder {
 								}
 							}
 							if (debug) System.out.println(" "+contactsFound+"("+ichains.size()*jchains.size()+")");
-							// if all possible contacts (at max num i chains*num j chains) were found for this operator we mark it as visited
-							// in order to later avoiding visiting its equivalent partner
-							// [ in some cases after applying a transform, the molec can happen to fall in a non-contacting position,
-							//   examples where this happens are: 2gdg 3ka0 1vzi 1g3p 1eaq 
-							//   That's why we can't just add every single transform as visited ]
-							// Actually there are some very unusual cases when even checking for this is not enough and
-							// an operator and its equivalent will find more than the total i x j chains, e.g. 2gqv
-							// that's why we've commented out this here, although it is very rare and interfaces missed
-							// are unlikely to be important. Anyway I'd rather keep things as correct as possible.
-							//if (withRedundancyElimination && contactsFound==(ichains.size()*jchains.size())) {
-							//	addVisited(tt);
-							//}
 						}
 					}
 				}
@@ -401,11 +390,11 @@ public class InterfacesFinder {
 		for (ChainInterface interf:set) {
 			PdbChain first = interf.getFirstMolecule();
 			PdbChain second = interf.getSecondMolecule();
-			if (!transformId2chain.containsKey(first.getPdbChainCode()+first.getParent().getTransformId())) {
-				transformId2chain.put(first.getPdbChainCode()+first.getParent().getTransformId(),first);
+			if (!transformId2chain.containsKey(first.getPdbChainCode()+interf.getFirstTransf().getTransformId())) {
+				transformId2chain.put(first.getPdbChainCode()+interf.getFirstTransf().getTransformId(),first);
 			}
-			if (!transformId2chain.containsKey(second.getPdbChainCode()+second.getParent().getTransformId())) {
-				transformId2chain.put(second.getPdbChainCode()+second.getParent().getTransformId(),second);
+			if (!transformId2chain.containsKey(second.getPdbChainCode()+interf.getSecondTransf().getTransformId())) {
+				transformId2chain.put(second.getPdbChainCode()+interf.getSecondTransf().getTransformId(),second);
 			}
 		}
 		
@@ -422,10 +411,10 @@ public class InterfacesFinder {
 			PdbChain first = interf.getFirstMolecule();
 			PdbChain second = interf.getSecondMolecule();
 			if (!first.hasASA()) {
-				first.setASAs(transformId2chain.get(first.getPdbChainCode()+first.getParent().getTransformId()));
+				first.setASAs(transformId2chain.get(first.getPdbChainCode()+interf.getFirstTransf().getTransformId()));
 			}
 			if (!second.hasASA()) {
-				second.setASAs(transformId2chain.get(second.getPdbChainCode()+second.getParent().getTransformId()));
+				second.setASAs(transformId2chain.get(second.getPdbChainCode()+interf.getSecondTransf().getTransformId()));
 			}
 
 			// finally we need to calculate bsas
@@ -454,7 +443,7 @@ public class InterfacesFinder {
 	}
 	
 	
-	private void addVisited(TransformIdTranslation tt) {
+	private void addVisited(CrystalTransform tt) {
 		visited.add(tt);
 	}
 	
@@ -465,23 +454,20 @@ public class InterfacesFinder {
 	 * @param tt
 	 * @return
 	 */
-	private boolean isRedundant(TransformIdTranslation tt) {
+	private boolean isRedundant(CrystalTransform tt) {
 		
-		
-		for (TransformIdTranslation v:visited) {
+		Iterator<CrystalTransform> it = visited.iterator();
+		while (it.hasNext()) {
+			CrystalTransform v = it.next();
 			
-			// there's only 1 possible equivalent partner for each visited matrix 
-			// (since the equivalent is its inverse matrix and the inverse matrix is unique)
-			// thus once the partner has been seen, we don't need to check it ever again
-			if (v.partnerSeen) continue;	
-			
-			Matrix4d mul = new Matrix4d();
-			mul.mul(tt.matTransform,v.matTransform);
-			
-			if (mul.epsilonEquals(IDENTITY, 0.0001)) {
+			if (tt.isEquivalent(v)) {
 
 				if (debug) System.out.println("Skipping redundant transformation: "+tt+", equivalent to "+v);
-				v.partnerSeen = true;
+				
+				// there's only 1 possible equivalent partner for each visited matrix 
+				// (since the equivalent is its inverse matrix and the inverse matrix is unique)
+				// thus once the partner has been seen, we don't need to check it ever again
+				it.remove();
 				
 				return true;
 			}
@@ -490,5 +476,16 @@ public class InterfacesFinder {
 		return false;
 	}
 	
+	public int getDuplicatesCount1() {
+		return duplicatesCount1;
+	}
+
+	public int getDuplicatesCount2() {
+		return duplicatesCount2;
+	}
+
+	public int getDuplicatesCount3() {
+		return duplicatesCount3;
+	}
 
 }

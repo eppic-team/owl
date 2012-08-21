@@ -24,6 +24,7 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
+import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.util.BoundingBox;
@@ -51,12 +52,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
 
-
 	
-	protected static final Matrix4d IDENTITY_TRANSFORM = new Matrix4d(1,0,0,0,
-																	0,1,0,0,
-																	0,0,1,0,
-																	0,0,0,1);
 	/*------------------------------------  members -----------------------------------------------*/
 	private String pdbCode;
 	private int model;
@@ -118,7 +114,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * Transformation matrix used to generate this asym unit (includes 
 	 * the possible translation from the original cell)
 	 */
-	private Matrix4d transform; 
+	//private Matrix4d transform; 
 	
 	/**
 	 * An identifier of the space group transformation used (0 is identity i.e. original asymmetric unit) 
@@ -126,7 +122,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
 	 * goes from 1 to m (m=number of symmetry operations of the space group)
 	 */
-	private int transformId;    
+	//private int transformId;
+	
+	/**
+	 * The crystal symmetry transformation used to generate this asym unit.
+	 * Contains the transformation matrix with transformation vector and the transform id  
+	 */
+	private CrystalTransform transform;
 
 
 	
@@ -146,8 +148,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		this.chains = new TreeMap<String,PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
-		this.transform = IDENTITY_TRANSFORM;
-		this.transformId = 0;
+		this.transform = new CrystalTransform();
 
 	}
 	
@@ -182,8 +183,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.pdbCode = NO_PDB_CODE;
 		this.model = model;
 		this.title = null;
-		this.transform = IDENTITY_TRANSFORM;
-		this.transformId = 0;
+		this.transform = new CrystalTransform();
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
@@ -218,8 +218,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.pdbCode = NO_PDB_CODE;
 		this.model = model;
 		this.title = null;
-		this.transform = IDENTITY_TRANSFORM;
-		this.transformId = 0;
+		this.transform = new CrystalTransform();
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
@@ -265,8 +264,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.rFree = -1;
 		this.rSym = -1;
 		this.title = null;
-		this.transform = IDENTITY_TRANSFORM;
-		this.transformId = 0;
+		this.transform = new CrystalTransform();
 		
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
@@ -795,8 +793,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 				// note that the call to transform in PdbChain also resets the cached bounds in the chain
 				chain.transform(m);
 			}
-			sym.setTransform((Matrix4d)this.spaceGroup.getTransformation(i).clone());
-			sym.setTransformId(i);
+			sym.setTransform(new CrystalTransform(this.spaceGroup,i));
 			syms.add(sym);
 			i++;
 		}
@@ -820,11 +817,11 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	/**
 	 * Translates this PdbAsymUnit to the given unit cell (direction).
-	 * e.g. doCrystalTranslation(new Vector3d(1,1,1)) will translate this PdbAsymUnit to 
+	 * e.g. doCrystalTranslation(new Point3i(1,1,1)) will translate this PdbAsymUnit to 
 	 * crystal cell (1,1,1), considering always this PdbAsymUnit's cell to be (0,0,0)
 	 * @param direction
 	 */
-	public void doCrystalTranslation(Vector3d direction) {
+	public void doCrystalTranslation(Point3i direction) {
 		// in order to speed up things we translate bounds instead of resetting them
 		// so no need for recalculating them will exist after
 		if (bounds!=null || centroid!=null) {
@@ -838,9 +835,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			pdb.doCrystalTranslation(direction);
 		}		
 
-		transform.m03 = transform.m03+direction.x;
-		transform.m13 = transform.m13+direction.y;
-		transform.m23 = transform.m23+direction.z;
+		transform.translate(direction);
 		// note that transformId doesn't change here: 
 		// that's the whole point of having such an id: to identify equivalent crystal symmetry units  
 	}
@@ -881,8 +876,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			newAsym.centroid = new Point3d(this.centroid);
 		}
 		
-		newAsym.setTransform(new Matrix4d(this.transform));
-		newAsym.setTransformId(this.getTransformId());
+		newAsym.setTransform(new CrystalTransform(this.transform));
 		return newAsym;
 	}
 	
@@ -931,51 +925,14 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		return transfs;
 	}
 	
-	/**
-	 * Gets the transformation used to generate the asymmetric unit, if no transformation used on
-	 * it yet, this will return the identity matrix.
-	 * @return
-	 */
-	public Matrix4d getTransform() {
+	public CrystalTransform getTransform() {
 		return transform;
 	}
 	
-	/**
-	 * Gets the translation component of the transformation used to generate the asymmetric unit
-	 * @return
-	 */
-	protected Vector3d getTranslation() {
-		return new Vector3d(transform.m03,transform.m13,transform.m23);
-	}
-	
-	/**
-	 * Sets the transformation used to generate the asymmetric unit.
-	 * @param transform
-	 */
-	public void setTransform(Matrix4d transform) {
+	public void setTransform(CrystalTransform transform) {
 		this.transform = transform;
 	}
-
-	/**
-	 * Returns the transform id, which identifies which space group symmetry operator was
-	 * used to generate this asym unit, 2 equivalent units related by a crystal translation
-	 * will have the same id. 
-	 * @param id
-	 */
-	public int getTransformId() {
-		return transformId;
-	}
 	
-	/**
-	 * Sets the transform id, which identifies which space group symmetry operator was
-	 * used to generate this asym unit, 2 equivalent units related by a crystal translation
-	 * will have the same id. 
-	 * @param id
-	 */
-	public void setTransformId(int id) {
-		this.transformId = id;
-	}
-
 	/**
 	 * Returns a sorted (decreasing area) list of all interfaces that this PdbAsymUnit has upon 
 	 * generation of all crystal symmetry objects. An interface is defined as any pair of chains 

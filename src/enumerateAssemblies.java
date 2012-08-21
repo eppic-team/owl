@@ -72,8 +72,8 @@ public class enumerateAssemblies {
 					interf.getFirstSubunitId()+"-"+
 					interf.getSecondSubunitId()+parallel);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
-			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
-					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
+			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf().getMatTransform())+
+					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf().getMatTransform()));
 			System.out.println(interf.getFirstMolecule().getChainCode()+" - "+interf.getSecondMolecule().getChainCode());
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());

@@ -240,10 +240,11 @@ public class InterfaceGraph {
 		if (inode.getTransformId()==jnode.getTransformId()) {
 			for (int n=0;n<sg.getNumOperators();n++) {
 				if (n==inode.getTransformId()) continue;
-				pairs.add(new Pair<SubunitId>(
-						new SubunitId(inode.getPdbChainCode(),n,null),
-						new SubunitId(jnode.getPdbChainCode(),n,null)
-						));
+				// TODO must re-write (commented out code since modifications of SubunitId class)
+				//pairs.add(new Pair<SubunitId>(
+				//		new SubunitId(inode.getPdbChainCode(),n,null),
+				//		new SubunitId(jnode.getPdbChainCode(),n,null)
+				//		));
 			}	
 			// TODO does this apply also if the original relationship was intercell?
 		}
@@ -252,10 +253,12 @@ public class InterfaceGraph {
 		//   e.g. A0-B1 => B0-A1
 		else {
 			//TODO what if the original relationship was intercell?
-			pairs.add(new Pair<SubunitId>(
-				new SubunitId(jnode.getPdbChainCode(),inode.getTransformId(),null),
-				new SubunitId(inode.getPdbChainCode(),jnode.getTransformId(),null)
-				));
+			
+			// TODO must re-write (commented out code since modifications of SubunitId class)
+			//pairs.add(new Pair<SubunitId>(
+			//	new SubunitId(jnode.getPdbChainCode(),inode.getTransformId(),null),
+			//	new SubunitId(inode.getPdbChainCode(),jnode.getTransformId(),null)
+			//	));
 		}
 
 		return pairs;

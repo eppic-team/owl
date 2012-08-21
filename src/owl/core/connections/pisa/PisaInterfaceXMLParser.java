@@ -15,6 +15,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import owl.core.structure.CrystalTransform;
 import owl.core.structure.SpaceGroup;
 
 
@@ -41,6 +42,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private static final String CHAIN_ID_TAG = "chain_id";
 	private static final String CLASS_TAG = "class";
 	
+	private static final String SYMOP_NO_TAG = "symop_no";
 	private static final String SYMOP_TAG = "symop";
 	private static final String RXX_TAG = "rxx";
 	private static final String RXY_TAG = "rxy";
@@ -73,7 +75,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private PisaMolecule currentPisaMolecule;
 	private PisaResidue currentResidue;
 	private Matrix4d currentTransfOrth;
-	private Matrix4d currentTransf;
+	private CrystalTransform currentTransf;
 	
 	private StringBuffer buffer;
 	private boolean inValue;
@@ -171,6 +173,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				} else if (name.equals(MOLECULE_TAG)) {
 					inMolecule = true;
 					currentPisaMolecule = new PisaMolecule();
+					currentTransf = new CrystalTransform();
 					currentTransfOrth = new Matrix4d();
 				}
 				
@@ -181,6 +184,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				} else if (name.equals(CHAIN_ID_TAG)){
 					initValueReading();
 				} else if (name.equals(CLASS_TAG)) {
+					initValueReading();
+				} else if (name.equals(SYMOP_NO_TAG)) {
 					initValueReading();
 				} else if (name.equals(SYMOP_TAG)) {
 					initValueReading();
@@ -282,8 +287,10 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					currentPisaMolecule.setChainId(flushValue());
 				} else if (name.equals(CLASS_TAG)) {
 					currentPisaMolecule.setMolClass(flushValue());
+				} else if (name.equals(SYMOP_NO_TAG)) {
+					currentTransf.setTransformId(Integer.parseInt(flushValue())-1); // we count from 0, pisa from 1
 				} else if (name.equals(SYMOP_TAG)) {
-					currentTransf = SpaceGroup.getMatrixFromAlgebraic(flushValue());
+					currentTransf.setMatTransform(SpaceGroup.getMatrixFromAlgebraic(flushValue()));
 				} else if (name.equals(RXX_TAG)) {
 					currentTransfOrth.m00=Double.parseDouble(flushValue());
 				} else if (name.equals(RXY_TAG)) {

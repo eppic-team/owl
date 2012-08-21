@@ -7,7 +7,6 @@ import java.io.PrintStream;
 import java.io.Serializable;
 
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
 import owl.core.runners.NaccessRunner;
@@ -33,13 +32,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	private double bsaToAsaCutoff;
 	
-	private Matrix4d firstTransf; 		// the transformation applied to first molecule expressed in crystal axes coordinates
+	private CrystalTransform firstTransf; 		// the transformation applied to first molecule
 	private Matrix4d firstTransfOrth;	// the transformation applied to first molecule expressed in orthonormal axes coordinates
-	private Matrix4d secondTransf; 		// the transformation applied to second molecule expressed in crystal axes coordinates
+	private CrystalTransform secondTransf; 		// the transformation applied to second molecule
 	private Matrix4d secondTransfOrth;	// the transformation applied to second molecule expressed in orthonormal axes coordinates
-	
-	private Point3i transl;		// the crystal translation (excluding unit cell symmetry translations) applied to second molecule expressed in crystal axes coordinates
-								// note that the translation component of secondTransf above contains this + any possible unit cell symmetry translations
 	
 	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
 	
@@ -54,7 +50,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		
 	}
 	
-	public ChainInterface(PdbChain firstMolecule, PdbChain secondMolecule, AICGraph graph, Matrix4d firstTransf, Matrix4d secondTransf) {
+	public ChainInterface(PdbChain firstMolecule, PdbChain secondMolecule, AICGraph graph, CrystalTransform firstTransf, CrystalTransform secondTransf) {
 		this.firstMolecule = firstMolecule;
 		this.secondMolecule = secondMolecule;
 		this.graph = graph;
@@ -120,11 +116,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return graph;
 	}
 	
-	public Matrix4d getFirstTransf() {
+	public CrystalTransform getFirstTransf() {
 		return firstTransf;
 	}
 	
-	public void setFirstTransf(Matrix4d firstTransf) {
+	public void setFirstTransf(CrystalTransform firstTransf) {
 		this.firstTransf = firstTransf;
 	}
 	
@@ -134,7 +130,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 */
 	public Matrix4d getFirstTransfOrth(){
 		if (firstTransfOrth==null) {
-			firstTransfOrth = firstMolecule.getParent().getCrystalCell().transfToOrthonormal(firstTransf);
+			firstTransfOrth = firstMolecule.getParent().getCrystalCell().transfToOrthonormal(firstTransf.getMatTransform());
 		}
 		return firstTransfOrth;
 	}
@@ -143,31 +139,23 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		this.firstTransfOrth = firstTransfOrth;
 	}
 	
-	public Matrix4d getSecondTransf() {
+	public CrystalTransform getSecondTransf() {
 		return secondTransf;
 	}
 	
-	public void setSecondTransf(Matrix4d secondTransf) {
+	public void setSecondTransf(CrystalTransform secondTransf) {
 		this.secondTransf = secondTransf;
 	} 
 	
 	public Matrix4d getSecondTransfOrth() {
 		if (secondTransfOrth==null) {
-			secondTransfOrth = secondMolecule.getParent().getCrystalCell().transfToOrthonormal(secondTransf);
+			secondTransfOrth = secondMolecule.getParent().getCrystalCell().transfToOrthonormal(secondTransf.getMatTransform());
 		}
 		return secondTransfOrth;
 	}
 	
 	public void setSecondTransfOrth(Matrix4d secondTransfOrth) {
 		this.secondTransfOrth = secondTransfOrth;
-	}
-	
-	public Point3i getSecondTranslation() {
-		return transl;
-	}
-	
-	public void setSecondTranslation(Point3i transl) {
-		this.transl = transl;
 	}
 	
 	public double getScore() {
@@ -293,7 +281,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public String toString() {
 		return firstMolecule.getPdbChainCode()+"-"+secondMolecule.getPdbChainCode()+" "+
-		getAICGraph().getEdgeCount()+" "+SpaceGroup.getAlgebraicFromMatrix(secondTransf);
+		getAICGraph().getEdgeCount()+" "+SpaceGroup.getAlgebraicFromMatrix(secondTransf.getMatTransform());
 	}
 	
 	public boolean equals(Object o) {
@@ -321,7 +309,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		ps.print("# ");
 		ps.printf("%d\t%9.2f\t%5.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(),this.getScore(), 
 				this.getName(),
-				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf()));
+				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf().getMatTransform()));
 		if (isFirstProtein()) {
 			ps.print("## ");
 			this.printFirstMolInfoTabular(ps);
@@ -573,11 +561,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	public SubunitId getFirstSubunitId() {
-		return new SubunitId(firstMolecule.getPdbChainCode().charAt(0),firstMolecule.getParent().getTransformId(),new Point3i(0,0,0));
+		return new SubunitId(firstMolecule.getPdbChainCode().charAt(0),firstTransf);
 	}
 
 	public SubunitId getSecondSubunitId() {
-		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondMolecule.getParent().getTransformId(),transl);
+		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondTransf);
 	}
 
 	public boolean isParallel() {

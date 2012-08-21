@@ -186,8 +186,8 @@ public class enumerateInterfaces {
 					interf.getFirstSubunitId()+"-"+
 					interf.getSecondSubunitId()+parallel);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
-			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf())+
-					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf()));
+			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf().getMatTransform())+
+					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf().getMatTransform()));
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+
