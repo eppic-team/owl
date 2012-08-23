@@ -191,6 +191,11 @@ public class PymolRunner {
 		
 		interf.calcRimAndCore(caCutoff);
 
+		cmd = "select chain"+chain1+", chain "+chain1;
+		writeCommand(cmd, pml);
+		cmd = "select chain"+chain2+", chain "+chain2;
+		writeCommand(cmd, pml);
+		
 		cmd = getSelString("core", chain1, interf.getFirstRimCore().getCoreResidues());
 		writeCommand(cmd, pml);
 		cmd = getSelString("core", chain2, interf.getSecondRimCore().getCoreResidues());
