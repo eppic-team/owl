@@ -14,6 +14,8 @@ import java.util.Set;
 
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.InterfaceRimCore;
+import owl.core.structure.PdbChain;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.PdbfileParser;
 import owl.core.structure.Residue;
@@ -36,6 +38,8 @@ public class PymolRunner {
 	private static final String DEF_TN_BG_COLOR = "white";
 	private static final int[] DEF_TN_HEIGHTS = {75};
 	private static final int[] DEF_TN_WIDTHS = {75};
+	
+	private static final double MIN_INTERF_AREA_TO_DISPLAY = 500;
 	
 	private File pymolExec;
 	private String[] chainColors;
@@ -373,6 +377,175 @@ public class PymolRunner {
 
 	}
 	
+	/**
+	 * Generates a pymol pse file with surface representation and spectrum b-factor coloring
+	 * with magenta dots overlaying marking the core residues of each of the interfaces given
+	 * @param chain
+	 * @param interfaces
+	 * @param caCutoff
+	 * @param pdbFile
+	 * @param pseFile
+	 * @param pmlFile 
+	 * @param minScore the minimum possible score for b factor colors scaling (passed as minimum to PyMOL's spectrum command)
+	 * if <0 then no minimum passed (PyMOL will calculate based on present b-factors)
+	 * @param maxScore the maximum possible score for b factor colors scaling (passed as maximum to PyMOL's spectrum command)
+	 * if <0 then no maximum passed (PyMOL will calculate based on present b-factors)
+	 * @throws IOException 
+	 * @throws InterruptedException 
+	 */
+	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, double caCutoffGeom, double caCutoffCoreSurf, File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore) 
+	throws IOException, InterruptedException {
+		
+		String molecName = getPymolMolecName(pdbFile);
+
+		//char chain1 = chain.getPdbChainCode().charAt(0);
+		
+		List<String> command = new ArrayList<String>();
+		command.add(pymolExec.getAbsolutePath());
+		command.add("-q");
+		command.add("-c");
+
+
+		// NOTE we used to pass all commands in one string after -d (with the pymolScriptBuilder StringBuffer.
+		//      But pymol 1.3 and 1.4 seem to have problems with very long strings (causing segfaults)
+		//      Because of that now we write most commands to pml file (which we were doing anyway so that users can 
+		//      use the pml scripts if they want) and then load the pmls with pymol "@" command
+		
+		
+		StringBuffer pymolScriptBuilder = new StringBuffer();
+		PrintStream pml = new PrintStream(pmlFile);
+		
+		pymolScriptBuilder.append("load "+pdbFile.getAbsolutePath()+";");
+				
+		String cmd;
+
+		cmd = "orient";
+		writeCommand(cmd, pml);
+		
+		cmd = "remove solvent";
+		writeCommand(cmd, pml);
+
+		// we need to show sticks so that clicking selects residues (otherwise if only surface shown, clicking doesn't select anything)
+		cmd = "as sticks"; 
+		writeCommand(cmd, pml);
+
+		cmd = "show surface";
+		writeCommand(cmd, pml);
+		
+		String spectrumParams = "";
+		if (minScore>=0) spectrumParams+=", minimum="+minScore;
+		if (maxScore>=0) spectrumParams+=", maximum="+maxScore;
+		cmd = "spectrum b"+spectrumParams;
+		writeCommand(cmd, pml);
+
+		String dotsLayerMolecName = molecName+"Dots";
+		cmd = "copy "+dotsLayerMolecName+", "+molecName;
+		writeCommand(cmd, pml);
+
+		cmd = "copy "+dotsLayerMolecName+", "+molecName;
+		writeCommand(cmd, pml);
+		cmd = "h_add "+dotsLayerMolecName;
+		writeCommand(cmd, pml);
+		cmd = "color magenta, "+dotsLayerMolecName;
+		writeCommand(cmd, pml);
+		
+		String caCutoffGeomStr = String.format("_%2.0f",caCutoffGeom*100.0);
+		String caCutoffCoreSurfStr = String.format("_%2.0f",caCutoffCoreSurf*100.0);
+		
+		List<Integer> interfaceIds = new ArrayList<Integer>();
+		
+		for (ChainInterface interf:interfaces) {
+			if (interf.getInterfaceArea()<MIN_INTERF_AREA_TO_DISPLAY) continue;
+			
+			InterfaceRimCore rimCore = null;
+			if (interf.getFirstMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
+				interf.calcRimAndCore(caCutoffGeom);
+				rimCore = interf.getFirstRimCore();
+				
+			} else if (interf.getSecondMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
+				interf.calcRimAndCore(caCutoffGeom);
+				rimCore = interf.getSecondRimCore();
+				
+			} else {
+				continue;
+			}
+			int id = interf.getId();
+			interfaceIds.add(id);
+			
+			
+			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffGeomStr);
+			
+			cmd = "select interface"+id+"Dots, core"+id+"Dots"+caCutoffGeomStr+" or rim"+id+"Dots"+caCutoffGeomStr;
+			writeCommand(cmd, pml);
+			
+			selectRimCore(pml, rimCore, molecName, id+caCutoffGeomStr);
+			
+			cmd = "select interface"+id+", core"+id+caCutoffGeomStr+" or rim"+id+caCutoffGeomStr;
+			writeCommand(cmd, pml);
+
+
+			if (interf.getFirstMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
+				interf.calcRimAndCore(caCutoffCoreSurf);
+				rimCore = interf.getFirstRimCore();
+				
+			} else if (interf.getSecondMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
+				interf.calcRimAndCore(caCutoffCoreSurf);
+				rimCore = interf.getSecondRimCore();
+				
+			} 
+			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffCoreSurfStr);
+
+			selectRimCore(pml, rimCore, molecName, id+caCutoffCoreSurfStr);
+
+		}
+		
+		// remove from the dots layer everything not in an interface
+		cmd = "remove "+dotsLayerMolecName+" ";
+		for (int id:interfaceIds) {
+			cmd+=" and not interface"+id+"Dots";
+		}
+		writeCommand(cmd, pml);
+		
+		cmd = "hide everything, "+dotsLayerMolecName;
+		writeCommand(cmd, pml);
+		
+		// show the dots for core+caCutoffCoreSurf only 
+		for (int id:interfaceIds) {
+			cmd = "as dots, core"+id+"Dots"+caCutoffCoreSurfStr;			
+			writeCommand(cmd, pml);		
+			break; // i.e. we only show cores for the first interface
+		}
+
+		cmd = "set dot_width=1, "+dotsLayerMolecName;
+		writeCommand(cmd, pml);
+
+		
+		cmd = "select resi 0";// so that the last selection is deactivated
+		writeCommand(cmd, pml);
+		
+		pml.close();
+		
+		pymolScriptBuilder.append("@ "+pmlFile+";");
+		
+		pymolScriptBuilder.append("save "+pseFile+";");
+
+		pymolScriptBuilder.append("quit;");
+		
+		command.add("-d");
+		
+		//System.out.println(pymolScriptBuilder.toString());
+		
+		command.add(pymolScriptBuilder.toString());
+
+		
+		Process pymolProcess = new ProcessBuilder(command).start();
+		int exit = pymolProcess.waitFor();
+		if (exit!=0) {
+			throw new IOException("Pymol exited with error status "+exit);
+		}
+	}
+
+	
 	public String getChainColor(char letter, int index, boolean isSymRelated) {
 		String color = null;
 		if (isSymRelated && index!=0) {
@@ -388,6 +561,13 @@ public class PymolRunner {
 			}
 		}
 		return color;
+	}
+	
+	private void selectRimCore(PrintStream pml, InterfaceRimCore rimCore, String molecName, String suffix) {
+		String cmd = "select core"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getCoreResidues());
+		writeCommand(cmd, pml);
+		cmd = "select rim"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getRimResidues());
+		writeCommand(cmd, pml);			
 	}
 	
 	private String getPymolMolecName(File pdbFile) {
@@ -407,7 +587,7 @@ public class PymolRunner {
 	private String getSelString(String namePrefix, char chainName, List<Residue> list) {
 		return "select "+namePrefix+chainName+", chain "+chainName+" and resi "+getResiSelString(list);
 	}
-	
+
 	private void writeCommand(String cmd, PrintStream ps) {
 		//if (sb!=null) {
 		//	sb.append(cmd+";");
