@@ -23,6 +23,7 @@ public class enumerateInterfaces {
 	private static final File   PYMOL_EXE = new File("/usr/bin/pymol");
 	
 	private static final double BSATOASA_CUTOFF = 0.95;
+	private static final double MIN_ASA_FOR_SURFACE = 5;
 
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
@@ -179,7 +180,7 @@ public class enumerateInterfaces {
 					
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i+1);
-			interf.calcRimAndCore(BSATOASA_CUTOFF);
+			interf.calcRimAndCore(BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE);
 			String parallel = "";
 			if (interf.isParallel()) parallel = " -- PARALLEL interface";
 			System.out.println("\n##Interface "+(i+1)+" "+
@@ -199,7 +200,7 @@ public class enumerateInterfaces {
 				interf.writeToPdbFile(pdbFile);
 				interfPdbFiles[i] = pdbFile; 
 				if (generatePngs) {
-					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, pdbFile, 
+					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE, pdbFile, 
 							new File(writeDir,outBaseName+"."+(i+1)+".pse"), 
 							new File(writeDir,outBaseName+"."+(i+1)+".pml"), outBaseName);
 				}

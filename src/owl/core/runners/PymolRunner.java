@@ -140,11 +140,13 @@ public class PymolRunner {
 	 * through {@link #readColorsFromPropertiesFile(InputStream)}
 	 * @param pymolExec
 	 * @param interf
+	 * @param caCutoff
+	 * @param minAsaForSurface
 	 * @param pdbFile
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, File pdbFile, File pseFile, File pmlFile, String base) 
+	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, double minAsaForSurface, File pdbFile, File pseFile, File pmlFile, String base) 
 	throws IOException, InterruptedException {
 		
 		String molecName = getPymolMolecName(pdbFile);
@@ -193,7 +195,7 @@ public class PymolRunner {
 		cmd = "color "+color2+", "+molecName+" and chain "+chain2;
 		writeCommand(cmd, pml);
 		
-		interf.calcRimAndCore(caCutoff);
+		interf.calcRimAndCore(caCutoff, minAsaForSurface);
 
 		cmd = "select chain"+chain1+", chain "+chain1;
 		writeCommand(cmd, pml);
@@ -382,7 +384,9 @@ public class PymolRunner {
 	 * with magenta dots overlaying marking the core residues of each of the interfaces given
 	 * @param chain
 	 * @param interfaces
-	 * @param caCutoff
+	 * @param caCutoffGeom
+	 * @param caCutoffCoreSurf
+	 * @param minAsaForSurface
 	 * @param pdbFile
 	 * @param pseFile
 	 * @param pmlFile 
@@ -393,7 +397,7 @@ public class PymolRunner {
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, double caCutoffGeom, double caCutoffCoreSurf, File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore) 
+	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, double caCutoffGeom, double caCutoffCoreSurf, double minAsaForSurface, File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore) 
 	throws IOException, InterruptedException {
 		
 		String molecName = getPymolMolecName(pdbFile);
@@ -459,11 +463,11 @@ public class PymolRunner {
 			
 			InterfaceRimCore rimCore = null;
 			if (interf.getFirstMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
-				interf.calcRimAndCore(caCutoffGeom);
+				interf.calcRimAndCore(caCutoffGeom, minAsaForSurface);
 				rimCore = interf.getFirstRimCore();
 				
 			} else if (interf.getSecondMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
-				interf.calcRimAndCore(caCutoffGeom);
+				interf.calcRimAndCore(caCutoffGeom, minAsaForSurface);
 				rimCore = interf.getSecondRimCore();
 				
 			} else {
@@ -485,11 +489,11 @@ public class PymolRunner {
 
 
 			if (interf.getFirstMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
-				interf.calcRimAndCore(caCutoffCoreSurf);
+				interf.calcRimAndCore(caCutoffCoreSurf, minAsaForSurface);
 				rimCore = interf.getFirstRimCore();
 				
 			} else if (interf.getSecondMolecule().getPdbChainCode().equals(chain.getPdbChainCode())) {
-				interf.calcRimAndCore(caCutoffCoreSurf);
+				interf.calcRimAndCore(caCutoffCoreSurf, minAsaForSurface);
 				rimCore = interf.getSecondRimCore();
 				
 			} 

@@ -131,9 +131,9 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	 * bsaToAsaCutoff given.
 	 * @param bsaToAsaCutoff
 	 */
-	public void calcRimAndCores(double bsaToAsaCutoff) {
+	public void calcRimAndCores(double bsaToAsaCutoff, double minAsaForSurface) {
 		for (ChainInterface interf:list){
-			interf.calcRimAndCore(bsaToAsaCutoff);
+			interf.calcRimAndCore(bsaToAsaCutoff, minAsaForSurface);
 		}
 	}
 	
@@ -162,7 +162,7 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		ps.println("Interfaces for "+pdbName);
 		ps.print("ASAs values from "+this.asaCalcMethod.getName());
 		if (asaCalcMethod==AsaCalcMethod.INTERNAL) {
-			ps.println(" (accuracy="+this.asaCalcAccuracyParam+")");
+			ps.println(" (sphere sampling points="+this.asaCalcAccuracyParam+")");
 		} else {
 			ps.println();
 		}
@@ -174,13 +174,15 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	/**
 	 * Given a PDB chain code returns the List of residues that are in the surface but belong to NO
 	 * interface (above given minInterfArea) 
+	 * Surface residues will be considered those with ASA above the given minAsaForSurface
 	 * @param pdbChainCode
 	 * @param minInterfArea
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public List<Residue> getResiduesNotInInterfaces(String pdbChainCode, double minInterfArea) {
+	public List<Residue> getResiduesNotInInterfaces(String pdbChainCode, double minInterfArea, double minAsaForSurface) {
 
-		List<Residue> surfResidues = new ArrayList<Residue>();
+		
 		PdbChain chain = null;
 		for (ChainInterface interf:this) {
 			if (interf.getFirstMolecule().getPdbChainCode().equals(pdbChainCode)) {
@@ -193,9 +195,8 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 			}
 		}
 		
-		for (Residue res:chain) {
-			if (res.getAsa()>0) surfResidues.add(res);
-		}
+		List<Residue> surfResidues = chain.getSurfaceResidues(minAsaForSurface);
+		
 		//System.out.println(" in surface: "+surfResidues.size());
 		
 		Set<Integer> interfResSerials = new HashSet<Integer>();

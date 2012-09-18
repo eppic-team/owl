@@ -327,6 +327,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		else molType = "nucleic acid";
 		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+molType);
 
+		int numSurfRes0 = firstMolecule.getSurfaceResidues(0).size();
+		int numSurfResCutoff = firstMolecule.getSurfaceResidues(getFirstRimCore().getMinAsaForSurface()).size();
+		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
+				numSurfRes0,numSurfResCutoff,getFirstRimCore().getMinAsaForSurface());
+		
 		InterfaceRimCore rimCore = getFirstRimCore();
 		ps.printf("## %4.2f\n",bsaToAsaCutoff);
 		ps.println("## rim : "+rimCore.getRimResString());
@@ -354,6 +359,11 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 
 		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+molType);
 
+		int numSurfRes0 = secondMolecule.getSurfaceResidues(0).size();
+		int numSurfResCutoff = secondMolecule.getSurfaceResidues(getSecondRimCore().getMinAsaForSurface()).size();
+		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
+				numSurfRes0,numSurfResCutoff,getSecondRimCore().getMinAsaForSurface());
+		
 		InterfaceRimCore rimCore = getSecondRimCore();
 		ps.printf("## %4.2f\n",bsaToAsaCutoff);
 		ps.println("## rim : "+rimCore.getRimResString());
@@ -401,9 +411,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @param bsaToAsaHardCutoff
 	 * @param relaxationStep
 	 * @param minNumResidues
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public void calcRimAndCoreZooming(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+	public void calcRimAndCoreZooming(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues, double minAsaForSurface) {
 		//zoomingUsed = true;
 		
 		bsaToAsaCutoff = bsaToAsaHardCutoff;
@@ -420,8 +431,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
 			InterfaceRimCore rimCore1 = null;
 			InterfaceRimCore rimCore2 = null;
-			if (isFirstProtein()) rimCore1 = this.firstMolecule.getRimAndCore(cutoff);
-			if (isSecondProtein()) rimCore2 = this.secondMolecule.getRimAndCore(cutoff);
+			if (isFirstProtein()) rimCore1 = this.firstMolecule.getRimAndCore(cutoff,minAsaForSurface);
+			if (isSecondProtein()) rimCore2 = this.secondMolecule.getRimAndCore(cutoff,minAsaForSurface);
 			firstRimCore = rimCore1;
 			secondRimCore = rimCore2;
 			
@@ -443,9 +454,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * object will be null for it  
 	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve the core/rim lists.  
 	 * @param bsaToAsaCutoff
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public void calcRimAndCore(double bsaToAsaCutoff) {
+	public void calcRimAndCore(double bsaToAsaCutoff, double minAsaForSurface) {
 		//zoomingUsed = false;
 		
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
@@ -453,12 +465,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		InterfaceRimCore rimCore1 = null;
 		InterfaceRimCore rimCore2 = null;
 		if (isFirstProtein()) { 
-			rimCore1 = this.firstMolecule.getRimAndCore(bsaToAsaCutoff);
+			rimCore1 = this.firstMolecule.getRimAndCore(bsaToAsaCutoff, minAsaForSurface);
 			firstRimCore = rimCore1;
 		}
 		
 		if (isSecondProtein()) {		
-			rimCore2 = this.secondMolecule.getRimAndCore(bsaToAsaCutoff);
+			rimCore2 = this.secondMolecule.getRimAndCore(bsaToAsaCutoff, minAsaForSurface);
 			secondRimCore = rimCore2;
 		}
 	}
@@ -466,18 +478,19 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	/**
 	 * Calculates core/rim lists of residues and caches them locally in {@link InterfaceRimCore} objects.
 	 * Following the Chakrabarti definition (see Chakrabarti, Janin Proteins 2002)
-	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve the core/rim lists. 
+	 * Use {@link #getFirstRimCore()} and {@link #getSecondRimCore()} to retrieve the core/rim lists.
+	 * @param minAsaForSurface 
 	 */
-	public void calcRimAndCoreChakrabarti() {
+	public void calcRimAndCoreChakrabarti(double minAsaForSurface) {
 		InterfaceRimCore rimCore1 = null;
 		InterfaceRimCore rimCore2 = null;
 		if (isFirstProtein()) { 
-			rimCore1 = this.firstMolecule.getRimAndCoreChakrabarti();
+			rimCore1 = this.firstMolecule.getRimAndCoreChakrabarti(minAsaForSurface);
 			firstRimCore = rimCore1;
 		}
 		
 		if (isSecondProtein()) {		
-			rimCore2 = this.secondMolecule.getRimAndCoreChakrabarti();
+			rimCore2 = this.secondMolecule.getRimAndCoreChakrabarti(minAsaForSurface);
 			secondRimCore = rimCore2;
 		}
 		

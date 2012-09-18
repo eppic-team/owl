@@ -2585,17 +2585,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object: core residues are those for 
-	 * which the bsa/asa ratio is above the given cut-off, rim those with bsa>0 and with 
+	 * Returns 2 lists of residues as a {@link InterfaceRimCore} object: core residues are those 
+	 * with bsa>0 and with bsa/asa ratio above the given cut-off, rim those with bsa>0 and with 
 	 * bsa/asa below the cut-off.
+	 * Additionally residues will be considered at interface surface only if their ASA is above 
+	 * given minAsaForSurface 
 	 * @param bsaToAsaCutoff
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public InterfaceRimCore getRimAndCore(double bsaToAsaCutoff) {
+	public InterfaceRimCore getRimAndCore(double bsaToAsaCutoff, double minAsaForSurface) {
 		List<Residue> core = new ArrayList<Residue>();
 		List<Residue> rim = new ArrayList<Residue>();
 		for (Residue residue:this) {
-			if (residue.getBsa()>0) {
+			if (residue.getAsa()>minAsaForSurface && residue.getBsa()>0) {
 				if (residue.getBsaToAsaRatio()<bsaToAsaCutoff) {
 					rim.add(residue);
 				} else {
@@ -2603,7 +2606,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				}
 			}
 		}
-		return new InterfaceRimCore(rim,core,bsaToAsaCutoff);
+		return new InterfaceRimCore(rim,core,bsaToAsaCutoff,minAsaForSurface);
 	}
 	
 	/**
@@ -2611,17 +2614,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * The core is required to have a minimum of minNumResidues. If the minimum is not 
 	 * reached with the bsaToAsaSoftCutoff, then the cutoff is relaxed in relaxationStep steps 
 	 * until reaching the bsaToAsaHardCutoff.
+	 * Residues will be considered at interface surface only if their ASA is above 
+	 * given minAsaForSurface  
 	 * @param bsaToAsaSoftCutoff
 	 * @param bsaToAsaHardCutoff
 	 * @param relaxationStep
 	 * @param minNumResidues
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public InterfaceRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues) {
+	public InterfaceRimCore getRimAndCore(double bsaToAsaSoftCutoff, double bsaToAsaHardCutoff, double relaxationStep, int minNumResidues, double minAsaForSurface) {
 		InterfaceRimCore rimCore = null;
 		// we introduce a margin of relaxationSte*0.10 to be sure we do go all the way down to bsaToAsaHardCutoff (necessary because of rounding)
 		for (double cutoff=bsaToAsaSoftCutoff;cutoff>=bsaToAsaHardCutoff-relaxationStep*0.10;cutoff-=relaxationStep) {
-			rimCore = getRimAndCore(cutoff);
+			rimCore = getRimAndCore(cutoff, minAsaForSurface);
 			//System.out.printf("cutoff %4.2f, core size: %d\n",cutoff,rimCore.getCoreSize());
 			if (rimCore.getCoreSize()>=minNumResidues) {
 				break;
@@ -2635,12 +2641,15 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * Following the Chakrabarti definition (see Chakrabarti, Janin Proteins 2002):
 	 * core residues have at least one atom fully buried (bsa/asa=1) and rim residues are all the
 	 * rest still with bsa>0 but bsa/asa<1 (all atoms partially accessible)
+	 * Residues will be considered at interface surface only if their ASA is above 
+	 * given minAsaForSurface   
+	 * @param minAsaForSurface
 	 * @return
 	 */
-	public InterfaceRimCore getRimAndCoreChakrabarti() {
+	public InterfaceRimCore getRimAndCoreChakrabarti(double minAsaForSurface) {
 		InterfaceRimCore rimcore = new InterfaceRimCore();
 		for (Residue residue:this) {
-			if (residue.getBsa()>0) {
+			if (residue.getAsa()>minAsaForSurface && residue.getBsa()>0) {
 				boolean iscore = false;
 				for (Atom atom:residue) {
 					if (atom.getBsa()/atom.getAsa()>0.999) {
@@ -2684,6 +2693,20 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			}
 		}
 		return rimcore;
+	}
+	
+	/**
+	 * Returns a list of all surface residues, i.e. all residues whose 
+	 * ASA is above the given minAsaForSurface
+	 * @param minAsaForSurface
+	 * @return
+	 */
+	public List<Residue> getSurfaceResidues(double minAsaForSurface) {
+		List<Residue> surfResidues = new ArrayList<Residue>();
+		for (Residue res:this) {
+			if (res.getAsa()>minAsaForSurface) surfResidues.add(res);
+		}
+		return surfResidues;
 	}
 	
 	/**

@@ -11,16 +11,18 @@ public class InterfaceRimCore implements Serializable {
 	private List<Residue> rimResidues;
 	private List<Residue> coreResidues;
 	private double bsaToAsaCutoff;
+	private double minAsaForSurface;
 	
 	public InterfaceRimCore() {
 		this.coreResidues = new ArrayList<Residue>();
 		this.rimResidues = new ArrayList<Residue>();
 	}
 	
-	public InterfaceRimCore(List<Residue> rimResidues, List<Residue> coreResidues, double bsaToAsaCutoff) {
+	public InterfaceRimCore(List<Residue> rimResidues, List<Residue> coreResidues, double bsaToAsaCutoff, double minAsaForSurface) {
 		this.rimResidues = rimResidues;
 		this.coreResidues = coreResidues;
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
+		this.minAsaForSurface = minAsaForSurface;
 	}
 	
 	public void addCoreResidue(Residue residue) {
@@ -71,6 +73,10 @@ public class InterfaceRimCore implements Serializable {
 	 */
 	public void setBsaToAsaCutoff(double bsaToAsaCutoff) {
 		this.bsaToAsaCutoff = bsaToAsaCutoff;
+	}
+	
+	public double getMinAsaForSurface() {
+		return minAsaForSurface;
 	}
 
 	public int getCoreSize() {

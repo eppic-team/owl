@@ -13,6 +13,7 @@ import owl.core.util.Goodies;
 public class enumerateAssemblies {
 
 	private static final double BSATOASA_CUTOFF = 0.95;
+	private static final double MIN_ASA_FOR_SURFACE = 5;
 
 	
 	/**
@@ -65,7 +66,7 @@ public class enumerateAssemblies {
 		// first we print out the interfaces
 		for (int i=0;i<interfs.size();i++) {
 			ChainInterface interf = interfs.get(i+1);
-			interf.calcRimAndCore(BSATOASA_CUTOFF);
+			interf.calcRimAndCore(BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE);
 			String parallel = "";
 			if (interf.isParallel()) parallel = " -- PARALLEL interface";
 			System.out.println("\n##Interface "+(i+1)+" "+
