@@ -235,6 +235,14 @@ public class PymolRunner {
 		//cmd = "set transparency, 0.35";
 		//writeCommand(cmd, pml);
 		//pymolScriptBuilder.append("zoom bothinterf"+";");
+		
+		if (interf.hasCofactors()) {
+			cmd = "select cofactors, org;";
+			writeCommand(cmd, pml);
+			cmd = "show sticks, cofactors;";
+			writeCommand(cmd, pml);
+		}
+		
 		cmd = "select resi 0";// so that the last selection is deactivated
 		writeCommand(cmd, pml);
 		
@@ -248,6 +256,10 @@ public class PymolRunner {
 		pymolScriptBuilder.append("bg "+DEF_TN_BG_COLOR+";");
 		
 		pymolScriptBuilder.append("as "+DEF_TN_STYLE+";");
+		
+		if (interf.hasCofactors()) {
+			pymolScriptBuilder.append("show sticks, org;");
+		}
 		
 		pymolScriptBuilder.append("color "+color1+", "+molecName+" and chain "+chain1+";");
 		pymolScriptBuilder.append("color "+color2+", "+molecName+" and chain "+chain2+";");

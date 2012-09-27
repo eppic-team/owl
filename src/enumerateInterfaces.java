@@ -24,7 +24,8 @@ public class enumerateInterfaces {
 	
 	private static final double BSATOASA_CUTOFF = 0.95;
 	private static final double MIN_ASA_FOR_SURFACE = 5;
-
+	private static final int CONSIDER_COFACTORS = -1; // minimum number of atoms for a cofactor to be considered, if -1 all ignored
+	
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
 	
@@ -168,7 +169,7 @@ public class enumerateInterfaces {
 		interfFinder.setDebug(debug);
 		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
-		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly);
+		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS);
 		long end = System.currentTimeMillis();
 		long total = (end-start)/1000;
 		System.out.println("Total time for interface calculation: "+total+"s");
@@ -216,7 +217,6 @@ public class enumerateInterfaces {
 		if (serialize && writeDir!=null) {
 			Goodies.serialize(new File(writeDir,outBaseName+".interfaces.dat"), interfaces);
 		}
-		
 		
 //		System.out.println();
 //		System.out.println("#### RECALCULATING with redundancy elimination");

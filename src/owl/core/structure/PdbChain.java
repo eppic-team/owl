@@ -554,11 +554,36 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * NACCESS' -h option
 	 */
 	public void calcASAs(int nSpherePoints, int nThreads, boolean hetAtoms) {
+		calcASAs(nSpherePoints, nThreads, hetAtoms, null);
+	}
+	
+	/**
+	 * Calculate the Accessible Surface Area using our implementation of the 
+	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members 
+	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
+	 * Lysozyme and Insulin." JMB (1973) 79:351-371.
+	 * @param nSpherePoints the number of points to be used in generating the spherical 
+	 * dot-density, the more points the more accurate (and slower) calculation
+	 * @param nThreads number of threads to be used for ASA calculation
+	 * @param hetAtoms if true HET residues are considered, if false they aren't, equivalent to 
+	 * NACCESS' -h option
+	 * @param cofactors molecules to be considered as bound to this PdbChain for calculation of its 
+	 * ASAs, if null then only atoms of this PdbChain will be used for ASAs calculation 
+	 */
+	public void calcASAs(int nSpherePoints, int nThreads, boolean hetAtoms, List<PdbChain> cofactors) {
 		this.setAtomRadii();
+		
 		int numAtoms = getNumNonHetAtoms();
 		if (hetAtoms) {
 			numAtoms = getNumAtoms();
 		}
+		if (cofactors!=null) {
+			for (PdbChain cofactor:cofactors) {
+				cofactor.setAtomRadii();
+				numAtoms += cofactor.getNumAtoms();
+			}
+		}
+		
 		Atom[] atoms = new Atom[numAtoms];
 		int i = 0;
 		for (Residue residue: this) {
@@ -568,6 +593,17 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				i++;
 			}
 		}
+		if (cofactors!=null) {
+			for (PdbChain cofactor:cofactors) {
+				for (Residue residue: cofactor) {
+					for (Atom atom: residue) {
+						atoms[i] = atom;
+						i++;
+					}
+				}
+			}
+		}
+		
 		double[] asas = Asa.calculateAsa(atoms,Asa.DEFAULT_PROBE_SIZE,nSpherePoints,nThreads);
 		
 		for (i=0;i<atoms.length;i++) {

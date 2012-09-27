@@ -2,6 +2,7 @@ package owl.core.structure;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -17,7 +18,21 @@ import owl.core.util.BoundingBox;
 
 public class InterfacesFinder {
 	
+	private class PartnerIdChainInterface {
+		public int partnerId;
+		public ChainInterface chainInterface;
+		public PartnerIdChainInterface(int partnerId, ChainInterface chainInterface) {
+			this.partnerId = partnerId;
+			this.chainInterface = chainInterface;
+		}
+		public PdbChain getPdbChain() {
+			return chainInterface.getMolecule(partnerId);
+		}
+		public List<PdbChain> getCofactors() {
+			return chainInterface.getCofactors(partnerId);
+		}
 
+	}
 	
 	private PdbAsymUnit pdb;
 	private boolean debug;
@@ -29,6 +44,8 @@ public class InterfacesFinder {
 	private int duplicatesCount1=0;
 	private int duplicatesCount2=0; 
 	private int duplicatesCount3=0;
+	
+	private HashMap<String,List<String>> polyChainCodes2cofactorsChainCodes;
 	
 	public InterfacesFinder(PdbAsymUnit pdb) {
 		this.pdb = pdb;
@@ -65,13 +82,14 @@ public class InterfacesFinder {
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
 	 * @param nSpherePoints
 	 * @param nThreads
-	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
-	 * @param nonPoly if true interfaces will be calculated for non-polymer chains and 
+	 * @param hetAtoms whether to consider HETATOMs of the poly chains in surface area calculations or not
+	 * @param nonPoly if true interfaces will be calculated for non-polymer chains as well as 
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
-	 * @param debug set to true to produce some debugging output (run times of each part of the calculation)
+	 * @param cofactorSizeToUse minimum number of atoms (non-H) for which a cofactor will be considered attached
+	 * to a polymer chain for ASA calculations, if -1 no cofactors will be used
 	 * @return
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly) {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse) {	
 
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
@@ -84,6 +102,9 @@ public class InterfacesFinder {
 
 		// initialising the visited ArrayList for keeping track of symmetry redundancy
 		initialiseVisited();
+		
+		// finding cofactor (non-poly) chains for each poly chain
+		findCofactors(cofactorSizeToUse);
 
 		// 0. generate complete unit cell
 		PdbUnitCell cell = null;
@@ -137,6 +158,8 @@ public class InterfacesFinder {
 					PdbChain chainiCopy = chaini.copy(pdb);
 					PdbChain chainjCopy = chainj.copy(pdb);
 					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),pdb.getTransform());
+					interf.setFirstCofactors(getCofactors(iChainCode, pdb.getTransform(), pdb));
+					interf.setSecondCofactors(getCofactors(jChainCode, pdb.getTransform(), pdb));
 					if (!set.add(interf)) {
 						duplicatesCount1++;
 					}
@@ -210,6 +233,8 @@ public class InterfacesFinder {
 							PdbChain chainiCopy = chaini.copy(pdb);
 							PdbChain chainjCopy = chainj.copy(jAsym);
 							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
+							interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
+							interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
 							if (!set.add(interf)) {
 								duplicatesCount2++;
 								if (debug) {
@@ -325,6 +350,9 @@ public class InterfacesFinder {
 										PdbChain chainiCopy = chaini.copy(pdb);
 										PdbChain chainjCopy = chainj.copy(jAsym);
 										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
+										interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
+										interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
+
 										if (!set.add(interf)){
 											duplicatesCount3++;
 											if (debug) {
@@ -386,22 +414,27 @@ public class InterfacesFinder {
 		}
 
 		// first we put one chain of each transform id in the map
-		TreeMap<String, PdbChain> transformId2chain = new TreeMap<String, PdbChain>();
+		TreeMap<String, PartnerIdChainInterface> transformId2chain = new TreeMap<String, PartnerIdChainInterface>();
 		for (ChainInterface interf:set) {
 			PdbChain first = interf.getFirstMolecule();
 			PdbChain second = interf.getSecondMolecule();
 			if (!transformId2chain.containsKey(first.getPdbChainCode()+interf.getFirstTransf().getTransformId())) {
-				transformId2chain.put(first.getPdbChainCode()+interf.getFirstTransf().getTransformId(),first);
+				transformId2chain.put(first.getPdbChainCode()+interf.getFirstTransf().getTransformId(),
+									  new PartnerIdChainInterface(ChainInterface.FIRST, interf));
 			}
 			if (!transformId2chain.containsKey(second.getPdbChainCode()+interf.getSecondTransf().getTransformId())) {
-				transformId2chain.put(second.getPdbChainCode()+interf.getSecondTransf().getTransformId(),second);
+				transformId2chain.put(second.getPdbChainCode()+interf.getSecondTransf().getTransformId(),
+									  new PartnerIdChainInterface(ChainInterface.SECOND, interf));
 			}
 		}
 		
 		// now we calculate ASAs only for those chains in the map
-		for (PdbChain chain:transformId2chain.values()) {
+		for (PartnerIdChainInterface pidci:transformId2chain.values()) {
 			if (debug) System.out.print(".");
-			chain.calcASAs(nSpherePoints, nThreads, hetAtoms);
+			//List<PdbChain> cofactors = getCofactors(chain.getChainCode(), chain.getParent().getTransform(), chain.getParent());
+			PdbChain chain = pidci.getPdbChain();
+			List<PdbChain> cofactors = pidci.getCofactors();
+			chain.calcASAs(nSpherePoints, nThreads, hetAtoms, cofactors);
 		}
 		if (debug) System.out.println();
 		
@@ -411,10 +444,10 @@ public class InterfacesFinder {
 			PdbChain first = interf.getFirstMolecule();
 			PdbChain second = interf.getSecondMolecule();
 			if (!first.hasASA()) {
-				first.setASAs(transformId2chain.get(first.getPdbChainCode()+interf.getFirstTransf().getTransformId()));
+				first.setASAs(transformId2chain.get(first.getPdbChainCode()+interf.getFirstTransf().getTransformId()).getPdbChain());
 			}
 			if (!second.hasASA()) {
-				second.setASAs(transformId2chain.get(second.getPdbChainCode()+interf.getSecondTransf().getTransformId()));
+				second.setASAs(transformId2chain.get(second.getPdbChainCode()+interf.getSecondTransf().getTransformId()).getPdbChain());
 			}
 
 			// finally we need to calculate bsas
@@ -487,5 +520,74 @@ public class InterfacesFinder {
 	public int getDuplicatesCount3() {
 		return duplicatesCount3;
 	}
+	
+	private void findCofactors(int cofactorSizeToUse) {		
+		
+		polyChainCodes2cofactorsChainCodes = new HashMap<String, List<String>>();
+		for (PdbChain poly:pdb.getPolyChains()) {
+			polyChainCodes2cofactorsChainCodes.put(poly.getChainCode(),new ArrayList<String>());
+		}
+		
+		// an input cofactorSizeToUse==-1 means we don't want any cofactors at all
+		if (cofactorSizeToUse<0) return;
+		
+		for (PdbChain nonPoly:pdb.getNonPolyChains()) {
+			if (nonPoly.getNumHeavyAtoms()>cofactorSizeToUse) {
+				String matchingPolyChainCode = pdb.getChainCodeForPdbChainCode(nonPoly.getPdbChainCode());
+				if (matchingPolyChainCode!=null) {
+					polyChainCodes2cofactorsChainCodes.get(matchingPolyChainCode).add(nonPoly.getChainCode());
+				} else {
+					System.err.println("Warning! Could not find a matching polymer chain for non-polymer chain with CIF chain code "+
+							nonPoly.getChainCode()+" (PDB chain code "+nonPoly.getPdbChainCode()+
+							"). The cofactor won't be used for ASA calculations.");
+				}
+			}
+		}
+	}
+	
+	private List<PdbChain> getCofactors(String polyChainCode, CrystalTransform ct, PdbAsymUnit parent) {
+		List<PdbChain> cofactors = new ArrayList<PdbChain>();
+		for (String nonPolyChainCode:polyChainCodes2cofactorsChainCodes.get(polyChainCode)) {
+			PdbChain nonPoly = pdb.getChainForChainCode(nonPolyChainCode).copy(parent); 			
+			nonPoly.transform(parent.getCrystalCell().transfToOrthonormal(ct.getMatTransform()));
+			cofactors.add(nonPoly);
+		}
+		return cofactors;
+	}
 
+	public boolean hasCofactors() {
+		if (polyChainCodes2cofactorsChainCodes==null) return false;
+		for (String chainCode:polyChainCodes2cofactorsChainCodes.keySet()) {
+			if (polyChainCodes2cofactorsChainCodes.get(chainCode).size()>0) return true;
+		}
+		return false;
+	}
+	
+	public int getNumCofactorsForPdbChainCode(String pdbChainCode) {
+		if (polyChainCodes2cofactorsChainCodes==null) return 0;
+		return polyChainCodes2cofactorsChainCodes.get(pdb.getChainCodeForPdbChainCode(pdbChainCode)).size();
+	}
+	
+	public String getCofactorsInfoString(String pdbChainCode) {
+		if (polyChainCodes2cofactorsChainCodes==null) return "";
+		String infoString = "";
+		List<String> chainCodes = polyChainCodes2cofactorsChainCodes.get(pdb.getChainCodeForPdbChainCode(pdbChainCode));
+		for (String chainCode:chainCodes) {
+			PdbChain cofactor = pdb.getChainForChainCode(chainCode);
+			infoString += chainCode+": "+getResiduesString(cofactor)+" ";
+		}
+		return infoString;
+	}
+	
+	private String getResiduesString(PdbChain nonPolyChain) {
+		String resStr = "";
+		int i = 0;
+
+		for (Residue residue:nonPolyChain) {
+			if (i==0) resStr += residue.getLongCode()+"("+residue.getSerial()+")"; 
+			else resStr += ", "+residue.getLongCode()+"("+residue.getSerial()+")";
+			i++;
+		}
+		return resStr;
+	}
 }

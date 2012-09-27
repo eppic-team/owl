@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.util.List;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
@@ -16,8 +17,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	private static final long serialVersionUID = 1L;
 
-	private static final int FIRST = 0;
-	private static final int SECOND = 1;
+	public static final int FIRST = 0;
+	public static final int SECOND = 1;
 	
 	private int id;
 	private String name;
@@ -26,6 +27,9 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	private PdbChain firstMolecule;
 	private PdbChain secondMolecule;
+	
+	private List<PdbChain> firstCofactors;
+	private List<PdbChain> secondCofactors;
 	
 	private InterfaceRimCore firstRimCore;  // cached first molecule's rim and core
 	private InterfaceRimCore secondRimCore; // cached second molecule's rim and core
@@ -59,6 +63,45 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		this.name = this.firstMolecule.getPdbChainCode()+"+"+this.secondMolecule.getPdbChainCode();
 	}
 	
+	public List<PdbChain> getCofactors(int molecId) {
+		if (molecId==FIRST) return getFirstCofactors();
+		if (molecId==SECOND) return getSecondCofactors();
+		return null;
+	}
+	
+	public void setFirstCofactors(List<PdbChain> cofactors) {
+		this.firstCofactors = cofactors;
+	}
+	
+	public List<PdbChain> getFirstCofactors() {
+		return firstCofactors;
+	}
+	
+	public void setSecondCofactors(List<PdbChain> cofactors) {
+		this.secondCofactors = cofactors;
+	}
+	
+	public List<PdbChain> getSecondCofactors() {
+		return secondCofactors;
+	}
+	
+	public boolean hasCofactors() {
+		if (firstCofactors==null && secondCofactors==null) return false;
+		if (firstCofactors!=null && firstCofactors.size()>0) return true;
+		if (secondCofactors!=null && secondCofactors.size()>0) return true;
+		return false;
+	}
+	
+	public boolean hasFirstCofactors() {
+		if (firstCofactors!=null && firstCofactors.size()>0) return true;
+		return false;
+	}
+	
+	public boolean hasSecondCofactors() {
+		if (secondCofactors!=null && secondCofactors.size()>0) return true;
+		return false;
+	}
+	
 	public int getId() {
 		return id;
 	}
@@ -81,6 +124,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setInterfaceArea(double interfaceArea) {
 		this.interfaceArea = interfaceArea;
+	}
+	
+	public PdbChain getMolecule(int molecId) {
+		if (molecId==FIRST) return getFirstMolecule();
+		if (molecId==SECOND) return getSecondMolecule();
+		return null;
 	}
 	
 	public PdbChain getFirstMolecule() {
@@ -225,21 +274,83 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 
 		// the ASAs of the uncomplexed chains must be already calculated by the caller
 		
-		PdbAsymUnit complex = new PdbAsymUnit();
-		complex.setPdbCode(firstMolecule.getPdbCode());
-		complex.setPolyChain("A", firstMolecule);
-		complex.setPolyChain("B", secondMolecule);
+		// 1) we find the total number of atoms we have (two molecules plus possible cofactors)
+		int numAtoms = 0;
+		for (int molecId=0;molecId<2;molecId++) {
+			PdbChain chain = getMolecule(molecId);
+			chain.setAtomRadii();
+			if (hetAtoms) {
+				numAtoms += chain.getNumAtoms();
+			} else {
+				numAtoms += chain.getNumNonHetAtoms();
+			}
+			for (PdbChain cofactor:getCofactors(molecId)) {
+				cofactor.setAtomRadii();
+				numAtoms += cofactor.getNumAtoms();
+			}
+		}
 
-		complex.calcBSAs(nSpherePoints, nThreads, hetAtoms);
-		double totBuried = 0.0;
+		// 2) then we fill the atoms array with atoms in 2 molecules and possible cofactors
+		Atom[] atoms = new Atom[numAtoms];
 		
-		for (Residue residue:firstMolecule) {
-			totBuried+=residue.getBsa();
+		int i = 0;
+		for (int molecId=0;molecId<2;molecId++) {
+			PdbChain chain = getMolecule(molecId);
+			for (Residue residue:chain) {
+				if (!hetAtoms && (residue instanceof HetResidue)) continue;
+				for (Atom atom:residue) {
+					atoms[i] = atom;
+					i++;
+				}
+			}
+			for (PdbChain cofactor:getCofactors(molecId)) {
+				for (Residue residue:cofactor) {
+					for (Atom atom:residue) {
+						atoms[i] = atom;
+						i++;
+					}
+				}
+			}
 		}
-		for (Residue residue:secondMolecule) {
-			totBuried+=residue.getBsa();
+		
+		// 3) we calculate asas for the complex
+		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		
+		// 4) by subtraction to the uncomplex values (that should be present in atoms from previously calling calcASAs) we get bsas 
+		for (i=0;i<atoms.length;i++){
+			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
+		}		
+		// and the sums per residue
+		for (int molecId=0;molecId<2;molecId++) {
+			PdbChain chain = getMolecule(molecId);
+			for (Residue residue:chain) {
+				double tot = 0;
+				for (Atom atom:residue) {
+					tot+=atom.getBsa();
+				}
+				residue.setBsa(tot);
+			}
+			// even though we won't use the cofactors' bsas it doesn't hurt to calculate them
+			for (PdbChain cofactor:getCofactors(molecId)) {
+				for (Residue residue:cofactor) {
+					double tot = 0;
+					for (Atom atom:residue) {
+						tot+=atom.getBsa();
+					}				
+					residue.setBsa(tot);
+				}
+			}
 		}
 
+		// 5) we finally calculate the interface bsa from summing all residues' bsas
+		//    note here we count only the polymer molecules and not the cofactors
+		double totBuried = 0.0;
+		for (int molecId=0;molecId<2;molecId++) {
+			for (Residue residue:getMolecule(molecId)) {
+				totBuried+=residue.getBsa();
+			}
+		}
+		
 		this.setInterfaceArea(totBuried/2.0); // to use the same convention as in PISA we halve it
 		
 	}
@@ -564,7 +675,17 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		if (!firstMolecule.isNonPolyChain()) firstMolecule.writeSeqresRecord(ps, firstMolecule.getPdbChainCode());
 		if (!secondMolecule.isNonPolyChain()) secondMolecule.writeSeqresRecord(ps,chain2forOutput);
 		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
+		if (firstCofactors!=null) {
+			for (PdbChain cofactor:firstCofactors) {
+				cofactor.writeAtomLines(ps, firstMolecule.getPdbChainCode());
+			}
+		}
 		secondMolecule.writeAtomLines(ps,chain2forOutput);
+		if (secondCofactors!=null) {
+			for (PdbChain cofactor:secondCofactors) {
+				cofactor.writeAtomLines(ps, chain2forOutput);
+			}
+		}
 		ps.println("END");
 		ps.close();
 	}

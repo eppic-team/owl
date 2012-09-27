@@ -947,11 +947,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @param hetAtoms whether to consider HETATOMs in surface area calculations or not
 	 * @param nonPoly if true interfaces will be calculated for non-polymer chains and 
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
+	 * @param cofactorSizeToUse minimum number of atoms (non-H) for which a cofactor will be considered attached
+	 * to a polymer chain for ASA calculations, if -1 no cofactors will be used
 	 * @return
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly)  {
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse)  {
 		InterfacesFinder interfFinder = new InterfacesFinder(this);
-		return interfFinder.getAllInterfaces(cutoff, nSpherePoints, nThreads, hetAtoms, nonPoly);
+		return interfFinder.getAllInterfaces(cutoff, nSpherePoints, nThreads, hetAtoms, nonPoly, cofactorSizeToUse);
 	}
 
 	/**
@@ -1014,17 +1016,25 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 */
 	public void calcBSAs(int nSpherePoints, int nThreads, boolean hetAtoms) {
 		
-		int numAtoms = this.getNumAtoms();
-		if (!hetAtoms) {
-			numAtoms = this.getNumNonHetAtoms();
+		int numAtoms = 0;
+		for (PdbChain pdb:getPolyChains()) {
+			if (hetAtoms) {
+				numAtoms+=pdb.getNumAtoms();
+			} else {
+				numAtoms+=pdb.getNumNonHetAtoms();
+			}
 		}
+		for (PdbChain pdb:getNonPolyChains()) {
+			numAtoms+=pdb.getNumAtoms();
+		}
+		
 		Atom[] atoms = new Atom[numAtoms];
 		
 		int i = 0;
 		for (PdbChain pdb:getAllChains()) {
 			pdb.setAtomRadii();
 			for (Residue residue:pdb) {
-				if (!hetAtoms && (residue instanceof HetResidue)) continue;
+				if (!pdb.isNonPolyChain() && !hetAtoms && (residue instanceof HetResidue)) continue;
 				for (Atom atom:residue) {
 					atoms[i] = atom;
 					i++;
