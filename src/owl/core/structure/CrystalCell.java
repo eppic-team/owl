@@ -392,6 +392,8 @@ public class CrystalCell implements Serializable {
 	 * a non-standard orthogonalisation. See:
 	 * http://www.wwpdb.org/documentation/2011remediation_overview-061711.pdf
 	 * For normal cases the scale matrix is diagonal without a translation component.
+	 * Additionally the translation component of the SCALE matrix is also checked to 
+	 * make sure it is (0,0,0), if not false is return
 	 * @param scaleMatrix
 	 * @return
 	 */
@@ -403,6 +405,11 @@ public class CrystalCell implements Serializable {
 					//System.out.println("Their value ("+i+","+j+"): "+scaleMatrix.getElement(i,j));
 					return false;	
 				}
+			}
+		}
+		for (int i=0;i<3;i++) {
+			if (!deltaComp(scaleMatrix.getElement(i, 3),0)) {
+				return false;
 			}
 		}
 		return true;
