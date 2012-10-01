@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import owl.core.sequence.Sequence;
+import owl.core.util.FileFormatException;
 
 
 /**
@@ -128,16 +129,18 @@ public class BlastRunner {
 	 * @param numThreads
 	 * @param maxNumHits the maximum number of hits to report, only used when >500, then passed 
 	 * to blast with option -v 
+	 * @param matrix the name of the substitution matrix to use, e.g. BLOSUM62
 	 * @throws IOException
 	 * @throws BlastException if exit statis of the program is not 0
 	 * @throws InterruptedException
 	 */
-	public void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
+	private void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads, int maxNumHits, String matrix) 
 	throws IOException, BlastException, InterruptedException {
 		
 		checkIO(queryFile, db);
 		
-		cmdLine = blastallProg + " -p " + prog + getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, maxNumHits);
+		cmdLine = blastallProg + " -p " + prog + " -M " + matrix + " " +
+				getCommonOptionsStr(queryFile, db, outFile, outputType, noFiltering, numThreads, maxNumHits);
 		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
 		
 
@@ -149,6 +152,13 @@ public class BlastRunner {
 	
 	/**
 	 * Runs protein blast against given db for given input query file 
+	 * The substitution matrix used will be adjusted automatically depending on query 
+	 * length (following http://www.ncbi.nlm.nih.gov/blast/html/sub_matrix.html):
+	 *   <35   : PAM30
+	 *   35-50 : PAM70
+	 *   50-85 : BLOSUM80
+	 *   >85   : BLOSUM62
+	 * 
 	 * @param queryFile
 	 * @param db
 	 * @param outFile
@@ -165,7 +175,47 @@ public class BlastRunner {
 	 */
 	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
 	throws IOException, BlastException, InterruptedException {
-		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads, maxNumHits);
+		int length = 0;
+		try {
+			List<Sequence> readseqs = Sequence.readSeqs(queryFile, null);
+			if (readseqs.size()>0) {
+				length = readseqs.get(0).getLength();
+			} else {
+				throw new BlastException("The given FASTA file for blasting "+queryFile+" contains no sequences");
+			}
+		} catch (FileFormatException e) {
+			throw new BlastException("The given FASTA file for blasting "+queryFile+" does not seem to have the right format");
+		}
+		
+		String mat = getMatrixFromLength(length);		
+			
+			
+		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads, maxNumHits, mat);
+	}
+	
+	/**
+	 * Returns a blast substitution matrix depending on given sequenceLength
+	 * (following http://www.ncbi.nlm.nih.gov/blast/html/sub_matrix.html):
+	 *   <35   : PAM30
+	 *   35-50 : PAM70
+	 *   50-85 : BLOSUM80
+	 *   >85   : BLOSUM62
+	 * This is what most blast web servers do by default.
+	 * @param sequenceLength
+	 * @return
+	 */
+	private String getMatrixFromLength(int sequenceLength) {
+		String mat;
+		if (sequenceLength<35) {
+			mat = "PAM30";
+		} else if (sequenceLength<50) {
+			mat = "PAM70"; 
+		} else if (sequenceLength<85) {
+			mat = "BLOSUM80";
+		} else {
+			mat = "BLOSUM62";
+		}
+		return mat;
 	}
 	
 	/**
