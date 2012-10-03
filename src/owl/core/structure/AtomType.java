@@ -71,6 +71,7 @@ public enum AtomType {
 	Gd(64,157.253, 2.00, "GD", "Gadolinium",false, false),
 	Tb(65,158.925, 2.00, "TB", "Terbium",   false, false),
 	Ho(67,164.930, 2.00, "HO", "Holmium",   false, false),
+	Er(68,167.259, 2.00, "ER", "Erbium",    false, false),
 	Yb(70,173.054, 2.00, "YB", "Ytterbium", false, false),
 	Ta(73,180.948, 2.00, "TA", "Tantalum",  false, false),
 	W (74,183.841, 2.00,  "W", "Tungsten",  false, false),
