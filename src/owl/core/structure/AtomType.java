@@ -60,6 +60,7 @@ public enum AtomType {
 	Ru(44,101.072, 2.00, "RU", "Ruthenium", false, false),
 	Ag(47,107.868, 1.72, "AG", "Silver",    false, false),
 	Cd(48,112.412, 1.58, "CD", "Cadmium",   false, false),
+	Sb(51,121.760, 2.00, "SB", "Antimony",  false, false),
 	I (53,126.904, 1.98,  "I", "Iodine",    false, false),
 	Xe(54,131.294, 2.16, "XE", "Xenon",     false, false),
 	Cs(55,132.905, 2.00, "CS", "Caesium",   false, false),
