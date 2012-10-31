@@ -27,6 +27,7 @@ import owl.core.connections.EmblWSDBfetchConnection;
 import owl.core.connections.NoMatchFoundException;
 import owl.core.connections.UniProtConnection;
 import owl.core.connections.UniprotLocalConnection;
+import owl.core.runners.ClustaloRunner;
 import owl.core.runners.TcoffeeException;
 import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastException;
@@ -498,18 +499,34 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	}
 	
 	/**
-	 * Runs t_coffee to align all protein sequences of homologs and the query sequence
+	 * Runs external program to align all protein sequences of homologs and the query sequence
 	 * returning a MultipleSequenceAlignment object
+	 * Two external programs are supported: t_coffee or clustalo. Only one of the two can be passed, 
+	 * the other one must be null, if both are null or both are set then an IllegalArgumentException is thrown
 	 * @param tcoffeeBin
-	 * @param veryFast whether to use t_coffee's very fast alignment (and less accurate) mode
-	 * @params nThreads number of CPU cores t_coffee should use
-	 * @params alnCacheFile
+	 * @param clustaloBin
+	 * @param nThreads number of CPU cores t_coffee should use
+	 * @param useHspsOnly
+	 * @param alnCacheFile
 	 * @throws IOException
-	 * @throws TcoffeeException 
 	 * @throws UniprotVerMisMatchException 
 	 */
-	public void computeTcoffeeAlignment(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly, File alnCacheFile) 
-			throws IOException, TcoffeeException, InterruptedException, UniprotVerMisMatchException {
+	public void computeAlignment(File tcoffeeBin, File clustaloBin, int nThreads, boolean useHspsOnly, File alnCacheFile) 
+			throws IOException, InterruptedException, UniprotVerMisMatchException {
+				
+		// we have to catch the special case when there are no homologs at all, we then will set an "alignment" that contains just the query sequence
+		if (getSizeFilteredSubset()==0) {
+
+			String[] tags = { this.ref.getUniId() };
+			String[] seqs = { ref.getSeq().getInterval(refInterval).getSeq() };
+			try {
+				this.aln = new MultipleSequenceAlignment(tags,seqs);
+			} catch (AlignmentConstructionException e) {
+				throw new IOException(e);
+			}
+			LOGGER.info("No homologs to align: no need to compute alignment");
+			return;
+		}
 		
 		File alnFile = null;
 		boolean alnFromCache = false;
@@ -530,14 +547,15 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			try {
 				this.aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
 				
-				if (!checkAlnFromCache(true, false)) { // the 2 parameters have to match the ones passed to writeToFasta in runTcoffee
+				// the 2 parameters have to match the ones passed to writeToFasta in runTcoffee/runClustalo below
+				if (!checkAlnFromCache(true, false)) { 
 					LOGGER.warn("Alignment from cache file does not coindice with computed filtered list of homologs");
-					LOGGER.info("Will compute t_coffee alignment");
-					alnFile = runTcoffee(tcoffeeBin, veryFast, nThreads,useHspsOnly);
+					LOGGER.info("Will compute alignment");
+					alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads, useHspsOnly);
 
 				} else {
 					alnFromCache = true;
-					LOGGER.info("Alignment from cache file coincides with computed filtered list of homologs. Won't recompute with t_coffee");
+					LOGGER.info("Alignment from cache file coincides with computed filtered list of homologs. Won't recompute alignment");
 				}
 				
 				
@@ -549,8 +567,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			
 			
 		} else {
-			// no cache: we compute with t-coffee
-			alnFile = runTcoffee(tcoffeeBin, veryFast, nThreads,useHspsOnly); 			
+			// no cache: we compute with external program
+			alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads, useHspsOnly); 			
 			
 		}
 		
@@ -581,8 +599,24 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 	}
 	
-	private File runTcoffee(File tcoffeeBin, boolean veryFast, int nThreads, boolean useHspsOnly) 
-			throws TcoffeeException, InterruptedException, IOException {
+	private File runAlignmentProgram(File tcoffeeBin, File clustaloBin, int nThreads, boolean useHspsOnly) 
+			throws InterruptedException, IOException {
+		
+		if ((tcoffeeBin==null && clustaloBin==null) || (tcoffeeBin!=null && clustaloBin!=null)) {
+			throw new IllegalArgumentException("Only one alignment program must be passed: either t_coffee or clustalo");
+		}
+		
+		if (tcoffeeBin!=null) {
+			return runTcoffee(tcoffeeBin, nThreads, useHspsOnly);
+		}
+
+		else {
+			return runClustalo(clustaloBin, nThreads, useHspsOnly);
+		}
+	}
+	
+	private File runTcoffee(File tcoffeeBin, int nThreads, boolean useHspsOnly) 
+			throws InterruptedException, IOException {
 		
 		File alnFile = File.createTempFile("homologs.",".aln");
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
@@ -590,11 +624,16 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
 
 		this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
+		
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
-		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, veryFast, nThreads);
+		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, false, nThreads);
 		LOGGER.info("Running t_coffee command: " + tcr.getCmdLine());
 		long start = System.nanoTime();
-		tcr.runTcoffee();
+		try {
+			tcr.runTcoffee();
+		} catch (TcoffeeException e) {
+			throw new IOException(e);
+		}
 		long end = System.nanoTime();
 		LOGGER.info("t_coffee ran in "+((end-start)/1000000000L)+"s ("+nThreads+" threads)");
 		if (!DEBUG) { 
@@ -603,6 +642,29 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			alnFile.deleteOnExit();
 			tcoffeeLogFile.deleteOnExit();
 			outTreeFile.deleteOnExit(); 
+		}
+		return alnFile;
+	}
+	
+	private File runClustalo(File clustaloBin, int nThreads, boolean useHspsOnly) 
+			throws InterruptedException, IOException {
+		
+		File alnFile = File.createTempFile("homologs.",".aln");
+		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
+
+		this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
+		
+		ClustaloRunner cor = new ClustaloRunner(clustaloBin);
+		cor.buildCmdLine(homologSeqsFile, alnFile, nThreads);
+		LOGGER.info("Running clustalo command: " + cor.getCmdLine());
+		long start = System.nanoTime();		
+		cor.runClustalo();		
+		long end = System.nanoTime();
+		LOGGER.info("clustalo ran in "+((end-start)/1000000000L)+"s ("+nThreads+" threads)");
+		if (!DEBUG) { 
+			// note that if the run of tcoffee throws an exception, files are not marked for deletion
+			homologSeqsFile.deleteOnExit();
+			alnFile.deleteOnExit();
 		}
 		return alnFile;
 	}
