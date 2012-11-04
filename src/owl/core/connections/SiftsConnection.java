@@ -12,10 +12,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.features.SiftsFeature;
+import owl.core.util.Interval;
 
 
 
@@ -156,5 +158,24 @@ public class SiftsConnection {
 	 */
 	public int getMappingsCount() {
 		return chain2uniprot.size();
+	}
+	
+	public static void main (String[] args) throws IOException {
+		SiftsConnection sc = new SiftsConnection("/home/jose/pdb_chain_uniprot.lst");
+		
+		
+		System.out.println("Unique UniProts in PDB: "+sc.uniprot2chain.size());
+		
+		int count = 0;
+		for (List<SiftsFeature> list:sc.uniprot2chain.values()) {
+			TreeSet<Interval> uniqueIntervals = new TreeSet<Interval>();
+			for (SiftsFeature f:list) {
+				for (Interval interv: f.getUniprotIntervalSet()){
+					uniqueIntervals.add(interv); 
+				}
+			}
+			count += uniqueIntervals.size();
+		}
+		System.out.println("Unique UniProt segments in PDB: "+count);
 	}
 }
