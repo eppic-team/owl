@@ -13,6 +13,7 @@ CURRENT="$LOCALDIR/current"
 DOWNLOAD="$LOCALDIR/download"
 
 FORMATDB=/usr/bin/formatdb
+MAKEBLASTDB=/usr/bin/makeblastdb
 
 #SITE="ftp://ftp.uniprot.org/pub" # US main ftp
 SITE="ftp://ftp.ebi.ac.uk/pub" # UK mirror
@@ -61,23 +62,23 @@ fi
 
 
 # download if newer available
-curl -z $CURRENT/$TREMBL $tremblurl > $DOWNLOAD/${TREMBL}.gz
-if [ -s "$DOWNLOAD/${TREMBL}.gz" ]
-then
-	echo "New trembl version downloaded"
-else
-	echo "Remote trembl file not newer than local one. Something wrong. Exiting."
-	exit 1
-fi
+#curl -z $CURRENT/$TREMBL $tremblurl > $DOWNLOAD/${TREMBL}.gz
+#if [ -s "$DOWNLOAD/${TREMBL}.gz" ]
+#then
+#	echo "New trembl version downloaded"
+#else
+#	echo "Remote trembl file not newer than local one. Something wrong. Exiting."
+#	exit 1
+#fi
 
-curl -z $CURRENT/$SPROT $sproturl > $DOWNLOAD/${SPROT}.gz
-if [ -s "$DOWNLOAD/${SPROT}.gz" ]
-then
-	echo "New sprot version downloaded"
-else
-	echo "Remote sprot file not newer than local one. Something wrong. Exiting."
-	exit 1	
-fi
+#curl -z $CURRENT/$SPROT $sproturl > $DOWNLOAD/${SPROT}.gz
+#if [ -s "$DOWNLOAD/${SPROT}.gz" ]
+#then
+#	echo "New sprot version downloaded"
+#else
+#	echo "Remote sprot file not newer than local one. Something wrong. Exiting."
+#	exit 1	
+#fi
 
 curl -z $CURRENT/$UNIREF100 $uref100url > $DOWNLOAD/${UNIREF100}.gz
 if [ -s "$DOWNLOAD/${UNIREF100}.gz" ]
@@ -93,11 +94,11 @@ curl $SIFTSPDB2UNIPROTFTP > $DOWNLOAD/$SIFTSPDB2UNIPROT
 
 
 # uncompressing
-gzip -df $DOWNLOAD/${SPROT}.gz
-gzip -df $DOWNLOAD/${TREMBL}.gz
+#gzip -df $DOWNLOAD/${SPROT}.gz
+#gzip -df $DOWNLOAD/${TREMBL}.gz
 gzip -df $DOWNLOAD/${UNIREF100}.gz
 # creating the "all" file
-cat $DOWNLOAD/$TREMBL $DOWNLOAD/$SPROT > $DOWNLOAD/$ALL
+#cat $DOWNLOAD/$TREMBL $DOWNLOAD/$SPROT > $DOWNLOAD/$ALL
 	
 # run formatdb
 # formatdb appends the path used to run it to the .pal index file, 
@@ -114,8 +115,11 @@ logfile="$DOWNLOAD/formatdb.log"
 cd $DOWNLOAD
 #$FORMATDB -p T -o T -l $logfile -i $SPROT
 #$FORMATDB -p T -o T -l $logfile -i $TREMBL
-$FORMATDB -p T -o T -l $logfile -i $ALL
-$FORMATDB -p T -o T -l $logfile -i $UNIREF100
+#$FORMATDB -p T -o T -l $logfile -i $ALL
+#$FORMATDB -p T -o T -l $logfile -i $UNIREF100
+
+# new blastplus makeblastdb
+$MAKEBLASTDB -dbtype prot -in $UNIREF100 -logfile $logfile -parse_seqids
 
 #renaming DOWNLOAD dir to uniprot version and updating current symlink
 echo "Creating new symlink..."
