@@ -161,7 +161,7 @@ public class SiftsConnection {
 	}
 	
 	public static void main (String[] args) throws IOException {
-		SiftsConnection sc = new SiftsConnection("/home/jose/pdb_chain_uniprot.lst");
+		SiftsConnection sc = new SiftsConnection("/nfs/data/dbs/uniprot/current/pdb_chain_uniprot.lst");
 		
 		
 		System.out.println("Unique UniProts in PDB: "+sc.uniprot2chain.size());

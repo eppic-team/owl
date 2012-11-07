@@ -15,6 +15,8 @@ import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
+import owl.tests.core.util.BlankingResolver;
+
 /**
  * Blast XML output parser using SAX
  * @author duarte
@@ -75,10 +77,13 @@ public class BlastXMLParser implements ContentHandler {
 	 * Constructs new BlastXMLParser parsing the given Blast XML file
 	 * Get the hits calling {@link #getHits()}
 	 * @param blastXMLFile
+	 * @param ignoreDTDUrl if true the DTD URL won't be read (blast output files always define a DOCTYPE line 
+	 * pointing to http://www.ncbi.nlm.nih.gov/dtd/NCBI_BlastOutput.dtd), if false it will be read and the
+	 * document validated with it
 	 * @throws SAXException
 	 * @throws IOException
 	 */
-	public BlastXMLParser(File blastXMLFile) throws SAXException, IOException{
+	public BlastXMLParser(File blastXMLFile, boolean ignoreDTDUrl) throws SAXException, IOException{
 		this.blastXMLFile = blastXMLFile;
 		
 		InputStream is = new FileInputStream(this.blastXMLFile);
@@ -88,6 +93,10 @@ public class BlastXMLParser implements ContentHandler {
 	 		
 		//BlastXMLHandler handler = new BlastXMLHandler();
 		parser.setContentHandler(this);
+		
+		if (ignoreDTDUrl) {
+			parser.setEntityResolver(new BlankingResolver());
+		}
 		
 		parser.parse(input);
 
@@ -345,7 +354,7 @@ public class BlastXMLParser implements ContentHandler {
 		//File xmlfile = new File("/scratch/local/temp/blast.out.xml");
 		File xmlfile = new File(args[0]);
 		
-		BlastXMLParser bxp = new BlastXMLParser(xmlfile);
+		BlastXMLParser bxp = new BlastXMLParser(xmlfile, false);
 		
 		BlastHitList hitListXML = bxp.getHits();
 		System.out.println("query length= "+hitListXML.getQueryLength());

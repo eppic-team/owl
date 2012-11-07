@@ -503,7 +503,7 @@ public class RunAll {
 			if (blastFile.exists()) {
 				BlastXMLParser bxp;
 				try {
-					bxp = new BlastXMLParser(blastFile);
+					bxp = new BlastXMLParser(blastFile, false);
 					BlastHitList hits = bxp.getHits();
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from blast file "+blastFile);
@@ -520,7 +520,7 @@ public class RunAll {
 			if (psiblastFile.exists()) {
 				BlastXMLParser bxp;
 				try {
-					bxp = new BlastXMLParser(psiblastFile);
+					bxp = new BlastXMLParser(psiblastFile, false);
 					BlastHitList hits = bxp.getHits();
 					if (hits.contains(BlastHit.templateIdToSubjectId(templates.getTemplate(0).getId()))) {
 						System.out.println("Target to template alignment from psi-blast file "+psiblastFile);

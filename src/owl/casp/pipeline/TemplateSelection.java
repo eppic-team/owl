@@ -72,8 +72,6 @@ public class TemplateSelection {
 	protected static final String PSIPRED_SS2_SUFFIX = ".ss2";
 	protected static final String PSIPRED_HORIZ_SUFFIX = ".horiz";
 	
-	protected static final int 	BLAST_DEFAULT_OUTPUT_TYPE = 7;  // xml output
-	protected static final int	BLAST_CLASSIC_OUTPUT = 0;
 	protected static final boolean BLAST_NO_FILTERING = true;
 	protected static final int	BLAST_PROFILE_OUTPUT = 6;	// needed for conversion to MSA with reformatpsialn
 	
@@ -226,12 +224,13 @@ public class TemplateSelection {
 
 		outPdbBlast = new File(outDir,baseName+BLASTOUT_PDB_SUFFIX);
 		File classicOutFile = new File(outDir,baseName+BLASTOUT_CLASSIC_PDB_SUFFIX);
-		BlastRunner blastRunner = new BlastRunner(BLASTBIN_DIR, BLASTDB_PDB_DIR);
-		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, outPdbBlast, BLAST_DEFAULT_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, 500);
-		blastRunner.runBlastp(inputSeqFile, pdbBlastDb, classicOutFile, BLAST_CLASSIC_OUTPUT, BLAST_NO_FILTERING, blastNumThreads, 500);
+		BlastRunner blastRunner = new BlastRunner(BLASTDB_PDB_DIR);
+		blastRunner.setLegacyBlastBinDir(BLASTBIN_DIR);
+		blastRunner.runLegacyBlastp(inputSeqFile, pdbBlastDb, outPdbBlast, BlastRunner.LEGACYBLAST_XML_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, 500);
+		blastRunner.runLegacyBlastp(inputSeqFile, pdbBlastDb, classicOutFile, BlastRunner.BLAST_CLASSIC_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, 500);
 		
 		try {
-			BlastXMLParser blastParser = new BlastXMLParser(outPdbBlast);
+			BlastXMLParser blastParser = new BlastXMLParser(outPdbBlast, false);
 			hitsPdbBlast = blastParser.getHits();
 		} catch (SAXException e) {
 			// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug
@@ -275,14 +274,15 @@ public class TemplateSelection {
 		File classicOutPdbPsiblast = new File(outDir, baseName+PSIBLASTOUT_CLASSIC_PDB_SUFFIX);
 		outProfileFile = new File(outDir,baseName+PSIBLAST_PROFILE_SUFFIX);
 
-		BlastRunner blastRunner = new BlastRunner(BLASTBIN_DIR, BLASTDB_BCKGRD_DIR);
-		blastRunner.runPsiBlast(inputSeqFile, nrBlastDb, outNrPsiblast, maxIter, outProfileFile, null, BLAST_PROFILE_OUTPUT, BLAST_NO_FILTERING, blastNumThreads);
-		blastRunner = new BlastRunner(BLASTBIN_DIR, BLASTDB_PDB_DIR);
-		blastRunner.runPsiBlast(inputSeqFile, pdbBlastDb, outPdbPsiblast, 1, null, outProfileFile, BLAST_DEFAULT_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
-		blastRunner.runPsiBlast(inputSeqFile, pdbBlastDb, classicOutPdbPsiblast, 1, null, outProfileFile, BLAST_CLASSIC_OUTPUT, BLAST_NO_FILTERING, blastNumThreads);
+		BlastRunner blastRunner = new BlastRunner(BLASTDB_BCKGRD_DIR);
+		blastRunner.setLegacyBlastBinDir(BLASTBIN_DIR);
+		blastRunner.runLegacyPsiBlast(inputSeqFile, nrBlastDb, outNrPsiblast, maxIter, outProfileFile, null, BLAST_PROFILE_OUTPUT, BLAST_NO_FILTERING, blastNumThreads);
+		blastRunner = new BlastRunner(BLASTDB_PDB_DIR);
+		blastRunner.runLegacyPsiBlast(inputSeqFile, pdbBlastDb, outPdbPsiblast, 1, null, outProfileFile, BlastRunner.LEGACYBLAST_XML_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
+		blastRunner.runLegacyPsiBlast(inputSeqFile, pdbBlastDb, classicOutPdbPsiblast, 1, null, outProfileFile, BlastRunner.BLAST_CLASSIC_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads);
 
 		try {
-			BlastXMLParser blastParser = new BlastXMLParser(outPdbPsiblast);
+			BlastXMLParser blastParser = new BlastXMLParser(outPdbPsiblast, false);
 			hitsPdbPsiblast = blastParser.getHits();
 		} catch (SAXException e) {
 			// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug

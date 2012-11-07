@@ -139,7 +139,8 @@ public class PsipredRunner {
 		writeStringToFile(snFile, tmpSeqFile.getAbsolutePath());
 		
 		// running makemat (NOTE: we won't blast with this BlastRunner, we do just makemat, thus we don't need a blastDbDir)
-		BlastRunner blastRunner = new BlastRunner(blastBinDir, null);
+		BlastRunner blastRunner = new BlastRunner(null);
+		blastRunner.setLegacyBlastBinDir(blastBinDir);
 		try {
 			blastRunner.runMakemat(tmpDir, basename);
 		} catch (BlastException e) {

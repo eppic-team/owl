@@ -69,9 +69,10 @@ public class BlastParsersTest {
 			File outFileTAB = new File(TMP_DIR,target+".blast.tab");
 			tabFiles[i] = outFileTAB;
 			xmlFiles[i] = outFileXML;
-			BlastRunner br = new BlastRunner(BLAST_BIN_DIR,BLAST_DB_DIR);
-			br.runBlastp(queryFile, BLAST_DB, outFileXML, 7, true, numThreads, 500);
-			br.runBlastp(queryFile, BLAST_DB, outFileTAB, 8, true, numThreads, 500);
+			BlastRunner br = new BlastRunner(BLAST_DB_DIR);
+			br.setLegacyBlastBinDir(BLAST_BIN_DIR);
+			br.runLegacyBlastp(queryFile, BLAST_DB, outFileXML, BlastRunner.LEGACYBLAST_XML_OUTPUT_TYPE, true, numThreads, 500);
+			br.runLegacyBlastp(queryFile, BLAST_DB, outFileTAB, BlastRunner.LEGACYBLAST_TAB_OUTPUT_TYPE, true, numThreads, 500);
 			i++;
 		}
 	}
@@ -95,7 +96,7 @@ public class BlastParsersTest {
 			BlastTabularParser btp = new BlastTabularParser(tabFiles[i]);
 			BlastHitList hitListTAB = btp.getHits();
 			
-			BlastXMLParser bxm = new BlastXMLParser(xmlFiles[i]);
+			BlastXMLParser bxm = new BlastXMLParser(xmlFiles[i], false);
 			BlastHitList hitListXML = bxm.getHits();
 			
 			// it seems that the tabular output lists a maximum of 250 hsp lines, thus the following

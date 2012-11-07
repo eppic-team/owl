@@ -64,8 +64,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	private static final String     BLASTCLUST_BASENAME = "homClustering";
 	private static final String     BLASTCLUST_OUT_SUFFIX = ".blastclust.out";
 	private static final String 	BLASTCLUST_SAVE_SUFFIX = ".blastclust.save";
-	
-	private static final int 		BLAST_OUTPUT_TYPE = 7;  // xml output
+	 
 	private static final boolean 	BLAST_NO_FILTERING = true;
 	private static final String 	UNIPROT_VER_FILE = "reldate.txt";
 	
@@ -140,7 +139,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	/**
 	 * Performs a blast search based on the reference UniprotEntry to populate this list of homologs.
 	 * All blast output files will be removed on exit.
-	 * @param blastBinDir
+	 * @param blastPlusBlastp
 	 * @param blastDbDir
 	 * @param blastDb
 	 * @param blastNumThreads
@@ -150,7 +149,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @throws UniprotVerMisMatchException if uniprot versions of cacheFile given and blastDbDir do not coincide
 	 * @throws InterruptedException
 	 */
-	public void searchWithBlast(String blastBinDir, String blastDbDir, String blastDb, int blastNumThreads, int maxNumSeqs, File cacheFile) 
+	public void searchWithBlast(File blastPlusBlastp, String blastDbDir, String blastDb, int blastNumThreads, int maxNumSeqs, File cacheFile) 
 			throws IOException, BlastException, UniprotVerMisMatchException, InterruptedException {
 		
 		File outBlast = null;
@@ -172,7 +171,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			LOGGER.warn("Reading blast results from cache file "+cacheFile);
 
 			try {
-				BlastXMLParser blastParser = new BlastXMLParser(outBlast);
+				// note that by setting second parameter to true we are ignoring the DTD url to avoid unnecessary network connections
+				BlastXMLParser blastParser = new BlastXMLParser(outBlast, true);
 				blastList = blastParser.getHits();
 				
 				// 500 is blast's default, we don't want to check this if we are under default
@@ -209,8 +209,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			// NOTE: we blast the reference uniprot sequence using only the interval specified
 			this.ref.getSeq().getInterval(this.refInterval).writeToFastaFile(inputSeqFile);
 			
-			BlastRunner blastRunner = new BlastRunner(blastBinDir, blastDbDir);
-			blastRunner.runBlastp(inputSeqFile, blastDb, outBlast, BLAST_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
+			BlastRunner blastRunner = new BlastRunner(blastDbDir);
+			blastRunner.runBlastp(blastPlusBlastp, inputSeqFile, blastDb, outBlast, BlastRunner.BLASTPLUS_XML_OUTPUT_TYPE, BLAST_NO_FILTERING, blastNumThreads, maxNumSeqs);
 
 			if (!DEBUG) {
 				// note that if blast throws an exception, the files won't be deleted on exit, good for debugging a crash
@@ -232,7 +232,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				}
 			} 
 			try {
-				BlastXMLParser blastParser = new BlastXMLParser(outBlast);
+				// note that by setting second parameter to true we are ignoring the DTD url to avoid unnecessary network connections
+				BlastXMLParser blastParser = new BlastXMLParser(outBlast, true);
 				blastList = blastParser.getHits();
 			} catch (SAXException e) {
 				// if this happens it means that blast doesn't format correctly its XML, i.e. has a bug
@@ -272,7 +273,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 						list.add(new Homolog(hit,uniref));
 					}
 				} else {
-					LOGGER.error("Could not find uniprot id in subject id "+sid);
+					LOGGER.error("Could not find UniProt id in subject id "+sid);
 				}
 			}
 		}
@@ -803,7 +804,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @throws BlastException 
 	 * @throws InterruptedException 
 	 */
-	public void reduceRedundancy(int maxDesiredHomologs, String blastBinDir, String blastDataDir, int blastNumThreads) 
+	public void reduceRedundancy(int maxDesiredHomologs, File blastclustBin, String blastDataDir, int blastNumThreads) 
 			throws IOException, InterruptedException, BlastException {
 		
 		LOGGER.info("Proceeding to perform redundancy reduction for homologs of "+ref.getUniId()+" by clustering of blast HSP regions");
@@ -815,9 +816,9 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		writeToFasta(inputSeqFile, false, true, true);
 				
 		// first the real run of blastclust (we save neighbors with -s and reuse them in the loop after)
-		BlastRunner blastRunner = new BlastRunner(blastBinDir, null);
+		BlastRunner blastRunner = new BlastRunner(null);
 		long start = System.currentTimeMillis();
-		blastRunner.runBlastclust(inputSeqFile, outblastclustFile, true, BLASTCLUST_STARTING_CLUSTERING_ID, BLASTCLUST_CLUSTERING_COVERAGE, blastDataDir, saveFile, blastNumThreads);
+		blastRunner.runBlastclust(blastclustBin, inputSeqFile, outblastclustFile, true, BLASTCLUST_STARTING_CLUSTERING_ID, BLASTCLUST_CLUSTERING_COVERAGE, blastDataDir, saveFile, blastNumThreads);
 		long end = System.currentTimeMillis();
 		LOGGER.info("Run initial blastclust ("+((end-start)/1000)+"s): "+blastRunner.getLastBlastCommand());
 		
@@ -834,7 +835,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					". Clustering with "+clusteringId+"% identity (and "+
 					String.format("%4.2f", BLASTCLUST_CLUSTERING_COVERAGE)+" coverage on both neighbors)");
 			
-			currentclusterslist = blastRunner.runBlastclust(outblastclustFile, true, clusteringId, BLASTCLUST_CLUSTERING_COVERAGE, saveFile, blastNumThreads);
+			currentclusterslist = blastRunner.runBlastclust(blastclustBin, outblastclustFile, true, clusteringId, BLASTCLUST_CLUSTERING_COVERAGE, saveFile, blastNumThreads);
 			LOGGER.info("Run blastclust from saved neighbors: "+blastRunner.getLastBlastCommand());
 			
 			LOGGER.info("Clustering with "+clusteringId+"% id resulted in "+currentclusterslist.size()+" clusters");

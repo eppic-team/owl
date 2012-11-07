@@ -19,36 +19,46 @@ import owl.core.util.FileFormatException;
 public class BlastRunner {
 
 	// constants
-	public static final String BLASTALL_PROG = "blastall";
-	public static final String BLASTPGP_PROG = "blastpgp";
-	public static final String MAKEMAT_PROG  = "makemat_withcd"; // customised makemat script that cds to working dir before running makemat
-	public static final String BLASTCLUST_PROG = "blastclust";
+	public static final int		BLAST_CLASSIC_OUTPUT_TYPE = 0;  // classic blast output, default in legacy blast and blast+
 	
-	private static final String BLASTP_PROGRAM_NAME = "blastp";
+	public static final int 	BLASTPLUS_XML_OUTPUT_TYPE = 5;  // xml output 
+	public static final int 	BLASTPLUS_TAB_OUTPUT_TYPE = 6;
 	
+	public static final int 	LEGACYBLAST_XML_OUTPUT_TYPE = 7;
+	public static final int		LEGACYBLAST_TAB_OUTPUT_TYPE = 8;
+
+
 	public static final int		BLAST_DEFAULT_MAX_HITS = 500;
 	
-	// members
+	public static final String 	BLASTALL_PROG = "blastall";
+	public static final String 	BLASTPGP_PROG = "blastpgp";
+	public static final String 	MAKEMAT_PROG  = "makemat_withcd"; // customised makemat script that cds to working dir before running makemat
+	
+	private static final String BLASTP_PROGRAM_NAME = "blastp";	
+
+	
+	// legacy blast programs
 	private String blastDbDir;
 	private String blastallProg;
 	private String blastpgpProg;
 	private String makematProg;
-	private String blastclustProg;
-	
+		
 	private String cmdLine;
 	
 	/**
-	 * Constructs a BlastRunner object given a blast bin directory and a blast 
-	 * db directory
-	 * @param blastBinDir
-	 * @param blastDbDir the blast databases dir (formatdb formatted dbs), use null if only blastclust needed
+	 * Constructs a BlastRunner object given a blastDbDir
+	 * Use then the setters to set the blast programs paths 
+	 * @param blastDbDir
 	 */
-	public BlastRunner(String blastBinDir, String blastDbDir) {
+	public BlastRunner(String blastDbDir) {
 		this.blastDbDir = blastDbDir;
+
+	}
+	
+	public void setLegacyBlastBinDir(String blastBinDir) {
 		this.blastallProg = new File(blastBinDir,BLASTALL_PROG).getAbsolutePath();
 		this.blastpgpProg = new File(blastBinDir,BLASTPGP_PROG).getAbsolutePath();
 		this.makematProg = new File(blastBinDir,MAKEMAT_PROG).getAbsolutePath();
-		this.blastclustProg = new File(blastBinDir,BLASTCLUST_PROG).getAbsolutePath();
 	}
 	
 	private String getCommonOptionsStr(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) { 
@@ -76,7 +86,7 @@ public class BlastRunner {
 	}
 	
 	/**
-	 * Runs psi-blast for given query file against given db
+	 * Runs legacy psi-blast for given query file against given db
 	 * @param queryFile
 	 * @param db the identifier of the blast database to run against
 	 * @param outFile the blast output file
@@ -94,7 +104,7 @@ public class BlastRunner {
 	 * @throws BlastException if exit status of the program is not 0
 	 * @throws InterruptedException
 	 */
-	public void runPsiBlast(File queryFile, String db, File outFile, int maxIter, File outProfileFile, File inProfileFile, int outputType, boolean noFiltering, int numThreads) 
+	public void runLegacyPsiBlast(File queryFile, String db, File outFile, int maxIter, File outProfileFile, File inProfileFile, int outputType, boolean noFiltering, int numThreads) 
 	throws IOException, BlastException, InterruptedException {
 		
 		checkIO(queryFile, db);
@@ -116,7 +126,7 @@ public class BlastRunner {
 	}
 	
 	/**
-	 * Runs the blastall program given by prog, for given query file against database db
+	 * Runs the legacy blastall program given by prog, for given query file against database db
 	 * @param queryFile
 	 * @param db the identifier of the blast database to run against
 	 * @param outFile the blast output file
@@ -131,7 +141,7 @@ public class BlastRunner {
 	 * to blast with option -v 
 	 * @param matrix the name of the substitution matrix to use, e.g. BLOSUM62
 	 * @throws IOException
-	 * @throws BlastException if exit statis of the program is not 0
+	 * @throws BlastException if exit status of the program is not 0
 	 * @throws InterruptedException
 	 */
 	private void runBlast(File queryFile, String db, File outFile, String prog, int outputType, boolean noFiltering, int numThreads, int maxNumHits, String matrix) 
@@ -151,7 +161,7 @@ public class BlastRunner {
 	}
 	
 	/**
-	 * Runs protein blast against given db for given input query file 
+	 * Runs legacy protein blast against given db for given input query file 
 	 * The substitution matrix used will be adjusted automatically depending on query 
 	 * length (following http://www.ncbi.nlm.nih.gov/blast/html/sub_matrix.html):
 	 *   <35   : PAM30
@@ -162,7 +172,7 @@ public class BlastRunner {
 	 * @param queryFile
 	 * @param db
 	 * @param outFile
-	 * @param outputType 0 classic, 7 XML, 8 tabular, 9 tabular with comments 
+	 * @param outputType use one of the constants: {@link #LEGACYBLAST_TAB_OUTPUT_TYPE}, {@link #LEGACYBLAST_XML_OUTPUT_TYPE}
 	 * @param noFiltering if true no filtering of query sequence will be done (-F F). Note 
 	 * that the default for this parameter varies from blastall to blastpgp and also from one 
 	 * output type to another. So it is recommended to use it to get consistent results if one
@@ -173,7 +183,7 @@ public class BlastRunner {
 	 * @throws IOException
 	 * @throws BlastException
 	 */
-	public void runBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
+	public void runLegacyBlastp(File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
 	throws IOException, BlastException, InterruptedException {
 		int length = 0;
 		try {
@@ -191,6 +201,73 @@ public class BlastRunner {
 			
 			
 		runBlast(queryFile, db, outFile, BLASTP_PROGRAM_NAME, outputType, noFiltering, numThreads, maxNumHits, mat);
+	}
+	
+	/**
+	 * Runs blast+ blastp program (the succesor of blastall -p blastp)
+	 * The substitution matrix used will be adjusted automatically depending on query 
+	 * length (following http://www.ncbi.nlm.nih.gov/blast/html/sub_matrix.html):
+	 *   <35   : PAM30
+	 *   35-50 : PAM70
+	 *   50-85 : BLOSUM80
+	 *   >85   : BLOSUM62
+	 *     
+	 * @param blastPlusBlastp
+	 * @param queryFile
+	 * @param db
+	 * @param outFile
+	 * @param outputType use one of the constants: {@link #BLASTPLUS_TAB_OUTPUT_TYPE}, {@link #BLASTPLUS_XML_OUTPUT_TYPE}
+	 * @param noFiltering
+	 * @param numThreads
+	 * @param maxNumHits
+	 * @throws IOException
+	 * @throws BlastException
+	 * @throws InterruptedException
+	 */
+	public void runBlastp(File blastPlusBlastp, File queryFile, String db, File outFile, int outputType, boolean noFiltering, int numThreads, int maxNumHits) 
+		throws IOException, BlastException, InterruptedException {
+		int length = 0;
+		try {
+			List<Sequence> readseqs = Sequence.readSeqs(queryFile, null);
+			if (readseqs.size()>0) {
+				length = readseqs.get(0).getLength();
+			} else {
+				throw new BlastException("The given FASTA file for blasting "+queryFile+" contains no sequences");
+			}
+		} catch (FileFormatException e) {
+			throw new BlastException("The given FASTA file for blasting "+queryFile+" does not seem to have the right format");
+		}
+		
+		String mat = getMatrixFromLength(length);		
+			
+		checkIO(queryFile, db);
+
+		String dbFullPath = new File(blastDbDir,db).getAbsolutePath();
+		
+		
+		// default blast max num hits is 500, only if we require more, we pass the -v option
+		String maxHits = "";
+		if (maxNumHits>BLAST_DEFAULT_MAX_HITS) maxHits = " -max_target_seqs "+maxNumHits+" ";
+		
+		cmdLine = blastPlusBlastp.getAbsolutePath() + 
+				" -matrix " + mat + 
+				" -db "+dbFullPath+
+				" -query "+queryFile.getAbsolutePath()+
+				" -out "+outFile.getAbsolutePath()+
+				" -num_threads "+numThreads+
+				" -outfmt "+outputType+
+				" -seg "+(noFiltering?"no":"yes") + 
+				maxHits;
+
+		Process blastallProc = Runtime.getRuntime().exec(cmdLine);
+
+
+		int exitValue = blastallProc.waitFor();
+		if (exitValue>0) {
+			throw new BlastException(blastPlusBlastp.getName() + " exited with error value " + exitValue);
+		}
+
+		
 	}
 	
 	/**
@@ -237,6 +314,7 @@ public class BlastRunner {
 	 * Runs blastclust, parsing the output file and returning it as a list of clusters. 
 	 * If a saveFile is passed, the neighbors are saved for later reuse (options -s/-r)
 	 * (see {@link #runBlastclust(File, boolean, int, double, File, int)}
+	 * @param blastClustBin the blastclust executable
 	 * @param inFile the input FASTA file with all sequences to be clustered
 	 * @param outFile the output file where clusters will be written
 	 * @param protein if true sequences are protein, false sequences are nucleotide
@@ -254,7 +332,7 @@ public class BlastRunner {
 	 * @throws InterruptedException 
 	 * @throws BlastException 
 	 */
-	public List<List<String>> runBlastclust(File inFile, File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, String blastDataDir, File saveFile, int numThreads) 
+	public List<List<String>> runBlastclust(File blastClustBin, File inFile, File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, String blastDataDir, File saveFile, int numThreads) 
 			throws IOException, InterruptedException, BlastException {
 		
 		// command to run blastclust for 95% clustering over full lengths 
@@ -263,7 +341,7 @@ public class BlastRunner {
 		
 		List<String> cmd = new ArrayList<String>();
 		
-		cmd.add(blastclustProg);
+		cmd.add(blastClustBin.getAbsolutePath());
 		cmd.add("-i"); cmd.add(inFile.getAbsolutePath());
 		cmd.add("-o"); cmd.add(outFile.getAbsolutePath());
 		cmd.add("-p"); cmd.add((protein?"T":"F"));
@@ -291,7 +369,7 @@ public class BlastRunner {
 		
 		int exitValue = blastclustProc.waitFor();
 		if (exitValue>0) {
-			throw new BlastException(BLASTCLUST_PROG + " exited with error value " + exitValue);
+			throw new BlastException(blastClustBin.getName() + " exited with error value " + exitValue);
 		}
 		
 		// and we parse the output file		
@@ -302,6 +380,7 @@ public class BlastRunner {
 	/**
 	 * Runs blastclust from a previously saved neighbors file (option -s) in order to save
 	 * computation time. The output file is parsed and output returned as a list of clusters
+	 * @param blastClustBin the blastclust executable 
 	 * @param outFile the output file where clusters will be written
 	 * @param protein if true sequences are protein, false sequences are nucleotide
 	 * @param clusteringPercentId the percentage identity threshold for clustering: the 
@@ -316,12 +395,12 @@ public class BlastRunner {
 	 * @throws InterruptedException 
 	 * @throws BlastException 
 	 */
-	public List<List<String>> runBlastclust(File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, File savedFile, int numThreads) 
+	public List<List<String>> runBlastclust(File blastClustBin, File outFile, boolean protein, int clusteringPercentId, double clusteringCoverage, File savedFile, int numThreads) 
 			throws IOException, InterruptedException, BlastException {
 		
 		List<String> cmd = new ArrayList<String>();
 		
-		cmd.add(blastclustProg);
+		cmd.add(blastClustBin.getAbsolutePath());
 		cmd.add("-o"); cmd.add(outFile.getAbsolutePath());
 		cmd.add("-p"); cmd.add((protein?"T":"F"));
 		cmd.add("-S"); cmd.add(Integer.toString(clusteringPercentId));
@@ -341,7 +420,7 @@ public class BlastRunner {
 		
 		int exitValue = blastclustProc.waitFor();
 		if (exitValue>0) {
-			throw new BlastException(BLASTCLUST_PROG + " exited with error value " + exitValue);
+			throw new BlastException(blastClustBin.getName() + " exited with error value " + exitValue);
 		}
 		
 		// and we parse the output file		
@@ -402,7 +481,8 @@ public class BlastRunner {
 
 		// run blast
 		
-		BlastRunner br = new BlastRunner(BLASTBIN_DIR, BLASTDB_DIR);
+		BlastRunner br = new BlastRunner(BLASTDB_DIR);
+		br.setLegacyBlastBinDir(BLASTBIN_DIR);
 		File outFile = new File("out.blast");
 		File outFile2 = new File("out2.blast");
 		File outFile3 = new File("out3.blast");
@@ -413,7 +493,7 @@ public class BlastRunner {
 		
 		// BlastP
 		System.out.println("Running blast against PDB...");
-		br.runBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering, numThreads, 500);
+		br.runLegacyBlastp(queryFile, pdbdb, outFile, OUTPUT_TYPE, noFiltering, numThreads, 500);
 		BlastTabularParser blastParser1 = new BlastTabularParser(outFile);
 		BlastHitList hits1 = blastParser1.getHits();
 		hits1.setQueryLength(queryLength);
@@ -423,9 +503,9 @@ public class BlastRunner {
 		
 		// PsiBlast
 		System.out.println("Create psi-blast profile with " + maxIter + " iterations against " + nrdb + "...");
-		br.runPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE, noFiltering, numThreads);
+		br.runLegacyPsiBlast(queryFile, nrdb, outFile2, maxIter, outProfileFile, null, OUTPUT_TYPE, noFiltering, numThreads);
 		System.out.println("Running psi-blast against PDB...");
-		br.runPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE, noFiltering, numThreads);
+		br.runLegacyPsiBlast(queryFile, pdbdb, outFile3, 1, null, outProfileFile, OUTPUT_TYPE, noFiltering, numThreads);
 		
 		BlastTabularParser blastParser2 = new BlastTabularParser(outFile);
 		BlastHitList hits2 = blastParser2.getHits();
