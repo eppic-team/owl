@@ -301,7 +301,7 @@ public class BlastHsp implements Serializable {
 	 * @return
 	 */
 	public double getQueryCoverage() {
-		return  ((double)(getQueryEnd()-getQueryStart())/parent.getQueryLength());
+		return  ((double)(getQueryEnd()-getQueryStart()+1)/parent.getQueryLength());
 	}
 	
 	/**

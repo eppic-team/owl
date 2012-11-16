@@ -33,6 +33,7 @@ import owl.core.runners.TcoffeeRunner;
 import owl.core.runners.blast.BlastException;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
+import owl.core.runners.blast.BlastHsp;
 import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.alignment.AlignmentConstructionException;
@@ -87,10 +88,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	private boolean isSubInterval;
 	private List<Homolog> list; 					// the list of homologs
 	private List<Homolog> subList;			 		// the filtered list of homologs after calling filterToMinIdAndCoverage
-	private Map<String,Homolog> lookup;		 		// to speed up searches (uniprot/uniparc ids to Homologs)
-													// (used to be lists of homologs as we considered multi-matches of the 
-													// same uniprot as different BlastHits, but not anymore since we introduced 
-													// BlastHsps)
+	
 	private double idCutoff; 						// the identity cutoff (see filterToMinIdAndCoverage() )
 	private double qCoverageCutoff;					// the query coverage cutoff (see filterToMinIdAndCoverage() )
 	private String uniprotVer;						// the version of uniprot used in blasting, read from the reldate.txt uniprot file
@@ -244,52 +242,42 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		
 		this.list = new ArrayList<Homolog>();
 		for (BlastHit hit:blastList) {
-			String sid = hit.getSubjectId();
-			Matcher m = Sequence.DEFLINE_PRIM_ACCESSION_REGEX.matcher(sid);
-			if (m.matches()) {
-				String uniId = m.group(1);
-				UnirefEntry uniref = new UnirefEntry();
-				uniref.setUniprotId(uniId);
-				list.add(new Homolog(hit,uniref));
-			} else {
-				Matcher m2 = Sequence.DEFLINE_PRIM_ACCESSION_UNIREF_REGEX.matcher(sid);
-				if (m2.matches()) {					
-					String uniId = m2.group(1);
-					if (uniId.startsWith("UPI")){
-						if (useUniparc) {
-							UnirefEntry uniref = new UnirefEntry();
-							uniref.setUniparcId(uniId);
-							list.add(new Homolog(hit,uniref));
-						} else {
-							LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniparc id.");
-						}
-					}
-					else if (uniId.contains("-")) {
-						LOGGER.warn("Ignoring blast hit "+uniId+" because it is a Uniprot isoform id.");
-					}
-					else {	
-						UnirefEntry uniref = new UnirefEntry();
-						uniref.setUniprotId(uniId);
-						list.add(new Homolog(hit,uniref));
-					}
+			for (BlastHsp hsp:hit) {
+				String sid = hit.getSubjectId();
+				Matcher m = Sequence.DEFLINE_PRIM_ACCESSION_REGEX.matcher(sid);
+				if (m.matches()) {
+					String uniId = m.group(1);
+					UnirefEntry uniref = new UnirefEntry();
+					uniref.setUniprotId(uniId);
+					list.add(new Homolog(hsp,uniref));
 				} else {
-					LOGGER.error("Could not find UniProt id in subject id "+sid);
+					Matcher m2 = Sequence.DEFLINE_PRIM_ACCESSION_UNIREF_REGEX.matcher(sid);
+					if (m2.matches()) {					
+						String uniId = m2.group(1);
+						if (uniId.startsWith("UPI")){
+							if (useUniparc) {
+								UnirefEntry uniref = new UnirefEntry();
+								uniref.setUniparcId(uniId);
+								list.add(new Homolog(hsp,uniref));
+							} else {
+								LOGGER.warn("Ignoring blast hit "+uniId+" because it is a UniParc id.");
+							}
+						}
+						else if (uniId.contains("-")) {
+							LOGGER.warn("Ignoring blast hit "+uniId+" because it is a UniProt isoform id.");
+						}
+						else {	
+							UnirefEntry uniref = new UnirefEntry();
+							uniref.setUniprotId(uniId);
+							list.add(new Homolog(hsp,uniref));
+						}
+					} else {
+						LOGGER.error("Could not find UniProt id in subject id "+sid);
+					}
 				}
 			}
 		}
 		this.subList = list; // initially the subList is the same as the list until filterToMinIdAndCoverage is called
-		initialiseMap();
-	}
-	
-	/**
-	 * Initialises the lookup map (for speeding up lookups of homologs by homolog identifiers)
-	 * Applies only to filtered subset of homologs
-	 */
-	private void initialiseMap() {
-		this.lookup = new HashMap<String, Homolog>();
-		for (Homolog hom:subList) {
-			lookup.put(hom.getIdentifier(), hom);
-		}
 	}
 	
 	public static String readUniprotVer(String blastDbDir) {
@@ -309,7 +297,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 			br.close();
 		} catch(IOException e) {
-			LOGGER.warn("Couldn't read uniprot version from file "+uniprotVerFile);
+			LOGGER.warn("Couldn't read UniProt version from file "+uniprotVerFile);
 		}
 		return ver;
 	}
@@ -324,39 +312,37 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	public void retrieveUniprotKBData(UniProtConnection uniprotConn) throws UniprotVerMisMatchException, IOException {
 		
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried with api ("+uniprotConn.getVersion()+") don't match!");
+			throw new UniprotVerMisMatchException("UniProt version used for blast ("+uniprotVer+") and UniProt version being queried with api ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();
 		for (Homolog hom:subList) {
-			if (hom.isUniprot()) uniprotIds.add(hom.getIdentifier());
+			if (hom.isUniprot()) uniprotIds.add(hom.getUniId());
 		}
 		
 		List<UnirefEntry> unirefs = uniprotConn.getMultipleUnirefEntries(uniprotIds);
-
+		
+		HashMap<String,UnirefEntry> unirefsmap = new HashMap<String,UnirefEntry>();
 		for (UnirefEntry uniref:unirefs) {
-			Homolog hom = this.getHomolog(uniref.getUniprotId());
-			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
-			hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
-			hom.getUnirefEntry().setSequence(uniref.getSequence());
-			hom.getUnirefEntry().setTaxons(uniref.getTaxons());			
+			unirefsmap.put(uniref.getUniId(), uniref);
 		}
-		
-		// now we check if the query did really return all requested uniprot ids 
-		HashSet<String> nonreturned = uniprotConn.getNonReturnedIdsLastMultipleRequest();
-		
-		if (!nonreturned.isEmpty()) {
-			Iterator<Homolog> it = subList.iterator(); 
-			while (it.hasNext()) {
-				Homolog hom = it.next();
-				if (!hom.isUniprot()) continue;
-				if (nonreturned.contains(hom.getIdentifier())) {
-					LOGGER.info("Removing uniprot id "+hom.getIdentifier()+" from homologs because it wasn't returned by the Uniprot connection.");
+
+		Iterator<Homolog> it = subList.iterator();
+		while (it.hasNext()) {
+			Homolog hom = it.next();
+			if (unirefsmap.containsKey(hom.getUniId())) {
+				UnirefEntry uniref = unirefsmap.get(hom.getUniId());
+				hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
+				hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
+				hom.getUnirefEntry().setSequence(uniref.getSequence());
+				hom.getUnirefEntry().setTaxons(uniref.getTaxons());
+			} else {
+				if (hom.isUniprot()) {				
+					LOGGER.info("Removing UniProt id "+hom.getUniId()+" from homologs because it wasn't returned by the UniProt connection.");
 					it.remove();
 				}
 			}
-			// and update the lookup table 
-			initialiseMap();
 		}
+		
 	}
 	
 	public void retrieveUniparcData(File cacheFile) throws IOException {
@@ -364,9 +350,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		List<String> allIds = new ArrayList<String>();
 		for (Homolog hom:subList) {
 			if (!hom.isUniprot()) {
-				allIds.add(hom.getIdentifier());
+				allIds.add(hom.getUniId());
 			}
 		}
+		
+		// do nothing if there were no uniparc ids at all
+		if (allIds.isEmpty()) return;
+		
 		try {
 			List<Sequence> allSeqs = EmblWSDBfetchConnection.fetchUniparc(allIds, cacheFile);
 			// we put the list (containing all the sequences from all the homologs) in a lookup table
@@ -377,12 +367,12 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 			for (Homolog hom:subList) {
 				if (hom.isUniprot()) continue;
-				if (lookup.containsKey(hom.getIdentifier())) {
-					hom.getUnirefEntry().setSequence(lookup.get(hom.getIdentifier()).getSeq());
+				if (lookup.containsKey(hom.getUniId())) {
+					hom.getUnirefEntry().setSequence(lookup.get(hom.getUniId()).getSeq());
 				}
 			}		
 		} catch (NoMatchFoundException e) {
-			LOGGER.warn("Couldn't retrieve Uniparc sequences");
+			LOGGER.warn("Couldn't retrieve UniParc sequences");
 		}
 
 	}
@@ -395,49 +385,37 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 */
 	public void retrieveUniprotKBData(UniprotLocalConnection uniprotConn) throws UniprotVerMisMatchException, SQLException {
 		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			throw new UniprotVerMisMatchException("Uniprot version used for blast ("+uniprotVer+") and uniprot version being queried from local database ("+uniprotConn.getVersion()+") don't match!");
+			throw new UniprotVerMisMatchException("UniProt version used for blast ("+uniprotVer+") and UniProt version being queried from local database ("+uniprotConn.getVersion()+") don't match!");
 		}
 		List<String> uniIds = new ArrayList<String>();
 		for (Homolog hom:subList) {
-			uniIds.add(hom.getIdentifier());
+			uniIds.add(hom.getUniId());
 		}
 		
 		List<UnirefEntry> unirefs = uniprotConn.getMultipleUnirefEntries(uniIds);
 
+		HashMap<String,UnirefEntry> unirefsmap = new HashMap<String,UnirefEntry>();
 		for (UnirefEntry uniref:unirefs) {
-			Homolog hom = this.getHomolog(uniref.getUniId());
-			hom.getUnirefEntry().setId(uniref.getId());
-			hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
-			hom.getUnirefEntry().setUniparcId(uniref.getUniparcId());
-			hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
-			hom.getUnirefEntry().setSequence(uniref.getSequence());
-			hom.getUnirefEntry().setTaxons(uniref.getTaxons());
+			unirefsmap.put(uniref.getUniId(), uniref);
 		}
 		
-		// now we check if the query did really return all requested uniprot ids 
-		HashSet<String> nonreturned = uniprotConn.getNonReturnedIdsLastMultipleRequest();
-		
-		if (!nonreturned.isEmpty()) {
-			Iterator<Homolog> it = subList.iterator(); 
-			while (it.hasNext()) {
-				Homolog hom = it.next();
-				if (nonreturned.contains(hom.getIdentifier())) {
-					LOGGER.info("Removing uniprot/uniparc id "+hom.getIdentifier()+" from homologs because it wasn't returned by the Uniprot connection.");
-					it.remove();
-				}
+		Iterator<Homolog> it = subList.iterator();
+		while (it.hasNext()) {
+			Homolog hom = it.next();
+			if (unirefsmap.containsKey(hom.getUniId())) {
+				UnirefEntry uniref = unirefsmap.get(hom.getUniId());
+				hom.getUnirefEntry().setId(uniref.getId());
+				hom.getUnirefEntry().setUniprotId(uniref.getUniprotId());
+				hom.getUnirefEntry().setUniparcId(uniref.getUniparcId());
+				hom.getUnirefEntry().setNcbiTaxId(uniref.getNcbiTaxId());
+				hom.getUnirefEntry().setSequence(uniref.getSequence());
+				hom.getUnirefEntry().setTaxons(uniref.getTaxons());				
+			} else { // the query might have not found some uniprot ids
+				LOGGER.info("Removing UniProt/UniParc id "+hom.getUniId()+" from homologs because it wasn't returned by the UniProt connection.");
+				it.remove();				
 			}
-			// and update the lookup table 
-			initialiseMap();
 		}
-	}
-	
-	/**
-	 * Gets the Homolog given a uniprot/uniparc ID
-	 * @param uniprotId
-	 * @return
-	 */
-	public Homolog getHomolog(String identifier) {
-		return this.lookup.get(identifier);
+		
 	}
 	
 	/**
@@ -447,13 +425,9 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @param outFile
 	 * @param writeQuery if true the query sequence is written as well, if false only 
 	 * homologs 
-	 * @param useHspsOnly if true only the matching HSPs region of homologs will be written
-	 * out, otherwise full uniprot sequences are written
-	 * @param simpleIds if true simple ids (i.e. just the uniprot/uniparc id) will be 
-	 * written as fasta tags, if false full long blast style fasta tags 
 	 * @throws FileNotFoundException
 	 */
-	public void writeToFasta(File outFile, boolean writeQuery, boolean useHspsOnly, boolean simpleIds) throws FileNotFoundException {
+	public void writeToFasta(File outFile, boolean writeQuery) throws FileNotFoundException {
 		PrintWriter pw = new PrintWriter(outFile);
 		
 		int len = 80;
@@ -472,25 +446,15 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		
 		for(Homolog hom:subList) {
 			
-			String sequence = null;
-			if (useHspsOnly) {
-				sequence = hom.getUnirefEntry().getSeq().
-						getInterval(new Interval(hom.getBlastHit().getMaxScoringHsp().getSubjectStart(),
-												 hom.getBlastHit().getMaxScoringHsp().getSubjectEnd())).getSeq();
-			} else {
-				sequence = hom.getSequence();
-			}
+			String sequence = 
+					hom.getUnirefEntry().getSeq().
+						getInterval(new Interval(hom.getBlastHsp().getSubjectStart(),
+												 hom.getBlastHsp().getSubjectEnd())).getSeq();
 			
-			if (simpleIds) {
-				pw.print(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getUnirefEntry().getUniId());
-			} else {
-				pw.print(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getLongSequenceTag());
-			}
-			if (useHspsOnly) {
-				// we print out to the fasta tags also the subsequence in case we are using hsps only
-				pw.print(" "+hom.getBlastHit().getMaxScoringHsp().getSubjectStart()+"-"+hom.getBlastHit().getMaxScoringHsp().getSubjectEnd());
-			}
+			pw.print(MultipleSequenceAlignment.FASTAHEADER_CHAR + hom.getIdentifier());
+			 
 			pw.println();
+			
 			for(int i=0; i<sequence.length(); i+=len) {
 				pw.println(sequence.substring(i, Math.min(i+len,sequence.length())));
 			}
@@ -507,12 +471,11 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @param tcoffeeBin
 	 * @param clustaloBin
 	 * @param nThreads number of CPU cores t_coffee should use
-	 * @param useHspsOnly
 	 * @param alnCacheFile
 	 * @throws IOException
 	 * @throws UniprotVerMisMatchException 
 	 */
-	public void computeAlignment(File tcoffeeBin, File clustaloBin, int nThreads, boolean useHspsOnly, File alnCacheFile) 
+	public void computeAlignment(File tcoffeeBin, File clustaloBin, int nThreads, File alnCacheFile) 
 			throws IOException, InterruptedException, UniprotVerMisMatchException {
 				
 		// we have to catch the special case when there are no homologs at all, we then will set an "alignment" that contains just the query sequence
@@ -548,11 +511,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			try {
 				this.aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(), MultipleSequenceAlignment.FASTAFORMAT);
 				
-				// the 2 parameters have to match the ones passed to writeToFasta in runTcoffee/runClustalo below
-				if (!checkAlnFromCache(true, false)) { 
+				if (!checkAlnFromCache(true)) { 
 					LOGGER.warn("Alignment from cache file does not coindice with computed filtered list of homologs");
 					LOGGER.info("Will compute alignment");
-					alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads, useHspsOnly);
+					alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads);
 
 				} else {
 					alnFromCache = true;
@@ -569,7 +531,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			
 		} else {
 			// no cache: we compute with external program
-			alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads, useHspsOnly); 			
+			alnFile = runAlignmentProgram(tcoffeeBin, clustaloBin, nThreads); 			
 			
 		}
 		
@@ -600,7 +562,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 
 	}
 	
-	private File runAlignmentProgram(File tcoffeeBin, File clustaloBin, int nThreads, boolean useHspsOnly) 
+	private File runAlignmentProgram(File tcoffeeBin, File clustaloBin, int nThreads) 
 			throws InterruptedException, IOException {
 		
 		if ((tcoffeeBin==null && clustaloBin==null) || (tcoffeeBin!=null && clustaloBin!=null)) {
@@ -608,15 +570,15 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		
 		if (tcoffeeBin!=null) {
-			return runTcoffee(tcoffeeBin, nThreads, useHspsOnly);
+			return runTcoffee(tcoffeeBin, nThreads);
 		}
 
 		else {
-			return runClustalo(clustaloBin, nThreads, useHspsOnly);
+			return runClustalo(clustaloBin, nThreads);
 		}
 	}
 	
-	private File runTcoffee(File tcoffeeBin, int nThreads, boolean useHspsOnly) 
+	private File runTcoffee(File tcoffeeBin, int nThreads) 
 			throws InterruptedException, IOException {
 		
 		File alnFile = File.createTempFile("homologs.",".aln");
@@ -624,7 +586,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		File outTreeFile = File.createTempFile("homologs.", ".dnd");
 		File tcoffeeLogFile = File.createTempFile("homologs.",".tcoffee.log");
 
-		this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
+		this.writeToFasta(homologSeqsFile, true);
 		
 		TcoffeeRunner tcr = new TcoffeeRunner(tcoffeeBin);
 		tcr.buildCmdLine(homologSeqsFile, alnFile, TCOFFEE_ALN_OUTFORMAT, outTreeFile, null, tcoffeeLogFile, false, nThreads);
@@ -647,13 +609,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		return alnFile;
 	}
 	
-	private File runClustalo(File clustaloBin, int nThreads, boolean useHspsOnly) 
+	private File runClustalo(File clustaloBin, int nThreads) 
 			throws InterruptedException, IOException {
 		
 		File alnFile = File.createTempFile("homologs.",".aln");
 		File homologSeqsFile = File.createTempFile("homologs.", ".fa");
 
-		this.writeToFasta(homologSeqsFile, true, useHspsOnly, false);
+		this.writeToFasta(homologSeqsFile, true);
 		
 		ClustaloRunner cor = new ClustaloRunner(clustaloBin);
 		cor.buildCmdLine(homologSeqsFile, alnFile, nThreads);
@@ -670,7 +632,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		return alnFile;
 	}
 	
-	private boolean checkAlnFromCache(boolean checkQuery, boolean simpleIds) {
+	private boolean checkAlnFromCache(boolean checkQuery) {
 		
 		int size = this.subList.size();
 		if (checkQuery) size+=1;
@@ -691,12 +653,9 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		
 		// and finally that all other tags are present
 		for (Homolog hom:subList){
-			String tag = null;
-			if (simpleIds) {
-				tag = hom.getUnirefEntry().getUniId();
-			} else {
-				tag = hom.getLongSequenceTag();
-			}
+			
+			String tag = hom.getIdentifier();
+			
 			if (!this.aln.hasTag(tag)) {
 				LOGGER.info("Tag "+tag+" not present in alignment cached file");
 				return false;
@@ -734,13 +693,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		this.subList = new ArrayList<Homolog>();
 
 		for (Homolog hom:list) {
-			if ((hom.getBlastHit().getTotalPercentIdentity()/100.0)>idCutoff && hom.getBlastHit().getQueryCoverage()>queryCovCutoff) {
-				subList.add(hom);
+			if ((hom.getPercentIdentity()/100.0)>idCutoff && hom.getQueryCoverage()>queryCovCutoff) {
+				subList.add(hom);			
+				//System.out.println(hom+" "+hom.getPercentIdentity()+" "+hom.getBlastHsp().getParent().getTotalPercentIdentity());
+				//System.out.println(hom.getQueryCoverage()+" "+hom.getBlastHsp().getParent().getQueryCoverage());
 			}
 		}
 		
-		// finally we update the lookup table
-		initialiseMap();
 	}
 	
 	/**
@@ -751,7 +710,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		while (it.hasNext()) {
 			Homolog hom = it.next();
 			if (!hom.getUnirefEntry().hasTaxons()) {
-				LOGGER.info("Removing homolog "+hom.getIdentifier()+" as no taxonomy info available for it");
+				LOGGER.info("Removing homolog "+hom.getUniId()+" as no taxonomy info available for it");
 				it.remove();
 				continue;
 			}
@@ -760,8 +719,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			}
 		}
 		
-		// finally we update the lookup table
-		initialiseMap();
 	}
 	
 	/**
@@ -770,19 +727,15 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * The query itself will usually be in this group and removed with this procedure.
 	 */
 	public void removeIdenticalToQuery(double minQueryCov) {
-		boolean identicalsFound = false;
 		Iterator<Homolog> it = list.iterator();
 		while (it.hasNext()) {
 			Homolog hom = it.next();
-			if (hom.getPercentIdentity()>99.99999 && hom.getBlastHit().getQueryCoverage()>minQueryCov) {
+			if (hom.getPercentIdentity()>99.99999 && hom.getQueryCoverage()>minQueryCov) {
 				it.remove();
-				identicalsFound = true;
-				LOGGER.info("Removing "+hom.getIdentifier()+" because it is 100% identical and covers "+
-						String.format("%5.1f%%",hom.getBlastHit().getQueryCoverage()*100.0)+" of the query.");				
+				LOGGER.info("Removing "+hom.getUniId()+" because it is 100% identical and covers "+
+						String.format("%5.1f%%",hom.getQueryCoverage()*100.0)+" of the query.");				
 			}
 		}
-		// finally we update the lookup table if something changed
-		if (identicalsFound) initialiseMap();
 		
 		LOGGER.info(getSizeFullList()+" homologs after removing identicals to query");
 	}
@@ -813,7 +766,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		File outblastclustFile = File.createTempFile(BLASTCLUST_BASENAME,BLASTCLUST_OUT_SUFFIX);
 		File saveFile = File.createTempFile(BLASTCLUST_BASENAME,BLASTCLUST_SAVE_SUFFIX);
 		
-		writeToFasta(inputSeqFile, false, true, true);
+		writeToFasta(inputSeqFile, false);
 				
 		// first the real run of blastclust (we save neighbors with -s and reuse them in the loop after)
 		BlastRunner blastRunner = new BlastRunner(null);
@@ -871,6 +824,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		}
 		LOGGER.info("Redundancy elimination will proceed with clusters of "+usedClusteringPercentId+"% identity");		
 		
+		HashSet<String> membersToRemove = new HashSet<String>(); 
 		int i = 0;
 		for (List<String> cluster:clusters) {
 			i++;
@@ -878,11 +832,20 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 				String msg = "Cluster "+i+" representative: "+cluster.get(0)+". Removed: ";			
 				// we then proceed to remove all but first
 				for (int j=1;j<cluster.size();j++) {
-					Homolog toRemove = getHomolog(cluster.get(j));
-					subList.remove(toRemove);
+					membersToRemove.add(cluster.get(j));
+					//Homolog toRemove = getHomolog(cluster.get(j));
+					//subList.remove(toRemove);
 					msg += cluster.get(j)+" ";
 				}								
 				LOGGER.info(msg);
+			}
+		}
+		
+		Iterator<Homolog> it = subList.iterator();
+		while (it.hasNext()) {
+			Homolog hom = it.next();
+			if (membersToRemove.contains(hom.getIdentifier())) {
+				it.remove();
 			}
 		}
 		
@@ -892,8 +855,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			LOGGER.warn("Size of final homologs list ("+subList.size()+") is larger than 50% of the max number of sequences required");
 		}
 
-		// and we reinitialise the lookup maps
-		initialiseMap();
 	}
 	
 	/**
