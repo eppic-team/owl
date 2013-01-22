@@ -154,12 +154,6 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		boolean fromCache = false;
 		BlastHitList blastList = null;
 		
-		// if a sub-interval is used, we need to alter the cache file name to contain the subinterval string
-		if (cacheFile!=null && isSubInterval) {
-			String prefix = cacheFile.getName();
-			prefix = prefix.substring(0, prefix.lastIndexOf(".blast.xml"));
-			cacheFile = new File(cacheFile.getParent(),prefix+"."+refInterval.beg+"-"+refInterval.end+".blast.xml");
-		}
 		this.uniprotVer = readUniprotVer(blastDbDir);
 		
 		if (cacheFile!=null && cacheFile.exists()) {
