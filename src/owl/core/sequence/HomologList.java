@@ -175,8 +175,10 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 					blastList = null;
 				} else {
 					// if we do take the cache file we have to do some sanity checks
-					if (!blastList.getQueryId().equals(this.ref.getUniId())) {
-						throw new IOException("Query id "+blastList.getQueryId()+" from cache file "+cacheFile+
+					String blastqueryid = blastList.getQueryId();
+					blastqueryid = blastqueryid.replaceAll("_.*", "");
+					if (!blastqueryid.equals(this.ref.getUniId())) {
+						throw new IOException("Query id "+blastqueryid+" from cache file "+cacheFile+
 								" does not match the id from the sequence: "+this.ref.getUniId());
 					}
 					String uniprotVerFromCache = readUniprotVer(cacheFile.getParent());
