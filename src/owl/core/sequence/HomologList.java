@@ -310,9 +310,9 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @throws IOException
 	 */
 	public void retrieveUniprotKBData(UniProtConnection uniprotConn) throws UniprotVerMisMatchException, IOException {
-		
-		if (!uniprotConn.getVersion().equals(this.uniprotVer)){
-			throw new UniprotVerMisMatchException("UniProt version used for blast ("+uniprotVer+") and UniProt version being queried with api ("+uniprotConn.getVersion()+") don't match!");
+		String japiVer = uniprotConn.getVersion();
+		if (!japiVer.equals(this.uniprotVer)){
+			throw new UniprotVerMisMatchException("UniProt version used for blast ("+uniprotVer+") and UniProt version being queried with JAPI ("+japiVer+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();
 		for (Homolog hom:subList) {
