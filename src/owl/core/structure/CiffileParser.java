@@ -401,7 +401,9 @@ public class CiffileParser {
 			return null;
 		}		
 		SpaceGroup spaceGroup = null;
-		String sg = fields2values.get(symmetry+".space_group_name_H-M").replace("'", "").trim();
+		// fields can be either single or double quoted: we have to remove 
+		// both types of quotes (most pdbs use single, e.g. of double is 1hhu)
+		String sg = fields2values.get(symmetry+".space_group_name_H-M").replaceAll("['\"]", "").trim();
 		spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
 			throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
