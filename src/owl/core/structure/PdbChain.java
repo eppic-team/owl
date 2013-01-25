@@ -832,7 +832,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	protected void writeSeqresRecord(PrintStream out, String chainCode) {
 		String chainCodeStr = chainCode;
 		if (chainCode.length()>1) {
-			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
+			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to SEQRES lines");
 			chainCodeStr = chainCode.substring(0,1);
 		}
 		ArrayList<String> seqLines = new ArrayList<String>();
@@ -864,7 +864,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Writes coordinate data into a file in PDB format (ATOM lines only)
+	 * Writes coordinate data into a file in PDB format (SEQRES and ATOM lines only)
 	 * The residue serials written correspond to the SEQRES sequence (as in CIF files).
 	 * The chain code written is the CIF chain code, if it is longer than one character
 	 * then only first character is written and a warning issued.
@@ -884,6 +884,26 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		out.close();
 	}
 
+	/**
+	 * Writes coordinate data into a file in PDB format (SEQRES and ATOM lines only)
+	 * The residue serials written correspond to the SEQRES sequence (as in CIF files).
+	 * The chain code written is the PDB chain code
+	 * @param outFile
+	 * @throws FileNotFoundException
+	 */
+	public void writeToPDBFileWithPdbChainCodes(File outFile) throws FileNotFoundException {
+		PrintStream out = new PrintStream(new FileOutputStream(outFile));
+		if (!isNonPolyChain()) {
+			writeSeqresRecord(out, pdbChainCode);
+		}
+		writeAtomLines(out, pdbChainCode);
+		if (!isNonPolyChain()) {
+			out.println("TER");
+		}
+		out.println("END");
+		out.close();
+	}
+	
 	/**
 	 * Writes coordinates to given File in CASP TS format.
      * Note that the CASP target number, CASP model number, CASP author, 
