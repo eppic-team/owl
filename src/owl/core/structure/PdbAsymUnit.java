@@ -111,20 +111,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private Point3d centroid;  // cached centroid
 	
 	/**
-	 * Transformation matrix used to generate this asym unit (includes 
-	 * the possible translation from the original cell)
-	 */
-	//private Matrix4d transform; 
-	
-	/**
-	 * An identifier of the space group transformation used (0 is identity i.e. original asymmetric unit) 
-	 * does not count the translations: 2 equivalent asym units of 2 different cells will have the same identifier)
-	 * i.e. it is unique within the unit cell but equivalent units of different crystal cells will have same id
-	 * goes from 1 to m (m=number of symmetry operations of the space group)
-	 */
-	//private int transformId;
-	
-	/**
 	 * The crystal symmetry transformation used to generate this asym unit.
 	 * Contains the transformation matrix with transformation vector and the transform id  
 	 */
@@ -288,11 +274,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.rFree = parser.getRfree();
 		this.rSym = parser.getRsym();
 		
-		// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb, 1bab)
-		Matrix4d scaleMatrix = parser.getScaleMatrix();
-		if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
-			throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
-		}
+		checkNoEmptyChains();
+		
+		checkScaleMatrix(parser.getScaleMatrix());
 
 	}
 	
@@ -312,12 +296,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		for (PdbChain chain:getAllChains()) {
 			chain.setParent(this);
 		}
+		
+		checkNoEmptyChains();
 
-		// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb, 1bab)
-		Matrix4d scaleMatrix = parser.readScaleMatrix();
-		if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
-			throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
-		}
+		checkScaleMatrix(parser.readScaleMatrix());
 		
 		parser.closeFile();		
 	}
@@ -339,14 +321,30 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 				chain.setParent(this);
 			}
 				
-			// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb,1bab)
-			Matrix4d scaleMatrix = parser.readScaleMatrix();
-			if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
-				throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
-			}
+			checkNoEmptyChains();
+
+			checkScaleMatrix(parser.readScaleMatrix());
 			
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
+		}
+	}
+	
+	private void checkScaleMatrix(Matrix4d scaleMatrix) throws PdbLoadException {
+		// check for those very weird few PDB entries that are in a non-standard frame (e.g. 1bbb,1bab)
+		if (isXrayDiffraction() && scaleMatrix!=null && this.crystalCell!=null && !this.crystalCell.checkScaleMatrix(scaleMatrix)) {
+			throw new PdbLoadException("This PDB entry is in a non-standard crystal frame. Please tell the PDB about it.");
+		}		
+	}
+	
+	private void checkNoEmptyChains() throws PdbLoadException {
+		// this check is necessary for weird (and in my opinion not properly data-modelled) entries. e.g.:
+		// 1oax: seqres contains chains I and K but there's not a single observed atom for them 
+		// 3nji: chain B has all of its atoms in B alt site, whilst chain A has some alt site A and some B
+		for (PdbChain chain:this.getPolyChains()) {
+			if (chain.getObsLength()==0) {
+				throw new PdbLoadException("Chain with CIF code "+chain.getChainCode()+" (PDB chain code "+chain.getPdbChainCode()+") has no observed residues.");
+			}
 		}
 	}
 	

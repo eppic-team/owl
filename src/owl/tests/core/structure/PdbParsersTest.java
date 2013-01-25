@@ -497,7 +497,7 @@ public class PdbParsersTest {
 						System.out.print(chainCode+" "+pdbChainCode+" ");
 						PdbChain pdbasePdb = ciffileFullpdb.getChainForChainCode(chainCode);
 						if (!ciffileFullpdb.containsChainCode(chainCode)) {
-							System.err.println("No pdbase chain for "+chainCode);
+							System.err.println("No cif file chain for "+chainCode);
 							continue;
 						}
 						System.out.print(pdbasePdb.getChainCode()+" "+pdbasePdb.getPdbChainCode());

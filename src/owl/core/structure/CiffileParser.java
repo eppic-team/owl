@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -19,8 +18,6 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
-
-import org.apache.commons.lang.math.NumberUtils;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -174,7 +171,7 @@ public class CiffileParser {
 			this.readAtomSite(pdbAsymUnit,modelSerial);
 
 			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
-				pdb.initialiseMaps();
+				pdb.initialiseMaps();				
 			}
 
 			readSecStructure(pdbAsymUnit);
@@ -635,6 +632,7 @@ public class CiffileParser {
 		}
 		
 		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+			
 			if (pdb.getObsLength()>pdb.getFullLength()) {
 				throw new PdbLoadException("Length of observed (atom_site) sequence longer than pdbx_poly_seq_scheme sequence for CIF chain "+pdb.getChainCode()+". Inconsistent PDB entry. Report to the PDB.");
 			}
