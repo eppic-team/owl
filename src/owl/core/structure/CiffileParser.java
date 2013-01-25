@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -18,6 +19,8 @@ import java.util.zip.GZIPInputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
+
+import org.apache.commons.lang.math.NumberUtils;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
@@ -484,14 +487,17 @@ public class CiffileParser {
 			// if both are present, we don't compare them but take the Rsym value to be 
 			// the right one (there's not much consensus in the field as to what's the 
 			// right thing to do anyway!)
-			if (!rsymvalStr.equals("?")) {
+			
+			if ( isDouble(rsymvalStr) && isDouble(rmergevalStr) ) {
 				qParams[2] = Double.parseDouble(rsymvalStr);
 			}
-			if (!rmergevalStr.equals("?")) {
-				if (qParams[2]==-1) {
-					qParams[2] = Double.parseDouble(rmergevalStr);
-				} 
+			else if(isDouble(rsymvalStr)){
+				qParams[2] = Double.parseDouble(rsymvalStr);
 			}
+			else if(isDouble(rmergevalStr)){
+				qParams[2] = Double.parseDouble(rmergevalStr);
+			}
+			
 		}
 		return qParams;
 	}
@@ -644,7 +650,13 @@ public class CiffileParser {
 	
 	
 	private void readPdbxPolySeq(PdbAsymUnit pdbAsymUnit) throws IOException, FileFormatException, PdbLoadException {
+		
 		PdbxPolySeqLineList list  = new PdbxPolySeqLineList();
+		
+		if(!ids2elements.containsKey(pdbxPolySeqId)) {
+			throw new PdbLoadException("Missing pdbx_poly_seq_scheme field in mmCIF file. Is there no protein or nucleotide chains in this structure?");
+		}
+		
         	
 		Long[] intPdbxPoly = loopelements2contentOffset.get(ids2elements.get(pdbxPolySeqId));
 		int asymIdIdx = fields2indices.get(pdbxPolySeqId+".asym_id");
@@ -949,5 +961,13 @@ public class CiffileParser {
 			}
 		}
 	}
-
+	
+	private static boolean isDouble(String value)
+	{
+	    try{
+	    	Double.parseDouble(value);
+	    	return true;
+	    }catch (NumberFormatException ex)
+	    {	return false; }
+	}
 }
