@@ -109,7 +109,7 @@ public class InterfacesFinder {
 		// 0. generate complete unit cell
 		PdbUnitCell cell = null;
 		List<BoundingBox> cellBBs = null;
-		if (pdb.getCrystalCell()!=null) {
+		if (pdb.getCrystalCell()!=null && pdb.isCrystallographicExpMethod()) {
 			cell = pdb.getUnitCell();
 			// we calculate all the bounds of each of the asym units, those will then be reused and translated
 			cellBBs = cell.getBoundingBoxes(!nonPoly);
