@@ -23,7 +23,7 @@ public class HetResidue implements Residue {
 	// some parents: 
 	// MSE:MET NLE:LEU SMC:CYS AIB:ALA ABA:ALA
 	private static final String[] BACKBONE_HET_RESIDUES = 
-		{"ACE", "NH2", "SUI", "PYR", "GL3", "MSE", "SNN", "CRO", "AKZ", "GLK", "LLP", "NLE", "SMC", "AIB", "ABA"};
+		{"ACE", "NH2", "SUI", "PYR", "GL3", "MSE", "SNN", "CRO", "AKZ", "GLK", "LLP", "NLE", "SMC", "AIB", "ABA", "L2O"};
 	
 	private String mol3letterCode;
 	

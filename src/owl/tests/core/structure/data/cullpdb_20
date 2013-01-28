@@ -35,7 +35,9 @@
 # rna with ligand
 3mei
 # an entry in a non-standard crystal frame (very rare!). We throw PdbLoadException when reading it, that's why it's commented out
-#1bab 
+#1bab
+# a tough cif parser case: contains multi-line ';' quoting in a non-loop element (_struct_conf) other than _struct.title
+2bi6 
 # from here cullpdb20
 7ODC	A
 1WB4	A

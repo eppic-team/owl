@@ -63,7 +63,7 @@ public class CiffileParser {
 	private TreeMap<String,Integer> fields2indices;					// map of field names (id.field) to index (for loop elements)
 	private TreeMap<String,Integer> ids2fieldsIdx;					// map of element ids to field index counter (after parseCifFile method done it contains the total number of fields per element id)
 	private TreeSet<Integer> loopElements; 							// contains list of elements that are of loop type
-	private TreeMap<Integer,Long[]> loopelements2contentOffset;    // begin and end line index of each loop element
+	private TreeMap<Integer,Long[]> loopelements2contentOffset;    // begin and end line index of each loop element, will also contain begin and end of multi-line quoted (';' quoting) values in non-loop elements
 	
 	private transient RandomAccessFile fcif;
  
@@ -326,18 +326,18 @@ public class CiffileParser {
 					continue;
 				}
 			}
-			if (!line.startsWith("_") && !line.startsWith("#")){ // not in field definition, we are in values of a loop element 
+			if (!line.startsWith("_") && !line.startsWith("#")){ // not in field definition, we are in values of a loop element or in a multi-line quoted value (';' quoting)
 				if (ids2elements.containsValue(element)) { // if this is one of the fields we want to parse (members of String[] ids)
 					if (!loopelements2contentOffset.containsKey(element)) {
-						//loopelements2content.put(element,line+"\n");
+						// this happens for both values in loop-elements and for multi-line quoted values in non-loop elements
 						Long[] interval = {lastLineOffset, currentOffset};
 						loopelements2contentOffset.put(element,interval);
 					} else {
-						// condition in next line is a bad hack: needed to be able to also parse non-loop elements 
-						// with our tokeniser for elements that can span several lines (e.g. _struct.title) 
-						if (loopElements.contains(element)) {  
-							//loopelements2content.put(element,loopelements2content.get(element)+line+"\n");
-							loopelements2contentOffset.get(element)[1]=currentOffset;
+						// condition in next line is a bad hack: needed to be able to also parse 
+						// multi-line quoted (';' quoting) values in non-loop elements with our 
+						// tokeniser (for instance it happens often for _struct.title) 
+						if (loopElements.contains(element)) { // i.e. we only do this if we really are in a loop-element (we could be in a non-loop with a multi-line quoted value) 
+							loopelements2contentOffset.get(element)[1]=currentOffset; // i.e. if we are in a loop-element we keep extending the offset to the end of the last value
 						}
 					}
 				}
@@ -737,8 +737,10 @@ public class CiffileParser {
 		// struct_conf element is optional
 		Long[] intStructConf = null;
 		if (ids2elements.containsKey(structConfId)) {
-			// if not a loop element then intStructConf stays null (because loopelements2contentIndex will return null)
-			intStructConf = loopelements2contentOffset.get(ids2elements.get(structConfId));
+			// if not a loop element then intStructConf stays null 
+			if (loopElements.contains(ids2elements.get(structConfId))) {
+				intStructConf = loopelements2contentOffset.get(ids2elements.get(structConfId));
+			}
 		} 
 		// taking care of cases where struct_conf is not a loop element but a one value field
 		if (ids2elements.containsKey(structConfId) && !loopElements.contains(ids2elements.get(structConfId))){  
@@ -772,8 +774,10 @@ public class CiffileParser {
 		// struct_sheet_range element is optional
 		Long[] intStructSheet = null; 
 		if (ids2elements.containsKey(structSheetId)) {
-			// if not a loop element intStructSheet stays null (because loopelements2contentIndex will return null)
-			intStructSheet = loopelements2contentOffset.get(ids2elements.get(structSheetId));
+			// if not a loop element intStructSheet stays null 
+			if (loopElements.contains(ids2elements.get(structSheetId))) {
+				intStructSheet = loopelements2contentOffset.get(ids2elements.get(structSheetId));
+			}
 		}
 		// taking care of cases where struct_sheet_range is not a loop element but a one value field
 		if (ids2elements.containsKey(structSheetId) && !loopElements.contains(ids2elements.get(structSheetId))){

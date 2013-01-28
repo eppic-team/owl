@@ -594,7 +594,9 @@ public class PdbParsersTest {
 								} else if (pdbfileRes instanceof HetResidue) {
 									Assert.assertEquals(((HetResidue)pdbaseRes).getLongCode(),((HetResidue)pdbfileRes).getLongCode());
 									Assert.assertNotSame(((HetResidue)pdbfileRes).getLongCode(),"HOH");
-									if (!pdbfilePdb.isNonPolyChain() && pdbfilePdb.getSequence().isProtein()) Assert.assertTrue(pdbfileRes.isPeptideLinked());
+									if (!pdbfilePdb.isNonPolyChain() && pdbfilePdb.getSequence().isProtein()) {
+										Assert.assertTrue(pdbfileRes.isPeptideLinked());
+									}
 								} else if (pdbfileRes instanceof NucResidue) {
 									nucleic = true;
 									Assert.assertEquals(((NucResidue)pdbaseRes).getNucType(),((NucResidue)pdbfileRes).getNucType());
