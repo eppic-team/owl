@@ -470,11 +470,11 @@ public class CiffileParser {
 		// refine only present in xray structures
 		if (fields2values.containsKey(refine+".ls_d_res_high")) {
 			String resolStr = fields2values.get(refine+".ls_d_res_high").trim();
-			if (!resolStr.equals("?")) {
+			if ( isDouble(resolStr) ) {
 				qParams[0] = Double.parseDouble(resolStr);
 			}
 			String rfreeStr = fields2values.get(refine+".ls_R_factor_R_free").trim();
-			if (!rfreeStr.equals("?")) {
+			if ( isDouble(rfreeStr) ) {
 				qParams[1] = Double.parseDouble(rfreeStr);
 			}
 		}
