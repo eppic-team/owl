@@ -87,21 +87,27 @@ public class InterfaceRimCore implements Serializable {
 		return this.rimResidues.size();
 	}
 
-	public String getRimResString() {
-		return getResString(rimResidues);
+	public String getRimResString(boolean usePdbResSer) {
+		return getResString(rimResidues, usePdbResSer);
 	}
 	
-	public String getCoreResString() {
-		return getResString(coreResidues);
+	public String getCoreResString(boolean usePdbResSer) {
+		return getResString(coreResidues, usePdbResSer);
 	}
 	
-	private static String getResString(List<Residue> residues) {
+	private static String getResString(List<Residue> residues, boolean usePdbResSer) {
 		String str = "";
 		for (int i=0;i<residues.size();i++) {
+			String serial = null;
+			if (usePdbResSer) {
+				serial = residues.get(i).getPdbSerial();
+			} else {
+				serial = ""+residues.get(i).getSerial();
+			}
 			if (i!=residues.size()-1)
-				str+=residues.get(i).getSerial()+",";
+				str+=serial+",";
 			else
-				str+=residues.get(i).getSerial();
+				str+=serial;
 		}
 		return str;
 	}

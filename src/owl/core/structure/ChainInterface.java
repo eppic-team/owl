@@ -416,74 +416,56 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	    return hash; 
 	}
 	
-	public void printTabular(PrintStream ps) {
+	public void printTabular(PrintStream ps, boolean usePdbResSer) {
 		ps.print("# ");
 		ps.printf("%d\t%9.2f\t%5.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(),this.getScore(), 
 				this.getName(),
 				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf().getMatTransform()));
 		if (isFirstProtein()) {
 			ps.print("## ");
-			this.printFirstMolInfoTabular(ps);
+			this.printMolInfoTabular(ps, FIRST, usePdbResSer);
 		}
 		if (isSecondProtein()) {
 			ps.print("## ");
-			this.printSecondMolInfoTabular(ps);
+			this.printMolInfoTabular(ps, SECOND, usePdbResSer);
 		}
 	}
 	
-	private void printFirstMolInfoTabular(PrintStream ps) {
-		String molType = null;
-		if (this.getFirstMolecule().isNonPolyChain()) molType = "non-polymer";
-		else if (this.getFirstMolecule().getSequence().isProtein()) molType = "protein";
-		else molType = "nucleic acid";
-		ps.println("1\t"+firstMolecule.getPdbChainCode()+"\t"+molType);
-
-		int numSurfRes0 = firstMolecule.getSurfaceResidues(0).size();
-		int numSurfResCutoff = firstMolecule.getSurfaceResidues(getFirstRimCore().getMinAsaForSurface()).size();
-		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
-				numSurfRes0,numSurfResCutoff,getFirstRimCore().getMinAsaForSurface());
+	private void printMolInfoTabular(PrintStream ps, int molecId, boolean usePdbResSer) {
+		PdbChain molecule = null;
+		InterfaceRimCore rimCore = null;
+		if (molecId==FIRST) {
+			molecule = this.getFirstMolecule();
+			rimCore = getFirstRimCore();
+		}
+		else if (molecId==SECOND) {
+			molecule = this.getSecondMolecule();
+			rimCore = getSecondRimCore();
+		}
+		else {
+			throw new IllegalArgumentException("Molecule id "+molecId+" is not valid");
+		}
 		
-		InterfaceRimCore rimCore = getFirstRimCore();
+		String molType = null;
+		if (molecule.isNonPolyChain()) molType = "non-polymer";
+		else if (molecule.getSequence().isProtein()) molType = "protein";		
+		else molType = "nucleic acid";
+		
+		ps.println((molecId+1)+"\t"+molecule.getPdbChainCode()+"\t"+molType);
+
+		int numSurfRes0 = molecule.getSurfaceResidues(0).size();
+		int numSurfResCutoff = molecule.getSurfaceResidues(rimCore.getMinAsaForSurface()).size();
+		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
+				numSurfRes0,numSurfResCutoff,rimCore.getMinAsaForSurface());
+		
 		ps.printf("## %4.2f\n",bsaToAsaCutoff);
-		ps.println("## rim : "+rimCore.getRimResString());
+		ps.println("## rim : "+rimCore.getRimResString(usePdbResSer));
 		if (rimCore.getCoreResidues().size()>0) {
-			ps.println("## core: "+rimCore.getCoreResString());
+			ps.println("## core: "+rimCore.getCoreResString(usePdbResSer));
 		}
 		ps.println("## seqres pdb res asa bsa burial(percent)");
 
-		for (Residue residue:firstMolecule) {			
-			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
-			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
-			if (percentBurial>0.1) {
-				ps.printf("\t%5.1f\n",percentBurial);
-			} else {
-				ps.println();
-			}
-		}
-	}
-
-	private void printSecondMolInfoTabular(PrintStream ps) {
-		String molType = null;
-		if (this.getSecondMolecule().isNonPolyChain()) molType = "non-polymer";
-		else if (this.getSecondMolecule().getSequence().isProtein()) molType = "protein";
-		else molType = "nucleic acid";
-
-		ps.println("2\t"+secondMolecule.getPdbChainCode()+"\t"+molType);
-
-		int numSurfRes0 = secondMolecule.getSurfaceResidues(0).size();
-		int numSurfResCutoff = secondMolecule.getSurfaceResidues(getSecondRimCore().getMinAsaForSurface()).size();
-		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
-				numSurfRes0,numSurfResCutoff,getSecondRimCore().getMinAsaForSurface());
-		
-		InterfaceRimCore rimCore = getSecondRimCore();
-		ps.printf("## %4.2f\n",bsaToAsaCutoff);
-		ps.println("## rim : "+rimCore.getRimResString());
-		if (rimCore.getCoreResidues().size()>0) {
-			ps.println("## core: "+rimCore.getCoreResString());
-		}
-		ps.println("## seqres pdb res asa bsa burial(percent)");
-		
-		for (Residue residue:secondMolecule) {
+		for (Residue residue:molecule) {			
 			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
 			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
 			if (percentBurial>0.1) {
@@ -652,12 +634,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	/**
 	 * Writes this interface to given PDB file with original chain names (PDB chain codes),
 	 * unless the 2 chains are the same where the second one is renamed to next letter in 
-	 * alphabet.
-	 * Subsequently the chain code for the renamed chain can be retrieved with {@link #getSecondPdbChainCodeForOutput()}
+	 * alphabet. Subsequently the chain code for the renamed chain can be retrieved 
+	 * with {@link #getSecondPdbChainCodeForOutput()} 
 	 * @param file
+	 * @param usePdbResSer if true PDB residue serials are written, if false CIF residue 
+	 * serials are written
 	 * @throws FileNotFoundException 
 	 */
-	public void writeToPdbFile(File file) throws FileNotFoundException {
+	public void writeToPdbFile(File file, boolean usePdbResSer) throws FileNotFoundException {
 		chain2forOutput = secondMolecule.getPdbChainCode();
 		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
 			// if both chains are named equally we want to still named them differently in the output pdb file
@@ -674,16 +658,16 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		ps.println("HEADER");
 		if (!firstMolecule.isNonPolyChain()) firstMolecule.writeSeqresRecord(ps, firstMolecule.getPdbChainCode());
 		if (!secondMolecule.isNonPolyChain()) secondMolecule.writeSeqresRecord(ps,chain2forOutput);
-		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode());
+		firstMolecule.writeAtomLines(ps, firstMolecule.getPdbChainCode(), usePdbResSer);
 		if (firstCofactors!=null) {
 			for (PdbChain cofactor:firstCofactors) {
-				cofactor.writeAtomLines(ps, firstMolecule.getPdbChainCode());
+				cofactor.writeAtomLines(ps, firstMolecule.getPdbChainCode(), usePdbResSer);
 			}
 		}
-		secondMolecule.writeAtomLines(ps,chain2forOutput);
+		secondMolecule.writeAtomLines(ps,chain2forOutput, usePdbResSer);
 		if (secondCofactors!=null) {
 			for (PdbChain cofactor:secondCofactors) {
-				cofactor.writeAtomLines(ps, chain2forOutput);
+				cofactor.writeAtomLines(ps, chain2forOutput, usePdbResSer);
 			}
 		}
 		ps.println("END");

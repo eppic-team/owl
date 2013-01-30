@@ -198,12 +198,12 @@ public class enumerateInterfaces {
 		
 			if (writeDir!=null) {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
-				interf.writeToPdbFile(pdbFile);
+				interf.writeToPdbFile(pdbFile, true);
 				interfPdbFiles[i] = pdbFile; 
 				if (generatePngs) {
 					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE, pdbFile, 
 							new File(writeDir,outBaseName+"."+(i+1)+".pse"), 
-							new File(writeDir,outBaseName+"."+(i+1)+".pml"), outBaseName);
+							new File(writeDir,outBaseName+"."+(i+1)+".pml"), outBaseName, true);
 				}
 			}
 		}

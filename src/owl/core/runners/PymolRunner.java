@@ -138,15 +138,20 @@ public class PymolRunner {
 	 * mixed cartoon/surface representation of interface with selections 
 	 * coloring each chain with a color as set in {@link #setColors(String[], String)} and 
 	 * through {@link #readColorsFromPropertiesFile(InputStream)}
-	 * @param pymolExec
 	 * @param interf
 	 * @param caCutoff
 	 * @param minAsaForSurface
 	 * @param pdbFile
+	 * @param pseFile
+	 * @param pmlFile
+	 * @param base
+	 * @param usePdbResSer if true PDB residue serials will be used for residue selections,
+	 * if false CIF residue serials will be used
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, double minAsaForSurface, File pdbFile, File pseFile, File pmlFile, String base) 
+	public void generateInterfPngPsePml(ChainInterface interf, double caCutoff, double minAsaForSurface, 
+			File pdbFile, File pseFile, File pmlFile, String base, boolean usePdbResSer) 
 	throws IOException, InterruptedException {
 		
 		String molecName = getPymolMolecName(pdbFile);
@@ -202,13 +207,13 @@ public class PymolRunner {
 		cmd = "select chain"+chain2+", chain "+chain2;
 		writeCommand(cmd, pml);
 		
-		cmd = getSelString("core", chain1, interf.getFirstRimCore().getCoreResidues());
+		cmd = getSelString("core", chain1, interf.getFirstRimCore().getCoreResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
-		cmd = getSelString("core", chain2, interf.getSecondRimCore().getCoreResidues());
+		cmd = getSelString("core", chain2, interf.getSecondRimCore().getCoreResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
-		cmd = getSelString("rim", chain1, interf.getFirstRimCore().getRimResidues());
+		cmd = getSelString("rim", chain1, interf.getFirstRimCore().getRimResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
-		cmd = getSelString("rim", chain2, interf.getSecondRimCore().getRimResidues());
+		cmd = getSelString("rim", chain2, interf.getSecondRimCore().getRimResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
 		
 		cmd = "select interface"+chain1+", core"+chain1+" or rim"+chain1;
@@ -288,8 +293,10 @@ public class PymolRunner {
 		}
 	}
 	
-	public void generateInterfacesPse(File asuPdbFile, Set<String> chains, File pmlFile, File pseFile, File[] interfacePdbFiles, ChainInterfaceList interfaces) 
-			throws IOException, InterruptedException {
+	public void generateInterfacesPse(File asuPdbFile, Set<String> chains, 
+			File pmlFile, File pseFile, File[] interfacePdbFiles, 
+			ChainInterfaceList interfaces) 
+		throws IOException, InterruptedException {
 		
 		String molecName = getPymolMolecName(asuPdbFile);
 		
@@ -406,10 +413,15 @@ public class PymolRunner {
 	 * if <0 then no minimum passed (PyMOL will calculate based on present b-factors)
 	 * @param maxScore the maximum possible score for b factor colors scaling (passed as maximum to PyMOL's spectrum command)
 	 * if <0 then no maximum passed (PyMOL will calculate based on present b-factors)
+	 * @param usePdbResSer if true PDB residue serials will be used for residue selections,
+	 * if false CIF residue serials will be used 
 	 * @throws IOException 
 	 * @throws InterruptedException 
 	 */
-	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, double caCutoffGeom, double caCutoffCoreSurf, double minAsaForSurface, File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore) 
+	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, 
+			double caCutoffGeom, double caCutoffCoreSurf, double minAsaForSurface, 
+			File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore,
+			boolean usePdbResSer) 
 	throws IOException, InterruptedException {
 		
 		String molecName = getPymolMolecName(pdbFile);
@@ -489,12 +501,12 @@ public class PymolRunner {
 			interfaceIds.add(id);
 			
 			
-			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffGeomStr);
+			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffGeomStr, usePdbResSer);
 			
 			cmd = "select interface"+id+"Dots, core"+id+"Dots"+caCutoffGeomStr+" or rim"+id+"Dots"+caCutoffGeomStr;
 			writeCommand(cmd, pml);
 			
-			selectRimCore(pml, rimCore, molecName, id+caCutoffGeomStr);
+			selectRimCore(pml, rimCore, molecName, id+caCutoffGeomStr, usePdbResSer);
 			
 			cmd = "select interface"+id+", core"+id+caCutoffGeomStr+" or rim"+id+caCutoffGeomStr;
 			writeCommand(cmd, pml);
@@ -509,9 +521,9 @@ public class PymolRunner {
 				rimCore = interf.getSecondRimCore();
 				
 			} 
-			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffCoreSurfStr);
+			selectRimCore(pml, rimCore, dotsLayerMolecName, id+"Dots"+caCutoffCoreSurfStr, usePdbResSer);
 
-			selectRimCore(pml, rimCore, molecName, id+caCutoffCoreSurfStr);
+			selectRimCore(pml, rimCore, molecName, id+caCutoffCoreSurfStr, usePdbResSer);
 
 		}
 		
@@ -579,10 +591,10 @@ public class PymolRunner {
 		return color;
 	}
 	
-	private void selectRimCore(PrintStream pml, InterfaceRimCore rimCore, String molecName, String suffix) {
-		String cmd = "select core"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getCoreResidues());
+	private void selectRimCore(PrintStream pml, InterfaceRimCore rimCore, String molecName, String suffix, boolean usePdbResSer) {
+		String cmd = "select core"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getCoreResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
-		cmd = "select rim"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getRimResidues());
+		cmd = "select rim"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getRimResidues(), usePdbResSer);
 		writeCommand(cmd, pml);			
 	}
 	
@@ -590,18 +602,22 @@ public class PymolRunner {
 		 return pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
 	}
 	
-	private String getResiSelString(List<Residue> list) {
+	private String getResiSelString(List<Residue> list, boolean usePdbResSer) {
 		if (list.isEmpty()) return "0";
 		StringBuffer sb = new StringBuffer();
 		for (int i=0;i<list.size();i++) {
-			sb.append(list.get(i).getSerial());
+			if (usePdbResSer) {
+				sb.append(list.get(i).getPdbSerial());
+			} else {
+				sb.append(list.get(i).getSerial());
+			}
 			if (i!=list.size()-1) sb.append("+");
 		}
 		return sb.toString();
 	}
 
-	private String getSelString(String namePrefix, char chainName, List<Residue> list) {
-		return "select "+namePrefix+chainName+", chain "+chainName+" and resi "+getResiSelString(list);
+	private String getSelString(String namePrefix, char chainName, List<Residue> list, boolean usePdbResSer) {
+		return "select "+namePrefix+chainName+", chain "+chainName+" and resi "+getResiSelString(list, usePdbResSer);
 	}
 
 	private void writeCommand(String cmd, PrintStream ps) {

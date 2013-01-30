@@ -775,7 +775,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/** 
 	 * Writes atom lines for this structure to the given output stream.
 	 * The chain code written is the CIF chain code. If the code is longer than 1 character 
-	 * only first character is used and a warning issued.
+	 * only first character is used and a warning issued. Residue serials are the CIF
+	 * (i.e. SEQRES) ones.
 	 * @param out
 	 */
 	public void writeAtomLines(PrintStream out) {
@@ -784,11 +785,25 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	
 	/**
 	 * Writes atom lines for this structure to the given output stream using the given
-	 * chain code instead of the internal CIF chain code.
+	 * chain code instead of the internal CIF chain code. Residue serials are the CIF
+	 * (i.e. SEQRES) ones.
 	 * @param out
 	 * @param chainCode
 	 */
 	public void writeAtomLines(PrintStream out, String chainCode) {
+		writeAtomLines(out, chainCode, false);
+	}
+	
+	/**
+	 * Writes atom lines for this structure to the given output stream using the given
+	 * chain code instead of the internal CIF chain code. Residue serials will be either
+	 * the CIF ones (if usePdbResSer is false) or the PDB ones (if usePdbResSer is true)
+	 * @param out
+	 * @param chainCode
+	 * @param usePdbResSer if true PDB residue serials are written, if false CIF 
+	 * residue serials are written
+	 */
+	public void writeAtomLines(PrintStream out, String chainCode, boolean usePdbResSer) {
 		String chainCodeStr = chainCode;
 		if (chainCode.length()>1) {
 			System.err.println("Warning! Chain code with more than 1 character ("+chainCode+"), only first character will be written to ATOM lines");
@@ -799,28 +814,47 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		for (int atomser:this.getAllAtomSerials()) {
 			Atom atom = getAtom(atomser);
 			int resser = atom.getParentResSerial();
+			String pdbresser = atom.getParentResidue().getPdbSerial();
 			String atomCode = atom.getCode();
 			String atomType = atom.getType().getSymbol();
 			String res = atom.getParentResidue().getLongCode();
 			Point3d coords = atom.getCoords();
 			double occupancy = atom.getOccupancy();
 			double bFactor = atom.getBfactor();
+			
 			String lineType = "ATOM  ";
 			if (atom.getParentResidue() instanceof HetResidue) {
 				lineType = "HETATM";
 			}
-			String printfStr = lineType+"%5d  %-3s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
-			if (atomCode.length()==4) { // some hydrogens have a 4 letter code and it is not aligned to column 14 but to 13 instead 
-				printfStr =    lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
+			
+			String atomCodePrintf = " %-3s";
+			// some hydrogens have a 4 letter code and it is not aligned to column 14 but to 13 instead
+			// for atoms with 2 letter codes (CL, NA, ....) the alignment is to the left again
+			if (atomCode.length()==4 || atomType.length()==2) { 
+				atomCodePrintf = "%-4s";
 			}
-			if (atomType.length()==2) { // for atoms with 2 letter codes (CL, NA, ....) the alignment is to the left again
-				printfStr =    lineType+"%5d %-4s %3s %1s%4d    %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
+			
+			String resSerPrintf = "%4d ";
+			if (usePdbResSer) {
+				resSerPrintf = "%4s ";
+				if (!Character.isDigit(pdbresser.charAt(pdbresser.length()-1))) {
+					resSerPrintf = "%5s";
+				}
 			}
+			
+			String printfStr = lineType+"%5d "+atomCodePrintf+" %3s %1s"+resSerPrintf+"   %8.3f%8.3f%8.3f%6.2f%6.2f          %2s\n";
+
 			// Local.US is necessary, otherwise java prints the doubles locale-dependant (i.e. with ',' for some locales)
-			out.printf(Locale.US, printfStr,
+			if (usePdbResSer) {
+				out.printf(Locale.US, printfStr,
+					atomser, atomCode, res, chainCodeStr, pdbresser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);				
+			} else {
+				out.printf(Locale.US, printfStr,
 					atomser, atomCode, res, chainCodeStr, resser, coords.x, coords.y, coords.z, occupancy, bFactor, atomType);
+			}
 		}
 		if (!isNonPolyChain()) out.println("TER");
+
 	}
 
 	/**
@@ -867,7 +901,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * Writes coordinate data into a file in PDB format (SEQRES and ATOM lines only)
 	 * The residue serials written correspond to the SEQRES sequence (as in CIF files).
 	 * The chain code written is the CIF chain code, if it is longer than one character
-	 * then only first character is written and a warning issued.
+	 * then only first character is written and a warning issued. Residue serials are
+	 * the CIF (i.e. SEQRES) ones.
 	 * @param outFile
 	 * @throws FileNotFoundException
 	 */
@@ -877,9 +912,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 			writeSeqresRecord(out, chainCode);
 		}
 		writeAtomLines(out);
-		if (!isNonPolyChain()) {
-			out.println("TER");
-		}
+		
 		out.println("END");
 		out.close();
 	}
@@ -887,19 +920,19 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Writes coordinate data into a file in PDB format (SEQRES and ATOM lines only)
 	 * The residue serials written correspond to the SEQRES sequence (as in CIF files).
-	 * The chain code written is the PDB chain code
+	 * The chain code written is the PDB chain code. Residue serials can be either CIF
+	 * serials (when usePdbResSer false) or PDB ones (when usePdbResSer true)
 	 * @param outFile
+	 * @param usePdbResSer
 	 * @throws FileNotFoundException
 	 */
-	public void writeToPDBFileWithPdbChainCodes(File outFile) throws FileNotFoundException {
+	public void writeToPDBFileWithPdbChainCodes(File outFile, boolean usePdbResSer) throws FileNotFoundException {
 		PrintStream out = new PrintStream(new FileOutputStream(outFile));
 		if (!isNonPolyChain()) {
 			writeSeqresRecord(out, pdbChainCode);
 		}
-		writeAtomLines(out, pdbChainCode);
-		if (!isNonPolyChain()) {
-			out.println("TER");
-		}
+		writeAtomLines(out, pdbChainCode, usePdbResSer);
+		
 		out.println("END");
 		out.close();
 	}

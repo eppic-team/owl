@@ -152,7 +152,7 @@ public class PisaConnection {
 			ChainInterfaceList interfaces = all.get(pdbCode);
 			for (ChainInterface interf:interfaces) {
 				
-				interf.printTabular(System.out);
+				interf.printTabular(System.out, true);
 			}
 		}
 		
