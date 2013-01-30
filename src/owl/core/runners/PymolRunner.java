@@ -607,7 +607,10 @@ public class PymolRunner {
 		StringBuffer sb = new StringBuffer();
 		for (int i=0;i<list.size();i++) {
 			if (usePdbResSer) {
-				sb.append(list.get(i).getPdbSerial());
+				String pdbSerial = list.get(i).getPdbSerial();
+				// we need to escape the negative residues in pymol with a backslash
+				if (pdbSerial.startsWith("-")) pdbSerial = "\\"+pdbSerial;
+				sb.append(pdbSerial);
 			} else {
 				sb.append(list.get(i).getSerial());
 			}
