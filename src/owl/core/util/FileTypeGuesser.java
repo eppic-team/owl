@@ -52,12 +52,16 @@ public class FileTypeGuesser {
 	
 	// signatures for the files as above
 	private static final String[] FILE_SIGNATURES  = {
-		"(?:HEADER|SEQRES|CRYST1|REMARK|EXPDTA|MODEL).*",
+		"(?:HEADER|TITLE|SEQRES|CRYST1|REMARK|EXPDTA|MODEL|HELIX|SHEET).*",
 		"ATOM\\s+.*",
 		"PFRMAT\\s+TS.*",
 		"PFRMAT\\s+RR.*",
 		"#(?:AGLAPPE|CMVIEW|OWL) GRAPH FILE.*",
-		"data_\\d\\w\\w\\w"
+		// mmCIF files from PDB always start with "data_PDBcode". 
+		// Phenix's cif files do start with data_ but then with no PDB code
+		// The problem is anyway that the cif format phenix uses is very different from 
+		// the one used by the PDB, thus we would fail to read them anyway-> we detect here only files that start with PDB code
+		"data_\\d\\w\\w\\w" 
 	};
 	
 	/*---------------------------- public methods ---------------------------*/

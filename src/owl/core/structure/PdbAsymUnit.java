@@ -213,7 +213,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		} else if (type==FileTypeGuesser.CIF_FILE) {
 			loadFromCifFile(pdbSourceFile);
 		} else {
-			throw new FileFormatException("The given file does not seem to be neither a PDB file nor a mmCIF file");
+			throw new FileFormatException("The given file does not seem to be neither a PDB file nor a mmCIF file. If a PDB file make sure it starts with a HEADER record.");
 		}
 		
 	}
