@@ -595,7 +595,7 @@ public class PymolRunner {
 		String cmd = "select core"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getCoreResidues(), usePdbResSer);
 		writeCommand(cmd, pml);
 		cmd = "select rim"+suffix+", "+molecName+" and resi "+getResiSelString(rimCore.getRimResidues(), usePdbResSer);
-		writeCommand(cmd, pml);			
+		writeCommand(cmd, pml);
 	}
 	
 	private String getPymolMolecName(File pdbFile) {
@@ -603,7 +603,7 @@ public class PymolRunner {
 	}
 	
 	private String getResiSelString(List<Residue> list, boolean usePdbResSer) {
-		if (list.isEmpty()) return "0";
+		if (list.isEmpty()) return "none"; // the keyword for an empty selection in pymol
 		StringBuffer sb = new StringBuffer();
 		for (int i=0;i<list.size();i++) {
 			if (usePdbResSer) {
