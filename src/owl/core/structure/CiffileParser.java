@@ -379,10 +379,16 @@ public class CiffileParser {
 		if (!fields2values.containsKey(cell+".length_a")) {
 			return null;
 		}
-		if (fields2values.get(cell+".length_a").trim().equals("?")) {
-			// some NMR entries (e.g. 1fmm) do have cell params with a question mark value! we love the PDB!!
+		if (!isDouble(fields2values.get(cell+".length_a").trim()) ||
+				!isDouble(fields2values.get(cell+".length_b").trim()) ||
+				!isDouble(fields2values.get(cell+".length_c").trim()) ||
+				!isDouble(fields2values.get(cell+".angle_alpha").trim()) ||
+				!isDouble(fields2values.get(cell+".angle_beta").trim()) ||
+				!isDouble(fields2values.get(cell+".angle_gamma").trim()) ) {
+			// some NMR entries (e.g. 1fmm, 3iyx) do have cell params with a question mark value! we love the PDB!!
 			return null;
 		}
+		
 		CrystalCell crystalCell = null;
 		double a = Double.parseDouble(fields2values.get(cell+".length_a").trim());
 		double b = Double.parseDouble(fields2values.get(cell+".length_b").trim());
