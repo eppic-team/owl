@@ -84,7 +84,7 @@ public class Asa {
 	    for (int i=0;i<atoms.length;i++) {
 	    	if (i==k) continue;
 	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords()); 
-	        if (dist < radius + atoms[i].getType().getRadius()) {
+	        if (dist < radius + atoms[i].getRadius()) {
 	            neighbor_indices.add(i);
 	        }
 	    }

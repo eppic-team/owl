@@ -58,11 +58,29 @@ public class Atom implements Serializable {
 			if (type==null) {
 				System.err.println("Warning! Can not recognise atom element "+element+" with atom code "+code+" and serial "+serial);
 			}
-		} else { // if we couldn't parse an atom type (e.g. not present in PDB file) we still try to get the element from the atom code
-			// getting atom type from code. This works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
+		} else { 
+			// If we couldn't parse an atom type (e.g. not present in PDB file) we still try to get the element from the atom code
+			// Getting atom type from code: it works for C, H, S, N and O atoms (all that is needed for standard aas), not necessarily for others
 			Matcher m = ATOM_TYPE_PATTERN.matcher(code);
 			if (m.matches()) {
-				this.type = AtomType.getBySymbol(m.group(1));
+				String elementGuess = null;
+				if (Character.isDigit(m.group(1).charAt(0))) {
+					// if first is a digit we go for second as the element guess
+					if (code.length()>1) {
+						elementGuess = Character.toString(code.charAt(1));
+						this.type = AtomType.getBySymbol(elementGuess);
+					}
+				} else {
+					// if first is not a digit, that's our element guess
+					elementGuess = m.group(1);
+					this.type = AtomType.getBySymbol(elementGuess);
+				}
+				// if not of the above is a good guess then we have no type and we warn
+				if (type==null) { 
+					System.err.println("Warning! Can't guess chemical element for atom code "+code+". Element guess was "+elementGuess+". Does the code follow the PDB standard?");
+				}									
+			} else {
+				System.err.println("Warning! Can't guess chemical element for atom code "+code+". Does the code follow the PDB standard?");
 			}
 		}
 	}
