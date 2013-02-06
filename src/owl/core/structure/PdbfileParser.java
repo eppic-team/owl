@@ -509,7 +509,7 @@ public class PdbfileParser {
 						fpdb.close();
 						throw new FileFormatException("ATOM/HETATM line is too short to contain the minimum fields required. PDB file "+pdbfile+" at line "+linecount);
 					}
-					if (!line.substring(17,20).trim().equals("HOH")) {
+					if (!line.substring(17,20).trim().equals(HetResidue.WATER) && !line.substring(17,20).trim().equals(HetResidue.DEUT_WATER)) {
 						if (m.group(1).equals("ATOM")) outOfPolyChain = false;
 						int atomserial=Integer.parseInt(line.substring(6,11).trim());
 						String atom = line.substring(12,16).trim();

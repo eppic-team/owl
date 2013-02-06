@@ -409,7 +409,7 @@ public class PdbaseParser {
 			double bfactor = rsst.getDouble(13);        // bfactor
 			String authAsymId = rsst.getString(14);		// auth_asym_id
 			
-			if (!res_type.equals("HOH")) {
+			if (!res_type.equals(HetResidue.WATER) && !res_type.equals(HetResidue.DEUT_WATER)) {
 				// note we don't really use the insCode and nonPoly fields of AtomLine (we use them only in pdb file parser), we fill them with null and false
 				atomLines.addAtomLine(new AtomLine(labelAsymId,labelAltId,atomserial,atom,element,res_type,resSerial,pdbResSerial,null,new Point3d(x,y,z),occupancy,bfactor,authAsymId,false,false));
 			}

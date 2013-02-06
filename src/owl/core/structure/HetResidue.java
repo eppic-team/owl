@@ -19,6 +19,9 @@ public class HetResidue implements Residue {
 
 	private static final long serialVersionUID = 1L;
 	
+	public static final String WATER = "HOH";
+	public static final String DEUT_WATER = "DOD"; // deuterated water: present in some PDB entries especially neutron diffraction ones
+	
 	// a (non-comprehensive) list of het residues that are within protein chains (peptide-linked)
 	// some parents: 
 	// MSE:MET NLE:LEU SMC:CYS AIB:ALA ABA:ALA
