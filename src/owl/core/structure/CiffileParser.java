@@ -734,7 +734,7 @@ public class CiffileParser {
         }
 	}
 	
-	private void readSecStructure(PdbAsymUnit pdbAsymUnit) throws IOException, FileFormatException {
+	private void readSecStructure(PdbAsymUnit pdbAsymUnit) throws IOException, FileFormatException, PdbLoadException {
 		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
 			SecondaryStructure secondaryStructure = new SecondaryStructure(pdb.getSequence().getSeq());	// create empty secondary structure first to make sure object is not null
 			pdb.setSecondaryStructure(secondaryStructure);
@@ -880,6 +880,7 @@ public class CiffileParser {
 		
 		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
 			if(!pdb.getSecondaryStructure().isEmpty()) {
+				if (!pdb.getSequence().isProtein()) throw new PdbLoadException("Secondary structure records present for a non-protein chain");
 				pdb.getSecondaryStructure().setComment("CIFfile");
 				pdb.initialiseResiduesSecStruct();
 			}

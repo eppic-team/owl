@@ -749,6 +749,7 @@ public class PdbfileParser {
 			if (!secStructure.isEmpty()) {
 				secStructure.setComment("Author");
 			}
+			if (!pdb.getSequence().isProtein()) throw new PdbLoadException("Secondary structure records present for a non-protein chain");
 			pdb.initialiseResiduesSecStruct();
 		}
 
