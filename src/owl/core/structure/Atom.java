@@ -57,6 +57,7 @@ public class Atom implements Serializable {
 			this.type = AtomType.getBySymbol(element);
 			if (type==null) {
 				System.err.println("Warning! Can not recognise atom element "+element+" with atom code "+code+" and serial "+serial);
+				this.type = AtomType.X;
 			}
 		} else { 
 			// If we couldn't parse an atom type (e.g. not present in PDB file) we still try to get the element from the atom code
