@@ -78,9 +78,11 @@ public class Atom implements Serializable {
 				// if not of the above is a good guess then we have no type and we warn
 				if (type==null) { 
 					System.err.println("Warning! Can't guess chemical element for atom code "+code+". Element guess was "+elementGuess+". Does the code follow the PDB standard?");
+					this.type = AtomType.X;
 				}									
 			} else {
 				System.err.println("Warning! Can't guess chemical element for atom code "+code+". Does the code follow the PDB standard?");
+				this.type = AtomType.X;
 			}
 		}
 	}
