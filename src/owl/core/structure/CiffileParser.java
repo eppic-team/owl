@@ -479,14 +479,20 @@ public class CiffileParser {
 			if ( isDouble(resolStr) ) {
 				qParams[0] = Double.parseDouble(resolStr);
 			}
+		}
+		
+		if (fields2values.containsKey(refine+".ls_R_factor_R_free")) {
 			String rfreeStr = fields2values.get(refine+".ls_R_factor_R_free").trim();
 			if ( isDouble(rfreeStr) ) {
 				qParams[1] = Double.parseDouble(rfreeStr);
 			}
 		}
+		
 		if (fields2values.containsKey(reflns+".pdbx_Rsym_value")){
 			String rsymvalStr = fields2values.get(reflns+".pdbx_Rsym_value").trim();
-			String rmergevalStr = fields2values.get(reflns+".pdbx_Rmerge_I_obs").trim();
+			String rmergevalStr = null;
+			if (fields2values.containsKey(reflns+".pdbx_Rmerge_I_obs")) {
+				rmergevalStr = fields2values.get(reflns+".pdbx_Rmerge_I_obs").trim();}
 			// if both are present, we don't compare them but take the Rsym value to be 
 			// the right one (there's not much consensus in the field as to what's the 
 			// right thing to do anyway!)
@@ -972,7 +978,7 @@ public class CiffileParser {
 	}
 	
 	private static boolean isDouble(String value)
-	{
+	{	if(value==null) return false;
 	    try{
 	    	Double.parseDouble(value);
 	    	return true;
