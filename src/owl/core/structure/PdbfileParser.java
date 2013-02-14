@@ -271,7 +271,7 @@ public class PdbfileParser {
 		tmpResiduesMaps = new HashMap<String, HashMap<String,Residue>>();
 		Pattern p;
 		Matcher m;
-		this.title = "";
+		this.title = null;
 		boolean outOfPolyChain = false; // true when out of poly chain (after TER record seen), false again when an ATOM record found
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		boolean terRecordSeen = false;
@@ -321,18 +321,25 @@ public class PdbfileParser {
 			}
 			// TITLE
 			if (line.startsWith("TITLE")) {
-				if (!line.substring(8,10).equals("  ")) {
-					char lastChar = title.charAt(title.length()-1);
-					if (lastChar!='-') { 
-						this.title += " ";
+				if (this.title==null) {
+					this.title = safeSubstring(line, 10, line.length()); 
+				} else { // more than 1 title line encountered
+					if (isInteger(safeSubstring(line,8,10))) {
+						char lastChar = this.title.charAt(this.title.length()-1);
+						if (lastChar!='-') { 
+							this.title += " ";
+						}
 					}
+					String titleStr = safeSubstring(line,10,line.length());
+					if (titleStr!=null) this.title += titleStr;
 				}
-				this.title += line.substring(10,line.length()).trim();
+				
 			}
 			// EXPDTA
 			if (line.startsWith("EXPDTA")) {
-				 String exp = line.substring(6, line.length()).trim();
-				 expMethod = exp.split(";\\s")[0]; // in some (strange) cases there are several exp methods, we simply take first, e.g. 2krl
+				 String exp = safeSubstring(line, 6, line.length());
+				 if (exp!=null)
+					 this.expMethod = exp.split(";\\s")[0]; // in some (strange) cases there are several exp methods, we simply take first, e.g. 2krl
 			}
 			// REMARK 3 (for resolution)
 			if (line.startsWith("REMARK   3   RESOLUTION RANGE HIGH")){
@@ -373,69 +380,83 @@ public class PdbfileParser {
 			}
 			// CRYST1
 			if (line.startsWith("CRYST1")) {
-				double a = Double.parseDouble(line.substring( 6, 15));
-				double b = Double.parseDouble(line.substring(15, 24));
-				double c = Double.parseDouble(line.substring(24, 33));
-				double alpha = Double.parseDouble(line.substring(33, 40));
-				double beta = Double.parseDouble(line.substring(40, 47));
-				double gamma = Double.parseDouble(line.substring(47, 54));
-				int endsg = 66;
-				if (line.length()<66) {
-					endsg = line.length(); // some programs like phenix don't write the z number and thus can have no trailing spaces so that the line is shorter
-				}
-				String sg = line.substring(55,endsg).trim();
-				crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
-				spaceGroup = SymoplibParser.getSpaceGroup(sg);
-				if (spaceGroup==null) {
-					throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
+				if (isDouble(safeSubstring(line,  6, 15)) &&
+						isDouble(safeSubstring(line, 15, 24)) &&
+						isDouble(safeSubstring(line, 24, 33)) &&
+						isDouble(safeSubstring(line, 33, 40)) &&
+						isDouble(safeSubstring(line, 40, 47)) &&
+						isDouble(safeSubstring(line, 47, 54))) {
+					
+					double a = Double.parseDouble(line.substring( 6, 15));
+					double b = Double.parseDouble(line.substring(15, 24));
+					double c = Double.parseDouble(line.substring(24, 33));
+					double alpha = Double.parseDouble(line.substring(33, 40));
+					double beta = Double.parseDouble(line.substring(40, 47));
+					double gamma = Double.parseDouble(line.substring(47, 54));
+					
+					// some programs like phenix don't write the z number and thus can have no trailing spaces so that the line is shorter
+					String sg = safeSubstring(line, 55, 66);
+					crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
+					spaceGroup = SymoplibParser.getSpaceGroup(sg);
+					if (spaceGroup==null) {
+						throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
+					}
 				}
 			}
 			// SCALE1,2,3: parsed in order to detect non-standard orthogonalisations (also flagged in REMARK 285)
-			if (line.startsWith("SCALE1")) {
-				scaleMatrix = new Matrix4d();
-				scaleMatrix.m00 = Double.parseDouble(line.substring(10,20));
-				scaleMatrix.m01 = Double.parseDouble(line.substring(20,30));
-				scaleMatrix.m02 = Double.parseDouble(line.substring(30,40));
-				scaleMatrix.m03 = Double.parseDouble(line.substring(45,55));
+			if ( (line.startsWith("SCALE1") || line.startsWith("SCALE2") || line.startsWith("SCALE3")) &&
+					isDouble(safeSubstring(line, 10, 20)) &&
+					isDouble(safeSubstring(line, 20, 30)) &&
+					isDouble(safeSubstring(line, 30, 40)) &&
+					isDouble(safeSubstring(line, 45, 55))) { 
+			
+				if (line.startsWith("SCALE1")) {
+					scaleMatrix = new Matrix4d();
+					scaleMatrix.m00 = Double.parseDouble(line.substring(10,20));
+					scaleMatrix.m01 = Double.parseDouble(line.substring(20,30));
+					scaleMatrix.m02 = Double.parseDouble(line.substring(30,40));
+					scaleMatrix.m03 = Double.parseDouble(line.substring(45,55));
+				}
+				if (line.startsWith("SCALE2")) {
+					scaleMatrix.m10 = Double.parseDouble(line.substring(10,20));
+					scaleMatrix.m11 = Double.parseDouble(line.substring(20,30));
+					scaleMatrix.m12 = Double.parseDouble(line.substring(30,40));
+					scaleMatrix.m13 = Double.parseDouble(line.substring(45,55));
+				}
+				if (line.startsWith("SCALE3")) {
+					scaleMatrix.m20 = Double.parseDouble(line.substring(10,20));
+					scaleMatrix.m21 = Double.parseDouble(line.substring(20,30));
+					scaleMatrix.m22 = Double.parseDouble(line.substring(30,40));
+					scaleMatrix.m23 = Double.parseDouble(line.substring(45,55));
+				}
 			}
-			if (line.startsWith("SCALE2")) {
-				scaleMatrix.m10 = Double.parseDouble(line.substring(10,20));
-				scaleMatrix.m11 = Double.parseDouble(line.substring(20,30));
-				scaleMatrix.m12 = Double.parseDouble(line.substring(30,40));
-				scaleMatrix.m13 = Double.parseDouble(line.substring(45,55));
-			}
-			if (line.startsWith("SCALE3")) {
-				scaleMatrix.m20 = Double.parseDouble(line.substring(10,20));
-				scaleMatrix.m21 = Double.parseDouble(line.substring(20,30));
-				scaleMatrix.m22 = Double.parseDouble(line.substring(30,40));
-				scaleMatrix.m23 = Double.parseDouble(line.substring(45,55));
-			}
-
 			// SEQRES
 			//SEQRES   1 A  348  VAL ASN ILE LYS THR ASN PRO PHE LYS ALA VAL SER PHE
 			if (line.startsWith("SEQRES")){
-				String chain = line.substring(11,12);
-				if (!sequences.containsKey(chain)) {
-					sequences.put(chain,"");
-				}
-				String sequence = sequences.get(chain);
-				for (int i=19;i<=67;i+=4) {
-					// most pdb files have blank spaces up to 80 characters, but some don't.
-					// because of that we need to check that (in the last line of SEQRES) the line is long enough
-					// else we'd get an out of bounds error
-					if (line.length()>=i+3) {  
-						if (!line.substring(i, i+3).equals("   ")) {
-							if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
-								sequence+= AminoAcid.three2one(line.substring(i, i+3));
-							} else if (Nucleotide.isStandardNuc(line.substring(i, i+3).trim())) {
-								sequence+=Nucleotide.getByCode(line.substring(i, i+3).trim()).getOneLetterCode();
-							} else {
-								sequence+=AminoAcid.XXX.getOneLetterCode();
+				if (line.length()>10) {
+					String chain = line.substring(11,12);
+					if (!sequences.containsKey(chain)) {
+						sequences.put(chain,"");
+					}
+					String sequence = sequences.get(chain);
+					for (int i=19;i<=67;i+=4) {
+						// most pdb files have blank spaces up to 80 characters, but some don't.
+						// because of that we need to check that (in the last line of SEQRES) the line is long enough
+						// else we'd get an out of bounds error
+						if (line.length()>=i+3) {  
+							if (!line.substring(i, i+3).equals("   ")) {
+								if (AminoAcid.isStandardAA(line.substring(i, i+3))) { // for non-standard aas
+									sequence+= AminoAcid.three2one(line.substring(i, i+3));
+								} else if (Nucleotide.isStandardNuc(line.substring(i, i+3).trim())) {
+									sequence+=Nucleotide.getByCode(line.substring(i, i+3).trim()).getOneLetterCode();
+								} else {
+									sequence+=AminoAcid.XXX.getOneLetterCode();
+								}
 							}
 						}
 					}
+					sequences.put(chain,sequence);
 				}
-				sequences.put(chain,sequence);
 				// if SEQRES was not empty then we have sequences
 				if (!sequences.isEmpty()) {
 					hasSeqRes = true;
@@ -444,7 +465,7 @@ public class PdbfileParser {
 			// SECONDARY STRUCTURE
 			// helix
 			//HELIX    1   1 LYS A   17  LEU A   26  1
-			if (line.startsWith("HELIX")){
+			if (line.startsWith("HELIX") && line.length()>37) {
 				String begChain = line.substring(19,20);
 				String endChain = line.substring(31,32);
 				int serial = Integer.valueOf(line.substring(7,10).trim());
@@ -454,7 +475,7 @@ public class PdbfileParser {
 			}
 			// sheet
 			//SHEET    2   A 5 ILE A  96  THR A  99 -1  N  LYS A  98   O  THR A 107
-			if (line.startsWith("SHEET")){
+			if (line.startsWith("SHEET") && line.length()>37) {
 				String begChain = line.substring(21,22);
 				String endChain = line.substring(32,33);
 				int strandSerial = Integer.valueOf(line.substring(7,10).trim());
@@ -748,8 +769,9 @@ public class PdbfileParser {
 			SecondaryStructure secStructure = pdb.getSecondaryStructure();
 			if (!secStructure.isEmpty()) {
 				secStructure.setComment("Author");
+				if (!pdb.getSequence().isProtein()) throw new PdbLoadException("Secondary structure records present for a non-protein chain");
 			}
-			if (!pdb.getSequence().isProtein()) throw new PdbLoadException("Secondary structure records present for a non-protein chain");
+			
 			pdb.initialiseResiduesSecStruct();
 		}
 
@@ -1050,4 +1072,54 @@ public class PdbfileParser {
 		return pdbfile;
 	}
 	
+	/**
+	 * Given a string and beg and end indices returns the corresponding 
+	 * trimmed substring.
+	 * If end index is beyond the end of the string then it returns 
+	 * the trimmed substring from beg to end of string.
+	 * If both beg and end index are beyond the end of the string then
+	 * it returns null.
+	 * If beg is larger than end it returns null.
+	 * @param str
+	 * @param beg
+	 * @param end
+	 * @return
+	 */
+	private String safeSubstring(String str, int beg, int end) {
+		if (beg>end) return null;
+		
+		String substr = null;
+		if (str.length()>beg-1) {
+			if (str.length()>end) {		
+				substr = str.substring(beg, end).trim();
+			} else {
+				substr = str.substring(beg, str.length()).trim();
+			}
+		}
+		return substr;		 
+	}
+	
+	private boolean isDouble(String value) {
+		if (value==null) return false;
+		
+	    try { 
+	    	Double.parseDouble(value);
+	    	return true;
+	    }
+	    catch (NumberFormatException ex) {	
+	    	return false; 
+	    }
+	}
+	
+	private boolean isInteger(String value) {
+		if (value==null) return false;
+		
+	    try { 
+	    	Integer.parseInt(value);
+	    	return true;
+	    }
+	    catch (NumberFormatException ex) {	
+	    	return false; 
+	    }
+	}
 }

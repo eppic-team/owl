@@ -471,7 +471,23 @@ public class PdbParsersTest {
 					if (ciffileFullpdb.getSpaceGroup()!=null) {
 						Assert.assertEquals(ciffileFullpdb.getSpaceGroup().getId(),pdbfileFullpdb.getSpaceGroup().getId());
 					}
-					Assert.assertNotNull(pdbfileFullpdb.getCrystalCell());
+					if (pdbfileFullpdb.isCrystallographicExpMethod()) {
+						CrystalCell pdbfileCrystalCell = pdbfileFullpdb.getCrystalCell();
+						CrystalCell ciffileCrystalCell = ciffileFullpdb.getCrystalCell();
+						
+						if (ciffileCrystalCell!=null) {
+							Assert.assertEquals(ciffileCrystalCell.getA(), pdbfileCrystalCell.getA(), 0.01);
+							Assert.assertEquals(ciffileCrystalCell.getB(), pdbfileCrystalCell.getB(), 0.01);
+							Assert.assertEquals(ciffileCrystalCell.getC(), pdbfileCrystalCell.getC(), 0.01);
+
+							Assert.assertEquals(ciffileCrystalCell.getAlpha(), pdbfileCrystalCell.getAlpha(), 0.01);
+							Assert.assertEquals(ciffileCrystalCell.getBeta(), pdbfileCrystalCell.getBeta(), 0.01);
+							Assert.assertEquals(ciffileCrystalCell.getGamma(), pdbfileCrystalCell.getGamma(), 0.01);
+						}
+						
+						// we can't assert anymore not null because we set to null in case of unreasonable crystal cell
+						//Assert.assertNotNull(pdbfileFullpdb.getCrystalCell());
+					}
 					
 					// exp data and quality parameters
 					Assert.assertEquals(ciffileFullpdb.getExpMethod(),pdbfileFullpdb.getExpMethod());

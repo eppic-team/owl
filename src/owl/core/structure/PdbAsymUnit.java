@@ -52,6 +52,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	public static final String NO_PDB_CODE       = "";		// to specify no pdb code
 
+	private static final double MIN_VALID_CELL_SIZE = 10.0; // the minimum admitted for a crystal cell
 	
 	/*------------------------------------  members -----------------------------------------------*/
 	private String pdbCode;
@@ -277,6 +278,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		checkNoEmptyChains();
 		
 		checkScaleMatrix(parser.getScaleMatrix());
+		
+		checkUnreasonableCrystalCell();
 
 	}
 	
@@ -302,6 +305,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		checkScaleMatrix(parser.readScaleMatrix());
 		
 		parser.closeFile();		
+		
+		checkUnreasonableCrystalCell();
+
 	}
 	
 	private void loadFromPdbase(MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
@@ -325,6 +331,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 
 			checkScaleMatrix(parser.readScaleMatrix());
 			
+			checkUnreasonableCrystalCell();
+			
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
 		}
@@ -344,6 +352,20 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		for (PdbChain chain:this.getPolyChains()) {
 			if (chain.getObsLength()==0) {
 				throw new PdbLoadException("Chain with CIF code "+chain.getChainCode()+" (PDB chain code "+chain.getPdbChainCode()+") has no observed residues.");
+			}
+		}
+	}
+	
+	private void checkUnreasonableCrystalCell() {
+		// this check is necessary mostly when reading PDB files that can contain the default 1 1 1 crystal cell
+		// if we use that further things can go wrong, for instance for interface calculation
+		// For instance programs like coot produce by default a 1 1 1 cell 
+		if (this.getCrystalCell()!=null && isCrystallographicExpMethod()) {
+			if (this.getCrystalCell().getA()<MIN_VALID_CELL_SIZE &&
+				this.getCrystalCell().getB()<MIN_VALID_CELL_SIZE &&
+				this.getCrystalCell().getC()<MIN_VALID_CELL_SIZE) {
+				System.err.println("Warning! crystal cell with 3 dimensions below "+MIN_VALID_CELL_SIZE+". Will ignore it.");
+				this.crystalCell = null;
 			}
 		}
 	}
