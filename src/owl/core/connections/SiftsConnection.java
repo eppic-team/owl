@@ -2,9 +2,11 @@ package owl.core.connections;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.Reader;
 import java.net.URL;
 import java.net.URLConnection;
@@ -152,6 +154,32 @@ public class SiftsConnection {
 	}
 	
 	/**
+	 * Gets a HashMap with unique mappings of uniprot ids for all PDB chains found in the SIFTS repository 
+	 * as the keys and all its unique segments as the array list
+	 * @return HashMap<String, ArrayList<Interval>>
+	 * @throws IOException 
+	 */
+	public HashMap<String, ArrayList<Interval>> getUniqueMappings() throws IOException {
+		HashMap<String, ArrayList<Interval>> uniqueMap = new HashMap<String, ArrayList<Interval>>();
+		System.out.println("Unique UniProts in PDB: "+uniprot2chain.size());
+		
+		int count = 0;
+		for (String uniprotid:uniprot2chain.keySet()) {
+			ArrayList<Interval> uniqueIntervals = new ArrayList<Interval>();
+			for (SiftsFeature f:uniprot2chain.get(uniprotid)) {
+				for (Interval interv: f.getUniprotIntervalSet()){
+					if(!uniqueIntervals.contains(interv)) uniqueIntervals.add(interv); 
+				}
+			}
+			count += uniqueIntervals.size();
+			uniqueMap.put(uniprotid, uniqueIntervals);
+		}
+		System.out.print("Unique UniProt segments in PDB: "+count);
+		
+		return uniqueMap;
+	}
+	
+	/**
 	 * Gets the total number of available pdb to uniprot mappings available in the SIFTS 
 	 * database.
 	 * @return
@@ -163,19 +191,7 @@ public class SiftsConnection {
 	public static void main (String[] args) throws IOException {
 		SiftsConnection sc = new SiftsConnection("/nfs/data/dbs/uniprot/current/pdb_chain_uniprot.lst");
 		
-		
-		System.out.println("Unique UniProts in PDB: "+sc.uniprot2chain.size());
-		
-		int count = 0;
-		for (List<SiftsFeature> list:sc.uniprot2chain.values()) {
-			TreeSet<Interval> uniqueIntervals = new TreeSet<Interval>();
-			for (SiftsFeature f:list) {
-				for (Interval interv: f.getUniprotIntervalSet()){
-					uniqueIntervals.add(interv); 
-				}
-			}
-			count += uniqueIntervals.size();
-		}
-		System.out.println("Unique UniProt segments in PDB: "+count);
+		HashMap<String, ArrayList<Interval>> uniqueMap = sc.getUniqueMappings();
+		System.out.print(uniqueMap.size());
 	}
 }
