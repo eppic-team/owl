@@ -1,11 +1,13 @@
 package owl.core.runners.blast;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
@@ -48,7 +50,6 @@ public class BlastXMLParser implements ContentHandler {
 	
 	private static final String ID_REGEX = "^\\s*(\\S+).*";
 
-	private File blastXMLFile;
 	private InputSource input;
 	
 	private BlastHitList hitList;
@@ -74,7 +75,11 @@ public class BlastXMLParser implements ContentHandler {
 	private boolean inHsp;
 	
 	/**
-	 * Constructs new BlastXMLParser parsing the given Blast XML file
+	 * Constructs new BlastXMLParser parsing the given Blast XML file.
+	 * The input blastXMLFile can be either raw XML or gzipped-compressed XML,
+	 * one or the other are detected automatically by searching string "<?xml" in
+	 * beginning of file, if no such string found then it will be considered a
+	 * gzipped xml file.
 	 * Get the hits calling {@link #getHits()}
 	 * @param blastXMLFile
 	 * @param ignoreDTDUrl if true the DTD URL won't be read (blast output files always define a DOCTYPE line 
@@ -84,9 +89,8 @@ public class BlastXMLParser implements ContentHandler {
 	 * @throws IOException
 	 */
 	public BlastXMLParser(File blastXMLFile, boolean ignoreDTDUrl) throws SAXException, IOException{
-		this.blastXMLFile = blastXMLFile;
 		
-		InputStream is = new FileInputStream(this.blastXMLFile);
+		InputStream is = getInputStream(blastXMLFile);
 		this.input = new InputSource(is); 
 			
 		XMLReader parser = XMLReaderFactory.createXMLReader();
@@ -100,6 +104,45 @@ public class BlastXMLParser implements ContentHandler {
 		
 		parser.parse(input);
 
+	}
+	
+	/**
+	 * Given a file guesses by reading it first few bytes and matching "<?xml"
+	 * whether it is a blast xml file or a gzipped blast xml file, 
+	 * returning the appropriate InputStream
+	 * @param file
+	 * @return a buffered FileInputStream if file starts with "<?xml", or 
+	 * a GZIPInputStream otherwise
+	 * @throws IOException
+	 */
+	private InputStream getInputStream (File file) throws IOException {
+		
+		boolean isZipped = false;
+		
+		// first we guess if the file is uncompressed xml or compressed
+
+		BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+		int bytesToRead = 5;
+		byte[] buffer = new byte[bytesToRead];
+		bis.mark(bytesToRead);
+		bis.read(buffer);		
+		
+		String xmlStr = "<?xml";
+		char[] xmlStrCA = xmlStr.toCharArray();
+		for (int i=0;i<bytesToRead;i++) {  
+			if (buffer[i]!=xmlStrCA[i]) {
+				isZipped = true;
+				break;
+			}
+		}
+		bis.reset();
+		
+		// and we return the appropriate InputStream
+		if (isZipped) {
+			return new GZIPInputStream(bis);
+		} else {
+			return bis;
+		}
 	}
 	
 	/**

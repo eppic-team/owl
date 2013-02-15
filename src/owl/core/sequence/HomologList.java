@@ -137,11 +137,14 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	/**
 	 * Performs a blast search based on the reference UniprotEntry to populate this list of homologs.
 	 * All blast output files will be removed on exit.
+	 * If a gzipped blast xml cacheFile is passed and it exists, blast is not run but instead results 
+	 * are read from cache file. If cacheFile passed but does not exist the blast xml file will be 
+	 * gzipped to cacheFile
 	 * @param blastPlusBlastp
 	 * @param blastDbDir
 	 * @param blastDb
 	 * @param blastNumThreads
-	 * @param cacheFile a file with the cached xml blast output file, if null blast will be always run
+	 * @param cacheFile a file with the cached gzipped xml blast output file, if null blast will be always run
 	 * @throws IOException
 	 * @throws BlastException
 	 * @throws UniprotVerMisMatchException if uniprot versions of cacheFile given and blastDbDir do not coincide
@@ -218,7 +221,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 			if (cacheFile!=null) {
 				try {
 					LOGGER.info("Writing blast cache file "+cacheFile);
-					Goodies.copyFile(outBlast, cacheFile);
+					Goodies.gzipFile(outBlast, cacheFile);
 					cacheFile.setWritable(true, false);
 				} catch (IOException e) {
 					LOGGER.error("Couldn't write the blast cache file "+cacheFile);

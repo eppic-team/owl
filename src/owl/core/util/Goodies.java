@@ -12,6 +12,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Collection of small useful helper methods.
@@ -189,13 +190,13 @@ public class Goodies {
 	}
 	
 	/**
-	 * Unzips given gzFile into outFile
-	 * @param gzFile
+	 * Gunzips (decompresses gzip) given gzFile into outFile using java.util gzip implementation
+	 * @param inFile
 	 * @param outFile
 	 * @throws IOException
 	 */
-	public static void unzip(File gzFile, File outFile) throws IOException {
-		GZIPInputStream zis = new GZIPInputStream(new FileInputStream(gzFile));
+	public static void gunzipFile(File inFile, File outFile) throws IOException {
+		GZIPInputStream zis = new GZIPInputStream(new FileInputStream(inFile));
 		FileOutputStream os = new FileOutputStream(outFile);
 		int b;
 		while ( (b=zis.read())!=-1) {
@@ -203,5 +204,23 @@ public class Goodies {
 		}
 		zis.close();
 		os.close();
+	}
+	
+	/**
+	 * Gzips given inFile into outFile gzip file using java.util gzip implementation
+	 * @param inFile
+	 * @param outFile
+	 * @throws IOException
+	 */
+	public static void gzipFile(File inFile, File outFile) throws IOException {
+		GZIPOutputStream zos = new GZIPOutputStream(new FileOutputStream(outFile));
+		FileInputStream is = new FileInputStream(inFile);
+
+		int b;
+		while ( (b=is.read())!=-1) {
+			zos.write(b);
+		}
+		zos.close();
+		is.close();
 	}
 }
