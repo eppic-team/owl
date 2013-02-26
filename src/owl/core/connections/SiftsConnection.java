@@ -10,6 +10,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -61,7 +63,7 @@ public class SiftsConnection {
 
 	/**
 	 * Parses the SIFTS table and stores pdb2uniprot and uniprot2pdb maps.
-	 * @param fileURL a URL pointing to the SIFTS pdb to uniprot mapping file or 
+	 * @param fileURL a URL pointing to the SIFTS pdb to UniProt mapping file or 
 	 * a path to a local file
 	 * @throws IOException
 	 */
@@ -121,16 +123,25 @@ public class SiftsConnection {
 	 * @param pdbCode
 	 * @param pdbChainCode
 	 * @return
-	 * @throws NoMatchFoundException if no matching Uniprot entry is found
+	 * @throws NoMatchFoundException if no matching UniProt entry is found
 	 */
 	public List<SiftsFeature> getMappings(String pdbCode, String pdbChainCode) throws NoMatchFoundException{
 		if (!chain2uniprot.containsKey(pdbCode+pdbChainCode)) 
 			throw new NoMatchFoundException("No SIFTS mapping for PDB "+pdbCode+", chain "+pdbChainCode);
+		List<SiftsFeature> list = chain2uniprot.get(pdbCode+pdbChainCode);
+		
+		// before returning the list we make sure it is sorted based on the order of cif intervals, i.e. as they happen in PDB chain
+		Collections.sort(list, new Comparator<SiftsFeature>() {
+			@Override
+			public int compare(SiftsFeature o1, SiftsFeature o2) {
+				return o1.getCifIntervalSet().iterator().next().compareTo(o2.getCifIntervalSet().iterator().next());
+			}
+		});
 		return chain2uniprot.get(pdbCode+pdbChainCode);
 	}
 	
 	/**
-	 * Returns a list of SiftsFeatures for the given Uniprot ID.
+	 * Returns a list of SiftsFeatures for the given UniProt ID.
 	 * Warning: If this is not the primary ID, no results may be found.
 	 * @param uniprotId
 	 * @return the SiftsFeatures containing information about PDB chains associated with this Uniprot entry
@@ -138,7 +149,7 @@ public class SiftsConnection {
 	 */
 	public List<SiftsFeature> getUniprot2PdbMappings(String uniprotId) throws NoMatchFoundException {
 		if (!uniprot2chain.containsKey(uniprotId)) 
-			throw new NoMatchFoundException("No SIFTS mapping for UniprotID "+uniprotId);
+			throw new NoMatchFoundException("No SIFTS mapping for UniProtID "+uniprotId);
 		return uniprot2chain.get(uniprotId);
 	}
 	
@@ -151,7 +162,7 @@ public class SiftsConnection {
 	}
 	
 	/**
-	 * Gets a HashMap with unique mappings of uniprot ids for all PDB chains found in the SIFTS repository 
+	 * Gets a HashMap with unique mappings of UniProt ids for all PDB chains found in the SIFTS repository 
 	 * as the keys and all its unique segments as the array list
 	 * @return HashMap<String, ArrayList<Interval>>
 	 * @throws IOException 
@@ -177,7 +188,7 @@ public class SiftsConnection {
 	}
 	
 	/**
-	 * Gets the total number of available pdb to uniprot mappings available in the SIFTS 
+	 * Gets the total number of available pdb to UniProt mappings available in the SIFTS 
 	 * database.
 	 * @return
 	 */
