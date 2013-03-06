@@ -81,7 +81,9 @@ public class PisaConnection {
 		URLConnection conn = interfacesURL.openConnection();
 		
 		PisaInterfaceXMLParser pxmlParser = new PisaInterfaceXMLParser(conn.getInputStream());
-		return pxmlParser.getAllInterfaces();
+		Map<String,PisaInterfaceList> map = pxmlParser.getAllInterfaces();
+		if (map.isEmpty()) throw new IOException("The PISA server returned no interface data for URL "+interfacesURL.toString());
+		return map;
 	}
 	
 	/**
@@ -116,11 +118,13 @@ public class PisaConnection {
 	 * @throws SAXException
 	 */
 	private Map<String,PisaAsmSetList> getAssembliesDescription(String commaSepList) throws IOException, SAXException {
-		URL interfacesURL = new URL(assembliesUrl+commaSepList);
-		URLConnection conn = interfacesURL.openConnection();
+		URL assembliesURL = new URL(assembliesUrl+commaSepList);
+		URLConnection conn = assembliesURL.openConnection();
 		
 		PisaAssembliesXMLParser pxmlParser = new PisaAssembliesXMLParser(conn.getInputStream());
-		return pxmlParser.getAllAssemblies();
+		Map<String,PisaAsmSetList> map = pxmlParser.getAllAssemblies();
+		if (map.isEmpty()) throw new IOException("The PISA server returned no assembly data for URL "+assembliesURL.toString());
+		return map;
 	}
 	
 	public static void main(String[] args) throws Exception {
