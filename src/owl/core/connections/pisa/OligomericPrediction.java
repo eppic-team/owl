@@ -45,7 +45,8 @@ public class OligomericPrediction {
 	
 	public void addAssembly(PisaAssembly assembly) {
 		if (assembly.getMmsize()!=mmSize) {
-			System.err.println("WARNING! Grouping a PISA assembly of size "+assembly.getMmsize()+" with one of size "+mmSize+". Pisa oligomeric prediction will be ambiguous!");
+			System.err.println("WARNING! Mixed assembly sizes in same assembly group. Assembly group is of size "+mmSize+", new assembly (id "+assembly.getId()+") is of size "+assembly.getMmsize()+", ignoring it");
+			return;
 		}
 		this.assemblies.add(assembly);
 	}
