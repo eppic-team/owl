@@ -409,6 +409,9 @@ public class PymolRunner {
 	 * @param pdbFile
 	 * @param pseFile
 	 * @param pmlFile 
+	 * @param iconPngFile
+	 * @param iconWidth
+	 * @param iconHeight
 	 * @param minScore the minimum possible score for b factor colors scaling (passed as minimum to PyMOL's spectrum command)
 	 * if <0 then no minimum passed (PyMOL will calculate based on present b-factors)
 	 * @param maxScore the maximum possible score for b factor colors scaling (passed as maximum to PyMOL's spectrum command)
@@ -420,7 +423,9 @@ public class PymolRunner {
 	 */
 	public void generateChainPse(PdbChain chain, ChainInterfaceList interfaces, 
 			double caCutoffGeom, double caCutoffCoreSurf, double minAsaForSurface, 
-			File pdbFile, File pseFile, File pmlFile, double minScore, double maxScore,
+			File pdbFile, File pseFile, File pmlFile,
+			File iconPngFile, int iconWidth, int iconHeight,
+			double minScore, double maxScore,
 			boolean usePdbResSer) 
 	throws IOException, InterruptedException {
 		
@@ -548,7 +553,7 @@ public class PymolRunner {
 		writeCommand(cmd, pml);
 
 		
-		cmd = "select resi 0";// so that the last selection is deactivated
+		cmd = "select none";// so that the last selection is deactivated
 		writeCommand(cmd, pml);
 		
 		pml.close();
@@ -556,6 +561,13 @@ public class PymolRunner {
 		pymolScriptBuilder.append("@ "+pmlFile+";");
 		
 		pymolScriptBuilder.append("save "+pseFile+";");
+		
+		// writing finally the icon png (we don't need this in pml)
+		pymolScriptBuilder.append("hide everything, "+dotsLayerMolecName+";"); // we don't want the pink dots for icons
+		pymolScriptBuilder.append("viewport " + iconHeight + "," + iconWidth + ";");
+		pymolScriptBuilder.append("set ray_opaque_background, off;");
+		pymolScriptBuilder.append("ray;");
+		pymolScriptBuilder.append("png "+iconPngFile+";");
 
 		pymolScriptBuilder.append("quit;");
 		
