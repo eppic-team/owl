@@ -119,7 +119,8 @@ public class SiftsConnection {
 	}
 
 	/**
-	 * Gets a list of SiftsFeatures for the given PDB chain 
+	 * Gets a list of SiftsFeatures for the given PDB chain, sorted 
+	 * according to cif intervals, i.e. in the order that they appear in the PDB chain  
 	 * @param pdbCode
 	 * @param pdbChainCode
 	 * @return
