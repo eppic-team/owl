@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
  * CCP4 package. The file contains the transformations belonging to all 
  * protein crystallography space groups.
  * 
+ * See http://structure.usc.edu/ccp4/symlib.html for documentation
+ * 
  * @author duarte_j
  *
  */
@@ -22,7 +24,7 @@ public class SymoplibParser {
 	// the symop library from the CCP4 package
 	private static final String SYMOPFILE = "/owl/core/structure/symop.lib";
 	
-	private static final Pattern namePat = Pattern.compile(".*\\s([A-Z]+)(?:\\s'.+')?\\s+'(.+)'.*");
+	private static final Pattern namePat = Pattern.compile(".*\\s([A-Z]+)(\\s'.+')?\\s+'(.+)'.*");
 	
 	private static final InputStream symoplibIS = SymoplibParser.class.getResourceAsStream(SYMOPFILE);
 	private static final TreeMap<Integer, SpaceGroup> sgs = parseSymopLib();
@@ -69,17 +71,24 @@ public class SymoplibParser {
 					if (currentSG!=null) {
 						map.put(currentSG.getId(),currentSG);
 						name2sgs.put(currentSG.getShortSymbol(), currentSG);
+						if (currentSG.getAltShortSymbol()!=null) {
+							// we add also alternative name to map so we can look it up
+							name2sgs.put(currentSG.getAltShortSymbol(), currentSG);
+						}
 					}
 					
 					int id = Integer.parseInt(line.substring(0, line.indexOf(' ')));
 					Matcher m = namePat.matcher(line);
 					String shortSymbol = null;
+					String altShortSymbol = null;
 					String brav = null;
-					if (m.matches()) {
+					if (m.matches()) {						
 						brav = m.group(1);
-						shortSymbol = m.group(2);
+						altShortSymbol = m.group(2); // null if there is no match 
+						if (altShortSymbol!=null) altShortSymbol = altShortSymbol.trim().replaceAll("'", "");
+						shortSymbol = m.group(3);							
 					}
-					currentSG = new SpaceGroup(id, shortSymbol,SpaceGroup.BravaisLattice.getByName(brav));
+					currentSG = new SpaceGroup(id, shortSymbol, altShortSymbol, SpaceGroup.BravaisLattice.getByName(brav));
 				} else {
 					currentSG.addTransformation(line.trim());
 				}
@@ -87,6 +96,11 @@ public class SymoplibParser {
 			br.close();
 			// and we add the last SG
 			map.put(currentSG.getId(), currentSG);
+			name2sgs.put(currentSG.getShortSymbol(), currentSG);
+			if (currentSG.getAltShortSymbol()!=null) {
+				// we add also alternative name to map so we can look it up
+				name2sgs.put(currentSG.getAltShortSymbol(), currentSG);
+			}
 		} catch (IOException e) {
 			System.err.println("Fatal error! Can't read resource file "+SYMOPFILE+". Error: "+e.getMessage()+". Exiting.");
 			System.exit(1);

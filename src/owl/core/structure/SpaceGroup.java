@@ -77,6 +77,7 @@ public final class SpaceGroup implements Serializable {
 	
 	private final int id;
 	private final String shortSymbol;
+	private final String altShortSymbol;
 	private final List<Matrix4d> transformations;
 	private final List<String> transfAlgebraic;
 	
@@ -90,9 +91,10 @@ public final class SpaceGroup implements Serializable {
 	
 	private BravaisLattice bravLattice;
 	
-	public SpaceGroup(int id, String shortSymbol, BravaisLattice bravLattice) {
+	public SpaceGroup(int id, String shortSymbol, String altShortSymbol, BravaisLattice bravLattice) {
 		this.id = id;
 		this.shortSymbol = shortSymbol;
+		this.altShortSymbol = altShortSymbol;
 		transformations = new ArrayList<Matrix4d>();
 		transfAlgebraic = new ArrayList<String>();
 		this.bravLattice = bravLattice;
@@ -178,6 +180,10 @@ public final class SpaceGroup implements Serializable {
 	
 	public String getShortSymbol() {
 		return shortSymbol;
+	}
+	
+	public String getAltShortSymbol() {
+		return altShortSymbol;
 	}
 	
 	/**
