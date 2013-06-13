@@ -19,19 +19,22 @@ import owl.core.sequence.UnirefEntryClusterMember;
 import owl.core.util.MySQLConnection;
 
 /**
- * Class to get Uniprot Knowledge Base info from a local MySQL database. 
+ * Class to get UniProt Knowledge Base info from a local MySQL database. 
  * 
- * Two databases are needed: 
- * 1) a uniref database downloaded from 
+ * Two sources of data are needed: 
+ * 
+ * 1) a UniRef database downloaded from 
  * ftp://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref100/ 
- * or for achived ones from
+ * or for archived ones from
  * ftp://ftp.uniprot.org/pub/databases/uniprot/previous_releases/
  * and then parsed with {@link UnirefXMLParser}, containing a minimal subset of the 
  * UniProt Knowledge Base.
- * The database must be named like uniprot_yyyy_mm or for the older style versions (e.g. 15.3)
- * the name convention must be uniprot_xx_y. The two tables of the database must be named "uniprot" 
- * and "uniprot_clusters"
- * 2) a taxonomy database as downloaded from http://www.uniprot.org/taxonomy
+ * 
+ * 2) a NEWT UniProt taxonomy database as downloaded from http://www.uniprot.org/taxonomy
+ * 
+ * The local database must be named like uniprot_yyyy_mm or for the older style versions (e.g. 15.3)
+ * the name convention must be uniprot_xx_y. The tables of the database must be named "uniprot", 
+ * "uniprot_clusters" and "taxonomy"
  * 
  * @see UniProtConnection
  * @see UnirefXMLParser
@@ -61,17 +64,19 @@ public class UniprotLocalConnection {
 	
 	private MySQLConnection conn;
 	private String dbName;
-	private String taxonomyDbName;
 	private String uniprotVer;
 	
 	private HashSet<String> nonReturnedIdsLastMultipleRequest;
 	
-	public UniprotLocalConnection(String dbName, String taxonomyDbName) throws SQLException {
+	public UniprotLocalConnection(String dbName) throws SQLException {
 		
 		conn = new MySQLConnection();
 		
 		this.dbName = dbName;
-		this.taxonomyDbName = taxonomyDbName;
+		
+		if (!dbName.startsWith("uniprot_")) {
+			throw new IllegalArgumentException("The local UniProt db name must start with 'uniprot_'");
+		}
 		
 		this.uniprotVer = dbName.substring(dbName.indexOf('_')+1, dbName.length());
 		if (this.uniprotVer.length()<7) { // for old style (pre 2010) version numbers
@@ -144,16 +149,11 @@ public class UniprotLocalConnection {
 		uniref.setNcbiTaxId(taxId);
 		uniref.setSequence(sequence);
 		
-		
-		if (taxonomyDbName!=null) {
-			TaxonomyRecord tax = getTaxonomy(uniref.getNcbiTaxId());
-			if (tax!=null) {
-				uniref.setTaxons(tax.taxons);
-			} else {
-				LOGGER.warn("No taxonomy information could be found for uniprot/uniparc id "+uniref.getUniId()+" (tax_id="+uniref.getNcbiTaxId()+")");
-			}
+		TaxonomyRecord tax = getTaxonomy(uniref.getNcbiTaxId());
+		if (tax!=null) {
+			uniref.setTaxons(tax.taxons);
 		} else {
-			LOGGER.warn("No taxonomy database specified, no taxonomy information will be available");
+			LOGGER.warn("No taxonomy information could be found for uniprot/uniparc id "+uniref.getUniId()+" (tax_id="+uniref.getNcbiTaxId()+")");
 		}
 		
 		return uniref;
@@ -216,7 +216,7 @@ public class UniprotLocalConnection {
 		if (taxId==0) return null;
 		
 		Statement st = conn.createStatement();
-		String sql = "SELECT scientific,lineage FROM "+taxonomyDbName+"."+TAX_TABLE+" WHERE tax_id="+taxId; 
+		String sql = "SELECT scientific,lineage FROM "+dbName+"."+TAX_TABLE+" WHERE tax_id="+taxId; 
 		ResultSet rs = st.executeQuery(sql);
 
 		String scientific = null;
@@ -308,7 +308,7 @@ public class UniprotLocalConnection {
 			System.err.println("Usage: UniprotLocalConnection <database name> <file to dump fasta sequences>");
 			System.exit(1);
 		}
-		UniprotLocalConnection upl = new UniprotLocalConnection(args[0], null);
+		UniprotLocalConnection upl = new UniprotLocalConnection(args[0]);
 		upl.dumpToFasta(new File(args[1]));
 	}
 }
