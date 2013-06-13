@@ -205,7 +205,15 @@ public class AtomLineList implements Iterable<AtomLine> {
 			}
 			// if one outOfPolyChain was true that means that the chain is poly, we assign isNonPoly accordingly:
 			if (hasOnePolyAtom) {
-				pdbchaincode2chaincode.put(group.get(0).authAsymId,group.get(0).labelAsymId);
+				String previous = pdbchaincode2chaincode.put(group.get(0).authAsymId,group.get(0).labelAsymId);
+				
+				// We check that we are not reassigning the poly chain: if we are that means there's something wrong in the file
+				// For instance a badly placed TER record before a HETATM line (followed by ATOM lines) can cause this problem
+				if (previous!=null) 
+					throw new FileFormatException("Polymer PDB chain code "+group.get(0).authAsymId+" assigned twice, to chain codes: "+
+							group.get(0).labelAsymId+" and "+previous+
+							". Most likely there is something wrong with this PDB file, are TER records well placed?");
+				
 				for (AtomLine atomLine:group) {
 					atomLine.isNonPoly = false;
 				}

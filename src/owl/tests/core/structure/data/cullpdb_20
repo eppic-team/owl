@@ -679,7 +679,7 @@
 1KAF	A
 #1KQP	A # (SHELX entry) R free in cif file is the one at sigma=4 (instead of no cutoff one). Won't pass our test, we skip it
 1VFY	A
-2JDC	A
+#2JDC	A # since revision in April 2013, the titles are not matching between cif and pdb
 1TU9	A
 1YBK	A
 2NWF	A

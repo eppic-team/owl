@@ -767,12 +767,14 @@ public class PdbfileParser {
 		}
 		for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
 			SecondaryStructure secStructure = pdb.getSecondaryStructure();
-			if (!secStructure.isEmpty()) {
+			if (secStructure!=null && !secStructure.isEmpty()) {
 				secStructure.setComment("Author");
-				if (!pdb.getSequence().isProtein()) throw new PdbLoadException("Secondary structure records present for a non-protein chain");
-			}
+				if (!pdb.getSequence().isProtein()) 
+					throw new PdbLoadException("Secondary structure records present for a non-protein chain");
+				
+				pdb.initialiseResiduesSecStruct();
+			}			
 			
-			pdb.initialiseResiduesSecStruct();
 		}
 
 	
