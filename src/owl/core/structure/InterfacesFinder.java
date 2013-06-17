@@ -550,7 +550,9 @@ public class InterfacesFinder {
 		for (String nonPolyChainCode:polyChainCodes2cofactorsChainCodes.get(polyChainCode)) {
 			PdbChain nonPoly = pdb.getChainForChainCode(nonPolyChainCode).copy(parent); 
 			// Transform the asymmetric unit only if crystal cell is present
-			if(parent.getCrystalCell()!=null) nonPoly.transform(parent.getCrystalCell().transfToOrthonormal(ct.getMatTransform()));
+			if(pdb.getCrystalCell()!=null && pdb.isCrystallographicExpMethod()) {
+				nonPoly.transform(pdb.getCrystalCell().transfToOrthonormal(ct.getMatTransform()));
+			}
 			cofactors.add(nonPoly);
 		}
 		return cofactors;
