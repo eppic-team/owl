@@ -21,7 +21,7 @@
     <description>
             description
     </description>
-	
+	<property name= "javaversion" value="1.6"/>
 	<property name="src.dir" value="src"/>
 	<property name="lib.dir" value="jars"/>
 	<property name="build.dir" value="build"/>
@@ -64,6 +64,8 @@
 	<target name="compile">
 		<mkdir dir="${bin.dir}"/>
 		<javac srcdir="${src.dir}"
+		 source="${javaversion}"
+		 target="${javaversion}"
          destdir="${bin.dir}"
          classpathref="classpath"
 		 excludes="**/owl/tests/**,testPyMol.java,**/owl/core/util/PymolServerOutputStream.java"/>
@@ -77,6 +79,8 @@
 	<target name="compile-core-only">
 		<mkdir dir="${bin.dir}"/>
 		<javac srcdir="${src.dir}"
+		 source="${javaversion}"
+		 target="${javaversion}"
          destdir="${bin.dir}"
          classpathref="classpath"
 		 includes="**/owl/core/**/*.java"

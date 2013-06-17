@@ -617,18 +617,58 @@ public class PymolRunner {
 	private String getResiSelString(List<Residue> list, boolean usePdbResSer) {
 		if (list.isEmpty()) return "none"; // the keyword for an empty selection in pymol
 		StringBuffer sb = new StringBuffer();
+		int SerialLast=-9999;
+		StringBuffer cs = new StringBuffer();// use to define seleciton range like 5-14+18+23-34
 		for (int i=0;i<list.size();i++) {
 			if (usePdbResSer) {
 				String pdbSerial = list.get(i).getPdbSerial();
 				// we need to escape the negative residues in pymol with a backslash
 				if (pdbSerial.startsWith("-")) pdbSerial = "\\"+pdbSerial;
+				if (i==0) {
+					SerialLast =  list.get(i).getSerial();
+					cs.append(pdbSerial);
+				}
+				if ((i > 0) && (list.get(i).getSerial()-list.get(i-1).getSerial() != 1)) {
+					if (SerialLast == list.get(i-1).getSerial()){
+						cs.append("+");
+						cs.append(pdbSerial);
+						SerialLast=list.get(i).getSerial();
+					} else {
+						cs.append("-");
+						String cs2e = list.get(i-1).getPdbSerial();
+						if (cs2e.startsWith("-")) cs2e = "\\"+cs2e;
+						cs.append(cs2e);
+						SerialLast=list.get(i).getSerial();
+						cs.append("+");
+						cs.append(pdbSerial);
+					}
+				}
 				sb.append(pdbSerial);
 			} else {
+				if (i==0) {
+					SerialLast =  list.get(i).getSerial();
+					cs.append(SerialLast);
+				}
+				if ((i > 0) && (list.get(i).getSerial()-list.get(i-1).getSerial() != 1)) {
+					if (SerialLast == list.get(i-1).getSerial()){
+						cs.append("+");
+						SerialLast=list.get(i).getSerial();
+						cs.append(SerialLast);
+					} else {
+						cs.append("-");
+						cs.append(list.get(i-1).getSerial());
+						SerialLast=list.get(i).getSerial();
+						cs.append("+");
+						cs.append(SerialLast);
+					}
+				}
 				sb.append(list.get(i).getSerial());
 			}
 			if (i!=list.size()-1) sb.append("+");
+			
 		}
-		return sb.toString();
+	//	return sb.toString(); //to write pymol selection 3+4+5+6+11+15+16+17
+		return cs.toString(); // to write pymol selection 3-6+11+15-17
 	}
 
 	private String getSelString(String namePrefix, char chainName, List<Residue> list, boolean usePdbResSer) {
