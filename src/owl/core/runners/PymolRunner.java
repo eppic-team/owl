@@ -39,7 +39,7 @@ public class PymolRunner {
 	private static final int[] DEF_TN_HEIGHTS = {75};
 	private static final int[] DEF_TN_WIDTHS = {75};
 	
-	private static final double MIN_INTERF_AREA_TO_DISPLAY = 500;
+	private static final double MIN_INTERF_AREA_TO_DISPLAY = 400;
 	
 	private File pymolExec;
 	private String[] chainColors;
