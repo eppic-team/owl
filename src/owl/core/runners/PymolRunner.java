@@ -248,7 +248,7 @@ public class PymolRunner {
 			writeCommand(cmd, pml);
 		}
 		
-		cmd = "select resi 0";// so that the last selection is deactivated
+		cmd = "select none";// so that the last selection is deactivated
 		writeCommand(cmd, pml);
 		
 		pml.close();
@@ -269,9 +269,11 @@ public class PymolRunner {
 		pymolScriptBuilder.append("color "+color1+", "+molecName+" and chain "+chain1+";");
 		pymolScriptBuilder.append("color "+color2+", "+molecName+" and chain "+chain2+";");
 		
+		pymolScriptBuilder.append("set ray_opaque_background, off;");
+		
 		for (int i=0;i<DEF_TN_HEIGHTS.length;i++) {
 			pymolScriptBuilder.append("viewport "+DEF_TN_HEIGHTS[i]+","+DEF_TN_WIDTHS[i] + ";");
-			
+
 			pymolScriptBuilder.append("ray;");
 			
 			pymolScriptBuilder.append("png "+pngFiles[i].getAbsolutePath() + ";");
