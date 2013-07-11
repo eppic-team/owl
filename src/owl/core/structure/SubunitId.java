@@ -20,6 +20,10 @@ public class SubunitId implements Comparable<SubunitId>{
 		return transform.getTransformId();
 	}
 	
+	public CrystalTransform getTransform() {
+		return transform;
+	}
+	
 	public Point3i getTransl() {
 		return transform.getCrystalTranslation();
 	}

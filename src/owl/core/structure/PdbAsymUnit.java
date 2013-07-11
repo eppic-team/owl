@@ -135,7 +135,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		this.chains = new TreeMap<String,PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
-		this.transform = new CrystalTransform();
+		this.transform = new CrystalTransform((SpaceGroup)null);
 
 	}
 	
@@ -170,7 +170,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.pdbCode = NO_PDB_CODE;
 		this.model = model;
 		this.title = null;
-		this.transform = new CrystalTransform();
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
@@ -205,7 +204,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.pdbCode = NO_PDB_CODE;
 		this.model = model;
 		this.title = null;
-		this.transform = new CrystalTransform();
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
@@ -251,7 +249,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.rFree = -1;
 		this.rSym = -1;
 		this.title = null;
-		this.transform = new CrystalTransform();
 		
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
@@ -271,6 +268,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = parser.getTitle();
 		this.crystalCell = parser.getCrystalCell();
 		this.spaceGroup = parser.getSpaceGroup();
+		this.transform = new CrystalTransform(spaceGroup);
 		this.resolution = parser.getResolution();
 		this.rFree = parser.getRfree();
 		this.rSym = parser.getRsym();
@@ -290,6 +288,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = parser.readTitle();
 		this.crystalCell = parser.readCrystalCell();
 		this.spaceGroup = parser.readSpaceGroup();
+		this.transform = new CrystalTransform(spaceGroup);
 		double[] qParams = parser.readQparams();
 		this.resolution = qParams[0];
 		this.rFree = qParams[1];
@@ -317,6 +316,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			this.expMethod = parser.readExpMethod();
 			this.crystalCell = parser.readCrystalCell();
 			this.spaceGroup = parser.readSpaceGroup();
+			this.transform = new CrystalTransform(spaceGroup);
 			double[] qParams = parser.readQparams();
 			this.resolution = qParams[0];
 			this.rFree = qParams[1];

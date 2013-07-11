@@ -73,36 +73,68 @@ public final class SpaceGroup implements Serializable {
 	
 	private static final Pattern nonEnantPat = Pattern.compile("[-abcmnd]");
 	
-	private static final double delta=0.0000001;
+	protected static final double DELTA=0.0000001;
 	
 	private final int id;
+	private final int multiplicity;
+	private final int primitiveMultiplicity;
 	private final String shortSymbol;
 	private final String altShortSymbol;
 	private final List<Matrix4d> transformations;
 	private final List<String> transfAlgebraic;
+	private final Vector3d[] cellTranslations; // in space groups I, C, F or H there are pure cell translations corresponding to recenterings
 	
-	private List<Double> angles; // all rotation angles except for the identity transformation (thus one element fewer than transformations)
-	private List<Vector3d> axes; // all rotation axes except for the identity transformation (thus one element fewer than transformations)
+	private double[] angles; // all rotation angles, indices are transformIds 
+	private Vector3d[] axes; // all rotation axes, indices are transformIds 
 	
-	// we store here the transformIds (the rotational ones) for each of the possible rotation axes (the key of the map)
-	private HashMap<Vector3d,ArrayList<Integer>> operatorsPerAxis; // axes of rotation to lists of operator ids
-	
-	private HashMap<Integer,Integer> transformId2AxisType;
+	private int[] axisTypes; // indices of array are transformIds
+	private Vector3d[] translScrewComponent; // the screw component of a screw rotation (if not screw or not rotation, then 0,0,0)
 	
 	private BravaisLattice bravLattice;
 	
-	public SpaceGroup(int id, String shortSymbol, String altShortSymbol, BravaisLattice bravLattice) {
+	public SpaceGroup(int id, int multiplicity, int primitiveMultiplicity, String shortSymbol, String altShortSymbol, BravaisLattice bravLattice) {
 		this.id = id;
+		this.multiplicity = multiplicity;
+		this.primitiveMultiplicity = primitiveMultiplicity;
 		this.shortSymbol = shortSymbol;
 		this.altShortSymbol = altShortSymbol;
 		transformations = new ArrayList<Matrix4d>();
 		transfAlgebraic = new ArrayList<String>();
+		cellTranslations = new Vector3d[multiplicity/primitiveMultiplicity];
 		this.bravLattice = bravLattice;
 	}
 	
 	public void addTransformation(String transfAlgebraic) {
 		this.transfAlgebraic.add(transfAlgebraic);
 		this.transformations.add(getMatrixFromAlgebraic(transfAlgebraic));
+	}
+	
+	protected void initializeCellTranslations() {
+		cellTranslations[0] = new Vector3d(0,0,0);
+		if (multiplicity==primitiveMultiplicity) {
+			return;
+		}
+		int fold = multiplicity/primitiveMultiplicity;
+		for (int n=1;n<fold;n++) {
+			Matrix4d t = transformations.get(n*primitiveMultiplicity);
+			cellTranslations[n] = new Vector3d(t.m03,t.m13,t.m23);
+		}
+	}
+	
+	public int getMultiplicity() {
+		return multiplicity;
+	}
+	
+	public int getPrimitiveMultiplicity() {
+		return primitiveMultiplicity;
+	}
+	
+	public Vector3d[] getCellTranslations() {
+		return cellTranslations;
+	}
+	
+	public Vector3d getCellTranslation(int i) {
+		return cellTranslations[i];
 	}
 	
 	public static Matrix4d getMatrixFromAlgebraic(String transfAlgebraic) {
@@ -199,76 +231,182 @@ public final class SpaceGroup implements Serializable {
 	}
 	
 	private void calcRotAxesAndAngles() {
-		// beware this works only for non enantiomorphic groups (those without inversion points/mirror planes)
-		angles = new ArrayList<Double>();
-		axes = new ArrayList<Vector3d>();
-		operatorsPerAxis = new HashMap<Vector3d, ArrayList<Integer>>();
-		transformId2AxisType = new HashMap<Integer, Integer>();
-		transformId2AxisType.put(0, 1); // for operator transformId=0, axis type is "1-fold"
+
+		angles = new double[multiplicity];
+		axes = new Vector3d[multiplicity];
+		
+		// identity operator (transformId==0) 
+		axes[0] = new Vector3d(0,0,0);
+		angles[0] = 0.0;
 		
 		for (int i=1;i<this.transformations.size();i++){
 			double[] d = {transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
 					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
 					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22};
 			Matrix r = new Matrix(d,3);
+			
+			if (!deltaComp(r.det(), 1.0, DELTA)) {
+				// improper rotation: we add no axis and angle 0
+				axes[i] = new Vector3d(0,0,0);
+				angles[i] = 0.0;
+				continue;
+			}
+			
 			EigenvalueDecomposition evd = new EigenvalueDecomposition(r);
 			
 			Matrix eval = evd.getD();
 			if (eval.get(0, 0)==1 && eval.get(1, 1)==1 && eval.get(2, 2)==1) {
 				// the rotation is an identity: no axis, we add a (0,0,0)
-				axes.add(new Vector3d(0,0,0)); 
-				angles.add(0.0);
-				transformId2AxisType.put(i, 1);
+				axes[i] = new Vector3d(0,0,0);
+				angles[i] = 0.0;
 				continue;
 			}
 			int indexOfEv1;
 			for (indexOfEv1=0;indexOfEv1<3;indexOfEv1++) {
-				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,0.00001)) break;
+				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,DELTA)) break;
 			}
-			Matrix evec = evd.getV();
-			double angle = Math.acos((eval.trace()-1)/2);
-			angles.add(angle);
-			Vector3d axis = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
-			axes.add(axis);
-			if (operatorsPerAxis.containsKey(axis)) {
-				operatorsPerAxis.get(axis).add(i);
-			} else {
-				ArrayList<Integer> ops = new ArrayList<Integer>();
-				ops.add(i);
-				operatorsPerAxis.put(axis, ops);
-			}
-			if (deltaComp(angle, Math.PI, delta)) { 
-				transformId2AxisType.put(i, 2);
-			} else if (deltaComp(angle, 2.0*Math.PI/3.0, delta)) {
-				transformId2AxisType.put(i, 3);
-			} else if (deltaComp(angle, Math.PI/2.0, delta)) {
-				transformId2AxisType.put(i, 4);
-			} else if (deltaComp(angle, Math.PI/3.0, delta)) {
-				transformId2AxisType.put(i, 6);
-			}
+			Matrix evec = evd.getV(); 
+			angles[i] = Math.acos((eval.trace()-1)/2);
+			axes[i] = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
 		}	
 	}
 	
 	/**
+	 * Calculates the axis fold type (1, 2, 3, 4, 5, 6 for rotations or -1, -2, -3, -4, -6 improper rotations)
+	 * from the trace of the rotation matrix, see for instance 
+	 * http://www.crystallography.fr/mathcryst/pdf/Gargnano/Aroyo_Gargnano_1.pdf 
+	 */
+	private void calcAxisFoldTypes() {
+		axisTypes = new int[multiplicity];
+		for (int i=0;i<this.transformations.size();i++){
+			Matrix3d rot = new Matrix3d(transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
+					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
+					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22);
+			int trace = (int)(rot.m00+rot.m11+rot.m22);
+			if (rot.determinant()>0) {
+				switch (trace) {
+				case 3:
+					axisTypes[i]=1;
+					break;
+				case -1:
+					axisTypes[i]=2;
+					break;
+				case 0:
+					axisTypes[i]=3;
+					break;						
+				case 1:
+					axisTypes[i]=4;
+					break;
+				case 2:
+					axisTypes[i]=6;
+					break;
+				default:
+					throw new NullPointerException("Trace of transform does not correspond to one of the expected types. This is most likely a bug");
+				}
+			} else {
+				switch (trace) {
+				case -3:
+					axisTypes[i]=-1;
+					break;
+				case 1:
+					axisTypes[i]=-2;
+					break;
+				case 0:
+					axisTypes[i]=-3;
+					break;						
+				case -1:
+					axisTypes[i]=-4;
+					break;
+				case -2:
+					axisTypes[i]=-6;
+					break;
+				default:
+					throw new NullPointerException("Trace of transform does not correspond to one of the expected types. This is most likely a bug");
+				}
+			}
+
+		}
+	}
+	
+	private void calcScrewTranslations() {
+		// For reference see:
+		// http://www.crystallography.fr/mathcryst/pdf/Gargnano/Aroyo_Gargnano_1.pdf
+		
+		translScrewComponent = new Vector3d[multiplicity];
+		
+		for (int i=0;i<this.transformations.size();i++){
+			
+			int foldType = getAxisFoldType(i); 			 		
+
+			Matrix3d W = 
+					new Matrix3d(transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
+							transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
+							transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22);
+			
+			if (foldType>=0) {
+				
+				// the Y matrix: Y = W^k-1 + W^k-2 ... + W + I  ; with k the fold type
+				Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);					
+				Matrix3d Wk = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
+
+				for (int k=0;k<foldType;k++) {						
+					Wk.mul(W); // k=0 Wk=W, k=1 Wk=W^2, k=2 Wk=W^3, ... k=foldType-1, Wk=W^foldType
+					if (k!=foldType-1) Y.add(Wk);
+				}
+
+				translScrewComponent[i] = new Vector3d(transformations.get(i).m03, transformations.get(i).m13, transformations.get(i).m23);
+				Y.transform(translScrewComponent[i]);
+				
+				translScrewComponent[i].scale(1.0/foldType);
+				
+			} else {
+				
+				if (foldType==-2) { // there are glide planes only in -2
+					Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
+					Y.add(W);
+
+					translScrewComponent[i] = new Vector3d(transformations.get(i).m03, transformations.get(i).m13, transformations.get(i).m23);
+					Y.transform(translScrewComponent[i]);
+
+					//translScrewComponent[i].scale(-1.0/foldType);
+					translScrewComponent[i].scale(1.0/2.0);
+				} else { // for -1, -3, -4 and -6 there's nothing to do: fill with 0s 
+					translScrewComponent[i] = new Vector3d(0,0,0);
+				}
+			}
+		}
+	}
+	
+	/**
 	 * Gets all axes (crystal basis) corresponding to the rotations of each of the transformations of 
-	 * this space group except for identity.
+	 * this space group (including identity).
 	 * @return
 	 */
-	public List<Vector3d> getRotAxes() {
+	public Vector3d[] getRotAxes() {
 		if (axes!=null) return axes;
 		calcRotAxesAndAngles();
 		return axes;
 	}
 	
+	public Vector3d getRotAxis(int transformId) {
+		if (axes==null) calcRotAxesAndAngles();
+		return axes[transformId];
+	}
+	
 	/**
 	 * Gets all angles of rotation corresponding to each of the transformations of this space group
-	 * except for identity.
+	 * (including identity).
 	 * @return
 	 */
-	public List<Double> getRotAngles() {
+	public double[] getRotAngles() {
 		if (angles!=null) return angles;
 		calcRotAxesAndAngles();
 		return angles;
+	}
+	
+	public double getRotAngle(int transformId) {
+		if (angles==null) calcRotAxesAndAngles();
+		return angles[transformId];
 	}
 	
 	/**
@@ -281,29 +419,82 @@ public final class SpaceGroup implements Serializable {
 	public boolean areInSameAxis(int tId1, int tId2) {
 		if (tId1==tId2) return true;
 		
-		if (operatorsPerAxis== null) calcRotAxesAndAngles();
+		if (axes== null) calcRotAxesAndAngles();
 		
-		if (isRotationIdentity(tId1) && isRotationIdentity(tId2)) return true;
+		if (getAxisFoldType(tId1)==1 && getAxisFoldType(tId2)==1) return true;
 		
-		for (Vector3d axis:operatorsPerAxis.keySet()) {
-			ArrayList<Integer> ops = operatorsPerAxis.get(axis);
-			if (ops.contains(tId1) && ops.contains(tId2)) {
-				return true;
-			}
-		}
+		// we can't deal yet with improper rotations: we return false whenever either of them is improper
+		if (getAxisFoldType(tId1)<0 || getAxisFoldType(tId2)<0) return false;
+		
+		Vector3d axis1 = axes[tId1];
+		Vector3d axis2 = axes[tId2];
+		
+		if (axis1.epsilonEquals(axis2, DELTA)) return true;
 		
 		return false;
 	}
 	
 	/**
-	 * Given a transformId returns the type of axis of rotation: 2, 3, 4 or 6 -fold
-	 * (or 1-fold for identity transformations)
+	 * Given a transformId returns the type of axis of rotation: 1 (no rotation), 2, 3, 4 or 6 -fold
+	 * and for improper rotations: -1, -2, -3, -4 and -6
+	 * 
 	 * @param transformId
 	 * @return
 	 */
 	public int getAxisFoldType(int transformId) {
-		if (transformId2AxisType== null) calcRotAxesAndAngles();
-		return transformId2AxisType.get(transformId);
+		if (axisTypes== null) calcAxisFoldTypes();
+		return axisTypes[transformId];
+	}
+	
+	public Vector3d getTranslScrewComponent(int transformId) {
+		if (translScrewComponent==null) calcScrewTranslations();
+		return translScrewComponent[transformId];
+	}
+	
+	public boolean isScrewRotation(int transformId) {
+		if (transformId==0) return false;
+		
+		int foldType = getAxisFoldType(transformId); 
+		// this condition takes care of improper rotations (negative axis fold type) or identities 		
+		if (foldType<=1) return false;
+
+		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
+		
+		if (Math.abs(translScrewComponent.x)>0 || Math.abs(translScrewComponent.y)>0 || Math.abs(translScrewComponent.z)>0) {
+			return true;
+		}
+		return false;
+		
+	}
+	
+	public boolean isPureRotation(int transformId) {
+		if (transformId==0) return false;
+		
+		int foldType = getAxisFoldType(transformId); 
+		// this condition takes care of improper rotations (negative axis fold type) or identities 		
+		if (foldType<=1) return false;
+
+		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
+		
+		if (deltaComp(translScrewComponent.x,0,DELTA) && 
+				deltaComp(translScrewComponent.y,0,DELTA) && 
+				deltaComp(translScrewComponent.z,0,DELTA)) {
+			return true;
+		}
+		return false;
+
+	}
+	
+	public boolean isGlide(int transformId) {
+		int foldType = getAxisFoldType(transformId);
+		if (foldType!=-2) return false;
+		
+		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
+		
+		if (Math.abs(translScrewComponent.x)>0 || Math.abs(translScrewComponent.y)>0 || Math.abs(translScrewComponent.z)>0) {
+			return true;
+		}
+		return false;
 	}
 	
 	/**
@@ -365,42 +556,42 @@ public final class SpaceGroup implements Serializable {
 		} else if (zcoef!=0) {
 			leading[2] = true;
 		}
-		String x = deltaComp(xcoef,0,delta)?"":formatCoef(xcoef,leading[0])+"X";
-		String y = deltaComp(ycoef,0,delta)?"":formatCoef(ycoef,leading[1])+"Y";
-		String z = deltaComp(zcoef,0,delta)?"":formatCoef(zcoef, leading[2])+"Z";
-		String t = deltaComp(trans,0,delta)?"":formatTransCoef(trans);
+		String x = deltaComp(xcoef,0,DELTA)?"":formatCoef(xcoef,leading[0])+"X";
+		String y = deltaComp(ycoef,0,DELTA)?"":formatCoef(ycoef,leading[1])+"Y";
+		String z = deltaComp(zcoef,0,DELTA)?"":formatCoef(zcoef, leading[2])+"Z";
+		String t = deltaComp(trans,0,DELTA)?"":formatTransCoef(trans);
 		return x+y+z+t;
 				
 	}
 	
 	private static String formatCoef(double c, boolean leading) {
 		if (leading) {
-			return (deltaComp(Math.abs(c),1,delta)?(c>0?"":"-"):String.format("%4.2f",c));
+			return (deltaComp(Math.abs(c),1,DELTA)?(c>0?"":"-"):String.format("%4.2f",c));
 		} else {
-			return (deltaComp(Math.abs(c),1,delta)?(c>0?"+":"-"):String.format("%+4.2f",c));
+			return (deltaComp(Math.abs(c),1,DELTA)?(c>0?"+":"-"):String.format("%+4.2f",c));
 		}
 	}
 	
 	private static String formatTransCoef(double c) {
-		if (Math.abs((Math.rint(c)-c))<delta) { // this is an integer
+		if (Math.abs((Math.rint(c)-c))<DELTA) { // this is an integer
 			return String.format("%+d",(int)Math.rint(c));
 		} else { // it is a fraction
 			int num,den;
 			int floor = (int)Math.floor(c);
 			double decPart = c - floor;
-			if (deltaComp(decPart,0.3333333,delta)) {
+			if (deltaComp(decPart,0.3333333,DELTA)) {
 				num=1;den=3;
-			} else if (deltaComp(decPart,0.6666667,delta)) {
+			} else if (deltaComp(decPart,0.6666667,DELTA)) {
 				num=2;den=3;
-			} else if (deltaComp(decPart,0.2500000,delta)) {
+			} else if (deltaComp(decPart,0.2500000,DELTA)) {
 				num=1;den=4;
-			} else if (deltaComp(decPart,0.5000000,delta)) {
+			} else if (deltaComp(decPart,0.5000000,DELTA)) {
 				num=1;den=2;
-			} else if (deltaComp(decPart,0.7500000,delta)) {
+			} else if (deltaComp(decPart,0.7500000,DELTA)) {
 				num=3;den=4;
-			} else if (deltaComp(decPart,0.1666667,delta)) {
+			} else if (deltaComp(decPart,0.1666667,DELTA)) {
 				num=1;den=6;
-			} else if (deltaComp(decPart,0.8333333,delta)) {
+			} else if (deltaComp(decPart,0.8333333,DELTA)) {
 				num=5;den=6;
 			} else {
 				num=0;den=0; // this in an error
@@ -411,7 +602,7 @@ public final class SpaceGroup implements Serializable {
 		}
 	}
 	
-	private static boolean deltaComp(double d1, double d2, double delta) {
+	protected static boolean deltaComp(double d1, double d2, double delta) {
 		return Math.abs(d1-d2)<delta;
 	}
 	
@@ -427,19 +618,4 @@ public final class SpaceGroup implements Serializable {
 		return true;
 	}
 	
-	/**
-	 * Returns true if the transform identified by given id is an identity rotation
-	 * It happens always for transformId==0 or for face centered space groups (e.g. C 1 2 1)
-	 * that have operators that are simply translations in cell unit without rotation 
-	 * @param transformId
-	 * @return
-	 */
-	public boolean isRotationIdentity(int transformId) {
-		if (transformId==0) return true;
-		Vector3d axis = getRotAxes().get(transformId-1);
-		if (axis.epsilonEquals(new Vector3d(0,0,0), delta)) {
-			return true;
-		}
-		return false;
-	}
 }

@@ -77,7 +77,12 @@ public class SymoplibParser {
 						}
 					}
 					
-					int id = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+					int idxFirstSpace = line.indexOf(' ');
+					int idxSecondSpace = line.indexOf(' ',idxFirstSpace+1);
+					int idxThirdSpace = line.indexOf(' ',idxSecondSpace+1);
+					int id = Integer.parseInt(line.substring(0, idxFirstSpace));
+					int multiplicity = Integer.parseInt(line.substring(idxFirstSpace+1, idxSecondSpace));
+					int primitiveMultiplicity = Integer.parseInt(line.substring(idxSecondSpace+1, idxThirdSpace));
 					Matcher m = namePat.matcher(line);
 					String shortSymbol = null;
 					String altShortSymbol = null;
@@ -88,7 +93,7 @@ public class SymoplibParser {
 						if (altShortSymbol!=null) altShortSymbol = altShortSymbol.trim().replaceAll("'", "");
 						shortSymbol = m.group(3);							
 					}
-					currentSG = new SpaceGroup(id, shortSymbol, altShortSymbol, SpaceGroup.BravaisLattice.getByName(brav));
+					currentSG = new SpaceGroup(id, multiplicity, primitiveMultiplicity, shortSymbol, altShortSymbol, SpaceGroup.BravaisLattice.getByName(brav));
 				} else {
 					currentSG.addTransformation(line.trim());
 				}
@@ -101,9 +106,14 @@ public class SymoplibParser {
 				// we add also alternative name to map so we can look it up
 				name2sgs.put(currentSG.getAltShortSymbol(), currentSG);
 			}
+			
 		} catch (IOException e) {
 			System.err.println("Fatal error! Can't read resource file "+SYMOPFILE+". Error: "+e.getMessage()+". Exiting.");
 			System.exit(1);
+		}
+
+		for (SpaceGroup sg:map.values()) {
+			sg.initializeCellTranslations();
 		}
 		return map;
 	}

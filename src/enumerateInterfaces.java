@@ -4,6 +4,8 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Vector3d;
+
 import owl.core.runners.PymolRunner;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
@@ -182,14 +184,30 @@ public class enumerateInterfaces {
 		for (int i=0;i<interfaces.size();i++) {
 			ChainInterface interf = interfaces.get(i+1);
 			interf.calcRimAndCore(BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE);
+			
 			String parallel = "";
 			if (interf.isParallel()) parallel = " -- PARALLEL interface";
 			System.out.println("\n##Interface "+(i+1)+" "+
 					interf.getFirstSubunitId()+"-"+
 					interf.getSecondSubunitId()+parallel);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
+			
+			
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf().getMatTransform())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf().getMatTransform()));
+	 		
+			int foldType = pdb.getSpaceGroup().getAxisFoldType(interf.getSecondTransf().getTransformId());
+			Vector3d axis = pdb.getSpaceGroup().getRotAxis(interf.getSecondTransf().getTransformId());
+			
+			String screwStr = "";
+			if (pdb.getSpaceGroup().isScrewRotation(interf.getSecondTransf().getTransformId())) {
+				Vector3d screwTransl = pdb.getSpaceGroup().getTranslScrewComponent(interf.getSecondTransf().getTransformId());
+				screwStr = " -- "+interf.getSecondTransf().getTransformType().getShortName()+" screw with translation "+
+						String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
+			}
+			
+			System.out.println(" "+foldType+"-fold on axis "+String.format("(%5.2f,%5.2f,%5.2f)",axis.x,axis.y,axis.z)+screwStr);
+			
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+

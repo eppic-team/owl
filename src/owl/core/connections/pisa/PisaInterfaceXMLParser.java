@@ -173,7 +173,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				} else if (name.equals(MOLECULE_TAG)) {
 					inMolecule = true;
 					currentPisaMolecule = new PisaMolecule();
-					currentTransf = new CrystalTransform();
+					currentTransf = new CrystalTransform((SpaceGroup)null);
 					currentTransfOrth = new Matrix4d();
 				}
 				

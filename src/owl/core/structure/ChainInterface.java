@@ -686,6 +686,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondTransf);
 	}
 
+	/**
+	 * Tells whether this interface is a parallel interface, i.e. both partners have
+	 * the same asymmetric unit id (chain code) and are related by a pure crystal 
+	 * (integer) translation.
+	 * @return
+	 */
 	public boolean isParallel() {
 		return this.getFirstSubunitId().isSymRelatedEquivalent(this.getSecondSubunitId());
 	}
