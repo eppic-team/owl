@@ -193,6 +193,10 @@ public class CrystalTransform implements Serializable {
 	 * @return
 	 */
 	public TransformType getTransformType() {
+		
+		// if no SG, that means a non-crystallographic entry (e.g. NMR). We return AU as type
+		if (sg==null) return TransformType.AU;
+		
 		int foldType = sg.getAxisFoldType(this.transformId);
 		if (foldType>1) {
 			if (sg.isScrewRotation(this.transformId)) {
