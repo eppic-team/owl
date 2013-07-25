@@ -212,7 +212,7 @@ public class AtomLineList implements Iterable<AtomLine> {
 				if (previous!=null) 
 					throw new FileFormatException("Polymer PDB chain code "+group.get(0).authAsymId+" assigned twice, to chain codes: "+
 							group.get(0).labelAsymId+" and "+previous+
-							". Most likely there is something wrong with this PDB file, are TER records well placed?");
+							". Most likely there is something wrong with this PDB file: check that TER records are correctly placed and that all chains have a unique chain code");
 				
 				for (AtomLine atomLine:group) {
 					atomLine.isNonPoly = false;
