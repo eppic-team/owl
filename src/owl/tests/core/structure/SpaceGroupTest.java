@@ -201,7 +201,7 @@ public class SpaceGroupTest {
 					case -1:
 						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
 						// no glide planes
-						Assert.assertTrue(spaceGroup.getTranslScrewComponent(i).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -2:
 						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
@@ -210,17 +210,17 @@ public class SpaceGroupTest {
 					case -3:
 						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
 						// no glide planes
-						Assert.assertTrue(spaceGroup.getTranslScrewComponent(i).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -4:
 						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
 						// no glide planes
-						Assert.assertTrue(spaceGroup.getTranslScrewComponent(i).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -6:
 						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
 						// no glide planes
-						Assert.assertTrue(spaceGroup.getTranslScrewComponent(i).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 
 					}
@@ -228,7 +228,7 @@ public class SpaceGroupTest {
 				}
 				
 				Vector3d axis = spaceGroup.getRotAxis(i);
-				Vector3d translScrewComponent = spaceGroup.getTranslScrewComponent(i);
+				Vector3d translScrewComponent = ct.getTranslScrewComponent(foldType);
 
 				// we only print the enantiomorphic ones, otherwise there's too much output
 				
@@ -241,32 +241,31 @@ public class SpaceGroupTest {
 							String.format("(%5.2f,%5.2f,%5.2f)",translScrewComponent.x,translScrewComponent.y,translScrewComponent.z));
 
 
-				if (spaceGroup.isScrewRotation(i)) {
+				if (ct.getTransformType().isScrew()) { // tests for both screw or glide planes (i.e. a non-zero scre transl component)
 					
-					if (spaceGroup.isEnantiomorphic()  || PRINT_OPERATORS_FROM_ALL_SGS) 
+					if (spaceGroup.isEnantiomorphic()  || PRINT_OPERATORS_FROM_ALL_SGS) { 
 						System.out.print(" -- SCREW AXIS");
+						if (foldType==-2) System.out.print(" (GLIDE)");
+					}
+					
 						
-					Assert.assertTrue(ct.getTransformType()==TransformType.TWOFOLDSCREW || 
+					Assert.assertTrue(
+							ct.getTransformType()==TransformType.GLIDE ||
+							ct.getTransformType()==TransformType.TWOFOLDSCREW || 
 							ct.getTransformType()==TransformType.THREEFOLDSCREW ||
 							ct.getTransformType()==TransformType.FOURFOLDSCREW ||
 							ct.getTransformType()==TransformType.SIXFOLDSCREW);
-					Assert.assertTrue(ct.getTransformType().isScrew());
-
-					Assert.assertFalse(spaceGroup.isPureRotation(i));
-				}
-				
-				if (spaceGroup.isPureRotation(i)) {
-					Assert.assertFalse(spaceGroup.isScrewRotation(i));
+					
 					Assert.assertFalse(ct.isPureTranslation());
 				}
-
+				
 				if (ct.isPureTranslation()) {
 					Assert.assertEquals(1,foldType);
 
 					if (spaceGroup.isEnantiomorphic()  || PRINT_OPERATORS_FROM_ALL_SGS) 
 						System.out.print(" -- FRACTIONAL TRANSLATION");
 					
-						Assert.assertTrue(ct.isFractionalTranslation());
+					Assert.assertTrue(ct.isFractionalTranslation());
 					Assert.assertTrue(ct.getTransformType()==TransformType.CELLTRANSL);
 				}
 				if (ct.isRotation() && !ct.isFractionalTranslation()) {

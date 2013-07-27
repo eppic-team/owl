@@ -88,7 +88,6 @@ public final class SpaceGroup implements Serializable {
 	private Vector3d[] axes; // all rotation axes, indices are transformIds 
 	
 	private int[] axisTypes; // indices of array are transformIds
-	private Vector3d[] translScrewComponent; // the screw component of a screw rotation (if not screw or not rotation, then 0,0,0)
 	
 	private BravaisLattice bravLattice;
 	
@@ -98,8 +97,8 @@ public final class SpaceGroup implements Serializable {
 		this.primitiveMultiplicity = primitiveMultiplicity;
 		this.shortSymbol = shortSymbol;
 		this.altShortSymbol = altShortSymbol;
-		transformations = new ArrayList<Matrix4d>();
-		transfAlgebraic = new ArrayList<String>();
+		transformations = new ArrayList<Matrix4d>(multiplicity);
+		transfAlgebraic = new ArrayList<String>(multiplicity);
 		cellTranslations = new Vector3d[multiplicity/primitiveMultiplicity];
 		this.bravLattice = bravLattice;
 	}
@@ -328,55 +327,6 @@ public final class SpaceGroup implements Serializable {
 		}
 	}
 	
-	private void calcScrewTranslations() {
-		// For reference see:
-		// http://www.crystallography.fr/mathcryst/pdf/Gargnano/Aroyo_Gargnano_1.pdf
-		
-		translScrewComponent = new Vector3d[multiplicity];
-		
-		for (int i=0;i<this.transformations.size();i++){
-			
-			int foldType = getAxisFoldType(i); 			 		
-
-			Matrix3d W = 
-					new Matrix3d(transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
-							transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
-							transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22);
-			
-			if (foldType>=0) {
-				
-				// the Y matrix: Y = W^k-1 + W^k-2 ... + W + I  ; with k the fold type
-				Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);					
-				Matrix3d Wk = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
-
-				for (int k=0;k<foldType;k++) {						
-					Wk.mul(W); // k=0 Wk=W, k=1 Wk=W^2, k=2 Wk=W^3, ... k=foldType-1, Wk=W^foldType
-					if (k!=foldType-1) Y.add(Wk);
-				}
-
-				translScrewComponent[i] = new Vector3d(transformations.get(i).m03, transformations.get(i).m13, transformations.get(i).m23);
-				Y.transform(translScrewComponent[i]);
-				
-				translScrewComponent[i].scale(1.0/foldType);
-				
-			} else {
-				
-				if (foldType==-2) { // there are glide planes only in -2
-					Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
-					Y.add(W);
-
-					translScrewComponent[i] = new Vector3d(transformations.get(i).m03, transformations.get(i).m13, transformations.get(i).m23);
-					Y.transform(translScrewComponent[i]);
-
-					//translScrewComponent[i].scale(-1.0/foldType);
-					translScrewComponent[i].scale(1.0/2.0);
-				} else { // for -1, -3, -4 and -6 there's nothing to do: fill with 0s 
-					translScrewComponent[i] = new Vector3d(0,0,0);
-				}
-			}
-		}
-	}
-	
 	/**
 	 * Gets all axes (crystal basis) corresponding to the rotations of each of the transformations of 
 	 * this space group (including identity).
@@ -444,57 +394,6 @@ public final class SpaceGroup implements Serializable {
 	public int getAxisFoldType(int transformId) {
 		if (axisTypes== null) calcAxisFoldTypes();
 		return axisTypes[transformId];
-	}
-	
-	public Vector3d getTranslScrewComponent(int transformId) {
-		if (translScrewComponent==null) calcScrewTranslations();
-		return translScrewComponent[transformId];
-	}
-	
-	public boolean isScrewRotation(int transformId) {
-		if (transformId==0) return false;
-		
-		int foldType = getAxisFoldType(transformId); 
-		// this condition takes care of improper rotations (negative axis fold type) or identities 		
-		if (foldType<=1) return false;
-
-		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
-		
-		if (Math.abs(translScrewComponent.x)>0 || Math.abs(translScrewComponent.y)>0 || Math.abs(translScrewComponent.z)>0) {
-			return true;
-		}
-		return false;
-		
-	}
-	
-	public boolean isPureRotation(int transformId) {
-		if (transformId==0) return false;
-		
-		int foldType = getAxisFoldType(transformId); 
-		// this condition takes care of improper rotations (negative axis fold type) or identities 		
-		if (foldType<=1) return false;
-
-		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
-		
-		if (deltaComp(translScrewComponent.x,0,DELTA) && 
-				deltaComp(translScrewComponent.y,0,DELTA) && 
-				deltaComp(translScrewComponent.z,0,DELTA)) {
-			return true;
-		}
-		return false;
-
-	}
-	
-	public boolean isGlide(int transformId) {
-		int foldType = getAxisFoldType(transformId);
-		if (foldType!=-2) return false;
-		
-		Vector3d translScrewComponent = getTranslScrewComponent(transformId);
-		
-		if (Math.abs(translScrewComponent.x)>0 || Math.abs(translScrewComponent.y)>0 || Math.abs(translScrewComponent.z)>0) {
-			return true;
-		}
-		return false;
 	}
 	
 	/**

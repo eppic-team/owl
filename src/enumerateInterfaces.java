@@ -200,11 +200,18 @@ public class enumerateInterfaces {
 			Vector3d axis = pdb.getSpaceGroup().getRotAxis(interf.getSecondTransf().getTransformId());
 			
 			String screwStr = "";
-			if (pdb.getSpaceGroup().isScrewRotation(interf.getSecondTransf().getTransformId())) {
-				Vector3d screwTransl = pdb.getSpaceGroup().getTranslScrewComponent(interf.getSecondTransf().getTransformId());
-				screwStr = " -- "+interf.getSecondTransf().getTransformType().getShortName()+" screw with translation "+
-						String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
+			if (interf.getSecondTransf().getTransformType().isScrew()) {
+				Vector3d screwTransl = 
+						interf.getSecondTransf().getTranslScrewComponent(pdb.getSpaceGroup().getAxisFoldType(interf.getSecondTransf().getTransformId()));
+				screwStr = " -- "+interf.getSecondTransf().getTransformType().getShortName()+" with translation "+
+				String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
+
 			}
+			//if (pdb.getSpaceGroup().isScrewRotation(interf.getSecondTransf().getTransformId())) {
+			//	Vector3d screwTransl = pdb.getSpaceGroup().getTranslScrewComponent(interf.getSecondTransf().getTransformId());
+			//	screwStr = " -- "+interf.getSecondTransf().getTransformType().getShortName()+" screw with translation "+
+			//			String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
+			//}
 			
 			System.out.println(" "+foldType+"-fold on axis "+String.format("(%5.2f,%5.2f,%5.2f)",axis.x,axis.y,axis.z)+screwStr);
 			
