@@ -613,7 +613,11 @@ public class PymolRunner {
 	}
 	
 	private String getPymolMolecName(File pdbFile) {
-		 return pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf('.'));
+		String fileName = pdbFile.getName();
+		if (fileName.endsWith(".gz")) {
+			fileName=fileName.substring(0,fileName.lastIndexOf('.'));
+		}
+		return fileName.substring(0, fileName.lastIndexOf('.'));
 	}
 	
 	private String getResiSelString(List<Residue> list, boolean usePdbResSer) {

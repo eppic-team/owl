@@ -1,11 +1,12 @@
 package owl.core.structure;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
@@ -639,9 +640,10 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 * @param file
 	 * @param usePdbResSer if true PDB residue serials are written, if false CIF residue 
 	 * serials are written
-	 * @throws FileNotFoundException 
+	 * @param gzip if true file will be gzipped, false it will be plain text
+	 * @throws IOException 
 	 */
-	public void writeToPdbFile(File file, boolean usePdbResSer) throws FileNotFoundException {
+	public void writeToPdbFile(File file, boolean usePdbResSer, boolean gzip) throws IOException {
 		chain2forOutput = secondMolecule.getPdbChainCode();
 		if (secondMolecule.getPdbChainCode().equals(firstMolecule.getPdbChainCode())) {
 			// if both chains are named equally we want to still named them differently in the output pdb file
@@ -653,8 +655,13 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 				chain2forOutput = Character.toString((char)(letter-25)); //i.e. 'A' or 'a'
 			}
 		}
-		
-		PrintStream ps = new PrintStream(file);
+			
+		PrintStream ps = null;
+		if (gzip) {
+			ps = new PrintStream(new GZIPOutputStream(new FileOutputStream(file)));
+		} else {
+			ps = new PrintStream(file);
+		}
 		ps.println("HEADER");
 		if (!firstMolecule.isNonPolyChain()) firstMolecule.writeSeqresRecord(ps, firstMolecule.getPdbChainCode());
 		if (!secondMolecule.isNonPolyChain()) secondMolecule.writeSeqresRecord(ps,chain2forOutput);

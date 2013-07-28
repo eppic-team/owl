@@ -223,7 +223,7 @@ public class enumerateInterfaces {
 		
 			if (writeDir!=null) {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
-				interf.writeToPdbFile(pdbFile, true);
+				interf.writeToPdbFile(pdbFile, true, false);
 				interfPdbFiles[i] = pdbFile; 
 				if (generatePngs) {
 					pr.generateInterfPngPsePml(interf, BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE, pdbFile, 
