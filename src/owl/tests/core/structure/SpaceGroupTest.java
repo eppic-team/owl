@@ -180,45 +180,45 @@ public class SpaceGroupTest {
 				if (W.determinant()>0) { // i.e. 1	
 					switch (foldType) {
 					case 1:
-						Assert.assertEquals(0, spaceGroup.getRotAngles()[i], DELTA);
+						Assert.assertEquals(0, spaceGroup.getRotAngle(i), DELTA);
 						break;
 					case 2:
-						Assert.assertEquals(Math.PI, spaceGroup.getRotAngles()[i], DELTA);
+						Assert.assertEquals(Math.PI, spaceGroup.getRotAngle(i), DELTA);
 						break;
 					case 3:
-						Assert.assertEquals(2.0*Math.PI/3.0, spaceGroup.getRotAngles()[i], DELTA);
+						Assert.assertEquals(2.0*Math.PI/3.0, spaceGroup.getRotAngle(i), DELTA);
 						break;						
 					case 4:
-						Assert.assertEquals(Math.PI/2.0, spaceGroup.getRotAngles()[i], DELTA);
+						Assert.assertEquals(Math.PI/2.0, spaceGroup.getRotAngle(i), DELTA);
 						break;
 					case 6:
-						Assert.assertEquals(Math.PI/3.0, spaceGroup.getRotAngles()[i], DELTA);
+						Assert.assertEquals(Math.PI/3.0, spaceGroup.getRotAngle(i), DELTA);
 						break;						
 					}
 					
 				} else { // i.e. determinant -1
 					switch (foldType) {
 					case -1:
-						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
+						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
 						// no glide planes
 						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -2:
-						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
+						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
 						// glide planes can happen
 						break;
 					case -3:
-						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
+						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
 						// no glide planes
 						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -4:
-						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
+						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
 						// no glide planes
 						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -6:
-						Assert.assertEquals(0,spaceGroup.getRotAngles()[i],DELTA);
+						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
 						// no glide planes
 						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
@@ -230,6 +230,14 @@ public class SpaceGroupTest {
 				Vector3d axis = spaceGroup.getRotAxis(i);
 				Vector3d translScrewComponent = ct.getTranslScrewComponent(foldType);
 
+				// if both non-0, then both have to be on the same direction (with perhaps different sense)
+				if (!axis.epsilonEquals(new Vector3d(0,0,0), DELTA) && 
+					!translScrewComponent.epsilonEquals(new Vector3d(0,0,0), DELTA)) {
+					
+					Assert.assertTrue ((eq(axis.angle(translScrewComponent),0.0)) || 
+										eq(axis.angle(translScrewComponent),Math.PI) );
+				}
+				
 				// we only print the enantiomorphic ones, otherwise there's too much output
 				
 				if (spaceGroup.isEnantiomorphic() || PRINT_OPERATORS_FROM_ALL_SGS)
@@ -287,6 +295,7 @@ public class SpaceGroupTest {
 
 
 		}
+		
 		
 		Assert.assertEquals(266, allSGs.size()); // the total count must be 266
 		Assert.assertEquals(65, countEn);        // enantiomorphic groups (protein crystallography groups)

@@ -231,17 +231,19 @@ public final class SpaceGroup implements Serializable {
 	
 	private void calcRotAxesAndAngles() {
 
-		angles = new double[multiplicity];
 		axes = new Vector3d[multiplicity];
+		angles = new double[multiplicity];
 		
 		// identity operator (transformId==0) 
 		axes[0] = new Vector3d(0,0,0);
 		angles[0] = 0.0;
 		
 		for (int i=1;i<this.transformations.size();i++){
-			double[] d = {transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
-					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
-					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22};
+						
+			double[] d = {transformations.get(i).m00,transformations.get(i).m10,transformations.get(i).m20,
+					transformations.get(i).m01,transformations.get(i).m11,transformations.get(i).m21,
+					transformations.get(i).m02,transformations.get(i).m12,transformations.get(i).m22};
+
 			Matrix r = new Matrix(d,3);
 			
 			if (!deltaComp(r.det(), 1.0, DELTA)) {
@@ -265,7 +267,7 @@ public final class SpaceGroup implements Serializable {
 				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,DELTA)) break;
 			}
 			Matrix evec = evd.getV(); 
-			angles[i] = Math.acos((eval.trace()-1)/2);
+			angles[i] = Math.acos((eval.trace()-1.0)/2.0);
 			axes[i] = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
 		}	
 	}
@@ -327,31 +329,9 @@ public final class SpaceGroup implements Serializable {
 		}
 	}
 	
-	/**
-	 * Gets all axes (crystal basis) corresponding to the rotations of each of the transformations of 
-	 * this space group (including identity).
-	 * @return
-	 */
-	public Vector3d[] getRotAxes() {
-		if (axes!=null) return axes;
-		calcRotAxesAndAngles();
-		return axes;
-	}
-	
 	public Vector3d getRotAxis(int transformId) {
 		if (axes==null) calcRotAxesAndAngles();
 		return axes[transformId];
-	}
-	
-	/**
-	 * Gets all angles of rotation corresponding to each of the transformations of this space group
-	 * (including identity).
-	 * @return
-	 */
-	public double[] getRotAngles() {
-		if (angles!=null) return angles;
-		calcRotAxesAndAngles();
-		return angles;
 	}
 	
 	public double getRotAngle(int transformId) {
@@ -379,7 +359,9 @@ public final class SpaceGroup implements Serializable {
 		Vector3d axis1 = axes[tId1];
 		Vector3d axis2 = axes[tId2];
 		
-		if (axis1.epsilonEquals(axis2, DELTA)) return true;
+		// TODO revise: we might need to consider that the 2 are in same direction but opposite senses
+		// the method is not used at the moment anyway
+		if (deltaComp(axis1.angle(axis2), 0.0, DELTA)) return true;
 		
 		return false;
 	}
