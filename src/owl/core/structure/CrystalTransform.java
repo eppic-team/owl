@@ -155,7 +155,9 @@ public class CrystalTransform implements Serializable {
 			SpaceGroup.deltaComp(matTransform.m20,0,SpaceGroup.DELTA) &&
 			SpaceGroup.deltaComp(matTransform.m21,0,SpaceGroup.DELTA) &&
 			SpaceGroup.deltaComp(matTransform.m22,1,SpaceGroup.DELTA) &&
-			(Math.abs(matTransform.m03)>0 || Math.abs(matTransform.m13)>0 || Math.abs(matTransform.m23)>0)) {
+			(	Math.abs(matTransform.m03-0.0)>SpaceGroup.DELTA || 
+				Math.abs(matTransform.m13-0.0)>SpaceGroup.DELTA || 
+				Math.abs(matTransform.m23-0.0)>SpaceGroup.DELTA)) {
 			return true;
 		}
 				
@@ -205,7 +207,10 @@ public class CrystalTransform implements Serializable {
 		int foldType = sg.getAxisFoldType(this.transformId);
 		boolean isScrewOrGlide = false;
 		Vector3d translScrewComponent = getTranslScrewComponent(foldType);
-		if (Math.abs(translScrewComponent.x)>0 || Math.abs(translScrewComponent.y)>0 || Math.abs(translScrewComponent.z)>0) {
+		if (Math.abs(translScrewComponent.x-0.0)>SpaceGroup.DELTA || 
+			Math.abs(translScrewComponent.y-0.0)>SpaceGroup.DELTA || 
+			Math.abs(translScrewComponent.z-0.0)>SpaceGroup.DELTA) {
+			
 			isScrewOrGlide = true;
 		}
 
