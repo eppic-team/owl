@@ -272,6 +272,7 @@ public class MultipleSequenceAlignment implements Serializable {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(PIRHEADER_CHAR)) { // quick check for PIR format
+					fileIn.close();
 					throw new FileFormatException("First non-empty line of file "+fileName+" does not seem to be a PIR header.");
 				}
 				if(nextLine.endsWith(PIRSEQEND)) {				// end of sequence
@@ -334,6 +335,7 @@ public class MultipleSequenceAlignment implements Serializable {
 			if(nextLine.length() > 0) {						// ignore empty lines
 				nonEmptyLine++;
 				if (nonEmptyLine==1 && !nextLine.startsWith(">")) { // quick check for FASTA format
+					fileIn.close();
 					throw new FileFormatException("First non-empty line of FASTA file "+fileName+" does not seem to be a FASTA header.");
 				}
 				Pattern p = Pattern.compile(FASTAHEADER_REGEX);
@@ -387,8 +389,10 @@ public class MultipleSequenceAlignment implements Serializable {
 		while((line = fileIn.readLine()) != null) {
 		    ++lineNum;
 			if (lineNum == 1) {
-				if (!line.startsWith("CLUSTAL"))
+				if (!line.startsWith("CLUSTAL")) {
+					fileIn.close();
 					throw new FileFormatException("File "+fileName+" does not conform with CLUSTAL format (first line does not start with CLUSTAL)");
+				}
 				continue;
 			}
 			line = line.trim();

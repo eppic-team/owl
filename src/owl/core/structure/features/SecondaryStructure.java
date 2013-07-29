@@ -129,6 +129,7 @@ public class SecondaryStructure implements Iterable<SecStrucElement> {
 				}				
 			}
 		}
+		br.close();
 		// adding the last element
 		char secStrucType = SecStrucElement.getThreeStateTypeFromPsiPredType(lastSsType);
 		this.add(new SecStrucElement(secStrucType, startRes, resSerial, String.valueOf(secStrucType)+(elemSerial+1)));

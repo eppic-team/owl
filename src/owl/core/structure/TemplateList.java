@@ -169,6 +169,7 @@ public class TemplateList implements Iterable<Template> {
 			
 			}
 		}
+		fileIn.close();
 
 		for (String id:idsList) {
 			this.add(new Template(id));
@@ -457,6 +458,8 @@ public class TemplateList implements Iterable<Template> {
 			
 			}
 		}
+		fileIn.close();
+		
 		String[] codes = new String[codesAL.size()];
 		codesAL.toArray(codes);
 		return codes;

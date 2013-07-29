@@ -229,6 +229,7 @@ public class Sequence implements Serializable {
 				seq += nextLine.trim();
 			}
 		}
+		fileIn.close();
 		if (seq.contains(" ")) {
 			throw new FileFormatException("The sequence in FASTA file "+fastaFile+" contains spaces.");
 		}
@@ -372,6 +373,7 @@ public class Sequence implements Serializable {
 					seq = new StringBuffer();
 					lastTag = currentTag;
 				} else {
+					br.close();
 					throw new FileFormatException("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
 				}
 			} else {

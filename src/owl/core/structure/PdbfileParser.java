@@ -399,6 +399,7 @@ public class PdbfileParser {
 					crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 					spaceGroup = SymoplibParser.getSpaceGroup(sg);
 					if (spaceGroup==null) {
+						fpdb.close();
 						throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
 					}
 				}
