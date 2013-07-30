@@ -333,6 +333,7 @@ public class EmblWSDBfetchConnection {
 					seq = new StringBuffer();
 					lastTag = currentTag;
 				} else {
+					br.close();
 					throw new FileFormatException("FASTA file "+seqsFile+" does not seem to have proper FASTA headers");
 				}
 			} else {

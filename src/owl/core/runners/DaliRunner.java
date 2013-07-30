@@ -110,6 +110,7 @@ public class DaliRunner {
 				}
 			}
 		} catch (IllegalStateException e) {
+			fileIn.close();
 			throw new AlignmentConstructionException("Could not read DALI alignment. Check "+file+" for errors");
 		}
 

@@ -84,9 +84,11 @@ public class FileRIGraph extends RIGraph {
 				Matcher m = p.matcher(line);
 				if (m.find()){
 					if (!m.group(1).equals(GRAPHFILEFORMATVERSION)){
+						fcont.close();
 						throw new FileFormatException("Contact map file "+contactsfile+" has a wrong file format version. Supported version is "+GRAPHFILEFORMATVERSION+" and found version was "+m.group(1));
 					}
 				} else if (linecount==1){ // #AGLAPPE/#CMVIEW/#OWL not found in first line
+					fcont.close();
 					throw new FileFormatException(contactsfile+" is not a valid contact map file");
 				}
 				Pattern ps = Pattern.compile("^#SEQUENCE:\\s*(\\w+)$");

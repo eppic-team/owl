@@ -14,7 +14,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.Assert;
+//import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -743,6 +744,7 @@ public class PdbParsersTest {
 			if (count>100) break;
 			count++;
 		}
+		flist.close();
 	}
 
 	// to debug the testing code (run as java program so that we can use normal debugger)

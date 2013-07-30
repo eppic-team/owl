@@ -66,6 +66,7 @@ public class reconstruct {
 				if (new File(m.group(1).trim()).exists()){
 					TINKER_BIN_DIR = m.group(1).trim(); 
 				} else {
+					br.close();
 					throw new FileNotFoundException("TINKER_BIN_DIR directory '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
 					//System.err.println("TINKER_BIN_DIR directory '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
 					//System.exit(1);
@@ -77,6 +78,7 @@ public class reconstruct {
 				if (new File(m.group(1).trim()).exists()){
 					PRM_FILE = m.group(1).trim(); 
 				} else {
+					br.close();
 					throw new FileNotFoundException("PRM_FILE file '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
 					//System.err.println("PRM_FILE file '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
 					//System.exit(1);

@@ -114,7 +114,6 @@ public final class Triplet<T> implements Collection<T>, Serializable {
 		return third;
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public boolean equals( Object o ) {
 		if (o == this)

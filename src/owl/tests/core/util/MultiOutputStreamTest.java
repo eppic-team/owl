@@ -40,6 +40,7 @@ public class MultiOutputStreamTest {
 		OutputStream multi = new MultiOutputStream(os1, os2, os3, os4);
 		PrintWriter multiOut = new PrintWriter(multi, true);
 		multiOut.println(command1);
-		multiOut.println(command2);		 
+		multiOut.println(command2);
+		multiOut.close();
 	}
 }

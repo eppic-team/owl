@@ -33,7 +33,7 @@ import owl.graphAveraging.GraphAveragerException;
 public class RIGEnsemble {
 	
 	/*------------------------------ constants ------------------------------*/
-	private static final long serialVersionUID = 1L;
+	//private static final long serialVersionUID = 1L;
 	public static final String DEFAULT_EDGE_TYPE = "Cb";
 	public static final double DEFAULT_DIST_CUTOFF = 8.0;
 	

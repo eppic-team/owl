@@ -113,6 +113,7 @@ public class SelectonRunner {
 				if (m.matches()) {
 					seqName = m.group(1).trim();
 					if (!seqName.equals(sequenceName)) {
+						br.close();
 						throw new FileFormatException("The reference sequence name in output selecton file "+resultsFile+" ("+seqName+") does not coincide with the expected sequence name "+sequenceName);
 					}
 				}
@@ -121,10 +122,12 @@ public class SelectonRunner {
 			String[] tokens = line.split("\\s+");
 			int serial = Integer.parseInt(tokens[0]);
 			if (lastSerial+1!=serial) {
+				br.close();
 				throw new FileFormatException("Aminoacids in the selecton results file "+resultsFile+" are not sequentially numbered at line "+lineCount);
 			}
 			AminoAcid aa = AminoAcid.getByOneLetterCode(tokens[1].toCharArray()[0]);
 			if (aa==null) {
+				br.close();
 				throw new FileFormatException("Unknown amino acid one letter code in selecton results file "+resultsFile+" at line "+lineCount);
 			}
 			kaksRatios.add(Double.parseDouble(tokens[2]));

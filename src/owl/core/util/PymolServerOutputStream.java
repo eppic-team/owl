@@ -169,6 +169,8 @@ public class PymolServerOutputStream extends OutputStream {
 			// execute command
 			serverOut.flush();
 			
+			serverOut.close();
+			
 	    	System.out.println("done.");
 			
 		} catch(MalformedURLException e) {
@@ -190,6 +192,7 @@ public class PymolServerOutputStream extends OutputStream {
 		serverOutPw.println(command3);
 		serverOutPw.println(command4);	
 		serverOutPw.println(command5);
+		serverOutPw.close();
 		System.out.println("done.");
 	}
 	

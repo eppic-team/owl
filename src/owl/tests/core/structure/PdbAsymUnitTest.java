@@ -14,7 +14,8 @@ import java.util.Properties;
 
 //import javax.vecmath.Matrix4d;
 
-import junit.framework.Assert;
+//import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.After;
 import org.junit.AfterClass;

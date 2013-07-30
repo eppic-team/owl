@@ -16,7 +16,8 @@ import java.util.regex.Pattern;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-import junit.framework.Assert;
+//import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -490,7 +491,7 @@ public class PdbChainTest {
 					double dist1 = distMap1.get(e);
 					double dist2 = distMap2.get(e);
 					double diffDist = diffDistMap.get(e);
-					Assert.assertEquals(Math.abs(dist1 - dist2), diffDist);					
+					Assert.assertEquals(Math.abs(dist1 - dist2), diffDist, 0.00001);					
 				}
 			}
 		}

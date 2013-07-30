@@ -42,8 +42,10 @@ public class BlastTabularParser {
 			if (line.startsWith("#")) continue;
 			
 			String[] fields = line.split("\t");
-			if (fields.length!=12) 
+			if (fields.length!=12) {
+				br.close();
 				throw new FileFormatException("Blast output file "+blastOutFile+" doesn't seem to have the right format at line "+lineCount);
+			}
 			
 			BlastHsp hsp = new BlastHsp(fields[0],fields[1],fields[2],fields[3],fields[4],fields[5],fields[6],fields[7],fields[8],fields[9],fields[10],fields[11]);
 			String subjectId = fields[1].trim();

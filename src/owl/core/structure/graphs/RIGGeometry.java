@@ -63,7 +63,7 @@ public class RIGGeometry {
 	private void initialiseGeometry(){
 		
 //		System.out.println("Geometry of graph with "+this.graph.getEdgeCount()+" edges:");
-		int edgeNum = 0;
+		//int edgeNum = 0;
 		GmbpGeometry gmbp = new GmbpGeometry();
 
 		PrintWriter logOut = null;
@@ -79,7 +79,7 @@ public class RIGGeometry {
 //		coord_sph_rotated = new HashMap<String,Vector3d>();
 		coord_sph_rotated = new HashMap<Pair<Integer>, Vector3d>();
 		for (RIGEdge edge:graph.getEdges()) {
-			edgeNum++;
+			//edgeNum++;
 			// extract (x,y,z) coordinates for nodes of both end of edge
 			Pair<RIGNode> nodes = this.graph.getEndpoints(edge);
 			RIGNode iNode = nodes.getFirst();
@@ -159,8 +159,6 @@ public class RIGGeometry {
 //			System.out.printf("TransRotCoord i->j Spherical: %s   j->i Spherical: %s \n", coord_sph_I, coord_sph_J);
 //			System.out.printf("TransRotCoord i->j Spherical: %s   j->i Spherical: %s \n", coord_sph_I, coord_sph_J);
 		}
-		if (logOut!=null)
-			logOut.close();
 
 	}
 	

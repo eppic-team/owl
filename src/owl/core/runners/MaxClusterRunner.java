@@ -243,6 +243,7 @@ public class MaxClusterRunner {
 				matrix.put(new Pair<Integer>(i,j),dist);
 			}
 		}
+		in.close();
 		return matrix;
 	}
 	
