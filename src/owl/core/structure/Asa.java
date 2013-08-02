@@ -222,6 +222,8 @@ public class Asa {
 		
 		double tot = 0;
 		
+		pdb.removeHatoms();
+		
 		for (PdbChain chain:pdb.getAllChains()) {
 			for (Residue res:chain) {
 
