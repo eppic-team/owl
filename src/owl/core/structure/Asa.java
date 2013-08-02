@@ -5,6 +5,7 @@ import java.util.ArrayList;
 
 import javax.vecmath.Point3d;
 
+
 /**
  * Class containing static methods to calculate Accessible Surface Areas based on
  * the rolling ball algorithm by Shrake and Rupley.
@@ -53,6 +54,7 @@ public class Asa {
 		}
 	}
 	
+	
 	/**
 	 * Returns list of 3d coordinates of points on a sphere using the
 	 * Golden Section Spiral algorithm.
@@ -79,15 +81,22 @@ public class Asa {
 	 * @param k index of atom for which we want neighbor indices
 	 */
 	private static ArrayList<Integer> findNeighborIndices(Atom[] atoms, double probe, int k) {
-	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>();
+		// looking at a typical protein case, number of neighbours are from ~10 to ~50, with an average of ~30
+		// Thus 40 seems to be a good compromise for the starting capacity
+	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>(40);
+	    
 	    double radius = atoms[k].getRadius() + probe + probe;
+	    
 	    for (int i=0;i<atoms.length;i++) {
 	    	if (i==k) continue;
-	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords()); 
+	    	
+	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords());
+	    	
 	        if (dist < radius + atoms[i].getRadius()) {
 	            neighbor_indices.add(i);
 	        }
 	    }
+	    
 	    return neighbor_indices;
 	}
 
@@ -101,6 +110,7 @@ public class Asa {
 	 * @return an array with asa values matching the input atoms array
 	 */
 	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints, int nThreads) { 
+		
 		double[] asas = new double[atoms.length];
 	    Point3d[] sphere_points = generateSpherePoints(nSpherePoints);
 
@@ -136,7 +146,6 @@ public class Asa {
 		    	}
 		    }
 	    }
-	    
 	    
 	    return asas;
 	}
@@ -216,13 +225,14 @@ public class Asa {
 		PdbAsymUnit pdb = new PdbAsymUnit(new File(args[0]));
 		int nThreads = Integer.parseInt(args[1]);
 		
+		pdb.removeHatoms();
+		
 		long start = System.currentTimeMillis();
-		pdb.calcASAs(9600,nThreads,false);
+		pdb.calcASAs(1000,nThreads,false);
 		long end = System.currentTimeMillis();
+
 		
 		double tot = 0;
-		
-		pdb.removeHatoms();
 		
 		for (PdbChain chain:pdb.getAllChains()) {
 			for (Residue res:chain) {

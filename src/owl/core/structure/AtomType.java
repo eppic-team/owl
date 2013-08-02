@@ -13,6 +13,13 @@ import java.util.HashMap;
  * and for other elements: 
  * http://www.ccdc.cam.ac.uk/products/csd/radii/table.php4
  * 
+ * The Cambridge Crystallography Data Center page above seems to be gone now (Aug 2013).
+ * Anyway a better source should be this:
+ * http://en.wikipedia.org/wiki/Atomic_radii_of_the_elements_(data_page)
+ * which contains radii from Bondi et al 1964 and Mantina et al 2009 (same sources as webelements)
+ * 
+ * TODO radii in here are not yet corrected to be those in the wikipedia article above (based on Bondi and Mantina)
+ * 
  * See {@link AtomRadii} class for more accurate vdw radii values
  * 
  * @author duarte
