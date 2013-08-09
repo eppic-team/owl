@@ -36,7 +36,8 @@ public class enumerateInterfaces {
 	// 5.0  gives 25 for 1pmo (right number) but 6.0 gives one more (26) for which NACCESS measures a negative area...
 	// what's the cutoff then? I'm trying a value in between but it seems strange to choose such fractional values
 	// 5.75 gives 25 for 1pmo (right) but 26 for 1pmm (instead of 27)
-	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)  
+	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)
+	// Beware in any case that the new default in eppic is 5.5
 	private static final double CUTOFF = 5.9; 
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
