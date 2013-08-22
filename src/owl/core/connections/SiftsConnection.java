@@ -82,19 +82,26 @@ public class SiftsConnection {
 		}
 		BufferedReader br = new BufferedReader(reader);
 		String line;
+		int lineCount = 0;
 		while ((line=br.readLine())!=null) {
-			if (line.startsWith("PDB")) continue;
-			String[] fields = line.split("\t");
+			lineCount++;
+			if (line.startsWith("#") || line.startsWith("PDB") || line.trim().isEmpty()) continue;
+			String[] fields = line.split("\\s+");
+			
+			if (fields.length!=9) {
+				throw new IOException("The SIFTS file "+fileURL+" does not seem to be in the right format. Line "+lineCount+" does not have exactly 9 fields");
+			}
+			
 			String pdbCode = fields[0];
 			String pdbChainCode = fields[1];
 			String id = pdbCode+pdbChainCode;
 			String uniprotId = fields[2];
-			int cifBeg = Integer.parseInt(fields[4]);
-			int cifEnd = Integer.parseInt(fields[5]);
-			String pdbBeg = fields[6];
-			String pdbEnd = fields[7];
-			int uniBeg = Integer.parseInt(fields[8]);
-			int uniEnd = Integer.parseInt(fields[9]);
+			int cifBeg = Integer.parseInt(fields[3]);
+			int cifEnd = Integer.parseInt(fields[4]);
+			String pdbBeg = fields[5];
+			String pdbEnd = fields[6];
+			int uniBeg = Integer.parseInt(fields[7]);
+			int uniEnd = Integer.parseInt(fields[8]);
 			
 			SiftsFeature siftsMapping = new SiftsFeature(pdbCode, pdbChainCode, uniprotId, cifBeg, cifEnd, pdbBeg, pdbEnd, uniBeg, uniEnd);
 			
