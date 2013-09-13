@@ -771,8 +771,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	public Point3d getCrystalSeparation(PdbAsymUnit pdb) {
 		Point3d thisCoM  = this.getCentroid();
 		Point3d otherCoM = pdb.getCentroid();
-		crystalCell.getCrystalFromOrthCoords(thisCoM);
-		crystalCell.getCrystalFromOrthCoords(otherCoM);
+		crystalCell.transfToCrystal(thisCoM);
+		crystalCell.transfToCrystal(otherCoM);
 		double asep = otherCoM.x-thisCoM.x;
 		double bsep = otherCoM.y-thisCoM.y;
 		double csep = otherCoM.z-thisCoM.z;

@@ -2860,21 +2860,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Tells wheter given PdbChain's centre of mass is closer to this' centre of mass than twice 
-	 * the maximum diagonal dimension of the unit cell.
-	 * @param pdb
-	 * @return
-	 */
-	public boolean isCrystalNeighbor(PdbChain pdb) {
-		Point3d thisCoM  = this.getCentroid();
-		Point3d otherCoM = pdb.getCentroid();
-		if (thisCoM.distance(otherCoM)<2.0*parent.getCrystalCell().getMaxDimension()) {
-			return true;
-		}
-		return false;
-	}
-	
-	/**
 	 * Returns an integer triplet indicating the crystal coordinates of this PdbChain with respect to the given one.
 	 * e.g. if given PdbChain is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
 	 * @param pdb
@@ -2883,8 +2868,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	public Point3i getCrystalSeparation(PdbChain pdb) {
 		Point3d thisCoM  = this.getCentroid();
 		Point3d otherCoM = pdb.getCentroid();
-		parent.getCrystalCell().getCrystalFromOrthCoords(thisCoM);
-		parent.getCrystalCell().getCrystalFromOrthCoords(otherCoM);
+		parent.getCrystalCell().transfToCrystal(thisCoM);
+		parent.getCrystalCell().transfToCrystal(otherCoM);
 		double asep = otherCoM.x-thisCoM.x;
 		double bsep = otherCoM.y-thisCoM.y;
 		double csep = otherCoM.z-thisCoM.z;

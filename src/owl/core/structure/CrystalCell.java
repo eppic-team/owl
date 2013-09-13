@@ -8,6 +8,7 @@ import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
+import javax.vecmath.Tuple3d;
 import javax.vecmath.Vector3d;
 
 
@@ -161,10 +162,13 @@ public class CrystalCell implements Serializable {
 	}
 
 	/**
-	 * Transforms the given vector expressed in crystal basis to orthonormal basis
+	 * Transforms the given crystal basis coordinates into orthonormal coordinates.
+	 * e.g. transfToOrthonormal(new Point3d(1,1,1)) returns the orthonormal coordinates of the 
+	 * vertex of the unit cell.
+	 * See Giacovazzo eq 2.20 (or any linear algebra manual) 
 	 * @param v
 	 */
-	public void transfToOrthonormal(Vector3d v) {
+	public void transfToOrthonormal(Tuple3d v) {
 		getMTransposeInv().transform(v);
 	}
 	
@@ -188,10 +192,11 @@ public class CrystalCell implements Serializable {
 	}
 	
 	/**
-	 * Transforms the given vector expressed in orthonormal basis to crystal basis
+	 * Transforms the given orthonormal basis coordinates into crystal coordinates.
+	 * See Giacovazzo eq 2.20 (or any linear algebra manual)
 	 * @param v
 	 */
-	public void transfToCrystal(Vector3d v) {
+	public void transfToCrystal(Tuple3d v) {
 		getMTranspose().transform(v);
 	}
 	
@@ -328,28 +333,6 @@ public class CrystalCell implements Serializable {
 	}
 	
 	/**
-	 * Transforms the given crystal basis coordinates into orthonormal coordinates.
-	 * e.g. getOrthFromCrystalCoords(new Point3d(1,1,1)) returns the orthonormal coordinates of the 
-	 * vertex of the unit cell.
-	 * See Giacovazzo eq 2.20 (or any linear algebra manual) 
-	 * @param point
-	 * @return
-	 */
-	public void getOrthFromCrystalCoords(Point3d point) {
-		getMTransposeInv().transform(point);		
-	}
-
-	/**
-	 * Transforms the given orthonormal basis coordinates into crystal coordinates.
-	 * See Giacovazzo eq 2.20 (or any linear algebra manual)
-	 * @param point
-	 * @return
-	 */
-	public void getCrystalFromOrthCoords(Point3d point) {
-		getMTranspose().transform(point);
-	}
-	
-	/**
 	 * Gets the maximum dimension of the unit cell.
 	 * @return
 	 */
@@ -359,19 +342,19 @@ public class CrystalCell implements Serializable {
 		}
 		Point3d vert0 = new Point3d(0,0,0);
 		Point3d vert1 = new Point3d(1,0,0);
-		getOrthFromCrystalCoords(vert1);
+		transfToOrthonormal(vert1);
 		Point3d vert2 = new Point3d(0,1,0);
-		getOrthFromCrystalCoords(vert2);
+		transfToOrthonormal(vert2);
 		Point3d vert3 = new Point3d(0,0,1);
-		getOrthFromCrystalCoords(vert3);
+		transfToOrthonormal(vert3);
 		Point3d vert4 = new Point3d(1,1,0);
-		getOrthFromCrystalCoords(vert4);
+		transfToOrthonormal(vert4);
 		Point3d vert5 = new Point3d(1,0,1);
-		getOrthFromCrystalCoords(vert5);
+		transfToOrthonormal(vert5);
 		Point3d vert6 = new Point3d(0,1,1);
-		getOrthFromCrystalCoords(vert6);
+		transfToOrthonormal(vert6);
 		Point3d vert7 = new Point3d(1,1,1);
-		getOrthFromCrystalCoords(vert7);
+		transfToOrthonormal(vert7);
 
 		ArrayList<Double> vertDists = new ArrayList<Double>();
 		vertDists.add(vert0.distance(vert7));
