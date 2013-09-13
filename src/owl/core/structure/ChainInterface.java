@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Vector3d;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
@@ -43,8 +42,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private Matrix4d secondTransfOrth;	// the transformation applied to second molecule expressed in orthonormal axes coordinates
 	
 	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
-	
-	private Vector3d connection; 	// the vector that connects the center of mass of first to center of mass of second
 	
 	private String chain2forOutput;
 	
@@ -701,21 +698,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	 */
 	public boolean isParallel() {
 		return this.getFirstSubunitId().isSymRelatedEquivalent(this.getSecondSubunitId());
-	}
-	
-	/**
-	 * Returns the vector that connects the center of mass of first 
-	 * molecule to the center of mass of second molecule expressed in crystal coordinates
-	 * @return
-	 */
-	public Vector3d getConnectionVector() {
-		if (connection==null) {
-			CrystalCell cell = firstMolecule.getParent().getCrystalCell();
-			connection = new Vector3d(secondMolecule.getCentroid());
-			connection.sub(firstMolecule.getCentroid());
-			cell.transfToCrystal(connection);
-		}
-		return connection;
 	}
 	
 	/**

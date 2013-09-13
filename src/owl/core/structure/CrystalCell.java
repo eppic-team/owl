@@ -165,7 +165,7 @@ public class CrystalCell implements Serializable {
 	 * @param v
 	 */
 	public void transfToOrthonormal(Vector3d v) {
-		getMInv().transform(v);
+		getMTransposeInv().transform(v);
 	}
 	
 	/**
@@ -192,7 +192,7 @@ public class CrystalCell implements Serializable {
 	 * @param v
 	 */
 	public void transfToCrystal(Vector3d v) {
-		getM().transform(v);
+		getMTranspose().transform(v);
 	}
 	
 	/**
