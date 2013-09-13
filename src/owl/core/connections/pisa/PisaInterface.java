@@ -174,7 +174,6 @@ public class PisaInterface implements Comparable<PisaInterface> {
 	 */
 	public ChainInterface convertToChainInterface(PdbAsymUnit pdb) {
 		ChainInterface interf = new ChainInterface();
-		interf.setScore(this.solvEnergy);
 		interf.setInterfaceArea(this.interfaceArea);
 		interf.setId(this.id);
 		interf.setFirstTransf(firstMolecule.getTransf());

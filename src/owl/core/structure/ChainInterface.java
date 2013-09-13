@@ -41,8 +41,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	private CrystalTransform secondTransf; 		// the transformation applied to second molecule
 	private Matrix4d secondTransfOrth;	// the transformation applied to second molecule expressed in orthonormal axes coordinates
 	
-	private double score; 			// a score value assigned to the interface (if from PISA this is the solvation energy) 
-	
 	private String chain2forOutput;
 	
 	/**
@@ -203,14 +201,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setSecondTransfOrth(Matrix4d secondTransfOrth) {
 		this.secondTransfOrth = secondTransfOrth;
-	}
-	
-	public double getScore() {
-		return score;
-	}
-	
-	public void setScore(double score) {
-		this.score = score;
 	}
 	
 	/**
@@ -416,7 +406,7 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void printTabular(PrintStream ps, boolean usePdbResSer) {
 		ps.print("# ");
-		ps.printf("%d\t%9.2f\t%5.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(),this.getScore(), 
+		ps.printf("%d\t%9.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(), 
 				this.getName(),
 				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf().getMatTransform()));
 		if (isFirstProtein()) {
