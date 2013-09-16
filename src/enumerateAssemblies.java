@@ -67,11 +67,11 @@ public class enumerateAssemblies {
 		for (int i=0;i<interfs.size();i++) {
 			ChainInterface interf = interfs.get(i+1);
 			interf.calcRimAndCore(BSATOASA_CUTOFF, MIN_ASA_FOR_SURFACE);
-			String parallel = "";
-			if (interf.isParallel()) parallel = " -- PARALLEL interface";
+			String infiniteStr = "";
+			if (interf.isInfinite()) infiniteStr = " -- INFINITE interface";
 			System.out.println("\n##Interface "+(i+1)+" "+
 					interf.getFirstSubunitId()+"-"+
-					interf.getSecondSubunitId()+parallel);
+					interf.getSecondSubunitId()+infiniteStr);
 			if (interf.hasClashes()) System.out.println("CLASHES!!!");
 			System.out.println("Transf1: "+SpaceGroup.getAlgebraicFromMatrix(interf.getFirstTransf().getMatTransform())+
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf().getMatTransform()));

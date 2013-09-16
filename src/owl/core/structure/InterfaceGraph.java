@@ -49,7 +49,7 @@ public class InterfaceGraph {
 	 */
 	public InterfaceGraph(ChainInterfaceList cil) {
 		graph  = new SparseGraph<SubunitId, InterfaceGraphEdge>();
-		for (int id:cil.getNonParallelInterfacesIds()) {
+		for (int id:cil.getNonInfiniteInterfacesIds()) {
 			graph.addEdge(new InterfaceGraphEdge(cil.get(id)), 
 					new Pair<SubunitId>(cil.get(id).getFirstSubunitId(),cil.get(id).getSecondSubunitId()),
 					EdgeType.UNDIRECTED);
@@ -177,6 +177,7 @@ public class InterfaceGraph {
 	 * related equivalent, e.g. A0 in original cell and A0 in cell (-1,-1,0)
 	 * As the subgraphs are always connected this will be true whenever there are two symmetry 
 	 * related equivalent subunits in the same graph.
+	 * TODO must revise this really works
 	 * @return
 	 */
 	private boolean isInfinite() {

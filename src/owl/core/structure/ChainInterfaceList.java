@@ -236,14 +236,15 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 	
 	/**
-	 * Returns true if this interface list contains parallel interfaces
-	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
-	 * related by a translation. Creating an assembly with it would result in an infinite assembly. 
+	 * Returns true if this interface list contains infinite interfaces
+	 * An infinite interface is an interface between two crystallographic-symmetry related 
+	 * monomers (same PDB chain codes) by an operator of an infinite character: pure translation
+	 * or screw rotation. These interfaces lead to infinite fiber-like assemblies. 
 	 * @return
 	 */
-	public boolean hasParallelInterfaces() {
+	public boolean hasInfiniteInterfaces() {
 		for (ChainInterface interf:this) {
-			if (interf.isParallel()) {
+			if (interf.isInfinite()) {
 				return true;
 			}
 		}
@@ -251,31 +252,16 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 	
 	/**
-     * Get a list of ids of all interfaces that are parallel.
-	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
-	 * related by a translation. Creating an assembly with it would result in an infinite assembly.
+	 * Get a list of ids of all interfaces that are not infinite.
+	 * An infinite interface is an interface between two crystallographic-symmetry related 
+	 * monomers (same PDB chain codes) by an operator of an infinite character: pure translation
+	 * or screw rotation. These interfaces lead to infinite fiber-like assemblies. 
 	 * @return
 	 */
-	public ArrayList<Integer> getParallelInterfacesIds() {
+	public ArrayList<Integer> getNonInfiniteInterfacesIds() {
 		ArrayList<Integer> list = new ArrayList<Integer>();
 		for (ChainInterface interf:this) {
-			if (interf.isParallel()) {
-				list.add(interf.getId());
-			}
-		}		
-		return list;
-	}
-	
-	/**
-	 * Get a list of ids of all interfaces that are not parallel.
-	 * A parallel interface is an interface between two equivalent subunits in different unit cells 
-	 * related by a translation. Creating an assembly with it would result in an infinite assembly.
-	 * @return
-	 */
-	public ArrayList<Integer> getNonParallelInterfacesIds() {
-		ArrayList<Integer> list = new ArrayList<Integer>();
-		for (ChainInterface interf:this) {
-			if (!interf.isParallel()) {
+			if (!interf.isInfinite()) {
 				list.add(interf.getId());
 			}
 		}		

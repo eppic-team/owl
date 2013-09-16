@@ -679,17 +679,18 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	public SubunitId getSecondSubunitId() {
 		return new SubunitId(secondMolecule.getPdbChainCode().charAt(0),secondTransf);
 	}
-
+	
 	/**
-	 * Tells whether this interface is a parallel interface, i.e. both partners have
-	 * the same asymmetric unit id (chain code) and are related by a pure crystal 
-	 * (integer) translation.
+	 * Returns true if the transformation applied to the second chain of this interface
+	 * has an infinite character (pure translation or screw rotation)
+	 * and both chains of the interface have the same PDB chain code: in such cases the 
+	 * interface would lead to infinite fiber-like (linear or helical) assemblies
 	 * @return
 	 */
-	public boolean isParallel() {
-		return this.getFirstSubunitId().isSymRelatedEquivalent(this.getSecondSubunitId());
+	public boolean isInfinite() {
+		return ((isSymRelated() && getSecondTransf().getTransformType().isInfinite()));
 	}
-	
+
 	/**
 	 * Returns true if both chains in this interface have same PDB chain code 
 	 * and thus it's an interface of symmetry-related chains. Returns false otherwise.
