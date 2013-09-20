@@ -131,15 +131,10 @@ public class CrystalCell implements Serializable {
 	public Matrix4d getTransform(Point3i direction) {
 		Matrix4d mat = new Matrix4d();
 		mat.setIdentity();
-		mat.setTranslation(getTranslationVector(new Vector3d(direction.x,direction.y,direction.z)));
+		Vector3d trans = new Vector3d(direction.x,direction.y,direction.z);
+		transfToOrthonormal(trans);
+		mat.setTranslation(trans);
 		return mat;
-	}
-	
-	private Vector3d getTranslationVector(Vector3d direction) {
-		Vector3d translationVec = new Vector3d();
-		// see Giacovazzo section 2.E, eq. 2.E.1
-		getMTransposeInv().transform(direction, translationVec);
-		return translationVec;
 	}
 	
 	/**
@@ -149,7 +144,8 @@ public class CrystalCell implements Serializable {
 	 * @return
 	 */
 	public Matrix4d transfToOrthonormal(Matrix4d m) {
-		Vector3d trans = this.getTranslationVector(new Vector3d(m.m03,m.m13,m.m23));
+		Vector3d trans = new Vector3d(m.m03,m.m13,m.m23);
+		transfToOrthonormal(trans);
 		
 		Matrix3d rot = new Matrix3d();
 		m.getRotationScale(rot);
@@ -165,10 +161,11 @@ public class CrystalCell implements Serializable {
 	 * Transforms the given crystal basis coordinates into orthonormal coordinates.
 	 * e.g. transfToOrthonormal(new Point3d(1,1,1)) returns the orthonormal coordinates of the 
 	 * vertex of the unit cell.
-	 * See Giacovazzo eq 2.20 (or any linear algebra manual) 
+	 * See Giacovazzo section 2.E, eq. 2.E.1 (or any linear algebra manual) 
 	 * @param v
 	 */
 	public void transfToOrthonormal(Tuple3d v) {
+		// see Giacovazzo section 2.E, eq. 2.E.1
 		getMTransposeInv().transform(v);
 	}
 	
@@ -179,7 +176,8 @@ public class CrystalCell implements Serializable {
 	 * @return
 	 */
 	public Matrix4d transfToCrystal(Matrix4d m) {
-		Vector3d trans = this.getTranslationVector(new Vector3d(m.m03,m.m13,m.m23));
+		Vector3d trans = new Vector3d(m.m03,m.m13,m.m23);
+		transfToCrystal(trans);
 		
 		Matrix3d rot = new Matrix3d();
 		m.getRotationScale(rot);
