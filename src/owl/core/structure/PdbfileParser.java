@@ -20,6 +20,9 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.io.BioUnitAssembly;
+import owl.core.structure.io.BioUnitAssemblyGen;
+import owl.core.structure.io.BioUnitOperation;
 import owl.core.util.FileFormatException;
 
 /**
@@ -71,6 +74,10 @@ public class PdbfileParser {
 	private Integer[] modelsArray;
 	
 	private boolean missingSeqResPadding;
+	
+	private ArrayList<BioUnitAssembly> bioUnitAssemblies;
+	private ArrayList<BioUnitAssemblyGen> bioUnitGenerators;
+	private ArrayList<BioUnitOperation> bioUnitOperations;
 	
 	/**
 	 * Constructs a pdb file parser object given a pdbfile name
@@ -246,6 +253,30 @@ public class PdbfileParser {
 		return rSym;
 	}
 	
+	public ArrayList<BioUnitAssembly> getBioUnitAssemblies() {
+		return bioUnitAssemblies;
+	}
+
+	public void setBioUnitAssemblies(ArrayList<BioUnitAssembly> bioUnitAssemblies) {
+		this.bioUnitAssemblies = bioUnitAssemblies;
+	}
+
+	public ArrayList<BioUnitAssemblyGen> getBioUnitGenerators() {
+		return bioUnitGenerators;
+	}
+
+	public void setBioUnitGenerators(ArrayList<BioUnitAssemblyGen> bioUnitGenerators) {
+		this.bioUnitGenerators = bioUnitGenerators;
+	}
+
+	public ArrayList<BioUnitOperation> getBioUnitOperations() {
+		return bioUnitOperations;
+	}
+
+	public void setBioUnitOperations(ArrayList<BioUnitOperation> bioUnitOperations) {
+		this.bioUnitOperations = bioUnitOperations;
+	}
+
 	/**
 	 * To read the pdb data (atom coordinates, residue serials, atom serials) from file.
 	 * <code>chainCode</code> gets set to same as <code>pdbChainCode</code>, except if input chain code 
@@ -281,6 +312,14 @@ public class PdbfileParser {
 		String line;
 		LinkedList<String> parentList = null;
 
+		//Variables for biounits
+		bioUnitAssemblies = new ArrayList<BioUnitAssembly>();
+		BioUnitAssembly assembly = new BioUnitAssembly();
+		bioUnitGenerators = new ArrayList<BioUnitAssemblyGen>();
+		BioUnitAssemblyGen generator = new BioUnitAssemblyGen();
+		bioUnitOperations = new ArrayList<BioUnitOperation>();
+		BioUnitOperation operation = new BioUnitOperation();
+		
 		while((line = fpdb.readLine()) != null ) {
 			linecount++;
 			if (linecount==1) {
@@ -378,6 +417,88 @@ public class PdbfileParser {
 					this.rSym = Double.parseDouble(mR.group(1));
 				}												
 			}
+			//REMARK 300 for detecting number of biounits present
+			//if (line.startsWith("REMARK 300 BIOMOLECULE:")) {
+			//	String[] fields = line.split(" ");
+			//	int numBioUnits=Integer.parseInt(fields[fields.length-1]);
+			//}
+			
+			//REMARK 350 for getting the data on the biounits
+			if (line.startsWith("REMARK 350")) {
+				String[] fields = line.split(" ");
+				//Reset for the start
+				if (line.startsWith("REMARK 350 BIOMOLECULE:")) {
+					if(generator.isReading()) {
+						bioUnitGenerators.add(generator);
+						assembly.addGeneratorId(generator.getId());
+						generator.setReading(false);
+					}
+					if(assembly.isReading())	bioUnitAssemblies.add(assembly);
+					assembly = new BioUnitAssembly();
+					assembly.setReading(true);
+					if(isInteger(fields[fields.length-1])) assembly.setId(Integer.parseInt(fields[fields.length-1].trim()));
+				}
+				
+				if (line.startsWith("REMARK 350 AUTHOR DETERMINED BIOLOGICAL UNIT")) {
+					assembly.addType("authors");
+					assembly.setSize(fields[fields.length-1].toLowerCase());
+				}
+				if (line.startsWith("REMARK 350 SOFTWARE DETERMINED QUATERNARY STRUCTURE")) {
+					assembly.setSize(fields[fields.length-1].toLowerCase());
+				}
+				if (line.startsWith("REMARK 350 SOFTWARE USED")) {
+					String temp = line.replaceAll("REMARK 350 SOFTWARE USED:(.*)","$1");
+					String[] software = temp.split(",");
+					for(String soft:software) assembly.addType(soft.trim().toLowerCase());
+				}
+				if (line.startsWith("REMARK 350 APPLY THE FOLLOWING TO CHAINS:")){
+					if(generator.isReading()) {
+						bioUnitGenerators.add(generator);
+						assembly.addGeneratorId(generator.getId());
+					}
+					generator = new BioUnitAssemblyGen(generator.getId()+1);
+					generator.setReading(true);
+					String[] parts = line.split("CHAINS:");
+					String[] chainCodes = parts[parts.length-1].trim().split(",");
+					generator.addPdbChainCodes(chainCodes);
+				}
+				if (line.startsWith("REMARK 350                    AND CHAINS:") ){
+					String[] parts = line.split("CHAINS:");
+					String[] chainCodes = parts[parts.length-1].trim().split(",");
+					generator.addPdbChainCodes(chainCodes);
+				}
+				
+				if (line.startsWith("REMARK 350   BIOMT")){
+					Pattern pR = Pattern.compile("REMARK 350   BIOMT(\\d)\\s+(\\d+)\\s+([\\-.0-9]+)\\s+([\\-.0-9]+)\\s+([\\-.0-9]+)\\s+([\\-.0-9]+)\\s+");
+					Matcher mR = pR.matcher(line);
+					if (mR.matches()) {
+						int matLine = Integer.parseInt(mR.group(1));
+						//int opNum = Integer.parseInt(mR.group(2));
+						double x = Double.parseDouble(mR.group(3));
+						double y = Double.parseDouble(mR.group(4));
+						double z = Double.parseDouble(mR.group(5));
+						double t = Double.parseDouble(mR.group(6));
+						
+						if(matLine == 1){
+							operation = new BioUnitOperation(operation.getId()+1);
+						}
+						
+						operation.setOperatorValue(4*(matLine-1)+0, x);
+						operation.setOperatorValue(4*(matLine-1)+1, y);
+						operation.setOperatorValue(4*(matLine-1)+2, z);
+						operation.setOperatorValue(4*(matLine-1)+3, t);
+						
+						if(matLine == 3){
+							bioUnitOperations.add(operation);
+							generator.addOperationId(operation.getId());
+						}
+					}
+				}
+				
+			}
+			
+			
+			
 			// CRYST1
 			if (line.startsWith("CRYST1")) {
 				if (isDouble(safeSubstring(line,  6, 15)) &&
@@ -597,6 +718,14 @@ public class PdbfileParser {
 			}
 		}
 		fpdb.close();
+		
+		//Save temporary biounit entries if present
+		if(generator.isReading()) {
+			bioUnitGenerators.add(generator);
+			assembly.addGeneratorId(generator.getId());
+		}
+		if(assembly.isReading())	bioUnitAssemblies.add(assembly);
+		
 		// we check that there was at least one observed residue
 		if (atomLines.isEmpty()) {
 			throw new PdbLoadException("Couldn't find any ATOM/HETATM line for model: "+model);
@@ -738,6 +867,7 @@ public class PdbfileParser {
 			}
 			pdb.setSecondaryStructure(secondaryStructure);
 		}
+		
 		
 		// finally we assign the secondary structure from the parsed sec structure lines
 		int generatedSerial = 1; // we have to generate our own serials because some times those in PDB files are wrong (whilst they have been fixed in CIF!)

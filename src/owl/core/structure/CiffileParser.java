@@ -21,6 +21,9 @@ import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.io.BioUnitAssembly;
+import owl.core.structure.io.BioUnitAssemblyGen;
+import owl.core.structure.io.BioUnitOperation;
 import owl.core.util.FileFormatException;
 
 
@@ -55,8 +58,11 @@ public class CiffileParser {
 	private static final String reflns = "_reflns";
 	private static final String refine = "_refine";
 	private static final String atomSitesId = "_atom_sites";
+	private static final String pdbxStructAssembly = "_pdbx_struct_assembly";
+	private static final String pdbxStructAssemblyGen = "_pdbx_struct_assembly_gen";
+	private static final String pdbxStructOperList = "_pdbx_struct_oper_list";
 	private static final String[] ids = 
-		{entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine,atomSitesId};
+		{entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine,atomSitesId,pdbxStructAssembly,pdbxStructAssemblyGen,pdbxStructOperList};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -509,6 +515,355 @@ public class CiffileParser {
 			
 		}
 		return qParams;
+	}
+	
+	/**
+	 * Method to read in the values of temporary biounit classes after parsing
+	 * @param pdbAsymUnit
+	 * @throws IOException
+	 * @throws FileFormatException
+	 */
+	protected void readBioUnit(PdbAsymUnit pdbAsymUnit) throws IOException, FileFormatException{
+		ArrayList<BioUnitAssembly> assemblies = new ArrayList<BioUnitAssembly>();
+		ArrayList<BioUnitAssemblyGen> generators = new ArrayList<BioUnitAssemblyGen>();
+		ArrayList<BioUnitOperation> operations = new ArrayList<BioUnitOperation>();
+		
+		//**********************************************
+		// _pdb_struct_assembly fields
+		//**********************************************
+		if(!ids2elements.containsKey(pdbxStructAssembly)) return;
+		//Check if the fields are in loop or not
+		//for non-loop cases
+		if(!loopElements.contains(ids2elements.get(pdbxStructAssembly))){
+			BioUnitAssembly assembly = new BioUnitAssembly();
+			//Set entry number
+			String id = fields2values.get(pdbxStructAssembly+".id").trim();
+			if(isInteger(id)) {
+				int i = Integer.parseInt(id);
+				assembly.setId(i);
+			}
+			
+			//Add assembly details
+			String details = fields2values.get(pdbxStructAssembly+".details").trim().toLowerCase();
+			String method = fields2values.get(pdbxStructAssembly+".method_details").trim().toLowerCase();
+			String sizeStr = fields2values.get(pdbxStructAssembly+".oligomeric_count").trim();
+			
+			//Check if the size contained in .oligomeric_count is a valid size; otherwise take it from .olifomeric_details field
+			if(isInteger(sizeStr)){
+				int size = Integer.parseInt(sizeStr);
+				assembly.setSize(size);
+			}else{
+				sizeStr = fields2values.get(pdbxStructAssembly+".oligomeric_details").trim().toLowerCase();
+				assembly.setSize(sizeStr);
+			}
+			
+			//Add details on the type of assignments
+			if(details.contains("author")) assembly.addType("authors");
+			if(!method.contains("?")){
+				String[] software = method.split(",");
+				for(String soft:software) assembly.addType(soft.trim().toLowerCase());
+			}
+						
+			
+			//Add to the list of entries
+			assemblies.add(assembly);
+			
+		} else{//for loop cases
+			Long[] intPdbxStruct = loopelements2contentOffset.get(ids2elements.get(pdbxStructAssembly));
+			
+			//boolean to check if method_details is present
+			boolean isSoftwarePresent  = fields2indices.containsKey(pdbxStructAssembly+".method_details");
+			int softwareIdx=0;
+			
+			int idIdx = fields2indices.get(pdbxStructAssembly+".id");
+			int detailsIdx = fields2indices.get(pdbxStructAssembly+".details");
+			if(isSoftwarePresent) softwareIdx = fields2indices.get(pdbxStructAssembly+".method_details");
+			int sizeCountIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_count");
+			int sizeCountStrIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_details");
+
+			int numberFields = ids2fieldsIdx.get(pdbxStructAssembly);
+						
+			int recordCount = 0;
+			//Read _pdbx_struct_assembly block values
+			fcif.seek(intPdbxStruct[0]);
+			while(fcif.getFilePointer()<intPdbxStruct[1]) {
+				recordCount++;
+				
+				BioUnitAssembly assembly = new BioUnitAssembly();
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxStructAssembly+ " of CIF file "+cifFile);
+				}
+				
+				//Add assembly details
+				
+				//1. Set Id
+				String id = tokens[idIdx].trim();
+				if(isInteger(id)) {
+					int i = Integer.parseInt(id);
+					assembly.setId(i);
+				}
+				
+				//2. Set size
+				String sizeStr = tokens[sizeCountIdx].trim();
+				if(isInteger(sizeStr)){
+					int size = Integer.parseInt(sizeStr);
+					assembly.setSize(size);
+				}else{
+					sizeStr = tokens[sizeCountStrIdx].trim().toLowerCase();
+					assembly.setSize(sizeStr);
+				}
+				
+				//3. set details on type of assignments
+				String details = tokens[detailsIdx].trim().toLowerCase();
+				if(details.contains("author")) assembly.addType("authors");
+				
+				if(isSoftwarePresent){
+					String method = tokens[softwareIdx].trim().toLowerCase();
+					if(!method.contains("?")){
+						String[] software = method.split(",");
+						for(String soft:software) assembly.addType(soft.replaceAll("\\s+","").toLowerCase());
+					}
+				}
+				//Finally add the assembly
+				assemblies.add(assembly);
+			}
+			
+			
+		}
+		
+		//**********************************************
+		// _pdb_struct_assembly_gen fields
+		//**********************************************
+		if(!ids2elements.containsKey(pdbxStructAssemblyGen)) return;
+		//Check if the _pdb_struct_assembly_gen fields are in loop or not
+		//for non-loop cases
+		if(!loopElements.contains(ids2elements.get(pdbxStructAssemblyGen))){
+			BioUnitAssemblyGen gen = new BioUnitAssemblyGen(1);
+			
+			String assemblyId = fields2values.get(pdbxStructAssemblyGen+".assembly_id").trim();
+			String operatorIds = fields2values.get(pdbxStructAssemblyGen+".oper_expression").trim().toLowerCase();
+			String chainIds = fields2values.get(pdbxStructAssemblyGen+".asym_id_list").trim();
+			
+
+			//check if the loopelements2contentOffset has this id!!
+			if(loopelements2contentOffset.containsKey(ids2elements.get(pdbxStructAssemblyGen))){ // some field occurs in new line
+				Long[] intPdbxStructGen = loopelements2contentOffset.get(ids2elements.get(pdbxStructAssemblyGen));
+			    fcif.seek(intPdbxStructGen[0]);
+				while(fcif.getFilePointer()<intPdbxStructGen[1]) {
+					String[] tokens = tokeniseFields(1);
+					if (tokens.length!=1) {
+						throw new FileFormatException("Incorrect number of fields for non loop element "+pdbxStructAssemblyGen+ " of CIF file "+cifFile);
+					}
+					if(chainIds.equals("")) chainIds = tokens[0]; //Assume that if fishy happens it happens only in the chain codes
+				}	
+			}
+			
+			
+			//Add details
+			
+			//1. Add the generator Id to the corresponding assembly
+			for(BioUnitAssembly assembly:assemblies)
+				if(isInteger(assemblyId) && Integer.parseInt(assemblyId) == assembly.getId()){
+					assembly.addGeneratorId(gen.getId());
+					break;
+				}
+				
+			//2. Add the corresponding operator Id's
+			String[] oids = operatorIds.split(",");
+			for(String oid:oids)
+				if(isInteger(oid))
+					gen.addOperationId(Integer.parseInt(oid.trim()));
+			
+			//3. Add corresponding chain id's
+			String[] chainCodes = chainIds.split(",");
+			gen.addPdbChainCodes(chainCodes);
+			
+			//Finally add the generator
+			generators.add(gen);
+			
+		} else { //for loop cases
+			Long[] intPdbxStructGen = loopelements2contentOffset.get(ids2elements.get(pdbxStructAssemblyGen));
+			
+			int genidIdx = fields2indices.get(pdbxStructAssemblyGen+".assembly_id");
+			int operidIdx = fields2indices.get(pdbxStructAssemblyGen+".oper_expression");
+			int chainIdx = fields2indices.get(pdbxStructAssemblyGen+".asym_id_list");
+			
+			int numberFieldsGen = ids2fieldsIdx.get(pdbxStructAssemblyGen);
+			
+			int recordCount = 0;
+			
+			BioUnitAssemblyGen gen = new BioUnitAssemblyGen();
+			//Read _pdbx_struct_assembly_gen values
+			fcif.seek(intPdbxStructGen[0]);
+			while(fcif.getFilePointer()<intPdbxStructGen[1]) {
+				recordCount++;
+				String[] tokens = tokeniseFields(numberFieldsGen);
+				if (tokens.length!=numberFieldsGen) {
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxStructAssemblyGen+ " of CIF file "+cifFile);
+				}
+				
+				gen = new BioUnitAssemblyGen(gen.getId()+1);
+				
+				
+				String assemblyId = tokens[genidIdx].trim();
+				String operatorIds = tokens[operidIdx].trim().toLowerCase();
+				String chainIds = tokens[chainIdx].trim();
+				
+				//Add details
+				
+				//1. Add the generator Id to the corresponding assembly
+				for(BioUnitAssembly assembly:assemblies)
+					if(isInteger(assemblyId) && Integer.parseInt(assemblyId) == assembly.getId()){
+						assembly.addGeneratorId(gen.getId());
+						break;
+					}
+					
+					
+				//2. Add the corresponding operator Id's
+				String[] oids = operatorIds.split(",");
+				for(String oid:oids)
+					if(isInteger(oid))
+						gen.addOperationId(Integer.parseInt(oid.trim()));
+				
+				//3. Add corresponding chain id's
+				String[] chainCodes = chainIds.split(",");
+				gen.addPdbChainCodes(chainCodes);
+				
+				//Finally add the generator
+				generators.add(gen);
+				
+			}
+		}
+		
+		
+		//**********************************************
+		// _pdb_struct_oper_list fields
+		//**********************************************
+		if(!ids2elements.containsKey(pdbxStructOperList)) return;
+		//Check if the fields are in loop or not
+		//for non-loop cases
+		if(!loopElements.contains(ids2elements.get(pdbxStructOperList))){
+			BioUnitOperation operation = new BioUnitOperation();
+
+			String idStr = fields2values.get(pdbxStructOperList+".id").trim();
+			String m00 = fields2values.get(pdbxStructOperList+".matrix[1][1]").trim();
+			String m01 = fields2values.get(pdbxStructOperList+".matrix[1][2]").trim();
+			String m02 = fields2values.get(pdbxStructOperList+".matrix[1][3]").trim();
+			String m03 = fields2values.get(pdbxStructOperList+".vector[1]").trim();
+			String m10 = fields2values.get(pdbxStructOperList+".matrix[2][1]").trim();
+			String m11 = fields2values.get(pdbxStructOperList+".matrix[2][2]").trim();
+			String m12 = fields2values.get(pdbxStructOperList+".matrix[2][3]").trim();
+			String m13 = fields2values.get(pdbxStructOperList+".vector[2]").trim();
+			String m20 = fields2values.get(pdbxStructOperList+".matrix[3][1]").trim();
+			String m21 = fields2values.get(pdbxStructOperList+".matrix[3][2]").trim();
+			String m22 = fields2values.get(pdbxStructOperList+".matrix[3][3]").trim();
+			String m23 = fields2values.get(pdbxStructOperList+".vector[3]").trim();
+
+
+			if(!isInteger(idStr))
+				System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
+			else if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
+					isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
+					isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
+				int id = Integer.parseInt(idStr);
+				operation.setId(id);
+
+				operation.setOperatorValue(0, Double.parseDouble(m00));
+				operation.setOperatorValue(1, Double.parseDouble(m01));
+				operation.setOperatorValue(2, Double.parseDouble(m02));
+				operation.setOperatorValue(3, Double.parseDouble(m03));
+				operation.setOperatorValue(4, Double.parseDouble(m10));
+				operation.setOperatorValue(5, Double.parseDouble(m11));
+				operation.setOperatorValue(6, Double.parseDouble(m12));
+				operation.setOperatorValue(7, Double.parseDouble(m13));
+				operation.setOperatorValue(8, Double.parseDouble(m20));
+				operation.setOperatorValue(9, Double.parseDouble(m21));
+				operation.setOperatorValue(10, Double.parseDouble(m22));
+				operation.setOperatorValue(11, Double.parseDouble(m23));
+
+				operations.add(operation);
+			}else
+				System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
+			
+			
+		}else{ //for loop-elements
+			Long[] intOperSite = loopelements2contentOffset.get(ids2elements.get(pdbxStructOperList));
+
+			int idIdx = fields2indices.get(pdbxStructOperList+".id");
+			int m00Idx = fields2indices.get(pdbxStructOperList+".matrix[1][1]");
+			int m01Idx = fields2indices.get(pdbxStructOperList+".matrix[1][2]");
+			int m02Idx = fields2indices.get(pdbxStructOperList+".matrix[1][3]");
+			int m03Idx = fields2indices.get(pdbxStructOperList+".vector[1]");
+			int m10Idx = fields2indices.get(pdbxStructOperList+".matrix[2][1]");
+			int m11Idx = fields2indices.get(pdbxStructOperList+".matrix[2][2]");
+			int m12Idx = fields2indices.get(pdbxStructOperList+".matrix[2][3]");
+			int m13Idx = fields2indices.get(pdbxStructOperList+".vector[2]");
+			int m20Idx = fields2indices.get(pdbxStructOperList+".matrix[3][1]");
+			int m21Idx = fields2indices.get(pdbxStructOperList+".matrix[3][2]");
+			int m22Idx = fields2indices.get(pdbxStructOperList+".matrix[3][3]");
+			int m23Idx = fields2indices.get(pdbxStructOperList+".vector[3]");
+
+			int numberFields = ids2fieldsIdx.get(pdbxStructOperList);
+
+			int recordCount = 0;
+
+			//Read _pdbx_struct_oper_list block values
+			fcif.seek(intOperSite[0]);
+			while(fcif.getFilePointer()<intOperSite[1]) {
+				recordCount++;
+				
+				BioUnitOperation operation = new BioUnitOperation();
+				String[] tokens = tokeniseFields(numberFields);
+				if (tokens.length!=numberFields) {
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+pdbxStructOperList+ " of CIF file "+cifFile);
+				}
+				
+				String idStr = tokens[idIdx].trim();
+				String m00 = tokens[m00Idx].trim();
+				String m01 = tokens[m01Idx].trim();
+				String m02 = tokens[m02Idx].trim();
+				String m03 = tokens[m03Idx].trim();
+				String m10 = tokens[m10Idx].trim();
+				String m11 = tokens[m11Idx].trim();
+				String m12 = tokens[m12Idx].trim();
+				String m13 = tokens[m13Idx].trim();
+				String m20 = tokens[m20Idx].trim();
+				String m21 = tokens[m21Idx].trim();
+				String m22 = tokens[m22Idx].trim();
+				String m23 = tokens[m23Idx].trim();
+				
+				//Add data
+				if(!isInteger(idStr))
+					System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
+				else if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
+						isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
+						isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
+					int id = Integer.parseInt(idStr);
+					operation.setId(id);
+
+					operation.setOperatorValue(0, Double.parseDouble(m00));
+					operation.setOperatorValue(1, Double.parseDouble(m01));
+					operation.setOperatorValue(2, Double.parseDouble(m02));
+					operation.setOperatorValue(3, Double.parseDouble(m03));
+					operation.setOperatorValue(4, Double.parseDouble(m10));
+					operation.setOperatorValue(5, Double.parseDouble(m11));
+					operation.setOperatorValue(6, Double.parseDouble(m12));
+					operation.setOperatorValue(7, Double.parseDouble(m13));
+					operation.setOperatorValue(8, Double.parseDouble(m20));
+					operation.setOperatorValue(9, Double.parseDouble(m21));
+					operation.setOperatorValue(10, Double.parseDouble(m22));
+					operation.setOperatorValue(11, Double.parseDouble(m23));
+
+					operations.add(operation);
+				}else
+					System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
+				
+			}
+		}
+		
+		pdbAsymUnit.setPdbBioUnitList(new PdbBioUnitList(pdbAsymUnit, assemblies, generators, operations,"cif"));
+		
 	}
 	
 	private void readAtomSite(PdbAsymUnit pdbAsymUnit, int model) throws IOException, FileFormatException, PdbLoadException {
@@ -984,5 +1339,17 @@ public class CiffileParser {
 	    	return true;
 	    }catch (NumberFormatException ex)
 	    {	return false; }
+	}
+	
+	private boolean isInteger(String value) {
+		if (value==null) return false;
+		
+	    try { 
+	    	Integer.parseInt(value);
+	    	return true;
+	    }
+	    catch (NumberFormatException ex) {	
+	    	return false; 
+	    }
 	}
 }

@@ -117,7 +117,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 */
 	private CrystalTransform transform;
 
-
+	/**
+	 * Details of biological units present in the pdb file
+	 */
+	private PdbBioUnitList pdbBioUnitList;
 	
 	/*------------------------------------  constructors -----------------------------------------------*/
 
@@ -136,6 +139,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.chains = new TreeMap<String,PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		this.transform = new CrystalTransform((SpaceGroup)null);
+		
+		this.pdbBioUnitList = new PdbBioUnitList(this);
 
 	}
 	
@@ -172,6 +177,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = null;
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
+		this.pdbBioUnitList = new PdbBioUnitList(this);
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile, true);
@@ -206,6 +212,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = null;
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
+		this.pdbBioUnitList = new PdbBioUnitList(this);
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile, missingSeqResPadding);
@@ -278,6 +285,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		checkScaleMatrix(parser.getScaleMatrix());
 		
 		checkUnreasonableCrystalCell();
+		
+		this.setPdbBioUnitList(new PdbBioUnitList(this, parser.getBioUnitAssemblies(), parser.getBioUnitGenerators(), parser.getBioUnitOperations(),"pdb"));
 
 	}
 	
@@ -302,6 +311,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		checkNoEmptyChains();
 
 		checkScaleMatrix(parser.readScaleMatrix());
+		
+		parser.readBioUnit(this);
 		
 		parser.closeFile();		
 		
@@ -615,6 +626,18 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.rSym = rSym;
 	}
 	
+	public void setPdbBioUnitList(PdbBioUnitList units){
+		this.pdbBioUnitList = units;
+	}
+	
+	public PdbBioUnitList getPdbBioUnitList(){
+		return this.pdbBioUnitList;
+	}
+	
+	public int getPdbBioUnitListSize(){
+		return this.pdbBioUnitList.getPdbBioUnits().size();
+	}
+	
 	/**
 	 * Returns true if the experimental method for this entry is X-RAY DIFFRACTION
 	 * False if experimental method not set or different from x-ray diffraction
@@ -897,6 +920,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		}
 		
 		newAsym.setTransform(new CrystalTransform(this.transform));
+		
+		newAsym.pdbBioUnitList = this.pdbBioUnitList.copy(newAsym);
 		return newAsym;
 	}
 	
@@ -1362,8 +1387,4 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		zis.close();
 		os.close();
 	}
-
-
-
-
 }

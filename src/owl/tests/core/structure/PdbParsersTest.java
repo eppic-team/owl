@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -507,6 +508,16 @@ public class PdbParsersTest {
 					}
 
 					Assert.assertEquals(ciffileFullpdb.getNumAtoms(),pdbfileFullpdb.getNumAtoms());
+					
+					//tests for biounit assemblies
+					Assert.assertEquals(ciffileFullpdb.getPdbBioUnitListSize(), pdbfileFullpdb.getPdbBioUnitListSize());
+					Collections.sort(ciffileFullpdb.getPdbBioUnitList().getPdbBioUnits());
+					Collections.sort(pdbfileFullpdb.getPdbBioUnitList().getPdbBioUnits());
+					if(ciffileFullpdb.getPdbBioUnitListSize() == pdbfileFullpdb.getPdbBioUnitListSize()){
+						for(int i=0; i<ciffileFullpdb.getPdbBioUnitListSize(); i++){
+							Assert.assertTrue(ciffileFullpdb.getPdbBioUnitList().getPdbBioUnits().get(i).equals(pdbfileFullpdb.getPdbBioUnitList().getPdbBioUnits().get(i)));
+						}
+					}
 					
 					for (PdbChain pdbfilePdb:pdbfileFullpdb.getAllChains()) {
 						String chainCode = pdbfilePdb.getChainCode();

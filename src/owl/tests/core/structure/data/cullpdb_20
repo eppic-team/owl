@@ -947,8 +947,8 @@
 1Z6M	A
 1KWG	A
 1RQW	A
-2DQA	A
-2DEJ	A
+#2DQA	A #wrong assembly size in cif file
+2DEJ	A 
 1JY2	O
 1PSR	A
 2B3G	A
