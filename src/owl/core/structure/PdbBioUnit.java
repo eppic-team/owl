@@ -162,7 +162,7 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 				unit.addOperator(code, new Matrix4d(oper));
 		
 		
-		return null;
+		return unit;
 	}
 	
 	/**
