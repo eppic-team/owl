@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Vector3d;
 
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
@@ -47,13 +46,12 @@ public class PdbBioUnitList implements Serializable{
 
 		//Transform the translation matrix to crystal coordinates
 		if(parent.getCrystalCell()!=null){
-			for(BioUnitOperation oper:operations){
-				Vector3d v=new Vector3d(oper.getOperator()[3],oper.getOperator()[7],oper.getOperator()[11]);
-				parent.getCrystalCell().transfToCrystal(v);
-
-				oper.setOperatorValue(3, v.x);
-				oper.setOperatorValue(7, v.y);
-				oper.setOperatorValue(11, v.z);
+			for(BioUnitOperation oper:operations){				
+				Matrix4d oper4d = new Matrix4d(oper.getOperator());
+				oper4d = parent.getCrystalCell().transfToCrystal(oper4d);
+				for(int i=0; i<4; i++)
+					for(int j=0; j<4;j++)
+						oper.setOperatorValue(4*i+j, oper4d.getElement(i, j));
 			}
 		}
 
