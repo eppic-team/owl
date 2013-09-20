@@ -14,9 +14,17 @@ import java.util.Properties;
 
 //import javax.vecmath.Matrix4d;
 
+
+
+
+
+import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3i;
+import javax.vecmath.Vector3d;
+
+
 //import junit.framework.Assert;
 import org.junit.Assert;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -29,6 +37,7 @@ import owl.core.connections.pisa.PisaInterfaceList;
 import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.CrystalCell;
 import owl.core.structure.HetResidue;
 import owl.core.structure.InterfacesFinder;
 import owl.core.structure.PdbChain;
@@ -437,6 +446,68 @@ public class PdbAsymUnitTest {
 			System.out.println("\nDuplicates in redundancy elimination procedure are unusual but they can still occur (due mainly to NCS). ");			
 		}
 
+	}
+	
+	@Test
+	public void testCrystalCellTransformations() throws IOException {
+		List<String> pdbCodes = readListFile(new File(LISTFILE));
+
+		for (String pdbCode: pdbCodes) {
+			
+			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+			
+			pdb.removeHatoms();
+			
+			SpaceGroup sg = pdb.getSpaceGroup();
+			CrystalCell cell = pdb.getCrystalCell();
+			
+			for (int i=0;i<sg.getNumOperators();i++) {
+				Matrix4d transfXtal = sg.getTransformation(i);				
+				
+				Matrix4d transfOrthon = cell.transfToOrthonormal(transfXtal);
+				
+				Matrix4d transfBackToXtal = cell.transfToCrystal(transfOrthon);
+				
+				Matrix4d transfBackToOrthon = cell.transfToOrthonormal(transfBackToXtal);
+				
+				Assert.assertTrue(transfXtal.epsilonEquals(transfBackToXtal, 0.00001));
+				
+				Assert.assertTrue(transfOrthon.epsilonEquals(transfBackToOrthon, 0.00001));
+				
+				
+				Matrix4d testTransfXtal = cell.getTransform(new Point3i(1,2,2));
+				Vector3d testTranslXtal = new Vector3d(testTransfXtal.m20, testTransfXtal.m21, testTransfXtal.m22);
+				
+				Matrix4d testTransfOrthon = cell.transfToOrthonormal(testTransfXtal);
+				
+				Matrix4d testTransfBackToXtal = cell.transfToCrystal(testTransfOrthon);
+				
+				Assert.assertTrue(testTransfXtal.epsilonEquals(testTransfBackToXtal, 0.00001));
+				
+				Vector3d testTranslOrthon = new Vector3d(testTranslXtal);
+				cell.transfToOrthonormal(testTranslOrthon);
+				Vector3d testTranslBackToXtal = new Vector3d(testTranslOrthon);
+				cell.transfToCrystal(testTranslBackToXtal);
+				
+				Assert.assertTrue(testTranslXtal.epsilonEquals(testTranslBackToXtal, 0.00001));
+				
+				
+			}
+		}
+		
 	}
 	
 	private static boolean deltaComp(double a, double b, double delta) {
