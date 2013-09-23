@@ -1,7 +1,6 @@
 package owl.tests.core.structure;
 
 import java.io.BufferedReader;
-//import java.io.File;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -12,18 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-//import javax.vecmath.Matrix4d;
-
-
-
-
-
 import javax.vecmath.Matrix4d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
-
-//import junit.framework.Assert;
 import org.junit.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -474,8 +464,8 @@ public class PdbAsymUnitTest {
 			SpaceGroup sg = pdb.getSpaceGroup();
 			CrystalCell cell = pdb.getCrystalCell();
 			
-			for (int i=0;i<sg.getNumOperators();i++) {
-				Matrix4d transfXtal = sg.getTransformation(i);				
+			for (int op=0;op<sg.getNumOperators();op++) {
+				Matrix4d transfXtal = sg.getTransformation(op);				
 				
 				Matrix4d transfOrthon = cell.transfToOrthonormal(transfXtal);
 				
@@ -488,24 +478,37 @@ public class PdbAsymUnitTest {
 				Assert.assertTrue(transfOrthon.epsilonEquals(transfBackToOrthon, 0.00001));
 				
 				
-				Matrix4d testTransfXtal = cell.getTransform(new Point3i(1,2,2));
-				Vector3d testTranslXtal = new Vector3d(testTransfXtal.m20, testTransfXtal.m21, testTransfXtal.m22);
+				// transforms on translations done with Matrix4d or Tuple3d transformations must coincide
+				Vector3d xtalTransl = new Vector3d(2,5,1);
+				transfXtal.setTranslation(xtalTransl); 
 				
-				Matrix4d testTransfOrthon = cell.transfToOrthonormal(testTransfXtal);
+				transfOrthon = cell.transfToOrthonormal(transfXtal);
 				
-				Matrix4d testTransfBackToXtal = cell.transfToCrystal(testTransfOrthon);
+				Vector3d orthonTransl = new Vector3d(xtalTransl);
+				cell.transfToOrthonormal(orthonTransl); 
 				
-				Assert.assertTrue(testTransfXtal.epsilonEquals(testTransfBackToXtal, 0.00001));
-				
-				Vector3d testTranslOrthon = new Vector3d(testTranslXtal);
-				cell.transfToOrthonormal(testTranslOrthon);
-				Vector3d testTranslBackToXtal = new Vector3d(testTranslOrthon);
-				cell.transfToCrystal(testTranslBackToXtal);
-				
-				Assert.assertTrue(testTranslXtal.epsilonEquals(testTranslBackToXtal, 0.00001));
-				
+				Vector3d translFromMatrix4dTransform = new Vector3d(transfOrthon.m03, transfOrthon.m13, transfOrthon.m23);
+				Assert.assertTrue(translFromMatrix4dTransform.epsilonEquals(orthonTransl, 0.0001)); 
 				
 			}
+			
+			int numCells = 3;
+			for (int i=-numCells;i<=numCells;i++) {
+				for (int j=-numCells;j<=numCells;j++) {
+					for (int k=-numCells;k<=numCells;k++) {
+						if (i==0 && j==0 && k==0) continue; 
+						
+						Vector3d translXtal = new Vector3d (i,j,k);
+						Vector3d translOrthon = new Vector3d(translXtal);
+						cell.transfToOrthonormal(translOrthon);
+						Vector3d translBackToXtal = new Vector3d(translOrthon);
+						cell.transfToCrystal(translBackToXtal);
+
+						Assert.assertTrue(translXtal.epsilonEquals(translBackToXtal, 0.00001));
+					}
+				}
+			}
+
 		}
 		
 	}
