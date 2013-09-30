@@ -310,13 +310,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		checkNoEmptyChains();
 
-		checkScaleMatrix(parser.readScaleMatrix());
+		checkScaleMatrix(parser.readScaleMatrix());		
+		
+		checkUnreasonableCrystalCell();
 		
 		parser.readBioUnit(this);
 		
-		parser.closeFile();		
-		
-		checkUnreasonableCrystalCell();
+		parser.closeFile();	
 
 	}
 	

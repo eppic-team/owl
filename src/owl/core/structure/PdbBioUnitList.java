@@ -5,7 +5,9 @@ package owl.core.structure;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.TreeMap;
 
 import javax.vecmath.Matrix4d;
 
@@ -18,7 +20,7 @@ import owl.core.structure.io.BioUnitOperation;
  * @author biyani_n
  *
  */
-public class PdbBioUnitList implements Serializable{
+public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	/**
 	 * 
 	 */
@@ -43,9 +45,10 @@ public class PdbBioUnitList implements Serializable{
 	public PdbBioUnitList(PdbAsymUnit parent, ArrayList<BioUnitAssembly> assemblies, ArrayList<BioUnitAssemblyGen> generators, ArrayList<BioUnitOperation> operations, String parser){
 		this.parent = parent;
 		this.pdbBioUnits = new ArrayList<PdbBioUnit>();
+		boolean hasNucelotides = false;
 
-		//Transform the translation matrix to crystal coordinates
-		if(parent.getCrystalCell()!=null){
+		//Transform the orthogonal matrix to crystal coordinates
+		if(parent.getCrystalCell()!=null && parent.isCrystallographicExpMethod()){
 			for(BioUnitOperation oper:operations){				
 				Matrix4d oper4d = new Matrix4d(oper.getOperator());
 				oper4d = parent.getCrystalCell().transfToCrystal(oper4d);
@@ -72,10 +75,18 @@ public class PdbBioUnitList implements Serializable{
 		//check if the chain code really exist in the pdbChainCodes 
 		for(BioUnitAssemblyGen gen:generators){
 			ArrayList<String> tempList = new ArrayList<String>();
-			for(String code:gen.getPdbChainCodes())
-				if(parent.getPdbChainCodes().contains(code))
+			for(String code:gen.getPdbChainCodes()){
+				if(!parent.getPdbChainCodes().contains(code)){
+					System.err.println("Warning: Chain with pdbChainCode "+code+" present in biounit-assembly but is not present in structure!");
+					continue;
+				}
+				if(parent.getChain(code).getSequence().isProtein())
 					tempList.add(code);
-				else System.err.println("Warning: Chain with pdbChainCode "+code+" present in biounit-assembly but is not present in structure!");
+				else{
+					System.err.println("Warning: Chain with pdbChainCode "+code+" is not protein chain, excluding it from biounit assembly and over-writing size!");
+					hasNucelotides = true;
+				}
+			}
 			gen.setPdbChainCodes(tempList);
 		}
 
@@ -141,7 +152,8 @@ public class PdbBioUnitList implements Serializable{
 												}
 											}
 									else {
-										System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
+										if(!hasNucelotides)
+											System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
 										toAdd = false;
 									}
 								}
@@ -153,8 +165,11 @@ public class PdbBioUnitList implements Serializable{
 
 
 							if(localUnit.getSize() != numOperators){
-								System.err.println("Warning: The size of the assembly for biounit "+assembly.getId()+" is not equal to it's number of operators; will not add this biounit.");
-								toAdd=false;
+								if(hasNucelotides) localUnit.setSize(numOperators);
+								else{
+									System.err.println("Warning: The size of the assembly for biounit "+assembly.getId()+" is not equal to it's number of operators; will not add this biounit.");
+									toAdd=false;
+									}
 							}
 
 							if(toAdd) this.pdbBioUnits.add(localUnit);
@@ -190,6 +205,11 @@ public class PdbBioUnitList implements Serializable{
 	public void setPdbBioUnits(List<PdbBioUnit> pdbBioUnits) {
 		this.pdbBioUnits = pdbBioUnits;
 	}
+	
+	private void addPdbBioUnit(PdbBioUnit unit) {
+		this.pdbBioUnits.add(unit);
+		
+	}
 
 	public PdbAsymUnit getParent() {
 		return parent;
@@ -206,6 +226,139 @@ public class PdbBioUnitList implements Serializable{
 			newList.pdbBioUnits.add(unit.copy());
 
 		return newList;
+	}
+
+	@Override
+	public Iterator<PdbBioUnit> iterator() {
+		return this.pdbBioUnits.iterator();
+	}
+	
+	/**
+	 * For each biounit in the list returns the list of the id's of interfaces which match with that biounit.
+	 * It checks for the errors and does not pass those biounits.
+	 * Id's for BioUnits start from 0,1,2,...
+	 * Id's for Interfaces start from 1,2,3,...
+	 * @param interfaces
+	 * @return
+	 */
+	public TreeMap<Integer, List<Integer>> getInterfaceMatches(ChainInterfaceList interfaces){
+		TreeMap<Integer,List<Integer>> matches = new TreeMap<Integer, List<Integer>>();
+		for(PdbBioUnit bioUnit:this.pdbBioUnits){
+			List<Integer> matchList = bioUnit.getInterfaceMatches(interfaces);
+			if(bioUnit.getSize() > 1 && matchList.size() < 1) continue;
+			else matches.put(this.pdbBioUnits.indexOf(bioUnit), matchList);
+		}
+		return matches;
+	}
+
+	/**
+	 * Returns the PdbBioUnit with index iUnit starting from 0,1,2,...
+	 * @param iUnit
+	 * @return
+	 */
+	public PdbBioUnit get(int iUnit) {
+		return this.pdbBioUnits.get(iUnit);
+	}
+	
+	/**
+	 * Returns the maximum size of the biounits in this list
+	 */
+	public int getMaximumSize(){
+		int maxSize = 0;
+		for(PdbBioUnit unit:this.pdbBioUnits)
+			if(unit.getSize() > maxSize) maxSize = unit.getSize();
+		return maxSize;
+	}
+	
+	
+	/**
+	 * Returns a sub-list of PdbBioUnits with particular assignment type
+	 */
+	public PdbBioUnitList getSubsetByType(BioUnitAssignmentType type){
+		PdbBioUnitList newList = new PdbBioUnitList(this.parent);
+		for(PdbBioUnit unit:this.pdbBioUnits)
+			if(unit.getType().equals(type)) newList.addPdbBioUnit(unit);
+		return newList;
+	}
+	
+	/**
+	 * Returns a sub-list of PdbBioUnits with particular size
+	 */
+	public PdbBioUnitList getSubsetBySize(int size){
+		PdbBioUnitList newList = new PdbBioUnitList(this.parent);
+		for(PdbBioUnit unit:this.pdbBioUnits)
+			if(unit.getSize() == size) newList.addPdbBioUnit(unit);
+		return newList;
+	}
+
+	/**
+	 * Returns a map with Assignment Type as the keys and corresponding array of gathered results.
+	 * The array has the size of the number of interfaces and returns 
+	 * 0: Match
+	 * 1: Non-match
+	 * -1: No results
+	 * Rules:
+	 * If present, the highest possible assembly of an assignment type,
+	 * else take the union of all the given highest assemblies of the assignment type
+	 * @param interfaces
+	 * @return
+	 */
+	public TreeMap<BioUnitAssignmentType, int[]> gatherBioUnits(ChainInterfaceList interfaces) {
+		
+		TreeMap<Integer, List<Integer>> matchIds = getInterfaceMatches(interfaces);
+		TreeMap<BioUnitAssignmentType, int[]> summary = new TreeMap<BioUnitAssignmentType, int[]>();
+
+		PdbBioUnitList authorsList = this.getSubsetByType(BioUnitAssignmentType.authors);
+		PdbBioUnitList pisaList = this.getSubsetByType(BioUnitAssignmentType.pisa);
+		PdbBioUnitList pqsList = this.getSubsetByType(BioUnitAssignmentType.pqs);
+		
+		int[] authorFinal = new int[interfaces.getNumInterfaces()];
+		int[] pisaFinal = new int[interfaces.getNumInterfaces()];
+		int[] pqsFinal = new int[interfaces.getNumInterfaces()];
+		
+		for(int i=1; i<=interfaces.getNumInterfaces(); i++){
+			
+			authorFinal[i-1]=pisaFinal[i-1]=pqsFinal[i-1]=-1;
+			
+			//Check for authors
+			for(PdbBioUnit bioUnit:authorsList.getSubsetBySize(authorsList.getMaximumSize())){
+				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
+				if(matchIds.containsKey(iUnit)){
+					if(matchIds.get(iUnit).contains(i)){
+						authorFinal[i-1] = 0;
+						break;
+					} else authorFinal[i-1] = 1;
+				}
+			}
+
+			//check for Pisa
+			for(PdbBioUnit bioUnit:pisaList.getSubsetBySize(pisaList.getMaximumSize())){
+				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
+				if(matchIds.containsKey(iUnit)){
+					if(matchIds.get(iUnit).contains(i)){
+						pisaFinal[i-1] = 0;
+						break;
+					} else pisaFinal[i-1] = 1;
+				}
+			}
+
+			//check for pqs
+			for(PdbBioUnit bioUnit:pqsList.getSubsetBySize(pqsList.getMaximumSize())){
+				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
+				if(matchIds.containsKey(iUnit)){
+					if(matchIds.get(iUnit).contains(i)){
+						pqsFinal[i-1] = 0;
+						break;
+					} else pqsFinal[i-1] = 1;
+				}
+			}
+		}
+
+		summary.put(BioUnitAssignmentType.authors, authorFinal);
+		summary.put(BioUnitAssignmentType.pisa, pisaFinal);
+		summary.put(BioUnitAssignmentType.pqs, pqsFinal);
+
+		return summary;
 	}
 
 }

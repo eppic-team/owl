@@ -10,10 +10,10 @@ import java.util.HashMap;
  *
  */
 public enum BioUnitAssignmentType {
-	authors(1,"authors"),
-	pisa(2,"pisa"),
-	pqs(3,"pqs"),
-	eppic(4,"eppic"),
+	eppic(1,"eppic"),
+	authors(2,"authors"),
+	pisa(3,"pisa"),
+	pqs(4,"pqs"),
 	none(5,"none");
 	
 	private int id;

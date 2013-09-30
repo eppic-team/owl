@@ -164,6 +164,61 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		
 		return unit;
 	}
+
+	/**
+	 * For each biounit in the list returns the list of the id's of interfaces which match with that biounit
+	 * Id's for BioUnits start from 0,1,2,...
+	 * Id's for Interfaces start from 1,2,3,...
+	 * @param interfaces
+	 * @return
+	 */
+	public List<Integer> getInterfaceMatches(ChainInterfaceList interfaces) {
+		List<Integer> matches = new ArrayList<Integer>();
+		for(int i=1; i<=interfaces.getNumInterfaces(); i++){
+			ChainInterface interf = interfaces.get(i);
+			if(matchesInterface(interf)) matches.add(i);
+		}
+		return matches;
+	}
+
+	
+	private boolean matchesInterface(ChainInterface interf) {
+		Matrix4d identity = new Matrix4d(); identity.m00=identity.m11=identity.m22=identity.m33=1;
+		boolean matches = false;
+
+		String firstCode = interf.getFirstMolecule().getPdbChainCode();
+		String secondCode = interf.getSecondMolecule().getPdbChainCode();
+		Matrix4d compareToOperator = interf.getSecondTransf().getMatTransform();
+
+		if(this.getOperators().containsKey(firstCode) &&
+				this.getOperators().containsKey(secondCode) ){
+			for(Matrix4d operFirst:this.getOperators().get(firstCode))
+				if(operFirst.epsilonEquals(identity, 0.001)){
+					for(Matrix4d operSecond:this.getOperators().get(secondCode))
+						if(operSecond.epsilonEquals(compareToOperator, 0.001)){
+							matches = true;
+							break;
+						}
+					break;
+				}
+
+			if(!matches)
+				for(Matrix4d operSecond:this.getOperators().get(secondCode))
+					if(operSecond.epsilonEquals(identity, 0.001)){
+						for(Matrix4d operFirst:this.getOperators().get(firstCode)){
+							Matrix4d operFirstInv = new Matrix4d(operFirst);
+							operFirstInv.invert();
+							if(operFirstInv.epsilonEquals(compareToOperator, 0.001)){
+								matches = true;
+								break;
+							}
+						}
+						break;
+					}
+		}
+
+		return matches;
+	}
 	
 	/**
 	 * Test method
