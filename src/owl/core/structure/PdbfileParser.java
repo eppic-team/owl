@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Locale;
@@ -54,6 +57,7 @@ public class PdbfileParser {
 	private HashMap<String,HashMap<String,Residue>> tmpResiduesMaps; // a map of pdb chain codes to the temp maps of all seen pdb residue serials to residues (need it for fast searches)
 	
 	private String pdbCode;
+	private Date releaseDate;
 	private String title;
 	private String expMethod;
 	private CrystalCell crystalCell;
@@ -217,6 +221,10 @@ public class PdbfileParser {
 		return modelsArray;
 	}
 	
+	protected Date getReleaseDate(){
+		return this.releaseDate;
+	}
+	
 	protected String getPdbCode() {
 		return pdbCode;
 	}
@@ -303,6 +311,7 @@ public class PdbfileParser {
 		Pattern p;
 		Matcher m;
 		this.title = null;
+		this.releaseDate = null;
 		boolean outOfPolyChain = false; // true when out of poly chain (after TER record seen), false again when an ATOM record found
 		boolean atomAtOriginSeen = false; // if we've read at least 1 atom at the origin (0,0,0) it is set to true
 		boolean terRecordSeen = false;
@@ -373,6 +382,15 @@ public class PdbfileParser {
 					if (titleStr!=null) this.title += titleStr;
 				}
 				
+			}
+			//Release Date
+			if (line.startsWith("REVDAT   1")){
+				String date = line.split("\\s+")[2].trim();
+				try{
+					this.releaseDate = new SimpleDateFormat("dd-MMM-yy", Locale.ENGLISH).parse(date);
+				}catch(ParseException pe){
+					System.err.println("Error in reading the format of release date from pdb file.");
+				}
 			}
 			// EXPDTA
 			if (line.startsWith("EXPDTA")) {

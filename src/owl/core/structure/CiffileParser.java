@@ -9,7 +9,11 @@ import java.io.RandomAccessFile;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -61,8 +65,9 @@ public class CiffileParser {
 	private static final String pdbxStructAssembly = "_pdbx_struct_assembly";
 	private static final String pdbxStructAssemblyGen = "_pdbx_struct_assembly_gen";
 	private static final String pdbxStructOperList = "_pdbx_struct_oper_list";
+	private static final String databasePdbRev = "_database_PDB_rev";
 	private static final String[] ids = 
-		{entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine,atomSitesId,pdbxStructAssembly,pdbxStructAssemblyGen,pdbxStructOperList};
+		{entryId,structId,atomSiteId,pdbxPolySeqId,structConfId,structSheetId,cell,symmetry,exptl,reflns,refine,atomSitesId,pdbxStructAssembly,pdbxStructAssemblyGen,pdbxStructOperList,databasePdbRev};
 	
 	private TreeMap<String,Integer> ids2elements;					// map of ids to element serials
 	private TreeMap<String,String> fields2values;					// map of field names (id.field) to values (for non-loop elements)
@@ -356,6 +361,56 @@ public class CiffileParser {
 	
 	protected String readPdbCode(){
 		return fields2values.get(entryId+".id").trim().toLowerCase();
+	}
+	
+	protected Date readReleaseDate() throws IOException, FileFormatException{
+		if(!ids2elements.containsKey(databasePdbRev)) return null;
+
+		Date releaseDate = null;
+		//for non-loop cases
+		if(!loopElements.contains(ids2elements.get(databasePdbRev))){
+			String date = fields2values.get(databasePdbRev+".date").trim();
+			try{
+				releaseDate = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(date);
+			}catch(ParseException pe){
+				System.err.println("Error in reading the format of release date from pdb file.");
+			}
+		}
+		//for loop cases
+		else{
+			Long[] intDBRev = loopelements2contentOffset.get(ids2elements.get(databasePdbRev));
+			
+			int numIdx = fields2indices.get(databasePdbRev+".num");
+			int dateIdx = fields2indices.get(databasePdbRev+".date");
+
+			int numberFields = ids2fieldsIdx.get(databasePdbRev);
+						
+			int recordCount = 0;
+			//Read _pdbx_struct_assembly block values
+			fcif.seek(intDBRev[0]);
+			while(fcif.getFilePointer()<intDBRev[1]) {
+				recordCount++;
+				
+				String[] tokens = tokeniseFields(numberFields);
+				
+				if (tokens.length!=numberFields) {
+					throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+databasePdbRev+ " of CIF file "+cifFile);
+				}
+				
+				String num = tokens[numIdx].trim();
+				if(isInteger(num))
+					if(Integer.parseInt(num) == 1){
+						String date = tokens[dateIdx].trim();
+						try{
+							releaseDate = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(date);
+						}catch(ParseException pe){
+							System.err.println("Error in reading the format of release date from pdb file.");
+						}
+					}
+			}
+		}
+
+		return releaseDate;
 	}
 	
 	protected String readTitle() throws IOException, PdbLoadException {

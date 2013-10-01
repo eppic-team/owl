@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private String pdbCode;
 	private int model;
 	private String title;
+	private Date releaseDate;
 	
 	/**
 	 * Polymer chains (peptide/nucleotide): chainCodes to PdbChains
@@ -128,6 +130,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * Constructs an empty PdbAsymUnit with default meta-data and no chains.
 	 */
 	public PdbAsymUnit() {
+		this.releaseDate = null;
 		this.expMethod = null;
 		this.resolution = -1;
 		this.rFree = -1;
@@ -168,6 +171,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @throws PdbLoadException if problems while loading the PDB data from file
 	 */
 	public PdbAsymUnit(File pdbSourceFile, int model) throws IOException, FileFormatException, PdbLoadException {
+		this.releaseDate = null;
 		this.expMethod = null;
 		this.resolution = -1;
 		this.rFree = -1;
@@ -203,6 +207,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * @throws PdbLoadException if problems while loading the PDB data from file
 	 */
 	public PdbAsymUnit(File pdbSourceFile, int model, boolean missingSeqResPadding) throws IOException, FileFormatException, PdbLoadException {
+		this.releaseDate = null;
 		this.expMethod = null;
 		this.resolution = -1;
 		this.rFree = -1;
@@ -270,6 +275,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		parser.readChains(this,model);
 		
+		this.releaseDate = parser.getReleaseDate();
 		this.pdbCode = parser.getPdbCode();
 		this.expMethod = parser.getExpMethod();
 		this.title = parser.getTitle();
@@ -292,6 +298,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	private void loadFromCifFile(File cifFile) throws PdbLoadException, IOException, FileFormatException {
 		CiffileParser parser = new CiffileParser(cifFile);
+		
+		this.releaseDate = parser.readReleaseDate();
 		this.pdbCode = parser.readPdbCode();
 		this.expMethod = parser.readExpMethod();
 		this.title = parser.readTitle();
@@ -556,6 +564,14 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	
 	public void setTitle(String title) {
 		this.title = title;
+	}
+	
+	public Date getReleaseDate() {
+		return releaseDate;
+	}
+
+	public void setReleaseDate(Date releaseDate) {
+		this.releaseDate = releaseDate;
 	}
 	
 	public String getExpMethod() {

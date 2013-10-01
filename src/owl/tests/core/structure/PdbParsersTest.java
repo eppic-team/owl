@@ -491,6 +491,9 @@ public class PdbParsersTest {
 						//Assert.assertNotNull(pdbfileFullpdb.getCrystalCell());
 					}
 					
+					//Release Date
+					Assert.assertTrue(ciffileFullpdb.getReleaseDate().equals(pdbfileFullpdb.getReleaseDate()));
+					
 					// exp data and quality parameters
 					Assert.assertEquals(ciffileFullpdb.getExpMethod(),pdbfileFullpdb.getExpMethod());
 					if (ciffileFullpdb.isXrayDiffraction()) {
