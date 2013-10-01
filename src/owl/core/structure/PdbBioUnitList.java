@@ -83,7 +83,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 				if(parent.getChain(code).getSequence().isProtein())
 					tempList.add(code);
 				else{
-					System.err.println("Warning: Chain with pdbChainCode "+code+" is not protein chain, excluding it from biounit assembly and over-writing size!");
+					//System.err.println("Warning: Chain with pdbChainCode "+code+" is not protein chain, excluding it from biounit assembly and over-writing size!");
 					hasNucelotides = true;
 				}
 			}
@@ -96,14 +96,20 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 			if(parent.getExpMethod()!=null &&
 					parent.getExpMethod().equals("SOLUTION NMR")){
 				PdbBioUnit localUnit = new PdbBioUnit();
-				localUnit.setSize(parent.getNumPolyChains());
-				localUnit.assignType(BioUnitAssignmentType.getByString("authors"));
-
+				
 				Matrix4d idOperator = new Matrix4d();
 				idOperator.m00=idOperator.m11=idOperator.m22=idOperator.m33=1.0; 
-				for(String pdbChainCode:parent.getPdbChainCodes()) localUnit.addOperator(pdbChainCode, idOperator);
+				
+				int numProteinChains = 0;
+				for(PdbChain chain:parent.getAllChains()) 
+					if(chain.getSequence()!=null && chain.getSequence().isProtein()) {
+						numProteinChains++;
+						localUnit.addOperator(chain.getPdbChainCode(), idOperator);
+					}
+				localUnit.setSize(numProteinChains);
+				localUnit.assignType(BioUnitAssignmentType.getByString("authors"));	
 
-				this.pdbBioUnits.add(localUnit);
+				if(numProteinChains != 0) this.pdbBioUnits.add(localUnit);
 			}
 		}
 		else{
