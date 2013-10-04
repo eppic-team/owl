@@ -602,23 +602,27 @@ public class CiffileParser {
 				assembly.setId(i);
 			}
 			
-			//Add assembly details
-			String details = fields2values.get(pdbxStructAssembly+".details").trim().toLowerCase();
-			String method = fields2values.get(pdbxStructAssembly+".method_details").trim().toLowerCase();
-			String sizeStr = fields2values.get(pdbxStructAssembly+".oligomeric_count").trim();
+			boolean isSoftwarePresent  = fields2values.containsKey(pdbxStructAssembly+".method_details");
+			boolean isCountPresent = fields2values.containsKey(pdbxStructAssembly+".oligomeric_count");
+			boolean isOligomerPresent = fields2values.containsKey(pdbxStructAssembly+".oligomeric_details");
+			String details=null; String method=null; String sizeStr=null;
 			
-			//Check if the size contained in .oligomeric_count is a valid size; otherwise take it from .olifomeric_details field
-			if(isInteger(sizeStr)){
+			//Add assembly details
+			details = fields2values.get(pdbxStructAssembly+".details").trim().toLowerCase();
+			if(isSoftwarePresent) method = fields2values.get(pdbxStructAssembly+".method_details").trim().toLowerCase();
+			if(isCountPresent) sizeStr = fields2values.get(pdbxStructAssembly+".oligomeric_count").trim();
+			
+			//Check if the size contained in .oligomeric_count is a valid size; otherwise take it from .oligomeric_details field
+			if(isCountPresent && isInteger(sizeStr)){
 				int size = Integer.parseInt(sizeStr);
 				assembly.setSize(size);
-			}else{
+			}else if(isOligomerPresent){
 				sizeStr = fields2values.get(pdbxStructAssembly+".oligomeric_details").trim().toLowerCase();
 				assembly.setSize(sizeStr);
 			}
-			
 			//Add details on the type of assignments
 			if(details.contains("author")) assembly.addType("authors");
-			if(!method.contains("?")){
+			if(isSoftwarePresent && !method.contains("?")){
 				String[] software = method.split(",");
 				for(String soft:software) assembly.addType(soft.trim().toLowerCase());
 			}
@@ -630,15 +634,19 @@ public class CiffileParser {
 		} else{//for loop cases
 			Long[] intPdbxStruct = loopelements2contentOffset.get(ids2elements.get(pdbxStructAssembly));
 			
-			//boolean to check if method_details is present
+			//boolean to check if fields are present
 			boolean isSoftwarePresent  = fields2indices.containsKey(pdbxStructAssembly+".method_details");
+			boolean isCountPresent = fields2indices.containsKey(pdbxStructAssembly+".oligomeric_count");
+			boolean isOligomerPresent = fields2indices.containsKey(pdbxStructAssembly+".oligomeric_details");
 			int softwareIdx=0;
+			int sizeCountIdx=0;
+			int sizeCountStrIdx=0;
 			
 			int idIdx = fields2indices.get(pdbxStructAssembly+".id");
 			int detailsIdx = fields2indices.get(pdbxStructAssembly+".details");
 			if(isSoftwarePresent) softwareIdx = fields2indices.get(pdbxStructAssembly+".method_details");
-			int sizeCountIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_count");
-			int sizeCountStrIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_details");
+			if(isCountPresent) sizeCountIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_count");
+			if(isOligomerPresent) sizeCountStrIdx = fields2indices.get(pdbxStructAssembly+".oligomeric_details");
 
 			int numberFields = ids2fieldsIdx.get(pdbxStructAssembly);
 						
@@ -664,15 +672,19 @@ public class CiffileParser {
 				}
 				
 				//2. Set size
-				String sizeStr = tokens[sizeCountIdx].trim();
-				if(isInteger(sizeStr)){
-					int size = Integer.parseInt(sizeStr);
-					assembly.setSize(size);
-				}else{
-					sizeStr = tokens[sizeCountStrIdx].trim().toLowerCase();
+				if(isCountPresent){
+					String sizeStr = tokens[sizeCountIdx].trim();
+					if(isInteger(sizeStr)){
+						int size = Integer.parseInt(sizeStr);
+						assembly.setSize(size);
+					}else if(isOligomerPresent){
+						sizeStr = tokens[sizeCountStrIdx].trim().toLowerCase();
+						assembly.setSize(sizeStr);
+					}
+				} else if(isOligomerPresent){
+					String sizeStr = tokens[sizeCountStrIdx].trim().toLowerCase();
 					assembly.setSize(sizeStr);
 				}
-				
 				//3. set details on type of assignments
 				String details = tokens[detailsIdx].trim().toLowerCase();
 				if(details.contains("author")) assembly.addType("authors");
