@@ -1,8 +1,12 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeMap;
+
+import owl.core.structure.AminoAcid;
+import owl.core.structure.Nucleotide;
+import owl.core.structure.PdbLoadException;
 
 public class PdbxPolySeqGroup implements Iterable<PdbxPolySeqLine> {
 	

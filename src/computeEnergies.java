@@ -82,6 +82,7 @@ public class computeEnergies {
 			pdbFiles.add(new File(line.trim()));
 			countPdbFiles++;
 		}
+		in.close();
 		
 		TinkerRunner tr = new TinkerRunner(TINKER_BIN_DIR,FORCEFIELD_PRM_FILE);
 		MaxClusterRunner maxCluster = new MaxClusterRunner(maxClusterExecutable);

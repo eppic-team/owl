@@ -1,4 +1,4 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import owl.core.structure.AminoAcid;
+import owl.core.structure.Nucleotide;
 import owl.core.util.FileFormatException;
 
 

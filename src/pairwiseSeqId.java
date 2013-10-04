@@ -59,6 +59,7 @@ public class pairwiseSeqId {
 					currentSeq += line.trim();
 				}
 			}
+			in.close();  
 			if(currentSeq.length() == 0) {
 				System.err.println("Error. No sequence found for >" + currentTag);
 				System.exit(1);

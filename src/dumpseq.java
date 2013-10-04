@@ -248,6 +248,7 @@ public class dumpseq {
 			
 			}
 		}
+		fileIn.close();
 		String[] codes = new String[codesAL.size()];
 		codesAL.toArray(codes);
 		return codes;

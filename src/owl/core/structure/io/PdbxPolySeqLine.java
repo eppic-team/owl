@@ -1,4 +1,4 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 public class PdbxPolySeqLine {
 	

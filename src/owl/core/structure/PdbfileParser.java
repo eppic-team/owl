@@ -23,9 +23,12 @@ import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.io.AtomLine;
+import owl.core.structure.io.AtomLineList;
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
 import owl.core.structure.io.BioUnitOperation;
+import owl.core.structure.io.SecStructureLine;
 import owl.core.util.FileFormatException;
 
 /**

@@ -1,6 +1,11 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 import javax.vecmath.Point3d;
+
+import owl.core.structure.AminoAcid;
+import owl.core.structure.HetResidue;
+import owl.core.structure.Nucleotide;
+import owl.core.structure.PdbfileParser;
 
 /**
  * A class to store all data that we read from the atom lines of cif/pdbase

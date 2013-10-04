@@ -1,4 +1,4 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 /**
  * A secondary structure line in a PDB file, to be used while parsing PDB files 

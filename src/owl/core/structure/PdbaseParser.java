@@ -14,6 +14,11 @@ import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.io.AtomLine;
+import owl.core.structure.io.AtomLineList;
+import owl.core.structure.io.PdbxPolySeqGroup;
+import owl.core.structure.io.PdbxPolySeqLine;
+import owl.core.structure.io.PdbxPolySeqLineList;
 import owl.core.util.MySQLConnection;
 
 

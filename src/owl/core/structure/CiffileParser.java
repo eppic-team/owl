@@ -5,7 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -25,9 +24,14 @@ import javax.vecmath.Point3d;
 
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.features.SecondaryStructure;
+import owl.core.structure.io.AtomLine;
+import owl.core.structure.io.AtomLineList;
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
 import owl.core.structure.io.BioUnitOperation;
+import owl.core.structure.io.PdbxPolySeqGroup;
+import owl.core.structure.io.PdbxPolySeqLine;
+import owl.core.structure.io.PdbxPolySeqLineList;
 import owl.core.util.FileFormatException;
 
 

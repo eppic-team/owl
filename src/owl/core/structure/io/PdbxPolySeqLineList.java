@@ -1,4 +1,4 @@
-package owl.core.structure;
+package owl.core.structure.io;
 
 import java.util.ArrayList;
 import java.util.Iterator;

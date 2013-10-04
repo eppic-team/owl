@@ -103,6 +103,7 @@ public class averageGraph {
 		while ((line=br.readLine())!=null){
 			methodStr += line+"\n";
 		}
+		br.close();
 		return methodStr;
 	}
 
