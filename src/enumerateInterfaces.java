@@ -46,6 +46,8 @@ public class enumerateInterfaces {
 	
 	private static final int N_SPHERE_POINTS = 3000;
 	
+	private static final double MIN_AREA_TO_KEEP = 35;
+	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
 	
 	/**
@@ -178,7 +180,7 @@ public class enumerateInterfaces {
 		interfFinder.setDebug(debug);
 		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
-		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS);
+		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
 		long end = System.currentTimeMillis();
 		long total = (end-start)/1000;
 		System.out.println("Total time for interface calculation: "+total+"s");

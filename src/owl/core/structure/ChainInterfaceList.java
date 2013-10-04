@@ -77,6 +77,21 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	}
 	
 	/**
+	 * Removes from this interface list all interfaces with areas
+	 * below the given cutoff area
+	 * @param area
+	 */
+	public void removeInterfacesBelowArea(double area) {
+		Iterator<ChainInterface> it = iterator();
+		while (it.hasNext()) {
+			ChainInterface interf = it.next();
+			if (interf.getInterfaceArea()<area) {
+				it.remove();
+			}
+		}
+	}
+	
+	/**
 	 * Sorts the interface list descending on total interface areas assigning identifiers 
 	 * from 1 to n in that order.
 	 */

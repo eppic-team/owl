@@ -86,9 +86,11 @@ public class InterfacesFinder {
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
 	 * @param cofactorSizeToUse minimum number of atoms (non-H) for which a cofactor will be considered attached
 	 * to a polymer chain for ASA calculations, if -1 no cofactors will be used
+	 * @param minInterfAreaToKeep the minimum interface area to keep the interface, interfaces below this area 
+	 * will be discarded
 	 * @return
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse) {	
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse, double minInterfAreaToKeep) {	
 
 		// the set takes care of eliminating duplicates, comparison is based on the equals() 
 		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
@@ -96,7 +98,7 @@ public class InterfacesFinder {
 		
 		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
 		if (!nonPoly && pdb.getProtChains().size()==0) {
-			return calcAsas(set, nSpherePoints, nThreads, hetAtoms);
+			return calcAsas(set, nSpherePoints, nThreads, hetAtoms, minInterfAreaToKeep);
 		}		
 
 		// initialising the visited ArrayList for keeping track of symmetry redundancy
@@ -392,10 +394,10 @@ public class InterfacesFinder {
 			}
 		}
 		
-		return calcAsas(set, nSpherePoints, nThreads, hetAtoms);
+		return calcAsas(set, nSpherePoints, nThreads, hetAtoms, minInterfAreaToKeep);
 	}
 	
-	private ChainInterfaceList calcAsas(Set<ChainInterface> set, int nSpherePoints, int nThreads, boolean hetAtoms) {
+	private ChainInterfaceList calcAsas(Set<ChainInterface> set, int nSpherePoints, int nThreads, boolean hetAtoms, double minInterfAreaToKeep) {
 		// bsa calculation 
 		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
@@ -471,6 +473,9 @@ public class InterfacesFinder {
 		for (ChainInterface interf:set) {
 			list.addInterface(interf);
 		}
+		
+		list.removeInterfacesBelowArea(minInterfAreaToKeep);
+		
 		list.sort(); // this sorts the returned list and assigns ids to the ChainInterface members
 		return list;
 	}

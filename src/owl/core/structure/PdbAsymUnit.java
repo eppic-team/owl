@@ -1011,11 +1011,13 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	 * protein/nucleic acid polymers, if false only interfaces between protein polymer chains calculated
 	 * @param cofactorSizeToUse minimum number of atoms (non-H) for which a cofactor will be considered attached
 	 * to a polymer chain for ASA calculations, if -1 no cofactors will be used
+	 * @param minInterfAreaToKeep the minimum interface area to keep the interface, interfaces below this area 
+	 * will be discarded
 	 * @return
 	 */
-	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse)  {
+	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse, double minInterfAreaToKeep)  {
 		InterfacesFinder interfFinder = new InterfacesFinder(this);
-		return interfFinder.getAllInterfaces(cutoff, nSpherePoints, nThreads, hetAtoms, nonPoly, cofactorSizeToUse);
+		return interfFinder.getAllInterfaces(cutoff, nSpherePoints, nThreads, hetAtoms, nonPoly, cofactorSizeToUse, minInterfAreaToKeep);
 	}
 
 	/**
