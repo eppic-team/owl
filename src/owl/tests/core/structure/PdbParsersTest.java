@@ -419,7 +419,7 @@ public class PdbParsersTest {
 	}
 	
 	@Test
-	public void testPdbfileParser() throws IOException, SQLException, FileFormatException, PdbLoadException {
+	public void testPdbfileParser() throws IOException, FileFormatException, PdbLoadException {
 		
 		ArrayList<String> warnings = new ArrayList<String>();
 		// testing a list of PDB files from PDB

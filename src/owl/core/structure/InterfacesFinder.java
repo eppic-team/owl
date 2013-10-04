@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
-import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
 
@@ -286,11 +285,12 @@ public class InterfacesFinder {
 						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
 
 						Point3i trans = new Point3i(i,j,k);
-						Matrix4d m = pdb.getCrystalCell().getTransform(trans);
+						Vector3d transOrth = new Vector3d(i,j,k);
+						pdb.getCrystalCell().transfToOrthonormal(transOrth);
 						
 						for (int au=0;au<cell.getNumAsymUnits();au++) { 
-							BoundingBox bbTrans = new BoundingBox(cellBBs.get(au));							
-							bbTrans.translate(new Vector3d(m.m03,m.m13,m.m23));
+							BoundingBox bbTrans = new BoundingBox(cellBBs.get(au));
+							bbTrans.translate(transOrth);
 						
 							// short-cut strategies
 							// 1) we skip first of all if the bounding boxes of the AUs don't overlap

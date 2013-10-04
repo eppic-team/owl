@@ -884,9 +884,10 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		// in order to speed up things we translate bounds instead of resetting them
 		// so no need for recalculating them will exist after
 		if (bounds!=null || centroid!=null) {
-			Matrix4d m = getCrystalCell().getTransform(direction);
-			if (bounds!=null) this.bounds.translate(new Vector3d(m.m03,m.m13,m.m23)); 
-			if (centroid!=null) this.centroid.add(new Vector3d(m.m03,m.m13,m.m23));
+			Vector3d transOrth = new Vector3d(direction.x, direction.y, direction.z);
+			getCrystalCell().transfToOrthonormal(transOrth);			
+			if (bounds!=null) this.bounds.translate(transOrth); 
+			if (centroid!=null) this.centroid.add(transOrth);
 		}
 		
 		for (PdbChain pdb:getAllChains()) {
@@ -1321,6 +1322,34 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			}
 		}
 		return str;
+	}
+	
+	/**
+	 * Given two PDB chain codes, returns true if both are different but belong to the same group
+	 * of equivalent chains (NCS related and identical in sequence).
+	 * If either of the given PDB chain codes do not exist in this structure, false
+	 * is returned. 
+	 * If both codes are the same false is returned.
+	 * @param pdbChainCode1
+	 * @param pdbChainCode2
+	 * @return
+	 */
+	public boolean areChainsNCSRelated(String pdbChainCode1, String pdbChainCode2) {
+		
+		if (pdbChainCode1.equals(pdbChainCode2)) return false;
+		
+		if (chain2repChain==null) {
+			initialiseRepChainsMaps();
+		}
+		
+		if (chain2repChain.containsKey(pdbChainCode1) && chain2repChain.containsKey(pdbChainCode2)) {  
+			String rep1 = chain2repChain.get(pdbChainCode1);
+			String rep2 = chain2repChain.get(pdbChainCode2);
+			if (rep1.equals(rep2)) return true;
+			else return false;
+		}
+		// either of the chains are not found in this structure: return false
+		return false;
 	}
 	
 	/**

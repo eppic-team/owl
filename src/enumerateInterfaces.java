@@ -4,17 +4,21 @@ import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.AxisAngle4d;
+import javax.vecmath.Matrix3d;
+import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
 import owl.core.runners.PymolRunner;
-import owl.core.structure.Asa;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.InterfacesFinder;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbChain;
 import owl.core.structure.SpaceGroup;
+import owl.core.util.GeometryTools;
 import owl.core.util.Goodies;
+import owl.core.util.OptSuperposition;
 
 
 public class enumerateInterfaces {
@@ -26,7 +30,7 @@ public class enumerateInterfaces {
 	
 	private static final double BSATOASA_CUTOFF = 0.95;
 	private static final double MIN_ASA_FOR_SURFACE = 5;
-	private static final int CONSIDER_COFACTORS = -1; // minimum number of atoms for a cofactor to be considered, if -1 all ignored
+	private static final int CONSIDER_COFACTORS = 40; // minimum number of atoms for a cofactor to be considered, if -1 all ignored
 	
 	private static final Pattern  PDBCODE_PATTERN = Pattern.compile("^\\d\\w\\w\\w$");
 	
@@ -38,7 +42,9 @@ public class enumerateInterfaces {
 	// 5.75 gives 25 for 1pmo (right) but 26 for 1pmm (instead of 27)
 	// 5.90 gives 25 for 1pmo (right)  and 27 for 1pmm (right)
 	// Beware in any case that the new default in eppic is 5.5
-	private static final double CUTOFF = 5.9; 
+	private static final double CUTOFF = 5.5; 
+	
+	private static final int N_SPHERE_POINTS = 3000;
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
 	
@@ -172,7 +178,7 @@ public class enumerateInterfaces {
 		interfFinder.setDebug(debug);
 		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
-		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS);
+		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS);
 		long end = System.currentTimeMillis();
 		long total = (end-start)/1000;
 		System.out.println("Total time for interface calculation: "+total+"s");
@@ -198,12 +204,12 @@ public class enumerateInterfaces {
 					". Transf2: "+SpaceGroup.getAlgebraicFromMatrix(interf.getSecondTransf().getMatTransform()));
 	 		
 			int foldType = pdb.getSpaceGroup().getAxisFoldType(interf.getSecondTransf().getTransformId());
-			Vector3d axis = pdb.getSpaceGroup().getRotAxis(interf.getSecondTransf().getTransformId());
+			AxisAngle4d axisAngle = pdb.getSpaceGroup().getRotAxisAngle(interf.getSecondTransf().getTransformId());
 			
 			String screwStr = "";
 			if (interf.getSecondTransf().getTransformType().isScrew()) {
 				Vector3d screwTransl = 
-						interf.getSecondTransf().getTranslScrewComponent(pdb.getSpaceGroup().getAxisFoldType(interf.getSecondTransf().getTransformId()));
+						interf.getSecondTransf().getTranslScrewComponent();
 				screwStr = " -- "+interf.getSecondTransf().getTransformType().getShortName()+" with translation "+
 				String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
 
@@ -214,14 +220,54 @@ public class enumerateInterfaces {
 			//			String.format("(%5.2f,%5.2f,%5.2f)",screwTransl.x,screwTransl.y,screwTransl.z);
 			//}
 			
-			System.out.println(" "+foldType+"-fold on axis "+String.format("(%5.2f,%5.2f,%5.2f)",axis.x,axis.y,axis.z)+screwStr);
+			System.out.println(" "+foldType+"-fold on axis "+String.format("(%5.2f,%5.2f,%5.2f)",axisAngle.x,axisAngle.y,axisAngle.z)+screwStr);
 			
 			System.out.println("Number of contacts: "+interf.getNumContacts());
 			System.out.println("Number of contacting atoms (from both molecules): "+interf.getNumAtomsInContact());
 			System.out.println("Number of core residues at "+String.format("%4.2f", BSATOASA_CUTOFF)+
 					" bsa to asa cutoff: "+interf.getFirstRimCore().getCoreSize()+" "+interf.getSecondRimCore().getCoreSize());
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
-		
+			
+			if (pdb.areChainsNCSRelated(interf.getFirstMolecule().getPdbChainCode(), 
+										interf.getSecondMolecule().getPdbChainCode())){
+
+				System.out.println("Chains are NCS related, trying to find pseudo-symmetric relationship: ");
+				//System.out.println("Superposition matrix in orthonormal: ");
+
+				OptSuperposition os = interf.getOptimalSuperposition();
+				
+				Matrix3d optSuperposition = os.getSupMatrix();
+				System.out.printf("%5.2f %5.2f %5.2f\n%5.2f %5.2f %5.2f\n%5.2f %5.2f %5.2f\n",
+						optSuperposition.m00, optSuperposition.m01, optSuperposition.m12,
+						optSuperposition.m10, optSuperposition.m11, optSuperposition.m12,
+						optSuperposition.m20, optSuperposition.m21, optSuperposition.m22);
+				
+				Vector3d transl = os.getCentroidsTranslation();
+				System.out.printf("translation: (%5.2f, %5.2f, %5.2f)\n",transl.x,transl.y,transl.z);
+				Vector3d translXtal = new Vector3d(transl);
+				pdb.getCrystalCell().transfToCrystal(translXtal);
+				System.out.printf("translation (xtal): (%5.2f, %5.2f, %5.2f)\n",translXtal.x,translXtal.y,translXtal.z);
+								
+				System.out.printf("rmsd: %7.4f\n",os.getRmsd());
+
+				double trace = optSuperposition.m00+optSuperposition.m11+optSuperposition.m22; 
+				System.out.printf("Trace: %5.2f\n",trace);
+
+				AxisAngle4d angleAndAxis = GeometryTools.getRotAxisAndAngle(optSuperposition);
+				System.out.printf("Angle: %5.2f (%6.2f deg)\n",angleAndAxis.angle,angleAndAxis.angle*180.0/Math.PI);
+				System.out.printf("Axis: %5.2f, %5.2f, %5.2f \n",angleAndAxis.x,angleAndAxis.y,angleAndAxis.z);
+
+				Matrix4d optSuperPosWithTransl = os.getTransformMatrix();
+				
+				Matrix4d optSuperPosWithTranslXtal = pdb.getCrystalCell().transfToCrystal(optSuperPosWithTransl);
+				
+				Vector3d screwComp = GeometryTools.getTranslScrewComponent(optSuperPosWithTranslXtal);
+				System.out.printf("screw comp: (%5.2f, %5.2f, %5.2f)\n",screwComp.x,screwComp.y,screwComp.z);
+			}
+			
+			
+			
+			
 			if (writeDir!=null) {
 				File pdbFile = new File(writeDir,outBaseName+"."+(i+1)+".interface.pdb");
 				interf.writeToPdbFile(pdbFile, true, false);

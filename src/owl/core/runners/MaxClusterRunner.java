@@ -78,6 +78,7 @@ public class MaxClusterRunner {
 	
 	/**
 	 * Compares two pdb files and returns the GDT-TS/RMSD score.
+	 * Uses maxcluster's sequence independent mode (option -in)
 	 * @param prediction
 	 * @param experiment
 	 * @param scoreType
@@ -104,6 +105,34 @@ public class MaxClusterRunner {
 		return score;
 	}
 
+	/**
+	 * Compares two pdb files and returns the GDT-TS/RMSD score.
+	 * Runs in default maxcluster (sequence dependent) mode (i.e. no option -in)
+	 * @param prediction
+	 * @param experiment
+	 * @param scoreType
+	 * @return the gdt/rmsd score or -1 if something went wrong
+	 */
+	public double calculatePairwiseScoreSeqDependent(String prediction, String experiment, ScoreType scoreType) throws IOException {
+		double score = -1;
+		String scoreTypeStr = "";
+		if (scoreType==ScoreType.GDT) scoreTypeStr = "gdt";
+		if (scoreType==ScoreType.RMSD) scoreTypeStr = "rmsd";
+		String cmdLine = String.format("%s %s %s -%s", maxClusterExecutable, prediction, experiment, scoreTypeStr);
+		//System.out.println(cmdLine);	// DEBUG
+		Process maxClusterProcess = Runtime.getRuntime().exec(cmdLine);
+		BufferedReader maxClusterOutput = new BufferedReader(new InputStreamReader(maxClusterProcess.getInputStream()));
+		String line;
+		Pattern p = Pattern.compile("^(GDT|RMSD)=\\s*(\\d+\\.\\d+).*");
+		while((line = maxClusterOutput.readLine()) != null) {
+			Matcher m = p.matcher(line);
+			if(m.matches()) {
+				score = Double.parseDouble(m.group(2));
+			}
+		}
+		//System.out.println("SCORE="+score); // DEBUG
+		return score;
+	}
 	
 	/**
 	 * Compares all files from a predictionList with experiment file returning an ArrayList of scores

@@ -24,6 +24,7 @@ import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
+import javax.vecmath.Tuple3d;
 import javax.vecmath.Vector3d;
 
 import owl.core.sequence.Sequence;
@@ -43,17 +44,14 @@ import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.BoundingBox;
 import owl.core.util.FileFormatException;
+import owl.core.util.GeometryTools;
 import owl.core.util.Grid;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
 import owl.core.util.MySQLConnection;
-
 import edu.uci.ics.jung.graph.util.EdgeType;
 import edu.uci.ics.jung.graph.util.Pair;
-
 import Jama.Matrix;
-import Jama.SingularValueDecomposition;
-
 
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -286,6 +284,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @param intervSet only residues of this intervals will be considered, if null then
 	 * all residues taken
 	 * @return
+	 * @throws IllegalArgumentException if any residue in the given intervals is unobserved
 	 */
 	private TreeMap<Integer, AaResidue> getReducedResidues(String ct, IntervalSet intervSet) {
 		TreeMap<Integer,AaResidue> reducedResidues = new TreeMap<Integer, AaResidue>();
@@ -2129,34 +2128,36 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	/**
 	 * Calculates rmsd (on atoms given by ct) of this PdbChain object to otherPdb object
 	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
+	 * The coordinates of both structures are not modified.
 	 * 
 	 * @param otherPdb
-	 * @param ct the contact type (crossed contact types don't make sense here)
+	 * @param ct the contact type, e.g. Ca, Cb, ALL 
 	 * @return
-	 * @throws ConformationsNotSameSizeException
 	 */
-	public double rmsd(PdbChain otherPdb, String ct) throws ConformationsNotSameSizeException {
+	public double rmsd(PdbChain otherPdb, String ct) {
 		return rmsd(otherPdb, ct, null);
 	}
 	
 	/**
-	 * Calculates rmsd (on atoms of given by contact type ct) of this PdbChain object to otherPdb object
+	 * Calculates rmsd (on atoms given by contact type ct) of this PdbChain object to otherPdb object
 	 * restricted to the given set of intervals
-	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms)
+	 * Both objects must represent structures with same sequence (save unobserved residues or missing atoms),
+	 * since the residue serials are used to match atoms from both sides.
+	 * The coordinates of the structures are not modified.
 	 * 
 	 * @param otherPdb
-	 * @param ct the contact type (crossed contact types don't make sense here)
+	 * @param ct the contact type, e.g. Ca, Cb, ALL 
 	 * @param intervSet an interval set of residues for which the rmsd will be calculated, if 
 	 * null then all residues will be considered
 	 * @return
-	 * @throws ConformationsNotSameSizeException
+	 * @throws IllegalArgumentException if any residue in the given intervals is unobserved
 	 */
-	public double rmsd(PdbChain otherPdb, String ct, IntervalSet intervSet) throws ConformationsNotSameSizeException {
+	public double rmsd(PdbChain otherPdb, String ct, IntervalSet intervSet) {
 		TreeMap<Integer, AaResidue> thisResidues = this.getReducedResidues(ct,intervSet);
 		TreeMap<Integer, AaResidue> otherResidues = otherPdb.getReducedResidues(ct,intervSet);
 
-		ArrayList<Vector3d> conf1AL = new ArrayList<Vector3d>();
-		ArrayList<Vector3d> conf2AL = new ArrayList<Vector3d>();	
+		ArrayList<Tuple3d> conf1AL = new ArrayList<Tuple3d>();
+		ArrayList<Tuple3d> conf2AL = new ArrayList<Tuple3d>();	
 		// there might be unobserved residues or some missing atoms for a residue
 		// here we get the ones that are in common
 		for (int resser:thisResidues.keySet()) {
@@ -2165,140 +2166,25 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				AaResidue otherRes = otherResidues.get(resser);
 				for (Atom atom:thisRes.getAtoms()) {
 					if (otherRes.containsAtom(atom.getCode())) {
-						conf1AL.add(new Vector3d(atom.getCoords()));
-						conf2AL.add(new Vector3d(otherRes.getAtom(atom.getCode()).getCoords()));
+						// we don't copy the coordinates but pass the exact same coord references
+						// rmsd calculation later takes care of copying them (if transform=false specified)
+						conf1AL.add(atom.getCoords());
+						conf2AL.add(otherRes.getAtom(atom.getCode()).getCoords());
 					}
 				}
 			}
 		}
 
 		// converting the ArrayLists to arrays
-		Vector3d[] conformation1 = new Vector3d[conf1AL.size()]; 
-		Vector3d[] conformation2 = new Vector3d[conf2AL.size()];
+		Tuple3d[] conformation1 = new Tuple3d[conf1AL.size()]; 
+		Tuple3d[] conformation2 = new Tuple3d[conf2AL.size()];
 		conf1AL.toArray(conformation1);
 		conf2AL.toArray(conformation2);
 		
-		// this as well as calculating the rmsd, changes conformation1 and conformation2 to be optimally superposed
-		double rmsd = calculate_rmsd(conformation1, conformation2);
-
-//		// printing out individual distances (conformation1 and conformation2 are now optimally superposed)
-//		for (i=0;i<conformation1.length;i++){
-//		Point3d point1 = new Point3d(conformation1[i].x,conformation1[i].y,conformation1[i].z);
-//		Point3d point2 = new Point3d(conformation2[i].x,conformation2[i].y,conformation2[i].z);
-//		System.out.println(point1.distance(point2));
-//		}
+		double rmsd = GeometryTools.calcOptimalSuperposition(conformation1, conformation2, false).getRmsd();
 
 		return rmsd;
 
-	}
-
-	/**
-	 * Calculates the RMSD between two conformations.      
-	 * conformation1: Vector3d array (matrix of dimensions [N,3])       
-	 * conformation2: Vector3d array (matrix of dimensions [N,3]) 
-	 * 
-	 * Both conformation1 and conformation2 are modified to be optimally superposed
-	 * 
-	 * Implementation taken (python) from http://bosco.infogami.com/Root_Mean_Square_Deviation, 
-	 * then ported to java using Jama matrix package 
-	 * (page has moved to: http://boscoh.com/protein/rmsd-root-mean-square-deviation)                
-	 * @param conformation1
-	 * @param conformation2
-	 * @return
-	 * @throws ConformationsNotSameSizeException
-	 */
-	public static double calculate_rmsd(Vector3d[] conformation1, Vector3d[] conformation2) throws ConformationsNotSameSizeException{
-		if (conformation1.length!=conformation2.length) {
-			//System.err.println("Conformations not the same size");
-			throw new ConformationsNotSameSizeException(
-					"Given conformations have different size: conformation1: "+conformation1.length+", conformation2: "+conformation2.length);
-		}
-		int n_vec = conformation1.length;
-
-		// 1st we bring both conformations to the same centre by subtracting their respectives centres
-		Vector3d center1 = new Vector3d();
-		Vector3d center2 = new Vector3d();
-		for (int i=0;i<n_vec;i++){ // summing all vectors in each conformation
-			center1.add(conformation1[i]);
-			center2.add(conformation2[i]);
-		}
-		// dividing by n_vec (average)
-		center1.scale((double)1/n_vec);
-		center2.scale((double)1/n_vec);
-		// translating our conformations to the same coordinate system by subtracting centers
-		for (Vector3d vec:conformation1){
-			vec.sub(center1);
-		}
-		for (Vector3d vec:conformation2){
-			vec.sub(center2);
-		}
-
-		//E0: initial sum of squared lengths of both conformations
-		double sum1 = 0.0;
-		double sum2 = 0.0;
-		for (int i=0;i<n_vec;i++){
-			sum1 += conformation1[i].lengthSquared();
-			sum2 += conformation2[i].lengthSquared();
-		}
-		double E0 = sum1 + sum2;
-
-		// singular value decomposition
-		Matrix vecs1 = vector3dAr2matrix(conformation1);
-		Matrix vecs2 = vector3dAr2matrix(conformation2);
-
-		Matrix correlation_matrix = vecs2.transpose().times(vecs1); //gives a 3x3 matrix
-
-		SingularValueDecomposition svd = correlation_matrix.svd();
-		Matrix U = svd.getU();
-		Matrix V_trans = svd.getV().transpose(); 
-		double[] singularValues = svd.getSingularValues();
-
-		boolean is_reflection = false;
-		if (U.det()*V_trans.det()<0.0){ 
-			is_reflection = true;
-		}
-		if (is_reflection){
-			// reflect along smallest principal axis:
-			// we change sign of last coordinate (smallest singular value)
-			singularValues[singularValues.length-1]=(-1)*singularValues[singularValues.length-1];  			
-		}
-
-		// getting sum of singular values
-		double sumSV = 0.0;
-		for (int i=0;i<singularValues.length;i++){
-			sumSV += singularValues[i];
-		}
-
-		// rmsd square: Kabsch formula
-		double rmsd_sq = (E0 - 2.0*sumSV)/((double) n_vec);
-		rmsd_sq = Math.max(rmsd_sq, 0.0);
-
-		// finally we modify conformation2 to be aligned to conformation1
-		if (is_reflection) { // first we check if we are in is_reflection case: we need to change sign to last row of U
-			for (int j=0;j<U.getColumnDimension();j++){
-				// we change sign to last row of U
-				int lastRow = U.getRowDimension()-1;
-				U.set(lastRow, j, (-1)*U.get(lastRow,j));
-			}
-		}
-		Matrix optimal_rotation = U.times(V_trans); 
-		Matrix conf2 = vecs2.times(optimal_rotation);
-		for (int i=0;i<n_vec;i++){
-			conformation2[i].x = conf2.get(i,0);
-			conformation2[i].y = conf2.get(i,1);
-			conformation2[i].z = conf2.get(i,2);
-		}
-
-		return Math.sqrt(rmsd_sq);
-	}
-
-	/** Gets a Jama.Matrix object from a Vector3d[] (deep copies) */
-	private static Matrix vector3dAr2matrix(Vector3d[] vecArray) {
-		double[][] array = new double[vecArray.length][3];
-		for (int i=0;i<vecArray.length;i++){
-			vecArray[i].get(array[i]);
-		}
-		return new Matrix(array);
 	}
 
 	/**
@@ -2847,36 +2733,17 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * @param direction
 	 */
 	public void doCrystalTranslation(Point3i direction) {
-		Matrix4d m = parent.getCrystalCell().getTransform(direction);
+		Vector3d transOrth = new Vector3d(direction.x, direction.y, direction.z);
+		parent.getCrystalCell().transfToOrthonormal(transOrth);		
 		if (bounds!=null) {
-			bounds.translate(new Vector3d(m.m03,m.m13,m.m23));
+			bounds.translate(transOrth);
 		}
 		for (Residue residue:this) {
 			for (Atom atom:residue) {
 				Point3d coords = atom.getCoords();
-				m.transform(coords);
+				coords.add(transOrth);
 			}
 		}
-	}
-	
-	/**
-	 * Returns an integer triplet indicating the crystal coordinates of this PdbChain with respect to the given one.
-	 * e.g. if given PdbChain is a translation of this to adjacent cell (-1,0,0) then the triplet (-1,0,0) is returned  
-	 * @param pdb
-	 * @return
-	 */
-	public Point3i getCrystalSeparation(PdbChain pdb) {
-		Point3d thisCoM  = this.getCentroid();
-		Point3d otherCoM = pdb.getCentroid();
-		parent.getCrystalCell().transfToCrystal(thisCoM);
-		parent.getCrystalCell().transfToCrystal(otherCoM);
-		double asep = otherCoM.x-thisCoM.x;
-		double bsep = otherCoM.y-thisCoM.y;
-		double csep = otherCoM.z-thisCoM.z;
-		//System.out.printf("a: %5.2f ",asep);
-		//System.out.printf("b: %5.2f ",bsep);
-		//System.out.printf("c: %5.2f \n",csep);
-		return new Point3i((int)asep, (int)bsep, (int)csep);
 	}
 	
 	/**

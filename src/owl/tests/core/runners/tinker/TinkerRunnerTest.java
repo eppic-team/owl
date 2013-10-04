@@ -18,7 +18,6 @@ import org.junit.runner.JUnitCore;
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.Atom;
-import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
@@ -65,7 +64,7 @@ public class TinkerRunnerTest {
 	}
 	
 	@Test
-	public void testReconstruct() throws SQLException, PdbCodeNotFoundException, PdbLoadException, TinkerError, IOException, ConformationsNotSameSizeException, FileFormatException {
+	public void testReconstruct() throws SQLException, PdbCodeNotFoundException, PdbLoadException, TinkerError, IOException, FileFormatException {
 		MySQLConnection conn = new MySQLConnection();
 		PdbAsymUnit fullpdb = new PdbAsymUnit(PDB_CODE,conn,PDBASE_DB);
 		PdbChain pdb = fullpdb.getChain(CHAIN);

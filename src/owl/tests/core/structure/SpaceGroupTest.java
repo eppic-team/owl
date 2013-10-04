@@ -3,13 +3,14 @@ package owl.tests.core.structure;
 
 import java.util.Collection;
 
+import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
+
 //import junit.framework.Assert;
 import org.junit.Assert;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -17,7 +18,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import Jama.Matrix;
-
 import owl.core.structure.CrystalCell;
 import owl.core.structure.CrystalTransform;
 import owl.core.structure.SpaceGroup;
@@ -178,58 +178,59 @@ public class SpaceGroupTest {
 
 				int foldType = spaceGroup.getAxisFoldType(i);
 				Matrix3d W = new Matrix3d(m.m00,m.m01,m.m02,m.m10,m.m11,m.m12,m.m20,m.m21,m.m22);
+				AxisAngle4d axisAngle = spaceGroup.getRotAxisAngle(i);
 				if (W.determinant()>0) { // i.e. 1	
 					switch (foldType) {
 					case 1:
-						Assert.assertEquals(0, spaceGroup.getRotAngle(i), DELTA);
+						Assert.assertEquals(0, axisAngle.angle, DELTA);
 						break;
 					case 2:
-						Assert.assertEquals(Math.PI, spaceGroup.getRotAngle(i), DELTA);
+						Assert.assertEquals(Math.PI, axisAngle.angle, DELTA);
 						break;
 					case 3:
-						Assert.assertEquals(2.0*Math.PI/3.0, spaceGroup.getRotAngle(i), DELTA);
+						Assert.assertEquals(2.0*Math.PI/3.0, axisAngle.angle, DELTA);
 						break;						
 					case 4:
-						Assert.assertEquals(Math.PI/2.0, spaceGroup.getRotAngle(i), DELTA);
+						Assert.assertEquals(Math.PI/2.0, axisAngle.angle, DELTA);
 						break;
 					case 6:
-						Assert.assertEquals(Math.PI/3.0, spaceGroup.getRotAngle(i), DELTA);
+						Assert.assertEquals(Math.PI/3.0, axisAngle.angle, DELTA);
 						break;						
 					}
 					
 				} else { // i.e. determinant -1
 					switch (foldType) {
 					case -1:
-						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
+						Assert.assertEquals(0,axisAngle.angle,DELTA);
 						// no glide planes
-						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent().epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -2:
-						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
+						Assert.assertEquals(0,axisAngle.angle,DELTA);
 						// glide planes can happen
 						break;
 					case -3:
-						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
+						Assert.assertEquals(0,axisAngle.angle,DELTA);
 						// no glide planes
-						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent().epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -4:
-						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
+						Assert.assertEquals(0,axisAngle.angle,DELTA);
 						// no glide planes
-						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent().epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 					case -6:
-						Assert.assertEquals(0,spaceGroup.getRotAngle(i),DELTA);
+						Assert.assertEquals(0,axisAngle.angle,DELTA);
 						// no glide planes
-						Assert.assertTrue(ct.getTranslScrewComponent(foldType).epsilonEquals(new Vector3d(0,0,0), DELTA));
+						Assert.assertTrue(ct.getTranslScrewComponent().epsilonEquals(new Vector3d(0,0,0), DELTA));
 						break;
 
 					}
 					
 				}
-				
-				Vector3d axis = spaceGroup.getRotAxis(i);
-				Vector3d translScrewComponent = ct.getTranslScrewComponent(foldType);
+								
+				Vector3d axis = new Vector3d(axisAngle.x, axisAngle.y, axisAngle.z);
+				Vector3d translScrewComponent = ct.getTranslScrewComponent();
 
 				// if both non-0, then both have to be on the same direction (with perhaps different sense)
 				if (!axis.epsilonEquals(new Vector3d(0,0,0), DELTA) && 

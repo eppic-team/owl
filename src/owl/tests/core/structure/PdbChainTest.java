@@ -3,9 +3,10 @@ package owl.tests.core.structure;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Properties;
@@ -13,12 +14,14 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.Point3d;
 import javax.vecmath.Point3i;
+import javax.vecmath.Tuple3d;
 import javax.vecmath.Vector3d;
+
 
 //import junit.framework.Assert;
 import org.junit.Assert;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -31,10 +34,8 @@ import owl.core.runners.NaccessRunner;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.Atom;
-import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.Residue;
 import owl.core.structure.AaResidue;
@@ -45,13 +46,12 @@ import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
+import owl.core.util.GeometryTools;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
-import owl.core.util.MySQLConnection;
+import owl.core.util.OptSuperposition;
 import owl.core.util.RegexFileFilter;
 import owl.tests.TestsSetup;
-
-
 import edu.uci.ics.jung.graph.util.Pair;
 
 
@@ -70,13 +70,12 @@ public class PdbChainTest {
 	private static final String TEST_CHAIN_2 = "B";
 	private static final String NACCESS_OUTPUT_REF = TESTDATADIR+"/1tdrA.rsa";
 	private static final String TESTSET10_LIST = TESTDATADIR+"/testset10.list";
+	private static final String TESTSETRMSD_LIST = TESTDATADIR+"/testset_rmsd.list";
 	
 	private static final String TEST_PDB_3 = "12as";
 	private static final String TEST_CHAIN_3 = "A";
 	private static final String TEST_PDB_4 = "12as";
 	private static final String TEST_CHAIN_4 = "B";
-
-	private static final String PDBASE_DB = "pdbase";
 
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors(); // number of threads for ASA calculation
 	
@@ -130,7 +129,7 @@ public class PdbChainTest {
 	}
 	
 	@Test
-	public void testASAcalcVsNaccess() throws IOException, PdbLoadException, SQLException {
+	public void testASAcalcVsNaccess() throws IOException, PdbLoadException, FileFormatException {
 		
 		System.out.println("Using "+NTHREADS+" CPUs for ASA calculations");
 		System.out.println("Matching of our ASA values against NACCESS's. Areas with disagreement >20% reported");
@@ -143,28 +142,23 @@ public class PdbChainTest {
 
 			PdbChain theirs = null;
 			PdbChain ours = null;
-			try {				
-				PdbAsymUnit theirsFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
-				theirs = theirsFull.getChain(pdbChainCode);
-				// note we run nacccess with -h to also include the het residues
-				NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC),"-h");
-				naccRunner.runNaccess(theirs);
+			
 
-				PdbAsymUnit oursFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
-				ours = oursFull.getChain(pdbChainCode);
-				long start = System.currentTimeMillis();
-				ours.calcASAs(960, NTHREADS, true);
-				long end = System.currentTimeMillis();
-				System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
+			PdbAsymUnit theirsFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
+			theirs = theirsFull.getChain(pdbChainCode);
+			// note we run nacccess with -h to also include the het residues
+			NaccessRunner naccRunner = new NaccessRunner(new File(NACCESS_EXEC),"-h");
+			naccRunner.runNaccess(theirs);
+
+			PdbAsymUnit oursFull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
+			ours = oursFull.getChain(pdbChainCode);
+			long start = System.currentTimeMillis();
+			ours.calcASAs(960, NTHREADS, true);
+			long end = System.currentTimeMillis();
+			System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 
 
-			} catch (IOException e) {
-				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
-				continue;
-			} catch (FileFormatException e) {
-				System.err.println("Could not find pdb code "+pdbCode+". Error: "+e.getMessage());
-				continue;				
-			}
+			
 			checkASAsMatch(theirs, ours, 0.20, 0.11);
 			
 		}
@@ -267,7 +261,8 @@ public class PdbChainTest {
 	}
 	
 	@Test
-	public void testRmsd() throws PdbLoadException, ConformationsNotSameSizeException, IOException, FileFormatException {
+	public void testRmsd() throws PdbLoadException, IOException, FileFormatException {
+		
 		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
 		PdbChain pdb1 = fullpdb.getChain(TEST_CHAIN_1);
 
@@ -293,15 +288,157 @@ public class PdbChainTest {
 		}
 
 		MaxClusterRunner mcr = new MaxClusterRunner(MAX_CLUSTER_EXEC);
-		double mcrmsd = mcr.calculatePairwiseScore(TEST_PDB_FILE_1, TEST_PDB_FILE_2, MaxClusterRunner.ScoreType.RMSD);
+		double mcrmsd = mcr.calculatePairwiseScoreSeqDependent(TEST_PDB_FILE_1, TEST_PDB_FILE_2, MaxClusterRunner.ScoreType.RMSD);
 		double ourrmsd = pdb1.rmsd(pdb2, "Ca");
 		Assert.assertEquals(mcrmsd, ourrmsd, 0.001);
 		ourrmsd = pdb2.rmsd(pdb1, "Ca");
 		Assert.assertEquals(mcrmsd, ourrmsd, 0.001);
+		
+		
+		// a more exhaustive test on a few test entries
+		
+		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSETRMSD_LIST));
+		
+		for (String pdbId:pdbIds) {
+			
+			PdbAsymUnit pdbi = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbId.substring(0,4)+".cif.gz")));
+			PdbAsymUnit pdbip = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbId.substring(0,4)+".cif.gz")));
+		
+			// first we write pdb files for every chain
+			ArrayList<File> pdbFiles = new ArrayList<File>();
+			for (PdbChain pdbChaini:pdbi.getPolyChains()) {
+				
+				File pdbFile = File.createTempFile("rmsdtest_"+pdbi.getPdbCode()+pdbChaini.getPdbChainCode()+"_",".pdb");
+				pdbFile.deleteOnExit();
+				pdbChaini.writeToPDBFileWithPdbChainCodes(pdbFile, false); 
+				pdbFiles.add(pdbFile);
+			}	
+			
+		
+			int i = 0;
+			for (PdbChain pdbChaini:pdbi.getPolyChains()) {
+				
+				PdbChain pdbpChaini = pdbip.getChain(pdbChaini.getPdbChainCode());
+				
+				for (String ct:cts) {
+					Assert.assertEquals(0.0,pdbChaini.rmsd(pdbpChaini, ct),0.0001);
+					Assert.assertEquals(0.0,pdbpChaini.rmsd(pdbChaini, ct),0.0001);			
+				}
+				
+				// rmsd on intervals check
+				intervSet = new IntervalSet();
+				intervSet.add(new Interval(pdbChaini.getFirstResidue().getSerial()+10,
+						pdbChaini.getLastResidue().getSerial()-10));
+				// check that rmsd is 0 on an interval
+				try {
+					for (String ct:cts) {
+						Assert.assertEquals(0.0,pdbChaini.rmsd(pdbpChaini, ct, intervSet),0.0001);
+						Assert.assertEquals(0.0,pdbpChaini.rmsd(pdbChaini, ct, intervSet),0.0001);			
+					}
+				} catch (IllegalArgumentException e) {
+					// whenever a residue from the interval is unobserved, rmsd throws an IllegalArgumentException
+				}
+
+				i++;
+				int j = 0;
+				for (PdbChain pdbChainj:pdbi.getPolyChains()) {
+					
+					if (!pdbi.areChainsNCSRelated(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
+						j++;
+						continue;						
+					}
+						
+					// in order to make sure that the rmsd call is not altering the coordinates we copy here and compare in the end
+					PdbChain newPdbChaini = pdbChaini.copy(null);
+					PdbChain newPdbChainj = pdbChainj.copy(null);
+					
+					mcrmsd = mcr.calculatePairwiseScoreSeqDependent(pdbFiles.get(i-1).getAbsolutePath(), pdbFiles.get(j).getAbsolutePath(), MaxClusterRunner.ScoreType.RMSD);
+					ourrmsd = pdbChaini.rmsd(pdbChainj, "Ca");
+					System.out.println(pdbi.getPdbCode()+": "+pdbChaini.getPdbChainCode()+" vs "+pdbChainj.getPdbChainCode()+": "
+							+String.format("%.3f", ourrmsd)+" (ours) "+String.format("%.3f", mcrmsd)+" (maxcluster)" );
+					
+					Assert.assertEquals(mcrmsd, ourrmsd, 0.001);
+					ourrmsd = pdbChainj.rmsd(pdbChaini, "Ca");
+					Assert.assertEquals(mcrmsd, ourrmsd, 0.001);
+					
+					// finally checking that the rmsd call didn't alter the coordinates
+					Assert.assertEquals(0.0,pdbChaini.rmsd(newPdbChaini, "Ca"),0.000001);
+					Assert.assertEquals(0.0,pdbChainj.rmsd(newPdbChainj, "Ca"),0.000001);
+					
+					j++;
+				}
+			}
+			
+			
+			// test for rmsd call with transform=true
+			i = 0;
+			for (PdbChain pdbChaini:pdbi.getPolyChains()) {
+
+				i++;
+				
+				// when transforming the coordinates we can't use a chain twice (because the coordinates are altered)				
+				if (i>1) continue;
+				// In any case beware this test fails if the i chain is first used with n atoms and then later used 
+				// again with m (>n) atoms. The left-over m-n atoms had not been transformed and the rmsd will not coincide
+				// since n atoms will be in the transformed positions and m-n will be in their original positions
+				// e.g. this happens for 4fc4
+								
+				int j = 0;
+				for (PdbChain pdbChainj:pdbi.getPolyChains()) {
+					
+					if (!pdbi.areChainsNCSRelated(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
+						j++;
+						continue;						
+					}					
+					
+					ArrayList<Tuple3d> conf1AL = new ArrayList<Tuple3d>();
+					ArrayList<Tuple3d> conf2AL = new ArrayList<Tuple3d>();	
+					// there might be unobserved residues or some missing atoms for a residue
+					// here we get the ones that are in common
+					for (int iresser:pdbChaini.getAllResSerials()) {
+						Residue iRes = pdbChaini.getResidue(iresser);
+						if (!(iRes instanceof AaResidue)) continue;
+						if (pdbChainj.containsResidue(iresser)) { 
+							Residue jRes = pdbChainj.getResidue(iresser);
+							if (!(jRes instanceof AaResidue)) continue;
+							if (iRes.containsAtom("CA") && jRes.containsAtom("CA")) {
+								conf1AL.add(iRes.getAtom("CA").getCoords());
+								conf2AL.add(jRes.getAtom("CA").getCoords());
+							}
+						}
+					}
+
+					// converting the ArrayLists to arrays
+					Tuple3d[] conformation1 = new Tuple3d[conf1AL.size()]; 
+					Tuple3d[] conformation2 = new Tuple3d[conf2AL.size()];
+					conf1AL.toArray(conformation1);
+					conf2AL.toArray(conformation2);
+					
+					System.out.println("rmsd with transform for "+pdbChaini.getPdbChainCode()+" vs "+pdbChainj.getPdbChainCode()+" on "+conformation1.length+" common CA atoms");
+					
+					OptSuperposition os = GeometryTools.calcOptimalSuperposition(conformation1, conformation2, true);
+					double rmsd = os.getRmsd();
+
+					mcrmsd = mcr.calculatePairwiseScoreSeqDependent(pdbFiles.get(i-1).getAbsolutePath(), pdbFiles.get(j).getAbsolutePath(), MaxClusterRunner.ScoreType.RMSD);
+					
+					Assert.assertEquals(mcrmsd, rmsd, 0.001);
+					
+					// finally checking that the rmsd call did alter the coordinates
+					Point3d icentroid = GeometryTools.getCentroid(conformation1);
+					Point3d jcentroid = GeometryTools.getCentroid(conformation2);
+					
+					Assert.assertTrue(icentroid.epsilonEquals(jcentroid, 0.00001));
+					
+					Assert.assertEquals(rmsd, GeometryTools.getCoordinatesRmsd(conformation1, conformation2),0.00001);
+
+					j++;
+				}
+			}
+		}
 	}
 	
 	@Test
-	public void testGetGraph() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadException, FileFormatException {
+	public void testGetGraph() throws IOException, PdbLoadException, FileFormatException {
 		// NOTE: to test we compare to previously calculated graphs with an older version of our software
 		//		In principle edges should coincide 100%. However there can be rounding problems that make one
 		//		version consider a border-case to be an edge or not. Indeed I've seen there is a difference 
@@ -329,13 +466,13 @@ public class PdbChainTest {
 		}
 		
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
-		MySQLConnection conn = new MySQLConnection();
+
 		for (String pdbId:pdbIds) {
 			System.out.print(pdbId+"\t");
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
 
-			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+			PdbAsymUnit fullpdb = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz")));
 			PdbChain pdb = fullpdb.getChain(pdbChainCode);
 			//System.out.println(pdb.get_length());
 			
@@ -399,7 +536,7 @@ public class PdbChainTest {
 	}
 	
 	@Test
-	public void testConstructors() throws PdbLoadException, ConformationsNotSameSizeException, IOException, FileFormatException {
+	public void testConstructors() throws PdbLoadException, IOException, FileFormatException {
 		PdbAsymUnit fullpdb = new PdbAsymUnit(new File(TEST_PDB_FILE_1));
 		PdbChain pdb = fullpdb.getChain(TEST_CHAIN_1);
 		Vector3d[] conformation = new Vector3d[pdb.getObsLength()];
@@ -437,16 +574,14 @@ public class PdbChainTest {
 	}
 	
 	@Test
-	public void testGetDiffDistMap () throws SQLException, PdbCodeNotFoundException, PdbLoadException, AlignmentConstructionException {
-		
-		MySQLConnection conn = new MySQLConnection();
+	public void testGetDiffDistMap () throws PdbLoadException, AlignmentConstructionException, FileNotFoundException, IOException, FileFormatException {
 		
 		System.out.println("Loading pdb objects...");
-		PdbAsymUnit pdbfull1 = new PdbAsymUnit(TEST_PDB_3,conn,PDBASE_DB);
+		PdbAsymUnit pdbfull1 = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,TEST_PDB_3+".cif.gz")));
 		PdbChain pdb1 = pdbfull1.getChain(TEST_CHAIN_3);
 		Assert.assertNotNull(pdb1);
-		PdbAsymUnit pdbfull2 = new PdbAsymUnit(TEST_PDB_4,conn,PDBASE_DB);
-		PdbChain pdb2 = pdbfull2.getChain(TEST_CHAIN_4);
+		PdbAsymUnit pdbfull2 = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,TEST_PDB_4+".cif.gz")));
+		PdbChain pdb2 = pdbfull2.getChain(TEST_CHAIN_4); 
 
 		Assert.assertNotNull(pdb2);
 		
@@ -510,15 +645,15 @@ public class PdbChainTest {
 	}
 	
 	@Test
-	public void testGetAllPhiPsi() throws IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public void testGetAllPhiPsi() throws IOException, PdbLoadException, FileFormatException {
 		String[] pdbIds = TemplateList.readIdsListFile(new File(TESTSET10_LIST));
-		MySQLConnection conn = new MySQLConnection();
+
 		for (String pdbId:pdbIds) {
 			System.out.print(pdbId+"\t");
 			String pdbCode = pdbId.substring(0,4);
 			String pdbChainCode = pdbId.substring(4,5);
 
-			PdbAsymUnit pdbfull = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
+			PdbAsymUnit pdbfull = new PdbAsymUnit(TestsSetup.unzipFile(new File(CIFDIR,pdbCode+".cif.gz"))); 
 			PdbChain pdb = pdbfull.getChain(pdbChainCode);
 
 			TreeMap<Integer,double[]> phipsi = pdb.getAllPhiPsi();
@@ -533,8 +668,8 @@ public class PdbChainTest {
 	public static void main(String[] args) throws Exception {
 		PdbChainTest pdbTest = new PdbChainTest();
 		setUpBeforeClass();
-		pdbTest.testRunDssp();
-		//pdbTest.testRmsd();
+		//pdbTest.testRunDssp();
+		pdbTest.testRmsd();
 		//pdbTest.testRunNaccess();
 		//pdbTest.testASAcalcVsNaccess();
 	}

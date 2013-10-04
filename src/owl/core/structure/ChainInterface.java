@@ -5,13 +5,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Tuple3d;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
+import owl.core.util.GeometryTools;
+import owl.core.util.OptSuperposition;
 
 public class ChainInterface implements Comparable<ChainInterface>, Serializable {
 	
@@ -699,4 +703,76 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	public boolean isSymRelated() {
 		return (getFirstMolecule().getPdbChainCode().equals(getSecondMolecule().getPdbChainCode()));
 	}
+	
+	/**
+	 * Calculates the optimal superposition between the 2 chains of this interface based on 
+	 * the (common) CA atoms only. The common CA atoms are takend from matching residue serials, 
+	 * thus the 2 chains must correspond to the same sequence.
+	 * @return
+	 */
+	public OptSuperposition getOptimalSuperposition() {
+		Tuple3d[][] conformations = getCommonCAConformations();
+		Tuple3d[] conformation1 = conformations[0];
+		Tuple3d[] conformation2 = conformations[1];
+
+		return GeometryTools.calcOptimalSuperposition(conformation1, conformation2, false);
+	}
+	
+	/**
+	 * Returns an array of size 2xn with the 2 conformations of n vectors of CA coordinates
+	 * from both chains that are observed in both chains.
+	 * The residue serials are used to match the residues from both sides, thus the 2 chains must
+	 * correspond to same sequence (even if with different observed residues, i.e. NCS related)
+	 * @return
+	 */
+	private Tuple3d[][] getCommonCAConformations() {
+		 
+		PdbChain shorterChain = null;
+		PdbChain longerChain = null;
+		boolean isFirstShorter = false;
+		if (firstMolecule.getObsLength() < secondMolecule.getObsLength()) {
+			shorterChain = this.firstMolecule;
+			longerChain = this.secondMolecule;
+			isFirstShorter = true;
+		} else { // both equal or second shortest
+			shorterChain = this.secondMolecule;
+			longerChain = this.firstMolecule;
+			isFirstShorter = false;
+		}
+		
+		// we initialise the AL to the shorter chain length, that's the maximum size it can have
+		ArrayList<Tuple3d> conf1AL = new ArrayList<Tuple3d>(shorterChain.getObsLength()); 
+		ArrayList<Tuple3d> conf2AL = new ArrayList<Tuple3d>(shorterChain.getObsLength());	
+
+		
+		for (int resser:shorterChain.getAllResSerials()) {
+			Residue shorterChainRes = shorterChain.getResidue(resser);
+			if (shorterChainRes.containsAtom("CA")) {
+				if (longerChain.containsResidue(resser)) {
+					Residue longerChainRes = longerChain.getResidue(resser);
+					if (longerChainRes.containsAtom("CA")) {
+						Tuple3d shorterChainVector = shorterChainRes.getAtom("CA").getCoords();
+						Tuple3d longerChainVector = longerChainRes.getAtom("CA").getCoords();
+						if (isFirstShorter) {
+							conf1AL.add(shorterChainVector);
+							conf2AL.add(longerChainVector);
+						} else {
+							conf2AL.add(shorterChainVector);
+							conf1AL.add(longerChainVector);							
+						}
+					}
+				}
+			}
+		}
+		if (conf1AL.size()!=conf2AL.size()) throw new NullPointerException("Conformations of different size!");
+		
+		// converting the ArrayLists to arrays		
+		Tuple3d[] conformation1 = new Tuple3d[conf1AL.size()]; 
+		Tuple3d[] conformation2 = new Tuple3d[conf2AL.size()];
+		conf1AL.toArray(conformation1);
+		conf2AL.toArray(conformation2);
+		Tuple3d[][] conformations = {conformation1, conformation2};
+		return conformations;
+	}
+	
 }

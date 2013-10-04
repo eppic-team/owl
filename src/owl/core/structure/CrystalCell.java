@@ -7,7 +7,6 @@ import java.util.Collections;
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
-import javax.vecmath.Point3i;
 import javax.vecmath.Tuple3d;
 import javax.vecmath.Vector3d;
 
@@ -119,22 +118,6 @@ public class CrystalCell implements Serializable {
 				+2.0*Math.cos(alphaRad)*Math.cos(betaRad)*Math.cos(gammaRad));
 		
 		return volume;
-	}
-	
-	/**
-	 * Returns the unit cell translation transformation matrix, given 3 integers for each 
-	 * of the directions of the unit cell.
-	 * See "Fundamentals of Crystallography" C. Giacovazzo, section 2.5, eq 2.30
-	 * @param direction
-	 * @return
-	 */
-	public Matrix4d getTransform(Point3i direction) {
-		Matrix4d mat = new Matrix4d();
-		mat.setIdentity();
-		Vector3d trans = new Vector3d(direction.x,direction.y,direction.z);
-		transfToOrthonormal(trans);
-		mat.setTranslation(trans);
-		return mat;
 	}
 	
 	/**

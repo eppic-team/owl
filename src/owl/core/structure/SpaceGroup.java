@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
-import Jama.EigenvalueDecomposition;
-import Jama.Matrix;
+import owl.core.util.GeometryTools;
 
 
 /**
@@ -84,8 +84,7 @@ public final class SpaceGroup implements Serializable {
 	private final List<String> transfAlgebraic;
 	private final Vector3d[] cellTranslations; // in space groups I, C, F or H there are pure cell translations corresponding to recenterings
 	
-	private double[] angles; // all rotation angles, indices are transformIds 
-	private Vector3d[] axes; // all rotation axes, indices are transformIds 
+	private AxisAngle4d[] axesAngles;
 	
 	private int[] axisTypes; // indices of array are transformIds
 	
@@ -231,44 +230,17 @@ public final class SpaceGroup implements Serializable {
 	
 	private void calcRotAxesAndAngles() {
 
-		axes = new Vector3d[multiplicity];
-		angles = new double[multiplicity];
+		axesAngles = new AxisAngle4d[multiplicity];
 		
-		// identity operator (transformId==0) 
-		axes[0] = new Vector3d(0,0,0);
-		angles[0] = 0.0;
+		// identity operator (transformId==0)
+		axesAngles[0] = new AxisAngle4d(new Vector3d(0,0,0), 0.0);
 		
 		for (int i=1;i<this.transformations.size();i++){
-						
-			double[] d = {transformations.get(i).m00,transformations.get(i).m10,transformations.get(i).m20,
-					transformations.get(i).m01,transformations.get(i).m11,transformations.get(i).m21,
-					transformations.get(i).m02,transformations.get(i).m12,transformations.get(i).m22};
-
-			Matrix r = new Matrix(d,3);
+			Matrix3d r = new Matrix3d(transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
+					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
+					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22);
 			
-			if (!deltaComp(r.det(), 1.0, DELTA)) {
-				// improper rotation: we add no axis and angle 0
-				axes[i] = new Vector3d(0,0,0);
-				angles[i] = 0.0;
-				continue;
-			}
-			
-			EigenvalueDecomposition evd = new EigenvalueDecomposition(r);
-			
-			Matrix eval = evd.getD();
-			if (eval.get(0, 0)==1 && eval.get(1, 1)==1 && eval.get(2, 2)==1) {
-				// the rotation is an identity: no axis, we add a (0,0,0)
-				axes[i] = new Vector3d(0,0,0);
-				angles[i] = 0.0;
-				continue;
-			}
-			int indexOfEv1;
-			for (indexOfEv1=0;indexOfEv1<3;indexOfEv1++) {
-				if (deltaComp(eval.get(indexOfEv1, indexOfEv1),1,DELTA)) break;
-			}
-			Matrix evec = evd.getV(); 
-			angles[i] = Math.acos((eval.trace()-1.0)/2.0);
-			axes[i] = new Vector3d(evec.get(0,indexOfEv1),evec.get(1, indexOfEv1),evec.get(2, indexOfEv1));
+			axesAngles[i] = GeometryTools.getRotAxisAndAngle(r);
 		}	
 	}
 	
@@ -279,64 +251,17 @@ public final class SpaceGroup implements Serializable {
 	 */
 	private void calcAxisFoldTypes() {
 		axisTypes = new int[multiplicity];
+		
 		for (int i=0;i<this.transformations.size();i++){
-			Matrix3d rot = new Matrix3d(transformations.get(i).m00,transformations.get(i).m01,transformations.get(i).m02,
-					transformations.get(i).m10,transformations.get(i).m11,transformations.get(i).m12,
-					transformations.get(i).m20,transformations.get(i).m21,transformations.get(i).m22);
-			int trace = (int)(rot.m00+rot.m11+rot.m22);
-			if (rot.determinant()>0) {
-				switch (trace) {
-				case 3:
-					axisTypes[i]=1;
-					break;
-				case -1:
-					axisTypes[i]=2;
-					break;
-				case 0:
-					axisTypes[i]=3;
-					break;						
-				case 1:
-					axisTypes[i]=4;
-					break;
-				case 2:
-					axisTypes[i]=6;
-					break;
-				default:
-					throw new NullPointerException("Trace of transform does not correspond to one of the expected types. This is most likely a bug");
-				}
-			} else {
-				switch (trace) {
-				case -3:
-					axisTypes[i]=-1;
-					break;
-				case 1:
-					axisTypes[i]=-2;
-					break;
-				case 0:
-					axisTypes[i]=-3;
-					break;						
-				case -1:
-					axisTypes[i]=-4;
-					break;
-				case -2:
-					axisTypes[i]=-6;
-					break;
-				default:
-					throw new NullPointerException("Trace of transform does not correspond to one of the expected types. This is most likely a bug");
-				}
-			}
+			
+			axisTypes[i] = GeometryTools.getRotAxisType(transformations.get(i)); 
 
 		}
 	}
 	
-	public Vector3d getRotAxis(int transformId) {
-		if (axes==null) calcRotAxesAndAngles();
-		return axes[transformId];
-	}
-	
-	public double getRotAngle(int transformId) {
-		if (angles==null) calcRotAxesAndAngles();
-		return angles[transformId];
+	public AxisAngle4d getRotAxisAngle(int transformId) {
+		if (this.axesAngles == null) calcRotAxesAndAngles();
+		return this.axesAngles[transformId];
 	}
 	
 	/**
@@ -349,15 +274,15 @@ public final class SpaceGroup implements Serializable {
 	public boolean areInSameAxis(int tId1, int tId2) {
 		if (tId1==tId2) return true;
 		
-		if (axes== null) calcRotAxesAndAngles();
+		if (axesAngles== null) calcRotAxesAndAngles();
 		
 		if (getAxisFoldType(tId1)==1 && getAxisFoldType(tId2)==1) return true;
 		
 		// we can't deal yet with improper rotations: we return false whenever either of them is improper
 		if (getAxisFoldType(tId1)<0 || getAxisFoldType(tId2)<0) return false;
 		
-		Vector3d axis1 = axes[tId1];
-		Vector3d axis2 = axes[tId2];
+		Vector3d axis1 = new Vector3d(axesAngles[tId1].x, axesAngles[tId1].y, axesAngles[tId1].z);
+		Vector3d axis2 = new Vector3d(axesAngles[tId2].x, axesAngles[tId2].y, axesAngles[tId2].z);
 		
 		// TODO revise: we might need to consider that the 2 are in same direction but opposite senses
 		// the method is not used at the moment anyway

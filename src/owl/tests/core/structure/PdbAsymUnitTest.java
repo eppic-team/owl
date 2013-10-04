@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -93,6 +92,7 @@ public class PdbAsymUnitTest {
 			
 			System.out.println(pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
 			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;
@@ -122,7 +122,7 @@ public class PdbAsymUnitTest {
 	}
 	
 	@Test
-	public void testInterfacesVsPisa() throws IOException, SQLException, SAXException {
+	public void testInterfacesVsPisa() throws IOException, SAXException {
 
 		List<String> pdbCodes = readListFile(new File(LISTFILE));
 
@@ -138,6 +138,7 @@ public class PdbAsymUnitTest {
 					
 			System.out.println("\n##"+pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
 			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;
@@ -228,7 +229,7 @@ public class PdbAsymUnitTest {
 	}
 	
 	@Test
-	public void testInterfacesVsPisaCountsOnly() throws IOException, SQLException, SAXException {
+	public void testInterfacesVsPisaCountsOnly() throws IOException, SAXException {
 
 		List<String> pdbCodes = readListFile(new File(LISTFILE2));
 
@@ -244,6 +245,7 @@ public class PdbAsymUnitTest {
 					
 			System.out.println("\n##"+pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
 			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;
@@ -281,7 +283,7 @@ public class PdbAsymUnitTest {
 	}
 	
 	@Test
-	public void testInterfacesFinderRedundancyElimination() throws IOException, SQLException, SAXException {
+	public void testInterfacesFinderRedundancyElimination() throws IOException, SAXException {
 		
 		// A exclude list for entries we don't want to test here
 		// At the moment entries in exclude list are the ones for which a different number of interfaces is found
@@ -311,6 +313,7 @@ public class PdbAsymUnitTest {
 					
 			System.out.println("\n##"+pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
 			try {
 				PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 			} catch (IOException e) {
@@ -446,6 +449,7 @@ public class PdbAsymUnitTest {
 			
 			System.out.println("\n##"+pdbCode);
 			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
 			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;

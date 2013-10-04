@@ -2,10 +2,11 @@ package owl.core.structure;
 
 import java.io.Serializable;
 
-import javax.vecmath.Matrix3d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector3d;
+
+import owl.core.util.GeometryTools;
 
 /**
  * Representation of a transformation in a crystal: 
@@ -206,7 +207,7 @@ public class CrystalTransform implements Serializable {
 		
 		int foldType = sg.getAxisFoldType(this.transformId);
 		boolean isScrewOrGlide = false;
-		Vector3d translScrewComponent = getTranslScrewComponent(foldType);
+		Vector3d translScrewComponent = getTranslScrewComponent();
 		if (Math.abs(translScrewComponent.x-0.0)>SpaceGroup.DELTA || 
 			Math.abs(translScrewComponent.y-0.0)>SpaceGroup.DELTA || 
 			Math.abs(translScrewComponent.z-0.0)>SpaceGroup.DELTA) {
@@ -277,49 +278,8 @@ public class CrystalTransform implements Serializable {
 	
 	}
 	
-	public Vector3d getTranslScrewComponent(int foldType) {
-		// For reference see:
-		// http://www.crystallography.fr/mathcryst/pdf/Gargnano/Aroyo_Gargnano_1.pdf
-		
-		Vector3d transl = null;
-		
-		Matrix3d W = 
-				new Matrix3d(matTransform.m00,matTransform.m01,matTransform.m02,
-						matTransform.m10,matTransform.m11,matTransform.m12,
-						matTransform.m20,matTransform.m21,matTransform.m22);
-		
-		if (foldType>=0) {
-			
-			// the Y matrix: Y = W^k-1 + W^k-2 ... + W + I  ; with k the fold type
-			Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);					
-			Matrix3d Wk = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
-
-			for (int k=0;k<foldType;k++) {						
-				Wk.mul(W); // k=0 Wk=W, k=1 Wk=W^2, k=2 Wk=W^3, ... k=foldType-1, Wk=W^foldType
-				if (k!=foldType-1) Y.add(Wk);
-			}
-
-			transl = new Vector3d(matTransform.m03, matTransform.m13, matTransform.m23);
-			Y.transform(transl);
-			
-			transl.scale(1.0/foldType);
-			
-		} else {
-			
-			if (foldType==-2) { // there are glide planes only in -2
-				Matrix3d Y = new Matrix3d(1,0,0, 0,1,0, 0,0,1);
-				Y.add(W);
-
-				transl = new Vector3d(matTransform.m03, matTransform.m13, matTransform.m23);
-				Y.transform(transl);
-
-				transl.scale(1.0/2.0);
-			} else { // for -1, -3, -4 and -6 there's nothing to do: fill with 0s 
-				transl = new Vector3d(0,0,0);
-			}
-		}
-		
-		return transl;
+	public Vector3d getTranslScrewComponent() {
+		return GeometryTools.getTranslScrewComponent(matTransform);
 	}
 	
 	public int getTransformId() {

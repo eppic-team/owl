@@ -16,7 +16,6 @@ import java.util.regex.Pattern;
 
 import owl.core.runners.tinker.TinkerError;
 import owl.core.runners.tinker.TinkerRunner;
-import owl.core.structure.ConformationsNotSameSizeException;
 import owl.core.structure.ContactType;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
@@ -569,7 +568,7 @@ public class reconstruct {
 				}
 				catch (TinkerError e) {
 					System.err.println("Warning: couldn't load tinker pdb output file, error: "+ e.getMessage()+". Can't calculate rmsd for it.");
-				} catch (ConformationsNotSameSizeException e) {
+				} catch (IllegalArgumentException e) {
 					System.err.println(origPdbFile+" and "+tr.getOutPdbFile(i)+" don't have the same conformation size, can't calculate rmsd for them.");
 				}				
 			}					
