@@ -182,7 +182,7 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 	}
 
 	
-	private boolean matchesInterface(ChainInterface interf) {
+	public boolean matchesInterface(ChainInterface interf) {
 		Matrix4d identity = new Matrix4d(); identity.m00=identity.m11=identity.m22=identity.m33=1;
 		boolean matches = false;
 

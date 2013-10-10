@@ -1,13 +1,17 @@
 package owl.core.connections.pisa;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
 
 import org.xml.sax.SAXException;
 
@@ -87,6 +91,67 @@ public class PisaConnection {
 	}
 	
 	/**
+	 * Retrieves the XML PISA interface description from the PISA web server dividing the 
+	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST} and saves them to disk.
+	 * Output files are named as <<int>.interfaces.xml.gz>. 
+	 * The corresponding pdb entries are written in file InterfacesNameToPdb.dat 
+	 * @param pdbCodesList pdb codes list for which we want to retrieve pisa assemblies
+	 * @return
+	 * @throws IOException
+	 */
+	public void saveInterfacesDescription(List<String> pdbCodesList, File saveDir) throws IOException{
+		//Check for directory
+		if(!saveDir.isDirectory()){
+			throw new IOException("No directory present: "+saveDir.getName());
+		}
+		
+		//Create the NameToPdb file
+		PrintWriter out = new PrintWriter(new File(saveDir,"InterfacesNameToPdb.dat"));
+
+		// we do batches of MAX_ENTRIES_PER_REQUEST
+		for (int i=0;i<pdbCodesList.size();i+=MAX_ENTRIES_PER_REQUEST) {
+			String commaSepList = "";
+			for (int c=i;c<i+MAX_ENTRIES_PER_REQUEST && c<pdbCodesList.size();c++) {
+				if (c!=i) commaSepList+=",";
+				commaSepList+=pdbCodesList.get(c);
+			}
+			File filePath = new File(saveDir,(i+1)+"-"+(i+MAX_ENTRIES_PER_REQUEST)+".interfaces.xml.gz");
+			try{
+				saveInterfacesDescription(commaSepList, filePath);
+				out.printf("%18s\t%60s\n",(i+1)+"-"+(i+MAX_ENTRIES_PER_REQUEST),commaSepList);
+			}catch(IOException e){
+				System.err.println("Error while downloading interfaces xml file from PISA for pdb files:\n"+commaSepList);
+				System.err.println(e.getMessage());
+			}
+		}
+		
+		out.close();
+
+	}
+	
+	/**
+	 * Retrieves the XML PISA interface description from the PISA web server and saves it to local disk in a zipped file.
+	 * @param commaSepList
+	 * @param saveDir
+	 * @return
+	 * @throws IOException
+	 */
+	private void saveInterfacesDescription(String commaSepList, File filePath) throws IOException{
+		
+		URL interfaceURL = new URL(interfacesUrl+commaSepList);
+		
+		InputStream is = interfaceURL.openStream();
+		GZIPOutputStream zos = new GZIPOutputStream(new FileOutputStream(filePath));
+		
+		int isRead;
+		while((isRead=is.read()) != -1){
+			zos.write(isRead);
+		}
+		
+		zos.close();
+	}
+	
+	/**
 	 * Retrieves the XML PISA assembly description from the PISA web server dividing the 
 	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST}, parses it and 
 	 * returns the result as a map of pdb codes to lists of PISA assemblies 
@@ -125,6 +190,67 @@ public class PisaConnection {
 		Map<String,PisaAsmSetList> map = pxmlParser.getAllAssemblies();
 		if (map.isEmpty()) throw new IOException("The PISA server returned no assembly data for URL "+assembliesURL.toString());
 		return map;
+	}
+	
+	/**
+	 * Retrieves the XML PISA assembly description from the PISA web server dividing the 
+	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST} and saves them to disk.
+	 * Output files are named as <<int>.assemblies.xml.gz>. 
+	 * The corresponding pdb entries are written in file AssembliesNameToPdb.dat 
+	 * @param pdbCodesList pdb codes list for which we want to retrieve pisa assemblies
+	 * @return
+	 * @throws IOException
+	 */
+	public void saveAssembliesDescription(List<String> pdbCodesList, File saveDir) throws IOException{
+		//Check for directory
+		if(!saveDir.isDirectory()){
+			throw new IOException("No directory present: "+saveDir.getName());
+		}
+		
+		//Create the NameToPdb file
+		PrintWriter out = new PrintWriter(new File(saveDir,"AssembliesNameToPdb.dat"));
+
+		// we do batches of MAX_ENTRIES_PER_REQUEST
+		for (int i=0;i<pdbCodesList.size();i+=MAX_ENTRIES_PER_REQUEST) {
+			String commaSepList = "";
+			for (int c=i;c<i+MAX_ENTRIES_PER_REQUEST && c<pdbCodesList.size();c++) {
+				if (c!=i) commaSepList+=",";
+				commaSepList+=pdbCodesList.get(c);
+			}
+			File filePath = new File(saveDir,(i+1)+"-"+(i+MAX_ENTRIES_PER_REQUEST)+".assemblies.xml.gz");
+			try{
+				saveAssembliesDescription(commaSepList, filePath);
+				out.printf("%18s\t%60s\n",(i+1)+"-"+(i+MAX_ENTRIES_PER_REQUEST),commaSepList);
+			}catch(IOException e){
+				System.err.println("Error while downloading assemblies xml file from PISA for pdb files:\n"+commaSepList);
+				System.err.println(e.getMessage());
+			}
+		}
+		
+		out.close();
+
+	}
+	
+	/**
+	 * Retrieves the XML PISA assembly description from the PISA web server and saves it to local disk in a zipped file.
+	 * @param commaSepList
+	 * @param saveDir
+	 * @return
+	 * @throws IOException
+	 */
+	private void saveAssembliesDescription(String commaSepList, File filePath) throws IOException{
+		
+		URL assembliesURL = new URL(assembliesUrl+commaSepList);
+		
+		InputStream is = assembliesURL.openStream();
+		GZIPOutputStream zos = new GZIPOutputStream(new FileOutputStream(filePath));
+		
+		int isRead;
+		while((isRead=is.read()) != -1){
+			zos.write(isRead);
+		}
+		
+		zos.close();
 	}
 	
 	public static void main(String[] args) throws Exception {

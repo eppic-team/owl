@@ -55,6 +55,12 @@ public class OligomericPrediction {
 		return assemblies;
 	}
 	
+	public PisaAsmSet getPisaAsmSet() {
+		PisaAsmSet set = new PisaAsmSet();
+		for(PisaAssembly pa:this.assemblies) set.add(pa);
+		return set;
+	}
+	
 	/**
 	 * Returns the PISA interface ids of all engaged protein-protein interfaces of this 
 	 * PISA oligomeric prediction.

@@ -85,6 +85,8 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 	private boolean inMolecule;
 	private boolean inResidue;
 	
+	private boolean addPdb;
+	
 	/**
 	 * Constructs new PisaXMLParser and parses the given XML stream
 	 * Get the list calling {@link #getAllInterfaces()}
@@ -140,6 +142,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 		inMolecule = false;
 		inResidue = false;
 		buffer = null;
+		addPdb = true;
 	}
 
 	public void endDocument() throws SAXException {
@@ -242,12 +245,14 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 
 		if (name.equals(PDB_ENTRY_TAG)) {
 			inEntry = false;
-			allInterfaces.put(currentPdbCode, currentInterfaces);
+			if(addPdb) allInterfaces.put(currentPdbCode, currentInterfaces);
+			else System.err.println("Interface parsing issues found with pdb id "+currentPdbCode+", not adding it in map");
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
 				currentPdbCode = flushValue().toLowerCase();
 				currentInterfaces.setPdbCode(currentPdbCode);
+				addPdb=true;
 			} else if (name.equals(INTERFACE_TAG)){
 				inInterface = false;
 				currentInterfaces.add(currentPisaInterface);
@@ -290,7 +295,10 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				} else if (name.equals(SYMOP_NO_TAG)) {
 					currentTransf.setTransformId(Integer.parseInt(flushValue())-1); // we count from 0, pisa from 1
 				} else if (name.equals(SYMOP_TAG)) {
-					currentTransf.setMatTransform(SpaceGroup.getMatrixFromAlgebraic(flushValue()));
+					String pattern = "[/\\s\\-+XYZ1-9]+,[/\\s\\-+XYZ1-9]+,[/\\s\\-+XYZ1-9]+";
+					String value = flushValue().trim().toUpperCase();
+					if(value.matches(pattern)) currentTransf.setMatTransform(SpaceGroup.getMatrixFromAlgebraic(flushValue().trim()));
+					else addPdb = false;
 				} else if (name.equals(RXX_TAG)) {
 					currentTransfOrth.m00=Double.parseDouble(flushValue());
 				} else if (name.equals(RXY_TAG)) {
