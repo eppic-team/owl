@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
@@ -442,6 +443,101 @@ public class PdbAsymUnitTest {
 				System.out.println(pdbCode);
 			}
 			System.out.println("\nDuplicates in redundancy elimination procedure are unusual but they can still occur (due mainly to NCS). ");			
+		}
+
+	}
+	
+	@Test
+	public void testInterfacesFinderNumCells() throws IOException, SAXException {
+		
+		
+		List<String> pdbCodes = readListFile(new File(CULLPDB20FILE));
+		
+		System.out.println("Interface calculation - number of neighboring cells test ("+pdbCodes.size()+" structures to test)");
+		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+		
+		Map<String, List<Integer>> pdbsNeedingExtraNeighbors = new TreeMap<String, List<Integer>>();
+		
+		for (String pdbCode: pdbCodes) {
+					
+			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
+			try {
+				PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+			} catch (IOException e) {
+				System.err.println("Something went wrong while grabbing cif file: "+e.getMessage());
+				continue;
+			}
+
+			
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);				
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+
+			pdb.removeHatoms();
+
+			//List<Integer> numInterfacesFound = new ArrayList<Integer>();			
+			
+			int numInterfaces = -1;
+			for (int numCells=1;numCells<=7;numCells++) {
+				long start = 0, end =0;
+
+				InterfacesFinder interfFinder = new InterfacesFinder(pdb.copy());
+				interfFinder.setNumCells(numCells);
+				
+				start = System.currentTimeMillis();
+				
+				// we use a small value for number of sphere points because we are not interested in the ASAs at all here 
+				ChainInterfaceList interfaces = 
+						interfFinder.getAllInterfaces(CUTOFF, 10, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
+				
+				end = System.currentTimeMillis();
+				long total = (end-start)/100; // i.e. in deciseconds
+
+
+				System.out.println("Tried "+numCells+" cells. Total number of interfaces found: "+interfaces.size());
+				// time in deciseconds
+				System.out.println("Time: "+total+"ds");
+
+				if (numInterfaces!=-1 && numInterfaces!=interfaces.size()) {
+					if (pdbsNeedingExtraNeighbors.containsKey(pdbCode)) {
+						pdbsNeedingExtraNeighbors.get(pdbCode).add(numCells);
+					} else {
+						List<Integer> list = new ArrayList<Integer>();
+						list.add(numCells);
+						pdbsNeedingExtraNeighbors.put(pdbCode, list);
+					}
+				}
+				
+				numInterfaces = interfaces.size();
+				//numInterfacesFound.add(interfaces.size());
+
+			}
+			
+			// we don't actually assert anything here, because the num of interfaces will change in some cases when changing the numCells
+			//for (int i=0;i<numInterfacesFound.size();i++){
+			//	if (i>0)
+			//		Assert.assertEquals(numInterfacesFound.get(i-1),numInterfacesFound.get(i));
+			//}
+			
+			
+		}
+		
+		System.out.println("PDBs that needed more than 1 cell neighbours to find all interfaces:");
+		for (String pdbCode:pdbsNeedingExtraNeighbors.keySet()) {
+			System.out.print(pdbCode+":");
+			for (int numCells:pdbsNeedingExtraNeighbors.get(pdbCode)) {
+				System.out.print(" "+numCells);
+			}
+			System.out.println();
 		}
 
 	}

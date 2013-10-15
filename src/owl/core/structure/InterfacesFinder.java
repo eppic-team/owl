@@ -17,6 +17,20 @@ import owl.core.util.BoundingBox;
 
 public class InterfacesFinder {
 	
+	// Default number of cell neighbors to try in interface search (in 3 directions of space). 
+	// In the search, only bounding box overlaps are tried, thus there's not so much overhead in adding 
+	// more cells. We actually tested it (see PdbAsymUnitTest.testInterfacesFinderNumCells): using numCells
+	// from 1 to 7 didn't change runtimes at all.
+	// Quite often 2nd neighbor search is needed e.g. 3hz3, 1wqj, 2de3, 1jcd
+	// Less often, but not unusual are entries that need search to 3rd neighbors, e.g. 3bd3, 1men, 2gkp, 1wui
+	// From time to time even farther searches are needed: 5 neighbors for 2ahf, 2h2z
+	// Even more amazing, some very strange cases need even 6th neighbors: e.g. 1was, in fact
+	// interfaces appear only at 5th neighbors for it and then some more at 6th 
+	// (BTW PISA doesn't find interfaces for 1was, they must be doing only 3 neighbors judging also from other entries)
+	// Maybe this could be avoided by previously translating the given molecule to the first cell.
+	// We set the default value to 6 as it is the highest value that I've seen (in 1was)
+	private static final int DEF_NUM_CELLS = 6;
+	
 	private class PartnerIdChainInterface {
 		public int partnerId;
 		public ChainInterface chainInterface;
@@ -38,6 +52,8 @@ public class InterfacesFinder {
 	
 	private boolean withRedundancyElimination;
 	
+	private int numCells;
+	
 	private ArrayList<CrystalTransform> visited;
 	
 	private int duplicatesCount1=0;
@@ -50,6 +66,7 @@ public class InterfacesFinder {
 		this.pdb = pdb;
 		this.debug = false;
 		this.withRedundancyElimination = true;
+		this.numCells = DEF_NUM_CELLS;
 		if (this.pdb.hasHydrogens()) {
 			// We have to warn because at the moment we implemented things so that we have to call removeHatoms() before calling getAllInterfaces()
 			// We need to fix that so that we simply can calculate interfaces by ignoring Hydrogens without having to remove them
@@ -64,6 +81,10 @@ public class InterfacesFinder {
 	
 	public void setWithRedundancyElimination(boolean withRedundancyElimination) {
 		this.withRedundancyElimination = withRedundancyElimination;
+	}
+	
+	public void setNumCells(int numCells) {
+		this.numCells = numCells;
 	}
 	
 	private void initialiseVisited() {
@@ -267,10 +288,6 @@ public class InterfacesFinder {
 
 			
 			// 2. interfaces between original asymmetric unit and neighboring whole unit cells
-			// We go up to 2nd neighbor, in some cases (e.g. 3hz3, 1wqj, 2de3, 1jcd) there are interfaces with 2nd neighboring cells
-			// Would we ever need 3rd neighbors? in principle possible but it would have to be a very strange cell
-			int numCells = 2;
-			
 			if (debug) {
 				trialCount = 0;
 				start= System.currentTimeMillis();
@@ -284,7 +301,7 @@ public class InterfacesFinder {
 			for (int i=-numCells;i<=numCells;i++) {
 				for (int j=-numCells;j<=numCells;j++) {
 					for (int k=-numCells;k<=numCells;k++) {
-						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculate that before
+						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculated that before
 
 						Point3i trans = new Point3i(i,j,k);
 						Vector3d transOrth = new Vector3d(i,j,k);
