@@ -295,10 +295,13 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 				} else if (name.equals(SYMOP_NO_TAG)) {
 					currentTransf.setTransformId(Integer.parseInt(flushValue())-1); // we count from 0, pisa from 1
 				} else if (name.equals(SYMOP_TAG)) {
-					String pattern = "[/\\s\\-+XYZ1-9]+,[/\\s\\-+XYZ1-9]+,[/\\s\\-+XYZ1-9]+";
+					String pattern = "[/\\s\\-+XYZ0-9]+,[/\\s\\-+XYZ0-9]+,[/\\s\\-+XYZ0-9]+";
 					String value = flushValue().trim().toUpperCase();
 					if(value.matches(pattern)) currentTransf.setMatTransform(SpaceGroup.getMatrixFromAlgebraic(flushValue().trim()));
-					else addPdb = false;
+					else {
+						System.err.println("Unreadable value in <symop> tag: "+value);
+						addPdb = false;
+					}
 				} else if (name.equals(RXX_TAG)) {
 					currentTransfOrth.m00=Double.parseDouble(flushValue());
 				} else if (name.equals(RXY_TAG)) {
