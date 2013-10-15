@@ -118,7 +118,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 			else
 				for(BioUnitAssembly assembly:assemblies)
 					if(assembly.getId()==0){
-						System.err.println("Warning: Error in reading Id for the assembly; will not add this biounit.");
+						//System.err.println("Warning: Error in reading Id for the assembly; will not add this biounit.");
 						continue;
 					}else
 						for(String method:assembly.getTypes()){

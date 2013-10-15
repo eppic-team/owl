@@ -832,9 +832,10 @@ public class CiffileParser {
 			String m23 = fields2values.get(pdbxStructOperList+".vector[3]").trim();
 
 
-			if(!isInteger(idStr))
-				System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
-			else if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
+			if(isInteger(idStr))
+				//System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
+			//else
+				if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
 					isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
 					isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
 				int id = Integer.parseInt(idStr);
@@ -854,8 +855,8 @@ public class CiffileParser {
 				operation.setOperatorValue(11, Double.parseDouble(m23));
 
 				operations.add(operation);
-			}else
-				System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
+			}//else
+				//System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
 			
 			
 		}else{ //for loop-elements
@@ -905,9 +906,10 @@ public class CiffileParser {
 				String m23 = tokens[m23Idx].trim();
 				
 				//Add data
-				if(!isInteger(idStr))
-					System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
-				else if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
+				if(isInteger(idStr))
+					//System.err.println("Warning: Encountered a non-integer id in "+pdbxStructOperList+" ; will not add it");
+				//else 
+					if(isDouble(m00) && isDouble(m01) && isDouble(m02) && isDouble(m03) &&
 						isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
 						isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
 					int id = Integer.parseInt(idStr);
@@ -927,8 +929,8 @@ public class CiffileParser {
 					operation.setOperatorValue(11, Double.parseDouble(m23));
 
 					operations.add(operation);
-				}else
-					System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
+				}//else
+				//	System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
 				
 			}
 		}
