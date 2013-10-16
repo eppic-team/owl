@@ -246,7 +246,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 		if (name.equals(PDB_ENTRY_TAG)) {
 			inEntry = false;
 			if(addPdb) allInterfaces.put(currentPdbCode, currentInterfaces);
-			else System.err.println("Interface parsing issues found with pdb id "+currentPdbCode+", not adding it in map");
+			else System.err.println("Warning: Interface parsing issues found with pdb id "+currentPdbCode+", not adding it in map");
 		}
 		if (inEntry) {
 			if (name.equals(PDB_CODE_TAG)) {
@@ -299,7 +299,7 @@ public class PisaInterfaceXMLParser implements ContentHandler {
 					String value = flushValue().trim().toUpperCase();
 					if(value.matches(pattern)) currentTransf.setMatTransform(SpaceGroup.getMatrixFromAlgebraic(flushValue().trim()));
 					else {
-						System.err.println("Unreadable value in <symop> tag: "+value);
+						System.err.println("Warning: Unreadable value in <symop> tag: "+value);
 						addPdb = false;
 					}
 				} else if (name.equals(RXX_TAG)) {
