@@ -15,21 +15,32 @@ import javax.vecmath.Vector3d;
 import owl.core.structure.graphs.AICGraph;
 import owl.core.util.BoundingBox;
 
+/**
+ * A class containing methods to find interfaces in a given PdbAsymUnit by
+ * reconstructing the crystal lattice through application of symmetry operators
+ *  
+ * @author duarte_j
+ *
+ */
 public class InterfacesFinder {
 	
 	// Default number of cell neighbors to try in interface search (in 3 directions of space). 
 	// In the search, only bounding box overlaps are tried, thus there's not so much overhead in adding 
 	// more cells. We actually tested it (see PdbAsymUnitTest.testInterfacesFinderNumCells): using numCells
-	// from 1 to 7 didn't change runtimes at all.
+	// from 1 to 10 didn't change runtimes at all.
 	// Quite often 2nd neighbor search is needed e.g. 3hz3, 1wqj, 2de3, 1jcd
 	// Less often, but not unusual are entries that need search to 3rd neighbors, e.g. 3bd3, 1men, 2gkp, 1wui
 	// From time to time even farther searches are needed: 5 neighbors for 2ahf, 2h2z
-	// Even more amazing, some very strange cases need even 6th neighbors: e.g. 1was, in fact
+	// Even more amazing, some very strange cases need 6th neighbors: e.g. 1was, in fact
 	// interfaces appear only at 5th neighbors for it and then some more at 6th 
 	// (BTW PISA doesn't find interfaces for 1was, they must be doing only 3 neighbors judging also from other entries)
-	// Maybe this could be avoided by previously translating the given molecule to the first cell.
-	// We set the default value to 6 as it is the highest value that I've seen (in 1was)
-	private static final int DEF_NUM_CELLS = 6;
+	// Maybe this could be avoided by previously translating the given molecule to the first cell,
+	// BUT! some bona fide cases exist, e.g. 2d3e: it is properly placed at the origin but the molecule 
+	// is enormously long in comparison with the dimensions of the unit cell, some interfaces come at the 7th neighbor.
+	// After a scan of the whole PDB (Oct 2013) using numCells=50, the highest one was 4jgc with 
+	// interfaces up to the 11th neighbor. Other high ones (9th neighbors) are 4jbm and 4k3t.
+	// We set the default value to 12 based on that (having not seen any difference in runtime)
+	private static final int DEF_NUM_CELLS = 12;
 	
 	private class PartnerIdChainInterface {
 		public int partnerId;
