@@ -13,7 +13,6 @@ import java.net.URLConnection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -77,16 +76,11 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private TreeMap<String, String> pdbchaincode2chaincode;
 	
 	/**
-	 * A map of all PDB chain codes to the representative pdbChainCode
-	 * (the first chain alphabetically from the group of identical chains)
+	 * The clusters of protein chains: the groups of identical in sequence (except for 
+	 * unobserved residues) NCS related protein chains (also called entities in PDB)
+	 * Map of PDB chain codes to ChainClusters (PDB chain codes of all protein chains)
 	 */
-	private HashMap<String, String> chain2repChain;
-	
-	/**
-	 * A map of representative PDB chain code to the members of the 
-	 * group of identical chains
-	 */
-	private HashMap<String,List<String>> repChain2members; 
+	private TreeMap<String, ChainCluster> protChainClusters;
 	
 	/**
 	 * Experimental method: x-ray crystallograpy, NMR, etc.
@@ -109,6 +103,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private double resolution;					
 	private double rFree;
 	private double rSym;
+	
+	// fields needed for geometry calculations
 	private BoundingBox bounds; // cached bounds for speed up of interface calculations, filled in getAllAtoms()
 	private boolean boundsProtOnly; // to track whether the cached bounds are for protein chains only (true) or for any chain poly/non-poly
 	private Point3d centroid;  // cached centroid
@@ -120,7 +116,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	private CrystalTransform transform;
 
 	/**
-	 * Details of biological units present in the pdb file
+	 * Details of biological units as annotated in PDB entry
 	 */
 	private PdbBioUnitList pdbBioUnitList;
 	
@@ -294,6 +290,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		this.setPdbBioUnitList(new PdbBioUnitList(this, parser.getBioUnitAssemblies(), parser.getBioUnitGenerators(), parser.getBioUnitOperations(),"pdb"));
 
+		// TODO check whether we can trust sequences or not: based on existence of SEQRES lines for instance
+		boolean trustSequences = true;
+		initialiseChainClusters(trustSequences); 
 	}
 	
 	private void loadFromCifFile(File cifFile) throws PdbLoadException, IOException, FileFormatException {
@@ -326,6 +325,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		parser.closeFile();	
 
+		// TODO check whether we can trust sequences or not: based on existence of pdbx_poly_seq_scheme for instance
+		boolean trustSequences = true;
+		initialiseChainClusters(trustSequences);
 	}
 	
 	private void loadFromPdbase(MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
@@ -355,6 +357,8 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		} catch(SQLException e) {
 			throw new PdbLoadException(e);
 		}
+		
+		initialiseChainClusters(true);
 	}
 	
 	private void checkScaleMatrix(Matrix4d scaleMatrix) throws PdbLoadException {
@@ -925,8 +929,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 
 		newAsym.pdbchaincode2chaincode = new TreeMap<String, String>();
 		newAsym.pdbchaincode2chaincode.putAll(this.pdbchaincode2chaincode);
-		newAsym.chain2repChain = null;
-		newAsym.repChain2members = null;
+		newAsym.protChainClusters = null;				
 		if (this.bounds!=null) {
 			newAsym.bounds = new BoundingBox(bounds.xmin, bounds.xmax, bounds.ymin, bounds.ymax, bounds.zmin, bounds.zmax);
 		}
@@ -1205,153 +1208,108 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 	}
 	
 	/**
-	 * Initialises the map of chain codes to representative chain codes.
+	 * Initialises the chain clusters i.e. the groups of identical in sequence (except for 
+	 * unobserved residues) NCS-related protein chains (also called entities in PDB).
+	 * If trustSequences is true, it is assumed that the sequences we have are those of the full constructs,
+	 * i.e. SEQRES was present and correct in the source file, the clustering is then based on 100% identity
+	 * sequence matching. With trustSequences false we don't trust the sequences and instead calculate the 
+	 * clusters based on alignments and rmsds.
+	 * 
+	 * @param trustSequences if true, sequences will be taken as they are and clusters found 
+	 * from 100% identity matching of sequences; if false, the clusters are calculated from 
+	 * alignments and rmsd 
+	 * 
 	 * @see #getRepChain(String)
 	 */
-	private void initialiseRepChainsMaps() {
-		// map of sequences to list of PDB chain codes
-		Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
-		// finding the entities (groups of identical chains)
-		for (PdbChain pdb:getPolyChains()) {
-			
-			if (uniqSequences.containsKey(pdb.getSequence().getSeq())) {
-				uniqSequences.get(pdb.getSequence().getSeq()).add(pdb.getPdbChainCode());
-			} else {
-				List<String> list = new ArrayList<String>();
-				list.add(pdb.getPdbChainCode());
-				uniqSequences.put(pdb.getSequence().getSeq(),list);
-			}		
-		}
+	private void initialiseChainClusters(boolean trustSequences) {
 		
-		chain2repChain = new HashMap<String,String>();
-		repChain2members = new HashMap<String,List<String>>();
-		for (List<String> entity:uniqSequences.values()) {
-			for (int i=0;i<entity.size();i++) {
-				chain2repChain.put(entity.get(i),entity.get(0));
+		protChainClusters = new TreeMap<String,ChainCluster>();
+
+		if (trustSequences) {
+
+			// map of sequences to list of PDB chain codes
+			Map<String, List<String>> uniqSequences = new HashMap<String, List<String>>();
+			// finding the entities (groups of identical chains)
+			for (PdbChain pdb:getPolyChains()) {
+				if (!pdb.getSequence().isProtein()) continue;
+					
+				if (uniqSequences.containsKey(pdb.getSequence().getSeq())) {
+					uniqSequences.get(pdb.getSequence().getSeq()).add(pdb.getPdbChainCode());
+				} else {
+					List<String> list = new ArrayList<String>();
+					list.add(pdb.getPdbChainCode());
+					uniqSequences.put(pdb.getSequence().getSeq(),list);
+				}		
 			}
-			repChain2members.put(entity.get(0), entity);
-		}
-		
-	}
-	
-	/**
-	 * Returns the representative chain's PDB chain code for the given PDB chain 
-	 * code, i.e. the first chain (alphabetically) that represents a set of 
-	 * sequence-identical chains.
-	 * A PDB entry is composed of several chains, some of them can be identical in sequence
-	 * (an entity). For each of those groups (entities) we define a representative chain as (the 
-	 * first PDB chain code alphabetically). 
-	 * That's the chain returned here, given any PDB chain code.
-	 * @param pdbChainCode the chain for which we want to get the representative chain
-	 * @return
-	 * @see {@link #getSeqIdenticalGroup(String)}
-	 */
-	public String getRepChain(String pdbChainCode) {
-		if (chain2repChain==null) {
-			initialiseRepChainsMaps();
-		}
-		return chain2repChain.get(pdbChainCode);
-	}
-	
-	/**
-	 * Returns the map containing as keys all PDB chain codes and values their corresponding 
-	 * representative chains (the first chain alphabetically from the group of identical chains)
-	 * @return
-	 * @see #getRepChain(String)
-	 */
-	public HashMap<String,String> getChain2repChainMap() {
-		if (chain2repChain==null) {
-			initialiseRepChainsMaps();
-		}
-		return chain2repChain;
-	}
-	
-	/**
-	 * For a given PDB chain code of a representative chain returns all the PDB chain codes
-	 * of the sequence-identical chains that it represents.
-	 * @param repPdbChainCode
-	 * @return
-	 * @see {@link #getRepChain(String)}
-	 */
-	public List<String> getSeqIdenticalGroup(String repPdbChainCode) {
-		if (repChain2members==null) {
-			initialiseRepChainsMaps();
-		}
-		return repChain2members.get(repPdbChainCode);
-	}
-	
-	/**
-	 * Returns a sorted list of the representative chains' PDB chain codes. 
-	 * @return
-	 * @see {@link #getRepChain(String)} and {@link #getSeqIdenticalGroup(String)}
-	 */
-	public List<String> getAllRepChains() {
-		if (repChain2members==null) {
-			initialiseRepChainsMaps();
-		}
-		List<String> reps = new ArrayList<String>();
-		for (String rep:repChain2members.keySet()) {
-			reps.add(rep);
-		}
-		Collections.sort(reps);
-		return reps;
-	}
-	
-	/**
-	 * Returns a string containing the given representative PDB chain code and the
-	 * PDB chain codes of all sequence-identical chains that it represents. 
-	 * The string is formatted like: A (B,C,D,E)  
-	 * @param repPdbChainCode
-	 * @return
-	 */
-	public String getSeqIdenticalGroupString(String repPdbChainCode) {
-		if (repChain2members==null) {
-			initialiseRepChainsMaps();
-		}
-		
-		List<String> members =  repChain2members.get(repPdbChainCode);
-		String str = repPdbChainCode;
-		
-		if (members.size()>1) str+=" (";
-		
-		for (int i=0;i<members.size();i++) {
-			if (!members.get(i).equals(repPdbChainCode)) {
-				if (i==members.size()-1) {
-					str+= members.get(i)+")";
-				}else {
-					str+= members.get(i)+",";
+			
+			for (List<String> entity:uniqSequences.values()) {
+				ChainCluster chainCluster = new ChainCluster(this, entity);
+				for (PdbChain member:chainCluster.getMembers()) {
+					protChainClusters.put(member.getPdbChainCode(),chainCluster);
 				}
 			}
+
+			
+		} else {
+			
+			// TODO clustering based on aligning sequences and rmsd
+			
 		}
-		return str;
+		
+	}
+
+	/**
+	 * Returns a list of all unique protein chain clusters, i.e. groups of identical 
+	 * in sequence (except for unobserved residues) NCS-related chains.
+	 * @return
+	 */
+	public List<ChainCluster> getProtChainClusters() {
+		
+		List<ChainCluster> list = new ArrayList<ChainCluster>();
+		
+		for (ChainCluster cluster:protChainClusters.values()) {
+			boolean present = false;
+			for (ChainCluster cl:list) {
+				if (cl==cluster) {
+					present = true;
+					break;
+				}
+			}
+			if (!present) list.add(cluster);
+		}
+		return list;
 	}
 	
 	/**
-	 * Given two PDB chain codes, returns true if both are different but belong to the same group
-	 * of equivalent chains (NCS related and identical in sequence).
-	 * If either of the given PDB chain codes do not exist in this structure, false
-	 * is returned. 
-	 * If both codes are the same false is returned.
+	 * Given a PDB chain code of a chain of this structure returns its corresponding
+	 * chain cluster.
+	 * @param pdbChainCode
+	 * @return
+	 */
+	public ChainCluster getProtChainCluster(String pdbChainCode) {
+		return protChainClusters.get(pdbChainCode);
+	}
+	
+	/**
+	 * Given two PDB chain codes, returns true if both belong to the same chain cluster of identical in 
+	 * sequence (save unobserved residues) chains, i.e. NCS related. If either of the PDB chain codes do 
+	 * not exist in this structure, false is returned. 
 	 * @param pdbChainCode1
 	 * @param pdbChainCode2
 	 * @return
 	 */
-	public boolean areChainsNCSRelated(String pdbChainCode1, String pdbChainCode2) {
-		
-		if (pdbChainCode1.equals(pdbChainCode2)) return false;
-		
-		if (chain2repChain==null) {
-			initialiseRepChainsMaps();
+	public boolean areChainsInSameCluster(String pdbChainCode1, String pdbChainCode2) {
+		if (!protChainClusters.containsKey(pdbChainCode1) || !protChainClusters.containsKey(pdbChainCode2)) {
+			// either of the chains are not found in this structure: return false
+			return false;
 		}
-		
-		if (chain2repChain.containsKey(pdbChainCode1) && chain2repChain.containsKey(pdbChainCode2)) {  
-			String rep1 = chain2repChain.get(pdbChainCode1);
-			String rep2 = chain2repChain.get(pdbChainCode2);
-			if (rep1.equals(rep2)) return true;
-			else return false;
-		}
-		// either of the chains are not found in this structure: return false
-		return false;
+
+		if (protChainClusters.get(pdbChainCode1).getRepresentative() == 
+			protChainClusters.get(pdbChainCode2).getRepresentative()) {
+			return true;
+		} 
+			
+		return false;		
 	}
 	
 	/**

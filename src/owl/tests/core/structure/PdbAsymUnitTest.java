@@ -25,6 +25,7 @@ import org.xml.sax.SAXException;
 import owl.core.connections.pisa.PisaConnection;
 import owl.core.connections.pisa.PisaInterfaceList;
 import owl.core.structure.Asa;
+import owl.core.structure.ChainCluster;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.CrystalCell;
@@ -89,7 +90,7 @@ public class PdbAsymUnitTest {
 	}
 
 	@Test
-	public void testGetAllRepChains() throws IOException {
+	public void testChainClusters() throws IOException {
 		List<String> pdbCodes = readListFile(new File(LISTFILE));
 		System.out.println("Checking unique and representative chains");
 		for (String pdbCode: pdbCodes) {
@@ -110,16 +111,17 @@ public class PdbAsymUnitTest {
 				continue;
 			}
 			
-			List<String> repChains = pdb.getAllRepChains();
-			Assert.assertTrue(repChains.size()<=pdb.getNumPolyChains() && repChains.size()>0);
+			List<ChainCluster> clusters = pdb.getProtChainClusters();
+			Assert.assertTrue(clusters.size()<=pdb.getNumPolyChains() && clusters.size()>0);
 			List<String> allchains = new ArrayList<String>();
-			for (String repChain:repChains) {
-				List<String> chains = pdb.getSeqIdenticalGroup(repChain);
-				allchains.addAll(chains);
+			for (ChainCluster cluster:clusters) {
+				for (PdbChain member:cluster.getMembers()) {
+					allchains.add(member.getPdbChainCode());
+				}
 			}
 			Assert.assertTrue(allchains.size()==pdb.getNumPolyChains());
 			for (String pdbChainCode:pdb.getPdbChainCodes()) {
-				Assert.assertTrue(repChains.contains(pdb.getRepChain(pdbChainCode)));
+				Assert.assertNotNull(pdb.getProtChainCluster(pdbChainCode));
 			}
 			
 		}

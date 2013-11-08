@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Point3d;
 import javax.vecmath.Tuple3d;
 
 import owl.core.runners.NaccessRunner;
@@ -706,12 +707,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	/**
 	 * Calculates the optimal superposition between the 2 chains of this interface based on 
-	 * the (common) CA atoms only. The common CA atoms are takend from matching residue serials, 
+	 * the (common) CA atoms only. The common CA atoms are taken from matching residue serials, 
 	 * thus the 2 chains must correspond to the same sequence.
 	 * @return
 	 */
 	public OptSuperposition getOptimalSuperposition() {
-		Tuple3d[][] conformations = getCommonCAConformations();
+		Tuple3d[][] conformations = getCommonConformations("CA");
 		Tuple3d[] conformation1 = conformations[0];
 		Tuple3d[] conformation2 = conformations[1];
 
@@ -719,13 +720,15 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	}
 	
 	/**
-	 * Returns an array of size 2xn with the 2 conformations of n vectors of CA coordinates
+	 * Returns an array of size 2xn with the 2 conformations of n vectors of coordinates of given atomName
 	 * from both chains that are observed in both chains.
 	 * The residue serials are used to match the residues from both sides, thus the 2 chains must
 	 * correspond to same sequence (even if with different observed residues, i.e. NCS related)
+	 * 
+	 * @param atomName
 	 * @return
 	 */
-	private Tuple3d[][] getCommonCAConformations() {
+	private Tuple3d[][] getCommonConformations(String atomName) {
 		 
 		PdbChain shorterChain = null;
 		PdbChain longerChain = null;
@@ -747,12 +750,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		
 		for (int resser:shorterChain.getAllResSerials()) {
 			Residue shorterChainRes = shorterChain.getResidue(resser);
-			if (shorterChainRes.containsAtom("CA")) {
+			if (shorterChainRes.containsAtom(atomName)) {
 				if (longerChain.containsResidue(resser)) {
 					Residue longerChainRes = longerChain.getResidue(resser);
-					if (longerChainRes.containsAtom("CA")) {
-						Tuple3d shorterChainVector = shorterChainRes.getAtom("CA").getCoords();
-						Tuple3d longerChainVector = longerChainRes.getAtom("CA").getCoords();
+					if (longerChainRes.containsAtom(atomName)) {
+						Tuple3d shorterChainVector = shorterChainRes.getAtom(atomName).getCoords();
+						Tuple3d longerChainVector = longerChainRes.getAtom(atomName).getCoords();
 						if (isFirstShorter) {
 							conf1AL.add(shorterChainVector);
 							conf2AL.add(longerChainVector);
@@ -775,4 +778,46 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return conformations;
 	}
 	
+	/**
+	 * Given two lists of residue serials corresponding to each chain,
+	 * returns an array with concatenated coordinates of both chains in this interface (for the given atomName)
+	 * 
+	 * @param firstSet the first set of residue serials that will form the first part of the output array, the coordinates
+	 * will be extracted from firstMolecule unless invertOrder is true 
+	 * @param secondSet the second set of residue serials that will form the second part of the output array, the coordinates
+	 * will be extracted from secondMolecule unless invertOrder is true
+	 * @param atomName the atom name, e.g. CA
+	 * @param invertOrder whether the order should be inverted, if true the returned array will start with
+	 * coordinates of secondMolecule (residues given in firstSet) and end with coordinates of firstMolecule
+	 * (residues given in secondSet)
+	 * 
+	 * @return an array of size firstSet.size()+secondSet.size() with concatenated coordinates of both 
+	 * chains
+	 *  
+	 * @throws NullPointerException if an atom for given atomName and for the given residue serials
+	 * does not exist in either of the chains
+	 */
+	public Point3d[] getConformation(List<Integer> firstSet, List<Integer> secondSet, String atomName, boolean invertOrder) {
+		Point3d[] conformation = new Point3d[firstSet.size()+secondSet.size()];
+
+		PdbChain firstMolecule = getFirstMolecule();
+		PdbChain secondMolecule = getSecondMolecule();
+		
+		if (invertOrder) {
+			firstMolecule = getSecondMolecule();
+			secondMolecule = getFirstMolecule();
+		}
+		
+		
+		int i = 0;
+		for (int resser:firstSet) {
+			conformation[i] = firstMolecule.getResidue(resser).getAtom(atomName).getCoords();
+			i++;
+		}
+		for (int resser:secondSet) {
+			conformation[i] = secondMolecule.getResidue(resser).getAtom(atomName).getCoords();
+			i++;			
+		}
+		return conformation;
+	}
 }

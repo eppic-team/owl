@@ -1,6 +1,7 @@
 import gnu.getopt.Getopt;
 
 import java.io.File;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,8 +11,10 @@ import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
 
 import owl.core.runners.PymolRunner;
+import owl.core.structure.ChainCluster;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
+import owl.core.structure.InterfaceCluster;
 import owl.core.structure.InterfacesFinder;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbChain;
@@ -47,6 +50,9 @@ public class enumerateInterfaces {
 	private static final int N_SPHERE_POINTS = 3000;
 	
 	private static final double MIN_AREA_TO_KEEP = 35;
+	
+	private static final double CLUSTERING_CUTOFF = 2.0;
+	private static final int MINATOMS_CLUSTERING = 10;
 	
 	private static final int NTHREADS = Runtime.getRuntime().availableProcessors();
 	
@@ -155,11 +161,11 @@ public class enumerateInterfaces {
 		// we remove H atoms
 		pdb.removeHatoms();
 		
-		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumPolyChains()+" polymer chains ("+pdb.getAllRepChains().size()+" sequence unique), " +
+		System.out.println(pdb.getPdbCode()+" - "+pdb.getNumPolyChains()+" polymer chains ("+pdb.getProtChainClusters().size()+" sequence unique), " +
 				pdb.getNumNonPolyChains()+" non-polymer chains.");
 
-		for (String repChain:pdb.getAllRepChains()) {
-			System.out.println(pdb.getSeqIdenticalGroupString(repChain));
+		for (ChainCluster chainCluster:pdb.getProtChainClusters()) {
+			System.out.println(chainCluster.getClusterString());
 		}
 		System.out.println("Polymer chains: ");
 		for (PdbChain chain:pdb.getPolyChains()) {
@@ -181,6 +187,9 @@ public class enumerateInterfaces {
 		interfFinder.setWithRedundancyElimination(withRedundancyElimination);
 
 		ChainInterfaceList interfaces = interfFinder.getAllInterfaces(CUTOFF, N_SPHERE_POINTS, nThreads, true, nonPoly, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
+		
+		interfaces.initialiseClusters(pdb, CLUSTERING_CUTOFF, MINATOMS_CLUSTERING, "CA");
+		
 		long end = System.currentTimeMillis();
 		long total = (end-start)/1000;
 		System.out.println("Total time for interface calculation: "+total+"s");
@@ -230,7 +239,8 @@ public class enumerateInterfaces {
 					" bsa to asa cutoff: "+interf.getFirstRimCore().getCoreSize()+" "+interf.getSecondRimCore().getCoreSize());
 			System.out.printf("Interface area: %8.2f\n",interf.getInterfaceArea());
 			
-			if (pdb.areChainsNCSRelated(interf.getFirstMolecule().getPdbChainCode(), 
+			if (!interf.getFirstMolecule().getPdbChainCode().equals(interf.getSecondMolecule().getPdbChainCode()) && 
+					pdb.areChainsInSameCluster(interf.getFirstMolecule().getPdbChainCode(), 
 										interf.getSecondMolecule().getPdbChainCode())){
 
 				System.out.println("Chains are NCS related, trying to find pseudo-symmetric relationship: ");
@@ -281,6 +291,19 @@ public class enumerateInterfaces {
 				}
 			}
 		}
+		
+				
+		List<InterfaceCluster> clusters = interfaces.getClusters();
+		System.out.println("\nClusters: ");
+		for (InterfaceCluster cluster:clusters) {
+			System.out.print(cluster.getId()+":");
+			for (ChainInterface member:cluster.getMembers()) {
+				System.out.print(" "+member.getId());
+			}
+			System.out.println();
+		}
+		System.out.println();
+		
 		if (writeDir!=null) {
 			pr.generateInterfacesPse(inputFile, pdb.getPdbChainCodes(),
 					new File(writeDir,outBaseName+".allinterfaces.pml"), 

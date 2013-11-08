@@ -343,7 +343,7 @@ public class PdbChainTest {
 				int j = 0;
 				for (PdbChain pdbChainj:pdbi.getPolyChains()) {
 					
-					if (!pdbi.areChainsNCSRelated(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
+					if (!pdbi.areChainsInSameCluster(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
 						j++;
 						continue;						
 					}
@@ -386,7 +386,7 @@ public class PdbChainTest {
 				int j = 0;
 				for (PdbChain pdbChainj:pdbi.getPolyChains()) {
 					
-					if (!pdbi.areChainsNCSRelated(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
+					if (!pdbi.areChainsInSameCluster(pdbChaini.getPdbChainCode(), pdbChainj.getPdbChainCode())) {
 						j++;
 						continue;						
 					}					
