@@ -306,7 +306,7 @@ public class CiffileParser {
 		int element = 0;
 		String line;
 		line = fcif.readLine(); // read first line
-		Pattern p = Pattern.compile("^data_\\d\\w\\w\\w");
+		Pattern p = Pattern.compile("^data_\\w+");
 		if (!p.matcher(line).find()){
 			throw new FileFormatException("The file "+cifFile+" doesn't seem to be a cif file");
 		}
@@ -317,6 +317,7 @@ public class CiffileParser {
 			long currentOffset = fcif.getFilePointer(); //this gets byte offset at end of line
 			//linecount++;
 			if (line.startsWith("#")) {
+				// TODO phenix cif files don't seem to contain #, why not? 
 				element++;
 				continue;
 			}
@@ -359,6 +360,14 @@ public class CiffileParser {
 			}
 			lastLineOffset = currentOffset; //we store this line's offset to have it for next iteration
 		} // end scanning lines
+		
+		// at least there should be 1 loop element or 1 non-loop element:
+		// if they are both empty, most likely there's something wrong with the cif file
+		// it's important to throw an exception here, otherwise there would be a null pointer elsewhere
+		if (fields2values.isEmpty() && fields2indices.isEmpty()) {
+			throw new FileFormatException("Could not find any cif loop or non-loop elements. Is the cif file formatted correctly?");
+		}
+		
 		
 		fieldsTitlesRead = true;
 	}
