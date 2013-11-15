@@ -868,6 +868,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * Returns the last homolog (as sorted by blast, i.e. worst evalue) present 
 	 * in the full unfiltered list of homologs
 	 * @return
+	 * @throws ArrayIndexOutOfBoundsException if list is of 0 size
 	 */
 	public Homolog getLast() {
 		return list.get(list.size()-1);
