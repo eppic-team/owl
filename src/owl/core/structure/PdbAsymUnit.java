@@ -323,8 +323,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		parser.readBioUnit(this);
 		
-		parser.closeFile();	
-
 		// TODO check whether we can trust sequences or not: based on existence of pdbx_poly_seq_scheme for instance
 		boolean trustSequences = true;
 		initialiseChainClusters(trustSequences);

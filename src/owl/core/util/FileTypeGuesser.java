@@ -59,7 +59,7 @@ public class FileTypeGuesser {
 		"#(?:AGLAPPE|CMVIEW|OWL) GRAPH FILE.*",
 		// mmCIF files from PDB always start with "data_PDBcode". 
 		// Phenix's cif files do start with data_ but then with no PDB code 
-		"data_\\w+"
+		"data_\\w+.*"
 	};
 	
 	/*---------------------------- public methods ---------------------------*/

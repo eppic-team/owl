@@ -274,7 +274,7 @@ public class RIGEnsemble {
 			CiffileParser cifparser = new CiffileParser(file);
 			models = cifparser.getModels();
 			chains = cifparser.getChains();
-			cifparser.closeFile();
+
 			chain = chains[0];
 			for(int mod: models) {
 				//pdb = new CiffilePdb(file.getAbsolutePath());

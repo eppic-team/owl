@@ -125,7 +125,8 @@ public class PdbParsersTest {
 		}
 	}
 	
-	@Test
+	// commenting it out since we have no Pdbase DB available anymore
+	//@Test
 	public void testCIFagainstPDBASE() throws FileFormatException, SQLException, IOException {
 
 		MySQLConnection conn = new MySQLConnection();
@@ -157,7 +158,7 @@ public class PdbParsersTest {
 				String[] ciffileChains = ciffileParser.getChains(); 
 				String[] pdbaseChains = pdbaseParser.getChains();
 				Integer[] ciffileModels = ciffileParser.getModels(); 
-				ciffileParser.closeFile();
+				
 				Integer[] pdbaseModels = pdbaseParser.getModels();
 				Assert.assertTrue(ciffileChains.length==pdbaseChains.length);
 				Assert.assertTrue(ciffileModels.length==pdbaseModels.length);
