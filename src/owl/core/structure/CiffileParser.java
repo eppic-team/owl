@@ -57,32 +57,30 @@ public class CiffileParser {
 	private File cifFile;
 
 	// fields we will read
-	private static final String entryId = "_entry";
-	private static final String structId = "_struct";
-	private static final String atomSiteId = "_atom_site";
-	private static final String pdbxPolySeqId = "_pdbx_poly_seq_scheme";
-	private static final String structConfId = "_struct_conf";
-	private static final String structSheetId = "_struct_sheet_range";
+	private static final String entry = "_entry";
+	private static final String struct = "_struct";
+	private static final String atomSite = "_atom_site";
+	private static final String pdbxPolySeq = "_pdbx_poly_seq_scheme";
+	private static final String structConf = "_struct_conf";
+	private static final String structSheet = "_struct_sheet_range";
 	private static final String cell = "_cell";
 	private static final String symmetry = "_symmetry";
 	private static final String exptl = "_exptl";
 	private static final String reflns = "_reflns";
 	private static final String refine = "_refine";
-	private static final String atomSitesId = "_atom_sites";
+	private static final String atomSites = "_atom_sites";
 	private static final String pdbxStructAssembly = "_pdbx_struct_assembly";
 	private static final String pdbxStructAssemblyGen = "_pdbx_struct_assembly_gen";
 	private static final String pdbxStructOperList = "_pdbx_struct_oper_list";
 	private static final String databasePdbRev = "_database_PDB_rev";
 	
 	private static final String[] ids = 
-		{entryId, structId, atomSiteId, pdbxPolySeqId,structConfId, 
-		structSheetId, cell, symmetry, exptl, reflns, refine, atomSitesId, 
+		{entry, struct, atomSite, pdbxPolySeq,structConf, 
+		structSheet, cell, symmetry, exptl, reflns, refine, atomSites, 
 		pdbxStructAssembly, pdbxStructAssemblyGen, pdbxStructOperList, databasePdbRev};
 	
 	
 	private HashMap<String, CifFieldInfo> fields;
-	
-	private int dataIdx; // the index of the data String being tokenised, to be initialised every time data from new field is read
 	
 	private boolean fieldsTitlesRead;
 	
@@ -215,14 +213,11 @@ public class CiffileParser {
 				scanFile();
 			}
 			
-			CifFieldInfo pdbxPolySeqField = fields.get(pdbxPolySeqId);
+			CifFieldInfo pdbxPolySeqField = fields.get(pdbxPolySeq);
 			
-			// we start always at 1, because the first character is a \n
-			dataIdx = 1;
-			
-			while(dataIdx<pdbxPolySeqField.getLastSubFieldData().length()-1) {
-				String[] tokens = tokeniseFields(pdbxPolySeqField.getLastSubFieldData(),pdbxPolySeqField.getNumSubFields());
-				chains.add(tokens[pdbxPolySeqField.getIndexForSubField("pdb_strand_id")]);
+			while (pdbxPolySeqField.hasMoreData()) {
+				String[] tokens = pdbxPolySeqField.getNextTokens();
+				chains.add(tokens[pdbxPolySeqField.getIndexForSubField("pdb_strand_id")]);				
 			}
 			
 		} catch (IOException e) {
@@ -253,13 +248,11 @@ public class CiffileParser {
 				scanFile();
 			}
 			
-			CifFieldInfo atomSiteField = fields.get(atomSiteId);
+			CifFieldInfo atomSiteField = fields.get(atomSite);
 			int modelIdx = atomSiteField.getIndexForSubField("pdbx_PDB_model_num");
 			
-			// we start always at 1, because the first character is a \n
-			dataIdx = 1;
-			while(dataIdx<atomSiteField.getLastSubFieldData().length()-1) {
-				String[] tokens = tokeniseFields(atomSiteField.getLastSubFieldData(),atomSiteField.getNumSubFields());
+			while(atomSiteField.hasMoreData()) {
+				String[] tokens = atomSiteField.getNextTokens();
 				models.add(Integer.parseInt(tokens[modelIdx]));
 			}
 			
@@ -385,10 +378,10 @@ public class CiffileParser {
 	
 	protected String readPdbCode() {
 
-		int index = fields.get(entryId).getIndexForSubField("id");
+		int index = fields.get(entry).getIndexForSubField("id");
 		if (index<0) return PdbAsymUnit.NO_PDB_CODE;  
 		
-		return fields.get(entryId).getSubFieldData(index).toString().trim().toLowerCase();
+		return fields.get(entry).getSubFieldData(index).toString().trim().toLowerCase();
 	}
 	
 	protected Date readReleaseDate() throws FileFormatException {
@@ -411,22 +404,13 @@ public class CiffileParser {
 			int numIdx = databasePdbRevField.getIndexForSubField("num");
 			int dateIdx = databasePdbRevField.getIndexForSubField("date");
 			
-			// we start always at 1, because the first character is a \n
-			dataIdx = 1;
-			
-			while(dataIdx<databasePdbRevField.getLastSubFieldData().length()-1) {  
+			while(databasePdbRevField.hasMoreData()) {  
 
-				String[] tokens = tokeniseFields(databasePdbRevField.getLastSubFieldData(), 
-												 databasePdbRevField.getNumSubFields());
+				String[] tokens = databasePdbRevField.getNextTokens();
 				
-				//TODO the condition below is useless, tokens[] will alway be the right size
-				//     can we catch an error by catching arrays out of bounds within the tokeniser method?
-				//if (tokens.length!=databasePdbRevField.getNumSubFields()) {
-				//	throw new FileFormatException("Incorrect number of fields for record "+recordCount+" in loop element "+databasePdbRev+ " of CIF file "+cifFile);
-				//}
-
 				String num = tokens[numIdx].trim();
-				if(isInteger(num) && (Integer.parseInt(num) == 1)) {
+				
+				if (isInteger(num) && (Integer.parseInt(num) == 1)) {
 					String date = tokens[dateIdx].trim();
 					try {
 						releaseDate = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(date);
@@ -441,33 +425,12 @@ public class CiffileParser {
 	}
 	
 	protected String readTitle() {
-		CifFieldInfo structField = fields.get(structId);
+		CifFieldInfo structField = fields.get(struct);
 		if (structField.isEmpty()) return null;
 		
-		int index = structField.getIndexForSubField("title");
-		if (index<0) return null; // subfield is missing
+		if (!structField.isSubFieldPresent("title")) return null; // subfield is missing
 		
-		//TODO review this: I think we could make the code clearer by moving the tokeniser elsewhere and 
-		// having all functionality within the tokeniser, so that here it's more transparent 
-
-		String title = null;
-
-		// title can be single line or multiline, we can catch it by checking first character: if multiline 1st char is a '\n'
-		if (structField.getSubFieldData(index).charAt(0)!='\n'){ // single line
-			
-			title = structField.getSubFieldData(index).toString().trim();
-			
-		} else { // multi line
-			// we start always at 1, because the first character is a \n
-			dataIdx = 1;
-			
-			// title can be single line or multiline, tokeniseFields takes care of either
-			while (dataIdx<structField.getSubFieldData(index).length()-1) {
-				String[] tokens = tokeniseFields(structField.getSubFieldData(index), 1);
-				title = tokens[0];
-			}			
-		}
-		
+		String title = structField.getFinalSubFieldData("title");
 		
 		if (title.charAt(0)=='\'' && title.charAt(title.length()-1)=='\'') {
 			title = title.substring(1,title.length()-1);
@@ -522,7 +485,7 @@ public class CiffileParser {
 	}
 	
 	protected Matrix4d readScaleMatrix() {
-		CifFieldInfo atomSitesField = fields.get(atomSitesId);
+		CifFieldInfo atomSitesField = fields.get(atomSites);
 		if (atomSitesField.isEmpty()) return null;
 		
 		Matrix4d scaleMatrix = new Matrix4d();
@@ -559,13 +522,11 @@ public class CiffileParser {
 			
 			int recordCount = 0;
 			
-			// we start always at 1, because the first character is a \n
-			dataIdx = 1;
-			
-			while(dataIdx<exptlField.getLastSubFieldData().length()-1) {
+			while(exptlField.hasMoreData()) {
 				recordCount++; 
-				String[] tokens = tokeniseFields(exptlField.getLastSubFieldData(), exptlField.getNumSubFields());
+				String[] tokens = exptlField.getNextTokens();
 				if (recordCount==1) {
+					// this means we read only first method and ignore the rest!
 					expMethod = tokens[methodIdx];
 				}
 			}
@@ -704,12 +665,10 @@ public class CiffileParser {
 
 			//Read _pdbx_struct_assembly block values
 			
-			dataIdx = 1;
-			
-			while(dataIdx<pdbxStructAssemblyField.getLastSubFieldData().length()-1) {
+			while(pdbxStructAssemblyField.hasMoreData()) {
 				
 				BioUnitAssembly assembly = new BioUnitAssembly();
-				String[] tokens = tokeniseFields(pdbxStructAssemblyField.getLastSubFieldData(),pdbxStructAssemblyField.getNumSubFields());
+				String[] tokens = pdbxStructAssemblyField.getNextTokens();
 				
 				//Add assembly details
 				
@@ -766,26 +725,8 @@ public class CiffileParser {
 			
 			String assemblyId = pdbxStructAssemblyGenField.getSubFieldData("assembly_id").trim();
 			String operatorIds = pdbxStructAssemblyGenField.getSubFieldData("oper_expression").trim().toLowerCase();
-			String chainIds = null;
-
-			// TODO ideally we should change this into a single method that takes cares of all this, see comment in readTitle
 			
-			// the asym_id_list sometimes is multiline
-			if (pdbxStructAssemblyGenField.getSubFieldData("asym_id_list").charAt(0)!='\n') { // single line
-				
-				chainIds = pdbxStructAssemblyGenField.getSubFieldData("asym_id_list").trim();
-				
-			} else { // multi line
-				dataIdx = 1;			
-				int index = pdbxStructAssemblyGenField.getIndexForSubField("asym_id_list"); 
-				while (dataIdx<pdbxStructAssemblyGenField.getSubFieldData(index).length()-1) {
-					String[] tokens = tokeniseFields(pdbxStructAssemblyGenField.getSubFieldData(index),1);
-
-					chainIds = tokens[0]; //Assume that if fishy happens it happens only in the chain codes
-				}	
-			}
-			
-			
+			String chainIds = pdbxStructAssemblyGenField.getFinalSubFieldData("asym_id_list"); 
 			
 			//Add details
 			
@@ -818,10 +759,10 @@ public class CiffileParser {
 			BioUnitAssemblyGen gen = new BioUnitAssemblyGen();
 
 			//Read _pdbx_struct_assembly_gen values
-			dataIdx = 1;
-			while(dataIdx<pdbxStructAssemblyGenField.getLastSubFieldData().length()-1) {
 
-				String[] tokens = tokeniseFields(pdbxStructAssemblyGenField.getLastSubFieldData(),pdbxStructAssemblyGenField.getNumSubFields());
+			while(pdbxStructAssemblyGenField.hasMoreData()) {
+
+				String[] tokens = pdbxStructAssemblyGenField.getNextTokens();
 				
 				gen = new BioUnitAssemblyGen(gen.getId()+1);
 				
@@ -929,11 +870,10 @@ public class CiffileParser {
 
 
 			//Read _pdbx_struct_oper_list block values
-			dataIdx = 1;
-			while(dataIdx<pdbxStructOperListField.getLastSubFieldData().length()-1) {
+			while(pdbxStructOperListField.hasMoreData()) {
 				
 				BioUnitOperation operation = new BioUnitOperation();
-				String[] tokens = tokeniseFields(pdbxStructOperListField.getLastSubFieldData(),pdbxStructOperListField.getNumSubFields());
+				String[] tokens = pdbxStructOperListField.getNextTokens();
 				
 				String idStr = tokens[idIdx].trim();
 				String m00 = tokens[m00Idx].trim();
@@ -987,7 +927,7 @@ public class CiffileParser {
 		
 		AtomLineList atomLines = new AtomLineList();
 		
-		CifFieldInfo atomSiteField = fields.get(atomSiteId);
+		CifFieldInfo atomSiteField = fields.get(atomSite);
 		
 		int groupPdbIdx = atomSiteField.getIndexForSubField("group_PDB");
 		int idIdx = atomSiteField.getIndexForSubField("id");
@@ -1006,14 +946,12 @@ public class CiffileParser {
 		int pdbxPDBModelNumIdx = atomSiteField.getIndexForSubField("pdbx_PDB_model_num");
 		int authAsymIdIdx = atomSiteField.getIndexForSubField("auth_asym_id");
 		
-		dataIdx = 1;
-		
-		while(dataIdx<atomSiteField.getLastSubFieldData().length()-1) {
+		while(atomSiteField.hasMoreData()) {
 
 			// group_PDB=0, auth_asym_id=22, pdbx_PDB_model_num=24, label_alt_id=4, id=1, label_atom_id=3, label_comp_id=5, label_asym_id=6, label_seq_id=8, Cartn_x=10, Cartn_y=11, Cartn_z=12, occupancy=13, B_iso_or_equiv=14
 			//   0   1    2  3  4   5 6 7 8  9     10    11       12    13    14 151617181920   2122 23 24
 			//ATOM   2    C CA  . MET A 1 1  ? 38.591 8.543   15.660  1.00 77.79  ? ? ? ? ? 1  MET A CA  1
-			String[] tokens = tokeniseFields(atomSiteField.getLastSubFieldData(), atomSiteField.getNumSubFields());
+			String[] tokens = atomSiteField.getNextTokens();
 
 			if ((tokens[groupPdbIdx].equals("ATOM") || tokens[groupPdbIdx].equals("HETATM")) &&  
 				Integer.parseInt(tokens[pdbxPDBModelNumIdx])==model) { // match our given chain and model 
@@ -1131,7 +1069,7 @@ public class CiffileParser {
 		
 		PdbxPolySeqLineList list  = new PdbxPolySeqLineList();
 		
-		CifFieldInfo pdbxPolySeqField = fields.get(pdbxPolySeqId);
+		CifFieldInfo pdbxPolySeqField = fields.get(pdbxPolySeq);
 		if (pdbxPolySeqField.isEmpty()) {
 			throw new PdbLoadException("Missing pdbx_poly_seq_scheme field in mmCIF file. Is there no protein or nucleotide chains in this structure?");
 		}
@@ -1144,14 +1082,12 @@ public class CiffileParser {
 		int monIdIdx = pdbxPolySeqField.getIndexForSubField("mon_id");
 		int pdbStrandIdIdx = pdbxPolySeqField.getIndexForSubField("pdb_strand_id");
 
-		dataIdx = 1;
-		
-		while(dataIdx<pdbxPolySeqField.getLastSubFieldData().length()-1) {
+		while(pdbxPolySeqField.hasMoreData()) {
 
 			// asym_id=0, seq_id=2, auth_seq_num=6, pdb_ins_code=10, mon_id=3 
 			// 0 1 2     3 4   5   6     7   8 910
 			// A 1 1   ASP 1   1   1   ASP ASP A .
-			String[] tokens = tokeniseFields(pdbxPolySeqField.getLastSubFieldData(), pdbxPolySeqField.getNumSubFields());
+			String[] tokens = pdbxPolySeqField.getNextTokens();
 			
 			String asymId = tokens[asymIdIdx];
 			String pdbChainCode = tokens[pdbStrandIdIdx];
@@ -1207,7 +1143,7 @@ public class CiffileParser {
 			pdb.setSecondaryStructure(secondaryStructure);
 		}
 		
-		CifFieldInfo structConfField = fields.get(structConfId);
+		CifFieldInfo structConfField = fields.get(structConf);
 		
 		// struct_conf element is optional
 		if (!structConfField.isEmpty()) {
@@ -1249,16 +1185,14 @@ public class CiffileParser {
 				int begLabelSeqIdIdx = structConfField.getIndexForSubField("beg_label_seq_id");
 				int endLabelSeqIdIdx = structConfField.getIndexForSubField("end_label_seq_id");
 				
-				dataIdx = 1;
-				
-				while(dataIdx<structConfField.getLastSubFieldData().length()-1) {
+				while(structConfField.hasMoreData()) {
 
 					// struct_conf (optional element), HELIX and TURN secondary structure
 
 					//id=1, beg_label_seq_id=5, end_label_seq_id=9, beg_label_asym_id=4
 					//     0       1  2    3 4 5   6   7 8  9 10  111213    1415 16 1718 19
 					//HELX_P HELX_P1  1  ASN A 2   ? GLY A 12  ? ASN A 2   GLY A 12  1 ? 11
-					String[] tokens = tokeniseFields(structConfField.getLastSubFieldData(), structConfField.getNumSubFields());
+					String[] tokens = structConfField.getNextTokens();
 
 					String begChainCode = tokens[begLabelAsymIdIdx];
 					String id = tokens[idIdx];
@@ -1289,7 +1223,7 @@ public class CiffileParser {
 		}
 		
 		
-		CifFieldInfo structSheetField = fields.get(structSheetId);
+		CifFieldInfo structSheetField = fields.get(structSheet);
 
 		// struct_sheet_range element is optional, when present it can be loop or non-loop		
 		if (!structSheetField.isEmpty()) {
@@ -1313,15 +1247,13 @@ public class CiffileParser {
 				int begLabelSeqIdIdx = structSheetField.getIndexForSubField("beg_label_seq_id");
 				int endLabelSeqIdIdx = structSheetField.getIndexForSubField("end_label_seq_id");
 				
-				dataIdx = 1;
-				
-				while(dataIdx<structSheetField.getLastSubFieldData().length()-1) {
+				while(structSheetField.hasMoreData()) {
 					
 					// struct_sheet_range (optional element), SHEETs
 					//sheet_id=0, id=1, beg_label_seq_id=4, end_label_seq_id=8, beg_label_asym_id=3
 					//0 1   2 3  4 5   6 7  8 910  1112 13  1415 16
 					//A 1 ARG A 14 ? LYS A 19 ? ? ARG A 14 LYS A 19
-					String[] tokens = tokeniseFields(structSheetField.getLastSubFieldData(),structSheetField.getNumSubFields());
+					String[] tokens = structSheetField.getNextTokens();
 
 					String begChainCode = tokens[begLabelAsymIdIdx];
 					String sheetid = tokens[sheetIdIdx];
@@ -1343,105 +1275,6 @@ public class CiffileParser {
 				pdb.getSecondaryStructure().setComment("CIFfile");
 				pdb.initialiseResiduesSecStruct();
 			}
-		}
-	}
-
-	/**
-	 * Splits a cif data string into its individual tokens returning a String array with all tokens
-	 * Takes care of all particularities of the format of data in the ciffiles:
-	 *  - fields within records are separated by spaces
-	 *  - spaces can be used within quoted strings (with single or double quotes)
-	 *  - free style with all characters allowed if something is quoted with \n; ;\n 
-	 * 
-	 * The given data StringBuilder must start with '\n'
-	 * The global variable dataIdx must be initialized to 1 (in order to start at the 
-	 * character after the first '\n') before starting a read
-	 * 
-	 * The java class StreamTokenizer could have done all this, but it was limited to do all that we needed to do
-	 * 
-	 * @param data
-	 * @param numberTokens
-	 * @return
-	 */
-	private String[] tokeniseFields(StringBuilder data, int numberTokens) {
-		String[] tokens = new String[numberTokens];
-		// initialise tokens to empty strings
-		for (int i=0; i<numberTokens;i++){
-			tokens[i]="";
-		}
-		
-		int i = 0; // token index
-		char lastChar = 0; // ' '
-		char quoteChar = 0;
-		while (true) {
-			
-			char currentChar = data.charAt(dataIdx++);
-			
-			// '' quoting
-			if (quoteChar!=';' && currentChar=='\'' && (lastChar==' ' || lastChar=='\n' || lastChar==0)){
-				quoteChar = '\'';
-			}
-			else if (quoteChar!=';' && currentChar==' ' && lastChar=='\''){
-				quoteChar = 0;
-			}
-			// "" quoting
-			if (quoteChar!=';' && currentChar=='"' && (lastChar==' ' || lastChar=='\n' || lastChar==0)){
-				quoteChar = '"';
-			}
-			else if (quoteChar!=';' && currentChar==' ' && lastChar=='"'){
-				quoteChar = 0;
-			}			
-			// ;; quoting (multi-line quoting)
-			if (quoteChar!=';' && currentChar==';' && (lastChar=='\n' || lastChar==0)){ 
-				quoteChar = ';';
-			}
-			else if (quoteChar==';' && currentChar==';' && lastChar=='\n'){
-				quoteChar = 0;
-			}
-			
-			// reading field
-			if (quoteChar==0) { // not within quotes
-				if (currentChar==' ' || currentChar=='\n') { 
-					if (currentChar!=lastChar && !(currentChar=='\n' && lastChar==' ')) i++; // we only increment when we move from a non-space to a space or from non-space to \n
-				} else {
-					tokens[i]+=currentChar;
-					// if we are adding the last ; of a ;;-quoted string then strip the starting ';' and ending "\n;" out 
-					if (currentChar==';' && lastChar=='\n' && tokens[i].startsWith(";") && tokens[i].endsWith("\n;")) {
-						tokens[i]=tokens[i].replaceFirst("^;", "");
-						tokens[i]=tokens[i].replaceFirst("\n;","");
-					}									
-				} 
-			} else {			// within quotes (of type '', ""  or  ;;)
-				tokens[i]+=currentChar;
-				// if string is surrounded by '' or "" then strip them out (except when string is length 1 and thus beginning and end are quoteChar)
-				if (tokens[i].length()!=1 && 
-						tokens[i].startsWith(Character.toString(quoteChar)) && 
-						tokens[i].endsWith(Character.toString(quoteChar))) 
-					tokens[i]=tokens[i].replaceAll(Character.toString(quoteChar), "");
-
-			}
-			
-			lastChar = currentChar;
-			 
-			if (i==numberTokens) {
-				// for the last record of an element it is important to have read up to the end of the line (including the '\n'), 
-				// This is needed because:
-				// 1) next iteration needs to start on the character after the '\n'
-				// 2) condition "while (dataIdx<data string length)-1" 
-				while (true) {
-					// first check if we are already at the end, we can't go further: in this case
-					// we'll stay at the '\n', that's why the condition "while (dataIdx<data string length)-1" has the -1					
-					if (dataIdx>=data.length()-1) break;
-					
-					currentChar = data.charAt(dataIdx++);
-					if (currentChar=='\n'){ 
-						break;
-					}
-					
-				}
-				return tokens;
-			}
-			
 		}
 	}
 	
@@ -1470,7 +1303,7 @@ public class CiffileParser {
 	public static void main(String[] args) throws Exception {
 		
 		// 4AX3, 1BXY for multi-line title
-		CiffileParser parser = new CiffileParser(new File("/home/duarte_j/4ax3.cif"));
+		CiffileParser parser = new CiffileParser(new File("/home/duarte_j/1bxy.cif"));
 		
 		for (CifFieldInfo field:parser.fields.values()) {
 			System.out.println(field.getFieldName()+" "+field.getNumSubFields()+" "+(field.isLoop()?"loop":""));
