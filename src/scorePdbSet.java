@@ -1,14 +1,11 @@
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 import owl.decoyScoring.AtomTypeScorer;
 import owl.decoyScoring.ResTypeScorer;
 import owl.decoyScoring.Scorer;
@@ -22,17 +19,16 @@ import owl.decoyScoring.Scorer;
  */
 public class scorePdbSet {
 
-	private static final String PDBASEDB = "pdbase";
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+
 	private static final File atomScMatFile = new File("/project/StruPPi/jose/emp_potential/scoremat.atom.cullpdb20");
 	private static final File resScMatFile = new File("/project/StruPPi/jose/emp_potential/scoremat.res.cullpdb20");
 
 
-	public static void main(String[] args) throws SQLException, IOException, FileFormatException  {
+	public static void main(String[] args) throws IOException, FileFormatException  {
 
 		File listFile = new File(args[0]);
-		
-		MySQLConnection conn = new MySQLConnection();
-		
+			
 		String[] pdbIds = TemplateList.readIdsListFile(listFile);
 
 		AtomTypeScorer atomScorer = new AtomTypeScorer(atomScMatFile);
@@ -43,7 +39,12 @@ public class scorePdbSet {
 			String pdbChainCode = pdbId.substring(4,5);
 		
 			try {
-				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASEDB);
+				
+				File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+				cifFile.deleteOnExit();
+				PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+
 				PdbChain pdb = fullpdb.getChain(pdbChainCode);
 				if (!Scorer.isValidPdb(pdb)) {
 					continue;
@@ -52,10 +53,7 @@ public class scorePdbSet {
 			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load "+pdbId);
 				continue;
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Couldn't find "+pdbId);
-				continue;				
-			}
+			} 
 			
 		}
 		

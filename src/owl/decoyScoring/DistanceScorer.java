@@ -8,9 +8,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.ResultSet;
+//import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+//import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -18,14 +18,13 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.AIGEdge;
 import owl.core.structure.graphs.AIGNode;
 import owl.core.structure.graphs.AIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
+//import owl.core.util.MySQLConnection;
 
 
 public class DistanceScorer extends Scorer {
@@ -42,7 +41,7 @@ public class DistanceScorer extends Scorer {
 	// our convention is for the index k to be for distances between DISTANCE_BINS[k] and DISTANCE_BINS[k-1]. k=0 will have all distances below DISTANCE_BINS[0]
 	private static final double[] DISTANCE_BINS = {2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0}; 
 	
-	private static final String ATOM_DISTANCE_COUNTS_TABLE = "atom_distance_counts";
+	//private static final String ATOM_DISTANCE_COUNTS_TABLE = "atom_distance_counts";
 	
 	
 	private double[] distanceBins;
@@ -73,7 +72,6 @@ public class DistanceScorer extends Scorer {
 		
 		this.pairCounts = new int[NUM_ATOM_TYPES][NUM_ATOM_TYPES][distanceBins.length];
 		
-		this.conn = new MySQLConnection();
 	}
 	
 	public DistanceScorer(File countsFile) throws IOException, FileFormatException {
@@ -100,7 +98,10 @@ public class DistanceScorer extends Scorer {
 			String pdbChainCode = id.substring(4,5);
 			PdbChain pdb = null;
 			try {
-				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,DB);
+				File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+				cifFile.deleteOnExit();
+				PdbAsymUnit.grabCifFile(Scorer.CIFREPODIR, null, pdbCode, cifFile, false);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 				pdb = fullpdb.getChain(pdbChainCode);
 				if (!isValidPdb(pdb)) {
 					System.err.println(id+" didn't pass the quality checks to be included in training set");
@@ -109,8 +110,8 @@ public class DistanceScorer extends Scorer {
 				System.out.println(id);
 				this.structureIds.add(id);
 				
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Couldn't find pdb "+pdbCode);
+			} catch (FileFormatException e) {
+				System.err.println("Couldn't load pdb "+pdbCode);
 				continue;
 			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load pdb "+pdbCode);
@@ -309,7 +310,10 @@ public class DistanceScorer extends Scorer {
 			}
 			if (!line.startsWith("#")) {
 				String[] tokens = line.split("\\s");
-				if (tokens.length!=4) throw new FileFormatException("Counts file "+file+" has incorrect number of columns in line "+lineCount);
+				if (tokens.length!=4) {
+					br.close();
+					throw new FileFormatException("Counts file "+file+" has incorrect number of columns in line "+lineCount);
+				}
 				int i = types2indices.get(tokens[0]);
 				int j = types2indices.get(tokens[1]);
 				int k = Integer.parseInt(tokens[2]);
@@ -319,48 +323,49 @@ public class DistanceScorer extends Scorer {
 		}
 		
 		if (cutoff!=distanceBins[distanceBins.length-1]) {
+			br.close();
 			throw new FileFormatException("Cutoff line doesn't coincide with last value in distance bins line in counts file "+file);
 		}
 		br.close();
 	}
 	
-	public void writeCountsToDb(String database) throws SQLException {
-		//TODO this is a (working) stub implementation, should write metadata with parameters like distanceBins and so on to separate table
-		Statement stmt = conn.createStatement();
-		for (int i=0;i<NUM_ATOM_TYPES;i++) {
-			for (int j=i;j<NUM_ATOM_TYPES;j++) {
-				for (int k=0;k<distanceBins.length;k++) {
-
-					String sql = "INSERT INTO "+database+"."+ATOM_DISTANCE_COUNTS_TABLE+" (i_res, j_res, dist_bin, count) " +
-							" VALUES ('"+indices2types.get(i)+"', '"+indices2types.get(j)+"', "+k+", "+pairCounts[i][j][k]+")";
-					stmt.executeUpdate(sql);
-				}
-			}
-		}
-		stmt.close();
-	}
-	
-	public void readCountsFromDb(String database) throws SQLException {
-		//TODO this is a (working) stub implementation, missing many things: distanceBins and other parameters must be read from db (a metadata table)
-		Scorer.initAtomMap(types2indices, indices2types);
-		pairCounts = new int[NUM_ATOM_TYPES][NUM_ATOM_TYPES][distanceBins.length];
-		Statement stmt = conn.createStatement();
-		String sql = "SELECT i_res, j_res, dist_bin, count FROM "+database+"."+ATOM_DISTANCE_COUNTS_TABLE;
-		ResultSet rsst = stmt.executeQuery(sql);
-		while (rsst.next()) {
-			int i = types2indices.get(rsst.getString(1));
-			int j = types2indices.get(rsst.getString(2));
-			int k = rsst.getInt(3);
-			int count = rsst.getInt(4);
-			if (i>j) {
-				System.err.println("Warning: indices for atom types in wrong order in database!");
-			}
-			pairCounts[i][j][k]=count;
-		}
-		rsst.close();
-		stmt.close();
-		this.listFile = new File("unknown"); 
-	}
+//	public void writeCountsToDb(String database) throws SQLException {
+//		//TODO this is a (working) stub implementation, should write metadata with parameters like distanceBins and so on to separate table
+//		Statement stmt = conn.createStatement();
+//		for (int i=0;i<NUM_ATOM_TYPES;i++) {
+//			for (int j=i;j<NUM_ATOM_TYPES;j++) {
+//				for (int k=0;k<distanceBins.length;k++) {
+//
+//					String sql = "INSERT INTO "+database+"."+ATOM_DISTANCE_COUNTS_TABLE+" (i_res, j_res, dist_bin, count) " +
+//							" VALUES ('"+indices2types.get(i)+"', '"+indices2types.get(j)+"', "+k+", "+pairCounts[i][j][k]+")";
+//					stmt.executeUpdate(sql);
+//				}
+//			}
+//		}
+//		stmt.close();
+//	}
+//	
+//	public void readCountsFromDb(String database) throws SQLException {
+//		//TODO this is a (working) stub implementation, missing many things: distanceBins and other parameters must be read from db (a metadata table)
+//		Scorer.initAtomMap(types2indices, indices2types);
+//		pairCounts = new int[NUM_ATOM_TYPES][NUM_ATOM_TYPES][distanceBins.length];
+//		Statement stmt = conn.createStatement();
+//		String sql = "SELECT i_res, j_res, dist_bin, count FROM "+database+"."+ATOM_DISTANCE_COUNTS_TABLE;
+//		ResultSet rsst = stmt.executeQuery(sql);
+//		while (rsst.next()) {
+//			int i = types2indices.get(rsst.getString(1));
+//			int j = types2indices.get(rsst.getString(2));
+//			int k = rsst.getInt(3);
+//			int count = rsst.getInt(4);
+//			if (i>j) {
+//				System.err.println("Warning: indices for atom types in wrong order in database!");
+//			}
+//			pairCounts[i][j][k]=count;
+//		}
+//		rsst.close();
+//		stmt.close();
+//		this.listFile = new File("unknown"); 
+//	}
 	
 	public static void main(String[] args) throws Exception {
 		String help = 

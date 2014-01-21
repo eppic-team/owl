@@ -1,14 +1,11 @@
 import java.io.*;
-import java.sql.SQLException;
 import java.util.HashMap;
 
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 /**
@@ -21,6 +18,8 @@ import owl.core.util.MySQLConnection;
  */
 public class writeSASAtoBFactor {
 
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+	
 	private static final String NACCESS_EXECUTABLE = "/project/StruPPi/bin/naccess";
 	
 	/**
@@ -104,7 +103,10 @@ public class writeSASAtoBFactor {
 				try {
 					System.out.println("Loading pdb code " + pdbCode);
 					try {
-						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+						File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+						cifFile.deleteOnExit();
+						PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+						PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 						if(chainCode.length() == 0) {
 
 							chainCode = fullpdb.getFirstChain().getPdbChainCode();
@@ -115,11 +117,11 @@ public class writeSASAtoBFactor {
 						System.err.println("Error loading pdb structure:" + e.getMessage());
 						System.exit(1);
 					}
-				} catch (SQLException e) {
-					System.err.println("Database error: " + e.getMessage());
+				} catch (FileFormatException e) {
+					System.err.println("Error loading pdb structure:" + e.getMessage());
 					System.exit(1);
-				} catch (PdbCodeNotFoundException e) {
-					System.err.println("Pdb code " + pdbCode + " not found in database.");
+				} catch (IOException e) {
+					System.err.println("Error loading pdb structure:" + e.getMessage());
 					System.exit(1);
 				}
 

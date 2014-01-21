@@ -5,24 +5,23 @@ import java.io.IOException;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 
 public class genGraph {
 	/*------------------------------ constants ------------------------------*/
 	
-	public static final String			PDB_DB = "pdbase";
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	/*--------------------------- type definitions --------------------------*/
 	public enum OutputFormat {CMVIEW, PAUL, SADP};
-	
-	
+
+
+
 	// main
 
 	public static void main(String[] args) throws IOException {
@@ -30,8 +29,8 @@ public class genGraph {
 		String progName = "genGraph";
 		
 		String help = "Usage, 3 options:\n" +
-				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
-				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-D <pdbase_db>] [-C|-P|-S] \n" +
+				"1)  "+progName+" -i <listfile> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] \n" +
+				"2)  "+progName+" -p <pdb_code> -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] \n" +
 				"3)  "+progName+" -f <pdbfile> [-c <chain_pdb_code>] -d <distance_cutoff> -t <contact_type> [-o <output_dir>] [-C|-P|-S] \n\n" +
 				"In case 2) also a list of comma separated pdb codes+chain codes can be specified, e.g. -p 1bxyA,1josA \n" +
 				"In case 3) if -c not specified then the first chain code in the pdb file will be taken\n" +
@@ -47,13 +46,12 @@ public class genGraph {
 		String[] pdbIds = null;
 		String pdbChainCode4file = null;
 		String pdbfile = "";
-		String pdbaseDb = PDB_DB;
 		String edgeType = "";
 		double cutoff = 0.0;
 		String outputDir = "."; // we set default to current directory
 		OutputFormat outFormat = OutputFormat.CMVIEW;	// output to cmview graph format by default
 		
-		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:D:CPSh?");
+		Getopt g = new Getopt(progName, args, "i:p:c:f:d:t:o:CPSh?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -77,9 +75,6 @@ public class genGraph {
 				break;
 			case 'o':
 				outputDir = g.getOptarg();
-				break;
-			case 'D':
-				pdbaseDb = g.getOptarg();
 				break;
 			case 'C':
 				outFormat = OutputFormat.CMVIEW;
@@ -115,16 +110,6 @@ public class genGraph {
 		}
 
 		
-		MySQLConnection conn = null;		
-
-		try{
-			conn = new MySQLConnection();
-		} catch (Exception e) {
-			System.err.println("Error opening database connection. Exiting");
-			System.exit(1);
-		}
-		
-		
 		if (pdbfile.equals("")){
 			
 			if (!listfile.equals("")) {		
@@ -140,7 +125,12 @@ public class genGraph {
 				try {
 					
 					//long start = System.currentTimeMillis();
-					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+					File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+					cifFile.deleteOnExit();
+					PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+					PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+
+					
 					PdbChain pdb = fullpdb.getChain(pdbChainCode);
 
 					// get graph
@@ -165,8 +155,8 @@ public class genGraph {
 
 				} catch (PdbLoadException e) {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
-				} catch (PdbCodeNotFoundException e) {
-					System.err.println("Couldn't find pdb code "+pdbCode);
+				} catch (FileFormatException e) {
+					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} 
 
 			}

@@ -1,14 +1,12 @@
 package examples;
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 
 import owl.core.structure.*;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -20,14 +18,18 @@ import edu.uci.ics.jung.graph.util.Pair;
  */
 public class testPdb {
 
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException, FileFormatException {
+	public static void main(String[] args) throws PdbLoadException, IOException, FileFormatException {
 		
 		String pdbCode="1bxy";
 		String pdbChainCode="A";
 		
 		// data from pdbase database
 		System.out.println("loading structure from pdbase");
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/mmCIF/gz/all/repo/dir", null, pdbCode, cifFile, false);				
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+				
 		PdbChain pdbFromPdbase = fullpdb.getChain(pdbChainCode);
 		System.out.println("dumping structure to pdb file");
 		pdbFromPdbase.writeToPDBFile(new File("test_dump_from_pdbase.pdb"));

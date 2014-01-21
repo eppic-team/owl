@@ -1,8 +1,8 @@
+import java.io.File;
 import java.util.HashMap;
 
 import owl.core.structure.*;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.MySQLConnection;
 
 
 public class compareCMs {
@@ -24,9 +24,9 @@ public class compareCMs {
 
 		
 		System.out.println("loading structures from pdbase");
-		PdbAsymUnit fullpdb1 = new PdbAsymUnit(pdbcode1,new MySQLConnection(),"pdbase");
+		PdbAsymUnit fullpdb1 = new PdbAsymUnit(new File(pdbcode1+".cif"));
 		PdbChain pdb1 = fullpdb1.getChain(chaincode1);
-		PdbAsymUnit fullpdb2 = new PdbAsymUnit(pdbcode2,new MySQLConnection(),"pdbase");
+		PdbAsymUnit fullpdb2 = new PdbAsymUnit(new File(pdbcode2+".cif"));
 		PdbChain pdb2 = fullpdb2.getChain(chaincode2);
 
 		System.out.println("getting graphs");

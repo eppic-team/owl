@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.sql.SQLException;
 import java.util.TreeMap;
 
 import org.xml.sax.SAXException;
@@ -27,7 +26,6 @@ import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.StructAlignmentException;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.GraphAveragerException;
@@ -38,6 +36,8 @@ import owl.graphAveraging.PhiPsiAverager;
 public class RunAll {
 	
 	private static final String PROGRAM_NAME = "model_it";
+	
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	// graph averaging constants
 	private static final String[] DEFAULT_CONTACT_TYPES = {"Ca", "Cg"};
@@ -90,11 +90,8 @@ public class RunAll {
 		double similarityGraphRmsdCutoff = TemplateSelection.DEFAULT_SIMILARITY_GRAPH_RMSD_CUTOFF;
 		int maxIter = TemplateSelection.DEFAULT_MAXITER;
 		double eValueCutoff = TemplateSelection.EVALUE_CUTOFF_PREFILTER;
-		int gtgScoreCutoff = TemplateSelection.DEFAULT_GTG_SCORE_CUTOFF;
 		boolean psiblast = true;
 		boolean psipred = true;
-		boolean gtg = true;
-		File gtgDir = new File(TemplateSelection.GTG_RESULTS_DIR);
 		String selectTemplates = ""; 
 		
 		File templatesFile = null;
@@ -167,22 +164,12 @@ public class RunAll {
 			case 'S':
 				psipred = false;
 				break;
-			case 'g':
-				gtgScoreCutoff = Integer.parseInt(g.getOptarg());
-				break;																
-			case 'G':
-				gtgDir = new File(g.getOptarg());
-				break;
-			case 'T':
-				gtg = false;
-				break;
 			case 'l':
 				selectTemplates = g.getOptarg();
 				if (!selectTemplates.equals(TemplateSelection.USE_BLAST_TEMPLATES) && 
-						!selectTemplates.equals(TemplateSelection.USE_PSIBLAST_TEMPLATES) && 
-						!selectTemplates.equals(TemplateSelection.USE_GTG_TEMPLATES)) {
+						!selectTemplates.equals(TemplateSelection.USE_PSIBLAST_TEMPLATES)) {
 					System.err.println("Invalid value specified for -l option, allowed values are: "
-							+TemplateSelection.USE_BLAST_TEMPLATES+", "+TemplateSelection.USE_PSIBLAST_TEMPLATES+" or "+TemplateSelection.USE_GTG_TEMPLATES);
+							+TemplateSelection.USE_BLAST_TEMPLATES+" or "+TemplateSelection.USE_PSIBLAST_TEMPLATES);
 					System.exit(1);
 				}
 				break;
@@ -235,18 +222,13 @@ public class RunAll {
 			System.err.println("Can't specify option use psi-blast templates (-l P) if skip psi-blast specified (-K)");
 			System.exit(1);
 		}
-		if (!gtg && selectTemplates.equals(TemplateSelection.USE_GTG_TEMPLATES)){
-			System.err.println("Can't specify option use GTG templates (-l G) if skip GTG specified (-T)");
-			System.exit(1);			
-		}
+		
 		if (target2templatesFile!=null && templatesFile==null) {
 			System.err.println("Option -L requires a templates file (-t)");
 			System.exit(1);
 		}
 		
 		
-		MySQLConnection conn = connectToDb();
-
 		TemplateList templates = null;	
 		MultipleSequenceAlignment target2templatesAln = null;
 		MultipleSequenceAlignment templatesAln = null;
@@ -261,9 +243,8 @@ public class RunAll {
 		
 			TemplateSelection ts = new TemplateSelection(inputSeqFile, 
 					pdbBlastDb, nrBlastDb, blastNumThreads, maxIter, eValueCutoff, 
-					gtgScoreCutoff, 
-					maxHits, similarityGraphRmsdCutoff, psiblast, psipred, gtg, baseName, outDir, gtgDir, 
-					selectTemplates, conn);
+					maxHits, similarityGraphRmsdCutoff, psiblast, psipred, baseName, outDir,  
+					selectTemplates, CIFREPODIR);
 
 			try {
 				templates = ts.run();
@@ -304,8 +285,8 @@ public class RunAll {
 			}
 			// load pdb data 
 			try {
-				templates.loadPdbData(conn, TemplateSelection.PDBASE_DB);
-			} catch (SQLException e) {
+				templates.loadPdbData(CIFREPODIR);
+			} catch (FileFormatException e) {
 				System.err.println("Problems getting PDB data for templates alignment. Error: "+e.getMessage()+"\nCan't continue");
 				System.exit(1);			
 			} catch (PdbLoadException e) {
@@ -477,19 +458,6 @@ public class RunAll {
 	
 	/*-------------------------------- private methods ----------------------------------------*/
  	
-	private static MySQLConnection connectToDb() {
-		MySQLConnection conn;
-		try {		
-			conn = new MySQLConnection();
-
-		} catch (SQLException e) {
-			conn = null;
-			System.err.println("Problems connecting to database. Error: "+e.getMessage()+"\nExiting");
-			System.exit(1);
-		}
-		return conn;
-	}
-	
 	private static MultipleSequenceAlignment getAlignment(TemplateList templates, File outDir, String baseName, String fullQuerySeq) {
 		BlastHit hit = null;
 		if (!templates.getSource().equals(TemplateList.SRC_OTHER)) {

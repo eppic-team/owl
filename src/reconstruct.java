@@ -8,7 +8,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.Locale;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -19,7 +18,6 @@ import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.ContactType;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.features.SecondaryStructure;
 import owl.core.structure.graphs.FileRIGraph;
@@ -27,7 +25,6 @@ import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
-import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.PhiPsiAverager;
 
@@ -48,8 +45,7 @@ public class reconstruct {
 	
 	private static String TINKER_BIN_DIR = "/usr/local/bin";
 	private static String PRM_FILE = "amber99.prm";
-	private static String PDBASE_DB = null; // this is for internal use only: if a PDBASE_DB is specified in config file then a local db installation of pdbase will be used
-											// otherwise the PDB data will be taken from the PDB's ftp
+	
 	private static String PDB_FTP_URL = "ftp://ftp.wwpdb.org/pub/pdb/data/structures/all/mmCIF/";
 	
 	private static final void readTinkerCfgFile(File file) throws IOException {
@@ -82,12 +78,6 @@ public class reconstruct {
 					//System.err.println("PRM_FILE file '"+m.group(1).trim()+"' given in config file "+file+" does not exist.");
 					//System.exit(1);
 				}
-			}
-			p = Pattern.compile("^PDBASE_DB=(.*)$");
-			m = p.matcher(line);
-			if (m.matches()) {		
-				// this option is for internal use only (undocumented)
-				PDBASE_DB = m.group(1).trim(); 
 			}
 			p = Pattern.compile("^PDB_FTP_URL=(.*)$");
 			m = p.matcher(line);
@@ -363,23 +353,17 @@ public class reconstruct {
 					mPdb = pdb.copy(fullpdb);
 					mPdb.mirror();
 				} else {
-					if (PDBASE_DB!=null) {
-						MySQLConnection conn = new MySQLConnection();
-						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDBASE_DB);
-						pdb = fullpdb.getChain(pdbChainCode);
-						mPdb = pdb.copy(fullpdb);
-						mPdb.mirror();
-					} else {
-						System.out.println("Downloading PDB entry "+pdbCode+" from PDB's ftp");
-						File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
-						cifFile.deleteOnExit();
-						PdbAsymUnit.grabCifFile(null, PDB_FTP_URL, pdbCode, cifFile, true);
-						PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
-						pdb = fullpdb.getChain(pdbChainCode);
-						mPdb = pdb.copy(fullpdb);
-						mPdb.mirror();
-						System.out.println("Done");
-					}
+
+					System.out.println("Downloading PDB entry "+pdbCode+" from PDB's ftp");
+					File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+					cifFile.deleteOnExit();
+					PdbAsymUnit.grabCifFile(null, PDB_FTP_URL, pdbCode, cifFile, true);
+					PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+					pdb = fullpdb.getChain(pdbChainCode);
+					mPdb = pdb.copy(fullpdb);
+					mPdb.mirror();
+					System.out.println("Done");
+
 					// we also write the file to the out dir so it can be used later for clustering rmsds etc.
 					origPdbFile = new File (outputDir,baseName+".native.pdb");
 					try {
@@ -392,12 +376,6 @@ public class reconstruct {
 
 			} catch (PdbLoadException e) {
 				System.err.println("Error while loading pdb data. Specific error "+e.getMessage());
-				System.exit(1);
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Given pdb code "+pdbCode+" couldn't be found in pdbase. Exiting");
-				System.exit(1);
-			} catch (SQLException e) {
-				System.err.println("Problems connecting to database for getting pdb data. Error: "+e.getMessage()+"\nExiting");
 				System.exit(1);
 			} catch (IOException e) {
 				System.err.println("Problems getting pdb data from PDB's ftp. Error: "+e.getMessage()+"\nExiting");

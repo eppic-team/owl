@@ -10,14 +10,12 @@ import java.util.HashMap;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 
@@ -58,7 +56,6 @@ public class ResTypeScorer extends TypeScorer {
 		entityCounts = new int[numEntities];
 		pairCounts = new int[numEntities][numEntities];
 		
-		this.conn = new MySQLConnection();
 		
 	}
 
@@ -84,7 +81,12 @@ public class ResTypeScorer extends TypeScorer {
 			String pdbChainCode = id.substring(4,5);
 			PdbChain pdb = null;
 			try {
-				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,DB);
+				
+				File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+				cifFile.deleteOnExit();
+				PdbAsymUnit.grabCifFile(Scorer.CIFREPODIR, null, pdbCode, cifFile, false);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+				
 				pdb = fullpdb.getChain(pdbChainCode);
 				if (!isValidPdb(pdb)) {
 					System.err.println(id+" didn't pass the quality checks to be included in training set");
@@ -92,8 +94,8 @@ public class ResTypeScorer extends TypeScorer {
 				}
 				System.out.println(id);
 				this.structureIds.add(id);
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Couldn't find pdb "+pdbCode);
+			} catch (FileFormatException e) {
+				System.err.println("Couldn't load pdb "+pdbCode);
 				continue;
 			} catch (PdbLoadException e) {
 				System.err.println("Couldn't load pdb "+pdbCode);

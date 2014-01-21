@@ -675,6 +675,7 @@ public class GraphAverager {
 			}
 			Out.println();
 		}
+		Out.close();
 	}
 	
 	/**

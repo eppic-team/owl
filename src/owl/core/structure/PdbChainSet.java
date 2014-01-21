@@ -1,10 +1,10 @@
 package owl.core.structure;
 
-import java.sql.SQLException;
 import java.util.*;
 import java.io.*;
 
 import owl.core.structure.graphs.RIGEnsemble;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -26,6 +26,7 @@ public class PdbChainSet {
 	/*------------------------------ constants ------------------------------*/
 	private static final String CULLPDB_20_FILE = "/project/StruPPi/Databases/cullpdb/cullpdb_pc20_res1.6_R0.25_d090102_chains1498";
 
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	/*--------------------------- member variables --------------------------*/
 	Collection<PdbChain> pdbs;
@@ -58,15 +59,18 @@ public class PdbChainSet {
 
 	/**
 	 * Given a collection of pdb+chain codes or file names, loads the respective structures from PDBase.
-	 * @throws PdbCodeNotFoundException 
-	 * @throws SQLException 
+	 * @throws FileFormatException 
+	 * @throws IOException 
 	 * @throws PdbLoadException 
 	 */
-	public void readFromList(Collection<String> list) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
+	public void readFromList(Collection<String> list) throws FileFormatException, IOException, PdbLoadException {
 		for(String pdbChain:list) {
 			String pdbCode = pdbChain.substring(0, 4);
 			String chainCode = pdbChain.substring(4, 5);
-			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),PdbaseParser.DEFAULT_PDBASE_DB);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+			cifFile.deleteOnExit();
+			PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+			PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 			PdbChain pdb = fullpdb.getChain(chainCode);
 			pdbs.add(pdb);
 			System.out.print(".");
@@ -102,11 +106,10 @@ public class PdbChainSet {
 	 * from January 2009 is being used. Eventually, the latest version could be downloaded
 	 * automatically.
 	 * @throws IOException 
-	 * @throws PdbLoadException 
-	 * @throws PdbCodeNotFoundException 
-	 * @throws SQLException 
+	 * @throws PdbLoadException
+	 * @throws FileFormatException 
 	 */
-	public void readCullPdb20() throws IOException, SQLException, PdbCodeNotFoundException, PdbLoadException {
+	public void readCullPdb20() throws IOException, FileFormatException, PdbLoadException {
 		LinkedList<String> pdbCodes = new LinkedList<String>();
 		
 		// read pdb+chain codes from file

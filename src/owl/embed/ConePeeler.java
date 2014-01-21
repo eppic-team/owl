@@ -1,6 +1,5 @@
 package owl.embed;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,11 +10,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import edu.uci.ics.jung.graph.util.Pair;
-import owl.embed.contactmaps.Individuals;
-
-import owl.core.structure.AminoAcid;
-import owl.core.structure.PdbChain;
-import owl.core.structure.PdbAsymUnit;
+//import owl.core.structure.PdbChain;
 import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.graphs.RIGCommonNbhood;
@@ -25,7 +20,6 @@ import owl.core.structure.graphs.RIGraph;
 import owl.core.util.Goodies;
 import owl.core.util.IntPairComparator;
 import owl.core.util.IntPairSet;
-import owl.core.util.MySQLConnection;
 /**
  * Class to generate minimal subsets of a given contact map according to Sathyapriya et al. 2009. The basic idea
  * is, that all contacts with the greatest common neighborhood size and sequence separation build a minimal subset.
@@ -38,11 +32,11 @@ import owl.core.util.MySQLConnection;
  */
 public class ConePeeler extends RIGraph {
 	private static final long serialVersionUID = 1L;
-	private static PdbChain structure;
+	//private static PdbChain structure;
 	/** the minimal sequence separation*/
 	private static int seqSep = 3;
 	/** the distance map, mapping all contacts onto their distance*/
-	private HashMap<Pair<Integer>,Double> distMap;
+	//private HashMap<Pair<Integer>,Double> distMap;
 	/** mapping all contacts onto their corresponding RIGEdge*/
 	private HashMap<Pair<Integer>,RIGEdge> allEdgeMap;
 	/** a set containing all edges the are not going to be deleted*/
@@ -57,23 +51,7 @@ public class ConePeeler extends RIGraph {
 	ConePeeler (){
 		super();
 	}
-	/**
-	 * Five parameter constructor: initializes an instance of this class by loading a PDB file from the specified
-	 * <tt>database</tt>. Additional parameters as <tt>chainCode</tt>, <tt>contactType</tt>, <tt>cutOff</tt> and
-	 * <tt>seqSep</tt> (which is the minimal sequence separation) are required. Note, that the <tt>pdbCode</tt> must
-	 * be in lower case PDB code.
-	 * @param pdbCode the PBD code of the protein
-	 * @param database the database to use
-	 * @param chainCode the chain code of the given protein
-	 * @param contactType the contact type, i.e. C-alpha = Ca, C-beta = Cb,...
-	 * @param cutOff the cutoff distance
-	 * @param seqSep the sequence separation, default: 3
-	 * @throws ConePeelerException if either an SQLException, or an error due to the pdb code was thrown
-	 */
-	private ConePeeler (String pdbCode, String database, String chainCode, String contactType, double cutOff, int seqSep) throws ConePeelerException {
-		super();
-		setFields(pdbCode,database,chainCode,contactType,cutOff,seqSep);
-	}
+
 	/**
 	 * One parameter constructor: uses the RIGraph instance <tt>rig</tt> to 
 	 * initialize an object of this class.
@@ -99,81 +77,14 @@ public class ConePeeler extends RIGraph {
 		allEdgeMap = new HashMap<Pair<Integer>,RIGEdge>();
 		protectedEdges = new HashSet<Pair<Integer>>();
 	}
-	/**
-	 * Setter of the five parameter constructor: initializes an instance of this class by loading a PDB file from the specified
-	 * <tt>database</tt>. Additional parameters as <tt>chainCode</tt>, <tt>contactType</tt>, <tt>cutOff</tt> and
-	 * <tt>seqSep</tt> (which is the minimal sequence separation) are required. Note, that the <tt>pdbCode</tt> must
-	 * be in lower case PDB code.
-	 * @param pdbCode the PDB code of the protein
-	 * @param database the database to use
-	 * @param chainCode the chain code of the protein
-	 * @param contactType the contact type
-	 * @param cutOff the cutoff distance
-	 * @param seqSep the sequence separation
-	 * @throws ConePeelerException if either an SQLException, or an error due to the pdb code was thrown
-	 */
-	private void setFields (String pdbCode, String database, String chainCode, String contactType, double cutOff, int seqSep) throws ConePeelerException {
-		try{
-		MySQLConnection conn = new MySQLConnection();
-		PdbAsymUnit fullpdb = null;
-		if(structure==null) {
-			fullpdb = new PdbAsymUnit(pdbCode,conn,database);
-		}
-		else if(!pdbCode.matches(structure.getPdbCode()))
-			throw new ConePeelerException ("The pdb code of the constant structure field and the denoted pdb code do not match!");
-		System.out.println("Loading strucutre of "+pdbCode+" from database...");
-		structure = fullpdb.getChain(chainCode);
-		setRIGraph(structure.getRIGraph(contactType, cutOff),3);
-		conn.close();
-		}
-		catch(SQLException e){
-			throw new ConePeelerException(e.getMessage());
-		}
-		catch(PdbCodeNotFoundException e){
-			throw new ConePeelerException (e.getMessage());
-		}
-		catch(PdbLoadException e){
-			throw new ConePeelerException (e.getMessage());
-		}
-	}
-	/**
-	 * Auxiliary setter: needed to pick all contacts of an RIGraph instance,
-	 * below the the specified <tt>cutOff</tt> and to specify the sequence separation. 
-	 * @param rig the RIGraph instance
-	 * @param seq_Sep the sequence separation
-	 */
-	private void setRIGraph(RIGraph rig, int seq_Sep){
-		if(rig!=null){
-			seqSep = seq_Sep;
-			allEdgeMap = new HashMap<Pair<Integer>,RIGEdge>();
-			protectedEdges = new HashSet<Pair<Integer>>();
-			setPdbCode(rig.getPdbCode());
-			String seq = rig.getSequence();
-			setSequence(seq);
-			super.setChainCode(rig.getChainCode());
-			super.setPdbChainCode(rig.getPdbChainCode());
-			super.setContactType(rig.getContactType());
-			double cutOff = rig.getCutoff();
-			super.setCutoff(cutOff);
-			super.setSerials2NodesMap();
-			distMap    = structure.calcDistMatrix(rig.getContactType());
-			for(Pair<Integer> pair: distMap.keySet()){
-				if(distMap.get(pair).doubleValue()<=cutOff){
-					int fVal = pair.getFirst().intValue(), sVal = pair.getSecond().intValue();
-					RIGNode node1 = new RIGNode(fVal,AminoAcid.one2three(seq.charAt(fVal-1)));
-					RIGNode node2 = new RIGNode(sVal,AminoAcid.one2three(seq.charAt(sVal-1)));
-					addVertex(node1);addVertex(node2); addEdgeIJ(fVal,sVal);
-				}
-			}
-		}
-	}
+
 	/**
 	 * Auxiliary setter: clears all fields of this class.
 	 */
 	void clear (){
 		allEdgePairs = null;
 		allEdgeMap = null;
-		distMap = null;
+		//distMap = null;
 		minSetRes = null;
 		protectedEdges = null;
 	}
@@ -349,62 +260,8 @@ public class ConePeeler extends RIGraph {
 		cone.conePeeler();
 		return cone.getSubSet();
 	}
-	/**
-	 * Static methods computing the minimal subsets according to the cone peeling algorithm. Takes
-	 * String instances as <tt>pdbCode</tt>, <tt>chainCode</tt>, <tt>db</tt> and an integer value
-	 * for sequence separation as parameter and performs computation.
-	 * @param pdbCode the PDB code
-	 * @param chainCode the chain code
-	 * @param db the database to use
-	 * @param seqSep the sequence separation
-	 * @return the minimal set as an RIGraph
-	 */
-	public static RIGraph getMinSubset (String pdbCode, String chainCode, String db, int seqSep){
-		return getMinSubset(pdbCode,chainCode,db,9.0,seqSep);
-	}
-	/**
-	 * Static methods computing the minimal subsets according to the cone peeling algorithm. Takes
-	 * String instances as <tt>pdbCode</tt>, <tt>chainCode</tt>, <tt>db</tt>, as well as <tt>cufOff</tt>
-	 * and an integer value for sequence separation as parameter and performs computation.
-	 * @param pdbCode the PDB code
-	 * @param chainCode the chain code
-	 * @param db the database to use
-	 * @param cutOff the cutoff distance in aangstroem
-	 * @param seqSep the sequence separation
-	 * @return the minimal set as an RIGraph
-	 * @throws ConePeelerException
-	 */
-	public static RIGraph getMinSubset (String pdbCode, String chainCode, String db, double cutOff, int seqSep) throws ConePeelerException{
-		ConePeeler peeler = new ConePeeler (pdbCode, db, chainCode,"Ca",cutOff,seqSep);
-		peeler.conePeeler();
-		return peeler.getSubSet();
-	}
-	/**
-	 * Static methods computing the minimal subsets according to the cone peeling algorithm. Takes
-	 * String instances as <tt>pdbCode</tt>, <tt>chainCode</tt> and <tt>db</tt> as parameter and
-	 * performs computation.
-	 * @param pdbCode the PDB code
-	 * @param chainCode the chain code
-	 * @param db the database to use
-	 * @return the minimal set as an RIGraph
-	 * @throws ConePeelerException
-	 */
-	public static RIGraph getMinSubset (String pdbCode, String chainCode, String db) throws ConePeelerException{
-		return getMinSubset(pdbCode,chainCode,db,3);
-	}
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException{
-		RIGraph subset = getMinSubset("1bkr","A","pdbase_20090728",8.0,1);
-		String output = "/project/StruPPi/gabriel/Arbeiten/ConePeeler/1bkr1bkr-31.indi";
-		Individuals in2 = new Individuals (output);
-		@SuppressWarnings("unused")
-		RIGraph rig = getMinSubset((RIGraph) in2);
-		subset.writeToFile(output);
-		Individuals in = new Individuals(output);
-		in.printToFile("/project/StruPPi/gabriel/Arbeiten/ConePeeler/","","1bkr");
-		Individuals in1 = new Individuals("1bkr",5.0,true);
-		in1.printToFile("/project/StruPPi/gabriel/Arbeiten/ConePeeler/","","1bkrRandom");
-	}
-	
+
+
 	class ConePeelerException extends RuntimeException {
 
 		/**

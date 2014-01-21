@@ -14,7 +14,6 @@ import owl.core.util.IntPairSet;
 import owl.core.util.MySQLConnection;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.GraphAveragerException;
-
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
@@ -131,7 +130,13 @@ public class SetScore implements Comparable<SetScore>{
 		String pdbChainCode = "A";
 		String contactType = "Ca";
 		double cutoff = 8;
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),"pdbase");
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/local/mmCIF/gz/all/repo", null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+		
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		String sequence = pdb.getSequence().getSeq();
 		String fileName = pdbCode+pdbChainCode+"_ensemble_"+numBestSets+".cm";

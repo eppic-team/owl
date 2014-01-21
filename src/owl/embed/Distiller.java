@@ -19,10 +19,8 @@ import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGEnsemble;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.IntPairSet;
-import owl.core.util.MySQLConnection;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.GraphAveragerException;
-
 import edu.uci.ics.jung.graph.util.Pair;
 
 
@@ -258,7 +256,12 @@ public class Distiller {
 		File edgesTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".subsets");
 		File scoresTableFile = new File(outDir,pdbCode+pdbChainCode+"_"+startingID+".scores");
 		
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,new MySQLConnection(),"pdbase");
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/local/mmCIF/gz/all/repo", null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		RIGraph graph = pdb.getRIGraph(ct, cutoff);
 		System.out.println("Total contacts: "+graph.getEdgeCount());

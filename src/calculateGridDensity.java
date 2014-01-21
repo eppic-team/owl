@@ -3,6 +3,7 @@ import java.sql.*;
 import java.util.*;
 
 import owl.core.structure.*;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 // TODO:
@@ -27,7 +28,9 @@ public class calculateGridDensity {
 	public static String 			DB_COL_PDB = "accession_code";
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
-	public static String			PDB_DB = "pdbase";
+
+	public static final String 		CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+
 
 	public static String			PDB_CODE = "1tdr";
 	public static String			CHAIN_CODE = "B";
@@ -41,8 +44,14 @@ public class calculateGridDensity {
 	
 	/*---------------------------- private methods --------------------------*/
 	
-	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, MySQLConnection conn, Map<Integer, Integer> densityCount) throws PdbLoadException, PdbCodeNotFoundException, SQLException {
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDB_DB);
+	private static void calcDensity(String pdbCode, String chainCode, double cutoff, String egdeType, Map<Integer, Integer> densityCount) throws PdbLoadException, FileFormatException, IOException {
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+
+
 		PdbChain pdb =  fullpdb.getChain(chainCode);
 		// add to density count vector
 		pdb.calcGridDensity(edgeType, cutoff, densityCount);
@@ -51,10 +60,10 @@ public class calculateGridDensity {
 	}
 	
 	public static void printValues(Map<Integer, Integer> v, PrintStream out) {
-		int atoms = 0;
+		//int atoms = 0;
 		for(int size:v.keySet()) {
 			out.println(size + "\t" + v.get(size));
-			atoms += size*v.get(size);
+			//atoms += size*v.get(size);
 		}
 		//out.println("Atoms: " + atoms);
 	}
@@ -111,11 +120,14 @@ public class calculateGridDensity {
 				
 				// calculate statistics
 				try {
-					calcDensity(pdbCode, chainCode, cutoff, edgeType, conn, densityCount); // will add to densityCount
+					calcDensity(pdbCode, chainCode, cutoff, edgeType, densityCount); // will add to densityCount
 				} catch(PdbLoadException e) {
 					System.err.println(e.getMessage());
 					continue;
-				} catch (PdbCodeNotFoundException e) {
+				} catch (FileFormatException e) {
+					System.err.println(e.getMessage());
+					continue;					
+				} catch (IOException e) {
 					System.err.println(e.getMessage());
 					continue;					
 				}

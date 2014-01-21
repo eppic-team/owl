@@ -819,6 +819,7 @@ public class Gene implements HasFeatures {
 					}
 				}
 			}
+			in.close();
 		} catch (IOException e) {
 			System.err.println("Error reading from file " + ANNOTATION_FILE + ":" + e.getMessage());
 		}

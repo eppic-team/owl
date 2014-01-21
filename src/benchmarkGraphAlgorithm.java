@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -5,9 +6,9 @@ import java.sql.Statement;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -21,7 +22,7 @@ public class benchmarkGraphAlgorithm {
 	public static String 			DB_COL_PDB = "accession_code";
 	public static String 			DB_COL_CHAIN = "chain_pdb_code";	
 	
-	public static String			PDB_DB = "pdbase";
+	public static final String		CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 
 	public static String			PDB_CODE = "1tdr";
 	public static String			CHAIN_CODE = "B";
@@ -61,7 +62,12 @@ public class benchmarkGraphAlgorithm {
 			
 				PdbChain pdb = null;
 				try {
-					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,PDB_DB);
+					
+					File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+					cifFile.deleteOnExit();
+					PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+					PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+					
 					pdb = fullpdb.getChain(chainCode);
 					int length = pdb.getStdAaObsLength();
 					int atoms = pdb.getNumStdAaHeavyAtoms();
@@ -81,7 +87,7 @@ public class benchmarkGraphAlgorithm {
 					
 				} catch (PdbLoadException e) {
 					System.out.println("pdb load error in " + pdbCode + chainCode+", specific error: "+e.getMessage());
-				} catch (PdbCodeNotFoundException e) {
+				} catch (FileFormatException e) {
 					e.printStackTrace();
 				} 					
 				

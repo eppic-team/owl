@@ -13,7 +13,6 @@ import owl.core.runners.DsspRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.features.SecStrucElement;
 import owl.core.structure.graphs.RIGraph;
@@ -28,7 +27,8 @@ import owl.core.util.MySQLConnection;
 public class genDbGraph {
 	/*------------------------------ constants ------------------------------*/
 	
-	public static final String			PDB_DB = "pdbase";
+	public static final String 			CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+
 	public static final String			DSSP_EXE = "/project/StruPPi/bin/dssp";
 	public static final String			DSSP_PARAMS = "--";
 	public static final String			NACCESS_EXE = "/project/StruPPi/bin/naccess";
@@ -60,7 +60,6 @@ public class genDbGraph {
 		String[] pdbCodes = null;
 		String[] pdbChainCodes = null;
 		String pdbfile = "";
-		String pdbaseDb = PDB_DB;
 		String[] edgeTypes = null;
 		double[] cutoffs = null;
 		int[] seqseps = null;
@@ -68,7 +67,7 @@ public class genDbGraph {
 		String outputDb = "";
 		String mode = "GRAPH";
 		
-		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:r:s:o:D:m:h?");
+		Getopt g = new Getopt("genDbGraph", args, "i:p:c:f:d:t:r:s:o:m:h?");
 		int c;
 		while ((c = g.getopt()) != -1) {
 			switch(c){
@@ -110,9 +109,6 @@ public class genDbGraph {
 				break;
 			case 'o':
 				outputDb = g.getOptarg();
-				break;
-			case 'D':
-				pdbaseDb = g.getOptarg();
 				break;
 			case 'm':
 				mode = g.getOptarg();
@@ -222,7 +218,11 @@ public class genDbGraph {
 					
 					System.out.println("Getting pdb data for "+pdbCode+"_"+pdbChainCode);
 					
-					PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);	
+					File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+					cifFile.deleteOnExit();
+					PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+					PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+						
 					//PdbChain pdb = new CiffilePdb(new File("/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/"+pdbCode+".cif"), pdbChainCode);	
 					PdbChain pdb = fullpdb.getChain(pdbChainCode);					
 					try {
@@ -295,14 +295,12 @@ public class genDbGraph {
 					
 				} catch (PdbLoadException e) {
 					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
-				} catch (PdbCodeNotFoundException e) {
-					System.err.println("Couldn't find pdb code "+pdbCode);
+				} catch (FileFormatException e) {
+					System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+", specific error: "+e.getMessage());
 				} catch (SQLException e) {
 					System.err.println("SQL error for structure "+pdbCode+"_"+pdbChainCode+", error: "+e.getMessage());
 				} 
-				/* catch (CiffileFormatError e) {
-					System.err.println(e.getMessage());
-				}*/
+				
 				
 				System.out.println("SUMMARY:"+pdbCode+"_"+pdbChainCode+" dssp:"+dssp+" scop:"+scop+" naccess:"+naccess+" consurf:"+consurf+" ec:"+ec+" csa:"+csa+ " graphs:"+numGraphs);
 

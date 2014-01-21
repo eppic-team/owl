@@ -1,11 +1,11 @@
-import edu.uci.ics.jung.graph.util.Pair;
+import java.io.File;
 
+import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.structure.Atom;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.graphs.AICGEdge;
 import owl.core.structure.graphs.AICGraph;
-import owl.core.util.MySQLConnection;
 
 
 public class testAICGraph {
@@ -16,7 +16,7 @@ public class testAICGraph {
 	public static void main(String[] args) throws Exception {
 
 
-		PdbAsymUnit pdb = new PdbAsymUnit("2vjz",new MySQLConnection(),"pdbase");
+		PdbAsymUnit pdb = new PdbAsymUnit(new File("2vjz.cif"));
 		
 		//Collection<PdbChain> chains = pdb.getAllChains();
 		String chain1 = "C";

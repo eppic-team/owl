@@ -7,17 +7,16 @@ import java.io.PrintStream;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
-import owl.core.util.MySQLConnection;
+import owl.core.util.FileFormatException;
 
 
 
 public class dumppdb {
 	/*------------------------------ constants ------------------------------*/
 	
-	public static final String			PDB_DB = "pdbase";
+	private static final String 		CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 
 	public static final String			GAP_CHARACTER = "-";
 	
@@ -35,12 +34,12 @@ public class dumppdb {
 				" [-m] <integer>  : model serial. Default: "+DEFAULT_MODEL+"\n"+
 				" [-o] <dir>      : outputs to file(s) in given directory. Default: current dir\n"+
 				" [-s]            : outputs to stdout instead of file(s)\n"+
-				" [-D] <database> : pdbase database name. Default: "+PDB_DB+"\n\n";
+				" [-D] <dir>      : mmCIF gz all repo dir. Default: "+CIFREPODIR+"\n\n";
 
 		String listfile = "";
 		String[] pdbIds = null;
 		int modelSerial = DEFAULT_MODEL;
-		String pdbaseDb = PDB_DB;
+		String cifRepoDir = CIFREPODIR;
 		String outputDir = ".";
 		boolean stdout = false;
 		
@@ -60,7 +59,7 @@ public class dumppdb {
 				outputDir = g.getOptarg();
 				break;			
 			case 'D':
-				pdbaseDb = g.getOptarg();
+				cifRepoDir = g.getOptarg();
 				break;
 			case 's':
 				stdout = true;
@@ -84,15 +83,6 @@ public class dumppdb {
 			System.exit(1);			
 		}
 		
-		MySQLConnection conn = null;		
-
-		try{
-			conn = new MySQLConnection();
-		} catch (Exception e) {
-			System.err.println("Error opening database connection. Exiting");
-			System.exit(1);
-		}
-
 
 		if (!listfile.equals("")) {	
 			pdbIds = TemplateList.readIdsListFile(new File(listfile));
@@ -119,9 +109,11 @@ public class dumppdb {
 			}
 
 			try {
-			
+				File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+				cifFile.deleteOnExit();
+				PdbAsymUnit.grabCifFile(cifRepoDir, null, pdbCode, cifFile, false);				
+				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile, modelSerial);
 
-				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,modelSerial,conn,pdbaseDb);
 				PdbChain pdb = null;
 				if (pdbChainCode==null) {
 					pdb = fullpdb.getFirstChain();
@@ -150,8 +142,8 @@ public class dumppdb {
 
 			} catch (PdbLoadException e) {
 				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+": "+e.getMessage());
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Couldn't find pdb code "+pdbCode);
+			} catch (FileFormatException e) {
+				System.err.println("Error loading pdb data for " + pdbCode + pdbChainCode+": "+e.getMessage());
 			} 
 
 		}

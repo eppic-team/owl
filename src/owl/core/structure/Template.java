@@ -2,16 +2,13 @@ package owl.core.structure;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Iterator;
 
-import owl.core.connections.GTGHit;
 import owl.core.connections.ScopConnection;
 import owl.core.runners.blast.BlastHit;
 import owl.core.structure.features.ScopRegion;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 /**
@@ -44,7 +41,6 @@ public class Template {
 	private Type type;
 
 	private BlastHit blastHit;
-	private GTGHit gtgHit;
 	
 	/**
 	 * Constructs a Template given an id in format pdbCode+chain, e.g. 1abcA
@@ -76,30 +72,22 @@ public class Template {
 	}
 
 	/**
-	 * Constructs a new Template given a GTGHit 
-	 * @param hit
-	 */
-	public Template(GTGHit hit) {
-		this.id = hit.getTemplateId();
-		this.gtgHit = hit;
-		this.type = Type.DB;
-	}
-	
-	/**
 	 * Gets the pdb structure coordinates into the pdb object 
-	 * reading the data either from DB or from FILE depending on the type of this Template
+	 * reading the data either from CIF dir repository or from FILE depending on the type of this Template
 	 * If reading from file only the first chain encountered in the file will be read.
-	 * If type is not DB then simply pass nulls for conn and pdbaseDb
-	 * @param conn
-	 * @param pdbaseDb
+	 * If type is not CIF dir then simply pass nulls for cifRepoDir
+	 * @param cifRepoDir a directory containing mmCIF files (.gz) 
 	 */
-	protected void loadPdbData(MySQLConnection conn, String pdbaseDb) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
+	protected void loadPdbData(String cifRepoDir) throws PdbLoadException, IOException, FileFormatException {
 		
 		if (type==Type.DB) {
 			String pdbCode = id.substring(0, 4);
 			String chain = id.substring(4);
 
-			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, conn, pdbaseDb);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+			cifFile.deleteOnExit();
+			PdbAsymUnit.grabCifFile(cifRepoDir, null, pdbCode, cifFile, false);				
+			PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 			pdb = fullpdb.getChain(chain);
 		} 
 		else if (type==Type.FILE) {
@@ -249,12 +237,4 @@ public class Template {
 		return this.blastHit;
 	}
 	
-	/**
-	 * Returns the GTGHit corresponding to this Template or null if this 
-	 * Template didn't originate from a GTGHit 
-	 * @return
-	 */
-	public GTGHit getGTGHit() {
-		return this.gtgHit;
-	}
 }

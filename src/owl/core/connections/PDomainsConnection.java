@@ -64,8 +64,8 @@ public class PDomainsConnection {
 				sb.append(line);
 			}
 			Matcher m = p.matcher(sb);
-		    int numDomains = 0;
-		    int numFragments = 0;
+		    //int numDomains = 0;
+		    //int numFragments = 0;
 	    	int start = -1;
 	    	int end = -1;
 	    	String domainName = null;
@@ -78,13 +78,13 @@ public class PDomainsConnection {
 		    	if(param.startsWith("method")) {
 		    		if(val.equals(method.toString())) {
 		    			// add new fragment
-		    			numFragments++;
+		    			//numFragments++;
 		    			fragments.addInterval(start, end);
 		    			if(!domainMap.containsKey(domainName)) {
 		    				// create new domain
 		    				IntervalSet newSet = IntervalSet.createFromInterval(new Interval(start, end));
 		    				domainMap.put(domainName, newSet);
-		    				numDomains++;
+		    				//numDomains++;
 		    			} else {
 		    				IntervalSet existingSet = domainMap.get(domainName);
 		    				existingSet.add(new Interval(start, end));

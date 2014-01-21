@@ -11,10 +11,7 @@ import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
-import owl.core.util.MySQLConnection;
-
 import Jama.Matrix;
-
 import edu.uci.ics.jung.graph.util.Pair;
 
 /**
@@ -233,7 +230,12 @@ public class Reconstructer {
 			String outDir, 
 			int numModels,Embedder.ScalingMethod scalingMethod, boolean metrize) 
 	throws Exception{
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/local/mmCIF/gz/all/repo", null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		PdbChain pdbMirror = pdb.copy(pdb.getParent());
 		pdbMirror.mirror();

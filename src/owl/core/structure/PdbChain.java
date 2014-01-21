@@ -64,6 +64,8 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 
 	private static final long serialVersionUID = 1L;
 	
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+	
 	public static final String DEFAULT_CHAIN   = "A";		// used when constructing models, this will be the chain assigned to them
 	public static final String NO_PDB_CHAIN_CODE = "";		// to specify no pdb chain code
 	public static final String NO_CHAIN_CODE     = "";		// to specify no internal chain code
@@ -3125,8 +3127,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 				try {
 					if(!silent) System.out.println("Loading pdb code " + pdbCode);
 					try {
-						PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(), PdbaseParser.DEFAULT_PDBASE_DB);
 						
+						File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+						cifFile.deleteOnExit();
+						PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+						PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+					
 						if(chainCode.length() == 0) {
 
 							chainCode = fullpdb.getFirstChain().getPdbChainCode();
@@ -3140,12 +3146,12 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 						if(exit) System.exit(1);
 					}
 
-				} catch (SQLException e) {
-					if(!silent) System.err.println("Database error: " + e.getMessage());
+				} catch (IOException e) {
+					if(!silent) System.err.println("Error loading pdb structure: " + e.getMessage());
 					if(exit) System.exit(1);
-				} catch (PdbCodeNotFoundException e) {
-					if(!silent) System.err.println("Pdb code " + pdbCode + " not found in database.");
-					if(exit) System.exit(1);
+				} catch (FileFormatException e) {
+					if(!silent) System.err.println("Error loading pdb structure: " + e.getMessage());
+					if(exit) System.exit(1);					
 				}
 			}
 		}

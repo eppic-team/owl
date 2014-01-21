@@ -21,7 +21,6 @@ import owl.core.util.MySQLConnection;
 import owl.graphAveraging.ConsensusSquare;
 import owl.graphAveraging.GraphAverager;
 import owl.graphAveraging.PhiPsiAverager;
-
 import gnu.getopt.Getopt;
 
 
@@ -40,7 +39,7 @@ public class averageGraph {
 	private static final double PHIPSI_CONSENSUS_THRESHOLD = 0.5;
 	private static final int    PHIPSI_CONSENSUS_INTERVAL = 20;
 	
-	private static final String	PDB_DB = 				"pdbase";
+	public static final String	CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	private static final String CASP_CONTACT_TYPE =		"Cb";
 	private static final double CASP_CUTOFF = 			8.0;
@@ -334,7 +333,11 @@ public class averageGraph {
 		
 		if (mode==Modes.BENCHMARK) {
 			// 1) benchmark: from a known structure sequence we repredict it based on template structures
-			PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCodeTarget,new MySQLConnection(),PDB_DB);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCodeTarget+".cif");
+			cifFile.deleteOnExit();
+			PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCodeTarget, cifFile, false);				
+			PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+			
 			targetPdb = fullpdb.getChain(pdbChainCodeTarget);
 			targetSeq = targetPdb.getSequence().getSeq();
 			targetTag = pdbCodeTarget+pdbChainCodeTarget;			
@@ -370,7 +373,7 @@ public class averageGraph {
 		TemplateList templates = null;
 		try {
 			templates = new TemplateList(templatesFile);
-			templates.loadPdbData(conn, PDB_DB);
+			templates.loadPdbData(CIFREPODIR);
 		} catch (IOException e) {
 			System.err.println("Error while reading templates file "+templatesFile+": "+ e.getMessage()+"\nExiting");
 			System.exit(1);

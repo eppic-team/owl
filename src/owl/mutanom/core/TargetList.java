@@ -298,7 +298,7 @@ public class TargetList {
 			// structural mutations
 			int strMut = 0;			// structural mutations
 			//int strMutPos = 0; // distinct mutated positions (in structural regions)
-			int strMutMatch = 0; 	// structural mutations matching the amino acid of the PDB sequence
+			//int strMutMatch = 0; 	// structural mutations matching the amino acid of the PDB sequence
 			//int strMutMatchPos = 0; // distinct mutated positions (in structural regions) where amino acid matches
 			if(mut > 0) {
 				TreeSet<Integer> mutatedPositions = new TreeSet<Integer>();
@@ -312,7 +312,7 @@ public class TargetList {
 							//if(m.getWtAA() == AminoAcid.getByOneLetterCode(g.getCosmicSeq().charAt(cosmicPos-1))) {
 							//if(m.getWtAA() == AminoAcid.getByOneLetterCode(g.getUniprotSeq().charAt(m.position-1))) {
 							if(m.getWtAA() == ((AaResidue)ss.pdb.getResidue(ss.mapUniprotResser2Cif(m.position))).getAaType()) {
-								strMutMatch++;
+								//strMutMatch++;
 								mutatedMatchPositions.add(m.position);
 							}
 							mutatedPositions.add(m.position);
@@ -344,13 +344,13 @@ public class TargetList {
 			
 			// sequence coverage
 			int len = g.getLength();	// total (cosmic) length
-			int res = 0;				// total residues covered by structural regions
+			//int res = 0;				// total residues covered by structural regions
 			int strRes = 0;				// observed residues in structural regions
 			//double cov = 0.0;			// total sequence coverage in %
 			double strCov = 0.0;		// sequence coverage by observed residues in %			
 			if(str > 0) {
 				for(Substructure ss:g.getSubstructures()) {
-					res += ss.getEndPos()-ss.getBegPos()+1;
+					//res += ss.getEndPos()-ss.getBegPos()+1;
 					strRes += ss.getPdb().getStdAaObsLength();
 				}
 				//cov = 100.0 * res / len;
@@ -856,7 +856,7 @@ public class TargetList {
 	 * @return the number of structures removed or -1 if something went wrong
 	 */
 	public int filterSubstructuresXRay() {
-		int numRemoved = 0;
+		//int numRemoved = 0;
 		for(Gene g:this.targets) {
 			if(!g.areSubstructuresLoaded()) {
 				System.err.println("Skipping gene " + g.getGeneName() + ". Substructures not loaded.");
@@ -867,7 +867,9 @@ public class TargetList {
 				if(ss.getType() != SubstructureType.XRAY) toRemove.add(ss);
 			}
 			for(Substructure ss:toRemove) {
-				if(g.getSubstructures().remove(ss)) numRemoved++;
+				if(g.getSubstructures().remove(ss)) {
+					//numRemoved++;
+				}
 			}
 		}
 		return 0;

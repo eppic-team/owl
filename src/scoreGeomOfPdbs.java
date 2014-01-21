@@ -188,7 +188,7 @@ public class scoreGeomOfPdbs {
 	    	BufferedReader in = new BufferedReader(new FileReader(inputFile)); 
 			String proteinId; 
 			PrintWriter out2 = new PrintWriter(new FileWriter(outputFile));
-			int numStructures = 0;
+			//int numStructures = 0;
 			out2.println("target"+","+"serverModel"+","+"Rank"+","+"GDT"+","+"GeomScore");
 			while ((proteinId = in.readLine()) != null){ 
 //				if (proteinId.startsWith("3Dpro"))
@@ -233,7 +233,7 @@ public class scoreGeomOfPdbs {
 						
 						out2.println(target+","+proteinId+","+rank+","+gdtScore+","+score); // add rmsd etc.
 						
-						numStructures++;
+						//numStructures++;
 					}
 					
 				}					

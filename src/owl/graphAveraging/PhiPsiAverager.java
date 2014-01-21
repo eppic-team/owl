@@ -22,7 +22,6 @@ import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
-import owl.core.util.MySQLConnection;
 
 
 public class PhiPsiAverager {
@@ -438,8 +437,7 @@ public class PhiPsiAverager {
 	 * @param args
 	 */
 	public static void main(String[] args) throws Exception {
-		MySQLConnection conn = new MySQLConnection("talyn","duarte","nieve");
-		String pdbaseDb = "pdbase";
+		String cifRepoDir = "/path/to/mmCIF/gz/all/repo/dir";
 		
 		//File templatesFile = new File("/scratch/local/phipsi/T0332.templates");
 		//File alnFile = new File("/scratch/local/phipsi/T0332.target2templ.fasta");
@@ -458,7 +456,7 @@ public class PhiPsiAverager {
 		//File targetPdbfile = null;
 
 		TemplateList templates = new TemplateList(templatesFile);
-		templates.loadPdbData(conn, pdbaseDb);
+		templates.loadPdbData(cifRepoDir);
 		
 		MultipleSequenceAlignment aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(),"FASTA");
 		System.out.println("Secondary structure matching: ");

@@ -47,6 +47,7 @@ public class scoreAllModelsWithRanks {
 			while((target = in.readLine()) != null) {
 				targetList.add(target.trim());
 			}
+			in.close();
 		} catch (IOException e) {
 			System.err.println("Error reading list file: " + listFile);
 		}

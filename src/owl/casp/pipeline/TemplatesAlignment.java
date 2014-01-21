@@ -5,14 +5,13 @@ import gnu.getopt.Getopt;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.sql.SQLException;
 
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.alignment.PaulStructAligner;
 import owl.core.structure.alignment.StructAlignmentException;
-import owl.core.util.MySQLConnection;
+import owl.core.util.FileFormatException;
 
 
 public class TemplatesAlignment {
@@ -25,9 +24,9 @@ public class TemplatesAlignment {
 													", "+PaulStructAligner.PAULMODE_FAST+
 													", "+PaulStructAligner.PAULMODE_SLOW+
 													", "+PaulStructAligner.PAULMODE_VERYSLOW;
+
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
-	private static final String MYSQL_SERVER = "talyn";
-	private static final String PDBASE_DB = "pdbase";
 	private static final String CONTACT_TYPE = "Cb";
 	private static final double CUTOFF = 8;
 	
@@ -123,18 +122,10 @@ public class TemplatesAlignment {
 		}
 		
 		
-		MySQLConnection conn = null;
-		try {
-			conn = new MySQLConnection(MYSQL_SERVER,"");
-		} catch(SQLException e) {
-			System.err.println("Problems while connecting to MySQL server. Error "+e.getMessage());
-			System.exit(1);
-		}
-
 		TemplateList templates = null;
 		try {
 			templates = new TemplateList(templatesFile);
-			templates.loadPdbData(conn, PDBASE_DB);
+			templates.loadPdbData(CIFREPODIR);
 			templates.loadRIGraphs(CONTACT_TYPE, CUTOFF);
 		} catch (IOException e) {
 			System.err.println("Couldn't read templates file "+templatesFile+". Error: "+e.getMessage());
@@ -142,7 +133,7 @@ public class TemplatesAlignment {
 		} catch (PdbLoadException e) {
 			System.err.println("Problems getting PDB data of templates from file "+templatesFile+". Error: "+e.getMessage());
 			System.exit(1);
-		} catch (SQLException e) {
+		} catch (FileFormatException e) {
 			System.err.println("Problems getting PDB data of templates from file "+templatesFile+". Error: "+e.getMessage());
 			System.exit(1);
 		}

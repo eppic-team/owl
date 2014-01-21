@@ -197,7 +197,7 @@ public abstract class TypeScorer extends Scorer {
 		ArrayList<ArrayList<Double>> scoringMatAL = new ArrayList<ArrayList<Double>>();
 		this.indices2types = new HashMap<Integer, String>();
 		
-		int rowCount = 0;
+		//int rowCount = 0;
 		BufferedReader br = new BufferedReader(new FileReader(scMatFile));
 		String line;
 		while ((line=br.readLine())!=null) {
@@ -267,7 +267,7 @@ public abstract class TypeScorer extends Scorer {
 					for (int i=0;i<tokens.length;i++){
 						thisRow.add(Double.parseDouble(tokens[i]));
 					}
-					rowCount++;
+					//rowCount++;
 				} 
 			}
 		}

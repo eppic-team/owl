@@ -15,7 +15,6 @@ import owl.core.structure.Template;
 import owl.core.structure.TemplateList;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 /**
@@ -214,10 +213,10 @@ public class PaulStructAligner implements StructAligner {
 		File templatesFile = new File("/project/StruPPi/OncoGenesHL/modeling/results/FBXW7_WT/P2/FBXW7_WT.blast.templates");
 		File logFile = new File("/scratch/local/temp/tmp2/paul.log");
 		
-		MySQLConnection conn = new MySQLConnection("talyn", "pdbase");
+		String cifRepoDir = "/path/to/mmCIF/gz/all/dir";
 		
 		TemplateList templates = new TemplateList(templatesFile);
-		templates.loadPdbData(conn, "pdbase");
+		templates.loadPdbData(cifRepoDir);
 		templates.loadRIGraphs("Cb", 8.0);
 		PaulStructAligner pr = new PaulStructAligner(paulProg, PaulStructAligner.PAULMODE_VERYFAST, logFile);
 		MultipleSequenceAlignment al = pr.alignStructures(templates);

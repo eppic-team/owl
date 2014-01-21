@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.PdbChain;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 
@@ -23,7 +22,7 @@ public abstract class Scorer {
 	// take anything that has observed length below this value
 	private static final int MIN_VALID_CHAIN_LENGTH = 30;
 
-	protected static final String DB = "pdbase";
+	protected static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	
 	
@@ -39,7 +38,6 @@ public abstract class Scorer {
 	protected int minSeqSep;							// the minimum sequence separation for which contacts are considered 
 														// when compiling the scoring matrix
 	
-	protected MySQLConnection conn;
 
 	
 	/**

@@ -9,10 +9,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Random;
+
 import javax.vecmath.GMatrix; 
 
 import edu.uci.ics.jung.graph.util.Pair;
-
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.PdbCodeNotFoundException;
@@ -21,9 +21,6 @@ import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
-import owl.embed.Bound;
-import owl.embed.Reconstructer;
-import owl.embed.Scorer;
 
 /**
  * Representation of a contact map in matrix form
@@ -41,19 +38,19 @@ public class RIGMatrix {
 	private String ct;
 	private double cutoff;
 	static int maxRank=21;
-	private static final String DEF_DB     = "pdbase_20090728";//default database
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	private static final String DEF_CT     = "Ca";//default contact type
 	private static final double DEF_CUTOFF = 9.0;//default cutoff distance
 	
 	public RIGMatrix (){};//Zero-constructor
 	
-	public RIGMatrix (String pdbCode, String chainCode) throws SQLException, PdbCodeNotFoundException, PdbLoadException{//
+	public RIGMatrix (String pdbCode, String chainCode) throws FileFormatException, IOException, PdbLoadException{//
 		this();
 		setPdbId(pdbCode);
 		setChainCode(chainCode);
 		setContactType(DEF_CT);
 		setCutoff(DEF_CUTOFF);
-		loadFromPDBase();
+		loadFromFile();
 	}
 
 	public RIGMatrix( int n) { // Constructor for an empty RIGMatrix size n 
@@ -154,18 +151,21 @@ public class RIGMatrix {
 	} // end of constructor loadfromCmapFile
 
 	
-	public void loadFromPDBase() throws SQLException, PdbCodeNotFoundException, PdbLoadException{ 
+	public void loadFromFile() throws IOException, FileFormatException, PdbLoadException{ 
 		// pdbID, chainCode, ct & cutoff have to be pre-set for this to work properly
 		// pass them as parameters and convert back as constructor method ? 
-		// throw errors ? 
-		MySQLConnection conn = new MySQLConnection ();
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbId, conn, DEF_DB);
+		// throw errors ?
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbId+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbId, cifFile, false);				
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+		
 		PdbChain pdb = fullpdb.getChain(chainCode);
 		RIGraph G = pdb.getRIGraph(ct, cutoff);
 		if(S==null) setSequence(G.getSequence());
 		M = new GMatrix(S.length,S.length);
 		G.convert2GMatrix(M);
-		conn.close();
+		
 	}
 	
 	public void setSequence (String sequence){
@@ -692,23 +692,6 @@ public class RIGMatrix {
 			}
 		}
 		return rig;
-	}
-	/**
-	 * Computes the CMError as defined in the {@link Scorer} class.
-	 * @return the CMError
-	 * @throws SQLException 
-	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadException 
-	 */
-	public double CMError() throws SQLException, PdbCodeNotFoundException, PdbLoadException {
-		RIGraph rig = convert2RIGraph();
-		MySQLConnection conn = new MySQLConnection ();
-		PdbAsymUnit fullpdb = new PdbAsymUnit(rig.getPdbCode(), conn, DEF_DB);
-		conn.close();
-		PdbChain pdb = fullpdb.getChain(rig.getChainCode());
-		RIGraph nat = pdb.getRIGraph(ct, cutoff);
-		Bound[][] spa = Reconstructer.convertRIGraphToBoundsMatrix(rig);
-		return Scorer.getCMError(spa, nat);
 	}
 	
 	public int makeBinaryByThreshold( double t) { // sets every Mij=1 if Mij>=t, Mij=0 otherwise  

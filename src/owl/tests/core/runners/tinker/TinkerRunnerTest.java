@@ -5,7 +5,6 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Properties;
 
 import org.junit.After;
@@ -20,22 +19,20 @@ import owl.core.runners.tinker.TinkerRunner;
 import owl.core.structure.Atom;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
 import owl.core.util.IntPairSet;
-import owl.core.util.MySQLConnection;
 import owl.tests.TestsSetup;
 
 
 
 public class TinkerRunnerTest {
 
+	private static final String CIFDIR="/nfs/data/dbs/pdb/data/structures/all/mmCIF/";
 	private static final String PDB_CODE = "1bxy";
 	private static final String CHAIN = "A";
-	private static final String PDBASE_DB = "pdbase";
 	private static final String CT = "Cb";
 	private static final double CUTOFF = 8;
 	
@@ -64,9 +61,11 @@ public class TinkerRunnerTest {
 	}
 	
 	@Test
-	public void testReconstruct() throws SQLException, PdbCodeNotFoundException, PdbLoadException, TinkerError, IOException, FileFormatException {
-		MySQLConnection conn = new MySQLConnection();
-		PdbAsymUnit fullpdb = new PdbAsymUnit(PDB_CODE,conn,PDBASE_DB);
+	public void testReconstruct() throws PdbLoadException, TinkerError, IOException, FileFormatException {
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),PDB_CODE+"_testreconstruct.cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile(CIFDIR, null, PDB_CODE, cifFile, false); 
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 		PdbChain pdb = fullpdb.getChain(CHAIN);
 		RIGraph graph = pdb.getRIGraph(CT, CUTOFF);
 		RIGraph[] graphs = {graph};

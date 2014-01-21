@@ -11,8 +11,7 @@ import org.apache.commons.collections15.Transformer;
 import owl.core.runners.MaxClusterRunner;
 import owl.core.structure.*;
 import owl.core.structure.graphs.GraphIOGDLFile;
-import owl.core.util.MySQLConnection;
-
+import owl.core.util.FileFormatException;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -102,8 +101,7 @@ public class BlastUtils {
 	 * templates and outputs a graph overview for visual inspection.
 	 * Now also writes the similarity matrix to a file (to be used by R script).
 	 * @param templates
-	 * @param conn db connection from where the PDB data will be taken
-	 * @param pdbaseDb pdbase database from where the PDB data will be taken
+	 * @param cifRepoDir a directory containing mmCIF (.gz) files from where the PDB data will be taken
 	 * @param graphFile
 	 * @param matrixFile
 	 * @param similarityGraphRmsdCutoff
@@ -111,11 +109,12 @@ public class BlastUtils {
 	 * @throws SQLException if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
 	 * @throws PdbLoadException if problems getting PDB data from database (only tried if PDB data were not loaded yet in given TemplateList)
 	 */
-	public static void writeClusterGraph(TemplateList templates, MySQLConnection conn, String pdbaseDb, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) throws IOException, SQLException, PdbLoadException {
+	public static void writeClusterGraph(TemplateList templates, String cifRepoDir, File graphFile, File matrixFile, double similarityGraphRmsdCutoff) 
+			throws IOException, FileFormatException, PdbLoadException {
 		if (templates.size()<=1) return; // if templates empty or only 1 template there's nothing to compare
 		
 		if (!templates.isPdbDataLoaded()) {
-			templates.loadPdbData(conn, pdbaseDb);
+			templates.loadPdbData(cifRepoDir);
 		}
 		
 		String listFileName = "listfile";
@@ -191,7 +190,7 @@ public class BlastUtils {
 	 * Testing some of the methods in this class.
 	 * @param args
 	 */
-	public static void main(String[] args) throws IOException, SQLException, PdbLoadException {
+	public static void main(String[] args) throws Exception {
 //		File blastOutput = new File("");
 //		File imgFile = new File("");
 //		try {
@@ -206,7 +205,7 @@ public class BlastUtils {
 		File matrixFile = new File("/project/StruPPi/CASP8/results/T0387/T0387.templates.matrix");
 		TemplateList templateList = new TemplateList(templateFile);
 		
-		writeClusterGraph(templateList, new MySQLConnection("talyn","duarte","nieve"),"pdbase",graphFile, matrixFile, 6.0);
+		writeClusterGraph(templateList, "/path/to/mmCIF/gz/all/repo",graphFile, matrixFile, 6.0);
 		
 		
 	}

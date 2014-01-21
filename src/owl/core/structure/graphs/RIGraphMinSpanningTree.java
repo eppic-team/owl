@@ -1,12 +1,12 @@
 package owl.core.structure.graphs;
 
+import java.io.File;
+
 import org.apache.commons.collections15.Factory;
 import org.apache.commons.collections15.Transformer;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.util.MySQLConnection;
-
 import edu.uci.ics.jung.algorithms.shortestpath.PrimMinimumSpanningTree;
 
 /**
@@ -67,7 +67,7 @@ public class RIGraphMinSpanningTree {
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		PdbAsymUnit fullpdb = new PdbAsymUnit("1bxy", new MySQLConnection(),"pdbase");
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File("1bxy.cif"));
 		PdbChain pdb = fullpdb.getChain("A");
 		RIGraph graph = pdb.getRIGraph("Cb", 8);
 		

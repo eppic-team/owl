@@ -6,17 +6,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 
 import owl.core.sequence.Sequence;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment;
 import owl.core.sequence.alignment.PairwiseSequenceAlignment.PairwiseSequenceAlignmentException;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 
 
 /**
@@ -30,10 +27,9 @@ public class MapStru2Seq {
 	public static final String PDBASEDB = "pdbase";
 	public static final String DEFAULT_CHAIN_CODE = "A";
 	public static final boolean WRITE_REMARKS = true;
-	public static final boolean LOAD_FROM_DB = false;	// otherwise load from cif file directory below
 	public static final String CIF_FILE_DIR = "/project/StruPPi/BiO/DBd/PDB-REMEDIATED/data/structures/unzipped/all/mmCIF/";
 	
-	public static void main(String[] args) throws SQLException, FileNotFoundException {
+	public static void main(String[] args) throws FileNotFoundException {
 		
 		if(args.length < 3) {
 			System.out.println("Usage: MapStru2Seq <seqfile> <pdbcode> <outfile>");
@@ -59,19 +55,13 @@ public class MapStru2Seq {
 		// load pdb
 		PdbChain pdb = null;
 		try {
-			if(LOAD_FROM_DB) {
-				// load from pdbase
-				PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),PDBASEDB);
-				pdb = fullpdb.getChain(chainCode);				
-			} else {
-				// load from ciffile directory
-				File cifFile = new File(CIF_FILE_DIR, pdbCode + ".cif");
-				PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
-				pdb = fullpdb.getChain(chainCode);				
-			}
-		} catch (PdbCodeNotFoundException e1) {
-			System.err.println(e1.getMessage());
-			System.exit(1);
+						
+			
+			// load from ciffile directory
+			File cifFile = new File(CIF_FILE_DIR, pdbCode + ".cif");
+			PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+			pdb = fullpdb.getChain(chainCode);				
+		
 		} catch (PdbLoadException e) {
 			System.err.println(e.getMessage());
 			System.exit(1);

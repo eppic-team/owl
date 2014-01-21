@@ -53,10 +53,10 @@ public class CSAConnection {
 			OutputStream out = new BufferedOutputStream(new FileOutputStream("CSA_"+version.replaceAll("\\.","_")+".dat.gz"));
 			byte[] buffer = new byte[1024];
 			int numRead;
-			long numWritten = 0;
+			//long numWritten = 0;
 			while ((numRead = inURL.read(buffer)) != -1) {
 				out.write(buffer, 0, numRead);
-				numWritten += numRead;
+				//numWritten += numRead;
 			}
 			inURL.close();
 			out.close();

@@ -462,33 +462,29 @@ public class SparseMatrix {
 	 * Sets this matrix object to identity.
 	 */
 	public void identity (){
-		if(this==null) throw new NullPointerException ("Null object!");
-		else{
-			if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
-			else matrix.clear();
-			int dim = Math.min(rowDim, colDim);
-			for(int i = 0; i < dim; i++){
-				matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
-			}
-			refreshMatrix();
+		if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
+		else matrix.clear();
+		int dim = Math.min(rowDim, colDim);
+		for(int i = 0; i < dim; i++){
+			matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
 		}
+		refreshMatrix();
 	}
+	
 	/**
 	 * Sets this SparseMatrix to the square (<tt>dim x dim</tt>) identity matrix
 	 * @param dim the dimension
 	 */
 	public void identity (int dim){
-		if(this==null) throw new NullPointerException ("Null object!");
-		else{
-			if(rowDim==0&&colDim==0) {rowDim = dim; colDim = dim;}
-			if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
-			else matrix.clear();
-			for(int i = 0; i < dim; i++){
-				matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
-			}
-			refreshMatrix();
+		if(rowDim==0&&colDim==0) {rowDim = dim; colDim = dim;}
+		if(matrix==null) matrix = new HashMap<Pair<Integer>,Double> ();
+		else matrix.clear();
+		for(int i = 0; i < dim; i++){
+			matrix.put(new Pair<Integer>(new Integer(i),new Integer(i)),new Double(1d));
 		}
+		refreshMatrix();
 	}
+	
 	/**
 	 * Sets this matrix to an <tt>row x col</tt> identity matrix.
 	 * @param row the row dimension
@@ -920,54 +916,7 @@ public class SparseMatrix {
 		symmetric();
 		return isSymmetric?true:false;
 	}
-	/**
-	 * Returns the kernel vector <tt>v</tt> of this matrix,
-	 * which satisfies:
-	 * <p><tt>A v = o</tt>, where <tt>o</tt> is the zero vector
-	 * @return the kernel vector as a SparseMatrix
-	 * TODO should be removed
-	 */
-	@Deprecated
-	public SparseMatrix kernelVector (){
-		if(matrix==null) throw new NullPointerException ("Null object!");
-		else{
-			if(convert2Matrix().rank()==rowDim) return new SparseMatrix (rowDim,1);
-			//if this matrix has full rank, the kernel is trivial!
-			
-			else{
-				SparseMatrix kerVec = new SparseMatrix (colDim,1);
-				SparseMatrix operator = new SparseMatrix(rowDim,colDim);
-				operator.identity(rowDim,colDim);
-				for(int i = 0; i < colDim; i++){
-					Pair<Integer> index = new Pair<Integer>(new Integer(i),new Integer(0));
-					kerVec.matrix.put(index, 1/Math.sqrt(colDim));
-				}
-				kerVec.refreshMatrix();
-				operator = operator.add(this);
-				//int pot = 2;
-				double normOP = operator.norm2();
-				/*while(normOP>=1){
-					operator = operator.subtract(this.multiply(2d));
-					normOP = operator.norm2();
-					pot++;
-				}*/
-				//operator = operator.add(this);
-				operator = operator.multiply(1/(normOP+1));
-				SparseMatrix latter = new SparseMatrix (colDim,1);
-				double currNorm = kerVec.norm2(), diff = 0;
-				while(Math.abs(currNorm-diff)>1e-13){
-					latter = new SparseMatrix (kerVec);
-					kerVec = operator.multiply(kerVec);
-					double norm = kerVec.norm2();
-					kerVec = kerVec.multiply(1/norm);
-					diff = currNorm;
-					currNorm = (kerVec.subtract(latter)).norm2();
-					System.out.println(currNorm);
-				}
-				return kerVec;
-			}
-		}
-	}
+	
 	/**
 	 * Scalar multiplication method: multiplies this instance with <tt>scalar</tt> and
 	 * returns the result as a new instance.
@@ -1047,10 +996,7 @@ public class SparseMatrix {
 	 * @return the 2-norm (frobenius-norm)
 	 */
 	public double norm2 (){
-		if(this==null) throw new NullPointerException("Null object!");
-		else{
-			return Math.sqrt(innerProduct(this));
-		}
+		return Math.sqrt(innerProduct(this));
 	}
 	
 	/**

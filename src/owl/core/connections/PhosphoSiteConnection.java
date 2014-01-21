@@ -115,6 +115,7 @@ public class PhosphoSiteConnection {
 					}
 				}
 			}
+			in.close();
 		} catch (IOException e) {
 			System.err.println("Error reading from file " + htmlFile + ": " + e.getMessage());
 		}

@@ -1,13 +1,13 @@
 package owl.mutanom;
 
-import java.sql.SQLException;
+import java.io.File;
+import java.io.IOException;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.AaResidue;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.util.MySQLConnection;
+import owl.core.util.FileFormatException;
 
 /**
  * Class for trying out things in the main method.
@@ -16,10 +16,10 @@ import owl.core.util.MySQLConnection;
  */
 public class Sandbox {
 
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException {
+	public static void main(String[] args) throws IOException, PdbLoadException,FileFormatException {
 		
 		// pdb to cif
-		PdbAsymUnit pdb = new PdbAsymUnit("3na3", new MySQLConnection(),"pdbase");
+		PdbAsymUnit pdb = new PdbAsymUnit(new File("3na3.cif"));
 		PdbChain chain = pdb.getChain("A");
 		String[] pdbResNums = {"3","208","209","321"};
 		for(String pdbResNum:pdbResNums) {

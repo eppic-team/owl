@@ -207,6 +207,7 @@ public class rankModels {
 				double gdt = Double.parseDouble(line);
 				gdts.add(gdt);
 			}
+			in.close();
 		} catch(FileNotFoundException e) {
 			System.err.println("File " + gdtFile.getAbsolutePath() + " not found.");
 			System.exit(1);

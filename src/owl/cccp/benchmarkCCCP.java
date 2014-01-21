@@ -126,7 +126,8 @@ public class benchmarkCCCP {
 				double consensus = ga.getEnsembleConsensusScore();
 				
 				System.out.printf("%d\t%.2f\n", filesRead, consensus);
-			}		
+			}
+			in.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("Could not find file with targets " + targetListFile.getPath());
 		} catch (IOException e) {
@@ -145,7 +146,8 @@ public class benchmarkCCCP {
 			String line;
 			while((line=in.readLine()) != null) {
 				estimateQuality(line,conn);
-			}		
+			}
+			in.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("Could not find file with targets " + targetListFile.getPath());
 		} catch (IOException e) {

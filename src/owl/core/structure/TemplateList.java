@@ -14,11 +14,10 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import owl.core.connections.GTGHit;
-import owl.core.connections.GTGHitList;
 import owl.core.runners.blast.BlastHit;
 import owl.core.runners.blast.BlastHitList;
 import owl.core.structure.graphs.RIGraph;
+import owl.core.util.FileFormatException;
 import owl.core.util.MySQLConnection;
 
 
@@ -66,21 +65,6 @@ public class TemplateList implements Iterable<Template> {
 		graphDataLoaded = false;
 	}
 
-	/**
-	 * Constructs a new TemplateList given a GTGHitList 
-	 * @param hits
-	 */
-	public TemplateList(GTGHitList hits) {
-		list = new ArrayList<Template>();
-		Iterator<GTGHit> it = hits.iterator();
-		while (it.hasNext()) {
-			this.add(new Template(it.next()));
-		}
-		pdbDataLoaded = false;
-		graphDataLoaded = false;
-		setSource(SRC_GTG);
-	}
-	
 	/**
 	 * Constructs a TemplateList from a file with a list of PDB ids (in format 
 	 * pdbCode+chain, e.g. 1abcA) or a list of PDB files or a mix of both.
@@ -330,20 +314,14 @@ public class TemplateList implements Iterable<Template> {
 	 * If there's no PDB code for a certain Template, then we simply print a warning 
 	 * and skip it. We consider subsequently that data were loaded.
 	 * If all templates in this list are of type==Template.Type.FILE then simply use 
-	 * nulls for conn and pdbaseDb
-	 * @param conn a db connection or null if all Templates are to be read from file
-	 * @param pdbaseDb a pdbase db name or null if all Templates are to be read from file
-	 * @throws PdbLoadException
-	 * @throws SQLException
-	 * @throws IOException 
+	 * nulls for cifRepoDir
+	 * @param cifRepoDir a dir containing all PDB mmCIF (.gz) files or null if templates are of FILE type
 	 */
-	public void loadPdbData(MySQLConnection conn, String pdbaseDb) throws PdbLoadException, SQLException, IOException {
+	public void loadPdbData(String cifRepoDir) throws PdbLoadException, FileFormatException, IOException {
 		for (Template template:this) {
-			try {
-				template.loadPdbData(conn, pdbaseDb);
-			} catch (PdbCodeNotFoundException e) {
-				System.err.println("Warning: no PDB data for template "+template.getId()+". Error: "+e.getMessage());
-			}
+			
+			template.loadPdbData(cifRepoDir);
+			
 		}
 		pdbDataLoaded = true;
 	}

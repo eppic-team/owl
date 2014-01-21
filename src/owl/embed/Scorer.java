@@ -1,7 +1,6 @@
 package owl.embed;
 
 import java.io.*;
-import java.sql.SQLException;
 //import java.util.ArrayList;
 import java.util.*;
 
@@ -11,9 +10,7 @@ import owl.core.structure.graphs.RIGEdge;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
 import owl.core.util.FileFormatException;
-import owl.core.util.MySQLConnection;
 import owl.core.util.RegexFileFilter;
-
 import edu.uci.ics.jung.graph.util.Pair;
 //import java.util.HashMap;
 //import java.util.HashSet;
@@ -64,9 +61,6 @@ public class Scorer {
 	 * @param sparseBounds
 	 * @param fullContactMap
 	 * @return
-	 * @throws SQLException 
-	 * @throws PdbCodeNotFoundException 
-	 * @throws PdbLoadException 
 	 */
 	public static double getCMError(Bound[][] sparseBounds, RIGraph fullContactMap) {
 		Bound[][] cmapBounds = Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
@@ -83,9 +77,14 @@ public class Scorer {
 		return sumDev/(double) fullContactMap.getFullLength(); 
 	}
 	
-	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
-		MySQLConnection conn = new MySQLConnection ();
-		PdbAsymUnit fullpdb = new PdbAsymUnit(fullContactMap.getPdbCode(),conn,"pdbase_20090728");
+	public static double getCMError(RIGraph fullContactMap,Bound[][] sparseBounds) throws PdbLoadException, IOException, FileFormatException {
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),fullContactMap.getPdbCode()+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/local/mmCIF/gz/all/repo", null, fullContactMap.getPdbCode(), cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+		
 		PdbChain pdb = fullpdb.getChain(fullContactMap.getChainCode());
 		Matrix distmat = pdb.calcDistMatrixJamaFormat("Ca");
 		Bound[][] cmapBounds = convertRIGraphToBounds(fullContactMap,distmat.getArray());//Reconstructer.convertRIGraphToBoundsMatrix(fullContactMap);
@@ -112,11 +111,8 @@ public class Scorer {
 	 * @param subset
 	 * @param fullContactMap
 	 * @return
-	 * @throws PdbLoadException 
-	 * @throws SQLException 
-	 * @throws PdbCodeNotFoundException 
 	 */
-	public static double getCMError(RIGraph subset, RIGraph fullContactMap) throws PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static double getCMError(RIGraph subset, RIGraph fullContactMap) throws IOException, FileFormatException, PdbLoadException {
 		
 		//initializing Bound array instance using class 'Reconstructer' method 'convertRIGraphToBoundsMatrix()' 
 		Bound[][] subsetBounds = Reconstructer.convertRIGraphToBoundsMatrix(subset);
@@ -134,13 +130,8 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static double getCMError(File rigFile, String pdbaseDb, MySQLConnection conn, boolean randomsampling) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static double getCMError(File rigFile, String cifRepoDir, boolean randomsampling) throws FileFormatException, IOException, PdbLoadException {
 
 		//new instance of class RIGraph created using File instance 'rigFile' 
 		RIGraph graph = new FileRIGraph(rigFile.getAbsolutePath());
@@ -161,7 +152,11 @@ public class Scorer {
 		double cutoff = graph.getCutoff();
 
 		//initializing PdbChain instance 'pdb' 
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile(cifRepoDir, null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 
 		//getting chain 
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
@@ -208,13 +203,8 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @return
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static double getDMError (File test, String pdbaseDb, MySQLConnection conn, boolean randsampling) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static double getDMError (File test, String cifRepoDir, boolean randsampling) throws FileFormatException, IOException, PdbLoadException {
 		RIGraph sub = new FileRIGraph(test.getAbsolutePath());
 		//initializing String variable for PDB code of RIGraph instance 'graph'
 		String pdbCode = sub.getPdbCode();
@@ -229,7 +219,12 @@ public class Scorer {
 		//double cutoff = sub.getCutoff();
 		
 		//initializing PdbChain instance 'pdb' using subclass 'PdbasePdb' constructor
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
+		
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile(cifRepoDir, null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		
 		Matrix fullDistanceMap = pdb.calcDistMatrixJamaFormat(ct);
@@ -326,18 +321,13 @@ public class Scorer {
 	 * @param conn database access
 	 * @param runs number of subsets to be sampled
 	 * @return stats mean value and standard deviation
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static double[] averageDMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {	
+	public static double[] averageDMRandom (File test, String cifRepoDir, int runs) throws FileFormatException, IOException, PdbLoadException {	
 		double[] list = new double[runs];
 		double average = 0.0;
 		boolean bool = true;
 		for(int i = 0; i < runs; i++){
-			list[i] = getDMError(test, pdbaseDb, conn, bool);
+			list[i] = getDMError(test, cifRepoDir, bool);
 			average = average + list[i];
 		}
 		average = average/(double) list.length;
@@ -353,18 +343,13 @@ public class Scorer {
 	 * @param conn
 	 * @param runs
 	 * @return stats
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static double[] averageCMRandom (File test, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static double[] averageCMRandom (File test, String cifRepoDir, int runs) throws FileFormatException, IOException, PdbLoadException {
 		boolean bool = true;
 		double[] list = new double[runs];
 		double average = 0.0;
 		for(int i = 0; i < runs; i++){
-			list[i] = getCMError(test, pdbaseDb, conn, bool);
+			list[i] = getCMError(test, cifRepoDir, bool);
 			average = average + list[i];
 		}
 		average = average/(double) list.length;
@@ -394,16 +379,11 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static void outputDMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static void outputDMScore (File test, PrintWriter file, String cifRepoDir, int runs) throws FileFormatException, IOException, PdbLoadException {
 		boolean bool = false;
-		double value = getDMError(test, pdbaseDb, conn, bool);
-		double[] values = averageDMRandom(test, pdbaseDb, conn, runs);
+		double value = getDMError(test, cifRepoDir, bool);
+		double[] values = averageDMRandom(test, cifRepoDir, runs);
 		file.print(test.getName()+":");
 		file.print(" DM error: "+value+", ");
 		file.print("average DM error: "+values[0]);
@@ -418,17 +398,12 @@ public class Scorer {
 	 * @param pdbaseDb
 	 * @param conn
 	 * @param runs
-	 * @throws FileFormatException
-	 * @throws IOException
-	 * @throws PdbCodeNotFoundException
-	 * @throws SQLException
-	 * @throws PdbLoadException
 	 */
-	public static void outputCMScore (File test, PrintWriter file, String pdbaseDb, MySQLConnection conn, int runs) throws FileFormatException, IOException, PdbCodeNotFoundException, SQLException, PdbLoadException {
+	public static void outputCMScore (File test, PrintWriter file, String cifRepoDir, int runs) throws FileFormatException, IOException, PdbLoadException {
 		boolean bool = false;
-		double value = getCMError(test, pdbaseDb, conn, bool);
-		double[] values = new double[averageCMRandom(test, pdbaseDb, conn, runs).length];
-		System.arraycopy(averageCMRandom(test, pdbaseDb, conn, runs), 0, values, 0, values.length);
+		double value = getCMError(test, cifRepoDir, bool);
+		double[] values = new double[averageCMRandom(test, cifRepoDir, runs).length];
+		System.arraycopy(averageCMRandom(test, cifRepoDir, runs), 0, values, 0, values.length);
 		file.print(test.getName()+":");
 		file.print(" CM error: "+value+", ");
 		file.print("average CM error: "+values[0]);
@@ -440,7 +415,7 @@ public class Scorer {
 	public static Bound[][] convertRIGraphToBounds (RIGraph rig, double[][] fulldistancematrix){
 		HashSet<Pair<Integer>> contact_pairs = convertRIGraphToHashSet(rig); 
 		Iterator<Pair<Integer>> it = contact_pairs.iterator();
-		int cont_size = rig.getSequence().length(), counter = 0;
+		int cont_size = rig.getSequence().length();
 		Bound[][] bounds = new Bound[cont_size][cont_size];
 		while(it.hasNext()){
 			Pair<Integer> pair = it.next();
@@ -448,7 +423,7 @@ public class Scorer {
 			double value = fulldistancematrix[f_val][s_val];
 			bounds[f_val][s_val] = new Bound(value,value);
 			bounds[s_val][f_val] = new Bound(value,value);
-			counter ++;
+			
 		}
 		return bounds;
 	}
@@ -489,9 +464,7 @@ public class Scorer {
 		PrintWriter file = new PrintWriter(out);
 		Arrays.sort(selSubsets);
 		//Arrays.sort(rndSubsets);
-		
-		MySQLConnection conn = new MySQLConnection();
-		
+			
 		for (int i=0;i<selSubsets.length;i++) {
 			File selSubset = selSubsets[i];
 			/*for(int j = 0; j < selSubsets.length; j++){
@@ -511,11 +484,11 @@ public class Scorer {
 			//System.out.print(getDMError(rndSubset, "pdbase", conn)/getDMError(selSubset, "pdbase", conn));
 			//System.out.println();
 			
-			outputDMScore(selSubset, file, "pdbase", conn, 10);
-			outputCMScore(selSubset, file, "pdbase", conn, 10);
+			outputDMScore(selSubset, file, "/path/to/mmCIF/gz/all/repo", 10);
+			outputCMScore(selSubset, file, "/path/to/mmCIF/gz/all/repo", 10);
 		}
 		file.close();
-		conn.close();
+	
 	}
 
 	

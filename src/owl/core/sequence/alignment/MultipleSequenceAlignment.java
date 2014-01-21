@@ -20,7 +20,6 @@ import owl.core.sequence.Sequence;
 import owl.core.structure.AminoAcid;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.TemplateList;
 import owl.core.structure.features.SecStrucElement;
@@ -28,7 +27,6 @@ import owl.core.structure.features.SecondaryStructure;
 import owl.core.util.FileFormatException;
 import owl.core.util.Interval;
 import owl.core.util.IntervalSet;
-import owl.core.util.MySQLConnection;
 
 /**
  * A multiple protein sequence alignment. This class represents a set of
@@ -1162,11 +1160,10 @@ public class MultipleSequenceAlignment implements Serializable {
     /**
      * Associates a secondary structure annotation to each sequence of this Alignment 
      * whose tag is in the form pdbCode+pdbChainCode e.g. 1abcA
-     * @param conn a db connection for getting the PDB data
-     * @param pdbaseDb a pdbase database name
+     * @param cifRepoDir a directory containing all PDB mmCIF (.gz) files
      * @param dsspExecutable
      */
-    public void addSecStructAnnotation(MySQLConnection conn, String pdbaseDb, String dsspExecutable) {
+    public void addSecStructAnnotation(String cifRepoDir, String dsspExecutable) {
     	this.secStructAnnotation = new TreeMap<String, SecondaryStructure>();
 		for (String tag:this.getTags()) {
 			SecondaryStructure secStruct = new SecondaryStructure("");
@@ -1174,14 +1171,17 @@ public class MultipleSequenceAlignment implements Serializable {
 			Matcher m = p.matcher(tag);
 			if (m.matches()) {
 				PdbChain pdb = null;
-				try {
-					PdbAsymUnit fullpdb = new PdbAsymUnit(m.group(1),conn,pdbaseDb);
+				try {					
+					File cifFile = new File(System.getProperty("java.io.tmpdir"),m.group(1)+".cif");
+					cifFile.deleteOnExit();
+					PdbAsymUnit.grabCifFile(cifRepoDir, null, m.group(1), cifFile, false);				
+					PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
 					pdb = fullpdb.getChain(m.group(2));
 					pdb.setSecondaryStructure(DsspRunner.runDssp(pdb, dsspExecutable, "--", SecStrucElement.ReducedState.THREESTATE, SecStrucElement.ReducedState.THREESTATE));
 					secStruct = pdb.getSecondaryStructure();
 				} catch (PdbLoadException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());
-				} catch (PdbCodeNotFoundException e) {
+				} catch (FileFormatException e) {
 					System.err.println("Couldn't get secondary structure annotation for sequence "+tag+". Error: "+e.getMessage());					
 				} catch (IOException e) {
 					secStruct = pdb.getSecondaryStructure(); // we take author's assignment
@@ -1243,7 +1243,7 @@ public class MultipleSequenceAlignment implements Serializable {
      * from the given psipredFile and from the sequences in this alignment for which 
      * a secondary annotation exists. The secondary structure annotation must be assigned before
      * calling this method by using {@link #addSecStructAnnotation(TemplateList, String)} or
-     * {@link #addSecStructAnnotation(MySQLConnection, String, String)}
+     * {@link #addSecStructAnnotation(String, String)}
      * This Alignment must contain the targetTag
      * @param Out
      * @param targetTag a tag of a sequence in this Alignment that corresponds to the 

@@ -1,18 +1,14 @@
 package owl.core.structure.graphs;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 
 import org.apache.commons.collections15.Transformer;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
-import owl.core.structure.PdbLoadException;
-import owl.core.util.MySQLConnection;
-
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -103,8 +99,8 @@ public class GraphIOGDLFile<V,E> {
 	
 	
 	// tester
-	public static void main(String[] args) throws SQLException, PdbCodeNotFoundException, PdbLoadException, IOException {
-		PdbAsymUnit fullpdb = new PdbAsymUnit("1bxy", new MySQLConnection(), "pdbase");
+	public static void main(String[] args) throws Exception {
+		PdbAsymUnit fullpdb = new PdbAsymUnit(new File("1bxy.cif"));
 		PdbChain pdb = fullpdb.getChain("A");
 		RIGraph graph = pdb.getRIGraph("Ca", 8);
 		

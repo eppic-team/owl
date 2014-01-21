@@ -12,16 +12,15 @@ import java.util.regex.Pattern;
 
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
-import owl.core.util.MySQLConnection;
+import owl.core.util.FileFormatException;
 
 
 
 public class dumpseq {
 	/*------------------------------ constants ------------------------------*/
 	
-	private static final String			PDB_DB = "pdbase";
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 
 	private static final String IDS_REGEX1 = "^(\\d\\w\\w\\w)(\\w)";
 	private static final String IDS_REGEX2 = "^(\\d\\w\\w\\w)_(\\w)";
@@ -44,11 +43,11 @@ public class dumpseq {
 				" [-s]            : outputs to stdout instead of file(s)\n" +
 				" [-N]            : don't print FASTA header, just raw sequence\n"+
 				" [-O]            : output observed sequences instead of full sequences\n" +
-				" [-D] <database> : pdbase database name. Default: "+PDB_DB+"\n\n";				
+				" [-D] <dir>      : mmCIF gz all repo dir. Default: "+CIFREPODIR+"\n\n";				
 
 		String listfile = "";
 		String[] pdbIds = null;
-		String pdbaseDb = PDB_DB;
+		String cifRepoDir = CIFREPODIR;
 		String outputDir = ".";
 		File oneOutputFile = null;
 		boolean stdout = false;
@@ -72,7 +71,7 @@ public class dumpseq {
 				oneOutputFile = new File(g.getOptarg());
 				break;				
 			case 'D':
-				pdbaseDb = g.getOptarg();
+				cifRepoDir = g.getOptarg();
 				break;
 			case 's':
 				stdout = true;
@@ -102,15 +101,6 @@ public class dumpseq {
 			System.exit(1);			
 		}
 		
-		MySQLConnection conn = null;		
-
-		try{
-			conn = new MySQLConnection();
-		} catch (Exception e) {
-			System.err.println("Error opening database connection. Exiting");
-			System.exit(1);
-		}
-
 
 		if (!listfile.equals("")) {	
 			pdbIds = readIdsListFile(new File(listfile));
@@ -141,8 +131,12 @@ public class dumpseq {
 
 			PdbAsymUnit pdb = null;
 			try {
-				pdb = new PdbAsymUnit(pdbCode,conn,pdbaseDb);
-			} catch (PdbCodeNotFoundException e) {
+				File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+				cifFile.deleteOnExit();
+				PdbAsymUnit.grabCifFile(cifRepoDir, null, pdbCode, cifFile, false);				
+				pdb = new PdbAsymUnit(cifFile);
+
+			} catch (FileFormatException e) {
 				System.err.println("Couldn't find pdb code "+pdbCode);
 				continue;
 			} catch (PdbLoadException e) {

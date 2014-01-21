@@ -10,7 +10,6 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.net.URLConnection;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -30,7 +29,6 @@ import javax.vecmath.Vector3d;
 import owl.core.util.BoundingBox;
 import owl.core.util.FileFormatException;
 import owl.core.util.FileTypeGuesser;
-import owl.core.util.MySQLConnection;
 
 /**
  * A protein crystal's asymmetric unit, i.e. a PDB entry.
@@ -225,45 +223,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 	}
 	
-	/**
-	 * Constructs a PdbAsymUnit by reading model {@value #DEFAULT_MODEL} for all chains 
-	 * from given pdbase database. 
-	 * @param pdbCode
-	 * @param conn
-	 * @param dbName
-	 * @throws PdbLoadException
-	 * @throws PdbCodeNotFoundException
-	 */
-	public PdbAsymUnit(String pdbCode, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
-		this(pdbCode, DEFAULT_MODEL, conn, dbName);
-	}
-	
-	/**
-	 * Constructs a PdbAsymUnit by reading given model for all chains 
-	 * from given pdbase database. 
-	 * @param pdbCode
-	 * @param model
-	 * @param conn
-	 * @param dbName
-	 * @throws PdbLoadException
-	 * @throws PdbCodeNotFoundException
-	 */
-	public PdbAsymUnit(String pdbCode, int model, MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
-		this.pdbCode = pdbCode.toLowerCase();
-		this.model = model;
-
-		this.expMethod = null;
-		this.resolution = -1;
-		this.rFree = -1;
-		this.rSym = -1;
-		this.title = null;
-		
-		this.chains = new TreeMap<String, PdbChain>();
-		this.nonPolyChains = new TreeMap<String,PdbChain>();
-
-		loadFromPdbase(conn, dbName);
-	}
-	
 	/*----------------------------------  loader methods ----------------------------------------*/
 	
 	private void loadFromPdbFile(File pdbFile, boolean missingSeqResPadding) throws PdbLoadException {
@@ -326,37 +285,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		// TODO check whether we can trust sequences or not: based on existence of pdbx_poly_seq_scheme for instance
 		boolean trustSequences = true;
 		initialiseChainClusters(trustSequences);
-	}
-	
-	private void loadFromPdbase(MySQLConnection conn, String dbName) throws PdbLoadException, PdbCodeNotFoundException {
-		try {
-			PdbaseParser parser = new PdbaseParser(pdbCode,dbName,conn);
-			this.title = parser.readTitle();
-			this.expMethod = parser.readExpMethod();
-			this.crystalCell = parser.readCrystalCell();
-			this.spaceGroup = parser.readSpaceGroup();
-			this.transform = new CrystalTransform(spaceGroup);
-			double[] qParams = parser.readQparams();
-			this.resolution = qParams[0];
-			this.rFree = qParams[1];
-			this.rSym = qParams[2];
-
-			parser.readChains(this, model);
-			for (PdbChain chain:getAllChains()) {
-				chain.setParent(this);
-			}
-				
-			checkNoEmptyChains();
-
-			checkScaleMatrix(parser.readScaleMatrix());
-			
-			checkUnreasonableCrystalCell();
-			
-		} catch(SQLException e) {
-			throw new PdbLoadException(e);
-		}
-		
-		initialiseChainClusters(true);
 	}
 	
 	private void checkScaleMatrix(Matrix4d scaleMatrix) throws PdbLoadException {

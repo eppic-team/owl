@@ -7,14 +7,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
-import owl.core.util.MySQLConnection;
 
 
 public class DisplaySecStructMatching {
 	
 	private static final String PROGRAM_NAME = "displaySSMatching";
 	
-	private static final String PDBASE_DB = "pdbase";
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
 	
 	private static final String DSSP_EXE = "/project/StruPPi/bin/dssp";
 	
@@ -60,7 +59,6 @@ public class DisplaySecStructMatching {
 			System.exit(1);
 		}
 		
-		MySQLConnection conn = new MySQLConnection();
 		
 		MultipleSequenceAlignment aln = new MultipleSequenceAlignment(alnFile.getAbsolutePath(),"FASTA");
 
@@ -76,7 +74,7 @@ public class DisplaySecStructMatching {
 			System.exit(1);
 		}
 		
-		aln.addSecStructAnnotation(conn, PDBASE_DB, DSSP_EXE);
+		aln.addSecStructAnnotation(CIFREPODIR, DSSP_EXE);
 		aln.writeWithSecStruct(System.out, targetTag, psipredFile, showSequence);
 	}
 

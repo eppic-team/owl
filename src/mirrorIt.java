@@ -3,7 +3,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import owl.core.structure.PdbAsymUnit;
-import owl.core.util.MySQLConnection;
 
 
 
@@ -11,6 +10,9 @@ public class mirrorIt {
 
 	private static final String PROG_NAME = "mirrorIt";
 	
+	private static final String CIFREPODIR = "/path/to/mmCIF/gz/all/repo/dir";
+
+
 	public static void main(String[] args) throws Exception {
 
 		String help = "\nMirrors the given pdb structure or file\n" +
@@ -49,7 +51,11 @@ public class mirrorIt {
 		if (pdbFromFile) {
 			pdb = new PdbAsymUnit(new File(pdbId));
 		} else {
-			pdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+			
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+			cifFile.deleteOnExit();
+			PdbAsymUnit.grabCifFile(CIFREPODIR, null, pdbCode, cifFile, false);				
+			pdb = new PdbAsymUnit(cifFile);
 		}
 		
 		pdb.mirror();

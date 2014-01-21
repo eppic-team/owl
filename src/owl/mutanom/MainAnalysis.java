@@ -29,7 +29,7 @@ import owl.core.features.FeatureType;
 import owl.core.features.StructuralDomainType;
 //import owl.core.features.UniprotFeature;
 import owl.core.structure.AminoAcid;
-import owl.core.structure.Residue;
+//import owl.core.structure.Residue;
 import owl.core.structure.AaResidue;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.util.MySQLConnection;

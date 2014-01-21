@@ -14,7 +14,6 @@ import owl.core.structure.PdbAsymUnit;
 import owl.core.structure.Residue;
 import owl.core.structure.AaResidue;
 import owl.core.util.Goodies;
-import owl.core.util.MySQLConnection;
 
 
 
@@ -309,7 +308,12 @@ public class Embedder {
 		String pdbChainCode = "A";
 		File outPdbFile = new File("/project/StruPPi/jose/embed_"+pdbCode+pdbChainCode+".pdb");
 		
-		PdbAsymUnit fullpdb = new PdbAsymUnit(pdbCode, new MySQLConnection(),"pdbase");
+		File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".cif");
+		cifFile.deleteOnExit();
+		PdbAsymUnit.grabCifFile("/path/to/local/mmCIF/gz/all/repo", null, pdbCode, cifFile, false);
+		
+		PdbAsymUnit fullpdb = new PdbAsymUnit(cifFile);
+		
 		PdbChain pdb = fullpdb.getChain(pdbChainCode);
 		int n = pdb.getStdAaObsLength();
 		int ind = 0;

@@ -186,7 +186,7 @@ public class checkCASPservertargets {
 					
 					checkAndRewriteServerModel(filenameIn, filenameOut);
 				}
-				
+				in.close();
 	    	}
 	    	iF++;
 	    }
@@ -305,6 +305,7 @@ public class checkCASPservertargets {
 			else
 				break;
 		}
+		bufRdr.close();
 		//read each line of text file
 		numHeaderLines = -1*numHeaderLines +1;
 		bufRdr = new BufferedReader(new FileReader(filename));
@@ -336,6 +337,7 @@ public class checkCASPservertargets {
 			else
 				break;
 		}
+		bufRdr.close();
 		//read each line of text file
 		numHeaderLines = -1*numHeaderLines +1;
 		int idPostHeader = 100000;
@@ -374,6 +376,7 @@ public class checkCASPservertargets {
 			else
 				break;
 		}
+		bufRdr.close();
 		//read each line of text file
 		numHeaderLines = -1*numHeaderLines;
 		bufRdr = new BufferedReader(new FileReader(filename));
