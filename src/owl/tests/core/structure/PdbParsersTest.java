@@ -422,6 +422,7 @@ public class PdbParsersTest {
 	@Test
 	public void testPdbfileParser() throws IOException, FileFormatException, PdbLoadException {
 		
+		long start = System.currentTimeMillis();
 		ArrayList<String> warnings = new ArrayList<String>();
 		// testing a list of PDB files from PDB
 		BufferedReader flist = new BufferedReader(new FileReader(LISTFILE));
@@ -700,12 +701,15 @@ public class PdbParsersTest {
 			} 
 		}
 		flist.close();
+		long end = System.currentTimeMillis();
+		
 		if (!warnings.isEmpty()) {
 			System.err.println("WARNINGS: ");
 			for (String warning:warnings) {
 				System.err.println(warning);
 			}
 		}
+		System.out.println("Test ran in "+((end-start)/60000)+"min");
 	}
 	
 	@Test

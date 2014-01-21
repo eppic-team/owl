@@ -82,10 +82,6 @@ public class CifFieldInfo {
 		return true;
 	}
 	
-	public String getSubFieldData(String subField) {
-		return this.subFieldsData.get(getIndexForSubField(subField)).toString();
-	}
-	
 	/**
 	 * Gets the data from the last subfield, to be used in loop cases where 
 	 * all the data is stored in last subfield only.
@@ -95,7 +91,7 @@ public class CifFieldInfo {
 		return this.subFieldsData.get(this.subFieldsData.size()-1);
 	}
 	
-	public StringBuilder getSubFieldData(int index) {
+	private StringBuilder getSubFieldData(int index) {
 		return this.subFieldsData.get(index);
 	}
 	
@@ -148,7 +144,8 @@ public class CifFieldInfo {
 	 * @return
 	 */
 	public String[] getNextTokens() {
-		if (!isLoop()) throw new IllegalArgumentException("Called loop method in a non-loop field");
+		if (!isLoop()) 
+			throw new IllegalArgumentException("Called loop method in a non-loop field");
 		return tokeniseData(getLastSubFieldData(), getNumSubFields());
 	}
 	
@@ -160,19 +157,21 @@ public class CifFieldInfo {
 	 * @return
 	 */
 	public boolean hasMoreData() {
-		if (!isLoop()) throw new IllegalArgumentException("Called loop method in a non-loop field");
+		if (!isLoop()) 
+			throw new IllegalArgumentException("Called loop method in a non-loop field");
 		return (dataIdx < getLastSubFieldData().length()-1);
 	}
 	
 	/**
-	 * Processes the data present in a subField and returns a trimmed String.
+	 * Processes the data present in a subField and returns a trimmed and unquoted String.
 	 * The data can be either one-line or multi-line (;; quoted or non-quoted)
 	 * @param subField
 	 * @return
 	 */
-	public String getFinalSubFieldData(String subField) {
+	public String getSubFieldData(String subField) {
 		
-		if (isLoop) throw new IllegalArgumentException("Called non-loop method in a loop field");
+		if (isLoop()) 
+			throw new IllegalArgumentException("Called non-loop method in a loop field");
 		
 		int index = getIndexForSubField(subField);
 		
@@ -193,7 +192,13 @@ public class CifFieldInfo {
 
 		}
 		
-		// TODO we should remove quotes here: '' "" and maybe also ;; (check in CiffileParser)
+		// note, no need to remove ;; quoting here as that was done by the tokeniser
+		if ( (finalStr.charAt(0)=='\'' && finalStr.charAt(finalStr.length()-1)=='\'') ||
+			 (finalStr.charAt(0)=='"' && finalStr.charAt(finalStr.length()-1)=='"')) {
+			
+			finalStr = finalStr.substring(1,finalStr.length()-1);
+		}
+		
 		
 		return finalStr;
 	}
@@ -218,7 +223,7 @@ public class CifFieldInfo {
 	 * 
 	 * @param data
 	 * @param numberTokens
-	 * @return
+	 * @return the tokens in a string with any surrounding quotes removed
 	 */
 	private String[] tokeniseData(StringBuilder data, int numberTokens) {
 		

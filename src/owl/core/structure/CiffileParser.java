@@ -378,10 +378,10 @@ public class CiffileParser {
 	
 	protected String readPdbCode() {
 
-		int index = fields.get(entry).getIndexForSubField("id");
-		if (index<0) return PdbAsymUnit.NO_PDB_CODE;  
+		CifFieldInfo entryField = fields.get(entry); 
+		if (!entryField.isSubFieldPresent("id")) return PdbAsymUnit.NO_PDB_CODE;  
 		
-		return fields.get(entry).getSubFieldData(index).toString().trim().toLowerCase();
+		return entryField.getSubFieldData("id").toLowerCase();
 	}
 	
 	protected Date readReleaseDate() throws FileFormatException {
@@ -391,9 +391,10 @@ public class CiffileParser {
 		Date releaseDate = null;
 		//for non-loop cases
 		if (!databasePdbRevField.isLoop()) {
-			int index = databasePdbRevField.getIndexForSubField("date");
-			if (index<0) return null;
-			String date = databasePdbRevField.getSubFieldData(index).toString().trim();
+			
+			if (!databasePdbRevField.isSubFieldPresent("date")) return null;
+			
+			String date = databasePdbRevField.getSubFieldData("date");
 			try {
 				releaseDate = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(date);
 			} catch(ParseException pe){
@@ -430,12 +431,8 @@ public class CiffileParser {
 		
 		if (!structField.isSubFieldPresent("title")) return null; // subfield is missing
 		
-		String title = structField.getFinalSubFieldData("title");
+		String title = structField.getSubFieldData("title");
 		
-		if (title.charAt(0)=='\'' && title.charAt(title.length()-1)=='\'') {
-			title = title.substring(1,title.length()-1);
-		}
-
 		return title;
 	}
 	
@@ -445,23 +442,32 @@ public class CiffileParser {
 		// we first see if the fields are there at all 
 		if (cellField.isEmpty()) return null;
 
-		if (!isDouble(cellField.getSubFieldData("length_a").trim()) ||
-			!isDouble(cellField.getSubFieldData("length_b").trim()) ||
-			!isDouble(cellField.getSubFieldData("length_c").trim()) ||
-			!isDouble(cellField.getSubFieldData("angle_alpha").trim()) ||
-			!isDouble(cellField.getSubFieldData("angle_beta").trim()) ||
-			!isDouble(cellField.getSubFieldData("angle_gamma").trim())) {
+
+		String aStr = cellField.getSubFieldData("length_a");
+		String bStr = cellField.getSubFieldData("length_b");
+		String cStr = cellField.getSubFieldData("length_c");
+		String alphaStr = cellField.getSubFieldData("angle_alpha");
+		String betaStr = cellField.getSubFieldData("angle_beta");
+		String gammaStr = cellField.getSubFieldData("angle_gamma");
+
+		
+		if (!isDouble(aStr) ||
+			!isDouble(bStr) ||
+			!isDouble(cStr) ||
+			!isDouble(alphaStr) ||
+			!isDouble(betaStr) ||
+			!isDouble(gammaStr)) {
 			// some NMR entries (e.g. 1fmm, 3iyx) do have cell params with a question mark value! we love the PDB!!
 			return null;
 		}
 		
 		CrystalCell crystalCell = null;
-		double a = Double.parseDouble(cellField.getSubFieldData("length_a").trim());
-		double b = Double.parseDouble(cellField.getSubFieldData("length_b").trim());
-		double c = Double.parseDouble(cellField.getSubFieldData("length_c").trim());
-		double alpha = Double.parseDouble(cellField.getSubFieldData("angle_alpha").trim());
-		double beta = Double.parseDouble(cellField.getSubFieldData("angle_beta").trim());
-		double gamma = Double.parseDouble(cellField.getSubFieldData("angle_gamma").trim());
+		double a = Double.parseDouble(aStr);
+		double b = Double.parseDouble(bStr);
+		double c = Double.parseDouble(cStr);
+		double alpha = Double.parseDouble(alphaStr);
+		double beta = Double.parseDouble(betaStr);
+		double gamma = Double.parseDouble(gammaStr);
 		crystalCell = new CrystalCell(a, b, c, alpha, beta, gamma);
 		return crystalCell;
 	}
@@ -474,9 +480,7 @@ public class CiffileParser {
 		
 		SpaceGroup spaceGroup = null;
 
-		// fields can be either single or double quoted: we have to remove 
-		// both types of quotes (most pdbs use single, e.g. of double is 1hhu)
-		String sg = symmetryField.getSubFieldData("space_group_name_H-M").replaceAll("['\"]", "").trim();
+		String sg = symmetryField.getSubFieldData("space_group_name_H-M");
 		spaceGroup = SymoplibParser.getSpaceGroup(sg);
 		if (spaceGroup==null) {
 			throw new PdbLoadException("The space group found '"+sg+"' is not recognised as a standard space group");
@@ -489,18 +493,18 @@ public class CiffileParser {
 		if (atomSitesField.isEmpty()) return null;
 		
 		Matrix4d scaleMatrix = new Matrix4d();
-		scaleMatrix.m00 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][1]").trim());
-		scaleMatrix.m01 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][2]").trim());
-		scaleMatrix.m02 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][3]").trim());
-		scaleMatrix.m10 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][1]").trim());
-		scaleMatrix.m11 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][2]").trim());
-		scaleMatrix.m12 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][3]").trim());
-		scaleMatrix.m20 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][1]").trim());
-		scaleMatrix.m21 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][2]").trim());
-		scaleMatrix.m22 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][3]").trim());
-		scaleMatrix.m03 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[1]").trim());
-		scaleMatrix.m13 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[2]").trim());
-		scaleMatrix.m23 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[3]").trim());
+		scaleMatrix.m00 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][1]"));
+		scaleMatrix.m01 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][2]"));
+		scaleMatrix.m02 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[1][3]"));
+		scaleMatrix.m10 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][1]"));
+		scaleMatrix.m11 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][2]"));
+		scaleMatrix.m12 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[2][3]"));
+		scaleMatrix.m20 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][1]"));
+		scaleMatrix.m21 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][2]"));
+		scaleMatrix.m22 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_matrix[3][3]"));
+		scaleMatrix.m03 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[1]"));
+		scaleMatrix.m13 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[2]"));
+		scaleMatrix.m23 = Double.parseDouble(atomSitesField.getSubFieldData("fract_transf_vector[3]"));
 
 		return scaleMatrix;
 	}
@@ -511,8 +515,7 @@ public class CiffileParser {
 		String expMethod = null;
 		
 		if (!exptlField.isLoop()) {
-			String expMethWithQuotes = exptlField.getSubFieldData("method").trim();
-			expMethod = expMethWithQuotes.substring(1,expMethWithQuotes.length()-1);
+			expMethod = exptlField.getSubFieldData("method");
 			
 		} else {
 			// normally _exptl.method is a single value element, but in some cases, e.g. 2krl, the _exptl.method is a loop element
@@ -520,15 +523,14 @@ public class CiffileParser {
 
 			int methodIdx = exptlField.getIndexForSubField("method");
 			
-			int recordCount = 0;
-			
 			while(exptlField.hasMoreData()) {
-				recordCount++; 
+
 				String[] tokens = exptlField.getNextTokens();
-				if (recordCount==1) {
-					// this means we read only first method and ignore the rest!
-					expMethod = tokens[methodIdx];
-				}
+				
+				expMethod = tokens[methodIdx];
+				
+				// this means we read only first method and ignore the rest!
+				break;
 			}
 		}
 		
@@ -547,30 +549,49 @@ public class CiffileParser {
 		
 		// refine only present in xray structures
 		if (!refineField.isEmpty()) {
-			int idx = refineField.getIndexForSubField("ls_d_res_high");
-			if (idx>=0) {
-				String resolStr = refineField.getSubFieldData(idx).toString().trim();
-				if ( isDouble(resolStr) ) {
-					qParams[0] = Double.parseDouble(resolStr);
-				}
-			}
 			
-			idx = refineField.getIndexForSubField("ls_R_factor_R_free");
-			if (idx>=0) {
-				String rfreeStr = refineField.getSubFieldData(idx).toString().trim();
-				if ( isDouble(rfreeStr) ) {
-					qParams[1] = Double.parseDouble(rfreeStr);
+			// note: refine can be a loop in some cases e.g. 3otj
+			if (!refineField.isLoop()) {
+				if (refineField.isSubFieldPresent("ls_d_res_high")) {
+					String resolStr = refineField.getSubFieldData("ls_d_res_high");
+					if ( isDouble(resolStr) ) {
+						qParams[0] = Double.parseDouble(resolStr);
+					}
+				}
+
+				if (refineField.isSubFieldPresent("ls_R_factor_R_free")) {
+					String rfreeStr = refineField.getSubFieldData("ls_R_factor_R_free");
+					if ( isDouble(rfreeStr) ) {
+						qParams[1] = Double.parseDouble(rfreeStr);
+					}
+				}
+			} else {
+				int reshighIdx = refineField.getIndexForSubField("ls_d_res_high");
+				int rfactorrfreeIdx = refineField.getIndexForSubField("ls_R_factor_R_free");
+				
+				while(refineField.hasMoreData()) {
+					// NOTE we take first only and ignore the rest
+					String[] tokens = refineField.getNextTokens();
+					String resolStr = tokens[reshighIdx];
+					String rfreeStr = tokens[rfactorrfreeIdx];
+					if ( isDouble(resolStr) ) {
+						qParams[0] = Double.parseDouble(resolStr);
+					}
+					if ( isDouble(rfreeStr) ) {
+						qParams[1] = Double.parseDouble(rfreeStr);
+					}
+					break;
 				}
 			}
 		}
 		
 		if (!reflnsField.isEmpty()) {
-			int rsymIdx = reflnsField.getIndexForSubField("pdbx_Rsym_value");
-			int rmergeIdx = reflnsField.getIndexForSubField("pdbx_Rmerge_I_obs");
 			String rsymvalStr = null;
-			if (rsymIdx>=0) rsymvalStr = reflnsField.getSubFieldData(rsymIdx).toString();
+			if (reflnsField.isSubFieldPresent("pdbx_Rsym_value")) 
+				rsymvalStr = reflnsField.getSubFieldData("pdbx_Rsym_value");
 			String rmergevalStr = null;
-			if (rmergeIdx>=0) rmergevalStr = reflnsField.getSubFieldData(rmergeIdx).toString();
+			if (reflnsField.isSubFieldPresent("pdbx_Rmerge_I_obs")) 
+				rmergevalStr = reflnsField.getSubFieldData("pdbx_Rmerge_I_obs");
 
 			// if both are present, we don't compare them but take the Rsym value to be 
 			// the right one (there's not much consensus in the field as to what's the 
@@ -612,7 +633,7 @@ public class CiffileParser {
 		if (!pdbxStructAssemblyField.isLoop()){
 			BioUnitAssembly assembly = new BioUnitAssembly();
 			//Set entry number
-			String id = pdbxStructAssemblyField.getSubFieldData("id").trim();
+			String id = pdbxStructAssemblyField.getSubFieldData("id");
 			if(isInteger(id)) {
 				int i = Integer.parseInt(id);
 				assembly.setId(i);
@@ -624,16 +645,16 @@ public class CiffileParser {
 			String details=null; String method=null; String sizeStr=null;
 			
 			//Add assembly details
-			details = pdbxStructAssemblyField.getSubFieldData("details").trim().toLowerCase();
-			if(isSoftwarePresent) method = pdbxStructAssemblyField.getSubFieldData("method_details").trim().toLowerCase();
-			if(isCountPresent) sizeStr = pdbxStructAssemblyField.getSubFieldData("oligomeric_count").trim();
+			details = pdbxStructAssemblyField.getSubFieldData("details").toLowerCase();
+			if(isSoftwarePresent) method = pdbxStructAssemblyField.getSubFieldData("method_details").toLowerCase();
+			if(isCountPresent) sizeStr = pdbxStructAssemblyField.getSubFieldData("oligomeric_count");
 			
 			//Check if the size contained in .oligomeric_count is a valid size; otherwise take it from .oligomeric_details field
 			if(isCountPresent && isInteger(sizeStr)){
 				int size = Integer.parseInt(sizeStr);
 				assembly.setSize(size);
 			}else if(isOligomerPresent){
-				sizeStr = pdbxStructAssemblyField.getSubFieldData("oligomeric_details").trim().toLowerCase();
+				sizeStr = pdbxStructAssemblyField.getSubFieldData("oligomeric_details").toLowerCase();
 				assembly.setSize(sizeStr);
 			}
 			//Add details on the type of assignments
@@ -723,10 +744,10 @@ public class CiffileParser {
 		if(!pdbxStructAssemblyGenField.isLoop()){
 			BioUnitAssemblyGen gen = new BioUnitAssemblyGen(1);
 			
-			String assemblyId = pdbxStructAssemblyGenField.getSubFieldData("assembly_id").trim();
-			String operatorIds = pdbxStructAssemblyGenField.getSubFieldData("oper_expression").trim().toLowerCase();
+			String assemblyId = pdbxStructAssemblyGenField.getSubFieldData("assembly_id");
+			String operatorIds = pdbxStructAssemblyGenField.getSubFieldData("oper_expression").toLowerCase();
 			
-			String chainIds = pdbxStructAssemblyGenField.getFinalSubFieldData("asym_id_list"); 
+			String chainIds = pdbxStructAssemblyGenField.getSubFieldData("asym_id_list"); 
 			
 			//Add details
 			
@@ -810,19 +831,19 @@ public class CiffileParser {
 		if(!pdbxStructOperListField.isLoop()){
 			BioUnitOperation operation = new BioUnitOperation();
 
-			String idStr = pdbxStructOperListField.getSubFieldData("id").trim();
-			String m00 = pdbxStructOperListField.getSubFieldData("matrix[1][1]").trim();
-			String m01 = pdbxStructOperListField.getSubFieldData("matrix[1][2]").trim();
-			String m02 = pdbxStructOperListField.getSubFieldData("matrix[1][3]").trim();
-			String m03 = pdbxStructOperListField.getSubFieldData("vector[1]").trim();
-			String m10 = pdbxStructOperListField.getSubFieldData("matrix[2][1]").trim();
-			String m11 = pdbxStructOperListField.getSubFieldData("matrix[2][2]").trim();
-			String m12 = pdbxStructOperListField.getSubFieldData("matrix[2][3]").trim();
-			String m13 = pdbxStructOperListField.getSubFieldData("vector[2]").trim();
-			String m20 = pdbxStructOperListField.getSubFieldData("matrix[3][1]").trim();
-			String m21 = pdbxStructOperListField.getSubFieldData("matrix[3][2]").trim();
-			String m22 = pdbxStructOperListField.getSubFieldData("matrix[3][3]").trim();
-			String m23 = pdbxStructOperListField.getSubFieldData("vector[3]").trim();
+			String idStr = pdbxStructOperListField.getSubFieldData("id");
+			String m00 = pdbxStructOperListField.getSubFieldData("matrix[1][1]");
+			String m01 = pdbxStructOperListField.getSubFieldData("matrix[1][2]");
+			String m02 = pdbxStructOperListField.getSubFieldData("matrix[1][3]");
+			String m03 = pdbxStructOperListField.getSubFieldData("vector[1]");
+			String m10 = pdbxStructOperListField.getSubFieldData("matrix[2][1]");
+			String m11 = pdbxStructOperListField.getSubFieldData("matrix[2][2]");
+			String m12 = pdbxStructOperListField.getSubFieldData("matrix[2][3]");
+			String m13 = pdbxStructOperListField.getSubFieldData("vector[2]");
+			String m20 = pdbxStructOperListField.getSubFieldData("matrix[3][1]");
+			String m21 = pdbxStructOperListField.getSubFieldData("matrix[3][2]");
+			String m22 = pdbxStructOperListField.getSubFieldData("matrix[3][3]");
+			String m23 = pdbxStructOperListField.getSubFieldData("vector[3]");
 
 
 			if(isInteger(idStr))
@@ -1152,10 +1173,10 @@ public class CiffileParser {
 			
 			// non-loop
 			if (!structConfField.isLoop()) {
-				String begChainCode = structConfField.getSubFieldData("beg_label_asym_id").trim();
-				String id = structConfField.getSubFieldData("id").trim();
-				int beg = Integer.parseInt(structConfField.getSubFieldData("beg_label_seq_id").trim());
-				int end = Integer.parseInt(structConfField.getSubFieldData("end_label_seq_id").trim());
+				String begChainCode = structConfField.getSubFieldData("beg_label_asym_id");
+				String id = structConfField.getSubFieldData("id");
+				int beg = Integer.parseInt(structConfField.getSubFieldData("beg_label_seq_id"));
+				int end = Integer.parseInt(structConfField.getSubFieldData("end_label_seq_id"));
 				// we don't parse turns anymore as they were dropped from PDB files and anyway the annotation is VERY inconsistent
 				if (!id.startsWith("TURN")) {
 					Pattern p = Pattern.compile("^(\\w).+_P(\\d+)$");
@@ -1230,11 +1251,11 @@ public class CiffileParser {
 			
 			// non-loop
 			if (!structSheetField.isLoop()) {
-				String begChainCode = structSheetField.getSubFieldData("beg_label_asym_id").trim();
-				String sheetid = structSheetField.getSubFieldData("sheet_id").trim();
-				int id = Integer.parseInt(structSheetField.getSubFieldData("id").trim());
-				int beg = Integer.parseInt(structSheetField.getSubFieldData("beg_label_seq_id").trim());
-				int end = Integer.parseInt(structSheetField.getSubFieldData("end_label_seq_id").trim());
+				String begChainCode = structSheetField.getSubFieldData("beg_label_asym_id");
+				String sheetid = structSheetField.getSubFieldData("sheet_id");
+				int id = Integer.parseInt(structSheetField.getSubFieldData("id"));
+				int beg = Integer.parseInt(structSheetField.getSubFieldData("beg_label_seq_id"));
+				int end = Integer.parseInt(structSheetField.getSubFieldData("end_label_seq_id"));
 				String ssId=SecStrucElement.STRAND+sheetid+id; // e.g.: SA1, SA2..., SB1, SB2,...
 				SecStrucElement ssElem = new SecStrucElement(SecStrucElement.STRAND, beg, end, ssId);
 				pdbAsymUnit.getChainForChainCode(begChainCode).getSecondaryStructure().add(ssElem);
