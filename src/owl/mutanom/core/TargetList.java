@@ -482,6 +482,7 @@ public class TargetList {
 		int gly = 0;
 		int nit = 0;
 		int dom = 0;
+		@SuppressWarnings("unused")
 		int mod = 0;
 		int unk = 0;
 		int total = 0;

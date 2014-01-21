@@ -15,7 +15,6 @@ import javax.vecmath.GMatrix;
 import edu.uci.ics.jung.graph.util.Pair;
 import owl.core.structure.PdbChain;
 import owl.core.structure.PdbAsymUnit;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.graphs.RIGNode;
 import owl.core.structure.graphs.RIGraph;
@@ -744,7 +743,7 @@ public class RIGMatrix {
 	 * score i.e. sum(deltaRank * CNSize) for entries in S, whole Matrix, CNSize > 3 or > avg.  
 	 * @throws FileFormatException 
 	 */
-	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, PdbCodeNotFoundException, NumberFormatException, FileFormatException {
+	public static void main(String[] args) throws PdbLoadException, IOException, SQLException, FileFormatException {
 		MySQLConnection conn;
 		conn = new MySQLConnection( "localhost", "lappe", "apple", "mw");
 		String cType = "Cb"; // contact type like "Ca"/"Cb"/"ALL"

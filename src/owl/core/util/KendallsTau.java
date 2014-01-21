@@ -236,6 +236,7 @@ public class KendallsTau {
 
 	// kendalls tau B implementation taking care of ties 
 	public double kendallsTauB( KendallsTau cmp)  {
+		@SuppressWarnings("unused")
 		int i, j, C=0, D=0, T=0;
 		double a1, a2, b1, b2;
 		double tauB=(double)0.0; 

@@ -1,6 +1,5 @@
 package owl.embed;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -11,7 +10,6 @@ import java.util.TreeSet;
 
 import edu.uci.ics.jung.graph.util.Pair;
 //import owl.core.structure.PdbChain;
-import owl.core.structure.PdbCodeNotFoundException;
 import owl.core.structure.PdbLoadException;
 import owl.core.structure.graphs.RIGCommonNbhood;
 import owl.core.structure.graphs.RIGEdge;
@@ -251,8 +249,6 @@ public class ConePeeler extends RIGraph {
 	 * RIGraph instance <tt>graph</tt> as parameter and performs computation.
 	 * @param graph a residue interaction graph object
 	 * @return the minimal set as an RIGraph 
-	 * @throws SQLException
-	 * @throws PdbCodeNotFoundException
 	 * @throws PdbLoadException
 	 */
 	public static RIGraph getMinSubset (RIGraph graph) throws ConePeelerException {
