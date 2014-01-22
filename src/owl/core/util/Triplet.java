@@ -122,7 +122,9 @@ public final class Triplet<T> implements Collection<T>, Serializable {
 		if (! (o instanceof Triplet)) {
 			return false;
 		}
-		Triplet otherTriplet = (Triplet) o;
+		
+		@SuppressWarnings("unchecked")
+		Triplet<T> otherTriplet = (Triplet<T>) o;
 		Object otherFirst = otherTriplet.getFirst();
 		Object otherSecond = otherTriplet.getSecond();
 		Object otherThird = otherTriplet.getThird();

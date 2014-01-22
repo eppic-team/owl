@@ -900,11 +900,15 @@ public class TinkerRunner {
 				
 		// if seqFile doesn't follow the naming convention (basename of xyzFile+seq extension) that tinker expects, we copy it to tmpSeqFile (which has right name) 
 		if (!tmpSeqFile.equals(seqFile)) {
-			FileChannel srcChannel = new FileInputStream(seqFile).getChannel();
-			FileChannel dstChannel = new FileOutputStream(tmpSeqFile).getChannel();
+			FileInputStream srcIS = new FileInputStream(seqFile);
+			FileInputStream dstIS = new FileInputStream(tmpSeqFile);
+			FileChannel srcChannel = srcIS.getChannel();
+			FileChannel dstChannel = dstIS.getChannel();
 			dstChannel.transferFrom(srcChannel, 0, srcChannel.size());
-			srcChannel.close();
-			dstChannel.close();
+			//srcChannel.close();
+			//dstChannel.close();
+			srcIS.close();
+			dstIS.close();
 			// if we copied then that means tmpSeqFile is different from seqFile and thus we want to delete the tmp file on exit
 			tmpSeqFile.deleteOnExit(); 
 		}
