@@ -14,7 +14,7 @@ public class PdbxPolySeqGroup implements Iterable<PdbxPolySeqLine> {
 	private String pdbChainCode;
 	private TreeMap<String,Integer> pdbresser2resser;
 	private TreeMap<Integer,String> resser2pdbresser;
-	private String sequence;
+	private StringBuilder sequence;
 	
 	private ArrayList<PdbxPolySeqLine> list;
 	
@@ -25,7 +25,7 @@ public class PdbxPolySeqGroup implements Iterable<PdbxPolySeqLine> {
 		list = new ArrayList<PdbxPolySeqLine>();
 		pdbresser2resser = new TreeMap<String, Integer>();
 		resser2pdbresser = new TreeMap<Integer, String>();
-		sequence = "";
+		sequence = new StringBuilder();
 		protein = false;
 		nucleotide = false;
 	}
@@ -49,12 +49,12 @@ public class PdbxPolySeqGroup implements Iterable<PdbxPolySeqLine> {
 		}
 		if (AminoAcid.isStandardAA(line.mon_id)){
 			protein = true;
-			sequence+=AminoAcid.three2one(line.mon_id);
+			sequence.append(AminoAcid.three2one(line.mon_id));
 		} else if (Nucleotide.isStandardNuc(line.mon_id)) {
 			nucleotide = true;
-			sequence+=Nucleotide.getByCode(line.mon_id).getOneLetterCode();
+			sequence.append(Nucleotide.getByCode(line.mon_id).getOneLetterCode());
 		} else {
-			sequence+=AminoAcid.XXX.getOneLetterCode();
+			sequence.append(AminoAcid.XXX.getOneLetterCode());
 		}
 		
 		pdbresser2resser.put(line.pdb_seq_num+(line.pdb_ins_code.equals(".")?"":line.pdb_ins_code),line.seq_id);
@@ -62,7 +62,7 @@ public class PdbxPolySeqGroup implements Iterable<PdbxPolySeqLine> {
 	}
 	
 	public String getSequence() {
-		return sequence;
+		return sequence.toString();
 	}
 	
 	public String getPdbChainCode() {

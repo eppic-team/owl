@@ -80,12 +80,39 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	private PdbAsymUnit parent;
 	
 	// atom/residue data
-	private TreeMap<Integer, Residue> residues;			// residue serials to residue object references (only observed residues)
-	private TreeMap<Integer, Atom>    atomser2atom;		// atom serials to Atom object references, we keep this is as a separate map to speed up searches
-	private TreeMap<Integer,String> resser2pdbresser;	// internal residue serials to pdb (author) residue serials (can include insertion codes so they are strings)
-	private TreeMap<String,Integer> pdbresser2resser; 	// pdb (author) residue serials (can include insertion codes so they are strings) to internal residue serials
+	/**
+	 * The residues of this chain. Only observed (with density in x-ray diffraction) residues
+	 * are stored. The key of the map are the internal residue serials (CIF serials, corresponding
+	 * to SEQRES from 1 to n) 
+	 */
+	private TreeMap<Integer, Residue> residues;
 	
-	private Sequence sequence; 							// full sequence as it appears in SEQRES field
+	/**
+	 * A map for rapid lookups of atom serials to Atom objects (only observed atoms)  
+	 */
+	private TreeMap<Integer, Atom>    atomser2atom;
+	
+	/**
+	 * A map for rapid lookups of internal residue serials (CIF serials corresponding to the 
+	 * SEQRES from 1 to n) to PDB residue serials (author deposited, can include insertion codes 
+	 * thus they are strings).
+	 * Note that both observed and non-observed residues are stored, thus the need for a separate map 
+	 * different from the {@link #residues} map above  
+	 */
+	private TreeMap<Integer,String> resser2pdbresser;
+	
+	/**
+	 * A map for rapid lookups of PDB residue serials (author deposited, can include insertion 
+	 * codes thus they are strings) to internal residue serials (CIF serials corresponding to the
+	 * SEQRES from 1 to n).
+	 * Note that both observed and non-observed residues are stored.
+	 */
+	private TreeMap<String,Integer> pdbresser2resser;
+	
+	/**
+	 * The full sequence as it appears in SEQRES field
+	 */
+	private Sequence sequence;
 
 	// identifiers 
 	/**
@@ -124,6 +151,7 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	private int groupNum;
 	private String[] caspParents;		// optional list of parents used for modelling, may be null
 
+	// flags and ancillary data
 	private boolean hasASA; 			// true if naccess has been run and ASA values assigned
 	private boolean hasBfactors; 		// true if atom b-factors have been assigned
 	

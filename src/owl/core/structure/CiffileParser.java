@@ -84,6 +84,9 @@ public class CiffileParser {
 	
 	private boolean fieldsTitlesRead;
 	
+	private boolean hasPdbCode;
+	private boolean hasPdbxPolySeq;
+	
 	private String[] chainsArray;
 	private Integer[] modelsArray;
 
@@ -114,6 +117,8 @@ public class CiffileParser {
 	 */
 	public CiffileParser (String pdbCode, String pdbFtpUrl) throws IOException, FileFormatException {
 		this.fieldsTitlesRead = false;
+		this.hasPdbCode = false;
+		this.hasPdbxPolySeq = false;
 		
 		// we store the file locally instead of reading directly from the ftp stream, so that the file can be cached locally in applications like CMView	
 		String gzCifFileName = pdbCode+CIF_FILE_EXTENSION;
@@ -156,6 +161,7 @@ public class CiffileParser {
 	public CiffileParser (File ciffile) throws IOException, FileFormatException {
 		this.cifFile = ciffile;
 		this.fieldsTitlesRead = false;
+		this.hasPdbCode = false;
 		scanFile();
 	}
 	
@@ -303,6 +309,8 @@ public class CiffileParser {
 			
 			if (line.startsWith("#")) continue; // hashes are comments
 			
+			if (line.trim().isEmpty()) continue; // ignore blank lines
+			
 			if (line.startsWith("loop_")) {
 				inLoop = true;
 				continue;
@@ -341,6 +349,8 @@ public class CiffileParser {
 						if (m.group(2)!=null) { // id there is data in same line we add it
 							// note that we add the end of line so that strings are full, needed for the tokeniser method
 							currentField.addDataToLastSubFieldDataBuffer(m.group(2)+"\n"); 
+						} else {
+							currentField.addDataToLastSubFieldDataBuffer("\n");
 						}
 					}
 				} else {
@@ -381,7 +391,11 @@ public class CiffileParser {
 		CifFieldInfo entryField = fields.get(entry); 
 		if (!entryField.isSubFieldPresent("id")) return PdbAsymUnit.NO_PDB_CODE;  
 		
-		return entryField.getSubFieldData("id").toLowerCase();
+		String pdbCode = entryField.getSubFieldData("id").toLowerCase();
+		
+		if (pdbCode.matches("\\d\\w\\w\\w")) hasPdbCode = true; // in all other cases it remains false
+		
+		return pdbCode;
 	}
 	
 	protected Date readReleaseDate() throws FileFormatException {
@@ -944,7 +958,7 @@ public class CiffileParser {
 		
 	}
 	
-	private void readAtomSite(PdbAsymUnit pdbAsymUnit, int model) throws PdbLoadException {
+	private void readAtomSite(PdbAsymUnit pdbAsymUnit, int model) throws PdbLoadException, FileFormatException {
 		
 		AtomLineList atomLines = new AtomLineList();
 		
@@ -959,6 +973,7 @@ public class CiffileParser {
 		int labelAsymIdIdx = atomSiteField.getIndexForSubField("label_asym_id");
 		int labelSeqIdIdx = atomSiteField.getIndexForSubField("label_seq_id");
 		int authSeqIdIdx = atomSiteField.getIndexForSubField("auth_seq_id");
+		int pdbxPDBInsCodeIdx = atomSiteField.getIndexForSubField("pdbx_PDB_ins_code");
 		int cartnXIdx = atomSiteField.getIndexForSubField("Cartn_x");
 		int cartnYIdx = atomSiteField.getIndexForSubField("Cartn_y");
 		int cartnZIdx = atomSiteField.getIndexForSubField("Cartn_z");
@@ -966,6 +981,7 @@ public class CiffileParser {
 		int bIsoOrEquivIdx = atomSiteField.getIndexForSubField("B_iso_or_equiv");
 		int pdbxPDBModelNumIdx = atomSiteField.getIndexForSubField("pdbx_PDB_model_num");
 		int authAsymIdIdx = atomSiteField.getIndexForSubField("auth_asym_id");
+		 
 		
 		while(atomSiteField.hasMoreData()) {
 
@@ -988,6 +1004,7 @@ public class CiffileParser {
 					resSerial = Integer.parseInt(tokens[labelSeqIdIdx]); // label_seq_id
 				}
 				int pdbResSerial = Integer.parseInt(tokens[authSeqIdIdx]); 
+				String insCode = tokens[pdbxPDBInsCodeIdx];
 				double x = Double.parseDouble(tokens[cartnXIdx]); // Cartn_x
 				double y = Double.parseDouble(tokens[cartnYIdx]); // Cartn_y
 				double z = Double.parseDouble(tokens[cartnZIdx]); // Cartn_z
@@ -996,75 +1013,26 @@ public class CiffileParser {
 				double bfactor = Double.parseDouble(tokens[bIsoOrEquivIdx]); // bfactor
 				String authAsymId = tokens[authAsymIdIdx];
 				if (!res_type.equals(HetResidue.WATER) && !res_type.equals(HetResidue.DEUT_WATER)) {
-					// note we don't really use the insCode and nonPoly fields of AtomLine (we use them only in pdb file parser), we fill them with null and false
-					atomLines.addAtomLine(new AtomLine(asymId, labelAltId, atomserial, atom, element, res_type, resSerial, pdbResSerial, null, coords, occupancy, bfactor, authAsymId, false, false));
+					// note we don't use the outOfPolyChain field of AtomLine (we use it only 
+					// in pdb file parser), we fill it with false
+					// the insCode and lineIsHetAtm fields are used only in case no pdbx_poly_seq_scheme is present
+					atomLines.addAtomLine(
+							new AtomLine(asymId, labelAltId, atomserial, atom, element, 
+									res_type, resSerial, pdbResSerial, insCode, coords, occupancy, bfactor, 
+									authAsymId, false, tokens[groupPdbIdx].equals("HETATM")));
 				}
 			}
 		}
-		if (atomLines.isEmpty()) { // no atom data was found for given pdb chain code and model
+		if (atomLines.isEmpty()) { // no atom data was found for given model
 			throw new PdbLoadException("Couldn't find _atom_site data for given model: "+model);
 		}
+
 		
-		String altLoc = atomLines.getAtomAltLoc();
-		String lastChainCode = null;
-
-		for (AtomLine atomLine:atomLines) {
-			// we read only the alt locs we want
-			if (altLoc!=null && !atomLine.labelAltId.equals(altLoc) && !atomLine.labelAltId.equals(".")) continue;
-			
-			if (lastChainCode!=null && !lastChainCode.equals(atomLine.labelAsymId)) {
-				// in readPdbxPolySeq we already added the polymer chains, now we only need to add the missing ones: non-polymer chains
-				if (!pdbAsymUnit.containsChainCode(atomLine.labelAsymId)) {
-					PdbChain pdb = new PdbChain();
-					pdb.setChainCode(atomLine.labelAsymId);
-					pdb.setPdbChainCode(atomLine.authAsymId);
-					pdbAsymUnit.setNonPolyChain(atomLine.labelAsymId, pdb);
-					pdb.setIsNonPolyChain(true);
-				}
-			} 
-			PdbChain pdb = pdbAsymUnit.getChainForChainCode(atomLine.labelAsymId);
-			if ((atomLine.resSerial!=-1 && !pdb.containsResidue(atomLine.resSerial)) ||
-					(atomLine.resSerial==-1 && !pdb.containsResidue(atomLine.pdbResSerial))) {
-				Residue residue = null;
-				if (AminoAcid.isStandardAA(atomLine.res_type)) {
-					residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), atomLine.resSerial, pdb);
-				} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
-					Nucleotide nuc = Nucleotide.getByCode(atomLine.res_type);
-					residue = new NucResidue(nuc,atomLine.resSerial,pdb);
-				} else {
-					// this check is valid for both protein or nucleotide sequences
-					if (!pdb.isNonPolyChain() && pdb.getSequence().getSeq().charAt(atomLine.resSerial-1)!=AminoAcid.XXX.getOneLetterCode()) {
-						throw new PdbLoadException("HET residue with residue serial "+atomLine.resSerial+" and type "+atomLine.res_type+" does not match an X in the SEQRES sequence");
-					}
-					if (pdb.isNonPolyChain()) {
-						// in het chains the res serial is not set in cif, we've got to use the pdb res serial 
-						residue = new HetResidue(atomLine.res_type,atomLine.pdbResSerial,pdb);
-
-					} else {
-						residue = new HetResidue(atomLine.res_type,atomLine.resSerial,pdb);
-					}
-				}
-				if (pdb.isNonPolyChain()) {
-					residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial));
-					residue.setSerial(atomLine.pdbResSerial);
-				} else {
-					residue.setPdbSerial(pdb.getPdbResSerFromResSer(atomLine.resSerial));
-				}
-				pdb.addResidue(residue);
-			}
-			
-			Residue residue = null;
-			if (pdb.isNonPolyChain()) {
-				residue = pdb.getResidue(atomLine.pdbResSerial);
-			} else {
-				residue = pdb.getResidue(atomLine.resSerial);
-			}
-			residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element, atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
-
-			lastChainCode = atomLine.labelAsymId;
-		}
+		processAtomLines(pdbAsymUnit, atomLines);
 		
-		if (altLoc!=null) {
+		
+		// some post processing checks 
+		if (atomLines.getAtomAltLoc()!=null) {
 			for (PdbChain pdb:pdbAsymUnit.getAllChains()) {
 				pdb.setHasAltCodes(true);
 			}
@@ -1084,16 +1052,206 @@ public class CiffileParser {
 
 	}
 
-	
-	
+	private void processAtomLines (PdbAsymUnit pdbAsymUnit, AtomLineList atomLines) throws PdbLoadException, FileFormatException {
+		
+		String altLoc = atomLines.getAtomAltLoc();
+		
+		
+		// CASE A) pdbx_poly_seq_scheme not present: partial info, we have to guess a few things and reassign residue serials
+		//		   We deal here with non-PDB-deposited mmCIF files.
+		// TODO we have implemented this as a quick and dirty way to parse some mmCIF files but it is not
+		//      as good as the PDB file parser where the sequence is checked, realigned, 3D-contiguity checked etc. 
+		//		Eventually we should extract the code in PdbfileParser and use it for both this case
+		//		(non-deposited mmCIF files) and for PDB file case.
+		if (!hasPdbxPolySeq) {
+			// if no pdbx_poly_seq_scheme present (non-PDB-deposited mmCIF file) we need to first sort 
+			// chains into poly/non-poly and then we can add them to the pdbAsymUnit
+			
+			atomLines.sortIntoChainsCIFFormat();
+			pdbAsymUnit.setPdbchaincode2chaincode(atomLines.getPdbChainCode2chainCode());
+			
+			TreeMap<String,ArrayList<AtomLine>> groups = atomLines.getAtomLineGroups();
+			
+			for (ArrayList<AtomLine> atomLineGroup:groups.values()) {
+			
+				String pdbChainCode = atomLineGroup.get(0).authAsymId;
+				String chainCode = atomLineGroup.get(0).labelAsymId;
+				boolean isNonPoly = atomLineGroup.get(0).isNonPoly;
+				
+				PdbChain pdb = new PdbChain();
+				pdb.setParent(pdbAsymUnit);
+				pdb.setPdbChainCode(pdbChainCode);			
+				pdb.setChainCode(chainCode);
+
+				pdb.setIsNonPolyChain(isNonPoly);
+
+				if (isNonPoly) {
+					pdbAsymUnit.setNonPolyChain(chainCode, pdb);;
+				} else {
+					pdbAsymUnit.setPolyChain(chainCode, pdb);
+				}
+				
+			}
+			
+			int lastResSerial = -1;
+			int resSerialToAssign = 1;
+			String lastChainCode = null;
+			Residue residue = null;
+			
+			for (AtomLine atomLine:atomLines) {
+				// we read only the alt locs we want
+				if (altLoc!=null && !atomLine.labelAltId.equals(altLoc) && !atomLine.labelAltId.equals(".")) continue;
+				
+				// in het chains the res serial is not set in cif, we've got to use the pdb res serial
+				PdbChain pdb = pdbAsymUnit.getChainForChainCode(atomLine.labelAsymId);				
+				
+				// resetting at the beginning of each chain
+				if (lastChainCode!=null && !lastChainCode.equals(atomLine.labelAsymId)) {
+					resSerialToAssign = 1;
+				}
+				
+				if (lastResSerial==-1 || atomLine.resSerial!=lastResSerial) {
+					
+					
+					if (AminoAcid.isStandardAA(atomLine.res_type)) {
+						residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), resSerialToAssign, pdb);						
+					} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
+						Nucleotide nuc = Nucleotide.getByCode(atomLine.res_type);
+						residue = new NucResidue(nuc,resSerialToAssign,pdb);
+					} else {
+						residue = new HetResidue(atomLine.res_type,resSerialToAssign,pdb);
+					}
+
+					residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial+(atomLine.insCode.equals("?")?"":atomLine.insCode)));
+
+					pdb.addResidue(residue);
+					
+					resSerialToAssign++;					
+				}
+				
+				// note we convert the element to upper case since in phenix's mmCIF files they are in lower (e.g. Cl, not CL) 
+				residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element.toUpperCase(), atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
+				lastResSerial = atomLine.resSerial;
+				lastChainCode = atomLine.labelAsymId;
+			}
+			
+			for (PdbChain pdb:pdbAsymUnit.getPolyChains()) {
+				TreeMap<String,Integer> pdbresser2resser = new TreeMap<String,Integer>();	
+				TreeMap<Integer,String> resser2pdbresser = new TreeMap<Integer,String>();
+				StringBuilder sequence = new StringBuilder();
+				
+				// we assume we have protein if not a single nuc or aa found
+				boolean isProtein = true;
+				
+				pdb.setPdbresser2resserMap(pdbresser2resser);
+				pdb.setResser2pdbresserMap(resser2pdbresser);
+				
+				for (int resser:pdb.getAllResSerials()) {
+					residue = pdb.getResidue(resser);
+					pdbresser2resser.put(residue.getPdbSerial(), residue.getSerial());
+					resser2pdbresser.put(residue.getSerial(), residue.getPdbSerial());
+					if (residue instanceof AaResidue) {
+						if (!isProtein) throw new PdbLoadException("Mix of protein and nucleotide in same chain");
+						sequence.append(((AaResidue) residue).getAaType().getOneLetterCode());
+					} else if (residue instanceof NucResidue) {
+						isProtein = false; 
+						sequence.append(((NucResidue) residue).getNucType().getOneLetterCode());
+					} else {
+						sequence.append(AminoAcid.XXX.getOneLetterCode());
+					}
+				}
+				
+
+				pdb.setSequence(sequence.toString(), isProtein);
+			}
+			
+		}
+
+		// CASE B) pdbx_poly_seq_scheme present: full info, PDB-deposited mmCIF file
+		else {
+
+			String lastChainCode = null;
+
+			for (AtomLine atomLine:atomLines) {
+				// we read only the alt locs we want
+				if (altLoc!=null && !atomLine.labelAltId.equals(altLoc) && !atomLine.labelAltId.equals(".")) continue;
+
+				if (lastChainCode==null || !lastChainCode.equals(atomLine.labelAsymId)) {
+
+					// in readPdbxPolySeq we already added the polymer chains, now we only need to add the missing ones: non-polymer chains
+					if (!pdbAsymUnit.containsChainCode(atomLine.labelAsymId)) {
+						PdbChain pdb = new PdbChain();
+						pdb.setChainCode(atomLine.labelAsymId);
+						pdb.setPdbChainCode(atomLine.authAsymId);
+						pdbAsymUnit.setNonPolyChain(atomLine.labelAsymId, pdb);
+						pdb.setIsNonPolyChain(true);
+					}
+
+
+				} 
+				PdbChain pdb = pdbAsymUnit.getChainForChainCode(atomLine.labelAsymId);
+				if ((atomLine.resSerial!=-1 && !pdb.containsResidue(atomLine.resSerial)) ||
+						(atomLine.resSerial==-1 && !pdb.containsResidue(atomLine.pdbResSerial))) {
+					Residue residue = null;
+					if (AminoAcid.isStandardAA(atomLine.res_type)) {
+						residue = new AaResidue(AminoAcid.getByThreeLetterCode(atomLine.res_type), atomLine.resSerial, pdb);
+					} else if (Nucleotide.isStandardNuc(atomLine.res_type)) {
+						Nucleotide nuc = Nucleotide.getByCode(atomLine.res_type);
+						residue = new NucResidue(nuc,atomLine.resSerial,pdb);
+					} else {
+						// this check is valid for both protein or nucleotide sequences
+						if (!pdb.isNonPolyChain() && pdb.getSequence().getSeq().charAt(atomLine.resSerial-1)!=AminoAcid.XXX.getOneLetterCode()) {
+							throw new PdbLoadException("HET residue with residue serial "+atomLine.resSerial+" and type "+atomLine.res_type+" does not match an X in the SEQRES sequence");
+						}
+						if (pdb.isNonPolyChain()) {
+							// in het chains the res serial is not set in cif, we've got to use the pdb res serial 
+							residue = new HetResidue(atomLine.res_type,atomLine.pdbResSerial,pdb);
+
+						} else {
+							residue = new HetResidue(atomLine.res_type,atomLine.resSerial,pdb);
+						}
+					}
+					if (pdb.isNonPolyChain()) {
+						residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial));
+						residue.setSerial(atomLine.pdbResSerial);
+					} else {
+						residue.setPdbSerial(String.valueOf(atomLine.pdbResSerial+(atomLine.insCode.equals("?")?"":atomLine.insCode)));
+					}
+					pdb.addResidue(residue);
+				}
+
+				Residue residue = null;
+				if (pdb.isNonPolyChain()) {
+					residue = pdb.getResidue(atomLine.pdbResSerial);
+				} else {
+					residue = pdb.getResidue(atomLine.resSerial);
+				}
+				residue.addAtom(new Atom(atomLine.atomserial, atomLine.atom, atomLine.element, atomLine.coords, residue, atomLine.occupancy, atomLine.bfactor));
+
+				lastChainCode = atomLine.labelAsymId;
+			}
+
+		}
+	}
+
 	private void readPdbxPolySeq(PdbAsymUnit pdbAsymUnit) throws PdbLoadException {
 		
 		PdbxPolySeqLineList list  = new PdbxPolySeqLineList();
 		
 		CifFieldInfo pdbxPolySeqField = fields.get(pdbxPolySeq);
-		if (pdbxPolySeqField.isEmpty()) {
+		if (pdbxPolySeqField.isEmpty() && hasPdbCode) { 
+			// PDB-deposited mmCIF file, must have pdbx_poly_seq 
 			throw new PdbLoadException("Missing pdbx_poly_seq_scheme field in mmCIF file. Is there no protein or nucleotide chains in this structure?");
+		
+		} else if (pdbxPolySeqField.isEmpty()) {
+			// non PDB-deposited mmCIF file: we flag it and in reading atom_site we'll have to do something special
+			// since chains would not have been initialised
+			
+			hasPdbxPolySeq = false;
+			return;
 		}
+		
+		hasPdbxPolySeq = true;
         	
 		int asymIdIdx = pdbxPolySeqField.getIndexForSubField("asym_id");
 		int seqIdIdx = pdbxPolySeqField.getIndexForSubField("seq_id");

@@ -754,7 +754,7 @@ public class PdbfileParser {
 		
 		//if (!terRecordSeen) System.err.println("Warning: TER records are missing in PDB file, chain assignments can be unreliable");
 		
-		atomLines.sortIntoChains(terRecordSeen); // this assigns the labelAsymIds (chainCodes) and the isNonPoly fields and finds out the pdbchaincode2chaincode mapping
+		atomLines.sortIntoChainsPDBFormat(terRecordSeen); // this assigns the labelAsymIds (chainCodes) and the isNonPoly fields and finds out the pdbchaincode2chaincode mapping
 		pdbAsymUnit.setPdbchaincode2chaincode(atomLines.getPdbChainCode2chainCode());
 		String altLoc = atomLines.getAtomAltLoc();
 

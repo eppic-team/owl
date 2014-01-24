@@ -126,6 +126,7 @@ public class PdbParsersTest {
 		String line;
 		while ((line = flist.readLine() ) != null ) {
 			if (line.startsWith("#")) continue;
+			if (line.isEmpty()) continue;
 			String pdbCode = line.split("\\s+")[0].toLowerCase();
 			//String pdbChainCode = line.split("\\s+")[1];
 			
@@ -221,57 +222,57 @@ public class PdbParsersTest {
 						}
 					}
 					
-					for (PdbChain pdbfilePdb:pdbfileFullpdb.getAllChains()) {
-						String chainCode = pdbfilePdb.getChainCode();
-						String pdbChainCode = pdbfilePdb.getPdbChainCode();
+					for (PdbChain pdbfilePdbChain:pdbfileFullpdb.getAllChains()) {
+						String chainCode = pdbfilePdbChain.getChainCode();
+						String pdbChainCode = pdbfilePdbChain.getPdbChainCode();
 						System.out.print(chainCode+" "+pdbChainCode+" ");
-						PdbChain pdbasePdb = ciffileFullpdb.getChainForChainCode(chainCode);
+						PdbChain ciffilePdbChain = ciffileFullpdb.getChainForChainCode(chainCode);
 						if (!ciffileFullpdb.containsChainCode(chainCode)) {
 							System.err.println("No cif file chain for "+chainCode);
 							continue;
 						}
-						System.out.print(pdbasePdb.getChainCode()+" "+pdbasePdb.getPdbChainCode());
+						System.out.print(ciffilePdbChain.getChainCode()+" "+ciffilePdbChain.getPdbChainCode());
 						String agreement = " ";
-						if (chainCode.equals(pdbasePdb.getChainCode())) agreement+=" ";
+						if (chainCode.equals(ciffilePdbChain.getChainCode())) agreement+=" ";
 						else agreement+="x";
-						if (pdbChainCode.equals(pdbasePdb.getPdbChainCode())) agreement+=" ";
+						if (pdbChainCode.equals(ciffilePdbChain.getPdbChainCode())) agreement+=" ";
 						else agreement+="x";
 						System.out.println(agreement);
 						
-						Assert.assertEquals(pdbasePdb.getPdbCode(), pdbfilePdb.getPdbCode());
+						Assert.assertEquals(ciffilePdbChain.getPdbCode(), pdbfilePdbChain.getPdbCode());
 						
 						// non-poly coincide
-						Assert.assertEquals(pdbasePdb.isNonPolyChain(),pdbfilePdb.isNonPolyChain());
+						Assert.assertEquals(ciffilePdbChain.isNonPolyChain(),pdbfilePdbChain.isNonPolyChain());
 						
 						// chain codes coincide
 						// we can only assert it for poly-chains, non-poly assignments won't coincide between us and CIF
-						if (!pdbasePdb.isNonPolyChain()) {
-							Assert.assertEquals(pdbasePdb.getPdbChainCode(),pdbfilePdb.getPdbChainCode());
-							Assert.assertEquals(pdbasePdb.getChainCode(),pdbfilePdb.getChainCode());
+						if (!ciffilePdbChain.isNonPolyChain()) {
+							Assert.assertEquals(ciffilePdbChain.getPdbChainCode(),pdbfilePdbChain.getPdbChainCode());
+							Assert.assertEquals(ciffilePdbChain.getChainCode(),pdbfilePdbChain.getChainCode());
 						}
 						
-						Assert.assertEquals(pdbasePdb.hasAltCodes(),pdbfilePdb.hasAltCodes());
+						Assert.assertEquals(ciffilePdbChain.hasAltCodes(),pdbfilePdbChain.hasAltCodes());
 						
 			
-						if (!pdbfilePdb.isNonPolyChain()) {
-							Assert.assertEquals(pdbasePdb.getFullLength(), pdbfilePdb.getFullLength());
-							Assert.assertEquals(pdbasePdb.getObsLength(), pdbfilePdb.getObsLength());
-							Assert.assertEquals(pdbasePdb.getSequence().getSeq(), pdbfilePdb.getSequence().getSeq());
-							Assert.assertEquals(pdbasePdb.getSequence().isProtein(),pdbfilePdb.getSequence().isProtein());
-							Assert.assertEquals(pdbasePdb.getObsSequence(), pdbfilePdb.getObsSequence());
+						if (!pdbfilePdbChain.isNonPolyChain()) {
+							Assert.assertEquals(ciffilePdbChain.getFullLength(), pdbfilePdbChain.getFullLength());
+							Assert.assertEquals(ciffilePdbChain.getObsLength(), pdbfilePdbChain.getObsLength());
+							Assert.assertEquals(ciffilePdbChain.getSequence().getSeq(), pdbfilePdbChain.getSequence().getSeq());
+							Assert.assertEquals(ciffilePdbChain.getSequence().isProtein(),pdbfilePdbChain.getSequence().isProtein());
+							Assert.assertEquals(ciffilePdbChain.getObsSequence(), pdbfilePdbChain.getObsSequence());
 
 							// sequence
-							Assert.assertTrue(pdbfilePdb.getObsSequence().length()<=pdbfilePdb.getSequence().getLength());
-							Assert.assertTrue(pdbfilePdb.getObsLength()==pdbfilePdb.getObsSequence().length());
-							Assert.assertTrue(pdbfilePdb.getFullLength()==pdbfilePdb.getSequence().getLength());
+							Assert.assertTrue(pdbfilePdbChain.getObsSequence().length()<=pdbfilePdbChain.getSequence().getLength());
+							Assert.assertTrue(pdbfilePdbChain.getObsLength()==pdbfilePdbChain.getObsSequence().length());
+							Assert.assertTrue(pdbfilePdbChain.getFullLength()==pdbfilePdbChain.getSequence().getLength());
 						}
 
 						
 						boolean protein = false;
 						boolean nucleic = false;
-						for (int resser:pdbfilePdb.getAllResSerials()) {
-							if (!pdbfilePdb.isNonPolyChain()) {
-								if (!pdbasePdb.getPdbResSerFromResSer(resser).equals(pdbfilePdb.getPdbResSerFromResSer(resser))) {
+						for (int resser:pdbfilePdbChain.getAllResSerials()) {
+							if (!pdbfilePdbChain.isNonPolyChain()) {
+								if (!ciffilePdbChain.getPdbResSerFromResSer(resser).equals(pdbfilePdbChain.getPdbResSerFromResSer(resser))) {
 									// In some cases the alignment is ambiguous, see 2nwr at residues 191 onwards:
 									// SEQRES           151 LTERGTTFGYNNLVVDFRSLPIMKQWAKVIYDATHSVQLPGGLGDKSGGM    200
 									//                      |||||||||||||||||||||||||||||||||||||||||      |||
@@ -283,19 +284,19 @@ public class PdbParsersTest {
 									// wrong the last HISs (or maybe not, didn't look at 3D) but pdbfile says the one with coords is 183, where pdbase says it's 182  
 									// That's why here we only print a warning (anyway it is only in rare cases that it happen)
 									System.err.println(pdbCode+pdbChainCode+": resser " +resser+" maps to pdbresser "
-											+pdbasePdb.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
-											+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
+											+ciffilePdbChain.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
+											+pdbfilePdbChain.getPdbResSerFromResSer(resser)+" in pdbfile");
 									warnings.add(pdbCode+pdbChainCode+": resser " +resser+" maps to pdbresser "
-											+pdbasePdb.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
-											+pdbfilePdb.getPdbResSerFromResSer(resser)+" in pdbfile");
+											+ciffilePdbChain.getPdbResSerFromResSer(resser)+" in cif and to pdbresser "
+											+pdbfilePdbChain.getPdbResSerFromResSer(resser)+" in pdbfile");
 								}
 							}
 
 							
-							if (pdbasePdb.getPdbChainCode().equals(pdbfilePdb.getPdbChainCode()) // to be sure we don't compare non-polys for which our chain mapping doesn't coincide 
-									&& pdbasePdb.containsResidue(resser)) { // we have to check for case where mapping of pdbfile and pdbase from resser to pdbresser don't coincide (we print warnings above for that)
-								Residue pdbaseRes = pdbasePdb.getResidue(resser);
-								Residue pdbfileRes = pdbfilePdb.getResidue(resser);
+							if (ciffilePdbChain.getPdbChainCode().equals(pdbfilePdbChain.getPdbChainCode()) // to be sure we don't compare non-polys for which our chain mapping doesn't coincide 
+									&& ciffilePdbChain.containsResidue(resser)) { // we have to check for case where mapping of pdbfile and pdbase from resser to pdbresser don't coincide (we print warnings above for that)
+								Residue pdbaseRes = ciffilePdbChain.getResidue(resser);
+								Residue pdbfileRes = pdbfilePdbChain.getResidue(resser);
 								Assert.assertEquals(resser, pdbaseRes.getSerial());
 								Assert.assertEquals(resser, pdbfileRes.getSerial());
 								
@@ -309,8 +310,8 @@ public class PdbParsersTest {
 
 								Assert.assertEquals(pdbaseRes.isPeptideLinked(), pdbfileRes.isPeptideLinked());
 								
-								if (!pdbasePdb.isNonPolyChain()) {
-									Assert.assertEquals(pdbfileRes.getShortCode(), pdbfilePdb.getSequence().getSeq().charAt(resser-1));
+								if (!ciffilePdbChain.isNonPolyChain()) {
+									Assert.assertEquals(pdbfileRes.getShortCode(), pdbfilePdbChain.getSequence().getSeq().charAt(resser-1));
 								}
 								
 
@@ -319,12 +320,12 @@ public class PdbParsersTest {
 									Assert.assertEquals(((AaResidue)pdbaseRes).getAaType(),((AaResidue)pdbfileRes).getAaType());	
 									Assert.assertTrue(pdbfileRes.isPeptideLinked());
 									Assert.assertTrue(pdbfileRes.getSerial()>0);
-									if (!pdbfilePdb.isNonPolyChain()) Assert.assertTrue(pdbfileRes.getSerial()<=pdbfilePdb.getFullLength());
-									if (!pdbfilePdb.isNonPolyChain()) Assert.assertTrue(pdbfilePdb.getSequence().isProtein());
+									if (!pdbfilePdbChain.isNonPolyChain()) Assert.assertTrue(pdbfileRes.getSerial()<=pdbfilePdbChain.getFullLength());
+									if (!pdbfilePdbChain.isNonPolyChain()) Assert.assertTrue(pdbfilePdbChain.getSequence().isProtein());
 								} else if (pdbfileRes instanceof HetResidue) {
 									Assert.assertEquals(((HetResidue)pdbaseRes).getLongCode(),((HetResidue)pdbfileRes).getLongCode());
 									Assert.assertNotSame(((HetResidue)pdbfileRes).getLongCode(),"HOH");
-									if (!pdbfilePdb.isNonPolyChain() && pdbfilePdb.getSequence().isProtein()) {
+									if (!pdbfilePdbChain.isNonPolyChain() && pdbfilePdbChain.getSequence().isProtein()) {
 										Assert.assertTrue(pdbfileRes.isPeptideLinked());
 									}
 								} else if (pdbfileRes instanceof NucResidue) {
@@ -332,9 +333,9 @@ public class PdbParsersTest {
 									Assert.assertEquals(((NucResidue)pdbaseRes).getNucType(),((NucResidue)pdbfileRes).getNucType());
 									Assert.assertFalse(pdbfileRes.isPeptideLinked());
 									Assert.assertTrue(pdbfileRes.getSerial()>0);
-									if (!pdbfilePdb.isNonPolyChain()) {
-										Assert.assertTrue(pdbfileRes.getSerial()<=pdbfilePdb.getFullLength());
-										Assert.assertTrue(pdbfilePdb.getSequence().isNucleotide());
+									if (!pdbfilePdbChain.isNonPolyChain()) {
+										Assert.assertTrue(pdbfileRes.getSerial()<=pdbfilePdbChain.getFullLength());
+										Assert.assertTrue(pdbfilePdbChain.getSequence().isNucleotide());
 									}
 									
 								}								
@@ -342,37 +343,37 @@ public class PdbParsersTest {
 							}
 
 						}
-						if (!pdbfilePdb.isNonPolyChain()) {
+						if (!pdbfilePdbChain.isNonPolyChain()) {
 							Assert.assertEquals(protein, !nucleic); // one must be true and the other false (a chain can't mix both prot and nucleic)
-							Assert.assertEquals(pdbasePdb.getSequence().isProtein(), protein);
-							Assert.assertEquals(pdbasePdb.getSequence().isNucleotide(), nucleic);
-							Assert.assertEquals(pdbfilePdb.getSequence().isProtein(), protein);
-							Assert.assertEquals(pdbfilePdb.getSequence().isNucleotide(), nucleic);
+							Assert.assertEquals(ciffilePdbChain.getSequence().isProtein(), protein);
+							Assert.assertEquals(ciffilePdbChain.getSequence().isNucleotide(), nucleic);
+							Assert.assertEquals(pdbfilePdbChain.getSequence().isProtein(), protein);
+							Assert.assertEquals(pdbfilePdbChain.getSequence().isNucleotide(), nucleic);
 						}
 
 						// info from atom serials
-						for (int atomser:pdbfilePdb.getAllAtomSerials()) {
-							Assert.assertNotNull(pdbfilePdb.getAtomCoord(atomser));
-							Assert.assertNotNull(pdbfilePdb.getResSerFromAtomSer(atomser));
+						for (int atomser:pdbfilePdbChain.getAllAtomSerials()) {
+							Assert.assertNotNull(pdbfilePdbChain.getAtomCoord(atomser));
+							Assert.assertNotNull(pdbfilePdbChain.getResSerFromAtomSer(atomser));
 						}
 
 						// sec structure
-						if (!pdbfilePdb.isNonPolyChain() && pdbfilePdb.getSequence().isProtein()) {
-							SecondaryStructure ss = pdbfilePdb.getSecondaryStructure();
+						if (!pdbfilePdbChain.isNonPolyChain() && pdbfilePdbChain.getSequence().isProtein()) {
+							SecondaryStructure ss = pdbfilePdbChain.getSecondaryStructure();
 							Assert.assertNotNull(ss);
-							Assert.assertEquals(pdbfilePdb.getSequence().getSeq(), ss.getSequence());
-							Assert.assertEquals(pdbasePdb.getSecondaryStructure().getNumElements(), ss.getNumElements());						
+							Assert.assertEquals(pdbfilePdbChain.getSequence().getSeq(), ss.getSequence());
+							Assert.assertEquals(ciffilePdbChain.getSecondaryStructure().getNumElements(), ss.getNumElements());						
 
-							for (int resser:pdbfilePdb.getAllResSerials()) {
+							for (int resser:pdbfilePdbChain.getAllResSerials()) {
 								String resserMsg = "Failed for "+pdbCode+pdbChainCode+" and resser "+resser;
 								// checking that the 2 ways of accessing the sec struct element coincide
-								Assert.assertSame(ss.getSecStrucElement(resser), pdbfilePdb.getResidue(resser).getSsElem());
-								Assert.assertEquals(resserMsg,ss.getSecStrucElement(resser),pdbfilePdb.getResidue(resser).getSsElem());
+								Assert.assertSame(ss.getSecStrucElement(resser), pdbfilePdbChain.getResidue(resser).getSsElem());
+								Assert.assertEquals(resserMsg,ss.getSecStrucElement(resser),pdbfilePdbChain.getResidue(resser).getSsElem());
 							}
 							
 							// comparing contents vs pdbase
-							for (Residue pdbfileRes:pdbfilePdb){
-								Residue pdbaseRes = pdbasePdb.getResidue(pdbfileRes.getSerial());
+							for (Residue pdbfileRes:pdbfilePdbChain){
+								Residue pdbaseRes = ciffilePdbChain.getResidue(pdbfileRes.getSerial());
 								if (pdbfileRes.getSsElem()!=null) {
 									SecStrucElement pdbaseSsElem = pdbaseRes.getSsElem();
 									SecStrucElement pdbfileSsElem = pdbfileRes.getSsElem();
@@ -384,9 +385,9 @@ public class PdbParsersTest {
 								}
 							}
 						}
-						if (pdbfilePdb.isNonPolyChain()) {
-							Assert.assertNull(pdbfilePdb.getSecondaryStructure());
-							Assert.assertNull(pdbfilePdb.getSequence());
+						if (pdbfilePdbChain.isNonPolyChain()) {
+							Assert.assertNull(pdbfilePdbChain.getSecondaryStructure());
+							Assert.assertNull(pdbfilePdbChain.getSequence());
 						}
 					}
 				}		

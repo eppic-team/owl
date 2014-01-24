@@ -117,7 +117,7 @@ public class AtomLineList implements Iterable<AtomLine> {
 	 * @param terRecordSeen whether at least one TER record is present in PDB file or not
 	 * @throws FileFormatException 
 	 */
-	public void sortIntoChains(boolean terRecordSeen) throws FileFormatException {
+	public void sortIntoChainsPDBFormat(boolean terRecordSeen) throws FileFormatException {
 		atomLineGroups = new TreeMap<String, ArrayList<AtomLine>>();
 		
 		String lastPdbChainCode = null;
@@ -205,7 +205,7 @@ public class AtomLineList implements Iterable<AtomLine> {
 					(AminoAcid.isStandardAA(atomLine.res_type) || Nucleotide.isStandardNuc(atomLine.res_type) || atomLine.res_type.equals("UNK"))) 
 						hasOnePolyAtom = true;
 			}
-			// if one outOfPolyChain was true that means that the chain is poly, we assign isNonPoly accordingly:
+			// if hasOnePolyAtom is true that means that the chain is poly, we assign isNonPoly accordingly:
 			if (hasOnePolyAtom) {
 				String previous = pdbchaincode2chaincode.put(group.get(0).authAsymId,group.get(0).labelAsymId);
 				
@@ -226,6 +226,84 @@ public class AtomLineList implements Iterable<AtomLine> {
 			}			
 
 		}
+		
+	}
+	
+	/**
+	 * Sorts the atom lines into groups of chains assigning poly/non-poly chains
+	 * Also assigns the pdbchaincode2chaincode mapping.
+	 * Retrieve the data subsequently with {@link #getAtomLineGroups()} and {@link #getPdbChainCode2chainCode()}
+	 * To be used in mmCIF file parsing only when no pdbx_poly_seq_scheme is available  
+	 * @throws FileFormatException
+	 */
+	public void sortIntoChainsCIFFormat() throws FileFormatException {
+		atomLineGroups = new TreeMap<String, ArrayList<AtomLine>>();
+		
+		String lastChainCode = null;
+		
+		for (AtomLine atomLine:this) {
+			if (	lastChainCode==null || 
+					!lastChainCode.equals(atomLine.labelAsymId) 
+					) {
+
+				ArrayList<AtomLine> list = new ArrayList<AtomLine>();
+				list.add(atomLine);
+				atomLineGroups.put(atomLine.labelAsymId,list);
+			} else {
+				atomLineGroups.get(atomLine.labelAsymId).add(atomLine);
+			}
+
+			lastChainCode = atomLine.labelAsymId;
+		}
+		
+		pdbchaincode2chaincode = new TreeMap<String, String>();
+		
+		// we now check for consistency in atom numbering
+		for (ArrayList<AtomLine> group:atomLineGroups.values()) {
+			int lastAtomSerial = -1;	
+			for (AtomLine line:group) {
+				if(line.atomserial <= lastAtomSerial) {
+					throw new FileFormatException("Atom serials do not occur in ascending order in CIF file for atom " + line.atomserial + ")");
+				}
+				lastAtomSerial = line.atomserial;
+			}
+		}
+		
+		// now chains are all assigned to chainCodes
+		// we can now fill the isNonPoly field indicating whether a chain is non-polymer or polymer (it's polymer when it has at least one ATOM line)
+		for (ArrayList<AtomLine> group:atomLineGroups.values()) {
+			
+			boolean hasOnePolyAtom = false;
+			for (AtomLine atomLine:group) {
+				if (!atomLine.lineIsHetAtm && 
+					// some bad PDB files (e.g. output of old phenix versions) don't use HETATM to tag a het atom but simply ATOM, 
+					// that's why we also check this (UNK we check for the rare cases when a deposited PDB file has a poly chain with only unknown residues):
+					// (not sure if this applies to CIF files too, but keeping it in case)
+					(AminoAcid.isStandardAA(atomLine.res_type) || Nucleotide.isStandardNuc(atomLine.res_type) || atomLine.res_type.equals("UNK"))) 
+						hasOnePolyAtom = true;
+			}
+			// if hasOnePolyAtom is true that means that the chain is poly, we assign isNonPoly accordingly:
+			if (hasOnePolyAtom) {
+				String previous = pdbchaincode2chaincode.put(group.get(0).authAsymId,group.get(0).labelAsymId);
+				
+				// We check that we are not reassigning the poly chain: if we are that means there's something wrong in the file
+				// Not sure if this can happen inf CIF file but we'll keep the check here anyway
+				if (previous!=null) 
+					throw new FileFormatException("Polymer PDB chain code "+group.get(0).authAsymId+" assigned twice, to chain codes: "+
+							group.get(0).labelAsymId+" and "+previous+
+							". Most likely there is something wrong with this CIF file: check that all chains have a unique chain code");
+				
+				for (AtomLine atomLine:group) {
+					atomLine.isNonPoly = false;
+				}
+			} else {
+				for (AtomLine atomLine:group) {
+					atomLine.isNonPoly = true;
+				}
+			}			
+
+		}
+
 		
 	}
 	

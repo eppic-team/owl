@@ -268,7 +268,9 @@ public class CifFieldInfo {
 			// reading field
 			if (quoteChar==0) { // not within quotes
 				if (currentChar==' ' || currentChar=='\n') { 
-					if (currentChar!=lastChar && !(currentChar=='\n' && lastChar==' ')) i++; // we only increment when we move from a non-space to a space or from non-space to \n
+					if (lastChar!=0 && currentChar!=lastChar && !(currentChar=='\n' && lastChar==' ')) {
+						i++; // we only increment when we move from a non-space to a space or from non-space to \n
+					}
 				} else {
 					tokens[i]+=currentChar;
 					// if we are adding the last ; of a ;;-quoted string then strip the starting ';' and ending "\n;" out 
