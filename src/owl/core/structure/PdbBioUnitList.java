@@ -77,7 +77,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 			ArrayList<String> tempList = new ArrayList<String>();
 			for(String code:gen.getPdbChainCodes()){
 				if(!parent.getPdbChainCodes().contains(code)){
-					System.err.println("Warning: Chain with pdbChainCode "+code+" present in biounit-assembly but is not present in structure!");
+					//System.err.println("Warning: Chain with pdbChainCode "+code+" present in biounit-assembly but is not present in structure!");
 					continue;
 				}
 				if(parent.getChain(code).getSequence().isProtein())
@@ -113,8 +113,12 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 			}
 		}
 		else{
-			if(generators.isEmpty()) System.err.println("Warning: No bio unit assembly generator found; bio-units will not be added!");
-			else if(operations.isEmpty()) System.err.println("Warning: No bio unit operator found; bio-units will not be added! ");
+			if(generators.isEmpty()) {
+				//System.err.println("Warning: No bio unit assembly generator found; bio-units will not be added!");
+			}
+			else if(operations.isEmpty()) {
+				//System.err.println("Warning: No bio unit operator found; bio-units will not be added! ");
+			}
 			else
 				for(BioUnitAssembly assembly:assemblies)
 					if(assembly.getId()==0){
@@ -127,21 +131,21 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 
 							if(assembly.getSize()>0) localUnit.setSize(assembly.getSize());
 							else {
-								System.err.println("Warning: The size of biounit assembly with id:"+assembly.getId()+" seems to be 0; will not add this biounit!");
+								//System.err.println("Warning: The size of biounit assembly with id:"+assembly.getId()+" seems to be 0; will not add this biounit!");
 								continue;
 							}
 
 							if(BioUnitAssignmentType.getByString(method)!=BioUnitAssignmentType.none)
 								localUnit.assignType(BioUnitAssignmentType.getByString(method));
 							else{
-								System.err.println("Warning: The assignment type of biounit assembly with id:"+assembly.getId()+" not understood; will not add this biounit!");
+								//System.err.println("Warning: The assignment type of biounit assembly with id:"+assembly.getId()+" not understood; will not add this biounit!");
 								continue;
 							}
 
 							for(int iGen:assembly.getGeneratorIds()){
 								//Count the number of chains and number of operations
 								if(generators.size() < iGen-1){ 
-									System.err.println("Warning: Assembly generator record "+iGen+" not present for assembly "+assembly.getId());
+									//System.err.println("Warning: Assembly generator record "+iGen+" not present for assembly "+assembly.getId());
 									toAdd = false;}
 								else{
 									BioUnitAssemblyGen gen = generators.get(iGen-1);  //ids starts from 1,2,3... and index of list starts from 0,1,2...
@@ -153,13 +157,13 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 											for(int operId:gen.getOperationIds()){
 												if(getOperator(operId, operations)!=null) localUnit.addOperator(code, getOperator(operId, operations));
 												else {
-													System.err.println("Warning: Operator record "+operId+" not present for generator "+iGen);
+													//System.err.println("Warning: Operator record "+operId+" not present for generator "+iGen);
 													toAdd = false;
 												}
 											}
 									else {
 										if(!hasNucelotides)
-											System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
+											//System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
 										toAdd = false;
 									}
 								}
@@ -173,7 +177,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 							if(localUnit.getSize() != numOperators){
 								if(hasNucelotides) localUnit.setSize(numOperators);
 								else{
-									System.err.println("Warning: The size of the assembly for biounit "+assembly.getId()+" is not equal to it's number of operators; will not add this biounit.");
+									//System.err.println("Warning: The size of the assembly for biounit "+assembly.getId()+" is not equal to it's number of operators; will not add this biounit.");
 									toAdd=false;
 									}
 							}
