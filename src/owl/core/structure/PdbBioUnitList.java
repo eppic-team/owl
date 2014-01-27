@@ -162,8 +162,9 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 												}
 											}
 									else {
-										if(!hasNucelotides)
+										if(!hasNucelotides){
 											//System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
+										}
 										toAdd = false;
 									}
 								}
