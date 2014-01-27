@@ -299,12 +299,15 @@ public class CifFieldInfo {
 				while (true) {
 					// first check if we are already at the end, we can't go further: in this case
 					// we'll stay at the '\n', that's why the condition "while (dataIdx<data string length)-1" has the -1					
-					if (dataIdx>=data.length()-1) break;
-					
-					currentChar = data.charAt(dataIdx++);
-					if (currentChar=='\n'){ 
+					if (dataIdx>=data.length()-1) {
 						break;
 					}
+					
+					if (currentChar=='\n') { 
+						//System.out.println(".");
+						break;
+					}
+					currentChar = data.charAt(dataIdx++);
 					
 				}
 				return tokens;
