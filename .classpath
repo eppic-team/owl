@@ -11,8 +11,8 @@
 	<classpathentry exported="true" kind="lib" path="jars/mysql-connector-java-5.0.5-bin.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/vecmath.jar"/>
 	<classpathentry exported="true" kind="lib" path="jars/jung-algorithms-2.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-api-2.0-beta1-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar" sourcepath="/afs/psi.ch/project/bioinfo/software/jars/jung2-src/jung-graph-impl-2.0-beta1-sources.jar"/>
+	<classpathentry exported="true" kind="lib" path="jars/jung-api-2.0.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="jars/jung-graph-impl-2.0.1.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/uniprotjapi.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/commons-logging.jar"/>
 	<classpathentry kind="lib" path="jars/uniprot/aopalliance.jar"/>
