@@ -85,14 +85,14 @@ public class Asa {
 		// Thus 40 seems to be a good compromise for the starting capacity
 	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>(40);
 	    
-	    double radius = atoms[k].getRadius() + probe + probe;
+	    double radius = AtomRadii.getRadius(atoms[k]) + probe + probe;
 	    
 	    for (int i=0;i<atoms.length;i++) {
 	    	if (i==k) continue;
 	    	
 	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords());
 	    	
-	        if (dist < radius + atoms[i].getRadius()) {
+	        if (dist < radius + AtomRadii.getRadius(atoms[i])) {
 	            neighbor_indices.add(i);
 	        }
 	    }
@@ -161,7 +161,7 @@ public class Asa {
     	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
         int n_neighbor = neighbor_indices.size();
         int j_closest_neighbor = 0;
-        double radius = probe + atom_i.getRadius();
+        double radius = probe + AtomRadii.getRadius(atom_i);
 
         int n_accessible_point = 0;
         
@@ -184,7 +184,7 @@ public class Asa {
 
             for (int j: cycled_indices) {
                 Atom atom_j = atoms[neighbor_indices.get(j)];
-                double r = atom_j.getRadius() + probe;
+                double r = AtomRadii.getRadius(atom_j) + probe;
                 double diff_sq = atom_j.getCoords().distanceSquared(test_point);
                 if (diff_sq < r*r) {
                     j_closest_neighbor = j;

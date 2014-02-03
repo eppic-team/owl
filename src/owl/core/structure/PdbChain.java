@@ -560,18 +560,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	}
 	
 	/**
-	 * Sets the VdW radius values of all atoms of this PdbChain (from standard amino acids,
-	 * het residues and nucleotides) 
-	 * Use subsequently Atom.getRadius() to get the value.
-	 * This uses the AtomRadii parser of the vdw.radii resource file.
-	 */
-	protected void setAtomRadii() {
-		for (Residue residue:residues.values()) {
-			residue.setAtomRadii();
-		}
-	}
-	
-	/**
 	 * Calculate the Accessible Surface Area using our implementation of the 
 	 * rolling ball algorithm. Sets both the Atoms' and Residues' asa members 
 	 * See Shrake, A., and J. A. Rupley. "Environment and Exposure to Solvent of Protein Atoms. 
@@ -600,7 +588,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 	 * ASAs, if null then only atoms of this PdbChain will be used for ASAs calculation 
 	 */
 	public void calcASAs(int nSpherePoints, int nThreads, boolean hetAtoms, List<PdbChain> cofactors) {
-		this.setAtomRadii();
 		
 		int numAtoms = getNumNonHetAtoms();
 		if (hetAtoms) {
@@ -608,7 +595,6 @@ public class PdbChain implements Serializable, Iterable<Residue> {
 		}
 		if (cofactors!=null) {
 			for (PdbChain cofactor:cofactors) {
-				cofactor.setAtomRadii();
 				numAtoms += cofactor.getNumAtoms();
 			}
 		}

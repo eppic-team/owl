@@ -968,7 +968,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 
 		int i = 0;
 		for (PdbChain pdb:getAllChains()) {
-			pdb.setAtomRadii();
 			for (Residue residue:pdb) {
 				if (!hetAtoms && (residue instanceof HetResidue)) continue;
 				for (Atom atom:residue) {
@@ -1025,7 +1024,6 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		int i = 0;
 		for (PdbChain pdb:getAllChains()) {
-			pdb.setAtomRadii();
 			for (Residue residue:pdb) {
 				if (!pdb.isNonPolyChain() && !hetAtoms && (residue instanceof HetResidue)) continue;
 				for (Atom atom:residue) {

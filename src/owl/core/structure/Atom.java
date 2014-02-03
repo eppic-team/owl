@@ -33,7 +33,6 @@ public class Atom implements Serializable {
 	
 	private double asa;
 	private double bsa;
-	private double vdwradius;
 
 	/**
 	 * Constructs a new Atom given a serial, an atom code (standard PDB name, e.g. CA), 
@@ -177,14 +176,6 @@ public class Atom implements Serializable {
 	
 	public void setBsa(double bsa) {
 		this.bsa = bsa;
-	}
-	
-	public double getRadius() {
-		return vdwradius;
-	}
-	
-	public void setRadius(double vdwradius) {
-		this.vdwradius = vdwradius;
 	}
 	
 	public Point3d getCoords() {

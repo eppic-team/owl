@@ -201,13 +201,6 @@ public class NucResidue implements Residue {
 	}
 	
 	@Override
-	public void setAtomRadii() {
-		for (Atom atom:this) {
-			atom.setRadius(AtomRadii.getRadius(this.nucType, atom));
-		}
-	}
-	
-	@Override
 	public SecStrucElement getSsElem() {
 		return null;
 	}

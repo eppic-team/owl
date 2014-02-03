@@ -271,14 +271,12 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		int numAtoms = 0;
 		for (int molecId=0;molecId<2;molecId++) {
 			PdbChain chain = getMolecule(molecId);
-			chain.setAtomRadii();
 			if (hetAtoms) {
 				numAtoms += chain.getNumAtoms();
 			} else {
 				numAtoms += chain.getNumNonHetAtoms();
 			}
 			for (PdbChain cofactor:getCofactors(molecId)) {
-				cofactor.setAtomRadii();
 				numAtoms += cofactor.getNumAtoms();
 			}
 		}

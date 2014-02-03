@@ -184,12 +184,6 @@ public interface Residue extends Iterable<Atom>, Serializable {
 	public void setScRsa(double scrsa);
 	
 	/**
-	 * Sets the vdw radius field of the member Atoms by using the AtomRadii parser.
-	 * Use subsequently Atom.getRadius() to get the value.
-	 */
-	public void setAtomRadii();
-
-	/**
 	 * Returns the secondary structure element to which this Residue belongs. 
 	 * It returns always null for HetResidues not peptide linked and for NucResidues
 	 * @return

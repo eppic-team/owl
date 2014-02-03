@@ -226,13 +226,6 @@ public class HetResidue implements Residue {
 		this.scRsa = scrsa;
 	}
 
-	@Override
-	public void setAtomRadii() {
-		for (Atom atom:this) {
-			atom.setRadius(AtomRadii.getRadius(this.mol3letterCode, atom));
-		}
-	}
-	
 	public String toString() {
 		return this.parent.getChainCode()+serial+getLongCode();
 	}

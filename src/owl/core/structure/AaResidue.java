@@ -224,13 +224,6 @@ public class AaResidue implements Residue {
 	}
 	
 	@Override
-	public void setAtomRadii() {
-		for (Atom atom:this) {
-			atom.setRadius(AtomRadii.getRadius(this.aaType, atom));
-		}
-	}
-	
-	@Override
 	public Collection<Atom> getAtoms() {
 		return atoms.values();
 	}
