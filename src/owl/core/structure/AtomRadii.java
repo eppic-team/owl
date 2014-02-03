@@ -1,10 +1,13 @@
 package owl.core.structure;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Class containing methods to parse the vdw.radii resource file from NACCESS.
@@ -19,6 +22,13 @@ public class AtomRadii {
 
 	private static final InputStream vdwradIS = AtomRadii.class.getResourceAsStream(RADFILE);
 	private static final HashMap<String, HashMap<String,Double>> radii = parseRadFile();
+	
+	public static final double TRIGONAL_CARBON_VDW = 1.76;
+	public static final double TETRAHEDRAL_CARBON_VDW = 1.87;
+	public static final double TRIGONAL_NITROGEN_VDW = 1.65;
+	public static final double TETRAHEDRAL_NITROGEN_VDW = 1.50;
+	public static final double SULFUR_VDW = 1.85;
+	public static final double OXIGEN_VDW = 1.40;
 
 	/**
 	 * Gets the radius for given amino acid and atom (PDB convention)
@@ -43,6 +53,79 @@ public class AtomRadii {
 		}
 		return radii.get(aa.getThreeLetterCode()).get(atomCode);
 	}
+	
+	public static double getRadiusNew(AminoAcid aa, Atom atom) {
+		if (atom.getType()==null) {
+			System.err.println("Warning: unrecognised atom "+atom.getCode()+" in residue "+atom.getParentResSerial()+"-"+aa.getThreeLetterCode()+
+					", setting its vdw radius to radius of default unknown atom (Nitrogen).");
+			return AtomType.X.getRadius();
+		}
+		if (atom.getType().equals(AtomType.H)) return AtomType.H.getRadius();
+		// some unusual entries (e.g. 1tes) contain Deuterium atoms in standard aminoacids
+		if (atom.getType().equals(AtomType.D)) return AtomType.D.getRadius();
+
+		String atomCode = atom.getCode();
+		
+		// here we use the values that Chothia gives in his paper (as NACCESS does)
+		if (atom.getType()==AtomType.O) {
+			return OXIGEN_VDW;
+		} 
+		else if (atom.getType()==AtomType.S) {
+			return SULFUR_VDW;
+		}
+		else if (atom.getType()==AtomType.N) {
+			if (atomCode.equals("NZ")) return TETRAHEDRAL_NITROGEN_VDW; // tetrahedral Nitrogen
+			return TRIGONAL_NITROGEN_VDW;								// trigonal Nitrogen
+		}
+		else if (atom.getType()==AtomType.C) { // it must be a carbon
+			if (atomCode.equals("C") || 
+					atomCode.equals("CE1") || atomCode.equals("CE2") || atomCode.equals("CE3") ||
+					atomCode.equals("CH2") || 
+					atomCode.equals("CZ") || atomCode.equals("CZ2") || atomCode.equals("CZ3")) {
+				return TRIGONAL_CARBON_VDW; 							// trigonal Carbon
+			}
+			else if (atomCode.equals("CA") || atomCode.equals("CB") || 
+					atomCode.equals("CE") ||
+					atomCode.equals("CG1") || atomCode.equals("CG2")) {
+				return TETRAHEDRAL_CARBON_VDW;							// tetrahedral Carbon
+			}
+			// left cases depend on amino acid: CD, CD1, CD2, CG
+			else {
+				switch (aa) {
+					case PHE:						
+					case TRP:
+					case TYR:
+					case HIS:
+					case ASP:
+					case ASN:
+						return TRIGONAL_CARBON_VDW;
+						
+					case PRO:
+					case LYS:
+					case ARG:
+					case MET:
+					case ILE:
+					case LEU:
+						return TETRAHEDRAL_CARBON_VDW;
+						
+					case GLN:
+					case GLU:
+						if (atomCode.equals("CD")) return TRIGONAL_CARBON_VDW;
+						else if (atomCode.equals("CG")) return TETRAHEDRAL_CARBON_VDW;
+						
+					default:
+						System.err.println("Warning: unexpected carbon atom "+atomCode+" for aminoacid "+aa.getThreeLetterCode()+", assigning its standard vdw radius");
+						return AtomType.C.getRadius();
+				}
+			}
+			
+		// not any of the expected atoms
+		} else {
+			System.err.println("Warning: unexpected atom "+atomCode+" for aminoacid "+aa.getThreeLetterCode()+", assigning its standard vdw radius");
+			return atom.getType().getRadius();
+		}
+	}
+
 	
 	/**
 	 * Gets the radius for given nucleotide and atom (PDB convention)
@@ -131,5 +214,92 @@ public class AtomRadii {
 			System.exit(1);
 		}
 		return radii;
+	}
+	
+	
+	// a tester method to print all aas from a pdb and show the differences between generic 
+	// element vdw radii and those taken from the naccess vdw radii file  
+	public static void main (String[] args) throws Exception {
+		
+		PdbAsymUnit pdb = new PdbAsymUnit(new File("/home/duarte_j/3hbx.cif"));
+		
+		TreeMap<String, Residue> uniqueAas = new TreeMap<String,Residue>();
+		
+		for (PdbChain chain:pdb.getPolyChains()) {
+			
+			chain.setAtomRadii();
+			
+			for (Residue res:chain) {
+				if (res instanceof AaResidue) {
+				
+					uniqueAas.put(res.getLongCode(),res);
+				}
+			}
+		}
+
+		
+		System.out.println(uniqueAas.size()+" aminoacids");
+		
+		TreeMap<String,String> uniqueValues = new TreeMap<String,String>();
+		TreeMap<String,TreeSet<String>> uniqueValues2List = new TreeMap<String,TreeSet<String>>();
+		
+		for (Residue res:uniqueAas.values()) {
+			
+			
+			
+			System.out.println("## "+res.getLongCode());
+			for (Atom atom:res) {
+				String valueStr = String.format("%4.2f",atom.getRadius());
+				uniqueValues.put(valueStr, atom.getType().getSymbol());
+				if (!uniqueValues2List.containsKey(valueStr)) {
+					TreeSet<String> list = new TreeSet<String>();
+					list.add(atom.getCode());
+					uniqueValues2List.put(valueStr, list);
+				} else {
+					uniqueValues2List.get(valueStr).add(atom.getCode());
+				}
+					
+				
+				
+				if (Math.abs(atom.getType().getRadius()-atom.getRadius())>0.001) {
+					System.out.printf("%s\t%5.2f\t%5.2f\n",atom.getCode(),atom.getType().getRadius(),atom.getRadius());				
+				
+				}
+			}
+		}
+		
+		System.out.println("Unique radii values (different from default AtomType vdw radius): ");
+		for (String value:uniqueValues.keySet()) {
+			System.out.println(uniqueValues.get(value)+" "+value);
+		}
+		
+		System.out.println("Unique values and atom classes belonging to them: ");
+		for (String value:uniqueValues2List.keySet()) {
+			System.out.print(value);
+			for (String atomCode:uniqueValues2List.get(value)) {
+				System.out.print(" "+atomCode);
+			}
+			System.out.println();
+		}
+		
+		// comparing old and new implementation
+
+		for (PdbChain chain:pdb.getPolyChains()) {
+
+			chain.setAtomRadii();
+
+			for (Residue res:chain) {
+				if (res instanceof AaResidue) {
+					for (Atom atom:res) {
+						double radiusOld = getRadius(((AaResidue) res).getAaType(), atom);
+						double radiusNew = getRadiusNew(((AaResidue) res).getAaType(), atom);
+						if (Math.abs(radiusOld-radiusNew)>0.0000001) 
+							System.err.println("Mismatch for "+res.getLongCode()+" atom "+atom.getCode());
+					}
+					
+				}
+			}
+		}
+
 	}
 }
