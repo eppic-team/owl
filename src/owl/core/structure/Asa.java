@@ -34,15 +34,17 @@ public class Asa {
 		int start;
 		int end;
 		Atom[] atoms;
+		double[] radii;
 		Point3d[] sphere_points;
 		double[] asas;
 		double probe;
 		double cons;
 		
-		public GroupASACalcThread(int start, int end, Atom[] atoms, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+		public GroupASACalcThread(int start, int end, Atom[] atoms, double[] radii, Point3d[] sphere_points, double[] asas, double probe, double cons) {
 			this.start = start;
 			this.end = end;
 			this.atoms = atoms;
+			this.radii = radii;
 			this.sphere_points = sphere_points;
 			this.asas = asas;
 			this.probe = probe;
@@ -50,7 +52,7 @@ public class Asa {
 		}
 
 		public void run() {
-			calcGroupOfAsas(start, end, atoms, sphere_points, asas, probe, cons);
+			calcGroupOfAsas(start, end, atoms, radii, sphere_points, asas, probe, cons);
 		}
 	}
 	
@@ -80,19 +82,19 @@ public class Asa {
 	 * @param probe the probe size
 	 * @param k index of atom for which we want neighbor indices
 	 */
-	private static ArrayList<Integer> findNeighborIndices(Atom[] atoms, double probe, int k) {
+	private static ArrayList<Integer> findNeighborIndices(Atom[] atoms, double[] radii, double probe, int k) {
 		// looking at a typical protein case, number of neighbours are from ~10 to ~50, with an average of ~30
 		// Thus 40 seems to be a good compromise for the starting capacity
 	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>(40);
 	    
-	    double radius = AtomRadii.getRadius(atoms[k]) + probe + probe;
+	    double radius = radii[k] + probe + probe;
 	    
 	    for (int i=0;i<atoms.length;i++) {
 	    	if (i==k) continue;
 	    	
 	        double dist = atoms[i].getCoords().distance(atoms[k].getCoords());
 	    	
-	        if (dist < radius + AtomRadii.getRadius(atoms[i])) {
+	        if (dist < radius + radii[i]) {
 	            neighbor_indices.add(i);
 	        }
 	    }
@@ -111,6 +113,12 @@ public class Asa {
 	 */
 	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints, int nThreads) { 
 		
+		
+		double[] radii = new double[atoms.length];
+		for (int i=0;i<atoms.length;i++) {
+			radii[i] = AtomRadii.getRadius(atoms[i]);
+		}
+		
 		double[] asas = new double[atoms.length];
 	    Point3d[] sphere_points = generateSpherePoints(nSpherePoints);
 
@@ -118,7 +126,7 @@ public class Asa {
 
 	    if (nThreads==1) {
 		    for (int i=0;i<atoms.length;i++) {	    	
-		        asas[i] = calcSingleAsa(atoms, sphere_points, i, probe, cons); 
+		        asas[i] = calcSingleAsa(atoms, radii, sphere_points, i, probe, cons); 
 		        //atom_i.setAsa(area);
 		    }
 	    } else {
@@ -132,7 +140,7 @@ public class Asa {
 
 
 		    for (int k=0;k<nThreads;k++) {
-		    	threads[k] = new Asa().new GroupASACalcThread(startIndices[k], startIndices[k+1], atoms, sphere_points, asas, probe, cons);
+		    	threads[k] = new Asa().new GroupASACalcThread(startIndices[k], startIndices[k+1], atoms, radii, sphere_points, asas, probe, cons);
 		    	threads[k].start();
 		    }
 	    	
@@ -150,18 +158,18 @@ public class Asa {
 	    return asas;
 	}
 	
-	private static void calcGroupOfAsas(int startIdx, int endIdx, Atom[] atoms, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+	private static void calcGroupOfAsas(int startIdx, int endIdx, Atom[] atoms, double[] radii, Point3d[] sphere_points, double[] asas, double probe, double cons) {
 		for (int i=startIdx;i<endIdx;i++) {
-			asas[i] = calcSingleAsa(atoms, sphere_points, i, probe, cons);
+			asas[i] = calcSingleAsa(atoms, radii, sphere_points, i, probe, cons);
 		}
 	}
 
-	private static double calcSingleAsa(Atom[] atoms, Point3d[] sphere_points, int i, double probe, double cons) {
+	private static double calcSingleAsa(Atom[] atoms, double[] radii, Point3d[] sphere_points, int i, double probe, double cons) {
     	Atom atom_i = atoms[i];
-    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, probe, i);
+    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, radii, probe, i);
         int n_neighbor = neighbor_indices.size();
         int j_closest_neighbor = 0;
-        double radius = probe + AtomRadii.getRadius(atom_i);
+        double radius = probe + radii[i];
 
         int n_accessible_point = 0;
         
@@ -184,7 +192,7 @@ public class Asa {
 
             for (int j: cycled_indices) {
                 Atom atom_j = atoms[neighbor_indices.get(j)];
-                double r = AtomRadii.getRadius(atom_j) + probe;
+                double r = radii[neighbor_indices.get(j)] + probe;
                 double diff_sq = atom_j.getCoords().distanceSquared(test_point);
                 if (diff_sq < r*r) {
                     j_closest_neighbor = j;
