@@ -2,8 +2,11 @@ package owl.core.structure;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.vecmath.Point3d;
+
 
 
 /**
@@ -29,20 +32,20 @@ public class AsaCalculator {
 	public static final double DEFAULT_PROBE_SIZE = 1.4;
 	public static final int DEFAULT_NTHREADS = 1;
 	
-	private class GroupASACalcThread extends Thread {
+	
+	private class AsaCalcWorker implements Runnable {
+
+		private int i;
+		private double[] asas;
 		
-		int start;
-		int end;
-		double[] asas;
-		
-		public GroupASACalcThread(int start, int end, double[] asas) {
-			this.start = start;
-			this.end = end;
+		public AsaCalcWorker(int i, double[] asas) {
+			this.i = i;
 			this.asas = asas;
 		}
 
+		@Override
 		public void run() {
-			calcGroupOfAsas(start, end, asas);
+			asas[i] = calcSingleAsa(i);
 		}
 	}
 	
@@ -80,8 +83,7 @@ public class AsaCalculator {
 	}
 	
 	/**
-	 * Calculates the Accessible Surface Areas of the given atoms, using given probe size.
-	 
+	 * Calculates the Accessible Surface Areas the list of atoms given in constructor and with parameters given 
 	 * @return an array with asa values matching the input atoms array
 	 */
 	public double[] calculateAsa() {
@@ -95,28 +97,20 @@ public class AsaCalculator {
 		    
 	    } else {
 	    	// NOTE the multithreaded calculation does not scale up well (4 CPUs ~ x2.8, 8CPUs ~ x2.9)
-	    	// tried copying the arrays (atoms and sphere_points) as new arrays but the scaling behaves the same
-	    	// also tried dividing the asas array in parts and them joining all together but same scaling behaviour
-	    	// I guess it's simply memory bottlenecks of the architecture :(
-	    	GroupASACalcThread[] threads = new GroupASACalcThread[nThreads];
+	    	// Why? some kind of race condition, memory bottlenecks?
 	    	
-	    	int[] startIndices = getStartingIdxForGroups();
-
-
-		    for (int k=0;k<nThreads;k++) {
-		    	threads[k] = new GroupASACalcThread(startIndices[k], startIndices[k+1], asas);
-		    	threads[k].start();
-		    }
 	    	
-		    for (int k=0;k<nThreads;k++) {
-		    	try {
-		    		threads[k].join();
-		    	} catch (InterruptedException e) {
-		    		System.err.println("Unexpected error while running multi-threaded ASA calculation. Exiting.");
-		    		e.printStackTrace();
-		    		System.exit(1);
-		    	}
-		    }
+	    	ExecutorService threadPool = Executors.newFixedThreadPool(nThreads);
+
+	    	
+	    	for (int i=0;i<atoms.length;i++) {
+	    		threadPool.submit(new AsaCalcWorker(i,asas));    			
+	    	}
+
+	    	threadPool.shutdown();
+	    	
+	    	while (!threadPool.isTerminated());
+	    	
 	    }
 	    
 	    return asas;
@@ -165,12 +159,6 @@ public class AsaCalculator {
 	    return neighbor_indices;
 	}
 	
-	private void calcGroupOfAsas(int startIdx, int endIdx, double[] asas) {
-		for (int i=startIdx;i<endIdx;i++) {
-			asas[i] = calcSingleAsa(i);
-		}
-	}
-
 	private double calcSingleAsa(int i) {
     	Atom atom_i = atoms[i];
     	ArrayList<Integer> neighbor_indices = findNeighborIndices(i);
@@ -214,25 +202,6 @@ public class AsaCalculator {
         return cons*n_accessible_point*radius*radius;
 	}
 	
-	private int[] getStartingIdxForGroups() {
-		// we use so many groups as threads
-		int n = atoms.length;
-		int[] indices = new int[nThreads+1];
-
-		int baseSize = n/nThreads;
-		int remainder = n%nThreads;
-
-		indices[0] = 0;
-		for (int k=1;k<nThreads;k++){
-			indices[k] = indices[k-1]+baseSize;
-			if (k<remainder) {
-				indices[k]+=1;
-			}
-		}
-		indices[nThreads] = n;
-		return indices;
-	}
-
 	/**
 	 * To test the class
 	 * @param args
@@ -261,6 +230,19 @@ public class AsaCalculator {
 		System.out.printf("Total area: %9.2f\n",tot);
 		System.out.printf("Time: %4.1fs\n",((end-start)/1000.0));
 		
-
+		
+		System.out.println("Testing scaling: ");
+		double[] runTimes = new double[4];
+		for (nThreads=1;nThreads<=4;nThreads++) {
+			start = System.currentTimeMillis();
+			pdb.calcASAs(1000,nThreads,false);
+			end = System.currentTimeMillis();
+			runTimes[nThreads-1] = (end-start)/1000.0;
+			
+		}
+		for (nThreads=1;nThreads<=4;nThreads++) {
+			System.out.printf(nThreads+" threads, time: %4.1fs -- x%2.1f\n",runTimes[nThreads-1],runTimes[0]/runTimes[nThreads-1]);
+		}
+		
 	}
 }
