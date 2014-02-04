@@ -125,7 +125,7 @@ public interface Residue extends Iterable<Atom>, Serializable {
 	
 	/**
 	 * Returns the absolute all-atoms accessible surface area (square Angstroms) 
-	 * @see Asa
+	 * @see AsaCalculator
 	 * @see NaccessRunner
 	 * @return
 	 */
@@ -141,7 +141,7 @@ public interface Residue extends Iterable<Atom>, Serializable {
 	 * Returns the absolute all-atoms accessible surface area upon burial (square Angstroms)
 	 * This can be calculated by computing asa for 2 partners separately and the complex of both.
 	 * @see ChainInterface
-	 * @see Asa
+	 * @see AsaCalculator
 	 * @see NaccessRunner
 	 * @return
 	 */

@@ -305,7 +305,8 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		}
 		
 		// 3) we calculate asas for the complex
-		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		AsaCalculator asaCalc = new AsaCalculator(atoms, AsaCalculator.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		double[] asas = asaCalc.calculateAsa();
 		
 		// 4) by subtraction to the uncomplex values (that should be present in atoms from previously calling calcASAs) we get bsas 
 		for (i=0;i<atoms.length;i++){

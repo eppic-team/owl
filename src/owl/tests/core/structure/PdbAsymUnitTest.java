@@ -24,7 +24,7 @@ import org.xml.sax.SAXException;
 
 import owl.core.connections.pisa.PisaConnection;
 import owl.core.connections.pisa.PisaInterfaceList;
-import owl.core.structure.Asa;
+import owl.core.structure.AsaCalculator;
 import owl.core.structure.ChainCluster;
 import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
@@ -169,7 +169,7 @@ public class PdbAsymUnitTest {
 			long start = System.currentTimeMillis();
 
 			// for pisa comparison we have to use 0 as the min area to keep
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 0);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 0);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found: "+interfaces.size());
@@ -276,7 +276,7 @@ public class PdbAsymUnitTest {
 			
 			long start = System.currentTimeMillis();
 			// for pisa comparison we have to use 0 as the min area to keep
-			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 0);
+			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 0);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
 			System.out.println("Total number of interfaces found above 30A2 area: "+interfaces.getNumInterfacesAboveArea(30));
@@ -361,7 +361,7 @@ public class PdbAsymUnitTest {
 			InterfacesFinder interfFinder = new InterfacesFinder(pdb);
 			interfFinder.setWithRedundancyElimination(false);
 			ChainInterfaceList interfacesWithRedundancy = 
-					interfFinder.getAllInterfaces(CUTOFF, Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
+					interfFinder.getAllInterfaces(CUTOFF, AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
 			end = System.currentTimeMillis();
 			long totalWithRedundancy = (end-start)/1000;
 			
@@ -369,7 +369,7 @@ public class PdbAsymUnitTest {
 			start = System.currentTimeMillis();
 			interfFinder2.setWithRedundancyElimination(true);
 			ChainInterfaceList interfacesRedundancyElim = 
-					interfFinder2.getAllInterfaces(CUTOFF,Asa.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
+					interfFinder2.getAllInterfaces(CUTOFF,AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, MIN_AREA_TO_KEEP);
 			end = System.currentTimeMillis();
 			long totalRedundancyElim = (end-start)/1000;			
 			

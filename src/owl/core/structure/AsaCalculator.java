@@ -7,7 +7,7 @@ import javax.vecmath.Point3d;
 
 
 /**
- * Class containing static methods to calculate Accessible Surface Areas based on
+ * Class to calculate Accessible Surface Areas based on
  * the rolling ball algorithm by Shrake and Rupley.
  * 
  * The code is taken from a python implementation at http://boscoh.com/protein/asapy
@@ -22,7 +22,7 @@ import javax.vecmath.Point3d;
  * @author duarte_j
  *
  */
-public class Asa {
+public class AsaCalculator {
 
 	// Bosco uses as default 960, Shrake and Rupley seem to use in their paper 92 (not sure if this is actually the same parameter)
 	public static final int DEFAULT_N_SPHERE_POINTS = 960;
@@ -33,41 +33,106 @@ public class Asa {
 		
 		int start;
 		int end;
-		Atom[] atoms;
-		double[] radii;
-		Point3d[] sphere_points;
 		double[] asas;
-		double probe;
-		double cons;
 		
-		public GroupASACalcThread(int start, int end, Atom[] atoms, double[] radii, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+		public GroupASACalcThread(int start, int end, double[] asas) {
 			this.start = start;
 			this.end = end;
-			this.atoms = atoms;
-			this.radii = radii;
-			this.sphere_points = sphere_points;
 			this.asas = asas;
-			this.probe = probe;
-			this.cons = cons;
 		}
 
 		public void run() {
-			calcGroupOfAsas(start, end, atoms, radii, sphere_points, asas, probe, cons);
+			calcGroupOfAsas(start, end, asas);
 		}
 	}
 	
 	
+	private Atom[] atoms;
+	private double[] radii;
+	private double probe;
+	private int nThreads;
+	private Point3d[] spherePoints;
+	private double cons;
+	
+	/**
+	 * Constructs a new Asa
+	 * @param atoms
+	 * @param probe the probe size
+	 * @param nSpherePoints the number of points to be used in generating the spherical 
+	 * dot-density, the more points the more accurate (and slower) calculation
+	 * @param nThreads the number of parallel threads to use for the calculation
+	 */
+	public AsaCalculator(Atom[] atoms, double probe, int nSpherePoints, int nThreads) {
+		this.atoms = atoms;
+		this.probe = probe;
+		this.nThreads = nThreads;
+		
+		// initialising the radii by looking them up through AtomRadii
+		radii = new double[atoms.length];
+		for (int i=0;i<atoms.length;i++) {
+			radii[i] = AtomRadii.getRadius(atoms[i]);
+		}
+		
+		// initialising the sphere points to sample
+		spherePoints = generateSpherePoints(nSpherePoints);
+		
+		cons = 4.0 * Math.PI / (double)nSpherePoints;
+	}
+	
+	/**
+	 * Calculates the Accessible Surface Areas of the given atoms, using given probe size.
+	 
+	 * @return an array with asa values matching the input atoms array
+	 */
+	public double[] calculateAsa() {
+		
+		double[] asas = new double[atoms.length];
+
+	    if (nThreads==1) {
+		    for (int i=0;i<atoms.length;i++) {	    	
+		        asas[i] = calcSingleAsa(i); 
+		    }
+		    
+	    } else {
+	    	// NOTE the multithreaded calculation does not scale up well (4 CPUs ~ x2.8, 8CPUs ~ x2.9)
+	    	// tried copying the arrays (atoms and sphere_points) as new arrays but the scaling behaves the same
+	    	// also tried dividing the asas array in parts and them joining all together but same scaling behaviour
+	    	// I guess it's simply memory bottlenecks of the architecture :(
+	    	GroupASACalcThread[] threads = new GroupASACalcThread[nThreads];
+	    	
+	    	int[] startIndices = getStartingIdxForGroups();
+
+
+		    for (int k=0;k<nThreads;k++) {
+		    	threads[k] = new GroupASACalcThread(startIndices[k], startIndices[k+1], asas);
+		    	threads[k].start();
+		    }
+	    	
+		    for (int k=0;k<nThreads;k++) {
+		    	try {
+		    		threads[k].join();
+		    	} catch (InterruptedException e) {
+		    		System.err.println("Unexpected error while running multi-threaded ASA calculation. Exiting.");
+		    		e.printStackTrace();
+		    		System.exit(1);
+		    	}
+		    }
+	    }
+	    
+	    return asas;
+	}
+	
 	/**
 	 * Returns list of 3d coordinates of points on a sphere using the
 	 * Golden Section Spiral algorithm.
-	 * @param n the number of points to be used in generating the spherical dot-density
+	 * @param nSpherePoints the number of points to be used in generating the spherical dot-density
 	 * @return
 	 */
-	private static Point3d[] generateSpherePoints(int n) {
-	    Point3d[] points = new Point3d[n];
+	private Point3d[] generateSpherePoints(int nSpherePoints) {
+	    Point3d[] points = new Point3d[nSpherePoints];
 	    double inc = Math.PI * (3.0 - Math.sqrt(5.0));
-	    double offset = 2.0 / (double)n; 
-	    for (int k=0;k<n;k++) {
+	    double offset = 2.0 / (double)nSpherePoints; 
+	    for (int k=0;k<nSpherePoints;k++) {
 	        double y = k * offset - 1.0 + (offset / 2.0);
 	        double r = Math.sqrt(1.0 - y*y);
 	        double phi = k * inc;
@@ -78,11 +143,9 @@ public class Asa {
 
 	/**
 	 * Returns list of indices of atoms within probe distance to atom k.
-	 * @param atoms an array of atoms
-	 * @param probe the probe size
 	 * @param k index of atom for which we want neighbor indices
 	 */
-	private static ArrayList<Integer> findNeighborIndices(Atom[] atoms, double[] radii, double probe, int k) {
+	private ArrayList<Integer> findNeighborIndices(int k) {
 		// looking at a typical protein case, number of neighbours are from ~10 to ~50, with an average of ~30
 		// Thus 40 seems to be a good compromise for the starting capacity
 	    ArrayList<Integer> neighbor_indices = new ArrayList<Integer>(40);
@@ -101,79 +164,23 @@ public class Asa {
 	    
 	    return neighbor_indices;
 	}
-
-	/**
-	 * Calculates the Accessible Surface Areas of the given atoms, using given probe size.
-	 * @param atoms
-	 * @param probe the probe size
-	 * @param nSpherePoints the number of points to be used in generating the spherical 
-	 * dot-density, the more points the more accurate (and slower) calculation
-	 * @param nThreads the number of parallel threads to use for the calculation
-	 * @return an array with asa values matching the input atoms array
-	 */
-	public static double[] calculateAsa(Atom[] atoms, double probe, int nSpherePoints, int nThreads) { 
-		
-		
-		double[] radii = new double[atoms.length];
-		for (int i=0;i<atoms.length;i++) {
-			radii[i] = AtomRadii.getRadius(atoms[i]);
-		}
-		
-		double[] asas = new double[atoms.length];
-	    Point3d[] sphere_points = generateSpherePoints(nSpherePoints);
-
-	    double cons = 4.0 * Math.PI / (double)nSpherePoints; 
-
-	    if (nThreads==1) {
-		    for (int i=0;i<atoms.length;i++) {	    	
-		        asas[i] = calcSingleAsa(atoms, radii, sphere_points, i, probe, cons); 
-		        //atom_i.setAsa(area);
-		    }
-	    } else {
-	    	// NOTE the multithreaded calculation does not scale up well (4 CPUs ~ x2.8, 8CPUs ~ x2.9)
-	    	// tried copying the arrays (atoms and sphere_points) as new arrays but the scaling behaves the same
-	    	// also tried dividing the asas array in parts and them joining all together but same scaling behaviour
-	    	// I guess it's simply memory bottlenecks of the architecture :(
-	    	GroupASACalcThread[] threads = new GroupASACalcThread[nThreads];
-	    	
-	    	int[] startIndices = getStartingIdxForGroups(atoms.length, nThreads);
-
-
-		    for (int k=0;k<nThreads;k++) {
-		    	threads[k] = new Asa().new GroupASACalcThread(startIndices[k], startIndices[k+1], atoms, radii, sphere_points, asas, probe, cons);
-		    	threads[k].start();
-		    }
-	    	
-		    for (int k=0;k<nThreads;k++) {
-		    	try {
-		    		threads[k].join();
-		    	} catch (InterruptedException e) {
-		    		System.err.println("Unexpected error while running multi-threaded ASA calculation. Exiting.");
-		    		e.printStackTrace();
-		    		System.exit(1);
-		    	}
-		    }
-	    }
-	    
-	    return asas;
-	}
 	
-	private static void calcGroupOfAsas(int startIdx, int endIdx, Atom[] atoms, double[] radii, Point3d[] sphere_points, double[] asas, double probe, double cons) {
+	private void calcGroupOfAsas(int startIdx, int endIdx, double[] asas) {
 		for (int i=startIdx;i<endIdx;i++) {
-			asas[i] = calcSingleAsa(atoms, radii, sphere_points, i, probe, cons);
+			asas[i] = calcSingleAsa(i);
 		}
 	}
 
-	private static double calcSingleAsa(Atom[] atoms, double[] radii, Point3d[] sphere_points, int i, double probe, double cons) {
+	private double calcSingleAsa(int i) {
     	Atom atom_i = atoms[i];
-    	ArrayList<Integer> neighbor_indices = findNeighborIndices(atoms, radii, probe, i);
+    	ArrayList<Integer> neighbor_indices = findNeighborIndices(i);
         int n_neighbor = neighbor_indices.size();
         int j_closest_neighbor = 0;
         double radius = probe + radii[i];
 
         int n_accessible_point = 0;
         
-        for (Point3d point: sphere_points){
+        for (Point3d point: spherePoints){
             boolean is_accessible = true;
             Point3d test_point = new Point3d(point.x*radius + atom_i.getCoords().x,
             								point.y*radius + atom_i.getCoords().y,
@@ -207,20 +214,22 @@ public class Asa {
         return cons*n_accessible_point*radius*radius;
 	}
 	
-	private static int[] getStartingIdxForGroups(int n, int nGroups) {
-		int[] indices = new int[nGroups+1];
+	private int[] getStartingIdxForGroups() {
+		// we use so many groups as threads
+		int n = atoms.length;
+		int[] indices = new int[nThreads+1];
 
-		int baseSize = n/nGroups;
-		int remainder = n%nGroups;
+		int baseSize = n/nThreads;
+		int remainder = n%nThreads;
 
 		indices[0] = 0;
-		for (int k=1;k<nGroups;k++){
+		for (int k=1;k<nThreads;k++){
 			indices[k] = indices[k-1]+baseSize;
 			if (k<remainder) {
 				indices[k]+=1;
 			}
 		}
-		indices[nGroups] = n;
+		indices[nThreads] = n;
 		return indices;
 	}
 

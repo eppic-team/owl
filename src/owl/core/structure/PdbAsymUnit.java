@@ -977,7 +977,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			}
 		}
 		
-		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		AsaCalculator asaCalc = new AsaCalculator(atoms, AsaCalculator.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		double[] asas = asaCalc.calculateAsa();
+		
 		for (i=0;i<atoms.length;i++){
 			atoms[i].setAsa(asas[i]);
 		}
@@ -1033,7 +1035,9 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 			}
 		}
 		
-		double[] asas = Asa.calculateAsa(atoms, Asa.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		AsaCalculator asaCalc = new AsaCalculator(atoms, AsaCalculator.DEFAULT_PROBE_SIZE, nSpherePoints, nThreads);
+		double[] asas = asaCalc.calculateAsa();
+		
 		for (i=0;i<atoms.length;i++){
 			atoms[i].setBsa(atoms[i].getAsa()-asas[i]);
 		}
