@@ -84,10 +84,10 @@ public class AsaCalculator {
 	}
 	
 	/**
-	 * Calculates the Accessible Surface Areas the atoms given in constructor and with parameters given.
+	 * Calculates the Accessible Surface Areas for the atoms given in constructor and with parameters given.
 	 * Beware that the parallel implementation is quite memory hungry. It scales well as long as there is
 	 * enough memory available. 
-	 * @return an array with asa values matching the input atoms array
+	 * @return an array with asa values corresponding to each atom of the input array
 	 */
 	public double[] calculateAsa() {
 		
