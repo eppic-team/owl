@@ -523,6 +523,11 @@ public class CiffileParser {
 		return scaleMatrix;
 	}
 	
+	/**
+	 * Reads the experimental method from the exptl field.
+	 * NOTE: in cases of multiple experimental method only first one is read, ignoring the rest.
+	 * @return
+	 */
 	protected String readExpMethod() {
 		CifFieldInfo exptlField = fields.get(exptl);
 		
@@ -532,8 +537,10 @@ public class CiffileParser {
 			expMethod = exptlField.getSubFieldData("method");
 			
 		} else {
-			// normally _exptl.method is a single value element, but in some cases, e.g. 2krl, the _exptl.method is a loop element
-			// in those cases we simply take the first value appearing (condition recordCount==1)
+			// normally _exptl.method is a single value element, but in some cases hybrid methods are used
+			// and then it is a loop element with several values
+			// e.g. 2krl solution NMR and solution scattering; 4n3m xray diffraction and neutron diffraction
+			// NOTE: in those cases we simply take the first value  
 
 			int methodIdx = exptlField.getIndexForSubField("method");
 			
@@ -552,19 +559,26 @@ public class CiffileParser {
 	}
 	
 	/**
-	 * Returns an array of size 3 with the quality parameters for a crystal structure: resolution, rFree and rSym
+	 * Returns an array of size 3 with the quality parameters for a crystal structure: resolution, rFree and rSym.
+	 * NOTE: in cases of multiple experimental methods where there are different quality parameters for the 
+	 * different methods, only the parameters for the first method are read.
 	 * @return
 	 */
 	protected double[] readQparams() {
 		CifFieldInfo refineField = fields.get(refine);
 		CifFieldInfo reflnsField = fields.get(reflns);
 		
+		// normally refine and reflns are single value fields, but in some cases hybrid methods are used
+		// and then one or both of them are loop elements with several values
+		// e.g. 4n3m (xray diffraction and neutron diffraction): both refine and reflns are loop;
+		//		3otj (xray diffraction and neutron diffraction): only refine is loop
+		// NOTE: in those cases we simply take the first value  
+		
 		double[] qParams = {-1,-1,-1};
 		
 		// refine only present in xray structures
 		if (!refineField.isEmpty()) {
-			
-			// note: refine can be a loop in some cases e.g. 3otj
+
 			if (!refineField.isLoop()) {
 				if (refineField.isSubFieldPresent("ls_d_res_high")) {
 					String resolStr = refineField.getSubFieldData("ls_d_res_high");
@@ -579,12 +593,12 @@ public class CiffileParser {
 						qParams[1] = Double.parseDouble(rfreeStr);
 					}
 				}
-			} else {
+			} else { // loop case: multi-experimental method
 				int reshighIdx = refineField.getIndexForSubField("ls_d_res_high");
 				int rfactorrfreeIdx = refineField.getIndexForSubField("ls_R_factor_R_free");
 				
 				while(refineField.hasMoreData()) {
-					// NOTE we take first only and ignore the rest
+					
 					String[] tokens = refineField.getNextTokens();
 					String resolStr = tokens[reshighIdx];
 					String rfreeStr = tokens[rfactorrfreeIdx];
@@ -594,19 +608,41 @@ public class CiffileParser {
 					if ( isDouble(rfreeStr) ) {
 						qParams[1] = Double.parseDouble(rfreeStr);
 					}
+					
+					// NOTE we take first only and ignore the rest
 					break;
 				}
 			}
 		}
 		
 		if (!reflnsField.isEmpty()) {
+			
 			String rsymvalStr = null;
-			if (reflnsField.isSubFieldPresent("pdbx_Rsym_value")) 
-				rsymvalStr = reflnsField.getSubFieldData("pdbx_Rsym_value");
 			String rmergevalStr = null;
-			if (reflnsField.isSubFieldPresent("pdbx_Rmerge_I_obs")) 
-				rmergevalStr = reflnsField.getSubFieldData("pdbx_Rmerge_I_obs");
+			
+			if (!reflnsField.isLoop()) {
+				
+				if (reflnsField.isSubFieldPresent("pdbx_Rsym_value")) 
+					rsymvalStr = reflnsField.getSubFieldData("pdbx_Rsym_value");
+				
+				if (reflnsField.isSubFieldPresent("pdbx_Rmerge_I_obs")) 
+					rmergevalStr = reflnsField.getSubFieldData("pdbx_Rmerge_I_obs");
 
+				
+			} else { //loop case (multi-experimental method)
+				int pdbxRsymValueIdx = reflnsField.getIndexForSubField("pdbx_Rsym_value");
+				int pdbxRmergeIobsIdx = reflnsField.getIndexForSubField("pdbx_Rmerge_I_obs");
+				
+				while(reflnsField.hasMoreData()) {
+					String[] tokens = reflnsField.getNextTokens();
+					rsymvalStr = tokens[pdbxRsymValueIdx];
+					rmergevalStr = tokens[pdbxRmergeIobsIdx];
+
+					// NOTE we take first only and ignore the rest
+					break;
+				}
+			}
+			
 			// if both are present, we don't compare them but take the Rsym value to be 
 			// the right one (there's not much consensus in the field as to what's the 
 			// right thing to do anyway!)
