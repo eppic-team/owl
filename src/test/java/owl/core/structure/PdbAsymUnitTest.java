@@ -74,6 +74,8 @@ public class PdbAsymUnitTest {
 	// for tests that don't need to compare to pisa we shave off the small interfaces
 	private static final double MIN_AREA_TO_KEEP = 35;
 
+	private static List<File> listFileCifFiles;
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		Properties p = TestsSetup.readPaths();
@@ -83,6 +85,19 @@ public class PdbAsymUnitTest {
 		LISTFILE = TestsSetup.inputStreamToTempFile(PdbAsymUnitTest.class.getResourceAsStream(LISTFILEPATH), "PdbAsymUnitTest", ".list");
 		LISTFILE2 = TestsSetup.inputStreamToTempFile(PdbAsymUnitTest.class.getResourceAsStream(LISTFILE2PATH), "PdbAsymUnitTest", ".list");
 		CULLPDB20FILE = TestsSetup.inputStreamToTempFile(PdbAsymUnitTest.class.getResourceAsStream(CULLPDB20FILEPATH), "PdbAsymUnitTest", ".list");
+		
+		// for pdbs in LISTFILE (used for several tests) we 
+		listFileCifFiles = new ArrayList<File>();
+		List<String> pdbCodes = readListFile(LISTFILE);
+		System.out.println("Grabbing cif files in list "+LISTFILEPATH);
+		for (String pdbCode: pdbCodes) {
+			System.out.print(".");
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
+			listFileCifFiles.add(cifFile);
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+		}
+		System.out.println();
 	}
 
 	@AfterClass
@@ -99,14 +114,11 @@ public class PdbAsymUnitTest {
 
 	@Test
 	public void testChainClusters() throws IOException {
-		List<String> pdbCodes = readListFile(LISTFILE);
+		
 		System.out.println("Checking unique and representative chains");
-		for (String pdbCode: pdbCodes) {
+		for (File cifFile:listFileCifFiles) {
 			
-			System.out.println(pdbCode);
-			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
-			cifFile.deleteOnExit();
-			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+			System.out.println(cifFile.getName());
 
 			PdbAsymUnit pdb = null;
 			try {
@@ -148,16 +160,14 @@ public class PdbAsymUnitTest {
 		System.out.println("Downloading PISA interfaces");
 		Map<String, PisaInterfaceList> all = pc.getInterfacesDescription(pdbCodes);
 
+		int cifFileIdx = 0;
 		for (String pdbCode: pdbCodes) {
 					
 			System.out.println("\n##"+pdbCode);
-			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
-			cifFile.deleteOnExit();
-			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
 
 			PdbAsymUnit pdb = null;
 			try {
-				pdb = new PdbAsymUnit(cifFile);
+				pdb = new PdbAsymUnit(listFileCifFiles.get(cifFileIdx++));
 			} catch (PdbLoadException e) {
 				System.err.println("PDB load error, cause: "+e.getMessage());
 				continue;
@@ -554,14 +564,10 @@ public class PdbAsymUnitTest {
 	
 	@Test
 	public void testCrystalCellTransformations() throws IOException {
-		List<String> pdbCodes = readListFile(LISTFILE);
-
-		for (String pdbCode: pdbCodes) {
+		
+		for (File cifFile:listFileCifFiles) {
 			
-			System.out.println("\n##"+pdbCode);
-			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
-			cifFile.deleteOnExit();
-			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+			System.out.println("\n##"+cifFile.getName());
 
 			PdbAsymUnit pdb = null;
 			try {
