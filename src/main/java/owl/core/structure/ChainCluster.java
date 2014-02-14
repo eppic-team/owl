@@ -65,7 +65,25 @@ public class ChainCluster implements Serializable {
 		
 		String str = representative.getPdbChainCode();
 		
-		if (members.size()>1) str+=" (";
+		String commaSepStr = getCommaSepMemberPdbChainCodes();
+		
+		if (commaSepStr!=null) {
+			str  +=" ("+commaSepStr+")";
+		}
+		
+		return str;
+	}
+	
+	/**
+	 * Returns a string containing a comma-separated list of PDB chain codes of
+	 * all member chains without the representative
+	 * @return the comma separated string of PDB chain codes of members or null if 0 members
+	 */
+	public String getCommaSepMemberPdbChainCodes() {
+		
+		if (members.size()<=1) return null;
+		
+		String str = "";
 		
 		for (int i=0;i<members.size();i++) {
 			
@@ -77,8 +95,7 @@ public class ChainCluster implements Serializable {
  
 		}
 		
-		if (members.size()>1)
-			str = str.substring(0, str.length()-1)+")";
+		str = str.substring(0, str.length()-1);
 		
 		return str;
 	}
