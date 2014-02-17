@@ -21,10 +21,46 @@ import owl.core.structure.io.BioUnitOperation;
  *
  */
 public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * A private class to reduce a list of PdbBioUnits to a single one 
+	 * with unique type, mmSize and list of cluster ids  
+	 * @author duarte_j
+	 *
+	 */
+	private class BioUnitView {
+		private int index;
+		private BioUnitAssignmentType type;
+		private int mmSize;
+		private List<Integer> clusterIds;
+		
+		public BioUnitView(int index, BioUnitAssignmentType type, int mmSize, List<Integer> clusterIds) {
+			this.index = index;
+			this.type = type;
+			this.mmSize = mmSize;
+			this.clusterIds = clusterIds;
+		}
+		
+		public boolean equals(Object o) {
+			if (!(o instanceof BioUnitView)) return false;
+			BioUnitView other = (BioUnitView) o;
+			
+			if (other.type!=this.type) return false;
+			if (other.mmSize!=this.mmSize) return false;
+			if (other.clusterIds.size()!=this.clusterIds.size()) return false;
+			for (int i=0;i<clusterIds.size();i++) {
+				if (other.clusterIds.get(i)!=this.clusterIds.get(i)) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
+	}
+	
+	
 	private PdbAsymUnit parent;
 	private List<PdbBioUnit> pdbBioUnits;
 	
@@ -245,10 +281,10 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	}
 	
 	/**
-	 * For each biounit in the list returns the list of the id's of interfaces which match with that biounit.
-	 * It checks for the errors and does not pass those biounits.
-	 * Id's for BioUnits start from 0,1,2,...
-	 * Id's for Interfaces start from 1,2,3,...
+	 * For each biounit in the list returns the list of ids of interfaces that match that biounit.
+	 * In case of no matches found for a certain biounit, the biounit will not be present in the returned map
+	 * Ids for BioUnits start from 0,1,2,...
+	 * Ids for Interfaces start from 1,2,3,...
 	 * @param interfaces
 	 * @return
 	 */
@@ -256,10 +292,45 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 		TreeMap<Integer,List<Integer>> matches = new TreeMap<Integer, List<Integer>>();
 		for(PdbBioUnit bioUnit:this.pdbBioUnits){
 			List<Integer> matchList = bioUnit.getInterfaceMatches(interfaces);
+			// if nothing matches for this bioUnit, don't add
 			if(bioUnit.getSize() > 1 && matchList.size() < 1) continue;
 			else matches.put(this.pdbBioUnits.indexOf(bioUnit), matchList);
 		}
 		return matches;
+	}
+	
+	/**
+	 * Retunrs a map of PdbBioUnit indices to list of interface cluster ids that match
+	 * that biounit assembly. Removes duplicate PdbBioUnits by grouping those with same
+	 * type, size and list of cluster ids and considering them identical. 
+	 * @param interfaces
+	 * @return
+	 */
+	public TreeMap<Integer, List<Integer>> getInterfaceClusterMatches(ChainInterfaceList interfaces) {
+		
+		List<BioUnitView> buList = new ArrayList<BioUnitView>();
+		
+		for(PdbBioUnit bioUnit:this.pdbBioUnits){
+			
+			List<Integer> matchList = bioUnit.getInterfaceClusterMatches(interfaces);
+			// if nothing matches for this bioUnit, don't add
+			if(bioUnit.getSize() > 1 && matchList.size() < 1) {
+				continue;
+			}
+			else {
+				BioUnitView bu = new BioUnitView(pdbBioUnits.indexOf(bioUnit), bioUnit.getType(),bioUnit.getSize(),matchList);
+				if (!buList.contains(bu)) {
+					buList.add(bu);
+				}
+			}
+		}
+		TreeMap<Integer, List<Integer>> map = new TreeMap<Integer,List<Integer>>();
+		
+		for (BioUnitView bu:buList) {
+			map.put(bu.index, bu.clusterIds);
+		}
+		
+		return map;		
 	}
 
 	/**

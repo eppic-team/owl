@@ -10,7 +10,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import javax.vecmath.Matrix4d;
 
@@ -23,10 +25,8 @@ import owl.core.util.Goodies;
  */
 public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
+	
 	private int size;										//size of the biounit
 	private BioUnitAssignmentType type;						//assignment type: authors/pisa/pqs/eppic/none
 	private TreeMap<String, List<Matrix4d>> operators;		//Map of chaincodes to the list of operators
@@ -166,19 +166,34 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 	}
 
 	/**
-	 * For each biounit in the list returns the list of the id's of interfaces which match with that biounit
-	 * Id's for BioUnits start from 0,1,2,...
-	 * Id's for Interfaces start from 1,2,3,...
+	 * Returns the list of interface ids that match this biounit
+	 * Ids for BioUnits start from 0,1,2,...
+	 * Ids for Interfaces start from 1,2,3,...
 	 * @param interfaces
 	 * @return
 	 */
 	public List<Integer> getInterfaceMatches(ChainInterfaceList interfaces) {
 		List<Integer> matches = new ArrayList<Integer>();
-		for(int i=1; i<=interfaces.getNumInterfaces(); i++){
-			ChainInterface interf = interfaces.get(i);
-			if(matchesInterface(interf)) matches.add(i);
+		for(ChainInterface interf:interfaces){
+			if(matchesInterface(interf)) matches.add(interf.getId());
 		}
 		return matches;
+	}
+	
+	/**
+	 * Returns the list of interface cluster ids that match this biounit
+	 * @param interfaces
+	 * @return a sorted list of cluster ids
+	 */
+	public List<Integer> getInterfaceClusterMatches(ChainInterfaceList interfaces) {
+		
+		Set<Integer> interfaceClusterMatches = new TreeSet<Integer>();
+		for(ChainInterface interf:interfaces){
+			if(matchesInterface(interf)){
+				interfaceClusterMatches.add(interfaces.getCluster(interf.getId()).getId());	
+			}
+		}		
+		return new ArrayList<Integer>(interfaceClusterMatches);
 	}
 
 	
