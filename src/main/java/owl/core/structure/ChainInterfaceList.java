@@ -184,8 +184,8 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		return list.iterator();
 	}
 
-	public void printTabular(PrintStream ps, String pdbName, boolean usePdbResSer) {
-		ps.println("Interfaces for "+pdbName);
+	public void printTabular(PrintStream ps, boolean usePdbResSer) {
+		ps.println("Interfaces for input structure");
 		ps.print("ASAs values from "+this.asaCalcMethod.getName());
 		if (asaCalcMethod==AsaCalcMethod.INTERNAL) {
 			ps.println(" (sphere sampling points="+this.asaCalcAccuracyParam+")");
