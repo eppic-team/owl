@@ -408,66 +408,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	    return hash; 
 	}
 	
-	public void printTabular(PrintStream ps, boolean usePdbResSer) {
-		ps.print("# ");
-		ps.printf("%d\t%9.2f\t%s\t%s\n",this.getId(),this.getInterfaceArea(), 
-				this.getName(),
-				SpaceGroup.getAlgebraicFromMatrix(this.getSecondTransf().getMatTransform()));
-		if (isFirstProtein()) {
-			ps.print("## ");
-			this.printMolInfoTabular(ps, FIRST, usePdbResSer);
-		}
-		if (isSecondProtein()) {
-			ps.print("## ");
-			this.printMolInfoTabular(ps, SECOND, usePdbResSer);
-		}
-	}
-	
-	private void printMolInfoTabular(PrintStream ps, int molecId, boolean usePdbResSer) {
-		PdbChain molecule = null;
-		InterfaceRimCore rimCore = null;
-		if (molecId==FIRST) {
-			molecule = this.getFirstMolecule();
-			rimCore = getFirstRimCore();
-		}
-		else if (molecId==SECOND) {
-			molecule = this.getSecondMolecule();
-			rimCore = getSecondRimCore();
-		}
-		else {
-			throw new IllegalArgumentException("Molecule id "+molecId+" is not valid");
-		}
-		
-		String molType = null;
-		if (molecule.isNonPolyChain()) molType = "non-polymer";
-		else if (molecule.getSequence().isProtein()) molType = "protein";		
-		else molType = "nucleic acid";
-		
-		ps.println((molecId+1)+"\t"+molecule.getPdbChainCode()+"\t"+molType);
-
-		int numSurfRes0 = molecule.getSurfaceResidues(0).size();
-		int numSurfResCutoff = molecule.getSurfaceResidues(rimCore.getMinAsaForSurface()).size();
-		ps.printf("## surface residues: %d (min ASA for surface 0), %d (min ASA for surface %2.0f)\n",
-				numSurfRes0,numSurfResCutoff,rimCore.getMinAsaForSurface());
-		
-		ps.printf("## %4.2f\n",bsaToAsaCutoff);
-		ps.println("## rim : "+rimCore.getRimResString(usePdbResSer));
-		if (rimCore.getCoreResidues().size()>0) {
-			ps.println("## core: "+rimCore.getCoreResString(usePdbResSer));
-		}
-		ps.println("## seqres pdb res asa bsa burial(percent)");
-
-		for (Residue residue:molecule) {			
-			ps.printf("%d\t%s\t%s\t%6.2f\t%6.2f",residue.getSerial(),residue.getPdbSerial(),residue.getLongCode(),residue.getAsa(),residue.getBsa());
-			double percentBurial = 100.0*residue.getBsa()/residue.getAsa();
-			if (percentBurial>0.1) {
-				ps.printf("\t%5.1f\n",percentBurial);
-			} else {
-				ps.println();
-			}
-		}
-	}
-	
 	public void printRimCoreInfo(PrintStream ps) {
 		
 

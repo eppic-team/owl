@@ -15,7 +15,7 @@ import java.util.zip.GZIPOutputStream;
 
 import org.xml.sax.SAXException;
 
-import owl.core.structure.ChainInterface;
+//import owl.core.structure.ChainInterface;
 import owl.core.structure.ChainInterfaceList;
 import owl.core.structure.PdbAsymUnit;
 
@@ -279,11 +279,11 @@ public class PisaConnection {
 			System.out.println("#####");
 			System.out.println("# "+pdbCode);
 			System.out.println("#####");
-			ChainInterfaceList interfaces = all.get(pdbCode);
-			for (ChainInterface interf:interfaces) {
-				
-				interf.printTabular(System.out, true);
-			}
+			//ChainInterfaceList interfaces = all.get(pdbCode);
+			//for (ChainInterface interf:interfaces) {
+				//TODO we used to have a method to print the interfaces in tabular format... would need to put it back somehow
+				//interf.printTabular(System.out, true);
+			//}
 		}
 		
 		Map<String,PisaAsmSetList> allPisaAsmSets = pc.getAssembliesDescription(pdbCodesList);

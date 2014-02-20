@@ -493,11 +493,9 @@ public class InterfacesFinder {
 		}
 
 		// now that we have the areas we can put them into a list and sort them
-		ChainInterfaceList.AsaCalcMethod asaCalcMethod = ChainInterfaceList.AsaCalcMethod.INTERNAL;
-		ChainInterfaceList list = new ChainInterfaceList(asaCalcMethod);
-		if (asaCalcMethod == ChainInterfaceList.AsaCalcMethod.INTERNAL) {
-			list.setAsaCalcAccuracyParam(nSpherePoints);
-		}
+		ChainInterfaceList list = new ChainInterfaceList();
+		list.setAsaCalcAccuracyParam(nSpherePoints);
+
 		for (ChainInterface interf:set) {
 			list.addInterface(interf);
 		}

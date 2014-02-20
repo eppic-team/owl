@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import owl.core.structure.ChainInterfaceList;
-import owl.core.structure.ChainInterfaceList.AsaCalcMethod;
 import owl.core.structure.PdbAsymUnit;
 
 public class PisaInterfaceList implements Iterable<PisaInterface> {
@@ -87,7 +86,7 @@ public class PisaInterfaceList implements Iterable<PisaInterface> {
 		if (!pdb.getPdbCode().equals(this.pdbCode)) {
 			throw new IllegalArgumentException("Pdb code of given PdbAsymUnit does not match pdb code from PISA");
 		}
-		ChainInterfaceList interfList = new ChainInterfaceList(AsaCalcMethod.PISA);
+		ChainInterfaceList interfList = new ChainInterfaceList();
 		for (PisaInterface interf:this){
 			interfList.addInterface(interf.convertToChainInterface(pdb));
 		}

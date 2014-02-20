@@ -1,6 +1,5 @@
 package owl.core.structure;
 
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,19 +28,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 
 	private static final long serialVersionUID = 1L;
 
-	public enum AsaCalcMethod {
-		INTERNAL("internal"),NACCESS("naccess"),PISA("pisa");
-
-		private String name;
-		private AsaCalcMethod(String name) {
-			this.name = name;
-		}
-
-		public String getName() {
-			return name;
-		}
-	}
-
 	private List<ChainInterface> list;
 
 	private InterfaceGraph graph; 
@@ -51,12 +37,10 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 	 */
 	private TreeMap<Integer, InterfaceCluster> clusters;
 
-	private AsaCalcMethod asaCalcMethod;
 	private int asaCalcAccuracyParam;
 
-	public ChainInterfaceList(AsaCalcMethod asaCalcMethod) {
+	public ChainInterfaceList() {
 		this.list = new ArrayList<ChainInterface>();
-		this.asaCalcMethod = asaCalcMethod;
 	}
 
 	public void addInterface(ChainInterface interf) {
@@ -130,10 +114,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 		return list.get(id-1);
 	}
 
-	public AsaCalcMethod getAsaCalcType() {
-		return asaCalcMethod;
-	}
-
 	public void setAsaCalcAccuracyParam(int asaCalcAccuracyParam) {
 		this.asaCalcAccuracyParam = asaCalcAccuracyParam;
 	}
@@ -182,19 +162,6 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 
 	public Iterator<ChainInterface> iterator() {
 		return list.iterator();
-	}
-
-	public void printTabular(PrintStream ps, boolean usePdbResSer) {
-		ps.println("Interfaces for input structure");
-		ps.print("ASAs values from "+this.asaCalcMethod.getName());
-		if (asaCalcMethod==AsaCalcMethod.INTERNAL) {
-			ps.println(" (sphere sampling points="+this.asaCalcAccuracyParam+")");
-		} else {
-			ps.println();
-		}
-		for (ChainInterface interf:this) {
-			interf.printTabular(ps, usePdbResSer);
-		}
 	}
 
 	/**
