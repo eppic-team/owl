@@ -407,21 +407,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	    hash = hash * 31 + firstMolecule.getPdbChainCode().hashCode()+secondMolecule.getPdbChainCode().hashCode();
 	    return hash; 
 	}
-	
-	public void printRimCoreInfo(PrintStream ps) {
-		
-
-		ps.printf("%15s\t%6.1f",
-				getId()+"("+getFirstMolecule().getPdbChainCode()+"+"+getSecondMolecule().getPdbChainCode()+")",
-				getInterfaceArea());
-		boolean isProt1 = isFirstProtein();
-		boolean isProt2 = isSecondProtein();
-		ps.printf("%5d\t%5d\t%5.2f", (!isProt1)?0:getFirstRimCore().getCoreSize(),
-									 (!isProt2)?0:getSecondRimCore().getCoreSize(),
-									 getBsaToAsaCutoff());
-		ps.print("\t");
-
-	}
 
 	/**
 	 * Calculates residues in rim and core using zooming for each of the 2 members of the 
