@@ -31,9 +31,8 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 	private BioUnitAssignmentType type;						//assignment type: authors/pisa/pqs/eppic/none
 	private TreeMap<String, List<Matrix4d>> operators;		//Map of chaincodes to the list of operators
 	
-	/**Methods
-	 * 
-	 */
+	//Methods
+	
 	//Main constructor
 	public PdbBioUnit(){
 		this.size = 0;
@@ -41,7 +40,11 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		this.operators = new TreeMap<String, List<Matrix4d>>();
 	}
 	
-	//Adds an entry to operators
+	/**
+	 * Adds an entry to operators
+	 * @param pdbChainCode
+	 * @param operator
+	 */
 	public void addOperator(String pdbChainCode, Matrix4d operator){
 		List<Matrix4d> tempList = new ArrayList<Matrix4d>();
 		if(this.operators.containsKey(pdbChainCode)) tempList = this.operators.get(pdbChainCode);
@@ -50,22 +53,34 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		this.operators.put(pdbChainCode, tempList);
 	}
 	
-	//Sets the size of biounit
+	/**
+	 * Sets the size of biounit
+	 * @param size
+	 */
 	public void setSize(int size){
 		this.size=size;
 	}
 	
-	//Assigns the type of biounit
+	/**
+	 * Assigns the type of biounit
+	 * @param type
+	 */
 	public void assignType(BioUnitAssignmentType type){
 		this.type=type;
 	}
 	
-	//Gets the size of the biounit
+	/**
+	 * Gets the size of the biounit
+	 * @return
+	 */
 	public int getSize(){
 		return this.size;
 	}
 	
-	//Gets the assignment type
+	/**
+	 * Gets the assignment type
+	 * @return
+	 */
 	public BioUnitAssignmentType getType(){
 		return this.type;
 	}

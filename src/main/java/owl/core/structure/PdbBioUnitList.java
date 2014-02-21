@@ -281,25 +281,6 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	}
 	
 	/**
-	 * For each biounit in the list returns the list of ids of interfaces that match that biounit.
-	 * In case of no matches found for a certain biounit, the biounit will not be present in the returned map
-	 * Ids for BioUnits start from 0,1,2,...
-	 * Ids for Interfaces start from 1,2,3,...
-	 * @param interfaces
-	 * @return
-	 */
-	public TreeMap<Integer, List<Integer>> getInterfaceMatches(ChainInterfaceList interfaces){
-		TreeMap<Integer,List<Integer>> matches = new TreeMap<Integer, List<Integer>>();
-		for(PdbBioUnit bioUnit:this.pdbBioUnits){
-			List<Integer> matchList = bioUnit.getInterfaceMatches(interfaces);
-			// if nothing matches for this bioUnit, don't add
-			if(bioUnit.getSize() > 1 && matchList.size() < 1) continue;
-			else matches.put(this.pdbBioUnits.indexOf(bioUnit), matchList);
-		}
-		return matches;
-	}
-	
-	/**
 	 * Retunrs a map of PdbBioUnit indices to list of interface cluster ids that match
 	 * that biounit assembly. Removes duplicate PdbBioUnits by grouping those with same
 	 * type, size and list of cluster ids and considering them identical. 
@@ -373,74 +354,5 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 		return newList;
 	}
 
-	/**
-	 * Returns a map with Assignment Type as the keys and corresponding array of gathered results.
-	 * The array has the size of the number of interfaces and returns 
-	 * 0: Match
-	 * 1: Non-match
-	 * -1: No results
-	 * Rules:
-	 * If present, the highest possible assembly of an assignment type,
-	 * else take the union of all the given highest assemblies of the assignment type
-	 * @param interfaces
-	 * @return
-	 */
-	public TreeMap<BioUnitAssignmentType, int[]> gatherBioUnits(ChainInterfaceList interfaces) {
-		
-		TreeMap<Integer, List<Integer>> matchIds = getInterfaceMatches(interfaces);
-		TreeMap<BioUnitAssignmentType, int[]> summary = new TreeMap<BioUnitAssignmentType, int[]>();
-
-		PdbBioUnitList authorsList = this.getSubsetByType(BioUnitAssignmentType.authors);
-		PdbBioUnitList pisaList = this.getSubsetByType(BioUnitAssignmentType.pisa);
-		PdbBioUnitList pqsList = this.getSubsetByType(BioUnitAssignmentType.pqs);
-		
-		int[] authorFinal = new int[interfaces.getNumInterfaces()];
-		int[] pisaFinal = new int[interfaces.getNumInterfaces()];
-		int[] pqsFinal = new int[interfaces.getNumInterfaces()];
-		
-		for(int i=1; i<=interfaces.getNumInterfaces(); i++){
-			
-			authorFinal[i-1]=pisaFinal[i-1]=pqsFinal[i-1]=-1;
-			
-			//Check for authors
-			for(PdbBioUnit bioUnit:authorsList.getSubsetBySize(authorsList.getMaximumSize())){
-				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
-				if(matchIds.containsKey(iUnit)){
-					if(matchIds.get(iUnit).contains(i)){
-						authorFinal[i-1] = 0;
-						break;
-					} else authorFinal[i-1] = 1;
-				}
-			}
-
-			//check for Pisa
-			for(PdbBioUnit bioUnit:pisaList.getSubsetBySize(pisaList.getMaximumSize())){
-				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
-				if(matchIds.containsKey(iUnit)){
-					if(matchIds.get(iUnit).contains(i)){
-						pisaFinal[i-1] = 0;
-						break;
-					} else pisaFinal[i-1] = 1;
-				}
-			}
-
-			//check for pqs
-			for(PdbBioUnit bioUnit:pqsList.getSubsetBySize(pqsList.getMaximumSize())){
-				int iUnit = this.pdbBioUnits.indexOf(bioUnit);
-				if(matchIds.containsKey(iUnit)){
-					if(matchIds.get(iUnit).contains(i)){
-						pqsFinal[i-1] = 0;
-						break;
-					} else pqsFinal[i-1] = 1;
-				}
-			}
-		}
-
-		summary.put(BioUnitAssignmentType.authors, authorFinal);
-		summary.put(BioUnitAssignmentType.pisa, pisaFinal);
-		summary.put(BioUnitAssignmentType.pqs, pqsFinal);
-
-		return summary;
-	}
 
 }

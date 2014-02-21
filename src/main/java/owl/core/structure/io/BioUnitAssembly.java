@@ -38,9 +38,8 @@ public class BioUnitAssembly {
 		this.reading = false;
 	}
 	
-	/**
-	 * Method for getters and setters
-	 */
+
+
 	public void setId(int id){
 		this.id = id;
 	}
@@ -53,7 +52,10 @@ public class BioUnitAssembly {
 		this.size = size;
 	}
 	
-	//Sets the size of biounit from a string
+	/**
+	 * Sets the size of biounit from a string
+	 * @param oligomer
+	 */
 	public void setSize(String oligomer){
 		this.size = (getSizefromString(oligomer));
 	}
