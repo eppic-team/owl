@@ -262,15 +262,34 @@
 				</configuration>
 			</plugin>
 
-          		<plugin>
-               			<groupId>org.apache.maven.plugins</groupId>
-               			<artifactId>maven-compiler-plugin</artifactId>
-               			<version>3.1</version>
-               			<configuration>
-                    			<source>${java.version}</source>
-                    			<target>${java.version}</target>
-               			</configuration>
-          		</plugin>
+          	<plugin>
+             	<groupId>org.apache.maven.plugins</groupId>
+              	<artifactId>maven-compiler-plugin</artifactId>
+               	<version>3.1</version>
+               	<configuration>
+                	<source>${java.version}</source>
+                		<target>${java.version}</target>
+               	</configuration>
+          	</plugin>
+          	
+          	<!-- source plugin needed so that the eclipse debugger can see sources of this project 
+          	     while debuggin other applications depending on this project  
+          	     See: http://stackoverflow.com/questions/1467575/how-to-teach-eclipse-to-include-maven-source-packages-on-the-source-path-->
+          	<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+        		<artifactId>maven-source-plugin</artifactId>
+        		<executions>
+            		<execution>
+                		<id>attach-sources</id>
+                		<goals>
+                    		<goal>jar</goal>
+                		</goals>
+            		</execution>
+        		</executions>
+        		<configuration>
+            		<attach>true</attach>
+        		</configuration>
+			</plugin>
 
 		</plugins>
 	</build>
