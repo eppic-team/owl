@@ -294,7 +294,7 @@ public class CrystalCell implements Serializable {
 		return M;
 	}
 	
-	private Matrix3d getMTranspose() {
+	public Matrix3d getMTranspose() {
 		if (Mtransp!=null){
 			return Mtransp;
 		}
@@ -347,6 +347,39 @@ public class CrystalCell implements Serializable {
 	}
 	
 	/**
+	 * Given a scale matrix parsed from the PDB entry (SCALE1,2,3 records),
+	 * checks that the matrix is a consistent scale matrix by comparing the
+	 * cell volume to the inverse of the scale matrix determinant (tolerance of 1/100).
+	 * If they don't match false is returned.
+	 * See the PDB documentation for the SCALE record.
+	 * See also last equation of section 2.5 of "Fundamentals of Crystallography" C. Giacovazzo
+	 * @param scaleMatrix
+	 * @return
+	 */
+	public boolean checkScaleMatrixConsistency(Matrix4d scaleMatrix) {
+
+		double vol = getVolume();
+		Matrix3d m = new Matrix3d();
+		scaleMatrix.getRotationScale(m);
+
+		// note we need to have a relaxed tolerance here as the PDB scale matrix is given with not such high precision
+		// plus we don't want to have false positives, so we stay conservative
+		double tolerance = vol/100.0;		
+		if ((Math.abs(vol - 1.0/m.determinant() )>tolerance)) { 
+			//System.err.println("Warning! SCALE matrix from PDB does not match 1/determinat == cell volume: "+
+			//		String.format("vol=%6.3f  1/det=%6.3f",vol,1.0/m.determinant()));
+			return false;
+		}
+		// this would be to check our own matrix, must always match!
+		//if (!deltaComp(vol,1.0/getMTranspose().determinant())) {
+		//	System.err.println("Our calculated SCALE matrix does not match 1/det=cell volume");
+		//}
+
+		return true;
+		
+	}
+	
+	/**
 	 * Given a scale matrix parsed from a PDB entry (SCALE1,2,3 records), 
 	 * compares it to our calculated Mtranspose matrix to see if they coincide and 
 	 * returns true if they do.
@@ -362,6 +395,7 @@ public class CrystalCell implements Serializable {
 	 * @return
 	 */
 	public boolean checkScaleMatrix(Matrix4d scaleMatrix) {
+		
 		for (int i=0;i<3;i++) {
 			for (int j=0;j<3;j++) {
 				if (!deltaComp(getMTranspose().getElement(i, j),scaleMatrix.getElement(i, j))) {

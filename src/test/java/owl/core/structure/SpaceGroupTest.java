@@ -117,6 +117,12 @@ public class SpaceGroupTest {
 				Matrix4d m = spaceGroup.getTransformation(i);
 				Matrix4d mT = unitCell.transfToOrthonormal(m);
 				
+				// as stated in PDB documentation for SCALE matrix (our MTranspose matrix) the inverse determinant should match the cell volume
+				Assert.assertEquals(unitCell.getVolume(),1.0/unitCell.getMTranspose().determinant(),DELTA);
+				// and checking that our method to check scale matrix works as expected				
+				Matrix4d scaleMat = new Matrix4d(unitCell.getMTranspose(),new Vector3d(0,0,0),1);
+				Assert.assertTrue(unitCell.checkScaleMatrixConsistency(scaleMat));
+				
 				// traces before and after transformation must coincide
 				Assert.assertEquals(m.m00+m.m11+m.m22+m.m33, mT.m00+mT.m11+mT.m22+mT.m33, DELTA);
 
