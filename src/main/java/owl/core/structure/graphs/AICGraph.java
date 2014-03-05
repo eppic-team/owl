@@ -186,7 +186,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	 * @param distance
 	 * @return
 	 */
-	private boolean isHbondInteraction(Pair<Atom> pair, double distance) {
+	protected boolean isHbondInteraction(Pair<Atom> pair, double distance) {
 		Atom atomi = pair.getFirst();
 		Atom atomj = pair.getSecond();
 		if ( (atomi.getType()!=null && atomj.getType()!=null) && // this can happen if the atom type is unknonw (not in our AtomType enum)
@@ -205,7 +205,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	 * @param distance
 	 * @return
 	 */
-	private boolean isDisulfideInteraction(Pair<Atom> pair, double distance) {
+	protected boolean isDisulfideInteraction(Pair<Atom> pair, double distance) {
 		Atom atomi = pair.getFirst();
 		Atom atomj = pair.getSecond();
 		if (atomi.getParentResidue().getShortCode()=='C' &&

@@ -259,7 +259,7 @@ public class AsaCalculator {
 		for (PdbChain chain:pdb.getAllChains()) {
 			for (Residue res:chain) {
 
-				System.out.printf("%3d\t%s\t%6.2f\n",res.getSerial(),res.getLongCode(),res.getAsa());
+				System.out.printf("%1s\t%3d\t%s\t%6.2f\n",chain.getPdbChainCode(),res.getSerial(),res.getLongCode(),res.getAsa());
 				tot+=res.getAsa();
 			}
 		}
