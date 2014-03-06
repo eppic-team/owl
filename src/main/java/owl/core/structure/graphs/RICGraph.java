@@ -35,6 +35,7 @@ public class RICGraph extends SparseGraph<RICGNode,RICGEdge> {
 			if (this.findEdge(iNode, jNode)==null) {
 
 				RICGEdge ricEdge = new RICGEdge();
+				ricEdge.addDistance(aicEdge.getDistance());
 				ricEdge.setClash(isClash);
 				ricEdge.setDisulfide(isDisulfide);
 				ricEdge.setnAtoms(0);
@@ -48,7 +49,7 @@ public class RICGraph extends SparseGraph<RICGNode,RICGEdge> {
 			} else {
 				
 				RICGEdge ricEdge = this.findEdge(iNode, jNode);
-				
+				ricEdge.addDistance(aicEdge.getDistance());
 				// only 1 atom with clash or disulfide will set it for the whole residue,
 				// we don't want to reset the state once it is already true
 				if (!ricEdge.isClash()) ricEdge.setClash(isClash);
