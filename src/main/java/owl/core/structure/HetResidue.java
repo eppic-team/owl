@@ -203,6 +203,8 @@ public class HetResidue implements Residue {
 
 	@Override
 	public double getBsaToAsaRatio() {
+		if (this.bsa==0.0 && this.asa==0.0) return 0.0;
+		
 		return (double)this.bsa/ (double)this.asa;
 	}
 	
