@@ -139,4 +139,8 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 	public int compareTo(PisaAssembly o) {
 		return Double.compare(this.dissEnergy, o.dissEnergy);
 	}
+	
+	public String toString() {
+		return "id:"+this.id+"-size:"+this.mmsize;
+	}
 }

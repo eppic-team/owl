@@ -9,6 +9,7 @@ import java.util.Map;
 
 import owl.core.connections.pisa.PisaAsmSet;
 import owl.core.connections.pisa.PisaAsmSetList;
+import owl.core.connections.pisa.PisaAssembliesXMLParser;
 import owl.core.connections.pisa.PisaAssembly;
 import owl.core.connections.pisa.PisaConnection;
 
@@ -46,7 +47,7 @@ public class getPisaAssemblyPreds {
 		
 		List<String> pdbCodes = readListFile(file);
 		
-		Map<String, PisaAsmSetList> asms = pc.getAssembliesDescription(pdbCodes);
+		Map<String, PisaAsmSetList> asms = pc.getAssembliesDescription(pdbCodes, PisaAssembliesXMLParser.VERSION1);
 		
 		for (String pdbCode:pdbCodes) {
 			PisaAsmSetList pal = asms.get(pdbCode);

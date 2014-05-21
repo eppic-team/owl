@@ -156,11 +156,12 @@ public class PisaConnection {
 	 * query into chunks of {@value #MAX_ENTRIES_PER_REQUEST}, parses it and 
 	 * returns the result as a map of pdb codes to lists of PISA assemblies 
 	 * @param pdbCodesList pdb codes list for which we want to retrieve pisa assemblies
+	 * @param pisaVersion
 	 * @return
 	 * @throws IOException
 	 * @throws SAXException
 	 */
-	public Map<String,PisaAsmSetList> getAssembliesDescription(List<String> pdbCodesList) throws IOException, SAXException {
+	public Map<String,PisaAsmSetList> getAssembliesDescription(List<String> pdbCodesList, int pisaVersion) throws IOException, SAXException {
 		Map<String,PisaAsmSetList> allPisaAsmSets = new HashMap<String,PisaAsmSetList>();
 		// we do batches of MAX_ENTRIES_PER_REQUEST
 		for (int i=0;i<pdbCodesList.size();i+=MAX_ENTRIES_PER_REQUEST) {
@@ -169,7 +170,7 @@ public class PisaConnection {
 				if (c!=i) commaSepList+=",";
 				commaSepList+=pdbCodesList.get(c);
 			}
-			allPisaAsmSets.putAll(getAssembliesDescription(commaSepList));
+			allPisaAsmSets.putAll(getAssembliesDescription(commaSepList, pisaVersion));
 		}
 		return allPisaAsmSets;
 	}
@@ -178,15 +179,16 @@ public class PisaConnection {
 	 * Retrieves the XML PISA assembly description from the PISA web server, parses it and 
 	 * returns the result as a map of pdb codes to lists of PISA assemblies 
 	 * @param commaSepList
+	 * @param pisaVersion
 	 * @return
 	 * @throws IOException
 	 * @throws SAXException
 	 */
-	private Map<String,PisaAsmSetList> getAssembliesDescription(String commaSepList) throws IOException, SAXException {
+	private Map<String,PisaAsmSetList> getAssembliesDescription(String commaSepList, int pisaVersion) throws IOException, SAXException {
 		URL assembliesURL = new URL(assembliesUrl+commaSepList);
 		URLConnection conn = assembliesURL.openConnection();
 		
-		PisaAssembliesXMLParser pxmlParser = new PisaAssembliesXMLParser(conn.getInputStream());
+		PisaAssembliesXMLParser pxmlParser = new PisaAssembliesXMLParser(conn.getInputStream(), pisaVersion);
 		Map<String,PisaAsmSetList> map = pxmlParser.getAllAssemblies();
 		if (map.isEmpty()) throw new IOException("The PISA server returned no assembly data for URL "+assembliesURL.toString());
 		return map;
@@ -286,7 +288,7 @@ public class PisaConnection {
 			//}
 		}
 		
-		Map<String,PisaAsmSetList> allPisaAsmSets = pc.getAssembliesDescription(pdbCodesList);
+		Map<String,PisaAsmSetList> allPisaAsmSets = pc.getAssembliesDescription(pdbCodesList, PisaAssembliesXMLParser.VERSION1);
 		for (String pdbCode:allPisaAsmSets.keySet()) {
 			System.out.println(pdbCode);
 			for (PisaAsmSet asmSet:allPisaAsmSets.get(pdbCode)) {

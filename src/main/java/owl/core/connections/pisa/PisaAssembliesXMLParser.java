@@ -23,12 +23,14 @@ import org.xml.sax.helpers.XMLReaderFactory;
 public class PisaAssembliesXMLParser implements ContentHandler {
 
 	// xml tags
-	private static final String PDB_ENTRY_TAG = "pdb_entry";
+	private static final String PDB_ENTRY_TAG_V1 = "pdb_entry";
+	private static final String PDB_ENTRY_TAG_V2 = "pisa_results";
 	private static final String ASM_SET_TAG = "asm_set";
 	private static final String ASSEMBLY_TAG = "assembly";
 	private static final String INTERFACES_TAG = "interfaces";
 
-	private static final String PDB_CODE_TAG = "pdb_code";
+	private static final String PDB_CODE_TAG_V1 = "pdb_code";
+	private static final String PDB_CODE_TAG_V2 = "name";
 	private static final String STATUS_TAG = "status";
 	
 	private static final String ID_TAG = "id";
@@ -39,6 +41,16 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 	private static final String	COMPOSITION_TAG = "composition";
 
 	private static final String NOCC_TAG = "nocc";
+	
+	/**
+	 * PISA version in EBI web server
+	 */
+	public static final int VERSION1 = 1;
+	
+	/**
+	 * PISA version in ccp4 command line program
+	 */
+	public static final int VERSION2 = 2;
 		
 	// members
 	private InputSource input;
@@ -59,14 +71,35 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 	private boolean inInterfaces;
 	
 	private int currentInterfaceId;
+
+	private int pisaVersion; // either 1 or 2
+	
+	private String pdbEntryTag;
+	private String pdbCodeTag;
 	
 	/**
 	 * Constructs new PisaAssembliesXMLParser and parses the given XML stream
 	 * Get the list calling {@link #getAllAssemblies()}
+	 * Two XML formats are supported depending whether the version is {@link #VERSION1} for XML
+	 * files downloaded from the PISA server or {@link #VERSION2} for XML files obtained from the
+	 * CCP4 command-line PISA.
 	 * @param is the stream with XML data for assemblies description
+	 * @param pisaVersion the PISA version: either {@link #VERSION1} or {@link #VERSION2}
 	 */
-	public PisaAssembliesXMLParser(InputStream is) throws SAXException, IOException {
+	public PisaAssembliesXMLParser(InputStream is, int pisaVersion) throws SAXException, IOException {
 		this.input = new InputSource(is);
+		this.pisaVersion = pisaVersion;
+		
+		if (pisaVersion==VERSION1) {
+			pdbEntryTag = PDB_ENTRY_TAG_V1;
+			pdbCodeTag = PDB_CODE_TAG_V1;
+		} else if (pisaVersion==VERSION2) {
+			pdbEntryTag = PDB_ENTRY_TAG_V2;
+			pdbCodeTag = PDB_CODE_TAG_V2;			
+		} else {
+			throw new IllegalArgumentException("PISA versions supported are either "+VERSION1+" or "+VERSION2);
+		}
+		
 		XMLReader parser = XMLReaderFactory.createXMLReader();
  		
 		parser.setContentHandler(this);
@@ -117,12 +150,12 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 
 	public void startElement(String uri, String localName, String name,
 			Attributes atts) throws SAXException {
-		if (name.equals(PDB_ENTRY_TAG)){
+		if (name.equals(pdbEntryTag)){
 			inEntry = true;
 			currentAsmSetList = new PisaAsmSetList();
 		}
 		if (inEntry) {
-			if (name.equals(PDB_CODE_TAG)) {
+			if (name.equals(pdbCodeTag)) {
 				initValueReading();
 			} else if (name.equals(STATUS_TAG)) {
 				initValueReading();
@@ -169,12 +202,12 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 	public void endElement(String uri, String localName, String name)
 			throws SAXException {
 
-		if (name.equals(PDB_ENTRY_TAG)) {
+		if (name.equals(pdbEntryTag)) {
 			inEntry = false;
 			allAssemblies.put(currentPdbCode, currentAsmSetList);
 		}
 		if (inEntry) {
-			if (name.equals(PDB_CODE_TAG)) {
+			if (name.equals(pdbCodeTag)) {
 				currentPdbCode = flushValue().toLowerCase();
 				currentAsmSetList.setPdbCode(currentPdbCode);
 			} else if (name.equals(STATUS_TAG)) {
@@ -204,6 +237,11 @@ public class PisaAssembliesXMLParser implements ContentHandler {
 			if (inAsmSet && inAssembly && inInterfaces) {
 				if (name.equals(ID_TAG)) {
 					currentInterfaceId = Integer.parseInt(flushValue());
+					if (pisaVersion==VERSION2) {
+						// version 1 lists all interfaces and assigns nocc>0 to all those composing this assembly
+						// version 2 lists only the interfaces composing this assembly (nocc field is missing)
+						currentPisaAssembly.addInterfaceId(currentInterfaceId);
+					}
 				} else if (name.equals(NOCC_TAG)) {
 					int nocc = Integer.parseInt(flushValue());
 					if (nocc>0) {
