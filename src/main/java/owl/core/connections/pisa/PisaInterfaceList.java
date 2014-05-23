@@ -20,6 +20,10 @@ public class PisaInterfaceList implements Iterable<PisaInterface> {
 		return list.add(interf);
 	}
 
+	public List<PisaInterface> getList() {
+		return list;
+	}
+
 	@Override
 	public Iterator<PisaInterface> iterator() {
 		return list.iterator();

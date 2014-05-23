@@ -17,9 +17,15 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 	// we'll considered that it means simply unstable 
 	private static final String SCORE_UNSTABLE2 =   
 			"Analysis of crystal interfaces has not revealed any strong indications that this assembly may form stable complexes in solution.";
-	private static final String SCORE_GRAY = 
-			"This assembly falls into a grey region of complex formation criteria. It may or may not be stable in solution.";
 	
+	// two different messages for gray in ver1 and ver2
+	private static final String SCORE_GRAY1 = 
+			"This assembly falls into a grey region of complex formation criteria. It may or may not be stable in solution.";
+
+	private static final String SCORE_GRAY2 = 
+			"This assembly falls into a grey region of complexation criteria. It may or may not be stable in solution.";
+
+
 	public enum PredictionType {
 		STABLE, UNSTABLE, GRAY;
 	}
@@ -76,6 +82,12 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 	}
 
 	public void setFormula(String formula) {
+		// adding a check for the formula (there seems to be a bug in PISA command-line not producing correctly formatted formulas, e.g. for 1aup)
+		Pattern p = Pattern.compile("[A-Za-z]");
+		Matcher m = p.matcher(formula);
+		if (!m.find()) {
+			throw new IllegalArgumentException("The PISA formula '"+formula+"' does not seem tha have the right format (no alphabetic characters present)" );
+		}
 		this.formula = formula;
 	}
 	
@@ -131,7 +143,7 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 	public PredictionType getPredictionType() {
 		if (score.equals(SCORE_STABLE)) return PredictionType.STABLE;
 		if (score.equals(SCORE_UNSTABLE) || score.equals(SCORE_UNSTABLE2)) return PredictionType.UNSTABLE;
-		if (score.equals(SCORE_GRAY)) return PredictionType.GRAY;
+		if (score.equals(SCORE_GRAY1) || score.equals(SCORE_GRAY2)) return PredictionType.GRAY;
 		return null;
 	}
 	

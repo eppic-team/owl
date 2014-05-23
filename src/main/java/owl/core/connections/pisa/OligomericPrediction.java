@@ -55,12 +55,6 @@ public class OligomericPrediction {
 		return assemblies;
 	}
 	
-	public PisaAsmSet getPisaAsmSet() {
-		PisaAsmSet set = new PisaAsmSet();
-		for(PisaAssembly pa:this.assemblies) set.add(pa);
-		return set;
-	}
-	
 	/**
 	 * Returns the PISA interface ids of all engaged protein-protein interfaces of this 
 	 * PISA oligomeric prediction.
@@ -79,11 +73,10 @@ public class OligomericPrediction {
 	/**
 	 * Returns true if given PISA interface id is one of the interfaces engaged in the 
 	 * assemblies represented by this prediction
-	 * @param pil
 	 * @param id
 	 * @return
 	 */
-	public boolean containProtInterface(PisaInterfaceList pil, int id) {
+	public boolean containProtInterface(int id) {
 		for (PisaAssembly ass:assemblies) {
 			for (int assid:ass.getInterfaceIds()) {
 				if (assid==id) return true;

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import owl.core.connections.pisa.PisaAssembly.PredictionType;
+
 public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 
 	private String pdbCode;
@@ -53,6 +55,8 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 		if (size()==0) {
 			return new OligomericPrediction(1);
 		} 
+
+		// we then take first AsmSet present as the prediction
 		PisaAsmSet pas = get(0);
 		
 		// NOTE that in principle PISA uses deltaGdiss to classify between stable, unstable and gray:
@@ -68,8 +72,12 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 		
 		for (PisaAssembly pa:pas) {
 			if (pa.isMacromolecular()) {
-				if (pa.getPredictionType()!=PisaAssembly.PredictionType.GRAY) allGray = false;
-				if (pa.getPredictionType()!=PisaAssembly.PredictionType.UNSTABLE) allUnstable = false;
+				PredictionType pt = pa.getPredictionType();
+				if (pt==null) 
+					System.err.println("ERROR: could not understand the prediction type (stable, gray or unstable) for assembly "+pa.getId());
+				
+				if (pt!=PisaAssembly.PredictionType.GRAY) allGray = false;
+				if (pt!=PisaAssembly.PredictionType.UNSTABLE) allUnstable = false;
 			}
 		}
 
@@ -84,11 +92,12 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 			
 
 		// all other cases: one or more stable assemblies in the AsmSet
-		OligomericPrediction op = new OligomericPrediction(1);
+		OligomericPrediction op = new OligomericPrediction(1); 
 		boolean sizeSet = false;
 		for (PisaAssembly pa:pas) {
 			if (!pa.isMacromolecular()) continue;
 
+			// we set the size to the first deltaGdiss>0 mm assembly present
 			if (!sizeSet && pa.getDissEnergy()>0) {
 				op.setMmSize(pa.getMmsize());
 				sizeSet = true;
@@ -100,6 +109,7 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 			//		pa.getDissEnergy(),
 			//		pa.getFormula(),
 			//		pa.getInterfaceIdsString());
+			
 		}
 		return op;
 	}
