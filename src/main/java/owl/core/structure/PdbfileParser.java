@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -27,7 +28,6 @@ import owl.core.structure.io.AtomLine;
 import owl.core.structure.io.AtomLineList;
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
-import owl.core.structure.io.BioUnitOperation;
 import owl.core.structure.io.SecStructureLine;
 import owl.core.util.FileFormatException;
 
@@ -84,7 +84,7 @@ public class PdbfileParser {
 	
 	private ArrayList<BioUnitAssembly> bioUnitAssemblies;
 	private ArrayList<BioUnitAssemblyGen> bioUnitGenerators;
-	private ArrayList<BioUnitOperation> bioUnitOperations;
+	private Map<Integer,Matrix4d> bioUnitOperations;
 	
 	/**
 	 * Constructs a pdb file parser object given a pdbfile name
@@ -280,12 +280,8 @@ public class PdbfileParser {
 		this.bioUnitGenerators = bioUnitGenerators;
 	}
 
-	public ArrayList<BioUnitOperation> getBioUnitOperations() {
+	public Map<Integer, Matrix4d> getBioUnitOperations() {
 		return bioUnitOperations;
-	}
-
-	public void setBioUnitOperations(ArrayList<BioUnitOperation> bioUnitOperations) {
-		this.bioUnitOperations = bioUnitOperations;
 	}
 
 	/**
@@ -329,8 +325,8 @@ public class PdbfileParser {
 		BioUnitAssembly assembly = new BioUnitAssembly();
 		bioUnitGenerators = new ArrayList<BioUnitAssemblyGen>();
 		BioUnitAssemblyGen generator = new BioUnitAssemblyGen();
-		bioUnitOperations = new ArrayList<BioUnitOperation>();
-		BioUnitOperation operation = new BioUnitOperation();
+		bioUnitOperations = new TreeMap<Integer,Matrix4d>();
+		int bioUnitOperationId = 0;
 		
 		while((line = fpdb.readLine()) != null ) {
 			linecount++;
@@ -500,18 +496,21 @@ public class PdbfileParser {
 						double z = Double.parseDouble(mR.group(5));
 						double t = Double.parseDouble(mR.group(6));
 						
+						Matrix4d operation = new Matrix4d();
+						operation.setElement(3, 3, 1);
+						
 						if(matLine == 1){
-							operation = new BioUnitOperation(operation.getId()+1);
+							bioUnitOperationId++;
 						}
 						
-						operation.setOperatorValue(4*(matLine-1)+0, x);
-						operation.setOperatorValue(4*(matLine-1)+1, y);
-						operation.setOperatorValue(4*(matLine-1)+2, z);
-						operation.setOperatorValue(4*(matLine-1)+3, t);
+						operation.setElement(matLine-1, 0, x);
+						operation.setElement(matLine-1, 1, y);
+						operation.setElement(matLine-1, 2, z);
+						operation.setElement(matLine-1, 3, t);
 						
 						if(matLine == 3){
-							bioUnitOperations.add(operation);
-							generator.addOperationId(operation.getId());
+							bioUnitOperations.put(bioUnitOperationId, operation);
+							generator.addOperationId(bioUnitOperationId);
 						}
 					}
 				}

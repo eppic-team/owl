@@ -13,8 +13,7 @@ public enum BioUnitAssignmentType {
 	eppic(1,"eppic"),
 	authors(2,"authors"),
 	pisa(3,"pisa"),
-	pqs(4,"pqs"),
-	none(5,"none");
+	pqs(4,"pqs");
 	
 	private int id;
 	private String type;
@@ -40,7 +39,7 @@ public enum BioUnitAssignmentType {
 	
 	public static BioUnitAssignmentType getByString(String type) {
 		if(string2type.containsKey(type)) return string2type.get(type.toLowerCase());
-		else return none;
+		else return null;
 	}
 	
 	public String getType(){

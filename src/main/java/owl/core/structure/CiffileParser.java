@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -30,7 +31,6 @@ import owl.core.structure.io.AtomLine;
 import owl.core.structure.io.AtomLineList;
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
-import owl.core.structure.io.BioUnitOperation;
 import owl.core.structure.io.CifFieldInfo;
 import owl.core.structure.io.PdbxPolySeqGroup;
 import owl.core.structure.io.PdbxPolySeqLine;
@@ -670,7 +670,7 @@ public class CiffileParser {
 	protected void readBioUnit(PdbAsymUnit pdbAsymUnit) {
 		ArrayList<BioUnitAssembly> assemblies = new ArrayList<BioUnitAssembly>();
 		ArrayList<BioUnitAssemblyGen> generators = new ArrayList<BioUnitAssemblyGen>();
-		ArrayList<BioUnitOperation> operations = new ArrayList<BioUnitOperation>();
+		Map<Integer, Matrix4d> operations = new TreeMap<Integer, Matrix4d>();
 		
 		//**********************************************
 		// _pdb_struct_assembly fields
@@ -879,7 +879,6 @@ public class CiffileParser {
 		//Check if the fields are in loop or not
 		//for non-loop cases
 		if(!pdbxStructOperListField.isLoop()){
-			BioUnitOperation operation = new BioUnitOperation();
 
 			String idStr = pdbxStructOperListField.getSubFieldData("id");
 			String m00 = pdbxStructOperListField.getSubFieldData("matrix[1][1]");
@@ -903,22 +902,24 @@ public class CiffileParser {
 					isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
 					isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
 				int id = Integer.parseInt(idStr);
-				operation.setId(id);
+				
+				Matrix4d mat = new Matrix4d();
+				mat.setElement(3,3,1);
 
-				operation.setOperatorValue(0, Double.parseDouble(m00));
-				operation.setOperatorValue(1, Double.parseDouble(m01));
-				operation.setOperatorValue(2, Double.parseDouble(m02));
-				operation.setOperatorValue(3, Double.parseDouble(m03));
-				operation.setOperatorValue(4, Double.parseDouble(m10));
-				operation.setOperatorValue(5, Double.parseDouble(m11));
-				operation.setOperatorValue(6, Double.parseDouble(m12));
-				operation.setOperatorValue(7, Double.parseDouble(m13));
-				operation.setOperatorValue(8, Double.parseDouble(m20));
-				operation.setOperatorValue(9, Double.parseDouble(m21));
-				operation.setOperatorValue(10, Double.parseDouble(m22));
-				operation.setOperatorValue(11, Double.parseDouble(m23));
+				mat.setElement(0, 0, Double.parseDouble(m00));
+				mat.setElement(0, 1, Double.parseDouble(m01));
+				mat.setElement(0, 2, Double.parseDouble(m02));
+				mat.setElement(0, 3, Double.parseDouble(m03));
+				mat.setElement(1, 0, Double.parseDouble(m10));
+				mat.setElement(1, 1, Double.parseDouble(m11));
+				mat.setElement(1, 2, Double.parseDouble(m12));
+				mat.setElement(1, 3, Double.parseDouble(m13));
+				mat.setElement(2, 0, Double.parseDouble(m20));
+				mat.setElement(2, 1, Double.parseDouble(m21));
+				mat.setElement(2, 2, Double.parseDouble(m22));
+				mat.setElement(2, 3, Double.parseDouble(m23));
 
-				operations.add(operation);
+				operations.put(id, mat);
 			}//else
 				//System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
 			
@@ -943,7 +944,6 @@ public class CiffileParser {
 			//Read _pdbx_struct_oper_list block values
 			while(pdbxStructOperListField.hasMoreData()) {
 				
-				BioUnitOperation operation = new BioUnitOperation();
 				String[] tokens = pdbxStructOperListField.getNextTokens();
 				
 				String idStr = tokens[idIdx].trim();
@@ -968,22 +968,23 @@ public class CiffileParser {
 						isDouble(m10) && isDouble(m11) && isDouble(m12) && isDouble(m13) &&
 						isDouble(m20) && isDouble(m21) && isDouble(m22) && isDouble(m23) ){
 					int id = Integer.parseInt(idStr);
-					operation.setId(id);
+					Matrix4d mat = new Matrix4d();
+					mat.setElement(3,3,1);
 
-					operation.setOperatorValue(0, Double.parseDouble(m00));
-					operation.setOperatorValue(1, Double.parseDouble(m01));
-					operation.setOperatorValue(2, Double.parseDouble(m02));
-					operation.setOperatorValue(3, Double.parseDouble(m03));
-					operation.setOperatorValue(4, Double.parseDouble(m10));
-					operation.setOperatorValue(5, Double.parseDouble(m11));
-					operation.setOperatorValue(6, Double.parseDouble(m12));
-					operation.setOperatorValue(7, Double.parseDouble(m13));
-					operation.setOperatorValue(8, Double.parseDouble(m20));
-					operation.setOperatorValue(9, Double.parseDouble(m21));
-					operation.setOperatorValue(10, Double.parseDouble(m22));
-					operation.setOperatorValue(11, Double.parseDouble(m23));
-
-					operations.add(operation);
+					mat.setElement(0, 0, Double.parseDouble(m00));
+					mat.setElement(0, 1, Double.parseDouble(m01));
+					mat.setElement(0, 2, Double.parseDouble(m02));
+					mat.setElement(0, 3, Double.parseDouble(m03));
+					mat.setElement(1, 0, Double.parseDouble(m10));
+					mat.setElement(1, 1, Double.parseDouble(m11));
+					mat.setElement(1, 2, Double.parseDouble(m12));
+					mat.setElement(1, 3, Double.parseDouble(m13));
+					mat.setElement(2, 0, Double.parseDouble(m20));
+					mat.setElement(2, 1, Double.parseDouble(m21));
+					mat.setElement(2, 2, Double.parseDouble(m22));
+					mat.setElement(2, 3, Double.parseDouble(m23));
+					
+					operations.put(id, mat);
 				}//else
 				//	System.err.println("Warning: Encountered a non-numeric field in "+pdbxStructOperList+" matrix list; will not add it");
 				

@@ -137,7 +137,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
 		this.transform = new CrystalTransform((SpaceGroup)null);
 		
-		this.pdbBioUnitList = new PdbBioUnitList(this);
+		this.pdbBioUnitList = new PdbBioUnitList();
 
 	}
 	
@@ -175,7 +175,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = null;
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
-		this.pdbBioUnitList = new PdbBioUnitList(this);
+		this.pdbBioUnitList = new PdbBioUnitList();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile, true);
@@ -211,7 +211,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		this.title = null;
 		this.chains = new TreeMap<String, PdbChain>();
 		this.nonPolyChains = new TreeMap<String,PdbChain>();
-		this.pdbBioUnitList = new PdbBioUnitList(this);
+		this.pdbBioUnitList = new PdbBioUnitList();
 		int type = FileTypeGuesser.guessFileType(pdbSourceFile);
 		if (type==FileTypeGuesser.PDB_FILE || type ==FileTypeGuesser.RAW_PDB_FILE || type==FileTypeGuesser.CASP_TS_FILE) {
 			loadFromPdbFile(pdbSourceFile, missingSeqResPadding);
@@ -867,7 +867,7 @@ public class PdbAsymUnit implements Serializable { //, Iterable<PdbChain>
 		
 		newAsym.setTransform(new CrystalTransform(this.transform));
 		
-		newAsym.pdbBioUnitList = this.pdbBioUnitList.copy(newAsym);
+		newAsym.pdbBioUnitList = this.pdbBioUnitList.copy();
 		return newAsym;
 	}
 	

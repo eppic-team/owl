@@ -7,13 +7,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import javax.vecmath.Matrix4d;
 
 import owl.core.structure.io.BioUnitAssembly;
 import owl.core.structure.io.BioUnitAssemblyGen;
-import owl.core.structure.io.BioUnitOperation;
 
 /**
  * Contains a list of PdbBioUnits
@@ -24,49 +24,12 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 
 	private static final long serialVersionUID = 1L;
 	
-	/**
-	 * A private class to reduce a list of PdbBioUnits to a single one 
-	 * with unique type, mmSize and list of cluster ids  
-	 * @author duarte_j
-	 *
-	 */
-	private class BioUnitView {
-		private int index;
-		private BioUnitAssignmentType type;
-		private int mmSize;
-		private List<Integer> clusterIds;
-		
-		public BioUnitView(int index, BioUnitAssignmentType type, int mmSize, List<Integer> clusterIds) {
-			this.index = index;
-			this.type = type;
-			this.mmSize = mmSize;
-			this.clusterIds = clusterIds;
-		}
-		
-		public boolean equals(Object o) {
-			if (!(o instanceof BioUnitView)) return false;
-			BioUnitView other = (BioUnitView) o;
-			
-			if (other.type!=this.type) return false;
-			if (other.mmSize!=this.mmSize) return false;
-			if (other.clusterIds.size()!=this.clusterIds.size()) return false;
-			for (int i=0;i<clusterIds.size();i++) {
-				if (other.clusterIds.get(i)!=this.clusterIds.get(i)) {
-					return false;
-				}
-			}
-			
-			return true;
-		}
-	}
+
 	
-	
-	private PdbAsymUnit parent;
 	private List<PdbBioUnit> pdbBioUnits;
 	
 	//Default Constructor
-	public PdbBioUnitList(PdbAsymUnit parent){
-		this.parent = parent;
+	public PdbBioUnitList(){
 		this.pdbBioUnits = new ArrayList<PdbBioUnit>();
 	}
 	
@@ -78,20 +41,20 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	 * @param operations
 	 * @param parser
 	 */
-	public PdbBioUnitList(PdbAsymUnit parent, ArrayList<BioUnitAssembly> assemblies, ArrayList<BioUnitAssemblyGen> generators, ArrayList<BioUnitOperation> operations, String parser){
-		this.parent = parent;
+	public PdbBioUnitList(PdbAsymUnit parent, ArrayList<BioUnitAssembly> assemblies, ArrayList<BioUnitAssemblyGen> generators, Map<Integer,Matrix4d> operations, String parser){
 		this.pdbBioUnits = new ArrayList<PdbBioUnit>();
-		boolean hasNucelotides = false;
+		boolean hasNucleotides = false;
 
+		
+		Map<Integer,Matrix4d> crystOperations = new TreeMap<Integer,Matrix4d>();		
 		//Transform the orthogonal matrix to crystal coordinates
 		if(parent.getCrystalCell()!=null && parent.isCrystallographicExpMethod()){
-			for(BioUnitOperation oper:operations){				
-				Matrix4d oper4d = new Matrix4d(oper.getOperator());
-				oper4d = parent.getCrystalCell().transfToCrystal(oper4d);
-				for(int i=0; i<4; i++)
-					for(int j=0; j<4;j++)
-						oper.setOperatorValue(4*i+j, oper4d.getElement(i, j));
+			for (int operId:operations.keySet()) {				
+				Matrix4d crystOper = parent.getCrystalCell().transfToCrystal(operations.get(operId));
+				crystOperations.put(operId,crystOper);
 			}
+		} else {
+			crystOperations.putAll(operations);
 		}
 
 
@@ -120,7 +83,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 					tempList.add(code);
 				else{
 					//System.err.println("Warning: Chain with pdbChainCode "+code+" is not protein chain, excluding it from biounit assembly and over-writing size!");
-					hasNucelotides = true;
+					hasNucleotides = true;
 				}
 			}
 			gen.setPdbChainCodes(tempList);
@@ -143,7 +106,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 						localUnit.addOperator(chain.getPdbChainCode(), idOperator);
 					}
 				localUnit.setSize(numProteinChains);
-				localUnit.assignType(BioUnitAssignmentType.getByString("authors"));	
+				localUnit.setType(BioUnitAssignmentType.getByString("authors"));	
 
 				if(numProteinChains != 0) this.pdbBioUnits.add(localUnit);
 			}
@@ -152,7 +115,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 			if(generators.isEmpty()) {
 				//System.err.println("Warning: No bio unit assembly generator found; bio-units will not be added!");
 			}
-			else if(operations.isEmpty()) {
+			else if(crystOperations.isEmpty()) {
 				//System.err.println("Warning: No bio unit operator found; bio-units will not be added! ");
 			}
 			else
@@ -160,7 +123,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 					if(assembly.getId()==0){
 						//System.err.println("Warning: Error in reading Id for the assembly; will not add this biounit.");
 						continue;
-					}else
+					} else
 						for(String method:assembly.getTypes()){
 							PdbBioUnit localUnit = new PdbBioUnit();
 							boolean toAdd = true;
@@ -171,8 +134,8 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 								continue;
 							}
 
-							if(BioUnitAssignmentType.getByString(method)!=BioUnitAssignmentType.none)
-								localUnit.assignType(BioUnitAssignmentType.getByString(method));
+							if(BioUnitAssignmentType.getByString(method)!=null)
+								localUnit.setType(BioUnitAssignmentType.getByString(method));
 							else{
 								//System.err.println("Warning: The assignment type of biounit assembly with id:"+assembly.getId()+" not understood; will not add this biounit!");
 								continue;
@@ -191,14 +154,15 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 									if(numChains!=0 && numOperations!=0)
 										for(String code:gen.getPdbChainCodes())
 											for(int operId:gen.getOperationIds()){
-												if(getOperator(operId, operations)!=null) localUnit.addOperator(code, getOperator(operId, operations));
+												if(crystOperations.containsKey(operId)) 
+													localUnit.addOperator(code, crystOperations.get(operId));
 												else {
 													//System.err.println("Warning: Operator record "+operId+" not present for generator "+iGen);
 													toAdd = false;
 												}
 											}
 									else {
-										if(!hasNucelotides){
+										if(!hasNucleotides){
 											//System.err.println("Warning: Either no chains or no operations in bio-unit assembly generator record "+iGen);
 										}
 										toAdd = false;
@@ -207,16 +171,16 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 							}
 							//Check if the number of operators is equal to the size of the biounit
 							int numOperators = 0;
-							for(String code:localUnit.getOperators().keySet())
-								numOperators += localUnit.getOperators().get(code).size();
+							for(String code:localUnit.getMemberPdbChainCodes())
+								numOperators += localUnit.getOperators(code).size();
 
 
-							if(localUnit.getSize() != numOperators){
-								if(hasNucelotides) localUnit.setSize(numOperators);
-								else{
+							if(localUnit.getSize() != numOperators) {
+								if(hasNucleotides) localUnit.setSize(numOperators);
+								else {
 									//System.err.println("Warning: The size of the assembly for biounit "+assembly.getId()+" is not equal to it's number of operators; will not add this biounit.");
 									toAdd=false;
-									}
+								}
 							}
 
 							if(toAdd) this.pdbBioUnits.add(localUnit);
@@ -226,23 +190,6 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 		}
 
 	}
-
-	//private method
-	private static Matrix4d getOperator(int id, ArrayList<BioUnitOperation> operations){
-		Matrix4d operation = new Matrix4d();
-		boolean present = false;
-		for(BioUnitOperation oper:operations){
-			if(id == oper.getId()) {
-				operation = new Matrix4d(oper.getOperator());
-				present = true;
-				break;
-			}
-		}
-
-		if(present) return operation;
-		else return null;
-	}
-
 
 	//Getters and Setters
 	public List<PdbBioUnit> getPdbBioUnits() {
@@ -257,17 +204,13 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 		this.pdbBioUnits.add(unit);
 		
 	}
-
-	public PdbAsymUnit getParent() {
-		return parent;
+	
+	public int size() {
+		return pdbBioUnits.size();
 	}
 
-	public void setParent(PdbAsymUnit parent) {
-		this.parent = parent;
-	}
-
-	public PdbBioUnitList copy(PdbAsymUnit parent) {
-		PdbBioUnitList newList = new PdbBioUnitList(parent);
+	public PdbBioUnitList copy() {
+		PdbBioUnitList newList = new PdbBioUnitList();
 
 		for(PdbBioUnit unit:this.pdbBioUnits)
 			newList.pdbBioUnits.add(unit.copy());
@@ -278,40 +221,6 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	@Override
 	public Iterator<PdbBioUnit> iterator() {
 		return this.pdbBioUnits.iterator();
-	}
-	
-	/**
-	 * Retunrs a map of PdbBioUnit indices to list of interface cluster ids that match
-	 * that biounit assembly. Removes duplicate PdbBioUnits by grouping those with same
-	 * type, size and list of cluster ids and considering them identical. 
-	 * @param interfaces
-	 * @return
-	 */
-	public TreeMap<Integer, List<Integer>> getInterfaceClusterMatches(ChainInterfaceList interfaces) {
-		
-		List<BioUnitView> buList = new ArrayList<BioUnitView>();
-		
-		for(PdbBioUnit bioUnit:this.pdbBioUnits){
-			
-			List<Integer> matchList = bioUnit.getInterfaceClusterMatches(interfaces);
-			// if nothing matches for this bioUnit, don't add
-			if(bioUnit.getSize() > 1 && matchList.size() < 1) {
-				continue;
-			}
-			else {
-				BioUnitView bu = new BioUnitView(pdbBioUnits.indexOf(bioUnit), bioUnit.getType(),bioUnit.getSize(),matchList);
-				if (!buList.contains(bu)) {
-					buList.add(bu);
-				}
-			}
-		}
-		TreeMap<Integer, List<Integer>> map = new TreeMap<Integer,List<Integer>>();
-		
-		for (BioUnitView bu:buList) {
-			map.put(bu.index, bu.clusterIds);
-		}
-		
-		return map;		
 	}
 
 	/**
@@ -338,7 +247,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	 * Returns a sub-list of PdbBioUnits with particular assignment type
 	 */
 	public PdbBioUnitList getSubsetByType(BioUnitAssignmentType type){
-		PdbBioUnitList newList = new PdbBioUnitList(this.parent);
+		PdbBioUnitList newList = new PdbBioUnitList();
 		for(PdbBioUnit unit:this.pdbBioUnits)
 			if(unit.getType().equals(type)) newList.addPdbBioUnit(unit);
 		return newList;
@@ -348,7 +257,7 @@ public class PdbBioUnitList implements Serializable, Iterable<PdbBioUnit>{
 	 * Returns a sub-list of PdbBioUnits with particular size
 	 */
 	public PdbBioUnitList getSubsetBySize(int size){
-		PdbBioUnitList newList = new PdbBioUnitList(this.parent);
+		PdbBioUnitList newList = new PdbBioUnitList();
 		for(PdbBioUnit unit:this.pdbBioUnits)
 			if(unit.getSize() == size) newList.addPdbBioUnit(unit);
 		return newList;

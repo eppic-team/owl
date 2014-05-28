@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import javax.vecmath.Matrix4d;
 
@@ -20,23 +19,28 @@ import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 
 /**
+ * A biounit annotation from PDB.
+ * 
+ * Note that the class implements the comparable interface so that 
+ * biounits can be sorted and compared in parsing tests.
+ * 
  * @author biyani_n
  *
  */
-public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
+public class PdbBioUnit implements Serializable, Comparable<PdbBioUnit> { 
 	
 	private static final long serialVersionUID = 1L;
 	
 	private int size;										//size of the biounit
 	private BioUnitAssignmentType type;						//assignment type: authors/pisa/pqs/eppic/none
-	private TreeMap<String, List<Matrix4d>> operators;		//Map of chaincodes to the list of operators
+	private TreeMap<String, List<Matrix4d>> operators;		//Map of PDB chaincodes to the list of operators
 	
 	//Methods
 	
 	//Main constructor
 	public PdbBioUnit(){
 		this.size = 0;
-		this.type = BioUnitAssignmentType.none;
+		this.type = null;
 		this.operators = new TreeMap<String, List<Matrix4d>>();
 	}
 	
@@ -65,7 +69,7 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 	 * Assigns the type of biounit
 	 * @param type
 	 */
-	public void assignType(BioUnitAssignmentType type){
+	public void setType(BioUnitAssignmentType type){
 		this.type=type;
 	}
 	
@@ -85,8 +89,16 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		return this.type;
 	}
 	
-	public TreeMap<String, List<Matrix4d>> getOperators(){
+	private TreeMap<String, List<Matrix4d>> getOperators(){
 		return this.operators;
+	}
+	
+	public Set<String> getMemberPdbChainCodes() {
+		return this.operators.keySet();
+	}
+	
+	public List<Matrix4d> getOperators(String pdbChainCode) {
+		return this.operators.get(pdbChainCode);
 	}
 	
 	//comparing methods
@@ -94,29 +106,25 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		if(ob == null) return false;
 		if(!(ob instanceof PdbBioUnit)) return false;
 		PdbBioUnit o = (PdbBioUnit) ob;
-		boolean ret = false;
-		if(this.size == o.getSize() &&
-				this.type == o.getType() &&
-				this.operators.size() == o.getOperators().size() &&
-				this.operators.keySet().equals(o.operators.keySet())){
-			String[] thisKeys = new String[this.operators.size()]; 
-			this.operators.keySet().toArray(thisKeys);
-			String[] oKeys = new String[o.operators.size()];
-			o.operators.keySet().toArray(oKeys);
-			for(int i=0; i < this.operators.keySet().size(); i++){
-				if(thisKeys[i].equals(oKeys[i])){
-					for(int j=0; j<this.operators.get(thisKeys[i]).size(); j++){
-						Matrix4d thisOp = this.operators.get(thisKeys[i]).get(j);
-						Matrix4d oOp = o.operators.get(oKeys[i]).get(j);
-						if(thisOp.epsilonEquals(oOp, 0.001))
-							ret = true;
-						else{ ret = false; break; }
-					}
-				}
-				
+		
+		if(this.size != o.getSize()) return false;
+		if (this.type != o.getType()) return false;
+		if (this.operators.size() != o.getOperators().size()) return false;
+		if (!this.operators.keySet().equals(o.operators.keySet())) return false;
+		
+		for (String thisKey:this.operators.keySet()) {
+			List<Matrix4d> thisList = this.operators.get(thisKey);
+			List<Matrix4d> otherList = o.operators.get(thisKey);
+			if (thisList.size()!=otherList.size()) return false;
+			
+			for(int j=0; j<thisList.size(); j++){
+				// this assumes same order in both lists
+				if (!thisList.get(j).epsilonEquals(otherList.get(j), 0.001)) 
+					return false;
 			}
+			
 		}
-		return ret;
+		return true;
 	}
 	
 	@Override
@@ -178,76 +186,6 @@ public class PdbBioUnit implements Comparable<PdbBioUnit>, Serializable {
 		
 		
 		return unit;
-	}
-
-	/**
-	 * Returns the list of interface ids that match this biounit
-	 * Ids for BioUnits start from 0,1,2,...
-	 * Ids for Interfaces start from 1,2,3,...
-	 * @param interfaces
-	 * @return
-	 */
-	public List<Integer> getInterfaceMatches(ChainInterfaceList interfaces) {
-		List<Integer> matches = new ArrayList<Integer>();
-		for(ChainInterface interf:interfaces){
-			if(matchesInterface(interf)) matches.add(interf.getId());
-		}
-		return matches;
-	}
-	
-	/**
-	 * Returns the list of interface cluster ids that match this biounit
-	 * @param interfaces
-	 * @return a sorted list of cluster ids
-	 */
-	public List<Integer> getInterfaceClusterMatches(ChainInterfaceList interfaces) {
-		
-		Set<Integer> interfaceClusterMatches = new TreeSet<Integer>();
-		for(ChainInterface interf:interfaces){
-			if(matchesInterface(interf)){
-				interfaceClusterMatches.add(interfaces.getCluster(interf.getId()).getId());	
-			}
-		}		
-		return new ArrayList<Integer>(interfaceClusterMatches);
-	}
-
-	
-	public boolean matchesInterface(ChainInterface interf) {
-		Matrix4d identity = new Matrix4d(); identity.m00=identity.m11=identity.m22=identity.m33=1;
-		boolean matches = false;
-
-		String firstCode = interf.getFirstMolecule().getPdbChainCode();
-		String secondCode = interf.getSecondMolecule().getPdbChainCode();
-		Matrix4d compareToOperator = interf.getSecondTransf().getMatTransform();
-
-		if(this.getOperators().containsKey(firstCode) &&
-				this.getOperators().containsKey(secondCode) ){
-			for(Matrix4d operFirst:this.getOperators().get(firstCode))
-				if(operFirst.epsilonEquals(identity, 0.001)){
-					for(Matrix4d operSecond:this.getOperators().get(secondCode))
-						if(operSecond.epsilonEquals(compareToOperator, 0.001)){
-							matches = true;
-							break;
-						}
-					break;
-				}
-
-			if(!matches)
-				for(Matrix4d operSecond:this.getOperators().get(secondCode))
-					if(operSecond.epsilonEquals(identity, 0.001)){
-						for(Matrix4d operFirst:this.getOperators().get(firstCode)){
-							Matrix4d operFirstInv = new Matrix4d(operFirst);
-							operFirstInv.invert();
-							if(operFirstInv.epsilonEquals(compareToOperator, 0.001)){
-								matches = true;
-								break;
-							}
-						}
-						break;
-					}
-		}
-
-		return matches;
 	}
 	
 	/**
