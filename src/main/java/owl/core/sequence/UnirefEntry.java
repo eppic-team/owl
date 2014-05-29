@@ -235,5 +235,22 @@ public class UnirefEntry implements Serializable {
 	public String getTabDelimitedMySQLString() {
 		return id+"\t"+(uniprotId==null?"\\N":uniprotId)+"\t"+uniparcId+"\t"+ncbiTaxId+"\t"+sequence;
 	}
+	
+	/**
+	 * Replace non-standard amino-acid character 'O' (Pyrrolysine) by 'X' 
+	 * in the sequence of this UnirefEntry
+	 * 
+	 * @return true if 'O' was present and replaced, false otherwise
+	 */
+	public boolean replaceNonStandardByX() {
+		if (this.sequence == null) return false;
+		
+		if (this.sequence.contains("O")) {
+			this.sequence = this.sequence.replaceAll("O", "X");
+			return true;
+		}
+		
+		return true;
+	}
 
 }
