@@ -327,6 +327,7 @@ public class PdbfileParser {
 		BioUnitAssemblyGen generator = new BioUnitAssemblyGen();
 		bioUnitOperations = new TreeMap<Integer,Matrix4d>();
 		int bioUnitOperationId = 0;
+		Matrix4d operation = null;
 		
 		while((line = fpdb.readLine()) != null ) {
 			linecount++;
@@ -496,11 +497,10 @@ public class PdbfileParser {
 						double z = Double.parseDouble(mR.group(5));
 						double t = Double.parseDouble(mR.group(6));
 						
-						Matrix4d operation = new Matrix4d();
-						operation.setElement(3, 3, 1);
-						
 						if(matLine == 1){
 							bioUnitOperationId++;
+							operation = new Matrix4d();
+							operation.setElement(3, 3, 1);
 						}
 						
 						operation.setElement(matLine-1, 0, x);
