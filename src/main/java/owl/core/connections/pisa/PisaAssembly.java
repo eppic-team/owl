@@ -2,8 +2,8 @@ package owl.core.connections.pisa;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+//import java.util.regex.Matcher;
+//import java.util.regex.Pattern;
 
 public class PisaAssembly implements Comparable<PisaAssembly> {
 
@@ -83,11 +83,11 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 
 	public void setFormula(String formula) {
 		// adding a check for the formula (there seems to be a bug in PISA command-line not producing correctly formatted formulas, e.g. for 1aup)
-		Pattern p = Pattern.compile("[A-Za-z]");
-		Matcher m = p.matcher(formula);
-		if (!m.find()) {
-			throw new IllegalArgumentException("The PISA formula '"+formula+"' does not seem tha have the right format (no alphabetic characters present)" );
-		}
+//		Pattern p = Pattern.compile("[A-Za-z]");
+//		Matcher m = p.matcher(formula);
+//		if (!m.find()) {
+//			throw new IllegalArgumentException("The PISA formula '"+formula+"' does not seem tha have the right format (no alphabetic characters present)" );
+//		}
 		this.formula = formula;
 	}
 	
@@ -121,19 +121,31 @@ public class PisaAssembly implements Comparable<PisaAssembly> {
 	}
 
 	/**
-	 * Returns true if this assembly contains at least one macromolecule (either protein or nucleic acid), false otherwise.
-	 * It is detected from the case of PISA chain identifiers in the assembly output. If chains are capital we consider 
-	 * them to be macromolecules, if lower case we consider they are small molecules.
+	 * Returns true if this assembly contains at least one protein-protein interface, false otherwise.
+	 * (it will thus also return false if it only has a single protein monomer, or if it 
+	 * contains only nucleic acid-protein interfaces)
 	 * @return
 	 */
-	public boolean isMacromolecular() {
-		Pattern p = Pattern.compile("[A-Z]");
-		Matcher m = p.matcher(formula);
-		if (m.find()) {
-			return true;
-		} else {
-			return false;
+	public boolean isProteinProtein(PisaInterfaceList pil) {
+		// below old implementation that used a regex on the formula field,
+		// unfortunately there is some bug in pisa that doesn't produce the formula correctly for many entries
+//		Pattern p = Pattern.compile("[A-Z]");
+//		Matcher m = p.matcher(formula);
+//		if (m.find()) {
+//			return true;
+//		} else {
+//			return false;
+//		}
+		
+		for (int interfaceId:getInterfaceIds()) {
+			if (pil.getById(interfaceId).isProtein()) {
+				// if only one of the interfaces is a protein we consider it macromolecular
+				return true;
+			}
 		}
+		// not a single interface was protein: not macromolecular
+		return false;
+		
 	}
 	
 	/**

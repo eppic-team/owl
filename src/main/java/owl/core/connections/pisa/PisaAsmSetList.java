@@ -49,7 +49,7 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 		return list.iterator();
 	}
 	
-	public OligomericPrediction getOligomericPred() {
+	public OligomericPrediction getOligomericPred(PisaInterfaceList pil) {
 		
 		// no AsmSet at all, PISA didn't find any possible assemblies (stable or not) and so we call monomer 
 		if (size()==0) {
@@ -71,10 +71,13 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 		boolean allUnstable = true;
 		
 		for (PisaAssembly pa:pas) {
-			if (pa.isMacromolecular()) {
+
+			if (pa.isProteinProtein(pil)) {
+				// isProteinProtein will return false also for assemblies with mmSize==1, 
+				// that doesn't matter here as those can't be gray or unstable
 				PredictionType pt = pa.getPredictionType();
 				if (pt==null) 
-					System.err.println("ERROR: could not understand the prediction type (stable, gray or unstable) for assembly "+pa.getId());
+					System.err.println("ERROR: could not understand the prediction type (stable, gray or unstable) for "+pdbCode+" assembly "+pa.getId());
 				
 				if (pt!=PisaAssembly.PredictionType.GRAY) allGray = false;
 				if (pt!=PisaAssembly.PredictionType.UNSTABLE) allUnstable = false;
@@ -93,16 +96,31 @@ public class PisaAsmSetList implements Iterable<PisaAsmSet> {
 
 		// all other cases: one or more stable assemblies in the AsmSet
 		OligomericPrediction op = new OligomericPrediction(1); 
-		boolean sizeSet = false;
+		//boolean sizeSet = false;
+		int mmSize = 0;
 		for (PisaAssembly pa:pas) {
-			if (!pa.isMacromolecular()) continue;
+			
+			if (mmSize>1 && pa.getMmsize()==1) {
+				// i.e. mmSize has been initialised (not 0) and its value is more than 1 (monomeric) and this pa is monomeric
+				// we then are in a mixed >1 with ==1 assemblies in same set, we warn
+				System.err.println("WARNING! Mixed assembly sizes in same assembly group for "+pdbCode+". Assembly group is of size "+mmSize+", new assembly (id "+pa.getId()+") is of size "+pa.getMmsize()+", ignoring it");								
+			}
+			// note following condition will also return false for assemblies of mmSize==1
+			// anyway those by definition have deltaGdiss==0, so they don't matter here
+			// if all assemblies in this set are monomeric then 'op' will stay monomeric as initialized above
+			if (!pa.isProteinProtein(pil)) continue;
 
 			// we set the size to the first deltaGdiss>0 mm assembly present
-			if (!sizeSet && pa.getDissEnergy()>0) {
+			if (mmSize==0 && pa.getDissEnergy()>0) {
 				op.setMmSize(pa.getMmsize());
-				sizeSet = true;
+				mmSize = pa.getMmsize();
 			}
-			op.addAssembly(pa);
+			
+			if (mmSize>0 && pa.getMmsize()!=mmSize) {
+				System.err.println("WARNING! Mixed assembly sizes in same assembly group for "+pdbCode+". Assembly group is of size "+mmSize+", new assembly (id "+pa.getId()+") is of size "+pa.getMmsize()+", ignoring it");				
+			} else {
+				op.addAssembly(pa);
+			}
 
 			//System.out.printf("\t%2d\t%2d\t%5.1f\t%20s\t%s\n",
 			//		mmsizePred,pa.getMmsize(),
