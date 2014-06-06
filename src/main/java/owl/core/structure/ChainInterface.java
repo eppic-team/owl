@@ -386,27 +386,6 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 		return firstMolecule.getPdbChainCode()+"-"+secondMolecule.getPdbChainCode()+" "+
 		getAICGraph().getEdgeCount()+" "+SpaceGroup.getAlgebraicFromMatrix(secondTransf.getMatTransform());
 	}
-	
-	public boolean equals(Object o) {
-		if (!(o instanceof ChainInterface)) return false;
-		ChainInterface other = (ChainInterface) o;
-		String tcc1 = firstMolecule.getPdbChainCode();
-		String tcc2 = secondMolecule.getPdbChainCode();
-		String occ1 = other.firstMolecule.getPdbChainCode();
-		String occ2 = other.secondMolecule.getPdbChainCode();
-		
-		if ( !(occ1.equals(tcc1) && occ2.equals(tcc2)) &&
-			 !(occ2.equals(tcc1) && occ1.equals(tcc2)) ) {
-			return false;
-		}
-		return this.graph.equals(other.graph);
-	}
-	
-	public int hashCode() {
-		int hash = graph.getEdgeCount();
-	    hash = hash * 31 + firstMolecule.getPdbChainCode().hashCode()+secondMolecule.getPdbChainCode().hashCode();
-	    return hash; 
-	}
 
 	/**
 	 * Calculates residues in rim and core using zooming for each of the 2 members of the 

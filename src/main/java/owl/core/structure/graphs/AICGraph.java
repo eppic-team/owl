@@ -284,25 +284,5 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		return false;
 	}
 	
-	/**
-	 * Equality based on having exact same set of edges between atoms of same serial and same atom code.
-	 */
-	public boolean equals(Object other) {
-		if (! (other instanceof AICGraph)) return false;
-		
-		AICGraph o = (AICGraph) other;
-		
-		if (this.getEdgeCount()!=o.getEdgeCount()) {
-			return false;
-		}
-		
-		for (AICGEdge edge:this.getEdges()) {
-			Pair<Atom> pair = this.getEndpoints(edge);
-			if (o.findEdge(pair.getFirst(), pair.getSecond())==null) {
-				return false;
-			}
-		}
-		return true;
-	}
 
 }

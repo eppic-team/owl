@@ -3,7 +3,6 @@ package owl.core.structure;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -61,15 +60,11 @@ public class InterfacesFinder {
 	private PdbAsymUnit pdb;
 	private boolean debug;
 	
-	private boolean withRedundancyElimination;
-	
 	private int numCells;
 	
 	private ArrayList<CrystalTransform> visited;
 	
 	// debugging vars
-	private int duplicatesCount1=0;
-	private int duplicatesCount3=0;
 	private long start; 
 	private long end;
 	private int trialCount;	
@@ -88,7 +83,6 @@ public class InterfacesFinder {
 	public InterfacesFinder(PdbAsymUnit pdb) {
 		this.pdb = pdb;
 		this.debug = false;
-		this.withRedundancyElimination = true;
 		this.numCells = DEF_NUM_CELLS;
 		if (this.pdb.hasHydrogens()) {
 			// We have to warn because at the moment we implemented things so that we have to call removeHatoms() before calling getAllInterfaces()
@@ -100,10 +94,6 @@ public class InterfacesFinder {
 	
 	public void setDebug(boolean debug) {
 		this.debug = debug;
-	}
-	
-	public void setWithRedundancyElimination(boolean withRedundancyElimination) {
-		this.withRedundancyElimination = withRedundancyElimination;
 	}
 	
 	public void setNumCells(int numCells) {
@@ -138,16 +128,8 @@ public class InterfacesFinder {
 		this.cutoff = cutoff;
 		this.nonPoly = nonPoly;
 		
-		// full symmetry-redundancy elimination is now implemented, thus the HashSet is not needed anymore
-		// we are keeping it here for the withRedundancyElimination=false case, so that we can still test the differences
-		Collection<ChainInterface> set = null;
-		if (withRedundancyElimination) {
-			set = new ArrayList<ChainInterface>();
-		} else {			
-			// the set takes care of eliminating duplicates, comparison is based on the equals() 
-			// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
-			set = new HashSet<ChainInterface>();
-		}
+		// full symmetry-redundancy elimination is now implemented, thus a HashSet is not needed anymore to store the found interfaces
+		Collection<ChainInterface> set = new ArrayList<ChainInterface>();
 		
 		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
 		if (!nonPoly && pdb.getProtChains().size()==0) {
@@ -170,8 +152,6 @@ public class InterfacesFinder {
 		skippedAUsNoOverlap = 0;
 		skippedChainsNoOverlap = 0;
 		skippedSelfEquivalent = 0;
-		duplicatesCount1 = 0;
-		duplicatesCount3 = 0;
 		
 
 		calcInterfacesWithinAu(set);
@@ -194,7 +174,6 @@ public class InterfacesFinder {
 				System.out.println("  skipped (sym redundant op pairs)    : "+skippedRedundant);
 				System.out.println("  skipped (sym redundant self op)     : "+skippedSelfEquivalent);
 
-				System.out.println("\nDuplicates: "+duplicatesCount1+" "+duplicatesCount3);
 				System.out.println("Found "+set.size()+" interfaces.");
 			}
 		}
@@ -251,9 +230,9 @@ public class InterfacesFinder {
 					ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),pdb.getTransform());
 					interf.setFirstCofactors(getCofactors(iChainCode, pdb.getTransform(), pdb));
 					interf.setSecondCofactors(getCofactors(jChainCode, pdb.getTransform(), pdb));
-					if (!set.add(interf)) {
-						duplicatesCount1++;
-					}
+					
+					set.add(interf);
+					
 				} else {
 					if (debug) System.out.print("o");
 				}
@@ -316,16 +295,15 @@ public class InterfacesFinder {
 							continue;
 						}
 
-						// 2) we check if we didn't already see its equivalent symmetry operator partner 							
-						if (withRedundancyElimination) {
-							CrystalTransform tt = new CrystalTransform(cell.getAsymUnit(au).getTransform());
-							tt.translate(trans);
-							if (isRedundant(tt)) { 								
-								if (debug) skippedRedundant++;								
-								continue;
-							}
-							addVisited(tt);
+						// 2) we check if we didn't already see its equivalent symmetry operator partner 													
+						CrystalTransform tt = new CrystalTransform(cell.getAsymUnit(au).getTransform());
+						tt.translate(trans);
+						if (isRedundant(tt)) { 								
+							if (debug) skippedRedundant++;								
+							continue;
 						}
+						addVisited(tt);
+						
 						
 						boolean selfEquivalent = false;
 						
@@ -335,16 +313,15 @@ public class InterfacesFinder {
 
 						
 
-						// 3) an operator can be "self redundant" if it is the inverse of itself (involutory, e.g. all pure 2-folds with no translation)
-						if (withRedundancyElimination) {
-							if (jAsym.getTransform().isEquivalent(jAsym.getTransform())) { 
-								if (debug) 
-									System.out.println("Transform "+jAsym.getTransform()+" is equivalent to itself, will skip half of i-chains to j-chains comparisons");
-								// in this case we can't skip the operator, but we can skip half of the matrix comparisons e.g. j>i
-								// we set a flag and do that within the loop below
-								selfEquivalent = true;
-							}
+						// 3) an operator can be "self redundant" if it is the inverse of itself (involutory, e.g. all pure 2-folds with no translation)						
+						if (jAsym.getTransform().isEquivalent(jAsym.getTransform())) { 
+							if (debug) 
+								System.out.println("Transform "+jAsym.getTransform()+" is equivalent to itself, will skip half of i-chains to j-chains comparisons");
+							// in this case we can't skip the operator, but we can skip half of the matrix comparisons e.g. j>i
+							// we set a flag and do that within the loop below
+							selfEquivalent = true;
 						}
+						
 						if (debug) System.out.print(jAsym.getTransform()+" ");
 						
 						// Now that we know that boxes overlap and operator is not redundant, we have to go to the details 
@@ -388,22 +365,8 @@ public class InterfacesFinder {
 									interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
 									interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
 
-									if (!set.add(interf)){
-										duplicatesCount3++;
-										if (debug) {
-											ChainInterface duplicate = null;
-											for (ChainInterface ci:set) {
-												if (ci.equals(interf)) duplicate = ci;
-											}
-											String equivalent = "";
-											if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
-												equivalent = " (transforms equivalent)";
-											System.out.println("\nDuplicate interface found for "+
-													chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
-													" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
-													" - "+duplicate.getSecondTransf()+equivalent);
-										}
-									}
+									set.add(interf);
+									
 								} else {
 									if (debug) System.out.print("o");
 								}
@@ -534,14 +497,6 @@ public class InterfacesFinder {
 		}
 		
 		return false;
-	}
-	
-	public int getDuplicatesCount1() {
-		return duplicatesCount1;
-	}
-
-	public int getDuplicatesCount3() {
-		return duplicatesCount3;
 	}
 	
 	private void findCofactors(int cofactorSizeToUse) {		
