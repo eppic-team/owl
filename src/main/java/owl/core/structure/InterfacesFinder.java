@@ -67,9 +67,21 @@ public class InterfacesFinder {
 	
 	private ArrayList<CrystalTransform> visited;
 	
+	// debugging vars
 	private int duplicatesCount1=0;
-	private int duplicatesCount2=0; 
 	private int duplicatesCount3=0;
+	private long start; 
+	private long end;
+	private int trialCount;	
+	private int skippedRedundant;
+	private int skippedAUsNoOverlap;
+	private int skippedChainsNoOverlap;
+	private int skippedSelfEquivalent;
+	
+	// other state vars for interface calculation
+	private boolean nonPoly;
+	private double cutoff; 
+
 	
 	private HashMap<String,List<String>> polyChainCodes2cofactorsChainCodes;
 	
@@ -108,8 +120,7 @@ public class InterfacesFinder {
 	 * that contact, i.e. for which there is at least a pair of atoms (one from each chain) within 
 	 * the given cutoff distance.
 	 * The interface areas and BSAs are calculated with either our implementation of the rolling
-	 * ball algorithm (naccessExe set to null) or the external NACCESS program (naccessExe must 
-	 * be passed)
+	 * ball algorithm 
 	 * @param cutoff the distance cutoff for 2 chains to be considered in contact
 	 * @param nSpherePoints
 	 * @param nThreads
@@ -124,9 +135,19 @@ public class InterfacesFinder {
 	 */
 	public ChainInterfaceList getAllInterfaces(double cutoff, int nSpherePoints, int nThreads, boolean hetAtoms, boolean nonPoly, int cofactorSizeToUse, double minInterfAreaToKeep) {	
 
-		// the set takes care of eliminating duplicates, comparison is based on the equals() 
-		// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
-		Set<ChainInterface> set = new HashSet<ChainInterface>();
+		this.cutoff = cutoff;
+		this.nonPoly = nonPoly;
+		
+		// full symmetry-redundancy elimination is now implemented, thus the HashSet is not needed anymore
+		// we are keeping it here for the withRedundancyElimination=false case, so that we can still test the differences
+		Collection<ChainInterface> set = null;
+		if (withRedundancyElimination) {
+			set = new ArrayList<ChainInterface>();
+		} else {			
+			// the set takes care of eliminating duplicates, comparison is based on the equals() 
+			// and hashCode() of ChainInterface and that in turn on that of AICGraph and Atom
+			set = new HashSet<ChainInterface>();
+		}
 		
 		// we've got to check if nonPoly=false (i.e. we want only prot-prot interfaces) that there are actually some protein chains!
 		if (!nonPoly && pdb.getProtChains().size()==0) {
@@ -139,32 +160,68 @@ public class InterfacesFinder {
 		// finding cofactor (non-poly) chains for each poly chain
 		findCofactors(cofactorSizeToUse);
 
-		// 0. generate complete unit cell
-		PdbUnitCell cell = null;
-		List<BoundingBox> cellBBs = null;
+		
+		
+		// initialising debugging vars
+		start = -1; 
+		end = -1;
+		trialCount = 0;
+		skippedRedundant = 0;
+		skippedAUsNoOverlap = 0;
+		skippedChainsNoOverlap = 0;
+		skippedSelfEquivalent = 0;
+		duplicatesCount1 = 0;
+		duplicatesCount3 = 0;
+		
+
+		calcInterfacesWithinAu(set);
+		
+		// this condition covers 3 cases:
+		// a) entries with expMethod X-RAY/other diffraction and defined crystalCell (most usual case)
+		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
+		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
 		if (pdb.getCrystalCell()!=null && pdb.isCrystallographicExpMethod()) {
-			cell = pdb.getUnitCell();
-			// we calculate all the bounds of each of the asym units, those will then be reused and translated
-			cellBBs = cell.getBoundingBoxes(!nonPoly);
+						
+
+			calcInterfacesCrystal(set);
+			
+			
+			if (debug) {
+				end = System.currentTimeMillis();
+				System.out.println("\n"+trialCount+" chain-chain clash trials done. Time "+(end-start)/1000+"s");
+				System.out.println("  skipped (not overlapping AUs)       : "+skippedAUsNoOverlap);
+				System.out.println("  skipped (not overlapping chains)    : "+skippedChainsNoOverlap);
+				System.out.println("  skipped (sym redundant op pairs)    : "+skippedRedundant);
+				System.out.println("  skipped (sym redundant self op)     : "+skippedSelfEquivalent);
+
+				System.out.println("\nDuplicates: "+duplicatesCount1+" "+duplicatesCount3);
+				System.out.println("Found "+set.size()+" interfaces.");
+			}
 		}
 		
-		long start = -1; 
-		long end = -1;
-		int trialCount = 0, skippedRedundantOrigCell =0, skippedRedundant = 0, skippedAUsNoOverlap = 0, skippedChainsNoOverlap = 0;
-		duplicatesCount1 = 0;
-		duplicatesCount2 = 0;
-		duplicatesCount3 = 0;
+		return calcAsas(set, nSpherePoints, nThreads, hetAtoms, minInterfAreaToKeep);
+	}
+	
+	/**
+	 * Calculate interfaces within asymmetric unit
+	 * @param set
+	 */
+	private void calcInterfacesWithinAu(Collection<ChainInterface> set) {
+		
+		
+		Set<String> chainCodes = null;
+		if (nonPoly) chainCodes = pdb.getChainCodes();
+		else chainCodes = pdb.getProtChainCodes();
 		
 		if (debug) {
 			trialCount = 0;
 			start= System.currentTimeMillis();
-			System.out.println("Interfaces within asymmetric unit");
+			int numChains = chainCodes.size();
+			System.out.println("\nInterfaces within asymmetric unit (total possible trials "+(numChains*(numChains-1))/2+")");
+			System.out.print("[ 0-( 0, 0, 0)] "); // printing header for dots line to have same format as in calcInterfacesCrystal
 		}
-		// 1. interfaces within unit cell
-		// 1.1 within asymmetric unit
-		Set<String> chainCodes = null;
-		if (nonPoly) chainCodes = pdb.getChainCodes();
-		else chainCodes = pdb.getProtChainCodes();
+		
+		int contactsFound = 0;
 		
 		for (String iChainCode:chainCodes) { 
 			for (String jChainCode:chainCodes) { 
@@ -187,6 +244,7 @@ public class InterfacesFinder {
 				AICGraph graph = chaini.getAICGraph(chainj, cutoff);
 				if (graph.getEdgeCount()>0) {
 					if (debug) System.out.print("x");
+					contactsFound++;
 					// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
 					PdbChain chainiCopy = chaini.copy(pdb);
 					PdbChain chainjCopy = chainj.copy(pdb);
@@ -203,229 +261,167 @@ public class InterfacesFinder {
 		}
 		if (debug) {
 			end = System.currentTimeMillis();
+			int numChains = chainCodes.size();			
+			System.out.println(" "+contactsFound+"("+(numChains*(numChains-1))/2+")");
 			System.out.println("\n"+trialCount+" chain-chain clash trials done. Time "+(end-start)/1000+"s");
 		}
+
+		
+		
+	}
+	
+	/**
+	 * Calculate interfaces between original asymmetric unit and neighboring 
+	 * whole unit cells, including the original full unit cell i.e. i=0,j=0,k=0 
+	 * @param set
+	 */
+	private void calcInterfacesCrystal(Collection<ChainInterface> set) {
+
+		// generate complete unit cell
+		PdbUnitCell cell = pdb.getUnitCell();
+		// we calculate all the bounds of each of the asym units, those will then be reused and translated
+		List<BoundingBox> cellBBs = cell.getBoundingBoxes(!nonPoly);
 
 		
 		if (debug) {
 			trialCount = 0;
 			start= System.currentTimeMillis();
-			System.out.println("Interfaces within the rest of the unit cell");
+			int neighbors = (2*numCells+1)*(2*numCells+1)*(2*numCells+1)-1;
+			int numChains = 0;
+			if (nonPoly) numChains = pdb.getNumChains();
+			else numChains = pdb.getNumPolyChains();
+			int trials = numChains*cell.getNumAsymUnits()*numChains*neighbors;
+			System.out.println("\nInterfaces between the original asym unit and the neighbouring "+neighbors+" whole unit cells " +
+					"(2x"+numChains+"chains x "+cell.getNumAsymUnits()+"AUs x "+neighbors+"cells = "+trials+" total possible trials)");
 		}
-		
-		// this condition covers 3 cases:
-		// a) entries with expMethod X-RAY/other diffraction and defined crystalCell (most usual case)
-		// b) entries with expMethod null but defined crystalCell (e.g. PDB file with CRYST1 record but no expMethod annotation) 
-		// c) entries with expMethod not X-RAY (e.g. NMR) and defined crystalCell (NMR entries do have a dummy CRYST1 record "1 1 1 90 90 90 P1")
-		if (cell!=null && pdb.isCrystallographicExpMethod()) {
-			
-			// 1.2 between the original asymmetric unit and the others resulting from applying the symmetry transformations
-			for (int j=0;j<cell.getNumAsymUnits();j++) {
-				PdbAsymUnit jAsym = cell.getAsymUnit(j);
-				if (jAsym==pdb) continue; // we want to compare this to all others but not to itself
-				if (withRedundancyElimination) { 
-					if (isRedundant(jAsym.getTransform())) {
-						if (debug) skippedRedundantOrigCell++;
-						continue;
-					}
-					addVisited(jAsym.getTransform());
-				}
-				
-//				if (jAsym.getTransformId()==3) {
-//					System.err.println("Writing debug file");
-//					jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_000.pdb"));
-//				}
-				
-				Collection<PdbChain> ichains = null;
-				Collection<PdbChain> jchains = null;
-				if (nonPoly) {
-					ichains = pdb.getAllChains();
-					jchains = jAsym.getAllChains();
-				} else {
-					ichains = pdb.getProtChains();
-					jchains = jAsym.getProtChains();
-				}
-				for (PdbChain chaini:ichains) { 
-					for (PdbChain chainj:jchains) { 
-						
-						// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
-						if (chaini.isNotOverlapping(chainj, cutoff)) {
-							if (debug) {
-								skippedChainsNoOverlap++;
-								System.out.print(".");
-							}
+
+
+		for (int i=-numCells;i<=numCells;i++) {
+			for (int j=-numCells;j<=numCells;j++) {
+				for (int k=-numCells;k<=numCells;k++) {
+					
+					Point3i trans = new Point3i(i,j,k);
+					Vector3d transOrth = new Vector3d(i,j,k);
+					pdb.getCrystalCell().transfToOrthonormal(transOrth);
+
+					for (int au=0;au<cell.getNumAsymUnits();au++) { 
+						if (au==0 && i==0 && j==0 && k==0) continue; // that would be the original au 
+						BoundingBox bbTrans = new BoundingBox(cellBBs.get(au));
+						bbTrans.translate(transOrth);
+
+						// short-cut strategies
+						// 1) we skip first of all if the bounding boxes of the AUs don't overlap
+						if (!pdb.getBoundingBox(!nonPoly).overlaps(bbTrans, cutoff)) {
+							if (debug) skippedAUsNoOverlap++;
 							continue;
 						}
-						
-						if (debug) trialCount++;
-						
-						AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-						if (graph.getEdgeCount()>0) {
-							if (debug) System.out.print("x");
-							// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-							PdbChain chainiCopy = chaini.copy(pdb);
-							PdbChain chainjCopy = chainj.copy(jAsym);
-							ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
-							interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
-							interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
-							if (!set.add(interf)) {
-								duplicatesCount2++;
-								if (debug) {
-									ChainInterface duplicate = null;
-									for (ChainInterface ci:set) {
-										if (ci.equals(interf)) duplicate = ci;
-									}
-									String equivalent = "";
-									if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
-										equivalent = " (transforms equivalent)";
-									System.out.println("\nDuplicate interface found for "+
-											chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
-											" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
-											" - "+duplicate.getSecondTransf()+equivalent);									
-								}
-							}
-						} else {
-							if (debug) System.out.print("o");
-						}
-					}
-				}
-				
 
-			}
-			if (debug) {
-				end = System.currentTimeMillis();
-				System.out.println("\n"+trialCount+" chain-chain clash trials done. Time "+(end-start)/1000+"s");
-			}
-
-			
-			// 2. interfaces between original asymmetric unit and neighboring whole unit cells
-			if (debug) {
-				trialCount = 0;
-				start= System.currentTimeMillis();
-				int neighbors = (2*numCells+1)*(2*numCells+1)*(2*numCells+1)-1;
-				int trials = pdb.getNumChains()*cell.getNumAsymUnits()*pdb.getNumChains()*neighbors;
-				System.out.println("Interfaces between the original asym unit and the neighbouring "+neighbors+" whole unit cells " +
-						"(2x"+pdb.getNumChains()+"chains x "+cell.getNumAsymUnits()+"AUs x "+neighbors+"cells = "+trials+" total possible trials)");
-			}
-
-			
-			for (int i=-numCells;i<=numCells;i++) {
-				for (int j=-numCells;j<=numCells;j++) {
-					for (int k=-numCells;k<=numCells;k++) {
-						if (i==0 && j==0 && k==0) continue; // that would be the identity translation, we calculated that before
-
-						Point3i trans = new Point3i(i,j,k);
-						Vector3d transOrth = new Vector3d(i,j,k);
-						pdb.getCrystalCell().transfToOrthonormal(transOrth);
-						
-						for (int au=0;au<cell.getNumAsymUnits();au++) { 
-							BoundingBox bbTrans = new BoundingBox(cellBBs.get(au));
-							bbTrans.translate(transOrth);
-						
-							// short-cut strategies
-							// 1) we skip first of all if the bounding boxes of the AUs don't overlap
-							if (!pdb.getBoundingBox(!nonPoly).overlaps(bbTrans, cutoff)) {
-								if (debug) skippedAUsNoOverlap++;
+						// 2) we check if we didn't already see its equivalent symmetry operator partner 							
+						if (withRedundancyElimination) {
+							CrystalTransform tt = new CrystalTransform(cell.getAsymUnit(au).getTransform());
+							tt.translate(trans);
+							if (isRedundant(tt)) { 								
+								if (debug) skippedRedundant++;								
 								continue;
 							}
-													
-							// 2) we check if we didn't already see its equivalent symmetry operator partner 							
-							if (withRedundancyElimination) {
-								CrystalTransform tt = new CrystalTransform(cell.getAsymUnit(au).getTransform());
-								tt.translate(trans);
-								if (isRedundant(tt)) { 								
-									if (debug) skippedRedundant++;								
+							addVisited(tt);
+						}
+						
+						boolean selfEquivalent = false;
+						
+						// now we copy and actually translate the AU if we saw it does overlap and the sym op was not redundant
+						PdbAsymUnit jAsym = cell.getAsymUnit(au).copy();
+						jAsym.doCrystalTranslation(trans);
+
+						
+
+						// 3) an operator can be "self redundant" if it is the inverse of itself (involutory, e.g. all pure 2-folds with no translation)
+						if (withRedundancyElimination) {
+							if (jAsym.getTransform().isEquivalent(jAsym.getTransform())) { 
+								if (debug) 
+									System.out.println("Transform "+jAsym.getTransform()+" is equivalent to itself, will skip half of i-chains to j-chains comparisons");
+								// in this case we can't skip the operator, but we can skip half of the matrix comparisons e.g. j>i
+								// we set a flag and do that within the loop below
+								selfEquivalent = true;
+							}
+						}
+						if (debug) System.out.print(jAsym.getTransform()+" ");
+						
+						// Now that we know that boxes overlap and operator is not redundant, we have to go to the details 
+						int contactsFound = 0;
+						Collection<PdbChain> ichains = null;
+						Collection<PdbChain> jchains = null;
+						if (nonPoly) jchains = jAsym.getAllChains();
+						else jchains = jAsym.getProtChains();
+												
+						int jIdx = -1;
+						for (PdbChain chainj:jchains) {
+							jIdx++;
+							if (nonPoly) ichains = pdb.getAllChains();
+							else ichains = pdb.getProtChains();
+							int iIdx = -1;
+							for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
+								iIdx++;
+								if(selfEquivalent && (jIdx>iIdx)) {
+									// in case of self equivalency of the operator we can safely skip half of the matrix
+									skippedSelfEquivalent++;
 									continue;
 								}
-								addVisited(tt);
-							}
-							
-							// now we copy and actually translate the AU if we saw it does overlap and the sym op was not redundant
-							PdbAsymUnit jAsym = cell.getAsymUnit(au).copy();
-							jAsym.doCrystalTranslation(trans);
-							if (debug) System.out.print(jAsym.getTransform()+" ");
-							
-//							if (jAsym.getTransformId()==2 && i==1 && j==0 && k==0) {
-//								System.err.println("Writing debug file");
-//								jAsym.writeToPdbFile(new File("/home/duarte_j/"+pdb.getPdbCode()+"_"+jAsym.getTransformId()+"_"+i+""+j+""+k+".pdb"));
-//							}
-							
-							// Now that we know that boxes overlap and operator is not redundant, we have to go to the details 
-							int contactsFound = 0;
-							Collection<PdbChain> ichains = null;
-							Collection<PdbChain> jchains = null;
-							if (nonPoly) jchains = jAsym.getAllChains();
-							else jchains = jAsym.getProtChains();
-							for (PdbChain chainj:jchains) {
-								
-								if (nonPoly) ichains = pdb.getAllChains();
-								else ichains = pdb.getProtChains();
-								for (PdbChain chaini:ichains) { // we only have to compare the original asymmetric unit to every full cell around
-									
-									// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
-									if (chaini.isNotOverlapping(chainj, cutoff)) {
-										if (debug) {
-											skippedChainsNoOverlap++;
-											System.out.print(".");
-										}
-										continue;
+								// before calculating the AICgraph we check for overlap, then we save putting atoms into the grid
+								if (chaini.isNotOverlapping(chainj, cutoff)) {
+									if (debug) {
+										skippedChainsNoOverlap++;
+										System.out.print(".");
 									}
-									if (debug) trialCount++;
-									
-									AICGraph graph = chaini.getAICGraph(chainj, cutoff);
-									if (graph.getEdgeCount()>0) {
-										contactsFound++;										
-										if (debug) System.out.print("x");
-										// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
-										PdbChain chainiCopy = chaini.copy(pdb);
-										PdbChain chainjCopy = chainj.copy(jAsym);
-										ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
-										interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
-										interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
+									continue;
+								}
+								if (debug) trialCount++;
 
-										if (!set.add(interf)){
-											duplicatesCount3++;
-											if (debug) {
-												ChainInterface duplicate = null;
-												for (ChainInterface ci:set) {
-													if (ci.equals(interf)) duplicate = ci;
-												}
-												String equivalent = "";
-												if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
-													equivalent = " (transforms equivalent)";
-												System.out.println("\nDuplicate interface found for "+
-														chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
-														" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
-														" - "+duplicate.getSecondTransf()+equivalent);
+								AICGraph graph = chaini.getAICGraph(chainj, cutoff);
+								if (graph.getEdgeCount()>0) {
+									contactsFound++;										
+									if (debug) System.out.print("x");
+									// because of the bsas are values of the residues of each chain we need to make a copy so that each interface has independent residues
+									PdbChain chainiCopy = chaini.copy(pdb);
+									PdbChain chainjCopy = chainj.copy(jAsym);
+									ChainInterface interf = new ChainInterface(chainiCopy,chainjCopy,graph,pdb.getTransform(),jAsym.getTransform());
+									interf.setFirstCofactors(getCofactors(chaini.getChainCode(), pdb.getTransform(), pdb));
+									interf.setSecondCofactors(getCofactors(chainj.getChainCode(), jAsym.getTransform(), jAsym));
+
+									if (!set.add(interf)){
+										duplicatesCount3++;
+										if (debug) {
+											ChainInterface duplicate = null;
+											for (ChainInterface ci:set) {
+												if (ci.equals(interf)) duplicate = ci;
 											}
+											String equivalent = "";
+											if (duplicate.getSecondTransf().isEquivalent(jAsym.getTransform())) 
+												equivalent = " (transforms equivalent)";
+											System.out.println("\nDuplicate interface found for "+
+													chainiCopy.getPdbChainCode()+"+"+chainjCopy.getPdbChainCode()+" - "+jAsym.getTransform()+
+													" == "+duplicate.getFirstMolecule().getPdbChainCode()+"+"+duplicate.getSecondMolecule().getPdbChainCode()+
+													" - "+duplicate.getSecondTransf()+equivalent);
 										}
-									} else {
-										if (debug) System.out.print("o");
 									}
+								} else {
+									if (debug) System.out.print("o");
 								}
 							}
-							if (debug) System.out.println(" "+contactsFound+"("+ichains.size()*jchains.size()+")");
+						}
+						if (debug) {
+							if (selfEquivalent) 								
+								System.out.println(" "+contactsFound+"("+(ichains.size()*(jchains.size()+1))/2+")");							
+							else
+								System.out.println(" "+contactsFound+"("+ichains.size()*jchains.size()+")");
 						}
 					}
 				}
 			}
-			if (debug) {
-				end = System.currentTimeMillis();
-				System.out.println("\n"+trialCount+" chain-chain clash trials done. Time "+(end-start)/1000+"s");
-				System.out.println("  skipped (not overlapping AUs)       : "+skippedAUsNoOverlap);
-				System.out.println("  skipped (not overlapping chains)    : "+skippedChainsNoOverlap);
-				System.out.println("  skipped (sym redundant within cell) : "+skippedRedundantOrigCell);
-				System.out.println("  skipped (sym redundant other cells) : "+skippedRedundant);
-
-				System.out.println("\nDuplicates: "+duplicatesCount1+" "+duplicatesCount2+" "+duplicatesCount3);
-				System.out.println("Found "+set.size()+" interfaces.");
-			}
 		}
-		
-		return calcAsas(set, nSpherePoints, nThreads, hetAtoms, minInterfAreaToKeep);
 	}
-	
-	private ChainInterfaceList calcAsas(Set<ChainInterface> set, int nSpherePoints, int nThreads, boolean hetAtoms, double minInterfAreaToKeep) {
+
+	private ChainInterfaceList calcAsas(Collection<ChainInterface> set, int nSpherePoints, int nThreads, boolean hetAtoms, double minInterfAreaToKeep) {
 		// bsa calculation 
 		// NOTE in principle it is more efficient to calculate asas only once per isolated chain
 		// BUT! surprisingly the rolling ball algorithm gives slightly different values for same molecule in different 
@@ -542,10 +538,6 @@ public class InterfacesFinder {
 	
 	public int getDuplicatesCount1() {
 		return duplicatesCount1;
-	}
-
-	public int getDuplicatesCount2() {
-		return duplicatesCount2;
 	}
 
 	public int getDuplicatesCount3() {

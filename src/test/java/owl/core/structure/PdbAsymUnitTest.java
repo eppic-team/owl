@@ -194,7 +194,7 @@ public class PdbAsymUnitTest {
 			
 			int pisaCount = pisaInterfaces.getNumProtProtInterfaces();
 			System.out.println("PISA interface count: "+pisaCount);
-			Assert.assertEquals(pisaCount, interfaces.size());
+			Assert.assertEquals(pdbCode+": num of interfaces not coinciding",pisaCount, interfaces.size());
 
 			int i = 0;
 			for (int p=0;p<pisaInterfaces.size();p++) {
@@ -311,15 +311,23 @@ public class PdbAsymUnitTest {
 	@Test
 	public void testInterfacesFinderRedundancyElimination() throws IOException, SAXException {
 		
-		// A exclude list for entries we don't want to test here
+		// NOTE this test is here only for historical reasons: now full symmetry-redundancy elimination is implemented
+		// We used this test for all that development. It can still be useful if we need to check something in the
+		// symmetry-redundancy elimination procedure
+		
+		// An exclude list for entries we don't want to test here
 		// At the moment entries in exclude list are the ones for which a different number of interfaces is found
 		// because slightly different number of contacts are found for symmetry-equivalent interfaces due to rounding
 		// leading thus to apparent different interfaces since we base uniqueness of interfaces in same exact number of contacts between same atoms
 		// e.g. in 1vyi there are 9 interfaces found if no symmetry redundancy elimination is used (they are actually only 6 unique ones following pisa)
 		// The repeated ones are the pairs 1-2, 3-4 and 6-7. For instance in 6-7 atoms CD (residue 7) and O (residue 43) are at cutoff limit 5.9
-		// This depends of course on cut-off values used. 
+		// This depends of course on cut-off values used.
+		// NOTE: the real cause of the rounding problems described above is that 1vyi has a trigonal cell which must have a=b
+		// but the a, b values deposited in PDB are slightly differing (a=44.30, b=44.40)
 		String[] excludeCodesCutoffIssues = {"1vyi"};
-		
+
+		// another similar example to 1vyi is 3a58 with a wrongly annotated a,b cell values slightly differing
+		// that produces again a "break of symmetry" leading to different contact counts for 2 equivalent interfaces 
 		
 		List<String> pdbCodes = readListFile(CULLPDB20FILE);
 		
@@ -398,13 +406,16 @@ public class PdbAsymUnitTest {
 			System.out.println("Total number of interfaces found: "+interfacesWithRedundancy.size()+" "+interfacesRedundancyElim.size());
 						
 			System.out.println("Duplicates: "+
-			 interfFinder.getDuplicatesCount1()+","+interfFinder.getDuplicatesCount2()+","+interfFinder.getDuplicatesCount3()+
+			 interfFinder.getDuplicatesCount1()+","+interfFinder.getDuplicatesCount3()+
 			 "  -  "+
-			 interfFinder2.getDuplicatesCount1()+","+interfFinder2.getDuplicatesCount2()+","+interfFinder2.getDuplicatesCount3());
-			if (interfFinder2.getDuplicatesCount1()+interfFinder2.getDuplicatesCount2()+interfFinder2.getDuplicatesCount3()>0) {
-				System.out.println(" warning! duplicates in redundancy elimination");
-				withDuplicatesInRedundElim.add(pdbCode);
-			}
+			 interfFinder2.getDuplicatesCount1()+","+interfFinder2.getDuplicatesCount3());
+			
+			Assert.assertFalse(interfFinder2.getDuplicatesCount1()+interfFinder2.getDuplicatesCount3()>0);
+			
+			//if (interfFinder2.getDuplicatesCount1()+interfFinder2.getDuplicatesCount2()+interfFinder2.getDuplicatesCount3()>0) {
+			//	System.out.println(" warning! duplicates in redundancy elimination");
+			//	withDuplicatesInRedundElim.add(pdbCode);
+			//}
 
 			
 			Assert.assertEquals(interfacesWithRedundancy.size(), interfacesRedundancyElim.size());
