@@ -7,12 +7,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
 import javax.vecmath.Point3d;
 
 import owl.core.util.GeometryTools;
+import owl.core.util.SingleLinkageClusterer;
 
 //import owl.core.util.CombinationsGenerator;
 
@@ -27,6 +29,9 @@ import owl.core.util.GeometryTools;
 public class ChainInterfaceList implements Iterable<ChainInterface>, Serializable {
 
 	private static final long serialVersionUID = 1L;
+	
+	// the "infinite" rmsd value: to be used in the rmsd matrix for any 2 values that should never cluster together
+	private static final double TOO_DISTANT_RMSD_VALUE = Double.MAX_VALUE;
 
 	private List<ChainInterface> list;
 
@@ -285,7 +290,7 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 			}
 		}
 		
-		double[][] rmsdMatrix = new double[this.size()][this.size()];
+		double[][] rmsdMatrix = new double[this.size()][this.size()];		
 		
 		for (ChainInterface iInterf:this) {
 			int iId = iInterf.getId();
@@ -307,7 +312,7 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 				if (!commonObservedSets.containsKey(iFirstPdbChainCode) || !commonObservedSets.containsKey(iSecondPdbChainCode) ||
 					!commonObservedSets.containsKey(jFirstPdbChainCode) || !commonObservedSets.containsKey(jSecondPdbChainCode)) {
 					
-					rmsdMatrix[iId-1][jId-1] = -1.0;
+					rmsdMatrix[iId-1][jId-1] = TOO_DISTANT_RMSD_VALUE;
 					continue;
 				}
 
@@ -323,7 +328,7 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 						iFirstPdbChainCode.equals(jFirstPdbChainCode) && 
 						iFirstPdbChainCode.equals(jSecondPdbChainCode)){
 					
-					rmsdMatrix[iId-1][jId-1] = -1.0;
+					rmsdMatrix[iId-1][jId-1] = TOO_DISTANT_RMSD_VALUE;
 				}
 				
 				// possible candidates for clustering: NCS related chains in 1st to 1st matching (A+C,B+D) 
@@ -375,47 +380,30 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 				// all other cases are not possible cluster candidates
 				else {
 				
-					rmsdMatrix[iId-1][jId-1] = -1.0;
+					rmsdMatrix[iId-1][jId-1] = TOO_DISTANT_RMSD_VALUE;
 				}
 				
 			}
 			
 		}
 		
-		int clusterId = 1;
+		// note that the clusterer alters the matrix, keep that in mind if we wanted to use the matrix down the line 
+		SingleLinkageClusterer cl = new SingleLinkageClusterer(rmsdMatrix,false);
+		//cl.setDebug();
 		
-		for (int iId=1;iId<this.size()+1;iId++) {
-			//System.out.printf("%2s: ",iId);
-			for (int jId=iId+1;jId<this.size()+1;jId++) {
-				//System.out.printf("%5.2f ",rmsdMatrix[iId-1][jId-1]);
-				if (rmsdMatrix[iId-1][jId-1] >= 0.0 && rmsdMatrix[iId-1][jId-1] < rmsdCutoff) {
-					if (clusters.containsKey(iId)) {
-						InterfaceCluster interfCluster = clusters.get(iId);
-						interfCluster.addMember(get(jId));
-						
-						clusters.put(jId, interfCluster);
-					} else {
-						InterfaceCluster interfCluster = new InterfaceCluster(clusterId);
-						interfCluster.addMember(get(iId));
-						interfCluster.addMember(get(jId));
-						clusters.put(iId, interfCluster);
-						clusters.put(jId, interfCluster);
-						clusterId++;
-					}
-				} 
-			}
-			//System.out.println();
-		}
-		//System.out.println();
+		Map<Integer,Set<Integer>> map  = cl.getClusters(rmsdCutoff);
 		
-		// anything not clustered is assigned to a singleton cluster (cluster with one member)
-		for (int id=1;id<this.size()+1;id++) {
-			if (!clusters.containsKey(id)) {
-				InterfaceCluster interfCluster = new InterfaceCluster(clusterId);
-				interfCluster.addMember(get(id));
-				clusters.put(id,interfCluster);
-				clusterId++;
+		for (int clusterId:map.keySet()) {
+			InterfaceCluster ic = new InterfaceCluster(clusterId);
+			for (int member:map.get(clusterId)) {
+				
+				int memberInterfaceId = member+1;
+				
+				ic.addMember(get(memberInterfaceId));
+				
+				clusters.put(memberInterfaceId,ic);
 			}
+			
 		}
 		
 		// reassigning cluster ids based on mean areas (see InterfaceCluster.compare implementation)

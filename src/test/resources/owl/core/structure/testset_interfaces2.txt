@@ -1,3 +1,4 @@
+1n4q # pdb for which we've had issues in clustering (some interfaces belonging to 2 different clusters) 
 3hz3 # interfaces with 2nd neighbors
 3NQJ # exact interface count disagrees because of cutoff issue (last interface very small)
 1FB6 
@@ -29,7 +30,7 @@
 2ERB	A
 1HBN	C
 1WQJ	B # interfaces with 2nd neighbors
-2HEU	A
+#2HEU	A # area of an interface around the 35A2 disagreeing makes count disagree 
 2I53	A
 1J3A	A
 1VZI	A

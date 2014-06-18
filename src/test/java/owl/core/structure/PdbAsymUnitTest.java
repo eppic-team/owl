@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -296,17 +297,91 @@ public class PdbAsymUnitTest {
 			ChainInterfaceList interfaces = pdb.getAllInterfaces(CUTOFF, AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 0);
 			long end = System.currentTimeMillis();
 			System.out.println("Time: "+((end-start)/1000)+"s");
-			System.out.println("Total number of interfaces found above 30A2 area: "+interfaces.getNumInterfacesAboveArea(30));
+			System.out.println("Total number of interfaces found above 35A2 area: "+interfaces.getNumInterfacesAboveArea(30));
 			
-			int pisaCount = pisaInterfaces.getNumProtProtInterfacesAboveArea(30);
-			System.out.println("PISA interface count above 30A2 area: "+pisaCount);
-			Assert.assertEquals(pisaCount, interfaces.getNumInterfacesAboveArea(30));
-
-			
+			int pisaCount = pisaInterfaces.getNumProtProtInterfacesAboveArea(35);
+			System.out.println("PISA interface count above 35A2 area: "+pisaCount);
+			Assert.assertEquals(pisaCount, interfaces.getNumInterfacesAboveArea(35));
 			
 		}
 	}
 	
+	@Test
+	public void testInterfaceClusters() throws IOException {
+
+		List<String> pdbCodes = readListFile(LISTFILE2);
+
+		System.out.println("Interface clusters calculation test");
+		System.out.println("Will use "+NTHREADS+" CPUs for ASA calculations");
+
+		
+		for (String pdbCode: pdbCodes) {
+
+			System.out.println("\n##"+pdbCode);
+			File cifFile = new File(System.getProperty("java.io.tmpdir"),pdbCode+".pdbasymunittest.cif");
+			cifFile.deleteOnExit();
+			PdbAsymUnit.grabCifFile(LOCAL_CIF_DIR, null, pdbCode, cifFile, false);
+
+			PdbAsymUnit pdb = null;
+			try {
+				pdb = new PdbAsymUnit(cifFile);
+			} catch (PdbLoadException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			} catch (FileFormatException e) {
+				System.err.println("PDB load error, cause: "+e.getMessage());
+				continue;
+			}
+
+			pdb.removeHatoms();
+
+			System.out.println(pdb.getSpaceGroup().getShortSymbol()+" ("+pdb.getSpaceGroup().getId()+")");
+
+			long start = System.currentTimeMillis();
+
+			ChainInterfaceList interfaces = 
+					pdb.getAllInterfaces(CUTOFF, AsaCalculator.DEFAULT_N_SPHERE_POINTS, NTHREADS, CONSIDER_HETATOMS, CONSIDER_NONPOLY, CONSIDER_COFACTORS, 35);
+
+			long end = System.currentTimeMillis();
+			
+			System.out.println("Time: "+((end-start)/1000)+"s");
+			System.out.println("Total number of interfaces found (above 35A2 area): "+interfaces.getNumInterfaces());
+
+
+			// testing the clusters
+			
+			
+			System.out.print("Calculating clusters... ");
+			
+			start = System.currentTimeMillis();
+			interfaces.initialiseClusters(pdb, 2.0, 10, "CA");
+			end = System.currentTimeMillis();
+			
+			System.out.printf("Time: %6.3f\n",((end-start)/1000.0));
+			
+			List<InterfaceCluster> clusters = interfaces.getClusters();
+
+			System.out.println("Total number of interface clusters found (above 35A2 area): "+clusters.size());
+			
+			// number of clusters must be smaller than number of interfaces
+			Assert.assertTrue(interfaces.getNumInterfaces()>=clusters.size());
+			
+			HashSet<Integer> interfaceIds = new HashSet<Integer>();
+			HashSet<Integer> clusterIds = new HashSet<Integer>();
+			for (InterfaceCluster cluster:clusters) {
+				
+				// just a sanity check: clusters ids are not duplicated
+				Assert.assertTrue(clusterIds.add(cluster.getId()));
+				
+				for (ChainInterface interf:cluster.getMembers()) {					
+					// main test: no duplicates should exist 
+					Assert.assertTrue("There should not be any duplicate interface ids in the interface clusters",interfaceIds.add(interf.getId()));
+				}
+			}
+			
+		}
+	}
+
 	@Test
 	public void testInterfacesFinderNumCells() throws IOException, SAXException {
 		
