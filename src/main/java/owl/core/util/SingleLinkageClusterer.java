@@ -1,7 +1,7 @@
 package owl.core.util;
 
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -10,7 +10,9 @@ import java.util.TreeSet;
 
 
 /**
- * An implementation of a single hierarchical clusterer
+ * An implementation of a single linkage clusterer
+ * 
+ * See http://en.wikipedia.org/wiki/Single-linkage_clustering
  * 
  * @author jose
  *
@@ -64,6 +66,11 @@ public class SingleLinkageClusterer {
 	private int numItems;
 	
 	private LinkedPair[] dendrogram;
+	
+	//private Set<Integer> toSkip;
+	
+	private ArrayList<Integer> indicesToCheck;
+	
 	
 	/**
 	 * Constructs a new SingleLinkageClusterer
@@ -120,7 +127,9 @@ public class SingleLinkageClusterer {
 		}
 		
 		for (int m=0;m<numItems-1;m++) {
-			LinkedPair pair = getClosestPair(m);
+			
+			updateIndicesToCheck(m);
+			LinkedPair pair = getClosestPair();
 			merge(pair);
 			dendrogram[m] = pair;
 			
@@ -166,21 +175,31 @@ public class SingleLinkageClusterer {
 		return matrix[Math.min(first, second)][Math.max(first, second)];
 	}
 	
-	private LinkedPair getClosestPair(int m) {
+	private void updateIndicesToCheck(int m) {
 		
-		Set<Integer> toSkip = new HashSet<Integer>();
-		for (int i=0;i<m;i++) {
-			toSkip.add(dendrogram[i].getFirst());
+		if (indicesToCheck==null) {
+			indicesToCheck = new ArrayList<Integer>(numItems);
+
+			for (int i=0;i<numItems;i++) {
+				indicesToCheck.add(i);
+			}			
 		}
+		
+		if (m==0) return;
+		
+		indicesToCheck.remove(new Integer(dendrogram[m-1].getFirst()));
+	}
+	
+	private LinkedPair getClosestPair() {		
 		
 		LinkedPair closestPair = null;
 		
 		if (isScoreMatrix) {
 			double max = 0.0;
-			for (int i=0;i<matrix.length;i++) {
-				if (toSkip.contains(i)) continue;
-				for (int j=i+1;j<matrix[i].length;j++) {
-					if (toSkip.contains(j)) continue;
+			for (int i:indicesToCheck) {
+				
+				for (int j:indicesToCheck) {					
+					if (j<=i) continue;
 					
 					if (matrix[i][j]>=max) {
 						max = matrix[i][j];
@@ -191,10 +210,10 @@ public class SingleLinkageClusterer {
 			}
 		} else {
 			double min = Double.MAX_VALUE;
-			for (int i=0;i<matrix.length;i++) {
-				if (toSkip.contains(i)) continue;
-				for (int j=i+1;j<matrix[i].length;j++) {
-					if (toSkip.contains(j)) continue;
+			for (int i:indicesToCheck) {
+				
+				for (int j:indicesToCheck) {
+					if (j<=i) continue;
 					
 					if (matrix[i][j]<=min) {
 						min = matrix[i][j];
