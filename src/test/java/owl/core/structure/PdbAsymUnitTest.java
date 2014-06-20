@@ -501,7 +501,7 @@ public class PdbAsymUnitTest {
 			CrystalCell cell = pdb.getCrystalCell();
 			
 			for (int op=0;op<sg.getNumOperators();op++) {
-				Matrix4d transfXtal = sg.getTransformation(op);				
+				Matrix4d transfXtal = new Matrix4d(sg.getTransformation(op));				
 				
 				Matrix4d transfOrthon = cell.transfToOrthonormal(transfXtal);
 				
