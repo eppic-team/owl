@@ -60,6 +60,8 @@ public class PdbParsersTest {
 	private static File PDBFILE_NO_TER;
 	private static File CASPTARBALL;
 	
+	private static File CASP_FILES_UNTAR_DIR;
+	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 	}
@@ -76,12 +78,12 @@ public class PdbParsersTest {
 		// copying and untaring the tarball
 		CASPTARBALL = TestsSetup.inputStreamToTempFile(PdbParsersTest.class.getResourceAsStream(CASPTARBALL_PATH),"PdbParsersTest",".tar.gz");
 		
-		File untarDir = new File(System.getProperty("java.io.tmpdir"),"test_casp_files");
-		if (!untarDir.exists()) untarDir.mkdir();
-		untarDir.deleteOnExit();
+		CASP_FILES_UNTAR_DIR = new File(TMPDIR,"test_casp_files");
+		if (!CASP_FILES_UNTAR_DIR.exists()) CASP_FILES_UNTAR_DIR.mkdir();
+		CASP_FILES_UNTAR_DIR.deleteOnExit();
 
 		// note this requires the tar program in path!
-		Process proc = Runtime.getRuntime().exec("tar -zxf "+CASPTARBALL+" -C "+untarDir);
+		Process proc = Runtime.getRuntime().exec("tar -zxf "+CASPTARBALL+" -C "+CASP_FILES_UNTAR_DIR);
 		proc.waitFor();
 		
 		// copying other temp files
@@ -114,7 +116,7 @@ public class PdbParsersTest {
 				
 		
 		// CASP TS server files (testing with server tar ball T0515 of CASP9)
-		File dir = new File(TMPDIR,"T0515");
+		File dir = new File(CASP_FILES_UNTAR_DIR,"T0515");
 		File[] files = dir.listFiles(new RegexFileFilter("T0515.*"));
 		
 		for (File caspFileName:files) {
