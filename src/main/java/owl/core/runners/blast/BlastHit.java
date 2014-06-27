@@ -131,8 +131,8 @@ public class BlastHit implements Iterable<BlastHsp>, Serializable, Comparable<Bl
 	}
 	
 	/**
-	 * Returns the total percent identity by considering the identities 
-	 * across all hsps of this hit.
+	 * Returns the total percent identity (identities over length of alignment) 
+	 * by considering the identities across all HSPs of this hit. 
 	 * @return
 	 */
 	public double getTotalPercentIdentity() {

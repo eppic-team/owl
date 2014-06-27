@@ -311,7 +311,7 @@ public class BlastXMLParser implements ContentHandler {
 			}
 			else if (name.equals(HSP_TAG)) {
 				this.currentHsp.setAlignment(currentQSeq, currentHSeq);
-				this.currentHsp.setPercentIdentity((double)(100*currentIdentity)/((double)currentAliLength));
+				this.currentHsp.setIdentities(currentIdentity);
 				inHsp = false;
 			}
 			if (inHsp) {
