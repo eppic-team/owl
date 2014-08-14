@@ -399,7 +399,7 @@ public class CrystalCell implements Serializable {
 		for (int i=0;i<3;i++) {
 			for (int j=0;j<3;j++) {
 				if (!deltaComp(getMTranspose().getElement(i, j),scaleMatrix.getElement(i, j))) {
-					//System.out.println("Our value   ("+i+","+j+"): "+getM().getElement(i,j));
+					//System.out.println("Our value   ("+i+","+j+"): "+getMTranspose().getElement(i,j));
 					//System.out.println("Their value ("+i+","+j+"): "+scaleMatrix.getElement(i,j));
 					return false;	
 				}
@@ -407,6 +407,7 @@ public class CrystalCell implements Serializable {
 		}
 		for (int i=0;i<3;i++) {
 			if (!deltaComp(scaleMatrix.getElement(i, 3),0)) {
+				//System.out.printf("Discrepancy in translation "+i+": %.4f\n",scaleMatrix.getElement(i, 3));
 				return false;
 			}
 		}
@@ -414,7 +415,7 @@ public class CrystalCell implements Serializable {
 	}
 	
 	private boolean deltaComp(double d1, double d2) {
-		if (Math.abs(d1-d2)<0.0001) return true;
+		if (Math.abs(d1-d2)<0.001) return true;
 		return false;
 	}
 }
