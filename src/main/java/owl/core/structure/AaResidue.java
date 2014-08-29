@@ -225,6 +225,10 @@ public class AaResidue implements Residue {
 		return (double)this.bsa/ (double)this.asa;
 	}
 	
+	public void setParent(PdbChain parent) {
+		this.parent = parent;
+	}
+	
 	@Override
 	public Collection<Atom> getAtoms() {
 		return atoms.values();

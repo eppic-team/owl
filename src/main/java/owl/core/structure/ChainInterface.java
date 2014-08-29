@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
@@ -13,6 +14,8 @@ import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3d;
 import javax.vecmath.Tuple3d;
 
+import edu.uci.ics.jung.graph.util.Pair;
+import owl.core.runners.HbplusRunner;
 import owl.core.runners.NaccessRunner;
 import owl.core.structure.graphs.AICGraph;
 import owl.core.util.GeometryTools;
@@ -206,6 +209,14 @@ public class ChainInterface implements Comparable<ChainInterface>, Serializable 
 	
 	public void setSecondTransfOrth(Matrix4d secondTransfOrth) {
 		this.secondTransfOrth = secondTransfOrth;
+	}
+	
+	public void runHBPlus(File hbplusExe, File pdbFile) throws IOException, InterruptedException {
+		HbplusRunner hbplus = new HbplusRunner(hbplusExe, pdbFile);
+		hbplus.runHBPlus();
+		hbplus.parseOutput(this);
+		HashSet<Pair<Atom>> hBondPairs = hbplus.getPairs();
+		graph.setHBondPairs(hBondPairs);
 	}
 	
 	/**

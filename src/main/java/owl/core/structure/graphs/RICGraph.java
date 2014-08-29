@@ -30,7 +30,7 @@ public class RICGraph extends SparseGraph<RICGNode,RICGEdge> {
 			
 			boolean isClash = aicEdge.getDistance()<AICGraph.CLASH_DISTANCE;
 			boolean isDisulfide = atomGraph.isDisulfideInteraction(pair, aicEdge.getDistance());
-			boolean isHBond = atomGraph.isHbondInteraction(pair, aicEdge.getDistance());
+			boolean isHBond = atomGraph.isHbondInteraction(pair);
 			
 			if (this.findEdge(iNode, jNode)==null) {
 

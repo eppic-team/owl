@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import owl.core.structure.Atom;
-import owl.core.structure.AtomType;
 import owl.core.structure.Residue;
+import owl.core.util.GeometryTools;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.Pair;
 
@@ -18,7 +18,7 @@ import edu.uci.ics.jung.graph.util.Pair;
  * @author duarte_j
  *
  */
-public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
+public class AICGraph extends SparseGraph<Atom,AICGEdge> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -26,9 +26,10 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	public static final double DISULFIDE_BRIDGE_DIST = 2.05;
 	public static final double DISULFIDE_BRIDGE_DIST_SIGMA = 0.1;
 	
-	// hydrogen bonds upper and lower bounds, wikipedia says 1.6-2.0
-	public static final double HBOND_UPPER = 2.05;
-	public static final double HBOND_LOWER = 1.55;
+	// hydrogen bonds (ref: Hubbard & Haider)
+	public static final double HBOND_UPPER = 3.9; //3.55
+	public static final double HBOND_LOWER = 2.5; //2.45
+	public static final double HBOND_MIN_ANGLE = Math.PI / 2;
 	
 	// a generic low distance for a close interaction (electrostatic, salt bridge, semi-covalent, covalent)
 	// see review Harding MM, Acta Crystallographica 2006 - 
@@ -36,9 +37,10 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	public static final double CLOSE_INTERACTION_DIST = 2.1;
 	
 	// clash distance: in theory, a disulfide bond distance (2.05) is the minimum distance we could reasonably expect
-	public static final double CLASH_DISTANCE = 1.5; 
+	public static final double CLASH_DISTANCE = 1.5;
 	
-	
+	// the set of hydrogen-bonded atom pairs
+	private HashSet<Pair<Atom>> hBondPairs;
 	
 	private double distCutoff;
 	
@@ -62,13 +64,17 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		return getPairsWithinDistance(CLASH_DISTANCE);
 	}
 	
+	public void setHBondPairs(HashSet<Pair<Atom>> hBondPairsI) {
+		hBondPairs = hBondPairsI;
+	}
+	
 	public boolean hasPairsWithinDistance(double distance) {
 		for (AICGEdge edge:this.getEdges()) {
 			if (edge.getDistance()<distance) {
 				return true;
 			}
 		}
-		return false;		
+		return false;
 	}
 	
 	public List<Pair<Atom>> getPairsWithinDistance(double distance) {
@@ -121,7 +127,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	public boolean hasHbonds() {
 		for (AICGEdge edge:this.getEdges()) {
 			Pair<Atom> pair = this.getEndpoints(edge);
-			if (isHbondInteraction(pair, edge.getDistance())) {
+			if (isHbondInteraction(pair)) {
 				return true;
 			}
 		}
@@ -137,7 +143,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		List<Pair<Atom>> list = new ArrayList<Pair<Atom>>();
 		for (AICGEdge edge:this.getEdges()) {
 			Pair<Atom> pair = this.getEndpoints(edge);
-			if (isHbondInteraction(pair, edge.getDistance())) {
+			if (isHbondInteraction(pair)) {
 				list.add(pair);
 			}
 		}
@@ -152,7 +158,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	public boolean hasCloselyInteractingPairs() {
 		for (AICGEdge edge:this.getEdges()) {
 			Pair<Atom> pair = this.getEndpoints(edge);			
-			if (!isHbondInteraction(pair, edge.getDistance()) &&
+			if (!isHbondInteraction(pair) &&
 				!isDisulfideInteraction(pair, edge.getDistance()) &&
 				(edge.getDistance()<CLOSE_INTERACTION_DIST)	) {
 				return true;
@@ -170,7 +176,7 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 		List<Pair<Atom>> list = new ArrayList<Pair<Atom>>();
 		for (AICGEdge edge:this.getEdges()) {
 			Pair<Atom> pair = this.getEndpoints(edge);
-			if (!isHbondInteraction(pair, edge.getDistance()) &&
+			if (!isHbondInteraction(pair) &&
 				!isDisulfideInteraction(pair, edge.getDistance()) &&
 				(edge.getDistance()<CLOSE_INTERACTION_DIST)	) {
 				list.add(pair);
@@ -180,27 +186,78 @@ public class AICGraph  extends SparseGraph<Atom,AICGEdge> {
 	}
 	
 	/**
-	 * Tells whether given atom pair and distance fullfils the conditions for a Hydrogen bond
-	 * TODO this can find Hbonds only if H atoms are present, should write a more general algorithm for cases when no H atoms are present
+	 * Tells whether given atom pair and distance fulfils the conditions for a Hydrogen bond
 	 * @param pair
 	 * @param distance
 	 * @return
 	 */
-	protected boolean isHbondInteraction(Pair<Atom> pair, double distance) {
-		Atom atomi = pair.getFirst();
-		Atom atomj = pair.getSecond();
-		if ( (atomi.getType()!=null && atomj.getType()!=null) && // this can happen if the atom type is unknonw (not in our AtomType enum)
-			 ((atomi.getType().isHbondAcceptor() && atomj.getType()==AtomType.H) ||
-			 (atomj.getType().isHbondAcceptor() && atomi.getType()==AtomType.H)) &&
-			 distance<HBOND_UPPER && 
-			 distance>HBOND_LOWER) {
-				return true;
+	protected boolean isHbondInteraction(Pair<Atom> pair) {
+		if (hBondPairs != null) {
+			return hBondPairs.contains(pair);
+		}
+		else {
+			/*
+			 * When HBPlus is not used, hBondPairs will be null and this block will instead be executed.
+			 */
+			Atom donor = pair.getFirst();
+			Atom acceptor = pair.getSecond();
+			if (donor.getType() == null || acceptor.getType() == null || !donor.isDonor() || !acceptor.isAcceptor()) {
+				return false;
 			}
-		return false;
+			Atom donorParent = null;
+			double donorParentDistance = 0.0;
+			for (Atom atom : donor.getParentResidue()) {
+				if ((atom != donor) && (!atom.getType().getSymbol().equals("H"))) {
+					if (donorParent == null) {
+						donorParent = atom;
+						donorParentDistance = GeometryTools.distance(atom.getCoords(), donor.getCoords());
+					}
+					else {
+						double thisDistance = GeometryTools.distance(atom.getCoords(), donor.getCoords());
+						if (thisDistance < donorParentDistance) {
+							donorParent = atom;
+							donorParentDistance = thisDistance;
+						}
+					}
+				}
+			}
+			Atom acceptorParent = null;
+			double acceptorParentDistance = 0.0;
+			for (Atom atom : acceptor.getParentResidue()) {
+				if ((atom != acceptor) && (!atom.getType().getSymbol().equals("H"))) {
+					if (acceptorParent == null) {
+						acceptorParent = atom;
+						acceptorParentDistance = GeometryTools.distance(atom.getCoords(), acceptor.getCoords());
+					}
+					else {
+						double thisDistance = GeometryTools.distance(atom.getCoords(), acceptor.getCoords());
+						if (thisDistance < acceptorParentDistance) {
+							acceptorParent = atom;
+							acceptorParentDistance = thisDistance;
+						}
+					}
+				}
+			}
+			if (donor.getType() != null && acceptor.getType() != null && // this can happen if the atom type is unknown (not in our AtomType enum)
+				 GeometryTools.distance(donor.getCoords(), acceptor.getCoords()) < HBOND_UPPER && 
+				 GeometryTools.distance(donor.getCoords(), acceptor.getCoords()) > HBOND_LOWER && 
+				 GeometryTools.angle(donorParent.getCoords(), donor.getCoords(), acceptor.getCoords()) > HBOND_MIN_ANGLE && 
+				 GeometryTools.angle(donor.getCoords(), acceptor.getCoords(), acceptorParent.getCoords()) > HBOND_MIN_ANGLE) {
+					//System.out.println("D is a(n) " + donor.getCode() + " in " + donor.getParentResidue().getLongCode() + donor.getParentResSerial());
+					//System.out.println("DD is a(n) " + donorParent.getCode() + " in " + donorParent.getParentResidue().getLongCode() + donorParent.getParentResSerial());
+					//System.out.println("A is a(n) " + acceptor.getCode() + " in " + acceptor.getParentResidue().getLongCode() + acceptor.getParentResSerial());
+					//System.out.println("AA is a(n) " + acceptorParent.getCode() + " in " + acceptorParent.getParentResidue().getLongCode() + acceptorParent.getParentResSerial());
+					//System.out.println("HBOND EXISTS " + GeometryTools.distance(donor.getCoords(), acceptor.getCoords()) + "\n");
+					return true;
+			}
+			else {
+				return false;
+			}
+		}
 	}
 	
 	/**
-	 * Tells whether given atom pair and distance fullfils the conditions for a disulfide bridge 
+	 * Tells whether given atom pair and distance fulfils the conditions for a disulfide bridge 
 	 * @param pair
 	 * @param distance
 	 * @return

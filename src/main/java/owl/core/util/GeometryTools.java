@@ -75,6 +75,30 @@ public class GeometryTools {
 	}
 	
 	/**
+	 * Returns the angle defined by three points (p1, p2, and p3).
+	 * @return the angle in radians
+	 */
+	public static double angle(Point3d p1, Point3d p2, Point3d p3) {
+		Vector3d v21 = new Vector3d(p1);
+		v21.sub(p2);
+		
+		Vector3d v23 = new Vector3d(p3);
+		v23.sub(p2);
+		
+		return Math.acos(v21.dot(v23) / (v21.length() * v23.length()));
+	}
+	
+	/**
+	 * Returns the distance between two points (p1 and p2).
+	 * @return the distance
+	 */
+	public static double distance(Point3d p1, Point3d p2) {
+		Vector3d v = new Vector3d(p2);
+		v.sub(p1);
+		return v.length();
+	}
+	
+	/**
 	 * Read backbone coordinates in pdb format (see http://www.wwpdb.org/documentation/format32/v3.2.html)
 	 * @param pdbFile the input file
 	 * @param chain the chain for which coordinates are read
@@ -559,37 +583,48 @@ public class GeometryTools {
 	 * Takes the name of a pdb file, reads in the coordinates and prints out the dihedral angles.
 	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws IOException {
-		if(args.length < 1) {
-			System.out.println("Usage: " + GeometryTools.class.getName() + " <pdb_file_name>");
-			System.exit(1);
-		}
-
-		File pdbFile = new File(args[0]);
-		char chain = 'A';	// define the chain to be processed
-		
-		// read coordinates
-		TreeMap<Integer,BackboneCoords> myBackbone = readBackbone(pdbFile, chain);
-
-		// calculate angles and predict secondary structure state
-		System.out.println("resNum\tphi\tpsi\tomega\tpredSS\tCaDist\tpredSS");
-		int maxResNum = myBackbone.lastKey();
-		for (int i = 2; i <= maxResNum - 1; i++) {
-			BackboneCoords bb_i = myBackbone.get(i);
-			BackboneCoords bb_iplus1 = myBackbone.get(i+1);
-			BackboneCoords bb_iminus1 = myBackbone.get(i-1);
-			double phi = Math.toDegrees(dihedralAngle(bb_iminus1.C, bb_i.N, bb_i.Ca, bb_i.C)); // phi: C(i-1), N, C-alpha, C
-			double psi = Math.toDegrees(dihedralAngle(bb_i.N, bb_i.Ca, bb_i.C, bb_iplus1.N));  // psi: N, C-alpha, C, N(i+1)
-			double omega = Math.toDegrees(dihedralAngle(bb_i.Ca, bb_i.C, bb_iplus1.N, bb_iplus1.Ca)); // omega: C-alpha, C, N(i+1), C-alpha(i+1)
-			char ssPred = classifyByAngle(phi, psi);
-			System.out.printf("%3d\t%4.0f\t%4.0f\t%4.0f\t%s", i, phi, psi, omega, ssPred);
-			if(myBackbone.containsKey(i+3)) {
-				BackboneCoords bb_iplus3 = myBackbone.get(i+3);
-				double distCa = bb_i.Ca.distance(bb_iplus3.Ca);
-				char ssPred2 = classifyByDistance(distCa);
-				System.out.printf("\t%4.1f\t%s", distCa, ssPred2);
-			}
-			System.out.println();
-		}
+//	public static void main(String[] args) throws IOException {
+//		if(args.length < 1) {
+//			System.out.println("Usage: " + GeometryTools.class.getName() + " <pdb_file_name>");
+//			System.exit(1);
+//		}
+//
+//		File pdbFile = new File(args[0]);
+//		char chain = 'A';	// define the chain to be processed
+//		
+//		// read coordinates
+//		TreeMap<Integer,BackboneCoords> myBackbone = readBackbone(pdbFile, chain);
+//
+//		// calculate angles and predict secondary structure state
+//		System.out.println("resNum\tphi\tpsi\tomega\tpredSS\tCaDist\tpredSS");
+//		int maxResNum = myBackbone.lastKey();
+//		for (int i = 2; i <= maxResNum - 1; i++) {
+//			BackboneCoords bb_i = myBackbone.get(i);
+//			BackboneCoords bb_iplus1 = myBackbone.get(i+1);
+//			BackboneCoords bb_iminus1 = myBackbone.get(i-1);
+//			double phi = Math.toDegrees(dihedralAngle(bb_iminus1.C, bb_i.N, bb_i.Ca, bb_i.C)); // phi: C(i-1), N, C-alpha, C
+//			double psi = Math.toDegrees(dihedralAngle(bb_i.N, bb_i.Ca, bb_i.C, bb_iplus1.N));  // psi: N, C-alpha, C, N(i+1)
+//			double omega = Math.toDegrees(dihedralAngle(bb_i.Ca, bb_i.C, bb_iplus1.N, bb_iplus1.Ca)); // omega: C-alpha, C, N(i+1), C-alpha(i+1)
+//			char ssPred = classifyByAngle(phi, psi);
+//			System.out.printf("%3d\t%4.0f\t%4.0f\t%4.0f\t%s", i, phi, psi, omega, ssPred);
+//			if(myBackbone.containsKey(i+3)) {
+//				BackboneCoords bb_iplus3 = myBackbone.get(i+3);
+//				double distCa = bb_i.Ca.distance(bb_iplus3.Ca);
+//				char ssPred2 = classifyByDistance(distCa);
+//				System.out.printf("\t%4.1f\t%s", distCa, ssPred2);
+//			}
+//			System.out.println();
+//		}
+//	}
+	
+	public static void main(String[] args) {
+		Point3d p1 = new Point3d(0.0, 0.0, 0.0);
+		Point3d p2 = new Point3d(1.0, 0.0, 0.0);
+		Point3d p3 = new Point3d(1.0, 1.0, 1.0);
+		System.out.println("Angle = " + Double.toString(angle(p1, p2, p3)) + " rad");
+		System.out.println("d12 = " + Double.toString(distance(p1, p2)));
+		System.out.println("d23 = " + Double.toString(distance(p2, p3)));
+		System.out.println("d31 = " + Double.toString(distance(p3, p1)));
 	}
 }
+

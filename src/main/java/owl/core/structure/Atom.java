@@ -3,7 +3,6 @@ package owl.core.structure;
 import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import javax.vecmath.Point3d;
 
 /**
@@ -26,7 +25,7 @@ public class Atom implements Serializable {
 	private int serial;
 	private Point3d coords;
 	
-	private Residue parentResidue; 
+	private Residue parentResidue;
 	
 	private double bfactor;
 	private double occupancy;
@@ -188,6 +187,106 @@ public class Atom implements Serializable {
 	
 	public String toString() {
 		return serial+code;
+		//return parentResidue.getPdbSerial() + code;
+	}
+	
+	public boolean isDonor() {
+		if (this.type.getSymbol().equals("O")) {
+			if ((this.parentResidue.getShortCode() == 'S') && (this.code.contains("OG"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'T') && (this.code.equals("OG1"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'Y') && (this.code.contains("OH"))) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		else if (this.type.getSymbol().equals("N")) {
+			if ((this.parentResidue.getShortCode() == 'K') && (this.code.contains("NZ"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'R') && (this.code.contains("NH"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'W') && (this.code.equals("NE1"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'H') && (this.code.equals("NE1"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'H') && (this.code.equals("ND2"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'R') && (this.code.contains("NE"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'N') && (this.code.equals("ND2"))) {
+				return true;
+			}
+			else if ((this.parentResidue.getShortCode() == 'Q') && (this.code.equals("NE2"))) {
+				return true;
+			}
+			else if (this.code.equals("N")) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		else if (this.type.getSymbol().equals("S")) {
+			if ((this.parentResidue.getShortCode() == 'C') && (this.code.contains("SG"))) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		else {
+			return false;
+		}
+	}
+	
+	public boolean isAcceptor() {
+		if (this.code.equals("O")) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'H') && (this.code.equals("ND1"))) {
+			return true;
+		}
+		else if (this.code.contains("SG")) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'D') && (this.code.contains("OD"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'E') && (this.code.contains("OE"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'M') && (this.code.contains("SD"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'N') && (this.code.equals("OD1"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'Q') && (this.code.equals("OE1"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'S') && (this.code.contains("OG"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'T') && (this.code.equals("OG1"))) {
+			return true;
+		}
+		else if ((this.parentResidue.getShortCode() == 'Y') && (this.code.contains("OH"))) {
+			return true;
+		}
+		else {
+			return false;
+		}
 	}
 	
 	/**
@@ -211,9 +310,11 @@ public class Atom implements Serializable {
 	 * of parent residue and same serial of parent residue.
 	 */
 	public boolean equals(Object other) {
-		if (!(other instanceof Atom)) return false;
+		if (!(other instanceof Atom)) {
+			return false;
+		}
 		Atom o = (Atom) other;
-		if (this.serial!=o.serial) { 
+		if (this.serial != o.serial) {
 			return false;
 		}
 		if (!this.code.equals(o.code)) {
@@ -222,10 +323,9 @@ public class Atom implements Serializable {
 		if (!this.parentResidue.getLongCode().equals(o.parentResidue.getLongCode())) {
 			return false;
 		}
-		if (this.parentResidue.getSerial()!=o.parentResidue.getSerial()) {
+		if (this.parentResidue.getSerial() != o.parentResidue.getSerial()) {
 			return false;
 		}
-		
 		return true;
 	}
 	
