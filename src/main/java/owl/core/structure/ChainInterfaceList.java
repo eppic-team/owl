@@ -387,6 +387,9 @@ public class ChainInterfaceList implements Iterable<ChainInterface>, Serializabl
 			
 		}
 		
+		// if no interfaces we don't want try clustering (or we get null pointer in SingleLinkageClusterer)
+		if (list.size()==0) return;
+		
 		// note that the clusterer alters the matrix, keep that in mind if we wanted to use the matrix down the line 
 		SingleLinkageClusterer cl = new SingleLinkageClusterer(rmsdMatrix,false);
 		//cl.setDebug();

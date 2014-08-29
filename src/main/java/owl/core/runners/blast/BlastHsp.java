@@ -17,9 +17,9 @@ public class BlastHsp implements Serializable {
 	private int subjectEnd;
 	private double eValue;
 	private double score;
-	private double percentIdentity;
+	private int identities;
 
-	private MultipleSequenceAlignment al; 		// if BlastHit create from tabular file parsing, this will be null 
+	private MultipleSequenceAlignment al; 
 
 	/**
 	 * Constructor to be used when parsing from XML output, use the setters to 
@@ -30,37 +30,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Constructor to be used when parsing from tabular output
-	 * @param field0
-	 * @param field1
-	 * @param field2
-	 * @param field3
-	 * @param field4
-	 * @param field5
-	 * @param field6
-	 * @param field7
-	 * @param field8
-	 * @param field9
-	 * @param field10
-	 * @param field11
-	 */
-	public BlastHsp(String field0, String field1, String field2, String field3, String field4, String field5, 
-			String field6, String field7, String field8, String field9, String field10, String field11) {
-		this.percentIdentity = Double.parseDouble(field2.trim());
-		this.aliLength = Integer.parseInt(field3.trim());
-		//this.mismatches = Integer.parseInt(field4.trim());
-		//this.gapOpenings = Integer.parseInt(field5.trim());
-		this.queryStart = Integer.parseInt(field6.trim());
-		this.queryEnd = Integer.parseInt(field7.trim());
-		this.subjectStart = Integer.parseInt(field8.trim());
-		this.subjectEnd = Integer.parseInt(field9.trim());
-		this.eValue = Double.parseDouble(field10.trim());
-		this.score = Double.parseDouble(field11.trim());
-		this.al = null;		
-	}
-	
-	/**
-	 * Returns the BlastHit parent of this hsp.
+	 * Returns the BlastHit parent of this HSP.
 	 * @return
 	 */
 	public BlastHit getParent() {
@@ -68,7 +38,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Sets the BlastHit parent of this hsp.
+	 * Sets the BlastHit parent of this HSP.
 	 * @param parent
 	 */
 	public void setParent(BlastHit parent) {
@@ -76,7 +46,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Returns the score for this hsp.
+	 * Returns the score for this HSP.
 	 * @return
 	 */
 	public double getScore() {
@@ -84,7 +54,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Sets the score for this hsp.
+	 * Sets the score for this HSP.
 	 * @param score
 	 */
 	public void setScore(double score) {
@@ -92,7 +62,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/** 
-	 * Returns the e-value for this hsp.
+	 * Returns the e-value for this HSP.
 	 * @return
 	 */
 	public double getEValue() {
@@ -100,7 +70,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Returns the alignment length of this hsp.
+	 * Returns the alignment length of this HSP.
 	 * @return
 	 */
 	public int getAliLength() {
@@ -108,7 +78,7 @@ public class BlastHsp implements Serializable {
 	}
 
 	/**
-	 * Returns the subject start position of this hsp.
+	 * Returns the subject start position of this HSP.
 	 * @return
 	 */
 	public int getSubjectStart() {
@@ -124,7 +94,7 @@ public class BlastHsp implements Serializable {
 	}
 
 	/**
-	 * Returns the query's start position of this hsp.
+	 * Returns the query's start position of this HSP.
 	 * @return
 	 */
 	public int getQueryStart() {
@@ -132,7 +102,7 @@ public class BlastHsp implements Serializable {
 	}
 
 	/**
-	 * Returns the query's end position of this hsp.
+	 * Returns the query's end position of this HSP.
 	 * @return
 	 */
 	public int getQueryEnd() {
@@ -164,19 +134,27 @@ public class BlastHsp implements Serializable {
 	}
 
 	/**
-	 * Returns the percent identity value of this hsp.
+	 * Returns the percent identity for this HSP, defined as number of identities over length of alignment.
 	 * @return
 	 */
 	public double getPercentIdentity() {
-		return this.percentIdentity;
+		return (double)(100*identities)/((double)aliLength);
 	}
 	
-	public void setPercentIdentity(double percentIdentity) {
-		this.percentIdentity = percentIdentity;
+	/**
+	 * Returns the query percent identity for this HSP, defined as number of identities over aligned query length.
+	 * @return
+	 */
+	public double getQueryPercentIdentity() {
+		return (double)(100*identities)/((double)(queryEnd-queryStart+1));
+	}
+	
+	public void setIdentities(int identitities) {
+		this.identities = identitities;
 	}
 	
 	public int getIdentities() {
-		return (int)((percentIdentity/100.0)*aliLength);
+		return identities;		
 	}
 	
 	public MultipleSequenceAlignment getAlignment() {
@@ -184,7 +162,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Sets the alignment of this hsp given the 2 aligned sequences of query and subject
+	 * Sets the alignment of this HSP given the 2 aligned sequences of query and subject
 	 * @param querySeq
 	 * @param subjectSeq
 	 */
@@ -276,7 +254,7 @@ public class BlastHsp implements Serializable {
 	}
 	
 	/**
-	 * Return the hsp alignment of this BlastHit with the subjectId tag replaced by templateId 
+	 * Return the alignment of this HSP with the subjectId tag replaced by templateId 
 	 * (pdbCode+pdbChaincode). If subjectId doesn't match regex {@value #ID_REGEX} then 
 	 * alignment with normal tags is returned. 
 	 * is returned.
@@ -296,8 +274,8 @@ public class BlastHsp implements Serializable {
 	}
 
 	/**
-	 * Returns the query coverage for this hsp, i.e. 
-	 * the ratio of aligned residues of the query compared to its length
+	 * Returns the query coverage for this HSP, i.e. 
+	 * the ratio of aligned residues of the query compared to the query's full length
 	 * @return
 	 */
 	public double getQueryCoverage() {
@@ -317,7 +295,7 @@ public class BlastHsp implements Serializable {
 		}
 		System.out.printf("%s\t%s\t%.2f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%.0e\t"+scoreFormat+"\n",
 				parent.getQueryId(),parent.getSubjectId(),
-				percentIdentity,aliLength,aliLength-getIdentities(),0,queryStart,queryEnd,subjectStart,subjectEnd,eValue,score);
+				getPercentIdentity(),aliLength,aliLength-getIdentities(),0,queryStart,queryEnd,subjectStart,subjectEnd,eValue,score);
 	}
 	
 }
