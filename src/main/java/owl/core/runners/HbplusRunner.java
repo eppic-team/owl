@@ -23,6 +23,11 @@ public class HbplusRunner {
 	private File pdbFile;
 	private HashSet<Pair<Atom>> hBondPairs;
 
+	/**
+	 * Constructs a HbplusRunner given the path to the executable and a gzipped pdbFile
+	 * @param pathToHBPlus
+	 * @param pdbFile
+	 */
 	public HbplusRunner(File pathToHBPlus, File pdbFile) {
 		this.pathToHBPlus = pathToHBPlus;
 		this.pdbFile = pdbFile;
@@ -36,7 +41,9 @@ public class HbplusRunner {
 	public String runHBPlus() throws IOException, InterruptedException {
 		byte[] buffer = new byte[1024];
 		GZIPInputStream gZIPInputStream = new GZIPInputStream(new FileInputStream(pdbFile.getPath()));
-		FileOutputStream fileOutputStream = new FileOutputStream(pdbFile.getPath().substring(0, pdbFile.getPath().lastIndexOf(".")));
+		File gunzippedPdbFile = new File(pdbFile.getPath().substring(0, pdbFile.getPath().lastIndexOf(".")));
+		gunzippedPdbFile.deleteOnExit();
+		FileOutputStream fileOutputStream = new FileOutputStream(gunzippedPdbFile);
 		int bytes_read;
 		while ((bytes_read = gZIPInputStream.read(buffer)) > 0) {
 			fileOutputStream.write(buffer, 0, bytes_read);
