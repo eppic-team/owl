@@ -238,7 +238,7 @@ public class AICGraph extends SparseGraph<Atom,AICGEdge> {
 					}
 				}
 			}
-			if (donor.getType() != null && acceptor.getType() != null && // this can happen if the atom type is unknown (not in our AtomType enum)
+			if (donorParent != null && acceptorParent != null &&     // this can happen if there's only one atom in residue, e.g. 1a3r, last resi of chain P
 				 GeometryTools.distance(donor.getCoords(), acceptor.getCoords()) < HBOND_UPPER && 
 				 GeometryTools.distance(donor.getCoords(), acceptor.getCoords()) > HBOND_LOWER && 
 				 GeometryTools.angle(donorParent.getCoords(), donor.getCoords(), acceptor.getCoords()) > HBOND_MIN_ANGLE && 
