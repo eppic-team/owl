@@ -1,6 +1,14 @@
 package owl.core.runners;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
 import java.util.zip.GZIPInputStream;
 
@@ -35,7 +43,7 @@ public class HbplusRunner {
 		}
 		gZIPInputStream.close();
 		fileOutputStream.close();
-		String command = pathToHBPlus.getPath() + " " + pdbFile.getPath().substring(0, pdbFile.getPath().lastIndexOf("."));
+		String command = pathToHBPlus.toString() + " " + pdbFile.getPath().substring(0, pdbFile.getPath().lastIndexOf("."));
 		StringBuffer output = new StringBuffer();
 		Process p;
 		p = Runtime.getRuntime().exec(command);
@@ -50,10 +58,14 @@ public class HbplusRunner {
 
 	public void parseOutput(ChainInterface chainInterface) throws IOException {
 		BufferedReader reader = null;
-		String temp = pdbFile.getPath().substring(0, pdbFile.getPath().lastIndexOf("."));
-		String outputFilePath = temp.substring(0, temp.lastIndexOf(".")) + ".hb2";
-		File output = new File(outputFilePath);
-		reader = new BufferedReader(new FileReader(output));
+		String hb2fileName = pdbFile.getName().substring(0, pdbFile.getName().lastIndexOf("."));
+		hb2fileName = hb2fileName.substring(0, hb2fileName.lastIndexOf(".")) + ".hb2";
+		// note HBPlus outputs to current directory (whatever that is), we move the file to our dir and use it from there
+		File orighb2File = new File(".",hb2fileName);
+		File hb2File = new File(pdbFile.getParent(), hb2fileName);
+		hb2File.deleteOnExit();
+		Files.move(orighb2File.toPath(), hb2File.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		reader = new BufferedReader(new FileReader(hb2File));
 		String line;
 		while ((line = reader.readLine()) != null) {
 			if (Character.isDigit(line.charAt(1)) && Character.isDigit(line.charAt(2))) {

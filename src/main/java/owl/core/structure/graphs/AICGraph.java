@@ -186,7 +186,7 @@ public class AICGraph extends SparseGraph<Atom,AICGEdge> {
 	}
 	
 	/**
-	 * Tells whether given atom pair and distance fulfils the conditions for a Hydrogen bond
+	 * Tells whether given atom pair and distance fulfills the conditions for a Hydrogen bond
 	 * @param pair
 	 * @param distance
 	 * @return
