@@ -918,13 +918,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	/**
 	 * Compute the sequence entropies for all reference sequence (uniprot) positions
-	 * @param reducedAlphabet
+	 * @param alphabetIdentifier
 	 */
-	public void computeEntropies(int reducedAlphabet) {
-		this.reducedAlphabet = reducedAlphabet;
+	public void computeEntropies(int alphabetIdentifier) {
+		this.reducedAlphabet = alphabetIdentifier;
 		this.entropies = new ArrayList<Double>(); 
 		for (int i=0;i<refInterval.getLength();i++){
-			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniId(),i+1), reducedAlphabet));
+			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniId(),i+1), alphabetIdentifier));
 		}
 	}
 	

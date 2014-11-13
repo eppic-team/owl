@@ -686,19 +686,19 @@ public class MultipleSequenceAlignment implements Serializable {
      * Gaps are not considered in the entry summation, but the calculation of amino acid 
      * column probabilities do take gaps into account.
      * @param alignIndex the column of the alignment
-     * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
+     * @param alphabetIdentifier the number of groups in the alphabet to be used, valid 
      * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum  
      * @return
      */
-    public double getColumnEntropy(int alignIndex, int numGroupsAlphabet) {
-    	int[] counts = getColumnCounts(alignIndex, numGroupsAlphabet);
+    public double getColumnEntropy(int alignIndex, int alphabetIdentifier) {
+    	int[] counts = getColumnCounts(alignIndex, alphabetIdentifier);
     	
     	// important: we are considering also gaps when calculating probabilities
     	
     	double sumplogp = 0.0;
     	double log2 = Math.log(2);
     	
-		for (int i=1;i<=numGroupsAlphabet;i++){
+		for (int i=1;i<=AminoAcid.getAlphabetSize(alphabetIdentifier);i++){
 			double prob = (double)counts[i]/(double)this.getNumberOfSequences(); // i.e. we consider gaps!
 			if (prob!=0){ // plogp is defined to be 0 when p=0 (because of limit). If we let java calculate it, it gives NaN (-infinite) because it tries to compute log(0) 
 				sumplogp += prob*(Math.log(prob)/log2);
@@ -710,7 +710,7 @@ public class MultipleSequenceAlignment implements Serializable {
     /**
      * Gets the counts of groups of aminoacids for the column alignIndex
      * @param alignIndex the column of the alignment
-     * @param numGroupsAlphabet the number of groups in the alphabet to be used, valid 
+     * @param alphabetIdentifier the number of groups in the alphabet to be used, valid 
      * values are 20, 15, 10, 8, 6, 4, 2 see {@link AminoAcid} enum 
      * @return an array of size numGroupsAlphabet+1 with indices containing the 
      * counts of groups, the indices correspond to those of the {@link AminoAcid} enum, 
@@ -718,11 +718,11 @@ public class MultipleSequenceAlignment implements Serializable {
      * @throws IllegalArgumentException if the numGroupsAlphabet given is not one of the
      * valid ones
      */
-    public int[] getColumnCounts(int alignIndex, int numGroupsAlphabet) {
+    public int[] getColumnCounts(int alignIndex, int alphabetIdentifier) {
     	String column = getColumn(alignIndex);
     	
     	// we use 0 for the gap counts, the rest for the AminoAcid classes counts (see AminoAcid enum)
-    	int[] counts = new int[numGroupsAlphabet+1];  
+    	int[] counts = new int[AminoAcid.getAlphabetSize(alphabetIdentifier) + 1];
     	 
     	for (int i=0;i<column.length();i++) {
     		char letter = column.charAt(i);
@@ -733,7 +733,7 @@ public class MultipleSequenceAlignment implements Serializable {
     		else if (AminoAcid.isStandardAA(letter)) {
     			AminoAcid aa = AminoAcid.getByOneLetterCode(letter);
     			int index;
-    			switch(numGroupsAlphabet) {
+    			switch(alphabetIdentifier) {
     			case 20:
     				index = aa.getNumber();
     				break;
@@ -755,10 +755,43 @@ public class MultipleSequenceAlignment implements Serializable {
     			case 2:
     				index = aa.getReduced2();
     				break;
+    			case 21:
+    				index = aa.getReduced21();
+    				break;
+    			case 22:
+    				index = aa.getReduced22();
+    				break;
+    			case 23:
+    				index = aa.getReduced23();
+    				break;
+    			case 24:
+    				index = aa.getReduced24();
+    				break;
+    			case 25:
+    				index = aa.getReduced25();
+    				break;
+    			case 26:
+    				index = aa.getReduced26();
+    				break;
+    			case 27:
+    				index = aa.getReduced27();
+    				break;
+    			case 28:
+    				index = aa.getReduced28();
+    				break;
+    			case 29:
+    				index = aa.getReduced29();
+    				break;
+    			case 30:
+    				index = aa.getReduced30();
+    				break;
+    			case 31:
+    				index = aa.getReduced31();
+    				break;
     			default:
-    				throw new IllegalArgumentException("A "+numGroupsAlphabet+ " groups alphabet is an invalid alphabet");	
+    				throw new IllegalArgumentException(alphabetIdentifier + " is not a valid alphabet identifier.");	
     			}
-    			counts[index]++;    		
+    			counts[index]++;
     		}
     		// notice that non-standard aas are not counted neither as gap or as class, that should not be a big problem in most cases
     	}
