@@ -41,6 +41,11 @@ public class AAAlphabet implements Serializable {
 	
 	public AAAlphabet(String alphabetString) {
 		groups = alphabetString.split(":");
+		numLetters =  groups.length;
+		updateGroups();
+	}
+	
+	public void updateGroups() {
 		for (int i = 0; i < groups.length; i++) {
 			for (int j = 0; j < groups[i].length(); j++) {
 				switch (groups[i].charAt(j)) {
@@ -107,7 +112,6 @@ public class AAAlphabet implements Serializable {
 				}
 			}
 		}
-		numLetters =  groups.length;
 	}
 	
 	public int getGroupByOneLetterCode(char oneLetterCode) {
@@ -159,6 +163,25 @@ public class AAAlphabet implements Serializable {
 
 	public int getNumLetters() {
 		return numLetters;
+	}
+	
+	public String[] getGroups() {
+		return groups;
+	}
+	
+	public void setGroups(String[] newGroups) {
+		groups = newGroups;
+		numLetters = groups.length;
+		updateGroups();
+	}
+	
+	public String toString() {
+		String toReturn = "";
+		for (String group : groups) {
+			toReturn += group;
+			toReturn += ":";
+		}
+		return toReturn.substring(0, toReturn.length() - 1);
 	}
 
 	public static boolean isValidAlphabetIdentifier(int identifier) {
