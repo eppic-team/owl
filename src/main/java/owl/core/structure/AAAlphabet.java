@@ -6,13 +6,13 @@ public class AAAlphabet implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
-	public static final String MURPHY_20 = "A:C:D:E:F:G:H:I:K:L:M:N:P:Q:R:S:T:V:W:Y";
-	public static final String MURPHY_15 = "A:C:D:E:FY:G:H:ILMV:KR:N:P:Q:S:T:W";
-	public static final String MURPHY_10 = "A:C:DENQ:FWY:G:H:ILMV:KR:P:ST";
-	public static final String MURPHY_8  = "AG:CILMV:DENQ:FWY:H:KR:P:ST";
-	public static final String MURPHY_6  = "ACILMV:DE:FHWY:GP:KR:NQST";
-	public static final String MURPHY_4  = "AGPST:CILMV:DEHKNQR:FWY";
-	public static final String MURPHY_2  = "ACFGILMPSTVWY:DEHKNQR";
+	public static final String STANDARD_20 = "A:C:D:E:F:G:H:I:K:L:M:N:P:Q:R:S:T:V:W:Y";
+	public static final String MURPHY_15   = "A:C:D:E:FY:G:H:ILMV:KR:N:P:Q:S:T:W";
+	public static final String MURPHY_10   = "A:C:DENQ:FWY:G:H:ILMV:KR:P:ST";
+	public static final String MURPHY_8    = "AG:CILMV:DENQ:FWY:H:KR:P:ST";
+	public static final String MIRNY_6     = "ACILMV:DE:FHWY:GP:KR:NQST";
+	public static final String MURPHY_4    = "AGPST:CILMV:DEHKNQR:FWY";
+	public static final String MURPHY_2    = "ACFGILMPSTVWY:DEHKNQR";
 	
 	private int ala;
 	private int arg;
@@ -41,7 +41,7 @@ public class AAAlphabet implements Serializable {
 	
 	public AAAlphabet(String alphabetString) {
 		groups = alphabetString.split(":");
-		numLetters =  groups.length;
+		numLetters = groups.length;
 		updateGroups();
 	}
 	
