@@ -2,7 +2,7 @@ package owl.core.structure;
 
 import java.io.Serializable;
 
-public class AAAlphabet implements Serializable {
+public class AAAlphabet implements Serializable, Comparable<AAAlphabet> {
 	
 	private static final long serialVersionUID = 1L;
 	
@@ -38,6 +38,8 @@ public class AAAlphabet implements Serializable {
 	private String[] groups;
 	
 	private int numLetters;
+	
+	private double fitness;
 	
 	public AAAlphabet(String alphabetString) {
 		groups = alphabetString.split(":");
@@ -175,6 +177,14 @@ public class AAAlphabet implements Serializable {
 		updateGroups();
 	}
 	
+	public double getFitness() {
+		return fitness;
+	}
+	
+	public void setFitness(double newFitness) {
+		fitness = newFitness;
+	}
+	
 	public String toString() {
 		String toReturn = "";
 		for (String group : groups) {
@@ -188,5 +198,16 @@ public class AAAlphabet implements Serializable {
 		return (identifier == 0  || identifier == 2  || identifier == 4  || identifier == 6  || identifier == 8 || 
 				identifier == 10 || identifier == 15 || identifier == 20);
 	}
-	
+
+	@Override // compares alphabets based on their assigned fitness ... erase this at some point
+	public int compareTo(AAAlphabet otherAlphabet) {
+		double difference = (this.fitness - otherAlphabet.fitness);
+		if (difference > 0) {
+			return 1;
+		} else if (difference < 0) {
+			return -1;
+		} else {
+			return 0;
+		}
+	}
 }
