@@ -13,6 +13,7 @@ public class AAAlphabet implements Serializable, Comparable<AAAlphabet> {
 	public static final String MIRNY_6     = "ACILMV:DE:FHWY:GP:KR:NQST";
 	public static final String MURPHY_4    = "AGPST:CILMV:DEHKNQR:FWY";
 	public static final String MURPHY_2    = "ACFGILMPSTVWY:DEHKNQR";
+	public static final String WANG_2      = "ADEGHKNPQRST:CFILMVWY";
 	
 	private int ala;
 	private int arg;
