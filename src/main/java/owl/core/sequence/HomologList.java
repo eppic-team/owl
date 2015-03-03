@@ -38,6 +38,7 @@ import owl.core.runners.blast.BlastRunner;
 import owl.core.runners.blast.BlastXMLParser;
 import owl.core.sequence.alignment.AlignmentConstructionException;
 import owl.core.sequence.alignment.MultipleSequenceAlignment;
+import owl.core.structure.AAAlphabet;
 import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
@@ -97,7 +98,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	private MultipleSequenceAlignment aln;	  		// the protein sequences alignment
 
-	private int reducedAlphabet;					// the reduced alphabet used to calculate entropies
+	private AAAlphabet alphabet;					// the reduced alphabet used to calculate entropies
 	private List<Double> entropies;					// entropies for each uniprot reference sequence position
 	
 	private boolean useUniparc;
@@ -918,13 +919,13 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	
 	/**
 	 * Compute the sequence entropies for all reference sequence (uniprot) positions
-	 * @param reducedAlphabet
+	 * @param alphabet the AAAlphabet
 	 */
-	public void computeEntropies(int reducedAlphabet) {
-		this.reducedAlphabet = reducedAlphabet;
+	public void computeEntropies(AAAlphabet alphabet) {
+		this.alphabet = alphabet;
 		this.entropies = new ArrayList<Double>(); 
-		for (int i=0;i<refInterval.getLength();i++){
-			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniId(),i+1), reducedAlphabet));
+		for (int i=0;i<refInterval.getLength();i++) {
+			entropies.add(this.aln.getColumnEntropy(this.aln.seq2al(ref.getUniId(),i+1), alphabet));
 		}
 	}
 	
@@ -932,8 +933,8 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 		return entropies;
 	}
 	
-	public int getReducedAlphabet() {
-		return reducedAlphabet;
+	public AAAlphabet getReducedAlphabet() {
+		return alphabet;
 	}
 	
 	public void setUseUniparc(boolean useUniparc) {
@@ -950,7 +951,7 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	public String getAlnVariability() {
 		int numBins = 6;
 		// the max value for entropy given a reducedAlphabet
-		double maxs = Math.log(reducedAlphabet)/Math.log(2);
+		double maxs = Math.log(alphabet.getNumLetters())/Math.log(2);
 		double max = Math.max(1,Collections.max(entropies));
 		// the bin step given the max and numBins
 		double binStep = max/(double)numBins;
