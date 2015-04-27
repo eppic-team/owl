@@ -1,6 +1,7 @@
 package owl.core.structure;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 public class AAAlphabet implements Serializable {
 	
@@ -176,7 +177,7 @@ public class AAAlphabet implements Serializable {
 		updateGroups();
 	}
 	
-	public String toString() {
+	public String getString() {
 		String toReturn = "";
 		for (String group : groups) {
 			toReturn += group;
@@ -184,7 +185,34 @@ public class AAAlphabet implements Serializable {
 		}
 		return toReturn.substring(0, toReturn.length() - 1);
 	}
-
+	
+	public String toString() {
+		String[] inputArray = getString().split(":");
+		int sum = 0;
+		for (int i = 0; i < inputArray.length; i++) {
+			sum += inputArray[i].length();
+		}
+		assert sum == 20;
+		for (int i = 0; i < inputArray.length; i++) {
+			char[] chars = inputArray[i].toCharArray();
+			Arrays.sort(chars);
+			String newString = "";
+			for (int j = 0; j < chars.length; j++) {
+				newString += chars[j];
+				}
+			inputArray[i] = newString;
+			}
+		Arrays.sort(inputArray);
+		String output = "";
+		for (int i = 0; i < inputArray.length; i++) {
+			if (inputArray[i].length() > 0) {
+				output += inputArray[i];
+				output += ":";
+				}
+			}
+		return output.substring(0, output.length() - 1);
+	}
+	
 	public static boolean isValidAlphabetIdentifier(int identifier) {
 		return (identifier == 0  || identifier == 2  || identifier == 4  || identifier == 6  || identifier == 8 || 
 				identifier == 10 || identifier == 15 || identifier == 20);
