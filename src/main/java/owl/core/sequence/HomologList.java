@@ -42,6 +42,7 @@ import owl.core.structure.AAAlphabet;
 import owl.core.util.FileFormatException;
 import owl.core.util.Goodies;
 import owl.core.util.Interval;
+import uk.ac.ebi.uniprot.dataservice.client.exception.ServiceException;
 
 /**
  * Class to store a set of homologs of a given sequence.
@@ -308,10 +309,16 @@ public class HomologList implements  Serializable {//Iterable<UniprotHomolog>,
 	 * @param uniprotConn
 	 * @throws UniprotVerMisMatchException 
 	 * @throws IOException
+	 * @throws ServiceException 
 	 */
-	public void retrieveUniprotKBData(UniProtConnection uniprotConn) throws UniprotVerMisMatchException, IOException {
-		String japiVer = uniprotConn.getVersion();
-		if (!japiVer.equals(this.uniprotVer)){
+	public void retrieveUniprotKBData(UniProtConnection uniprotConn) throws UniprotVerMisMatchException, IOException, ServiceException {
+		String japiVer = null;
+		try {
+			japiVer = uniprotConn.getVersion();
+		} catch (ServiceException e) {
+			LOGGER.warn("Could not get UniProt release version from UniProt JAPI. Will not check if version used for blast coincides with version queried through JAPI. Error: "+e.getMessage());
+		}
+		if (japiVer!=null && !japiVer.equals(this.uniprotVer)){
 			throw new UniprotVerMisMatchException("UniProt version used for blast ("+uniprotVer+") and UniProt version being queried with JAPI ("+japiVer+") don't match!");
 		}
 		List<String> uniprotIds = new ArrayList<String>();

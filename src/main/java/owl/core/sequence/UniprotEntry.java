@@ -25,6 +25,7 @@ import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxon;
 import uk.ac.ebi.kraken.interfaces.uniprot.NcbiTaxonomyId;
 import uk.ac.ebi.kraken.interfaces.uniprot.Organelle;
 import uk.ac.ebi.kraken.interfaces.uniprot.UniProtEntry;
+import uk.ac.ebi.uniprot.dataservice.client.exception.ServiceException;
 
 /**
  * A uniprot entry.
@@ -148,8 +149,10 @@ public class UniprotEntry implements HasFeatures, Serializable {
 	/**
 	 * Retrieves from UniprotKB the sequence, taxonomy and gene encoding organelle 
 	 * by using the remote Uniprot API
+	 * @throws NoMatchFoundException
+	 * @throws ServiceException 
 	 */
-	public void retrieveUniprotKBData() throws NoMatchFoundException {
+	public void retrieveUniprotKBData() throws NoMatchFoundException, ServiceException {
 		this.taxons = new ArrayList<String>();
 		
 		UniProtConnection uniprotConn = new UniProtConnection();

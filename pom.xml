@@ -105,9 +105,9 @@
 		
 		<!-- uniprot -->
 		<dependency>
-        	<groupId>uk.ac.ebi.uniprot.kraken</groupId>
-        	<artifactId>uniprotjapi</artifactId>   
-        	<version>2014.01</version>     	
+	        <groupId>uk.ac.ebi.uniprot</groupId>
+    	    <artifactId>japi</artifactId>
+        	<version>1.0.8</version> 	
     	</dependency>
 		
 		<!-- spring (for uniprot japi) -->
